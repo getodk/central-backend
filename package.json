@@ -21,8 +21,11 @@
     "uuid": "~3"
   },
   "devDependencies": {
+    "eslint": "~4.7",
+    "eslint-config-airbnb-base": "^12.0.0",
+    "eslint-plugin-import": "^2.7.0",
+    "istanbul": "~0.4",
     "mocha": "~3",
-    "should": "~13",
-    "istanbul": "~0.4"
+    "should": "~13"
   }
 }
