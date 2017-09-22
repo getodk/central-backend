@@ -4,3 +4,4 @@
 *.swn
 node_modules/
 /*.log
+/coverage/
