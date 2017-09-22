@@ -1,0 +1,9 @@
+{
+  "database": {
+    "host": "localhost",
+    "user": "jubilant",
+    "password": "jubilant",
+    "database": "jubilant"
+  }
+}
+
