@@ -20,6 +20,9 @@ test: base
 test-coverage: base
 	node node_modules/.bin/istanbul cover node_modules/.bin/_mocha -- --recursive
 
+lint: base
+	node node_modules/.bin/eslint lib
+
 run-multi: base
 	node node_modules/naught/lib/main.js start --worker-count 4 lib/server.js
 stop-multi:

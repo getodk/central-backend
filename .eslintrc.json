@@ -1,3 +1,21 @@
 {
-    "extends": "airbnb-base"
+  "extends": "airbnb-base",
+  "env": { "node": true },
+  "rules": {
+    "array-bracket-spacing": "off",
+    "arrow-parens": "off",
+    "comma-dangle": "off",
+    "curly": "off",
+    "max-len": "off",
+    "no-iterator": "off",
+    "no-multiple-empty-lines": "off",
+    "no-restricted-syntax": "off",
+    "no-underscore-dangle": "off",
+    "object-curly-newline": [ "error", {
+      "ObjectPattern": { "minProperties": 0 }
+    } ],
+    "padded-blocks": "off",
+    "space-before-function-paren": "off",
+    "spaced-comment": "off"
+  }
 }
