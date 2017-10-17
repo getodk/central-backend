@@ -4,17 +4,29 @@
   "rules": {
     "array-bracket-spacing": "off",
     "arrow-parens": "off",
+    "class-methods-use-this": "off",
     "comma-dangle": "off",
+    "consistent-return": "off",
     "curly": "off",
+    "func-names": "off",
+    "guard-for-in": "off",
     "max-len": "off",
+    "no-confusing-arrow": "off",
+    "no-console": "off",
     "no-iterator": "off",
     "no-multiple-empty-lines": "off",
+    "no-param-reassign": [ "error", { "props": false } ],
+    "no-prototype-builtins": "off",
     "no-restricted-syntax": "off",
     "no-underscore-dangle": "off",
+    "no-unused-vars": [ "error", { "varsIgnorePattern": "^_$" } ],
+    "no-use-before-define": [ "error", { "classes": false } ],
+    "new-cap": [ "error", { "newIsCap": false } ],
     "object-curly-newline": [ "error", {
       "ObjectPattern": { "minProperties": 0 }
     } ],
     "padded-blocks": "off",
+    "prefer-template": "off",
     "space-before-function-paren": "off",
     "spaced-comment": "off"
   }
