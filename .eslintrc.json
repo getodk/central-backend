@@ -4,9 +4,13 @@
   "rules": {
     "array-bracket-spacing": "off",
     "arrow-parens": "off",
+    "class-methods-use-this": "off",
     "comma-dangle": "off",
+    "consistent-return": "off",
     "curly": "off",
+    "import/newline-after-import": "off",
     "max-len": "off",
+    "no-debugger": "off",
     "no-iterator": "off",
     "no-multiple-empty-lines": "off",
     "no-restricted-syntax": "off",
