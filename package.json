@@ -8,6 +8,7 @@
   "dependencies": {
     "config": "~1.26",
     "naught": "~1.6",
+    "ramda": "~0",
     "express": "~4.15",
     "body-parser": "~1.17",
     "morgan": "~1.8",

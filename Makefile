@@ -20,7 +20,7 @@ test: base
 test-coverage: base
 	node node_modules/.bin/istanbul cover node_modules/.bin/_mocha -- --recursive
 
-lint: base
+lint:
 	node node_modules/.bin/eslint lib
 
 run-multi: base
