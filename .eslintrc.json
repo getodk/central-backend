@@ -8,6 +8,7 @@
     "comma-dangle": "off",
     "consistent-return": "off",
     "curly": "off",
+    "global-require": "off",
     "import/newline-after-import": "off",
     "max-len": "off",
     "no-debugger": "off",
