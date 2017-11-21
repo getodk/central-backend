@@ -1,6 +1,7 @@
 # Jubilant Garbanzo
 
 ![Platform](https://img.shields.io/badge/platform-Node.js-blue.svg)
+[![License](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Build status](https://circleci.com/gh/nafundi/jubilant-garbanzo.svg?style=shield)](https://circleci.com/gh/nafundi/jubilant-garbanzo)
 
 Jubilant Garbanzo (or just Jubilant for short) is a minimal [Open Data Kit](https://opendatakit.org/) server based on Node.js and Postgres. It is currently under development. This repository holds back-end code only: [Super Adventure](https://github.com/nafundi/super-adventure) holds front-end code.
