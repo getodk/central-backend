@@ -16,11 +16,13 @@
     "knex": "~0.13",
     "luxon": "~0.2",
     "morgan": "~1.8",
+    "multer": "~1.3",
     "mustache": "~2.3",
     "naught": "~1.6",
     "pg": "~7",
     "pg-query-stream": "~1.1",
     "ramda": "~0",
+    "tmp": "~0",
     "uuid": "~3"
   },
   "devDependencies": {
