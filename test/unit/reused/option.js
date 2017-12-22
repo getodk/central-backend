@@ -24,6 +24,12 @@ describe('(libs/FP) Option type', () => {
     it("Can be mapped over", () => {
       o.map(n => n + n).should.deepEqual(Option.of(66));
     });
+    it("Can be filtered to something", () => {
+      o.filter(x => x === 33).should.deepEqual(Option.of(33));
+    });
+    it("Can be filtered to nothing", () => {
+      o.filter(_ => false).should.equal(Option.of(null));
+    });
     describe("Getting its value", () => {
       it("get() returns its value", () => {
         o.get().should.equal(33);
@@ -41,6 +47,12 @@ describe('(libs/FP) Option type', () => {
         o.orThrow("you shouldn't see this error").should.equal(33);
       });
     });
+    it("Calls a consumer ifDefined", (done) => {
+      o.ifDefined((x) => {
+        x.should.equal(33);
+        done();
+      });
+    });
     it("It is not empty / It is defined", () => {
       o.isDefined().should.be.true();
       o.isEmpty().should.be.false();
@@ -54,6 +66,9 @@ describe('(libs/FP) Option type', () => {
     });
     it("Mapping over it has no effect", () => {
       o.map(n => n + n).should.deepEqual(o);
+    });
+    it("Can only be filtered to nothing", () => {
+      o.filter(_ => true).should.equal(Option.of(null));
     });
     describe("Getting its value", () => {
       it("get() throws error", () => {
@@ -71,6 +86,11 @@ describe('(libs/FP) Option type', () => {
       it("orThrow(msg) throws", () => {
         (() => o.orThrow("you shouldn't see this error")).should.throw("you shouldn't see this error");
       });
+    });
+    it("Does nothing ifDefined", () => {
+      let called = false;
+      o.ifDefined((x) => { called = true; });
+      called.should.equal(false);
     });
     it("It is not empty / It is defined", () => {
       o.isDefined().should.be.false();
