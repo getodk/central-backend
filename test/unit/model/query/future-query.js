@@ -149,5 +149,31 @@ describe('FutureQuery', () => {
         });
     });
   });
+
+  describe('fold', (done) => {
+    it('should point each parent with the given context', (done) => {
+      (new FoldedFutureQuery([
+        (new FutureQuery((container) => Promise.resolve(container))),
+        (new FutureQuery((container) => Promise.resolve(container * 2))),
+        (new FutureQuery((container) => Promise.resolve(container * 3)))
+      ])).point(3).then((result) => {
+        result.should.eql([ 3, 6, 9 ]);
+        done();
+      });
+    });
+
+    it('should reject given any rejection', (done) => {
+      (new FoldedFutureQuery([
+        (new FutureQuery((container) => Promise.resolve(container))),
+        (new FutureQuery((container) => Promise.reject(container * 2))),
+        (new FutureQuery((container) => Promise.resolve(container * 3)))
+      ])).point(3).then((result) => {
+        throw new Error('should not be reached');
+      }, (failure) => {
+        failure.should.equal(6);
+        done();
+      });
+    });
+  });
 });
 
