@@ -1,8 +1,7 @@
 const should = require('should');
-const { identity } = require('ramda');
 const util = require('../../../lib/util/util');
 
-describe('util', () => {
+describe('util/util', () => {
   describe('isBlank', () => {
     const { isBlank } = util;
     it('should return true for nonexistentish values', () => {
