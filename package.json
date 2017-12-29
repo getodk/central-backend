@@ -13,7 +13,7 @@
     "config": "~1.26",
     "csv-stringify": "~1",
     "express": "~4.16",
-    "fast-xml-parser": "~2.7.4",
+    "fast-xml-parser": "~2.8.1",
     "knex": "~0.13",
     "luxon": "~0.2",
     "morgan": "~1.8",
