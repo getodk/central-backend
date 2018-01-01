@@ -1,7 +1,6 @@
 const should = require('should');
 const builder = require('../../../../lib/model/query/builder');
 
-// we aren't going to test the many problem types here, only the basic infrastructure.
 describe('query module builder', () => {
   it('should return modules with an identical signature to the source, plus transacting', () => {
     Object.keys(builder({ a: 1, b: 2, c: 3 })).should.eql([ 'a', 'b', 'c', 'transacting' ]);

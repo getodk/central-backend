@@ -1,7 +1,6 @@
 const should = require('should');
 const builder = require('../../../../lib/model/instance/instance');
 
-// we aren't going to test the many problem types here, only the basic infrastructure.
 describe('Instance', () => {
   // convenience test helper that completes the dependency injection shuffle-dance.
   const complete = (partial, container = {}) => {

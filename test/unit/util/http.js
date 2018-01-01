@@ -26,7 +26,6 @@ const createModernResponse = () => {
   return result;
 };
 
-// we aren't going to test the many problem types here, only the basic infrastructure.
 describe('util/http', () => {
   describe('serialize', () => {
     const { serialize } = http;
