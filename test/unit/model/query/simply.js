@@ -19,6 +19,14 @@ describe('simply', () => {
     // wraps away a bunch of boilerplate:
     const whereForConditions = (conditions, f) => getWhere(null, conditions)({ db: fakeDb(f) });
 
+    it('should simply chain if no conditions are provided', (done) => {
+      whereForConditions(null, (result) => {
+        // expect no calls.
+        result.should.eql([]);
+        done();
+      });
+    });
+
     it('should directly apply plain objects', (done) => {
       whereForConditions({ x: 1, y: 2 }, (result) => {
         // expect one call with a single argument consisting of the object literal:
