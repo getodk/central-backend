@@ -1,9 +1,19 @@
 {
-  "database": {
-    "host": "localhost",
-    "user": "jubilant",
-    "password": "jubilant",
-    "database": "jubilant"
+  "default": {
+    "database": {
+      "host": "localhost",
+      "user": "jubilant",
+      "password": "jubilant",
+      "database": "jubilant"
+    }
+  },
+  "test": {
+    "database": {
+      "host": "localhost",
+      "user": "jubilant",
+      "password": "jubilant",
+      "database": "jubilant_test"
+    }
   }
 }
 
