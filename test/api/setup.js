@@ -45,14 +45,14 @@ before(() => db
 // gets rolled back for a clean slate on the next test.
 const baseContainer = injector.withDefaults(db);
 const testService = (test) => () => {
-  let releaser;
-  db.transaction((trxn) => {
-    const container = merge(baseContainer, { db: trxn, _alreadyTransacting: true });
-    const rollback = () => { trxn.rollback(); return Promise.resolve(); };
-    releaser = test(request(service(container))).then(rollback, rollback);
-    return null; // this disallows knex from autocommiting the transaction.
+  return new Promise((resolve, reject) => {
+    db.transaction((trxn) => {
+      const container = merge(baseContainer, { db: trxn, _alreadyTransacting: true });
+      const rollback = (f) => (x) => { trxn.rollback(true); return f(x); };
+      test(request(service(container))).then(rollback(resolve), rollback(reject));
+      // we return nothing to prevent knex from auto-committing the transaction.
+    }).catch(Promise.resolve.bind(Promise));
   });
-  return releaser;
 };
 
 // logs the desired user in, then automatically applies that authentication to
