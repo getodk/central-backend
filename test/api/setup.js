@@ -1,22 +1,24 @@
+const appRoot = require('app-root-path');
+const { merge } = require('ramda');
+const { readdirSync } = require('fs');
+const { join } = require('path');
+const request = require('supertest');
+
 // debugging things.
 global.tap = (x) => { console.log(x); return x; };
 
 // database things.
-const appRoot = require('app-root-path');
 const config = require('config');
 const { connect, migrate } = require(appRoot + '/lib/model/database');
-const { readdirSync } = require('fs');
-const { join } = require('path');
-
-// application things.
-const injector = require(appRoot + '/lib/model/package');
-const service = require(appRoot + '/lib/service');
-const request = require('supertest');
 
 // save some time by holding a db connection open globally. they're just tests,
 // so the performance overhead is irrelevant.
 const db = connect('test');
 const owner = config.get('test.database.user');
+
+// application things.
+const injector = require(appRoot + '/lib/model/package');
+const service = require(appRoot + '/lib/service');
 
 // get all our fixture scripts, and set up a function that runs them all.
 const fixtures = readdirSync(appRoot + '/test/api/fixtures')
@@ -26,17 +28,32 @@ const fixtures = readdirSync(appRoot + '/test/api/fixtures')
 const populate = (container, [ head, ...tail ] = fixtures) =>
   (tail.length === 0) ? head(container).point() : head(container).then(() => populate(container, tail));
 
-// do our actual work: wipe the database, run the standard migrations, then run
-// the fixture scripts to populate our test data. we wipe before each test
-// rather than after so that if a single test is failing, it can be run
-// individually and the state of the database may then be investigated by hand.
-const testService = (test) => () => db
+// set up the database at the very beginning of the suite; wipe the database,
+// run the standard migrations, then run the fixture scripts to populate our
+// test data.
+//
+// this hook won't run if `test-unit` is called, as this directory is skipped
+// in that case.
+before(() => db
   .raw('drop owned by ' + owner)
   //.raw('drop owned by ?', [ owner ]) TODO: why does this <- not work?
   .then(() => db.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
-  .then(() => injector.withDefaults(db))
-  .then((container) => populate(container)
-    .then(() => test(request(service(container)))));
+  .then(() => populate(injector.withDefaults(db))));
+
+// called to get a service context per request. we do some work to hijack the
+// transaction system so that each test runs in a single transaction that then
+// gets rolled back for a clean slate on the next test.
+const baseContainer = injector.withDefaults(db);
+const testService = (test) => () => {
+  let releaser;
+  db.transaction((trxn) => {
+    const container = merge(baseContainer, { db: trxn, _alreadyTransacting: true });
+    const rollback = () => { trxn.rollback(); return Promise.resolve(); };
+    releaser = test(request(service(container))).then(rollback, rollback);
+    return null; // this disallows knex from autocommiting the transaction.
+  });
+  return releaser;
+};
 
 // logs the desired user in, then automatically applies that authentication to
 // the ensuing service request. uses a proxy so that the method call (GET, POST,
