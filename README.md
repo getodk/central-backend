@@ -13,8 +13,8 @@ First, install Node.js 8.
 Next, create a database and user in Postgres. Either use the same settings as the [default configuration file](config/default.json), or update your local configuration file to match the settings you choose. For example:
 
 ```sql
-CREATE DATABASE jubilant;
 CREATE USER jubilant WITH PASSWORD 'jubilant';
+CREATE DATABASE jubilant with owner=jubilant encoding=UTF8;
 ```
 
 Next, install Node package dependencies and migrate the database to the latest schema. To do so, open the command line, change the working directory to the root directory of the repository, and type the following:
@@ -34,8 +34,14 @@ For other options for running the server, see the [makefile](Makefile).
 
 ## Testing
 
-To run unit tests, open the command line, change the working directory to the root directory of the repository, and type `make test`. We use [Mocha](https://mochajs.org/) and [Should.js](https://shouldjs.github.io/) for unit testing. [CircleCI](https://circleci.com/gh/nafundi/jubilant-garbanzo) is configured to run all unit tests.
+Jubilant sports both unit and integration tests. The unit tests (`/test/unit`) check, in isolation, the more-complex parts of Jubilant's core code, such as the query promise and model systems, the various util functions, and some of the http handlers. The integration tests (`/test/api`) focus on verifying the correct behaviour of the API itself and the business logic (ie the `lib/resources/*` code and concrete model/query implementation) which are independently simple but which altogether form a complex system.
 
-To examine test coverage, type `make test-coverage`. We use [Istanbul](https://istanbul.js.org/).
+To run all tests (both unit and integration), run `make test` in the project root (where this README is). We use [Mocha](https://mochajs.org/) and [Should.js](https://shouldjs.github.io/) as our testing frameworks. [CircleCI](https://circleci.com/gh/nafundi/jubilant-garbanzo) is configured to run all tests for verification.
+
+To run only unit tests, open the command line, run `make test-unit` in the project root.
+
+To run only API integration tests, open the command line, run `make test-api` instead.
+
+To examine test coverage (runs both test suites), type `make test-coverage`. We use [Istanbul](https://istanbul.js.org/).
 
 For linting, type `make lint`. We use [ESLint](https://eslint.org/) with [rules](.eslintrc.json) based on the [Airbnb JavaScript style guide](https://github.com/airbnb/javascript).

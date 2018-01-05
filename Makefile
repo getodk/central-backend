@@ -14,10 +14,16 @@ run: base
 debug: base
 	node --debug --inspect lib/run-server.js
 
-test: base
+test: node_modules
 	node node_modules/mocha/bin/mocha --recursive
 
-test-coverage: base
+test-api: node_modules
+	node node_modules/mocha/bin/mocha --recursive test/api
+
+test-unit: node_modules
+	node node_modules/mocha/bin/mocha --recursive test/unit
+
+test-coverage: node_modules
 	node node_modules/.bin/istanbul cover node_modules/.bin/_mocha -- --recursive
 
 lint:
