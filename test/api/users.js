@@ -22,5 +22,29 @@ describe('api: /users', () => {
               ]);
           }))));
   });
+
+  describe('POST', () => {
+    it('should prohibit non-admins from creating users', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.post('/v1/users')
+          .send({ email: 'david@opendatakit.org' })
+          .expect(403))));
+
+    it('should hash and store passwords if provided', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'david@opendatakit.org', password: 'apassword' })
+          .expect(200)
+          .then(() => service.login({ email: 'david@opendatakit.org', password: 'apassword' }, (asDavid) =>
+            asDavid.get('/v1/users/current').expect(200))))));
+
+    it('should not accept and hash blank passwords', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'david@opendatakit.org', password: '' })
+          .expect(200)
+          .then(() => service.login({ email: 'david@opendatakit.org', password: '' }, (failed) =>
+            failed.get('/v1/users/current').expect(401))))));
+  });
 });
 
