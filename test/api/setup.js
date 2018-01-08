@@ -40,24 +40,12 @@ before(() => db
   .then(() => db.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
   .then(() => populate(injector.withDefaults(db))));
 
-// called to get a service context per request. we do some work to hijack the
-// transaction system so that each test runs in a single transaction that then
-// gets rolled back for a clean slate on the next test.
-const baseContainer = injector.withDefaults(db);
-const testService = (test) => () => {
-  return new Promise((resolve, reject) => {
-    db.transaction((trxn) => {
-      const container = merge(baseContainer, { db: trxn, _alreadyTransacting: true });
-      const rollback = (f) => (x) => { trxn.rollback(true); return f(x); };
-      test(request(service(container))).then(rollback(resolve), rollback(reject));
-      // we return nothing to prevent knex from auto-committing the transaction.
-    }).catch(Promise.resolve.bind(Promise));
-  });
-};
-
-// logs the desired user in, then automatically applies that authentication to
-// the ensuing service request. uses a proxy so that the method call (GET, POST,
-// etc) can be done by the test and we inject the authorization afterwards.
+// augments a supertest object with a `.as(user, cb)` method, where user may be the
+// name of a fixture user or an object with email/password. the user will be logged
+// in and the following single request will be performed as that user.
+//
+// a proxy is used so that the auth header is injected at the appropriate spot
+// after the next method call.
 const authProxy = (token) => ({
   get(target, name) {
     const method = target[name];
@@ -66,9 +54,32 @@ const authProxy = (token) => ({
     return (...args) => method.apply(target, args).set('Authorization', `Bearer ${token}`);
   }
 });
-const as = (user, test) => (service) =>
-  service.post('/v1/sessions').send({ email: `${user}@opendatakit.org`, password: user })
-    .then((response) => test(new Proxy(service, authProxy(response.body.token))));
+const augment = (service) => {
+  service.login = function(user, test) {
+    const credentials = (typeof user === 'string')
+      ? { email: `${user}@opendatakit.org`, password: user }
+      : user;
 
-module.exports = { testService, as };
+    return service.post('/v1/sessions').send(credentials)
+      .then(({ body }) => test(new Proxy(service, authProxy(body.token))));
+  };
+  return service;
+};
+
+// called to get a service context per request. we do some work to hijack the
+// transaction system so that each test runs in a single transaction that then
+// gets rolled back for a clean slate on the next test.
+// TODO: why do we have to make this container /last/? we are leaking state
+// somewhere, and it worries me. (#53)
+const testService = (test) => () => new Promise((resolve, reject) => {
+  db.transaction((trxn) => {
+    const container = injector.withDefaults(db);
+    Object.assign(container, { db: trxn, _alreadyTransacting: true });
+    const rollback = (f) => (x) => trxn.rollback().then(() => f(x));
+    test(augment(request(service(container)))).then(rollback(resolve), rollback(reject));
+    // we return nothing to prevent knex from auto-committing the transaction.
+  }).catch(Promise.resolve.bind(Promise));
+});
+
+module.exports = { testService };
 
