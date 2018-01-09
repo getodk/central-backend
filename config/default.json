@@ -5,7 +5,9 @@
       "user": "jubilant",
       "password": "jubilant",
       "database": "jubilant"
-    }
+    },
+    "serviceEmail": "no-reply@opendatakit.org",
+    "domain": "localhost:8989"
   },
   "test": {
     "database": {

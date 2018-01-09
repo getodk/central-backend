@@ -32,6 +32,21 @@ To run the server, open the command line, change the working directory to the ro
 
 For other options for running the server, see the [makefile](Makefile).
 
+### Command line scripts
+
+A number of operational tasks (creating accounts, setting passwords, etc) may be accomplished directly via local command line. These may be accessed by running `node lib/cli.js` from the project root (where this README is). Further instructions will be provided by the script.
+
+### Sending email
+
+It isn't necessary to send mail in order to run a development server. For account creation, one may simply use the command line scripts to manually set a password on an account once created. If one wishes to test that emails do work, however, a working localhost SMTP relay must be set up. On a Mac, this may be accomplished as follows:
+
+```bash
+sudo postfix tls enable-client
+sudo postfix start
+```
+
+Even so, often mail messages will go at first to spam, so be sure to check that.
+
 ## Testing
 
 Jubilant sports both unit and integration tests. The unit tests (`/test/unit`) check, in isolation, the more-complex parts of Jubilant's core code, such as the query promise and model systems, the various util functions, and some of the http handlers. The integration tests (`/test/api`) focus on verifying the correct behaviour of the API itself and the business logic (ie the `lib/resources/*` code and concrete model/query implementation) which are independently simple but which altogether form a complex system.
