@@ -11,7 +11,7 @@
       "transport": "json"
     },
     "env": {
-      "domain": "localhost:8989"
+      "domain": "http://localhost:8989"
     }
   },
   "test": {
