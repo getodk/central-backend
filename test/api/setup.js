@@ -16,6 +16,10 @@ const { connect, migrate } = require(appRoot + '/lib/model/database');
 const db = connect('test');
 const owner = config.get('test.database.user');
 
+// set up our mailer.
+const { mailer } = require(appRoot + '/lib/outbound/mail');
+const mail = mailer(config.get('test.email'));
+
 // application things.
 const injector = require(appRoot + '/lib/model/package');
 const service = require(appRoot + '/lib/service');
@@ -38,7 +42,7 @@ before(() => db
   .raw('drop owned by ' + owner)
   //.raw('drop owned by ?', [ owner ]) TODO: why does this <- not work?
   .then(() => db.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
-  .then(() => populate(injector.withDefaults(db))));
+  .then(() => populate(injector.withDefaults({ db }))));
 
 // augments a supertest object with a `.as(user, cb)` method, where user may be the
 // name of a fixture user or an object with email/password. the user will be logged
@@ -73,7 +77,7 @@ const augment = (service) => {
 // somewhere, and it worries me. (#53)
 const testService = (test) => () => new Promise((resolve, reject) => {
   db.transaction((trxn) => {
-    const container = injector.withDefaults(db);
+    const container = injector.withDefaults({ db, mail });
     Object.assign(container, { db: trxn, _alreadyTransacting: true });
     const rollback = (f) => (x) => trxn.rollback().then(() => f(x));
     test(augment(request(service(container)))).then(rollback(resolve), rollback(reject));

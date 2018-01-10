@@ -38,7 +38,9 @@ A number of operational tasks (creating accounts, setting passwords, etc) may be
 
 ### Sending email
 
-It isn't necessary to send mail in order to run a development server. For account creation, one may simply use the command line scripts to manually set a password on an account once created. If one wishes to test that emails do work, however, a working localhost SMTP relay must be set up. On a Mac, this may be accomplished as follows:
+It isn't necessary to send mail in order to run a development server. One can modify the email configuration (`config/default.json`) to use the `json`, as the `test` config already does, whereupon emails are outputted to the local server log and delivery is not attempted.
+
+If one wishes to send mail, the `sendmail` provider is relatively foolproof so long as it is available locally. Postfix is the easiest way to ensure this. It may be necessary to configure Postfix to negotiate TLS with servers it connects to. If so, these commands ought to suffice:
 
 ```bash
 sudo postfix tls enable-client

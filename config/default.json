@@ -6,8 +6,13 @@
       "password": "jubilant",
       "database": "jubilant"
     },
-    "serviceEmail": "no-reply@opendatakit.org",
-    "domain": "localhost:8989"
+    "email": {
+      "serviceAccount": "no-reply@opendatakit.org",
+      "transport": "json"
+    },
+    "env": {
+      "domain": "localhost:8989"
+    }
   },
   "test": {
     "database": {
@@ -15,6 +20,11 @@
       "user": "jubilant",
       "password": "jubilant",
       "database": "jubilant_test"
+    },
+    "email": {
+      "serviceAccount": "no-reply@opendatakit.org",
+      "transport": "json",
+      "transportOpts": { "newline": "unix" }
     }
   }
 }
