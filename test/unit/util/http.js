@@ -74,11 +74,11 @@ describe('util/http', () => {
       result.should.equal('test');
     });
 
-    it('should fail None as an unknown internal Problem', () => {
+    it('should fail None with the empty result internal Problem', () => {
       let result, writeResult = (x) => { result = x };
       finalize(null, writeResult)(Option.none());
       result.isProblem.should.equal(true);
-      result.problemCode.should.equal(500.1);
+      result.problemCode.should.equal(500.3);
     });
 
     it('should pipe through stream results', (done) => {
