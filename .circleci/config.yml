@@ -5,8 +5,12 @@ machine:
 jobs:
   build:
     docker:
-      # specify the version you desire here
       - image: circleci/node:8.5.0
+      - image: postgres:9.6
+        environment:
+          - POSTGRES_USER=jubilant
+          - POSTGRES_PASSWORD=jubilant
+          - POSTGRES_DB=jubilant_test
 
     working_directory: ~/repo
 
