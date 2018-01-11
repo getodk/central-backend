@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Build status](https://circleci.com/gh/nafundi/jubilant-garbanzo.svg?style=shield)](https://circleci.com/gh/nafundi/jubilant-garbanzo)
 
-Jubilant Garbanzo (or just Jubilant for short) is a minimal [Open Data Kit](https://opendatakit.org/) server based on Node.js and Postgres. It is currently under development. This repository holds back-end code only: [Super Adventure](https://github.com/nafundi/super-adventure) holds front-end code.
+Jubilant Garbanzo (or just Jubilant for short) is a minimal [Open Data Kit](https://opendatakit.org/) server based on Node.js and Postgres. It is currently under development. This repository holds back-end code only: [Super Adventure](https://github.com/nafundi/super-adventure) holds front-end code, and [Effective Spork](https://github.com/nafundi/effective-spork) contains both the Docker-based production deployment infrastructure for the combined frontend/backend, as well as the higher-level project management and issue tickets.
 
 ## Setting up your development environment
 
@@ -17,28 +17,21 @@ CREATE USER jubilant WITH PASSWORD 'jubilant';
 CREATE DATABASE jubilant with owner=jubilant encoding=UTF8;
 ```
 
-Next, install Node package dependencies and migrate the database to the latest schema. To do so, open the command line, change the working directory to the root directory of the repository, and type the following:
+Then, simply go to the repository root in a command line (where this README is) and run `make` with no arguments. This will install all npm dependencies and run all necessary migrations on the database; see the [makefile](Makefile) for details.
 
-```bash
-npm install
-make migrations
-```
+### Starting the development server
 
-Or equivalently, simply type `make` with no arguments. (Many `make` rules for the project also run `npm install` and `make migrations`: see the [makefile](Makefile) for details.)
+To run the server, run `make run` from the repository root. Once started, the server will be available on port `8383`.
 
-## Running the server
-
-To run the server, open the command line, change the working directory to the root directory of the repository, and type `make run`. Once started, the server will be available on port `8383`.
-
-For other options for running the server, see the [makefile](Makefile).
+You can also run `make debug` to run the server with a standard node inspector port running (use your favorite tool, or visit [about:inspect](chrome://inspect) in Chrome to attach breakpoints and step through statements).
 
 ### Command line scripts
 
-A number of operational tasks (creating accounts, setting passwords, etc) may be accomplished directly via local command line. These may be accessed by running `node lib/cli.js` from the project root (where this README is). Further instructions will be provided by the script.
+A number of operational tasks (creating accounts, setting passwords, etc) may be accomplished directly via local command line. These may be accessed by running `node lib/cli.js` from the project root. The full list of commands and arguments will be provided by the script.
 
 ### Sending email
 
-It isn't necessary to send mail in order to run a development server. One can modify the email configuration (`config/default.json`) to use the `json`, as the `test` config already does, whereupon emails are outputted to the local server log and delivery is not attempted.
+It isn't necessary to send mail in order to run a development server. The default email configuration (see `config/default.json`) uses the `json` transport (as does the test configuration), in which case emails are outputted to the local server log and delivery is not attempted.
 
 If one wishes to send mail, the `sendmail` provider is relatively foolproof so long as it is available locally. Postfix is the easiest way to ensure this. It may be necessary to configure Postfix to negotiate TLS with servers it connects to. If so, these commands ought to suffice:
 
@@ -51,14 +44,20 @@ Even so, often mail messages will go at first to spam, so be sure to check that.
 
 ## Testing
 
-Jubilant sports both unit and integration tests. The unit tests (`/test/unit`) check, in isolation, the more-complex parts of Jubilant's core code, such as the query promise and model systems, the various util functions, and some of the http handlers. The integration tests (`/test/api`) focus on verifying the correct behaviour of the API itself and the business logic (ie the `lib/resources/*` code and concrete model/query implementation) which are independently simple but which altogether form a complex system.
+Jubilant is tested with both unit and integration tests. The unit tests (`/test/unit`) check, in isolation, the more-complex parts of Jubilant's core code, such as the query promise and model systems, the various util functions, and some of the http handlers. The integration tests (`/test/api`) focus on verifying the correct behaviour of the API itself and the business logic (ie the `lib/resources/*` code and therefore concrete model/query implementation) which are independently simple but which altogether form a complex system.
 
-To run all tests (both unit and integration), run `make test` in the project root (where this README is). We use [Mocha](https://mochajs.org/) and [Should.js](https://shouldjs.github.io/) as our testing frameworks. [CircleCI](https://circleci.com/gh/nafundi/jubilant-garbanzo) is configured to run all tests for verification.
+To run all tests (both unit and integration), run `make test` in the project root. We use [Mocha](https://mochajs.org/), [Should.js](https://shouldjs.github.io/), and [Supertest](https://github.com/visionmedia/supertest) as our testing frameworks. [CircleCI](https://circleci.com/gh/nafundi/jubilant-garbanzo) is configured to run all tests for verification.
 
-To run only unit tests, open the command line, run `make test-unit` in the project root.
+Various commands are available:
 
-To run only API integration tests, open the command line, run `make test-api` instead.
+* To run only unit tests (which are much speedier than integration tests), run `make test-unit` in the project root.
+* To run only API integration tests, run `make test-api` instead.
+* As provided by default by Mocha, add `.only` after any `describe` or `it` call in the tests to run only the marked tests.
+* To examine test coverage (runs both test suites), type `make test-coverage`. We use [Istanbul](https://istanbul.js.org/).
 
-To examine test coverage (runs both test suites), type `make test-coverage`. We use [Istanbul](https://istanbul.js.org/).
+## Style Guidelines
 
-For linting, type `make lint`. We use [ESLint](https://eslint.org/) with [rules](.eslintrc.json) based on the [Airbnb JavaScript style guide](https://github.com/airbnb/javascript).
+Details forthcoming prior to release.
+
+We use linting as _a part of_ coding style verification. To run the linter, run `make lint` from the repository root. We use [ESLint](https://eslint.org/) with [rules](.eslintrc.json) based on the [Airbnb JavaScript style guide](https://github.com/airbnb/javascript). The linter is not perfect; we will make exceptions when we have a consensus to do so.
+
