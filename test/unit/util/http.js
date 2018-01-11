@@ -330,32 +330,34 @@ describe('util/http', () => {
 
   describe('sessionParser', () => {
     const { sessionParser } = http;
+
+    // some mock helpers to simplify testing this module in isolation:
+    class Auth { constructor(data) { Object.assign(this, data); } }
     const mockSession = (expectedToken) => ({
       getByBearerToken: (token) => ExplicitPromise.of(Promise.resolve((token === expectedToken)
         ? Option.of('session')
-        : Option.none())),
-      none: () => 'none'
+        : Option.none()))
     });
 
     it('should set no-session if no Authorization header is provided', (done) => {
       const request = createRequest();
-      sessionParser({ Session: mockSession() })(request, null, () => {
-        request.session.should.equal('none');
+      sessionParser({ Auth, Session: mockSession() })(request, null, () => {
+        request.auth.session.should.equal(Option.none());
         done();
       });
     });
 
     it('should set no-session if Authorization mode is no Bearer', (done) => {
       const request = createRequest({ headers: { Authorization: 'Basic aabbccddeeff123' } });
-      sessionParser({ Session: mockSession() })(request, null, () => {
-        request.session.should.equal('none');
+      sessionParser({ Auth, Session: mockSession() })(request, null, () => {
+        request.auth.session.should.equal(Option.none());
         done();
       });
     });
 
     it('should fail the request if an invalid Bearer token is given', (done) => {
       const request = createRequest({ headers: { Authorization: 'Bearer abracadabra' } });
-      sessionParser({ Session: mockSession('alohomora') })(request, null, (failure) => {
+      sessionParser({ Auth, Session: mockSession('alohomora') })(request, null, (failure) => {
         failure.isProblem.should.equal(true);
         failure.problemCode.should.equal(401.2);
         done();
@@ -364,8 +366,8 @@ describe('util/http', () => {
 
     it('should set the appropriate session if a valid Bearer token is given', (done) => {
       const request = createRequest({ headers: { Authorization: 'Bearer alohomora' } });
-      sessionParser({ Session: mockSession('alohomora') })(request, null, () => {
-        request.session.should.equal('session');
+      sessionParser({ Auth, Session: mockSession('alohomora') })(request, null, () => {
+        request.auth.session.should.eql(Option.of('session'));
         done();
       });
     });
