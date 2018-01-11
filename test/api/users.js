@@ -120,5 +120,16 @@ describe('api: /users', () => {
           .send({ new: 'coolpassword' })
           .expect(403))));
   });
+
+  describe('/users/current GET', () => {
+    it('should return not found if nobody is logged in', testService((service) =>
+      service.get('/v1/users/current').expect(404)));
+
+    it('should give the authed user if logged in', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/users/current')
+          .expect(200)
+          .then(({ body }) => body.email.should.equal('chelsea@opendatakit.org')))));
+  });
 });
 
