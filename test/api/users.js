@@ -56,6 +56,69 @@ describe('api: /users', () => {
           .expect(200)
           .then(() => service.login('david', (asDavid) =>
             asDavid.get('/v1/users').expect(200))))));
+
+    it('should send an email to provisioned users', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'david@opendatakit.org', password: 'david' })
+          .expect(200)
+          .then(() => {
+            const email = global.inbox.pop();
+            email.to.should.eql([{ address: 'david@opendatakit.org', name: '' }]);
+            email.subject.should.equal('Data collection account created');
+          }))));
+
+    it('should send a token which can reset the new user password', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'david@opendatakit.org' })
+          .expect(200)
+          .then(() => {
+            const token = /token=([^<]+)<\/p>/.exec(global.inbox.pop().html)[1];
+            return service.post('/v1/users/reset/verify')
+              .send({ new: 'testreset' })
+              .set('Authorization', 'Bearer ' + token)
+              .expect(200)
+              .then(() => service.login({ email: 'david@opendatakit.org', password: 'testreset' }, (asDavid) =>
+                asDavid.get('/v1/users/current').expect(200)));
+          }))));
+  });
+
+  describe('/reset/initiate POST', () => {
+    it('should send an email with a helpful message if no account exists', testService((service) =>
+      service.post('/v1/users/reset/initiate')
+        .send({ email: 'winnifred@opendatakit.org' })
+        .expect(200)
+        .then(() => {
+          const email = global.inbox.pop();
+          email.to.should.eql([{ address: 'winnifred@opendatakit.org', name: '' }]);
+          email.subject.should.equal('Data collection account password reset');
+          email.html.should.match(/no account exists/);
+        })));
+
+    it('should send an email with a token which can reset the user password', testService((service) =>
+      service.post('/v1/users/reset/initiate')
+        .send({ email: 'alice@opendatakit.org' })
+        .expect(200)
+        .then(() => {
+          const email = global.inbox.pop();
+          email.to.should.eql([{ address: 'alice@opendatakit.org', name: '' }]);
+          email.subject.should.equal('Data collection account password reset');
+          const token = /token=([^<]+)<\/p>/.exec(email.html)[1];
+
+          return service.post('/v1/users/reset/verify')
+            .send({ new: 'reset!' })
+            .set('Authorization', 'Bearer ' + token)
+            .expect(200)
+            .then(() => service.login({ email: 'alice@opendatakit.org', password: 'reset!' }, (asAlice) =>
+              asAlice.get('/v1/users/current').expect(200)));
+        })));
+
+    it('should not allow a user to reset their own password directly', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users/reset/verify')
+          .send({ new: 'coolpassword' })
+          .expect(403))));
   });
 });
 
