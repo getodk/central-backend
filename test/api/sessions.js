@@ -14,13 +14,13 @@ describe('api: /sessions', () => {
           body.token.length.should.equal(64);
         })));
 
-    it('should return a 403 if the password is wrong', testService((service) =>
+    it('should return a 401 if the password is wrong', testService((service) =>
       service.post('/v1/sessions')
         .send({ email: 'chelsea@opendatakit.org', password: 'letmein' })
         .expect(401)
         .then(({ body }) => body.message.should.equal('Could not authenticate with the provided credentials.'))));
 
-    it('should return a 403 if the email is wrong', testService((service) =>
+    it('should return a 401 if the email is wrong', testService((service) =>
       service.post('/v1/sessions')
         .send({ email: 'winnifred@opendatakit.org', password: 'winnifred' })
         .expect(401)
