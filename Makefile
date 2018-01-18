@@ -1,3 +1,4 @@
+.PHONY: test
 default: base
 
 node_modules:
