@@ -5,6 +5,8 @@ const { DateTime } = require('luxon');
 const appRoot = require('app-root-path');
 const { without } = require(appRoot + '/lib/util/util');
 
+// TODO: not happy about how these assertions are used.
+
 // verifies the non-nullable presence of a given date field in an object, and
 // then returns a new object without that field so that the remaining fields
 // may be directly bulk-compared.
@@ -20,5 +22,10 @@ const couldBeDate = curry((field, obj) => {
   return without([ field ], obj);
 });
 
-module.exports = { shouldBeDate, couldBeDate };
+const shouldBeToken = curry((field, obj) => {
+  should(obj[field]).match(/^[a-z0-9!+]{64}$/i);
+  return without([ field ], obj);
+});
+
+module.exports = { shouldBeDate, couldBeDate, shouldBeToken };
 

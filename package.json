@@ -14,7 +14,7 @@
     "csv-stringify": "~1",
     "express": "~4.16",
     "fast-xml-parser": "~2.8.1",
-    "knex": "~0.13",
+    "knex": "~0.14",
     "luxon": "~0.2",
     "morgan": "~1.8",
     "multer": "~1.3",
