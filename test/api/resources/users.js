@@ -1,6 +1,6 @@
 const should = require('should');
-const { testService, as } = require('./setup');
-const { shouldBeDate, couldBeDate } = require('./util');
+const { testService } = require('../setup');
+const { shouldBeDate, couldBeDate } = require('../util');
 
 describe('api: /users', () => {
   describe('GET', () => {
@@ -12,13 +12,14 @@ describe('api: /users', () => {
         asAlice.get('/v1/users')
           .expect(200)
           .expect(({ body }) => {
+            // TODO: not happy about how these assertions are done.
             body
               .map(shouldBeDate('createdAt'))
               .map(couldBeDate('updatedAt'))
               .should.eql([
-                { displayName: 'Alice', email: 'alice@opendatakit.org', id: 4, meta: null },
-                { displayName: 'Bob', email: 'bob@opendatakit.org', id: 5, meta: null },
-                { displayName: 'Chelsea', email: 'chelsea@opendatakit.org', id: 6, meta: null }
+                { displayName: 'Alice', email: 'alice@opendatakit.org', id: 5, meta: null },
+                { displayName: 'Bob', email: 'bob@opendatakit.org', id: 6, meta: null },
+                { displayName: 'Chelsea', email: 'chelsea@opendatakit.org', id: 7, meta: null }
               ]);
           }))));
   });

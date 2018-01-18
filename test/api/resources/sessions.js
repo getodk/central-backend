@@ -1,6 +1,6 @@
 const should = require('should');
-const { testService, as } = require('./setup');
-const { shouldBeDate, couldBeDate } = require('./util');
+const { testService } = require('../setup');
+const { shouldBeDate, couldBeDate } = require('../util');
 
 describe('api: /sessions', () => {
   describe('POST', () => {
