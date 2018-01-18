@@ -10,7 +10,6 @@ module.exports = ({ all, User, Actor, Membership }) => {
   // mark transaction so the whole thing happens in one commit rather than many (slow).
   return all.transacting.do(users.map((user) => user.withHashedPassword()))
     .then((users) => all.inOrder(users.map((user) => user.create())))
-    .then(([ alice, bob, chelsea ]) => Actor.getBySystemId('admins')
-      .then((admins) => Membership.fromActors(admins.get(), alice.actor).create()))
+    .then(([ alice, bob, chelsea ]) => alice.actor.addToSystemGroup('admins'));
 };
 
