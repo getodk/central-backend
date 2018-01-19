@@ -83,6 +83,13 @@ describe('api: /users', () => {
               .then(() => service.login({ email: 'david@opendatakit.org', password: 'testreset' }, (asDavid) =>
                 asDavid.get('/v1/users/current').expect(200)));
           }))));
+
+    // TODO: for initial release only:
+    it('should duplicate the email into the display name if not given', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'david@opendatakit.org' })
+          .then(({ body }) => body.displayName.should.equal('david@opendatakit.org')))));
   });
 
   describe('/reset/initiate POST', () => {
