@@ -2,6 +2,7 @@ const should = require('should');
 const { pipe } = require('ramda');
 const { testService } = require('../setup');
 const { shouldBeDate, couldBeDate, shouldBeToken } = require('../util');
+const testData = require('../data');
 
 describe('api: /field-keys', () => {
   describe('POST', () => {
@@ -71,5 +72,31 @@ describe('api: /field-keys', () => {
             .expect(200)
             .then(({ body }) => body.should.eql([]))))));
   });
+});
+
+
+// Test the actual use of field keys.
+// TODO: perhaps these deserve their own file.
+describe('api: /key/:key', () => {
+  it('should return 401 if an invalid key is provided', testService((service) =>
+    service.get('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/current')
+      .expect(401)));
+
+  it('should return 401 if two credentials are presented', testService((service) =>
+    service.login('alice', (asAlice) => asAlice.post('/v1/field-keys').send({ displayName: 'fktest' })
+      .then(({ body }) => asAlice.post(`/v1/key/${body.token}/users/current`)
+        .expect(401)))));
+
+  it('should reject non-field tokens', testService((service) =>
+    service.post('/v1/sessions').send({ email: 'alice@opendatakit.org', password: 'alice' })
+      .then(({ body }) => service.get(`/v1/key/${body.token}/users/current`)
+        .expect(401))));
+
+  it('should passthrough to the appropriate route with successful auth', testService((service) =>
+    service.login('alice', (asAlice) => asAlice.post('/v1/field-keys').send({ displayName: 'fktest' })
+      .then(({ body }) => service.post(`/v1/key/${body.token}/forms/withrepeat/submissions`)
+        .send(testData.instances.withrepeat.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200)))));
 });
 
