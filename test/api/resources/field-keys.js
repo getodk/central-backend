@@ -1,5 +1,6 @@
 const should = require('should');
 const { pipe } = require('ramda');
+const { DateTime } = require('luxon');
 const { testService } = require('../setup');
 const { shouldBeDate, couldBeDate, shouldBeToken } = require('../util');
 const testData = require('../data');
@@ -16,10 +17,11 @@ describe('api: /field-keys', () => {
         asAlice.post('/v1/field-keys')
           .send({ displayName: 'test1' })
           .expect(200)
-          .then(({ body }) =>
-            // TODO: not happy about how these assertions are done.
-            pipe(shouldBeToken('token'), shouldBeDate('createdAt'))(body)
-              .should.eql({ id: 8, displayName: 'test1', createdBy: 5, meta: null, updatedAt: null })))));
+          .then(({ body }) => {
+            body.should.be.a.FieldKey();
+            body.displayName.should.equal('test1');
+            body.createdBy.should.equal(5);
+          }))));
   });
 
   describe('GET', () => {
@@ -33,16 +35,13 @@ describe('api: /field-keys', () => {
           .then(() => asAlice.post('/v1/field-keys').send({ displayName: 'test 3' }).expect(200))
           .then(() => asAlice.get('/v1/field-keys')
             .expect(200)
-            .then(({ body }) =>
-              // TODO: not happy about how these assertions are done.
-              body
-                .map(shouldBeToken('token'))
-                .map(shouldBeDate('createdAt'))
-                .should.eql([
-                  { id: 11, displayName: 'test 3', createdBy: 5, meta: null, updatedAt: null },
-                  { id: 10, displayName: 'test 2', createdBy: 5, meta: null, updatedAt: null },
-                  { id: 9, displayName: 'test 1', createdBy: 5, meta: null, updatedAt: null }
-                ]))))));
+            .then(({ body }) => {
+              body.map((fk) => fk.displayName).should.eql([ 'test 3', 'test 2', 'test 1' ]);
+              body.forEach((fk) => {
+                fk.should.be.a.FieldKey()
+                fk.createdBy.should.equal(5);
+              });
+            })))));
 
     it('should leave tokens out if the session is ended', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -50,11 +49,41 @@ describe('api: /field-keys', () => {
           .then(({ body }) => asAlice.delete('/v1/sessions/' + body.token).expect(200))
           .then(() => asAlice.get('/v1/field-keys')
             .expect(200)
-            .then(({ body }) =>
-              // TODO: not happy about how these assertions are done.
-              body
-                .map(shouldBeDate('createdAt'))
-                .should.eql([ { id: 12, displayName: 'compromised', createdBy: 5, meta: null, updatedAt: null, token: null } ]))))));
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              const [ key ] = body;
+              key.should.be.a.FieldKey();
+              should(key.token).equal(null);
+            })))));
+
+    it('should join through additional data if extended metadata is requested', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/field-keys').send({ displayName: 'test 1' }).expect(200)
+          .then(() => asAlice.post('/v1/field-keys').send({ displayName: 'test 2' }).expect(200))
+          .then(() => asAlice.get('/v1/field-keys')
+            .set('X-Extended-Metadata', 'true')
+            .expect(200)
+            .then(({ body }) => body.forEach((obj) => {
+              obj.should.be.an.ExtendedFieldKey();
+              obj.createdBy.displayName.should.equal('Alice');
+            }))))));
+
+    it('should correctly report last used in extended metadata', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/field-keys').send({ displayName: 'test 1' }).expect(200)
+          .then(() => asAlice.post('/v1/field-keys').send({ displayName: 'test 2' })
+            .then(({ body }) => service.post(`/v1/key/${body.token}/forms/simple/submissions`)
+              .send(testData.instances.simple.one)
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+              .then(() => asAlice.get('/v1/field-keys')
+                .set('X-Extended-Metadata', 'true')
+                .expect(200)
+                .then(({ body }) => {
+                  body.forEach((fk) => fk.should.be.an.ExtendedFieldKey());
+                  DateTime.fromISO(body[0].lastUsed).plus({ minutes: 2 }).should.be.greaterThan(DateTime.local());
+                  should(body[1].lastUsed).equal(null);
+                })))))));
   });
 
   describe('/:id DELETE', () => {
