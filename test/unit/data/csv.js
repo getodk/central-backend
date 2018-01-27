@@ -12,7 +12,8 @@ const tmp = require('tmp');
 
 // takes care of instance envelope boilerplate.
 const instance = (id, data) => ({
-  xml: `<submission><data><data id="data" instanceID="${id}">${data}</data></data></submission>`
+  instanceId: id,
+  xml: `<data id="data">${data}</data>`
 });
 
 // does all the plumbing work to call the streamer, then unzip and detangle the result.

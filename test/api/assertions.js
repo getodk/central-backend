@@ -11,6 +11,11 @@ should.Assertion.add('token', function() {
   this.obj.should.match(/^[a-z0-9!+]{64}$/i);
 });
 
+should.Assertion.add('uuid', function() {
+  this.params = { operator: 'to be a uuid string' };
+  this.obj.should.match(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+});
+
 should.Assertion.add('Actor', function() {
   this.params = { operator: 'to be an Actor' };
 
