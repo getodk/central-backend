@@ -22,10 +22,5 @@ const couldBeDate = curry((field, obj) => {
   return without([ field ], obj);
 });
 
-const shouldBeToken = curry((field, obj) => {
-  should(obj[field]).match(/^[a-z0-9!+]{64}$/i);
-  return without([ field ], obj);
-});
-
-module.exports = { shouldBeDate, couldBeDate, shouldBeToken };
+module.exports = { shouldBeDate, couldBeDate };
 

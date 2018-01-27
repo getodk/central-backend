@@ -9,6 +9,57 @@ class X {
 }
 
 describe('util/db', () => {
+  describe('fieldsForJoin', () => {
+    const { fieldsForJoin } = util;
+    it('should return a set of flattened fields', () => {
+      fieldsForJoin({
+        prop1: { table: 'prop1table', fields: [ 'a', 'b' ] },
+        prop2: { table: 'prop2table', fields: [ 'c', 'd' ] }
+      }).should.eql({
+        'prop1!a': 'prop1table.a',
+        'prop1!b': 'prop1table.b',
+        'prop2!c': 'prop2table.c',
+        'prop2!d': 'prop2table.d'
+      });
+    });
+  });
+
+  describe('joinRowToInstance', () => {
+    const { joinRowToInstance } = util;
+    class TestInstance {
+      constructor(props) { Object.assign(this, props); }
+    }
+    class TestMain extends TestInstance {
+      static fields() { return [ 'a', 'b', 'inner' ]; }
+    }
+    class TestSecondary extends TestInstance {
+      static fields() { return [ 'c', 'd' ]; }
+    }
+    it('should inflate instances', () => {
+      const result = joinRowToInstance('main', { main: TestMain, inner: TestSecondary })({
+        'main!a': 1,
+        'main!b': 2,
+        'inner!c': 3,
+        'inner!d': 4
+      });
+      result.should.eql(new TestMain({ a: 1, b: 2, inner: new TestSecondary({ c: 3, d: 4 }) }));
+      result.should.be.an.instanceof(TestMain);
+      result.inner.should.be.an.instanceof(TestSecondary);
+    });
+    it('should handle optional instances', () => {
+      const result = joinRowToInstance('main', { main: TestMain, one: Option.of(TestSecondary), two: Option.of(TestSecondary) })({
+        'main!a': 1,
+        'main!b': 2,
+        'two!c': 3,
+        'two!d': 4
+      });
+      result.should.eql(new TestMain({ a: 1, b: 2, one: Option.none(), two: Option.of(new TestSecondary({ c: 3, d: 4 })) }));
+      result.should.be.an.instanceof(TestMain);
+      result.one.should.equal(Option.none());
+      result.two.get().should.be.an.instanceof(TestSecondary);
+    });
+  });
+
   describe('rowToInstance', () => {
     const { rowToInstance } = util;
     it('should instantiate the first row result as the given class', () => {
