@@ -38,9 +38,12 @@ describe('util/http', () => {
       serialize({ forApi: () => 42 }).should.equal(42);
     });
 
+    it('should leave strings alone', () => {
+      serialize('hello').should.equal('hello');
+    });
+
     it('should jsonify any other values it finds', () => {
       serialize(42).should.equal('42');
-      serialize('hello').should.equal('"hello"');
       serialize({ x: 1 }).should.equal('{"x":1}');
     });
 
@@ -50,7 +53,7 @@ describe('util/http', () => {
         { forApi: () => 42 },
         [ 'world',
           { forApi: () => 23 } ]
-      ]).should.eql(['"hello"', 42, [ '"world"', 23 ] ]); // TODO: is this actually the desired result?
+      ]).should.eql(['hello', 42, [ 'world', 23 ] ]); // TODO: is this actually the desired result?
     });
   });
 
@@ -157,7 +160,7 @@ describe('util/http', () => {
     it('should send the given response', () => {
       const response = createModernResponse();
       endpoint(() => 'test')(createRequest(), response);
-      response._getData().should.equal('"test"');
+      response._getData().should.equal('test');
     });
   });
 
