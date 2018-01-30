@@ -211,7 +211,7 @@ describe('util/http', () => {
 
       response.on('end', () => {
         response.statusCode.should.equal(400);
-        response._getData().trim().should.equal('<OpenRosaResponse xmlns="http://openrosa.org/http/response" items="0">\n    <message nature="error"></message>\n  </OpenRosaResponse>');
+        response._getData().trim().should.equal('<OpenRosaResponse xmlns="http://openrosa.org/http/response" items="0">\n    <message nature="error">test message</message>\n  </OpenRosaResponse>');
         done();
       });
 
