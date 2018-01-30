@@ -83,6 +83,22 @@ describe('ExplicitPromise', () => {
       .point();
   });
 
+  describe('fromCallback legacy CPS API conversion', () => {
+    it('should resolve via callback if no error is found', (done) => {
+      ExplicitPromise.fromCallback((cb) => cb(null, 42)).point().then((result) => {
+        result.should.equal(42);
+        done();
+      });
+    });
+
+    it('should reject via callback if an error is provided', (done) => {
+      ExplicitPromise.fromCallback((cb) => cb(-1, null)).point().catch((result) => {
+        result.should.equal(-1);
+        done();
+      });
+    });
+  });
+
   it('package should provide a resolve that obeys point', (done) => {
     resolve(20).point().then((x) => {
       x.should.equal(20);
