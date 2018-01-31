@@ -1,8 +1,10 @@
+const appRoot = require('app-root-path');
 const should = require('should');
 const { open } = require('yauzl');
 const streamTest = require('streamtest').v2;
 const yauzl = require('yauzl');
-const { streamDataZip } = require('../../../lib/data/csv');
+const { streamJoinedCsvs } = require(appRoot + '/lib/data/csv');
+const { zipStreamFromParts } = require(appRoot + '/lib/data/zip');
 const { createWriteStream } = require('fs');
 const tmp = require('tmp');
 
@@ -27,7 +29,7 @@ const instance = (id, data) => ({
 // }
 const callAndParse = (form, inStream, callback) => {
   tmp.file((_, tmpfile) => {
-    const zipStream = streamDataZip(inStream, form);
+    const zipStream = zipStreamFromParts(streamJoinedCsvs(inStream, form));
     const writeStream = createWriteStream(tmpfile);
     zipStream.pipe(writeStream);
     zipStream.on('end', () => {
