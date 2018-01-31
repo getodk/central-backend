@@ -25,19 +25,22 @@ const zipStreamToFiles = (zipStream, callback) => {
 
           zipfile.on('entry', (entry) => entries.push(entry));
           zipfile.on('end', () => {
-            entries.forEach((entry) => {
-              result.filenames.push(entry.fileName);
-              zipfile.openReadStream(entry, (_, resultStream) => {
-                resultStream.pipe(streamTest.toText((_, contents) => {
-                  result[entry.fileName] = contents;
-                  completed += 1;
-                  if (completed === entries.length) {
-                    callback(result);
-                    zipfile.close();
-                  }
-                }));
+            if (entries.length === 0)
+              callback(result);
+            else
+              entries.forEach((entry) => {
+                result.filenames.push(entry.fileName);
+                zipfile.openReadStream(entry, (_, resultStream) => {
+                  resultStream.pipe(streamTest.toText((_, contents) => {
+                    result[entry.fileName] = contents;
+                    completed += 1;
+                    if (completed === entries.length) {
+                      callback(result);
+                      zipfile.close();
+                    }
+                  }));
+                });
               });
-            });
           });
         });
       }, 5); // otherwise sometimes the file doesn't fully drain
