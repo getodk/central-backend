@@ -1,12 +1,9 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { open } = require('yauzl');
 const streamTest = require('streamtest').v2;
-const yauzl = require('yauzl');
+const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
 const { streamJoinedCsvs } = require(appRoot + '/lib/data/csv');
 const { zipStreamFromParts } = require(appRoot + '/lib/data/zip');
-const { createWriteStream } = require('fs');
-const tmp = require('tmp');
 
 
 // these are a little closer to integration tests than unit tests, by virtue of
@@ -18,48 +15,8 @@ const instance = (id, data) => ({
   xml: `<data id="data">${data}</data>`
 });
 
-// does all the plumbing work to call the streamer, then unzip and detangle the result.
-// also, hooraaaayy callback hell.
-// calls the callback with an object as follows:
-// {
-//      filenames: [ names of files in zip ],
-//      {filename}: "contents",
-//      {filename}: "contents",
-//      …
-// }
-const callAndParse = (form, inStream, callback) => {
-  tmp.file((_, tmpfile) => {
-    const zipStream = zipStreamFromParts(streamJoinedCsvs(inStream, form));
-    const writeStream = createWriteStream(tmpfile);
-    zipStream.pipe(writeStream);
-    zipStream.on('end', () => {
-      setTimeout(() => {
-        yauzl.open(tmpfile, { autoClose: false }, (_, zipfile) => {
-          const result = { filenames: [] };
-          let entries = [];
-          let completed = 0;
-
-          zipfile.on('entry', (entry) => entries.push(entry));
-          zipfile.on('end', () => {
-            entries.forEach((entry) => {
-              result.filenames.push(entry.fileName);
-              zipfile.openReadStream(entry, (_, resultStream) => {
-                resultStream.pipe(streamTest.toText((_, contents) => {
-                  result[entry.fileName] = contents;
-                  completed += 1;
-                  if (completed === entries.length) {
-                    callback(result);
-                    zipfile.close();
-                  }
-                }));
-              });
-            });
-          });
-        });
-      }, 5); // otherwise sometimes the file doesn't fully drain
-    });
-  });
-};
+const callAndParse = (form, inStream, callback) =>
+  zipStreamToFiles(zipStreamFromParts(streamJoinedCsvs(inStream, form)), callback);
 
 describe('.csv.zip output', () => {
   it('should output a simple flat table within a zip', (done) => {
