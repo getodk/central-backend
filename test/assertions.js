@@ -1,9 +1,16 @@
 const should = require('should');
 const { DateTime } = require('luxon');
+const { validate } = require('fast-xml-parser');
 
 should.Assertion.add('isoDate', function() {
   this.params = { operator: 'to be an ISO date string' };
   DateTime.fromISO(this.obj).isValid.should.equal(true);
+});
+
+should.Assertion.add('recentIsoDate', function() {
+  this.params = { operator: 'to be a recent ISO date string' };
+  this.obj.should.be.an.isoDate();
+  DateTime.fromISO(this.obj).plus({ minutes: 2 }).should.be.greaterThan(DateTime.local());
 });
 
 should.Assertion.add('token', function() {
@@ -14,6 +21,11 @@ should.Assertion.add('token', function() {
 should.Assertion.add('uuid', function() {
   this.params = { operator: 'to be a uuid string' };
   this.obj.should.match(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+});
+
+should.Assertion.add('md5Sum', function() {
+  this.params = { operator: 'to be an md5 sum string' };
+  this.obj.should.match(/^[0-9a-f]{32}$/i);
 });
 
 should.Assertion.add('Actor', function() {
@@ -41,5 +53,28 @@ should.Assertion.add('ExtendedFieldKey', function() {
   this.obj.createdBy.should.be.an.Actor();
   this.obj.should.have.property('lastUsed');
   if (this.obj.lastUsed != null) this.obj.lastUsed.should.be.an.isoDate();
+});
+
+should.Assertion.add('Form', function() {
+  this.params = { operator: 'to be a Form' };
+
+  Object.keys(this.obj).should.containDeep([ 'xmlFormId', 'xml', 'createdAt', 'updatedAt', 'name', 'version', 'hash' ]);
+  this.obj.xmlFormId.should.be.a.String();
+  this.obj.xml.should.be.a.String();
+  validate(this.obj.xml).should.equal(true);
+  this.obj.createdAt.should.be.an.isoDate();
+  if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
+  if (this.obj.name != null) this.obj.name.should.be.a.String();
+  if (this.obj.version != null) this.obj.version.should.be.a.String();
+  this.obj.hash.should.be.an.md5Sum();
+});
+
+should.Assertion.add('ExtendedForm', function() {
+  this.params = { operator: 'to be a ExtendedForm' };
+
+  this.obj.should.be.a.Form();
+  Object.keys(this.obj).should.containDeep([ 'submissions', 'lastSubmission' ]);
+  if (this.obj.submissions != null) this.obj.submissions.should.be.a.Number();
+  if (this.obj.lastSubmission != null) this.obj.lastSubmission.should.be.an.isoDate();
 });
 

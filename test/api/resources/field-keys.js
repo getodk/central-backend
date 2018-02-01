@@ -81,7 +81,7 @@ describe('api: /field-keys', () => {
                 .expect(200)
                 .then(({ body }) => {
                   body.forEach((fk) => fk.should.be.an.ExtendedFieldKey());
-                  DateTime.fromISO(body[0].lastUsed).plus({ minutes: 2 }).should.be.greaterThan(DateTime.local());
+                  body[0].lastUsed.should.be.a.recentIsoDate();
                   should(body[1].lastUsed).equal(null);
                 })))))));
   });
