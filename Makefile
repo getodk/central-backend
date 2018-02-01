@@ -25,7 +25,7 @@ test-unit: node_modules
 	node node_modules/mocha/bin/mocha --recursive test/unit
 
 test-coverage: node_modules
-	node node_modules/.bin/istanbul cover node_modules/.bin/_mocha -- --recursive
+	node node_modules/.bin/istanbul cover -x "**/migrations/**" node_modules/.bin/_mocha -- --recursive
 
 lint:
 	node node_modules/.bin/eslint lib
