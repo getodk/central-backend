@@ -1,6 +1,5 @@
 const should = require('should');
 const { testService } = require('../setup');
-const { shouldBeDate, couldBeDate } = require('../util');
 
 describe('api: /sessions', () => {
   describe('POST', () => {
@@ -9,9 +8,7 @@ describe('api: /sessions', () => {
         .send({ email: 'chelsea@opendatakit.org', password: 'chelsea' })
         .expect(200)
         .then(({ body }) => {
-          shouldBeDate('expiresAt', body);
-          shouldBeDate('createdAt', body);
-          body.token.length.should.equal(64);
+          body.should.be.a.Session();
         })));
 
     it('should return a 401 if the password is wrong', testService((service) =>

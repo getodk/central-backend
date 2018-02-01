@@ -38,6 +38,23 @@ should.Assertion.add('Actor', function() {
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 
+should.Assertion.add('User', function() {
+  this.params = { operator: 'to be a User' };
+
+  this.obj.should.be.an.Actor();
+  Object.keys(this.obj).should.containDeep([ 'email' ]);
+  this.obj.email.should.be.a.String();
+});
+
+should.Assertion.add('Session', function() {
+  this.params = { operator: 'to be a Session' };
+
+  Object.keys(this.obj).should.containDeep([ 'expiresAt', 'createdAt', 'token' ]);
+  this.obj.expiresAt.should.be.an.isoDate();
+  this.obj.createdAt.should.be.an.isoDate();
+  this.obj.token.should.be.a.token();
+});
+
 should.Assertion.add('FieldKey', function() {
   this.params = { operator: 'to be a Field Key' };
 

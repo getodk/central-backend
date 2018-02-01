@@ -2,7 +2,6 @@ const should = require('should');
 const { pipe } = require('ramda');
 const { DateTime } = require('luxon');
 const { testService } = require('../setup');
-const { shouldBeDate, couldBeDate } = require('../util');
 const testData = require('../data');
 
 describe('api: /field-keys', () => {

@@ -1,6 +1,5 @@
 const should = require('should');
 const { testService } = require('../setup');
-const { shouldBeDate, couldBeDate } = require('../util');
 
 describe('api: /users', () => {
   describe('GET', () => {
@@ -12,15 +11,9 @@ describe('api: /users', () => {
         asAlice.get('/v1/users')
           .expect(200)
           .expect(({ body }) => {
-            // TODO: not happy about how these assertions are done.
-            body
-              .map(shouldBeDate('createdAt'))
-              .map(couldBeDate('updatedAt'))
-              .should.eql([
-                { displayName: 'Alice', email: 'alice@opendatakit.org', id: 5, meta: null },
-                { displayName: 'Bob', email: 'bob@opendatakit.org', id: 6, meta: null },
-                { displayName: 'Chelsea', email: 'chelsea@opendatakit.org', id: 7, meta: null }
-              ]);
+            body.forEach((user) => user.should.be.a.User());
+            body.map((user) => user.displayName).should.eql([ 'Alice', 'Bob', 'Chelsea' ]);
+            body.map((user) => user.email).should.eql([ 'alice@opendatakit.org', 'bob@opendatakit.org', 'chelsea@opendatakit.org' ]);
           }))));
   });
 
