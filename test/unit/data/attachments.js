@@ -26,5 +26,22 @@ describe('.zip attachments streaming', () => {
       done();
     });
   });
+
+  it('should deal with unsafe filenames sanely', (done) => {
+    const inStream = streamTest.fromObjects([
+      { instanceId: '../subone', name: 'firstfile.ext', content: 'this is my first file' },
+      { instanceId: 'subone', name: '../secondfile.ext', content: 'this is my second file' },
+      { instanceId: 'subone', name: './.secondfile.ext', content: 'this is my duplicate second file' },
+    ]);
+    zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream)), (result) => {
+      result.filenames.should.eql([
+        'files/..subone/firstfile.ext',
+        'files/subone/..secondfile.ext',
+        'files/subone/..secondfile.ext'
+      ]);
+
+      done();
+    });
+  });
 });
 

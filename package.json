@@ -25,6 +25,7 @@
     "pg-query-stream": "~1.1",
     "prompt": "~1",
     "ramda": "~0",
+    "sanitize-filename": "~1",
     "sha": "~2",
     "tmp": "~0",
     "uuid": "~3"
