@@ -46,6 +46,19 @@ should.Assertion.add('User', function() {
   this.obj.email.should.be.a.String();
 });
 
+should.Assertion.add('Submission', function() {
+  this.params = { operator: 'to be a Submission' };
+
+  Object.keys(this.obj).should.containDeep([ 'formId', 'instanceId', 'xml', 'createdAt', 'updatedAt', 'submitter' ]);
+  this.obj.formId.should.be.a.Number();
+  this.obj.instanceId.should.be.a.String();
+  this.obj.xml.should.be.a.String();
+  validate(this.obj.xml).should.equal(true);
+  this.obj.createdAt.should.be.an.isoDate();
+  if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
+  this.obj.submitter.should.be.a.Number();
+});
+
 should.Assertion.add('Session', function() {
   this.params = { operator: 'to be a Session' };
 
