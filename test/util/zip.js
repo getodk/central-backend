@@ -25,9 +25,10 @@ const zipStreamToFiles = (zipStream, callback) => {
 
           zipfile.on('entry', (entry) => entries.push(entry));
           zipfile.on('end', () => {
-            if (entries.length === 0)
+            if (entries.length === 0) {
               callback(result);
-            else
+              zipfile.close();
+            } else {
               entries.forEach((entry) => {
                 result.filenames.push(entry.fileName);
                 zipfile.openReadStream(entry, (_, resultStream) => {
@@ -41,6 +42,7 @@ const zipStreamToFiles = (zipStream, callback) => {
                   }));
                 });
               });
+            }
           });
         });
       }, 5); // otherwise sometimes the file doesn't fully drain
