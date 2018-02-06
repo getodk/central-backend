@@ -100,7 +100,7 @@ Chelsea,38,"San Francisco, CA"
     callAndParse(form, inStream, (result) => {
       result.filenames.should.eql([ 'structuredform.csv' ]);
       result['structuredform.csv'].should.equal(
-`instanceID,name,type,street,city
+`meta.instanceID,name,home.type,home.address.street,home.address.city
 one,Alice,Apartment,101 Pike St,"Seattle, WA"
 two,Bob,Condo,20 Broadway,"Portland, OR"
 three,Chelsea,House,99 Mission Ave,"San Francisco, CA"
@@ -150,7 +150,7 @@ three,Chelsea,House,99 Mission Ave,"San Francisco, CA"
     callAndParse(form, inStream, (result) => {
       result.filenames.should.eql([ 'singlerepeat.csv', 'singlerepeat-children-child.csv' ]);
       result['singlerepeat.csv'].should.equal(
-`instanceID,name,age
+`meta.instanceID,name,age
 one,Alice,30
 two,Bob,34
 three,Chelsea,38
@@ -210,7 +210,7 @@ three,Candace,2
     callAndParse(form, inStream, (result) => {
       result.filenames.should.eql([ 'singlerepeat.csv', 'singlerepeat-children-child.csv', 'singlerepeat-children-child-toy.csv' ]);
       result['singlerepeat.csv'].should.equal(
-`instanceID,name,age
+`meta.instanceID,name,age
 one,Alice,30
 two,Bob,34
 three,Chelsea,38

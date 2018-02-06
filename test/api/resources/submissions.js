@@ -223,7 +223,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => new Promise((done) =>
             zipStreamToFiles(asAlice.get('/v1/forms/simple/submissions.csv.zip'), (result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
-              result['simple.csv'].should.equal(`instanceID,name,age
+              result['simple.csv'].should.equal(`meta.instanceID,name,age
 one,Alice,30
 two,Bob,34
 three,Chelsea,38
