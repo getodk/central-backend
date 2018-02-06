@@ -17,7 +17,7 @@ describe('api: /forms', () => {
           .then(({ body }) => {
             body.forEach((form) => form.should.be.a.Form());
             body.map((form) => form.xmlFormId).should.eql([ 'withrepeat', 'simple' ]);
-            body.map((form) => form.hash).should.eql([ '000eb66ff915cd97a896d9e5dea39469', '5c09c21d4c71f2f13f6aa26227b2d133' ]);
+            body.map((form) => form.hash).should.eql([ '971879f078afd4353f3969d5322681ab', '5c09c21d4c71f2f13f6aa26227b2d133' ]);
             body.map((form) => form.version).should.eql([ '1.0', null ]);
           }))));
 
@@ -62,7 +62,7 @@ describe('api: /forms', () => {
       <formID>withrepeat</formID>
       <name></name>
       <version>1.0</version>
-      <hash>md5:000eb66ff915cd97a896d9e5dea39469</hash>
+      <hash>md5:971879f078afd4353f3969d5322681ab</hash>
       <downloadUrl>http://localhost:8989/v1/forms/withrepeat.xml</downloadUrl>
     </xform>
     <xform>

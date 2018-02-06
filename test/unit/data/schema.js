@@ -1,5 +1,7 @@
+const appRoot = require('app-root-path');
 const should = require('should');
-const { getFormSchema, flattenSchemaStructures } = require('../../../lib/data/schema');
+const { getFormSchema, flattenSchemaStructures, _findRepeats } = require(appRoot + '/lib/data/schema');
+const { toTraversable } = require(appRoot + '/lib/util/xml');
 
 describe('form schema', () => {
   describe('parsing', () => {
@@ -109,9 +111,9 @@ describe('form schema', () => {
                 <data id="form">
                   <name/>
                   <children>
-                    <child jr:template="">
+                    <child>
                       <name/>
-                      <toy jr:template="">
+                      <toy>
                         <name/>
                       </toy>
                     </child>
@@ -123,6 +125,27 @@ describe('form schema', () => {
               <bind nodeset="/data/children/child/toy/name" type="string"/>
             </model>
           </h:head>
+          <h:body>
+            <input ref="/data/name">
+              <label>What is your name?</label>
+            </input>
+            <group ref="/data/children/child">
+              <label>Child</label>
+              <repeat nodeset="/data/children/child">
+                <input ref="/data/children/child/name">
+                  <label>What is the child's name?</label>
+                </input>
+                <group ref="/data/children/child/toy">
+                  <label>Child</label>
+                  <repeat nodeset="/data/children/child/toy">
+                    <input ref="/data/children/child/toy/name">
+                      <label>What is the toy's name?</label>
+                    </input>
+                  </repeat>
+                </group>
+              </repeat>
+            </group>
+          </h:body>
         </h:html>`;
       getFormSchema({ xml }).should.eql([
         { name: 'name', type: 'string' },
@@ -135,6 +158,42 @@ describe('form schema', () => {
           ] }
         ] }
       ]);
+    });
+
+    describe('repeat locator', () => {
+      it('should find repeat nodes', () => {
+        const xml = `
+          <body>
+            <input/>
+            <group>
+              <repeat nodeset="one">
+                <repeat nodeset="two"/>
+                <group>
+                  <repeat nodeset="three">
+                    <input/>
+                  </repeat>
+                </group>
+              </repeat>
+            </group>
+          </body>`;
+        _findRepeats(toTraversable(xml)).should.eql([ 'one', 'two', 'three' ]);
+      });
+
+      it('does not crash given no body node', () => {
+        _findRepeats(null).should.eql([]);
+        _findRepeats(undefined).should.eql([]);
+      });
+
+      it('does not crash given a repeat with no nodeset', () => {
+        const xml = `
+          <body>
+            <repeat/>
+            <repeat>
+              <repeat nodeset="four"/>
+            </repeat>
+          </body>`;
+        _findRepeats(toTraversable(xml)).should.eql([ 'four' ]);
+      });
     });
   });
 
@@ -206,6 +265,28 @@ describe('form schema', () => {
                 <bind nodeset="/data/occupation/reports/report/project/due" type="date"/>
               </model>
             </h:head>
+            <h:body>
+              <input ref="/data/name">
+                <label>What is your name?</label>
+              </input>
+              <input ref="/data/occupation/title">
+                <label>What is your job title?</label>
+              </input>
+              <group ref="/data/occupation/reports">
+                <label>Report</label>
+                <repeat nodeset="/data/occupation/reports/report">
+                  <input ref="/data/occupation/reports/report/name">
+                    <label>What is the report's name?</label>
+                  </input>
+                  <input ref="/data/occupation/reports/report/project/name">
+                    <label>What is the report's current project?</label>
+                  </input>
+                  <input ref="/data/occupation/reports/report/project/due">
+                    <label>When is the report's current project due?</label>
+                  </input>
+                </repeat>
+              </group>
+            </h:body>
           </h:html>`;
         flattenSchemaStructures(getFormSchema({ xml })).should.eql([
           { path: [ 'name' ], type: 'string' },

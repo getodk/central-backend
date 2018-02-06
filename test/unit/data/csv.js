@@ -139,6 +139,25 @@ three,Chelsea,House,99 Mission Ave,"San Francisco, CA"
               <bind nodeset="/data/children/child/age" type="integer"/>
             </model>
           </h:head>
+          <h:body>
+            <input ref="/data/name">
+              <label>What is your name?</label>
+            </input>
+            <input ref="/data/age">
+              <label>What is your age?</label>
+            </input>
+            <group ref="/data/children/child">
+              <label>Child</label>
+              <repeat nodeset="/data/children/child">
+                <input ref="/data/children/child/name">
+                  <label>What is the child's name?</label>
+                </input>
+                <input ref="/data/children/child/age">
+                  <label>What is the child's age?</label>
+                </input>
+              </repeat>
+            </group>
+          </h:body>
         </h:html>`
     };
     const inStream = streamTest.fromObjects([
@@ -181,10 +200,10 @@ three,Candace,2
                   <name/>
                   <age/>
                   <children>
-                    <child jr:template="">
+                    <child>
                       <name/>
                       <age/>
-                      <toy jr:template="">
+                      <toy>
                         <name/>
                       </toy>
                     </child>
@@ -199,6 +218,33 @@ three,Candace,2
               <bind nodeset="/data/children/child/toy/name" type="string"/>
             </model>
           </h:head>
+          <h:body>
+            <input ref="/data/name">
+              <label>What is your name?</label>
+            </input>
+            <input ref="/data/age">
+              <label>What is your age?</label>
+            </input>
+            <group ref="/data/children/child">
+              <label>Child</label>
+              <repeat nodeset="/data/children/child">
+                <input ref="/data/children/child/name">
+                  <label>What is the child's name?</label>
+                </input>
+                <input ref="/data/children/child/age">
+                  <label>What is the child's age?</label>
+                </input>
+                <group ref="/data/children/child/toy">
+                  <label>Child</label>
+                  <repeat nodeset="/data/children/child/toy">
+                    <input ref="/data/children/child/toy/name">
+                      <label>What is the toy's name?</label>
+                    </input>
+                  </repeat>
+                </group>
+              </repeat>
+            </group>
+          </h:body>
         </h:html>`
     };
     const inStream = streamTest.fromObjects([

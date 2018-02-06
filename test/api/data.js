@@ -61,6 +61,25 @@ module.exports = {
       <bind nodeset="/data/children/child/age" type="integer"/>
     </model>
   </h:head>
+  <h:body>
+    <input ref="/data/name">
+      <label>What is your name?</label>
+    </input>
+    <input ref="/data/age">
+      <label>What is your age?</label>
+    </input>
+    <group ref="/data/children/child">
+      <label>Child</label>
+      <repeat nodeset="/data/children/child">
+        <input ref="/data/children/child/name">
+          <label>What is the child's name?</label>
+        </input>
+        <input ref="/data/children/child/age">
+          <label>What is the child's age?</label>
+        </input>
+      </repeat>
+    </group>
+  </h:body>
 </h:html>`,
 
     simple2: `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
