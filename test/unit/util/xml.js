@@ -1,5 +1,5 @@
 const should = require('should');
-const { standardOptions, toTraversable, findAndTraverse, traverseFirstChild } = require('../../../lib/util/xml');
+const { standardOptions, toTraversable, findAndTraverse, traverseFirstChild, stripNamespacesFromPath } = require('../../../lib/util/xml');
 
 describe('util/xml', () => {
   describe('standardOptions/toTraversable', () => {
@@ -49,6 +49,17 @@ describe('util/xml', () => {
     it('should not crash if the child does not exist', () => {
       const root = toTraversable('<root/>');
       should.not.exist(traverseFirstChild(traverseFirstChild(root)));
+    });
+  });
+
+  describe('stripNamespacesFromPath', () => {
+    it('should work on relative and absolute paths', () => {
+      stripNamespacesFromPath('/orx:meta/orx:instanceID').should.equal('/meta/instanceID');
+      stripNamespacesFromPath('orx:meta/orx:instanceID').should.equal('meta/instanceID');
+    });
+
+    it('should work on mixed namespace presence', () => {
+      stripNamespacesFromPath('/ns:abc/def/ns2:ghi').should.equal('/abc/def/ghi');
     });
   });
 });

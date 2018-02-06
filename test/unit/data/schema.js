@@ -29,6 +29,36 @@ describe('form schema', () => {
       ]);
     });
 
+    it('should handle namespaced bindings correctly', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <orx:meta>
+                    <orx:instanceID/>
+                  </orx:meta>
+                  <name/>
+                  <age/>
+                </data>
+              </instance>
+              <bind nodeset="/data/orx:meta/orx:instanceID" type="string"/>
+              <bind nodeset="/data/name" type="string"/>
+              <bind type="integer" nodeset="/data/age"/>
+            </model>
+          <h:/head>
+        <h:/html>`;
+      getFormSchema({ xml }).should.eql([
+        { name: 'meta', type: 'structure', children: [
+          { name: 'instanceID', type: 'string' }
+        ] },
+        { name: 'name', type: 'string' },
+        { name: 'age', type: 'integer' }
+      ]);
+    });
+
     it('should deal correctly with nonbinding nested nodes', () => {
       const xml = `
         <?xml version="1.0"?>
