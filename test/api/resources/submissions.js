@@ -205,9 +205,6 @@ describe('api: /forms/:id/submissions', () => {
           }))));
   });
 
-  // NOTE: here we do not endeavour to comprehensively test all possible data
-  // conditions; this is done in the unit tests (test/unit/data/*). rather,
-  // we aim to verify that all the pipes are glued together as we expect.
   describe('.csv.zip GET', () => {
     it('should return a zipfile with the relevant data', testService((service) =>
       service.login('alice', (asAlice) =>

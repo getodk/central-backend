@@ -53,27 +53,26 @@ describe('api: /forms', () => {
           .set('Date', DateTime.local().toHTTP())
           .expect(200)
           .then(({ text, headers }) => {
-            // TODO: re-evaluate if fragile.
-            parse(text, { textNodeConversion: false }).should.eql({
-              xforms: {
-                xform: [{
-                  formID: 'withrepeat',
-                  name: '',
-                  version: '1.0',
-                  hash: 'md5:000eb66ff915cd97a896d9e5dea39469',
-                  downloadUrl: 'http://localhost:8989/v1/forms/withrepeat.xml'
-                }, {
-                  formID: 'simple',
-                  name: 'Simple',
-                  version: '',
-                  hash: 'md5:5c09c21d4c71f2f13f6aa26227b2d133',
-                  downloadUrl: 'http://localhost:8989/v1/forms/simple.xml'
-                }]
-              }
-            });
-
             // Collect is particular about this:
             headers['content-type'].should.equal('text/xml; charset=utf-8');
+
+            text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+  <xforms xmlns="http://openrosa.org/xforms/xformsList">
+    <xform>
+      <formID>withrepeat</formID>
+      <name></name>
+      <version>1.0</version>
+      <hash>md5:000eb66ff915cd97a896d9e5dea39469</hash>
+      <downloadUrl>http://localhost:8989/v1/forms/withrepeat.xml</downloadUrl>
+    </xform>
+    <xform>
+      <formID>simple</formID>
+      <name>Simple</name>
+      <version></version>
+      <hash>md5:5c09c21d4c71f2f13f6aa26227b2d133</hash>
+      <downloadUrl>http://localhost:8989/v1/forms/simple.xml</downloadUrl>
+    </xform>
+  </xforms>`);
           }))));
   });
 
