@@ -20,8 +20,8 @@ describe('form schema', () => {
               <bind type="integer" nodeset="/data/age"/>
               <bind nodeset="/data/hometown" type="select1"/>
             </model>
-          <h:/head>
-        <h:/html>`;
+          </h:head>
+        </h:html>`;
       getFormSchema({ xml }).should.eql([
         { name: 'name', type: 'string' },
         { name: 'age', type: 'integer' },
@@ -48,8 +48,8 @@ describe('form schema', () => {
               <bind nodeset="/data/name" type="string"/>
               <bind type="integer" nodeset="/data/age"/>
             </model>
-          <h:/head>
-        <h:/html>`;
+          </h:head>
+        </h:html>`;
       getFormSchema({ xml }).should.eql([
         { name: 'meta', type: 'structure', children: [
           { name: 'instanceID', type: 'string' }
@@ -84,8 +84,8 @@ describe('form schema', () => {
               <bind nodeset="/data/occupation/dates/joined" type="date"/>
               <bind nodeset="/data/occupation/dates/departed" type="date"/>
             </model>
-          <h:/head>
-        <h:/html>`;
+          </h:head>
+        </h:html>`;
       getFormSchema({ xml }).should.eql([
         { name: 'name', type: 'string' },
         { name: 'occupation', type: 'structure', children: [
@@ -122,8 +122,8 @@ describe('form schema', () => {
               <bind nodeset="/data/children/child/name" type="string"/>
               <bind nodeset="/data/children/child/toy/name" type="string"/>
             </model>
-          <h:/head>
-        <h:/html>`;
+          </h:head>
+        </h:html>`;
       getFormSchema({ xml }).should.eql([
         { name: 'name', type: 'string' },
         { name: 'children', type: 'structure', children: [
@@ -165,8 +165,8 @@ describe('form schema', () => {
                 <bind nodeset="/data/occupation/dates/joined" type="date"/>
                 <bind nodeset="/data/occupation/dates/departed" type="date"/>
               </model>
-            <h:/head>
-          <h:/html>`;
+            </h:head>
+          </h:html>`;
         flattenSchemaStructures(getFormSchema({ xml })).should.eql([
           { path: [ 'name' ], type: 'string' },
           { path: [ 'occupation', 'title' ], type: 'string' },
@@ -205,8 +205,8 @@ describe('form schema', () => {
                 <bind nodeset="/data/occupation/reports/report/project/name" type="string"/>
                 <bind nodeset="/data/occupation/reports/report/project/due" type="date"/>
               </model>
-            <h:/head>
-          <h:/html>`;
+            </h:head>
+          </h:html>`;
         flattenSchemaStructures(getFormSchema({ xml })).should.eql([
           { path: [ 'name' ], type: 'string' },
           { path: [ 'occupation', 'title' ], type: 'string' },

@@ -38,8 +38,8 @@ describe('.csv.zip output', () => {
               <bind type="integer" nodeset="/data/age"/>
               <bind nodeset="/data/hometown" type="select1"/>
             </model>
-          <h:/head>
-        <h:/html>`
+          </h:head>
+        </h:html>`
     };
     const inStream = streamTest.fromObjects([
       instance('one', '<name>Alice</name><age>30</age><hometown>Seattle, WA</hometown>'),
@@ -88,8 +88,8 @@ Chelsea,38,"San Francisco, CA"
               <bind nodeset="/data/home/address/street" type="string"/>
               <bind nodeset="/data/home/address/city" type="string"/>
             </model>
-          <h:/head>
-        <h:/html>`
+          </h:head>
+        </h:html>`
     };
     const inStream = streamTest.fromObjects([
       instance('one', '<orx:meta><orx:instanceID>one</orx:instanceID></orx:meta><name>Alice</name><home><type>Apartment</type><address><street>101 Pike St</street><city>Seattle, WA</city></address></home>'),
@@ -138,8 +138,8 @@ three,Chelsea,House,99 Mission Ave,"San Francisco, CA"
               <bind nodeset="/data/children/child/name" type="string"/>
               <bind nodeset="/data/children/child/age" type="integer"/>
             </model>
-          <h:/head>
-        <h:/html>`
+          </h:head>
+        </h:html>`
     };
     const inStream = streamTest.fromObjects([
       instance('one', '<orx:meta><orx:instanceID>one</orx:instanceID></orx:meta><name>Alice</name><age>30</age>'),
@@ -198,8 +198,8 @@ three,Candace,2
               <bind nodeset="/data/children/child/age" type="integer"/>
               <bind nodeset="/data/children/child/toy/name" type="string"/>
             </model>
-          <h:/head>
-        <h:/html>`
+          </h:head>
+        </h:html>`
     };
     const inStream = streamTest.fromObjects([
       instance('one', '<orx:meta><orx:instanceID>one</orx:instanceID></orx:meta><name>Alice</name><age>30</age>'),
