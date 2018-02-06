@@ -72,7 +72,7 @@ describe('(libs/FP) Option type', () => {
     });
     describe("Getting its value", () => {
       it("get() throws error", () => {
-        (() => o.get()).should.throw(/Value not present/);
+        (() => o.get()).should.throw(/Option value not present on get/);
       });
       it("orNull() returns null", () => {
         Should(o.orNull()).be.null();
