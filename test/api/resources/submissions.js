@@ -294,7 +294,22 @@ three,Chelsea,38
             .expect(200)
             .then(({ body }) => {
               body.forEach((submission) => submission.should.be.a.Submission());
-              body.map((submission) => submission.instanceId).should.eql([ 'one', 'two' ]);
+              body.map((submission) => submission.instanceId).should.eql([ 'two', 'one' ]);
+            })))));
+
+    it('should list with extended metadata if requested', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/forms/simple/submissions')
+            .set('X-Extended-Metadata', 'true')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].should.be.an.ExtendedSubmission();
+              body[0].submitter.displayName.should.equal('Alice');
             })))));
   });
 
@@ -327,6 +342,20 @@ three,Chelsea,38
             .then(({ body }) => {
               body.should.be.a.Submission();
               body.createdAt.should.be.a.recentIsoDate();
+            })))));
+
+    it('should return with extended metadata if requested', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/forms/simple/submissions/one')
+            .set('X-Extended-Metadata', 'true')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.an.ExtendedSubmission();
+              body.submitter.displayName.should.equal('Alice');
             })))));
   });
 

@@ -46,17 +46,28 @@ should.Assertion.add('User', function() {
   this.obj.email.should.be.a.String();
 });
 
+const assertSubmissionBase = (obj) => {
+  Object.keys(obj).should.containDeep([ 'formId', 'instanceId', 'xml', 'createdAt', 'updatedAt', 'submitter' ]);
+  obj.formId.should.be.a.Number();
+  obj.instanceId.should.be.a.String();
+  obj.xml.should.be.a.String();
+  validate(obj.xml).should.equal(true);
+  obj.createdAt.should.be.an.isoDate();
+  if (obj.updatedAt != null) obj.updatedAt.should.be.an.isoDate();
+};
+
 should.Assertion.add('Submission', function() {
   this.params = { operator: 'to be a Submission' };
 
-  Object.keys(this.obj).should.containDeep([ 'formId', 'instanceId', 'xml', 'createdAt', 'updatedAt', 'submitter' ]);
-  this.obj.formId.should.be.a.Number();
-  this.obj.instanceId.should.be.a.String();
-  this.obj.xml.should.be.a.String();
-  validate(this.obj.xml).should.equal(true);
-  this.obj.createdAt.should.be.an.isoDate();
-  if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
+  assertSubmissionBase(this.obj);
   this.obj.submitter.should.be.a.Number();
+});
+
+should.Assertion.add('ExtendedSubmission', function() {
+  this.params = { operator: 'to be an extended Submission' };
+
+  assertSubmissionBase(this.obj);
+  this.obj.submitter.should.be.an.Actor();
 });
 
 should.Assertion.add('Session', function() {
