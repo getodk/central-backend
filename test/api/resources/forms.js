@@ -172,6 +172,7 @@ describe('api: /forms', () => {
           .then(({ body }) => {
             body.should.be.an.ExtendedForm();
             body.xmlFormId.should.equal('simple');
+            body.submissions.should.equal(0);
           }))));
   });
 });
