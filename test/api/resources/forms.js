@@ -166,14 +166,19 @@ describe('api: /forms', () => {
 
     it('should return extended form details', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms/simple')
-          .set('X-Extended-Metadata', 'true')
+        asAlice.post('/v1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
           .expect(200)
-          .then(({ body }) => {
-            body.should.be.an.ExtendedForm();
-            body.xmlFormId.should.equal('simple');
-            body.submissions.should.equal(0);
-          }))));
+          .then(() => asAlice.get('/v1/forms/simple2')
+            .set('X-Extended-Metadata', 'true')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.an.ExtendedForm();
+              body.xmlFormId.should.equal('simple2');
+              body.submissions.should.equal(0);
+              body.createdBy.should.be.an.Actor();
+            })))));
   });
 });
 

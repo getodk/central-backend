@@ -58,6 +58,14 @@ describe('util/db', () => {
       result.one.should.equal(Option.none());
       result.two.get().should.be.an.instanceof(TestSecondary);
     });
+    it('should consider an optional instance nonpresent given empty values', () => {
+      const result = joinRowToInstance('main', { main: TestMain, inner: Option.of(TestSecondary) })({
+        'main!a': 1,
+        'inner!b': null,
+        'inner!c': undefined
+      });
+      result.should.eql(new TestMain({ a: 1, inner: Option.none() }));
+    });
   });
 
   describe('rowToInstance', () => {
