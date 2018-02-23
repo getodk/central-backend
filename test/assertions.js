@@ -15,7 +15,7 @@ should.Assertion.add('recentIsoDate', function() {
 
 should.Assertion.add('token', function() {
   this.params = { operator: 'to be a token string' };
-  this.obj.should.match(/^[a-z0-9!+]{64}$/i);
+  this.obj.should.match(/^[a-z0-9!$]{64}$/i);
 });
 
 should.Assertion.add('uuid', function() {
