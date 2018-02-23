@@ -115,6 +115,27 @@ describe('api: /users', () => {
               asAlice.get('/v1/users/current').expect(200)));
         })));
 
+    it('should fail the request if invalidation is requested but not allowed', testService((service) =>
+      service.post('/v1/users/reset/initiate?invalidate=true')
+        .send({ email: 'alice@opendatakit.org' })
+        .expect(403)));
+
+    it('should invalidate the existing password if requested', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users/reset/initiate?invalidate=true')
+          .send({ email: 'bob@opendatakit.org' })
+          .expect(200)
+          .then(() => {
+            // should still send the email.
+            const email = global.inbox.pop();
+            email.to.should.eql([{ address: 'bob@opendatakit.org', name: '' }]);
+            email.subject.should.equal('Data collection account password reset');
+
+            return service.post('/v1/sessions')
+              .send({ email: 'bob@opendatakit.org', password: 'bob' })
+              .expect(401);
+          }))));
+
     it('should not allow a user to reset their own password directly', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users/reset/verify')
