@@ -178,6 +178,7 @@ describe('api: /forms', () => {
               body.xmlFormId.should.equal('simple2');
               body.submissions.should.equal(0);
               body.createdBy.should.be.an.Actor();
+              body.createdBy.displayName.should.equal('Alice');
             })))));
   });
 });
