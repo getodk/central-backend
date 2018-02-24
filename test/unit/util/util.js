@@ -122,6 +122,20 @@ describe('util/util', () => {
         done();
       });
     });
+
+    it('should not attempt to verify empty plaintext', (done) => {
+      verifyPassword('', '$2a$12$hCRUXz/7Hx2iKPLCduvrWugC5Q/j5e3bX9KvaYvaIvg/uvFYEpzSy').point().then((result) => {
+        result.should.equal(false);
+        done();
+      });
+    });
+
+    it('should not attempt to verify empty hash', (done) => {
+      verifyPassword('password', '').point().then((result) => {
+        result.should.equal(false);
+        done();
+      });
+    });
   });
 });
 
