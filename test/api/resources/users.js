@@ -58,6 +58,7 @@ describe('api: /users', () => {
           .expect(200)
           .then(() => {
             const email = global.inbox.pop();
+            global.inbox.length.should.equal(0);
             email.to.should.eql([{ address: 'david@opendatakit.org', name: '' }]);
             email.subject.should.equal('Data collection account created');
           }))));
@@ -92,6 +93,7 @@ describe('api: /users', () => {
         .expect(200)
         .then(() => {
           const email = global.inbox.pop();
+          global.inbox.length.should.equal(0);
           email.to.should.eql([{ address: 'winnifred@opendatakit.org', name: '' }]);
           email.subject.should.equal('Data collection account password reset');
           email.html.should.match(/no account exists/);
@@ -103,6 +105,7 @@ describe('api: /users', () => {
         .expect(200)
         .then(() => {
           const email = global.inbox.pop();
+          global.inbox.length.should.equal(0);
           email.to.should.eql([{ address: 'alice@opendatakit.org', name: '' }]);
           email.subject.should.equal('Data collection account password reset');
           const token = /token=([^<]+)<\/p>/.exec(email.html)[1];
@@ -128,6 +131,7 @@ describe('api: /users', () => {
           .then(() => {
             // should still send the email.
             const email = global.inbox.pop();
+            global.inbox.length.should.equal(0);
             email.to.should.eql([{ address: 'bob@opendatakit.org', name: '' }]);
             email.subject.should.equal('Data collection account password reset');
 
