@@ -28,6 +28,7 @@
     "ramda": "~0",
     "sanitize-filename": "~1",
     "sha": "~2",
+    "simple-oauth2": "~2",
     "tmp": "~0",
     "ursa": "~0.9",
     "uuid": "~3"
