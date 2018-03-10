@@ -3,7 +3,7 @@ const should = require('should');
 const streamTest = require('streamtest').v2;
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
 const { streamJoinedCsvs } = require(appRoot + '/lib/data/csv');
-const { zipStreamFromParts } = require(appRoot + '/lib/data/zip');
+const { zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 
 
 // these are a little closer to integration tests than unit tests, by virtue of
