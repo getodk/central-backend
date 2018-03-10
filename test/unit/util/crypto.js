@@ -54,9 +54,57 @@ describe('util/crypto', () => {
       generateKeypair('test').point().then((result) => {
         result.pubkey.should.be.a.base64string();
         result.privkey.should.be.a.base64string();
-        result.salt.should.be.a.token();
-        result.iv.should.be.a.token(16);
+        result.salt.should.be.a.base64string();
+        result.iv.should.be.a.base64string();
         done();
+      });
+    });
+  });
+
+  describe('generateLocalCipherer', () => {
+    const { generateKeypair, generateLocalCipherer } = crypto;
+    it('should return an encipherer with a local key', (done) => {
+      generateKeypair('test').point().then((keys) => {
+        const [ localkey, cipherer ] = generateLocalCipherer(keys);
+        localkey.should.be.a.base64string();
+        cipherer.should.be.a.Function();
+        done();
+      });
+    });
+
+    it('should return an (iv, cipher) tuple when the cipherer is given an iv', (done) => {
+      generateKeypair('test').point().then((keys) => {
+        const [ , cipherer ] = generateLocalCipherer(keys);
+        const [ iv, cipher ] = cipherer();
+        iv.should.be.a.base64string();
+        cipher.update.should.be.a.Function();
+        cipher.final.should.be.a.Function();
+        done();
+      });
+    });
+  });
+
+  describe('getLocalDecipherer', () => {
+    const { generateKeypair, generateLocalCipherer, getLocalDecipherer } = crypto;
+    it('should successfully round-trip a piece of data', (done) => {
+      // init.
+      generateKeypair('topsecret').point().then((initkeys) => {
+        // create local cipher; encrypt our plaintext.
+        const [ localkey, cipherer ] = generateLocalCipherer(initkeys);
+        const [ localiv, cipher ] = cipherer();
+
+        const plain = 'a way a lone a last a loved a long the riverrun,';
+        const encrypted = cipher.update(plain, 'utf8', 'base64') + cipher.final('base64');
+
+        // now get a local decipher and decrypt. verify round-trip.
+        const keys = { privkey: initkeys.privkey, salt: initkeys.salt, iv: initkeys.iv, local: { key: localkey } };
+        getLocalDecipherer('topsecret', keys).point().then((decipherer) => {
+          const decipher = decipherer(localiv);
+          const unencrypted = decipher.update(encrypted, 'base64', 'utf8') + decipher.final('utf8');
+
+          unencrypted.should.equal(plain);
+          done();
+        });
       });
     });
   });
