@@ -7,8 +7,8 @@ const { DateTime } = require('luxon');
 
 const Problem = require('../../../lib/problem');
 const http = require('../../../lib/util/http');
-const Option = require('../../../lib/reused/option');
-const { ExplicitPromise } = require('../../../lib/reused/promise');
+const Option = require('../../../lib/util/option');
+const { ExplicitPromise } = require('../../../lib/util/promise');
 
 const createModernResponse = () => {
   const result = createResponse({ eventEmitter: EventEmitter });

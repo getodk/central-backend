@@ -1,6 +1,6 @@
 const should = require('should');
 const util = require('../../../lib/util/db');
-const Option = require('../../../lib/reused/option');
+const Option = require('../../../lib/util/option');
 const Problem = require('../../../lib/problem');
 
 // dummy test class that simply stores its own constructor argument.

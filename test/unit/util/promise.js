@@ -1,6 +1,6 @@
 const should = require('should');
 const { identity } = require('ramda');
-const { ExplicitPromise, MappedExplicitPromise, resolve } = require('../../../lib/reused/promise');
+const { ExplicitPromise, MappedExplicitPromise, resolve } = require('../../../lib/util/promise');
 
 describe('ExplicitPromise', () => {
   it('should construct', () =>

@@ -1,5 +1,5 @@
 const should = require('should');
-const Option = require('../../../../lib/reused/option');
+const Option = require('../../../../lib/util/option');
 const { Submission } = require('../../../../lib/model/package').withDefaults();
 
 describe('Submission', () => {
