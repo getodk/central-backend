@@ -10,10 +10,10 @@ migrations: node_modules
 base: node_modules migrations
 
 run: base
-	node lib/run-server.js
+	node lib/bin/run-server.js
 
 debug: base
-	node --debug --inspect lib/run-server.js
+	node --debug --inspect lib/bin/run-server.js
 
 test: node_modules
 	node node_modules/mocha/bin/mocha --recursive
@@ -31,7 +31,7 @@ lint:
 	node node_modules/.bin/eslint lib
 
 run-multi: base
-	node node_modules/naught/lib/main.js start --worker-count 4 lib/run-server.js
+	node node_modules/naught/lib/main.js start --worker-count 4 lib/bin/run-server.js
 stop-multi:
 	node node_modules/naught/lib/main.js stop
 

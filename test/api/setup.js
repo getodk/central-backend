@@ -25,7 +25,7 @@ if (mailConfig.transport !== 'json')
 
 // application things.
 const injector = require(appRoot + '/lib/model/package');
-const service = require(appRoot + '/lib/service');
+const service = require(appRoot + '/lib/http/service');
 
 // get all our fixture scripts, and set up a function that runs them all.
 const fixtures = readdirSync(appRoot + '/test/api/fixtures')
