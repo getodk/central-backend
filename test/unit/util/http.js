@@ -5,10 +5,11 @@ const streamTest = require('streamtest').v2;
 const { identity } = require('ramda');
 const { DateTime } = require('luxon');
 
-const Problem = require('../../../lib/problem');
-const http = require('../../../lib/util/http');
-const Option = require('../../../lib/util/option');
-const { ExplicitPromise } = require('../../../lib/util/promise');
+const appRoot = require('app-root-path');
+const Problem = require(appRoot + '/lib/util/problem');
+const http = require(appRoot + '/lib/util/http');
+const Option = require(appRoot + '/lib/util/option');
+const { ExplicitPromise } = require(appRoot + '/lib/util/promise');
 
 const createModernResponse = () => {
   const result = createResponse({ eventEmitter: EventEmitter });

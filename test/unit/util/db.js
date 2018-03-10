@@ -1,7 +1,8 @@
+const appRoot = require('app-root-path');
 const should = require('should');
-const util = require('../../../lib/util/db');
-const Option = require('../../../lib/util/option');
-const Problem = require('../../../lib/problem');
+const util = require(appRoot + '/lib/util/db');
+const Option = require(appRoot + '/lib/util/option');
+const Problem = require(appRoot + '/lib/util/problem');
 
 // dummy test class that simply stores its own constructor argument.
 class X {
