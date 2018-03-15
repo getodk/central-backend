@@ -3,6 +3,7 @@ const { merge } = require('ramda');
 const { readdirSync } = require('fs');
 const { join } = require('path');
 const request = require('supertest');
+const { run, task } = require(appRoot + '/lib/task/task');
 
 // debugging things.
 global.tap = (x) => { console.log(x); return x; };
@@ -89,5 +90,24 @@ const testService = (test) => () => new Promise((resolve, reject) => {
   }).catch(Promise.resolve.bind(Promise));
 });
 
-module.exports = { testService };
+// called to get a container context per task. ditto all the above.
+// here instead our weird hijack work involves injecting our own constructed
+// container into the task context so it just picks it up and uses it.
+// 
+// we also provide a finalizer in case the test needs to use the container for
+// various post-task checks. eg: finalizer(User.getByEmail(abc)).then(…)
+//
+// TODO: very copypasta.
+const testTask = (test) => () => new Promise((resolve, reject) => {
+  db.transaction((trxn) => {
+    task._container = injector.withDefaults({ db, mail });
+    Object.assign(task._container, { db: trxn, _alreadyTransacting: true });
+    const rollback = (f) => (x) => trxn.rollback().then(() => f(x));
+    const finalize = (proc) => proc.point(task._container);
+    test(task._container, finalize).then(rollback(resolve), rollback(reject));
+    // we return nothing to prevent knex from auto-committing the transaction.
+  }).catch(Promise.resolve.bind(Promise));
+});
+
+module.exports = { testService, testTask };
 
