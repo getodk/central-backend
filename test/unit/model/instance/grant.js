@@ -1,6 +1,6 @@
 const should = require('should');
 const container = require('../../../../lib/model/package');
-const Option = require('../../../../lib/reused/option');
+const Option = require('../../../../lib/util/option');
 
 describe('Grant', () => {
   describe('granting', () => {

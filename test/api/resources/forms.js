@@ -1,4 +1,5 @@
 const should = require('should');
+const config = require('config');
 const { DateTime } = require('luxon');
 const { validate, parse } = require('fast-xml-parser');
 const { testService } = require('../setup');
@@ -56,6 +57,7 @@ describe('api: /forms', () => {
             // Collect is particular about this:
             headers['content-type'].should.equal('text/xml; charset=utf-8');
 
+            const domain = config.get('default.env.domain');
             text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <xforms xmlns="http://openrosa.org/xforms/xformsList">
     <xform>
@@ -63,14 +65,14 @@ describe('api: /forms', () => {
       <name></name>
       <version>1.0</version>
       <hash>md5:971879f078afd4353f3969d5322681ab</hash>
-      <downloadUrl>http://localhost:8989/v1/forms/withrepeat.xml</downloadUrl>
+      <downloadUrl>${domain}/v1/forms/withrepeat.xml</downloadUrl>
     </xform>
     <xform>
       <formID>simple</formID>
       <name>Simple</name>
       <version></version>
       <hash>md5:5c09c21d4c71f2f13f6aa26227b2d133</hash>
-      <downloadUrl>http://localhost:8989/v1/forms/simple.xml</downloadUrl>
+      <downloadUrl>${domain}/v1/forms/simple.xml</downloadUrl>
     </xform>
   </xforms>`);
           }))));

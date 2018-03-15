@@ -3,7 +3,7 @@ const should = require('should');
 const streamTest = require('streamtest').v2;
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
 const { streamAttachments } = require(appRoot + '/lib/data/attachments');
-const { zipStreamFromParts } = require(appRoot + '/lib/data/zip');
+const { zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 
 describe('.zip attachments streaming', () => {
   it('should stream the contents to files at the appropriate paths', (done) => {

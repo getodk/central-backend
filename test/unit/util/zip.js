@@ -2,7 +2,7 @@ const appRoot = require('app-root-path');
 const should = require('should');
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
 const { streamAttachments } = require(appRoot + '/lib/data/attachments');
-const { zipPart, zipStreamFromParts } = require(appRoot + '/lib/data/zip');
+const { zipPart, zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 
 describe('zipPart streamer', () => {
   it('should close the archive only after parts are finalized', (done) => {

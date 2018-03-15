@@ -1,5 +1,6 @@
+const appRoot = require('app-root-path');
 const should = require('should');
-const Problem = require('../../lib/problem');
+const Problem = require(appRoot + '/lib/util/problem');
 
 // we aren't going to test the many problem types here, only the basic infrastructure.
 describe('Problem', () => {

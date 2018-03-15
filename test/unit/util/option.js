@@ -1,5 +1,5 @@
 const Should = require('should');
-const Option = require('../../../lib/reused/option');
+const Option = require('../../../lib/util/option');
 
 describe('(libs/FP) Option type', () => {
   it("Can be obtained from a value", () => {

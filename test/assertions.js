@@ -13,9 +13,9 @@ should.Assertion.add('recentIsoDate', function() {
   DateTime.fromISO(this.obj).plus({ minutes: 2 }).should.be.greaterThan(DateTime.local());
 });
 
-should.Assertion.add('token', function() {
+should.Assertion.add('token', function(length = 64) {
   this.params = { operator: 'to be a token string' };
-  this.obj.should.match(/^[a-z0-9!$]{64}$/i);
+  this.obj.should.match(new RegExp(`^[a-z0-9!$]{${length}}$`, 'i'));
 });
 
 should.Assertion.add('uuid', function() {
@@ -26,6 +26,11 @@ should.Assertion.add('uuid', function() {
 should.Assertion.add('md5Sum', function() {
   this.params = { operator: 'to be an md5 sum string' };
   this.obj.should.match(/^[0-9a-f]{32}$/i);
+});
+
+should.Assertion.add('base64string', function() {
+  this.params = { operator: 'to be an base64 string' };
+  this.obj.should.match(/^[0-9a-z/+=]+$/i);
 });
 
 should.Assertion.add('Actor', function() {
