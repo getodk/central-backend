@@ -18,8 +18,8 @@ debug: base
 test: node_modules
 	node node_modules/mocha/bin/mocha --recursive
 
-test-api: node_modules
-	node node_modules/mocha/bin/mocha --recursive test/api
+test-integration: node_modules
+	node node_modules/mocha/bin/mocha --recursive test/integration
 
 test-unit: node_modules
 	node node_modules/mocha/bin/mocha --recursive test/unit

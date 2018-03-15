@@ -44,14 +44,14 @@ Even so, often mail messages will go at first to spam, so be sure to check that.
 
 ## Testing
 
-Jubilant is tested with both unit and integration tests. The unit tests (`/test/unit`) check, in isolation, the more-complex parts of Jubilant's core code, such as the query promise and model systems, the various util functions, and some of the http handlers. The integration tests (`/test/api`) focus on verifying the correct behaviour of the API itself and the business logic (ie the `lib/resources/*` code and therefore concrete model/query implementation) which are independently simple but which altogether form a complex system.
+Jubilant is tested with both unit and integration tests. The unit tests (`/test/unit`) check, in isolation, the more-complex parts of Jubilant's core code, such as the query promise and model systems, the various util functions, and some of the http handlers. The integration tests (`/test/integration`) focus on verifying the correct behaviour of the API itself and the business logic (ie the `lib/resources/*` code and therefore concrete model/query implementation) which are independently simple but which altogether form a complex system.
 
 To run all tests (both unit and integration), run `make test` in the project root. We use [Mocha](https://mochajs.org/), [Should.js](https://shouldjs.github.io/), and [Supertest](https://github.com/visionmedia/supertest) as our testing frameworks. [CircleCI](https://circleci.com/gh/nafundi/jubilant-garbanzo) is configured to run all tests for verification.
 
 Various commands are available:
 
 * To run only unit tests (which are much speedier than integration tests), run `make test-unit` in the project root.
-* To run only API integration tests, run `make test-api` instead.
+* To run only API integration tests, run `make test-integration` instead.
 * As provided by default by Mocha, add `.only` after any `describe` or `it` call in the tests to run only the marked tests.
 * To examine test coverage (runs both test suites), type `make test-coverage`. We use [Istanbul](https://istanbul.js.org/).
 

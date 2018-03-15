@@ -29,9 +29,9 @@ const injector = require(appRoot + '/lib/model/package');
 const service = require(appRoot + '/lib/http/service');
 
 // get all our fixture scripts, and set up a function that runs them all.
-const fixtures = readdirSync(appRoot + '/test/api/fixtures')
+const fixtures = readdirSync(appRoot + '/test/integration/fixtures')
   .filter((name) => /^\d\d-[a-z-_]+\.js$/i.test(name))
-  .map((name) => join(appRoot.toString(), '/test/api/fixtures', /^([^.]+)\.js$/i.exec(name)[1]))
+  .map((name) => join(appRoot.toString(), '/test/integration/fixtures', /^([^.]+)\.js$/i.exec(name)[1]))
   .sort()
   .map(require);
 const populate = (container, [ head, ...tail ] = fixtures) =>
