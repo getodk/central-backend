@@ -26,10 +26,12 @@ jobs:
 
       - run: yarn install
 
+      - run: echo '/usr/lib/postgresql/9.6/bin/:$PATH' >> $BASH_ENV
+
       - save_cache:
           paths:
             - node_modules
           key: v1-dependencies-{{ checksum "package.json" }}
-        
+
       - run: make test
 
