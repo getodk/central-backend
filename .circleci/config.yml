@@ -6,7 +6,7 @@ jobs:
   build:
     docker:
       - image: circleci/node:8.5.0
-      - image: postgres:9.6
+      - image: circleci/postgres:9.6-alpine-ram
         environment:
           - POSTGRES_USER=jubilant
           - POSTGRES_PASSWORD=jubilant
@@ -24,9 +24,10 @@ jobs:
           # fallback to using the latest cache if no exact match is found
           - v1-dependencies-
 
-      - run: yarn install
-
+      - run: sudo apt install postgresql-client-9.6
       - run: echo '/usr/lib/postgresql/9.6/bin/:$PATH' >> $BASH_ENV
+
+      - run: yarn install
 
       - save_cache:
           paths:
