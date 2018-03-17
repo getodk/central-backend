@@ -98,7 +98,7 @@ describe('util/crypto', () => {
 
         // now get a local decipher and decrypt. verify round-trip.
         const keys = { privkey: initkeys.privkey, salt: initkeys.salt, iv: initkeys.iv, local: { key: localkey } };
-        getLocalDecipherer('topsecret', keys).point().then((decipherer) => {
+        getLocalDecipherer(keys, 'topsecret').point().then((decipherer) => {
           const decipher = decipherer(localiv);
           const unencrypted = decipher.update(encrypted, 'base64', 'utf8') + decipher.final('utf8');
 
