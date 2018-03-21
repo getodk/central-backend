@@ -1,4 +1,7 @@
+const appRoot = require('app-root-path');
 const should = require('should');
+const { map } = require('ramda');
+const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { testService } = require('../setup');
 
 describe('api: /config', () => {
@@ -68,6 +71,65 @@ describe('api: /config', () => {
               body.url.should.match(/^https:\/\/accounts.google.com\/o\/oauth2/);
               body.token.should.be.a.token();
             }))));
+    });
+
+    describe('/verify POST', () => {
+      it('should reject unless the user can create backups', testService((service) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.post('/v1/config/backups/verify').expect(403))));
+
+      it('should reject unless the provisioned auth token is used', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/config/backups/verify').expect(403))));
+
+      // does the entire round-trip:
+      it('should store all configuration in the database', testService((service, { all, Config }, finalize) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/config/backups/initiate')
+            .send({ passphrase: 'super secure' })
+            .expect(200)
+            .then(({ body }) => service.post('/v1/config/backups/verify')
+              .set('Authorization', `Bearer ${body.token}`)
+              .send({ code: 'happy google' })
+              .expect(200)
+              .then(() => asAlice.get('/v1/config/backups')
+                .expect(200)
+                .then(() => finalize(all.do([ 'backups.main', 'backups.google' ].map(Config.get)))
+                  .then(map(getOrNotFound))
+                  .then(map((x) => JSON.parse(x.value)))
+                  .then(([ main, google ]) => {
+                    main.type.should.equal('google');
+                    should.exist(main.keys);
+                    google.code.should.equal('happy google');
+                  })))))));
+
+      it('should not allow token replay', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/config/backups/initiate')
+            .send({ passphrase: 'super secure' })
+            .expect(200)
+            .then(({ body }) => service.post('/v1/config/backups/verify')
+              .set('Authorization', `Bearer ${body.token}`)
+              .send({ code: 'happy google' })
+              .expect(200)
+              .then(() => service.post('/v1/config/backups/verify')
+                .set('Authorization', `Bearer ${body.token}`)
+                .send({ code: 'happy google' })
+                .expect(401))))));
+
+      it('should handle google connection failures appropriately', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/config/backups/initiate')
+            .send({ passphrase: 'super secure' })
+            .expect(200)
+            .then(({ body }) => service.post('/v1/config/backups/verify')
+              .set('Authorization', `Bearer ${body.token}`)
+              .send({ code: 'sad google' })
+              .expect(400)
+              .then(({ body }) => {
+                body.code.should.equal(400.9);
+                body.details.reason.should.match(/sad google/);
+              })))));
     });
   });
 });
