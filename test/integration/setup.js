@@ -85,7 +85,8 @@ const testService = (test) => () => new Promise((resolve, reject) => {
     const container = injector.withDefaults({ db, mail });
     Object.assign(container, { db: trxn, _alreadyTransacting: true });
     const rollback = (f) => (x) => trxn.rollback().then(() => f(x));
-    test(augment(request(service(container)))).then(rollback(resolve), rollback(reject));
+    const finalize = (proc) => proc.point(container);
+    test(augment(request(service(container))), container, finalize).then(rollback(resolve), rollback(reject));
     // we return nothing to prevent knex from auto-committing the transaction.
   }).catch(Promise.resolve.bind(Promise));
 });
