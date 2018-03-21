@@ -25,6 +25,11 @@ const mail = mailer(merge(mailConfig, env));
 if (mailConfig.transport !== 'json')
   console.error('WARNING: some tests will not work except with a JSON email transport configuration.');
 
+// set up our google mock.
+const googler = require(appRoot + '/lib/outbound/google');
+const realGoogle = googler(config.get('default.external.google'));
+const google = require('../util/google-mock')(realGoogle);
+
 // application things.
 const injector = require(appRoot + '/lib/model/package');
 const service = require(appRoot + '/lib/http/service');
@@ -76,6 +81,10 @@ const augment = (service) => {
   return service;
 };
 
+
+////////////////////////////////////////////////////////////////////////////////
+// FINAL TEST WRAPPERS
+
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
 // gets rolled back for a clean slate on the next test.
@@ -83,7 +92,7 @@ const augment = (service) => {
 // somewhere, and it worries me. (#53)
 const testService = (test) => () => new Promise((resolve, reject) => {
   db.transaction((trxn) => {
-    const container = injector.withDefaults({ db, mail, env });
+    const container = injector.withDefaults({ db, mail, env, google });
     Object.assign(container, { db: trxn, _alreadyTransacting: true });
     const rollback = (f) => (x) => trxn.rollback().then(() => f(x));
     const finalize = (proc) => proc.point(container);
@@ -102,7 +111,7 @@ const testService = (test) => () => new Promise((resolve, reject) => {
 // TODO: very copypasta.
 const testTask = (test) => () => new Promise((resolve, reject) => {
   db.transaction((trxn) => {
-    task._container = injector.withDefaults({ db, mail, env });
+    task._container = injector.withDefaults({ db, mail, env, google });
     Object.assign(task._container, { db: trxn, _alreadyTransacting: true });
     const rollback = (f) => (x) => {
       delete task._container;
