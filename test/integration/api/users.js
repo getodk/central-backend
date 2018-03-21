@@ -118,6 +118,20 @@ describe('api: /users', () => {
               asAlice.get('/v1/users/current').expect(200)));
         })));
 
+    it('should not allow password reset token replay', testService((service) =>
+      service.post('/v1/users/reset/initiate')
+        .send({ email: 'alice@opendatakit.org' })
+        .expect(200)
+        .then(() => /token=([^<]+)<\/p>/.exec(global.inbox.pop().html)[1])
+        .then((token) => service.post('/v1/users/reset/verify')
+          .send({ new: 'reset!' })
+          .set('Authorization', 'Bearer ' + token)
+          .expect(200)
+          .then(() => service.post('/v1/users/reset/verify')
+            .send({ new: 'reset again!' })
+            .set('Authorization', 'Bearer ' + token)
+            .expect(401)))));
+
     it('should fail the request if invalidation is requested but not allowed', testService((service) =>
       service.post('/v1/users/reset/initiate?invalidate=true')
         .send({ email: 'alice@opendatakit.org' })
