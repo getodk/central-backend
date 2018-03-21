@@ -20,7 +20,7 @@ const owner = config.get('test.database.user');
 // set up our mailer.
 const { mailer } = require(appRoot + '/lib/outbound/mail');
 const mailConfig = config.get('test.email');
-const mail = mailer(mailConfig);
+const mail = mailer(merge(mailConfig, config.get('default.env')));
 if (mailConfig.transport !== 'json')
   console.error('WARNING: some tests will not work except with a JSON email transport configuration.');
 
