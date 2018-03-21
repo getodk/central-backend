@@ -14,7 +14,7 @@ const { connect, migrate } = require(appRoot + '/lib/model/database');
 
 // save some time by holding a db connection open globally. they're just tests,
 // so the performance overhead is irrelevant.
-const db = connect('test');
+const db = connect(config.get('test.database'));
 const owner = config.get('test.database.user');
 
 // set up our mailer.
