@@ -18,9 +18,10 @@ const db = connect(config.get('test.database'));
 const owner = config.get('test.database.user');
 
 // set up our mailer.
+const env = config.get('default.env');
 const { mailer } = require(appRoot + '/lib/outbound/mail');
 const mailConfig = config.get('test.email');
-const mail = mailer(merge(mailConfig, config.get('default.env')));
+const mail = mailer(merge(mailConfig, env));
 if (mailConfig.transport !== 'json')
   console.error('WARNING: some tests will not work except with a JSON email transport configuration.');
 
@@ -82,7 +83,7 @@ const augment = (service) => {
 // somewhere, and it worries me. (#53)
 const testService = (test) => () => new Promise((resolve, reject) => {
   db.transaction((trxn) => {
-    const container = injector.withDefaults({ db, mail });
+    const container = injector.withDefaults({ db, mail, env });
     Object.assign(container, { db: trxn, _alreadyTransacting: true });
     const rollback = (f) => (x) => trxn.rollback().then(() => f(x));
     const finalize = (proc) => proc.point(container);
@@ -101,7 +102,7 @@ const testService = (test) => () => new Promise((resolve, reject) => {
 // TODO: very copypasta.
 const testTask = (test) => () => new Promise((resolve, reject) => {
   db.transaction((trxn) => {
-    task._container = injector.withDefaults({ db, mail });
+    task._container = injector.withDefaults({ db, mail, env });
     Object.assign(task._container, { db: trxn, _alreadyTransacting: true });
     const rollback = (f) => (x) => {
       delete task._container;
