@@ -24,7 +24,6 @@
     "mustache": "~2.3",
     "naught": "~1.6",
     "nodemailer": "~4.4",
-    "npm": "^5.7.1",
     "pg": "~7",
     "pg-query-stream": "~1.1",
     "prompt": "~1",
@@ -33,7 +32,8 @@
     "sha": "~2",
     "tmp": "~0",
     "ursa": "~0.9",
-    "uuid": "~3"
+    "uuid": "~3",
+    "yauzl": "~2.9"
   },
   "devDependencies": {
     "app-root-path": "~2",
@@ -45,7 +45,6 @@
     "node-mocks-http": "~1.6",
     "should": "~13",
     "supertest": "~3",
-    "streamtest": "~1.2",
-    "yauzl": "~2.9"
+    "streamtest": "~1.2"
   }
 }

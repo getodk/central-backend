@@ -6,7 +6,7 @@ jobs:
   build:
     docker:
       - image: circleci/node:8.5.0
-      - image: postgres:9.6
+      - image: circleci/postgres:9.6-alpine-ram
         environment:
           - POSTGRES_USER=jubilant
           - POSTGRES_PASSWORD=jubilant
@@ -30,6 +30,6 @@ jobs:
           paths:
             - node_modules
           key: v1-dependencies-{{ checksum "package.json" }}
-        
+
       - run: make test
 

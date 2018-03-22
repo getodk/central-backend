@@ -5,7 +5,7 @@ node_modules:
 	npm install
 
 migrations: node_modules
-	node -e 'const { withDatabase, migrate } = require("./lib/model/database"); withDatabase(migrate);'
+	node -e 'const { withDatabase, migrate } = require("./lib/model/database"); withDatabase(require("config").get("default.database"))(migrate);'
 
 base: node_modules migrations
 
@@ -18,8 +18,8 @@ debug: base
 test: node_modules
 	node node_modules/mocha/bin/mocha --recursive
 
-test-api: node_modules
-	node node_modules/mocha/bin/mocha --recursive test/api
+test-integration: node_modules
+	node node_modules/mocha/bin/mocha --recursive test/integration
 
 test-unit: node_modules
 	node node_modules/mocha/bin/mocha --recursive test/unit

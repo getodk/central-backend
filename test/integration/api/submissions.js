@@ -83,7 +83,7 @@ describe('api: /submission', () => {
           .then(() => asAlice.get('/v1/forms/simple/submissions/one/attachments')
             .expect(200)
             .then(({ body }) => {
-              body.should.eql([ 'file1.txt', 'file2.txt' ]);
+              body.should.containDeep([ 'file1.txt', 'file2.txt' ]);
             })))));
 
     it('should reject if the xml changes between posts', testService((service) =>
