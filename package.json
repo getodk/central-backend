@@ -23,7 +23,6 @@
     "mustache": "~2.3",
     "naught": "~1.6",
     "nodemailer": "~4.4",
-    "npm": "^5.7.1",
     "pg": "~7",
     "pg-query-stream": "~1.1",
     "prompt": "~1",

@@ -29,7 +29,7 @@ should.Assertion.add('md5Sum', function() {
 });
 
 should.Assertion.add('base64string', function() {
-  this.params = { operator: 'to be an base64 string' };
+  this.params = { operator: 'to be a base64 string' };
   this.obj.should.match(/^[0-9a-z/+=]+$/i);
 });
 

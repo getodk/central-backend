@@ -67,20 +67,20 @@ describe('task: fs', () => {
     }));
 
     it('should fail gracefully given a random archive', testTask(() => new Promise((resolve) =>
-        tmp.dir((_, dirpath) =>
-          tmp.file((_, filepath) => {
-            const archive = archiver('zip', { zlib: { level: 9 } });
+      tmp.dir((_, dirpath) =>
+        tmp.file((_, filepath) => {
+          const archive = archiver('zip', { zlib: { level: 9 } });
 
-            archive.on('end', () => setTimeout((() =>
-              decryptFromArchive(filepath, dirpath)
-                .should.be.rejected()
-                .then(resolve))
-            ), 5);
+          archive.on('end', () => setTimeout((() =>
+            decryptFromArchive(filepath, dirpath)
+              .should.be.rejected()
+              .then(resolve))
+          ), 5);
 
-            archive.pipe(createWriteStream(filepath));
-            archive.append('some file', { name: 'file.txt' });
-            archive.finalize();
-          })))));
+          archive.pipe(createWriteStream(filepath));
+          archive.append('some file', { name: 'file.txt' });
+          archive.finalize();
+        })))));
 
     // TODO: there are more failure cases that the code covers but the tests do not.
     // but they get increasingly elaborate to fake and increasingly improbable in
