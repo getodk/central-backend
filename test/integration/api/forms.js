@@ -76,6 +76,24 @@ describe('api: /forms', () => {
     </xform>
   </xforms>`);
           }))));
+
+    it('should not include closing/closed forms', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.put('/v1/forms/withrepeat')
+          .send({ state: 'closing' })
+          .expect(200)
+          .then(() => asAlice.put('/v1/forms/simple')
+            .send({ state: 'closing' })
+            .expect(200)
+            .then(() => asAlice.get('/v1/formList')
+              .set('X-OpenRosa-Version', '1.0')
+              .set('Date', DateTime.local().toHTTP())
+              .expect(200)
+              .then(({ text }) => {
+                text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+  <xforms xmlns="http://openrosa.org/xforms/xformsList">
+  </xforms>`);
+              }))))));
   });
 
   describe('POST', () => {
@@ -181,6 +199,48 @@ describe('api: /forms', () => {
               body.submissions.should.equal(0);
               body.createdBy.should.be.an.Actor();
               body.createdBy.displayName.should.equal('Alice');
+            })))));
+  });
+
+  describe('/:id PUT', () => {
+    it('should reject unless the user can update', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.put('/v1/forms/simple')
+          .send({ name: 'a new name!' })
+          .expect(403))));
+
+    it('should update allowed fields', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.put('/v1/forms/simple')
+          .send({ name: 'a fancy name', version: '2.0', state: 'draft' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/forms/simple')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.a.Form();
+              body.name.should.equal('a fancy name');
+              body.version.should.equal('2.0');
+              body.state.should.equal('draft');
+              body.xml.should.equal(testData.forms.simple);
+            })))));
+
+    it('should reject if state is invalid', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.put('/v1/forms/simple')
+          .send({ name: 'a cool name', state: 'the coolest' })
+          .expect(400))));
+
+    it('should not update disallowed fields', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.put('/v1/forms/simple')
+          .send({ xmlFormId: 'changed', xml: 'changed', hash: 'changed' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/forms/simple')
+            .expect(200)
+            .then(({ body }) => {
+              body.xmlFormId.should.equal('simple');
+              body.xml.should.equal(testData.forms.simple);
+              body.hash.should.equal('5c09c21d4c71f2f13f6aa26227b2d133');
             })))));
   });
 });

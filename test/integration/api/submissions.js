@@ -51,6 +51,17 @@ describe('api: /submission', () => {
         .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
         .expect(403)));
 
+    it('should reject if the form is not taking submissions', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.put('/v1/forms/simple')
+          .send({ state: 'closed' })
+          .expect(200)
+          .then(() => asAlice.post('/v1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .set('Date', DateTime.local().toHTTP())
+            .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+            .expect(409)))));
+
     it('should save the submission to the appropriate form', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/submission')
@@ -170,6 +181,16 @@ describe('api: /forms/:id/submissions', () => {
           .set('Content-Type', 'text/xml')
           .expect(403))));
 
+    it('should reject if the form is not taking submissions', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.put('/v1/forms/simple')
+          .send({ state: 'closed' })
+          .expect(200)
+          .then(() => asAlice.post('/v1/forms/simple/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .expect(409)))));
+
     it('should reject if the submission body is not valid xml', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/forms/simple/submissions')
@@ -191,6 +212,20 @@ describe('api: /forms/:id/submissions', () => {
             body.code.should.equal(400.8);
             body.details.reason.should.match(/did not match.*url/i);
           }))));
+
+    it('should reject if the form is not taking submissions', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.put('/v1/forms/simple')
+          .send({ state: 'closed' })
+          .expect(200)
+          .then(() => asAlice.post('/v1/forms/simple/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(409)
+            .then(({ body }) => {
+              body.code.should.equal(409.2);
+              body.message.should.match(/not currently accepting submissions/);
+            })))));
 
     it('should submit if all details are provided', testService((service) =>
       service.login('alice', (asAlice) =>
