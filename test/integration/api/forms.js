@@ -79,10 +79,10 @@ describe('api: /forms', () => {
 
     it('should not include closing/closed forms', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.put('/v1/forms/withrepeat')
+        asAlice.patch('/v1/forms/withrepeat')
           .send({ state: 'closing' })
           .expect(200)
-          .then(() => asAlice.put('/v1/forms/simple')
+          .then(() => asAlice.patch('/v1/forms/simple')
             .send({ state: 'closing' })
             .expect(200)
             .then(() => asAlice.get('/v1/formList')
@@ -202,16 +202,16 @@ describe('api: /forms', () => {
             })))));
   });
 
-  describe('/:id PUT', () => {
+  describe('/:id PATCH', () => {
     it('should reject unless the user can update', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.put('/v1/forms/simple')
+        asChelsea.patch('/v1/forms/simple')
           .send({ name: 'a new name!' })
           .expect(403))));
 
     it('should update allowed fields', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.put('/v1/forms/simple')
+        asAlice.patch('/v1/forms/simple')
           .send({ name: 'a fancy name', version: '2.0', state: 'draft' })
           .expect(200)
           .then(() => asAlice.get('/v1/forms/simple')
@@ -226,13 +226,13 @@ describe('api: /forms', () => {
 
     it('should reject if state is invalid', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.put('/v1/forms/simple')
+        asAlice.patch('/v1/forms/simple')
           .send({ name: 'a cool name', state: 'the coolest' })
           .expect(400))));
 
     it('should not update disallowed fields', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.put('/v1/forms/simple')
+        asAlice.patch('/v1/forms/simple')
           .send({ xmlFormId: 'changed', xml: 'changed', hash: 'changed' })
           .expect(200)
           .then(() => asAlice.get('/v1/forms/simple')

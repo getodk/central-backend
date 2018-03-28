@@ -53,7 +53,7 @@ describe('api: /submission', () => {
 
     it('should reject if the form is not taking submissions', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.put('/v1/forms/simple')
+        asAlice.patch('/v1/forms/simple')
           .send({ state: 'closed' })
           .expect(200)
           .then(() => asAlice.post('/v1/submission')
@@ -183,7 +183,7 @@ describe('api: /forms/:id/submissions', () => {
 
     it('should reject if the form is not taking submissions', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.put('/v1/forms/simple')
+        asAlice.patch('/v1/forms/simple')
           .send({ state: 'closed' })
           .expect(200)
           .then(() => asAlice.post('/v1/forms/simple/submissions')
@@ -215,7 +215,7 @@ describe('api: /forms/:id/submissions', () => {
 
     it('should reject if the form is not taking submissions', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.put('/v1/forms/simple')
+        asAlice.patch('/v1/forms/simple')
           .send({ state: 'closed' })
           .expect(200)
           .then(() => asAlice.post('/v1/forms/simple/submissions')
