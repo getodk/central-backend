@@ -52,12 +52,21 @@ describe('Submission', () => {
     });
 
     it('should return a populated PartialSubmission given correct xml', (done) => {
-      const xml = '<data id="mycoolform"><orx:meta><orx:instanceID>myinstance</orx:instanceID></orx:meta><field/></data>';
+      const xml = '<data id="mycoolform" version="coolest"><orx:meta><orx:instanceID>myinstance</orx:instanceID></orx:meta><field/></data>';
       Submission.fromXml(xml).then((ps) => {
         ps.complete.should.be.a.Function();
         ps.xmlFormId.should.equal('mycoolform');
         ps.instanceId.should.equal('myinstance');
+        ps.version.should.equal('coolest');
         ps.xml.should.equal(xml);
+        done();
+      }).point();
+    });
+
+    it('should squash version to null if empty string is given', (done) => {
+      const xml = '<data id="mycoolform" version=""><orx:meta><orx:instanceID>myinstance</orx:instanceID></orx:meta><field/></data>';
+      Submission.fromXml(xml).then((ps) => {
+        (ps.version === null).should.equal(true);
         done();
       }).point();
     });
@@ -97,6 +106,16 @@ describe('Submission', () => {
         submission.formId.should.equal(42);
         submission.submitter.should.equal(75);
         should.not.exist(submission.xmlFormId);
+        done();
+      });
+    });
+
+    it('should fail to complete if the form and submission versions mismatch', (done) => {
+      psp.then((ps) => {
+        ps.complete({ id: 42, version: '5.0' }, Option.of({ id: 75 }));
+      }).catch((ex) => {
+        ex.isProblem.should.equal(true);
+        ex.problemDetails.field.should.equal('version');
         done();
       });
     });
