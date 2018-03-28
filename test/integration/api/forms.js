@@ -243,5 +243,18 @@ describe('api: /forms', () => {
               body.hash.should.equal('5c09c21d4c71f2f13f6aa26227b2d133');
             })))));
   });
+
+  describe('/:id DELETE', () => {
+    it('should reject unless the user can delete', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.delete('/v1/forms/simple').expect(403))));
+
+    it('should delete the form', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/forms/simple')
+          .expect(200)
+          .then(() => asAlice.get('/v1/forms/simple')
+            .expect(404)))));
+  });
 });
 
