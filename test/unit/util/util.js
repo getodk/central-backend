@@ -50,26 +50,6 @@ describe('util/util', () => {
     });
   });
 
-  describe('get', () => {
-    const { get } = util;
-    it('should traverse an object tree to its target', () => {
-      get({ a: { b: { c: 2 }, d: 3 } }, [ 'a', 'b', 'c' ]).should.equal(2);
-    });
-
-    it('should return undefined if the target does not exist', () => {
-      should(get({ a: {} }, [ 'a', 'b', 'c' ])).equal(undefined);
-    });
-
-    it('should return source if the source does not exist', () => {
-      should(get(null, [ 'x', 'y' ])).equal(null);
-      should(get(undefined, [ 'x', 'y' ])).equal(undefined);
-    });
-
-    it('should return the source if no keys are given', () => {
-      get({ x: 5, y: 7 }, []).should.eql({ x: 5, y: 7 });
-    });
-  });
-
   describe('ensureArray', () => {
     const { ensureArray } = util;
     it('should wrap non-arrays in an array', () => {
@@ -81,26 +61,6 @@ describe('util/util', () => {
       ensureArray([]).should.eql([]);
       ensureArray([[]]).should.eql([[]]);
       ensureArray([ undefined ]).should.eql([ undefined ]);
-    });
-  });
-
-  describe('incr', () => {
-    const { incr } = util;
-    it('should return incrementing values starting with 1', () => {
-      const inst = incr();
-      inst().should.equal(1);
-      inst().should.equal(2);
-      inst().should.equal(3);
-    });
-
-    it('should not leak values between instances', () => {
-      const a = incr();
-      a().should.equal(1);
-      const b = incr();
-      a().should.equal(2);
-      b().should.equal(1);
-      a().should.equal(3);
-      b().should.equal(2);
     });
   });
 });

@@ -125,7 +125,7 @@ three,Chelsea,House,99 Mission Ave,"San Francisco, CA"
                   <name/>
                   <age/>
                   <children>
-                    <child jr:template="">
+                    <child>
                       <name/>
                       <age/>
                     </child>
@@ -146,7 +146,7 @@ three,Chelsea,House,99 Mission Ave,"San Francisco, CA"
             <input ref="/data/age">
               <label>What is your age?</label>
             </input>
-            <group ref="/data/children/child">
+            <group ref="/data/children">
               <label>Child</label>
               <repeat nodeset="/data/children/child">
                 <input ref="/data/children/child/name">
@@ -162,7 +162,7 @@ three,Chelsea,House,99 Mission Ave,"San Francisco, CA"
     };
     const inStream = streamTest.fromObjects([
       instance('one', '<orx:meta><orx:instanceID>one</orx:instanceID></orx:meta><name>Alice</name><age>30</age>'),
-      instance('two', '<orx:meta><orx:instanceID>two</orx:instanceID></orx:meta><name>Bob</name><age>34</age><children><child><name>Billy</name><age>4</age></child><child><name>Blaine</name><age>6</age></child></children>'),
+      instance('two', '<orx:meta><orx:instanceID>two</orx:instanceID></orx:meta><name>Bob</name><age>34</age><children><child><name>Billy</name><age>4</age></child></children><children><child><name>Blaine</name><age>6</age></child></children>'),
       instance('three', '<orx:meta><orx:instanceID>three</orx:instanceID></orx:meta><name>Chelsea</name><age>38</age><children><child><name>Candace</name><age>2</age></child></children>'),
     ]);
 
@@ -262,20 +262,20 @@ two,Bob,34
 three,Chelsea,38
 `);
       result['singlerepeat-children-child.csv'].should.equal(
-`instanceID,children-childID,name,age
-two,1,Billy,4
-two,2,Blaine,6
-two,3,Baker,7
-three,4,Candace,2
+`instanceID,children-child-id,name,age
+two,cf9a1b5cc83c6d6270c1eb98860d294eac5d526d,Billy,4
+two,c76d0ccc6d5da236be7b93b985a80413d2e3e172,Blaine,6
+two,57c0d9e982699e087c34a22696c10753a15beb6c,Baker,7
+three,beaedcdba519e6e6b8037605c9ae3f6a719984fa,Candace,2
 `);
       result['singlerepeat-children-child-toy.csv'].should.equal(
-`instanceID,children-childID,name
-two,1,R2-D2
-two,2,BB-8
-two,2,Porg plushie
-three,4,Millennium Falcon
-three,4,X-Wing
-three,4,Pod racer
+`instanceID,children-child-id,name
+two,cf9a1b5cc83c6d6270c1eb98860d294eac5d526d,R2-D2
+two,c76d0ccc6d5da236be7b93b985a80413d2e3e172,BB-8
+two,c76d0ccc6d5da236be7b93b985a80413d2e3e172,Porg plushie
+three,beaedcdba519e6e6b8037605c9ae3f6a719984fa,Millennium Falcon
+three,beaedcdba519e6e6b8037605c9ae3f6a719984fa,X-Wing
+three,beaedcdba519e6e6b8037605c9ae3f6a719984fa,Pod racer
 `);
       done();
     });
