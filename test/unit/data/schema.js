@@ -31,6 +31,32 @@ describe('form schema', () => {
       ]);
     });
 
+    it('should work with relative paths', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <age/>
+                  <hometown/>
+                </data>
+              </instance>
+              <bind nodeset="name" type="string"/>
+              <bind type="integer" nodeset="age"/>
+              <bind nodeset="hometown" type="select1"/>
+            </model>
+          </h:head>
+        </h:html>`;
+      getFormSchema({ xml }).should.eql([
+        { name: 'name', type: 'string' },
+        { name: 'age', type: 'integer' },
+        { name: 'hometown', type: 'select1' }
+      ]);
+    });
+
     it('should handle namespaced bindings correctly', () => {
       const xml = `
         <?xml version="1.0"?>
