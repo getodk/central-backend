@@ -122,8 +122,8 @@ describe('api: /key/:key', () => {
 
   it('should passthrough to the appropriate route with successful auth', testService((service) =>
     service.login('alice', (asAlice) => asAlice.post('/v1/field-keys').send({ displayName: 'fktest' })
-      .then(({ body }) => service.post(`/v1/key/${body.token}/forms/withrepeat/submissions`)
-        .send(testData.instances.withrepeat.one)
+      .then(({ body }) => service.post(`/v1/key/${body.token}/forms/simple/submissions`)
+        .send(testData.instances.simple.one)
         .set('Content-Type', 'application/xml')
         .expect(200)))));
 });
