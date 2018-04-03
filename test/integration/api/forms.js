@@ -62,7 +62,7 @@ describe('api: /forms', () => {
   <xforms xmlns="http://openrosa.org/xforms/xformsList">
     <xform>
       <formID>withrepeat</formID>
-      <name></name>
+      <name>withrepeat</name>
       <version>1.0</version>
       <hash>md5:971879f078afd4353f3969d5322681ab</hash>
       <downloadUrl>${domain}/v1/forms/withrepeat.xml</downloadUrl>
