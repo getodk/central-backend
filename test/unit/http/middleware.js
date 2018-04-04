@@ -6,6 +6,7 @@ const middleware = require(appRoot + '/lib/http/middleware');
 const Problem = require(appRoot + '/lib/util/problem');
 const Option = require(appRoot + '/lib/util/option');
 const { ExplicitPromise } = require(appRoot + '/lib/util/promise');
+const { hashPassword } = require(appRoot + '/lib/util/crypto');
 
 describe('middleware', () => {
   describe('versionParser', () => {
@@ -56,19 +57,36 @@ describe('middleware', () => {
         ? Option.of('session')
         : Option.none()))
     });
+    const mockUser = (expectedEmail, password) => ({
+      getByEmail: (email) => ExplicitPromise.of(Promise.resolve((email === expectedEmail)
+        ? Option.of({ password, actor: 'actor' })
+        : Option.none()))
+    });
 
-    it('should set no-session if no Authorization header is provided', (done) => {
+    it('should set no auth if no Authorization header is provided', (done) => {
       const request = createRequest();
       sessionParser({ Auth, Session: mockSession() })(request, null, () => {
-        request.auth.session.should.equal(Option.none());
+        should.not.exist(request.auth._session);
+        should.not.exist(request.auth._actor);
         done();
       });
     });
 
-    it('should set no-session if Authorization mode is no Bearer', (done) => {
-      const request = createRequest({ headers: { Authorization: 'Basic aabbccddeeff123' } });
+    it('should set no auth if Authorization mode is not Bearer or Basic', (done) => {
+      const request = createRequest({ headers: { Authorization: 'Digest aabbccddeeff123' } });
       sessionParser({ Auth, Session: mockSession() })(request, null, () => {
-        request.auth.session.should.equal(Option.none());
+        should.not.exist(request.auth._session);
+        should.not.exist(request.auth._actor);
+        done();
+      });
+    });
+
+    it('should fail the request if Bearer auth is attempted with a successful auth present', (done) => {
+      const request = createRequest({ headers: { Authorization: 'Bearer aabbccddeeff123' } });
+      request.auth = { isAuthenticated: () => true };
+      sessionParser({ Auth, Session: mockSession() })(request, null, (failure) => {
+        failure.isProblem.should.equal(true);
+        failure.problemCode.should.equal(401.2);
         done();
       });
     });
@@ -85,8 +103,83 @@ describe('middleware', () => {
     it('should set the appropriate session if a valid Bearer token is given', (done) => {
       const request = createRequest({ headers: { Authorization: 'Bearer alohomora' } });
       sessionParser({ Auth, Session: mockSession('alohomora') })(request, null, () => {
-        request.auth.session.should.eql(Option.of('session'));
+        request.auth._session.should.eql(Option.of('session'));
         done();
+      });
+    });
+
+    it('should reject non-https Basic auth requests', (done) => {
+      const request = createRequest({ headers: { Authorization: 'Basic abracadabra', } });
+      sessionParser({ Auth, User: mockUser('alice@opendatakit.org') })(request, null, (failure) => {
+        failure.isProblem.should.equal(true);
+        failure.problemCode.should.equal(401.3);
+        done();
+      });
+    });
+
+    it('should fail the request if an improperly-formatted Basic auth is given', (done) => {
+      const encodedCredentials = Buffer.from('alice@opendatakit.org:', 'utf8').toString('base64');
+      const request = createRequest({ headers: {
+        Authorization: `Basic ${encodedCredentials}`,
+        'X-Forwarded-Proto': 'https'
+      } });
+      sessionParser({ Auth, User: mockUser('alice@opendatakit.org') })(request, null, (failure) => {
+        failure.isProblem.should.equal(true);
+        failure.problemCode.should.equal(401.2);
+        done();
+      });
+    });
+
+    it('should fail the request if Basic auth is attempted with a successful auth present', (done) => {
+      const request = createRequest({ headers: {
+        Authorization: `Basic abcdef1234567890`,
+        'X-Forwarded-Proto': 'https'
+      } });
+      request.auth = { isAuthenticated: () => true };
+      sessionParser({ Auth, User: mockUser('alice@opendatakit.org') })(request, null, (failure) => {
+        failure.isProblem.should.equal(true);
+        failure.problemCode.should.equal(401.2);
+        done();
+      });
+    });
+
+    it('should fail the request if the Basic auth user cannot be found', (done) => {
+      const encodedCredentials = Buffer.from('bob@opendatakit.org:bob', 'utf8').toString('base64');
+      const request = createRequest({ headers: {
+        Authorization: `Basic ${encodedCredentials}`,
+        'X-Forwarded-Proto': 'https'
+      } });
+      sessionParser({ Auth, User: mockUser('alice@opendatakit.org') })(request, null, (failure) => {
+        failure.isProblem.should.equal(true);
+        failure.problemCode.should.equal(401.2);
+        done();
+      });
+    });
+
+    it('should fail the request if the Basic auth credentials are not right', (done) => {
+      const encodedCredentials = Buffer.from('alice@opendatakit.org:password', 'utf8').toString('base64');
+      const request = createRequest({ headers: {
+        Authorization: `Basic ${encodedCredentials}`,
+        'X-Forwarded-Proto': 'https'
+      } });
+      sessionParser({ Auth, User: mockUser('alice@opendatakit.org', 'willnevermatch') })(request, null, (failure) => {
+        failure.isProblem.should.equal(true);
+        failure.problemCode.should.equal(401.2);
+        done();
+      });
+    });
+
+    it('should set the appropriate session if valid Basic auth credentials are given @slow', (done) => {
+      hashPassword('alice').point().then((hashed) => {
+        const encodedCredentials = Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64');
+        const request = createRequest({ headers: {
+          Authorization: `Basic ${encodedCredentials}`,
+          'X-Forwarded-Proto': 'https'
+        } });
+        sessionParser({ Auth, User: mockUser('alice@opendatakit.org', hashed) })(request, null, () => {
+          request.auth._actor.should.equal('actor');
+          done();
+        });
       });
     });
   });
