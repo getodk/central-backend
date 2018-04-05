@@ -6,7 +6,7 @@ const { identity } = require('ramda');
 const { DateTime } = require('luxon');
 
 const appRoot = require('app-root-path');
-const { finalize, endpoint, openRosaEndpoint, sendError } = require(appRoot + '/lib/http/endpoint');
+const { finalize, endpoint, openRosaEndpoint, odataEndpoint, sendError } = require(appRoot + '/lib/http/endpoint');
 const Problem = require(appRoot + '/lib/util/problem');
 const Option = require(appRoot + '/lib/util/option');
 const { ExplicitPromise } = require(appRoot + '/lib/util/promise');
@@ -197,6 +197,54 @@ describe('endpoints', () => {
     });
   });
 
+  describe('odataEndpoint', () => {
+    it('should reject json requests to xml endpoints', (done) => {
+      const request = createRequest({ headers: { Accept: 'application/json' } });
+      const response = createModernResponse();
+      odataEndpoint.xml(null)(request, response, (error) => {
+        error.problemCode.should.equal(406.1);
+        done();
+      });
+    });
+
+    it('should reject xml requests to json endpoints', (done) => {
+      const request = createRequest({ headers: { Accept: 'atom' } });
+      const response = createModernResponse();
+      odataEndpoint.json(null)(request, response, (error) => {
+        error.problemCode.should.equal(406.1);
+        done();
+      });
+    });
+
+    it('should reject requests for OData max-versions below 4.0', (done) => {
+      const request = createRequest({ headers: { 'OData-MaxVersion': '3.0' } });
+      const response = createModernResponse();
+      odataEndpoint.json(null)(request, response, (error) => {
+        error.problemCode.should.equal(404.1);
+        done();
+      });
+    });
+
+    it('should reject requests for unsupported OData features', (done) => {
+      const request = createRequest({ url: '/odata.svc?$orderby=magic' });
+      const response = createModernResponse();
+      odataEndpoint.json(null)(request, response, (error) => {
+        error.problemCode.should.equal(501.1);
+        done();
+      });
+    });
+
+    it('should set the appropriate OData version', (done) => {
+      const request = createRequest();
+      const response = createModernResponse();
+      response.on('end', () => {
+        response.getHeader('OData-Version').should.equal('4.0');
+        done();
+      });
+      odataEndpoint.json(() => ({ success: true }))(request, response);
+    });
+  });
+
   describe('sendError', () => {
     it('should adapt Problem code to http code', (done) => {
       const response = createModernResponse();
@@ -257,6 +305,21 @@ describe('endpoints', () => {
         done();
       });
       sendError(error, null, response);
+    });
+
+    it('should translate 403 replies to Tableau into 401 Basic auth directives', (done) => {
+      const response = createModernResponse();
+      const request = createRequest({
+        headers: {
+          'User-Agent': 'Tableau Desktop 10500.18.0305.1200; public; libcurl-client; 64-bit; en_US; Mac OS X 10.13.3;'
+        }
+      });
+      response.on('end', () => {
+        response.statusCode.should.equal(401);
+        response.header('WWW-Authenticate').should.equal('Basic charset="UTF-8"');
+        done();
+      });
+      sendError(Problem.user.insufficientRights(), request, response);
     });
   });
 
