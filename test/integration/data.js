@@ -56,9 +56,9 @@ module.exports = {
       </instance>
       <bind nodeset="/data/meta/instanceID" preload="uid" type="string"/>
       <bind nodeset="/data/name" type="string"/>
-      <bind nodeset="/data/age" type="integer"/>
+      <bind nodeset="/data/age" type="int"/>
       <bind nodeset="/data/children/child/name" type="string"/>
-      <bind nodeset="/data/children/child/age" type="integer"/>
+      <bind nodeset="/data/children/child/age" type="int"/>
     </model>
   </h:head>
   <h:body>

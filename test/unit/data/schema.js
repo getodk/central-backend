@@ -20,14 +20,14 @@ describe('form schema', () => {
                 </data>
               </instance>
               <bind nodeset="/data/name" type="string"/>
-              <bind type="integer" nodeset="/data/age"/>
+              <bind type="int" nodeset="/data/age"/>
               <bind nodeset="/data/hometown" type="select1"/>
             </model>
           </h:head>
         </h:html>`;
       getFormSchema({ xml }).should.eql([
         { name: 'name', type: 'string' },
-        { name: 'age', type: 'integer' },
+        { name: 'age', type: 'int' },
         { name: 'hometown', type: 'select1' }
       ]);
     });
@@ -46,14 +46,14 @@ describe('form schema', () => {
                 </data>
               </instance>
               <bind nodeset="name" type="string"/>
-              <bind type="integer" nodeset="age"/>
+              <bind type="int" nodeset="age"/>
               <bind nodeset="hometown" type="select1"/>
             </model>
           </h:head>
         </h:html>`;
       getFormSchema({ xml }).should.eql([
         { name: 'name', type: 'string' },
-        { name: 'age', type: 'integer' },
+        { name: 'age', type: 'int' },
         { name: 'hometown', type: 'select1' }
       ]);
     });
@@ -75,7 +75,7 @@ describe('form schema', () => {
               </instance>
               <bind nodeset="/data/orx:meta/orx:instanceID" type="string"/>
               <bind nodeset="/data/name" type="string"/>
-              <bind type="integer" nodeset="/data/age"/>
+              <bind type="int" nodeset="/data/age"/>
             </model>
           </h:head>
         </h:html>`;
@@ -84,7 +84,7 @@ describe('form schema', () => {
           { name: 'instanceID', type: 'string' }
         ] },
         { name: 'name', type: 'string' },
-        { name: 'age', type: 'integer' }
+        { name: 'age', type: 'int' }
       ]);
     });
 
@@ -344,11 +344,11 @@ describe('form schema', () => {
             instanceID: { name: 'instanceID', type: 'string' }
           } },
           name: { name: 'name', type: 'string' },
-          age: { name: 'age', type: 'integer' },
+          age: { name: 'age', type: 'int' },
           children: { name: 'children', type: 'structure', children: {
             child: { name: 'child', type: 'repeat', children: {
               name: { name: 'name', type: 'string' },
-              age: { name: 'age', type: 'integer' }
+              age: { name: 'age', type: 'int' }
             } }
           } }
         });
