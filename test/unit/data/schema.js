@@ -1,7 +1,8 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { getFormSchema, flattenSchemaStructures, _findRepeats } = require(appRoot + '/lib/data/schema');
+const { getFormSchema, flattenSchemaStructures, _findRepeats, schemaAsLookup } = require(appRoot + '/lib/data/schema');
 const { toTraversable } = require(appRoot + '/lib/util/xml');
+const testData = require(appRoot + '/test/integration/data'); // TODO: probably misplaced.
 
 describe('form schema', () => {
   describe('parsing', () => {
@@ -323,6 +324,34 @@ describe('form schema', () => {
             { path: [ 'project', 'due' ], type: 'date' }
           ] }
         ]);
+      });
+    });
+
+    describe('lookup', () => {
+      it('should flatten basic and group bindings into lookups', () => {
+        schemaAsLookup(getFormSchema({ xml: testData.forms.simple })).should.eql({
+          meta: { name: 'meta', type: 'structure', children: {
+            instanceID: { name: 'instanceID', type: 'string' } }
+          },
+          name: { name: 'name', type: 'string' },
+          age: { name: 'age', type: 'int' }
+        });
+      });
+
+      it('should flatten repeat bindings into lookups', () => {
+        schemaAsLookup(getFormSchema({ xml: testData.forms.withrepeat })).should.eql({
+          meta: { name: 'meta', type: 'structure', children: {
+            instanceID: { name: 'instanceID', type: 'string' }
+          } },
+          name: { name: 'name', type: 'string' },
+          age: { name: 'age', type: 'integer' },
+          children: { name: 'children', type: 'structure', children: {
+            child: { name: 'child', type: 'repeat', children: {
+              name: { name: 'name', type: 'string' },
+              age: { name: 'age', type: 'integer' }
+            } }
+          } }
+        });
       });
     });
   });
