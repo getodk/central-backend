@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { getFormSchema, flattenSchemaStructures, _findRepeats, schemaAsLookup } = require(appRoot + '/lib/data/schema');
+const { getFormSchema, flattenSchemaStructures, _findRepeats, getSchemaTables, schemaAsLookup } = require(appRoot + '/lib/data/schema');
 const { toTraversable } = require(appRoot + '/lib/util/xml');
 const testData = require(appRoot + '/test/integration/data'); // TODO: probably misplaced.
 
@@ -323,6 +323,19 @@ describe('form schema', () => {
             { path: [ 'project', 'name' ], type: 'string' },
             { path: [ 'project', 'due' ], type: 'date' }
           ] }
+        ]);
+      });
+    });
+
+    describe('table listing', () => {
+      it('should return nothing for a schema without repeats', () => {
+        getSchemaTables(getFormSchema({ xml: testData.forms.simple })).should.eql([]);
+      });
+
+      it('should return relevant tables', () => {
+        getSchemaTables(getFormSchema({ xml: testData.forms.doubleRepeat })).should.eql([
+          'children.child',
+          'children.child.toys.toy'
         ]);
       });
     });
