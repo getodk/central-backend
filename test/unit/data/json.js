@@ -131,6 +131,7 @@ describe('submissionToOData', () => {
     });
   });
 
+  /* TODO: commented out pending issue #82.
   it('should provide navigation links for repeats', () => {
     const fields = schemaAsLookup(getFormSchema({ xml: testData.forms.withrepeat }));
     const submission = { instanceId: 'two', xml: testData.instances.withrepeat.two };
@@ -143,6 +144,21 @@ describe('submissionToOData', () => {
         children: {
           'child@odata.navigationLink': "Submissions('two')/children/child"
         }
+      }]);
+    });
+  });*/
+
+  // TODO: remove this test once #82 is resolved.
+  it('should ignore repeats in data output', () => {
+    const fields = schemaAsLookup(getFormSchema({ xml: testData.forms.withrepeat }));
+    const submission = { instanceId: 'two', xml: testData.instances.withrepeat.two };
+    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+      result.should.eql([{
+        __id: 'two',
+        meta: { instanceID: 'two' },
+        name: 'Bob',
+        age: 34,
+        children: {}
       }]);
     });
   });
@@ -165,6 +181,7 @@ describe('submissionToOData', () => {
     });
   });
 
+  /* TODO: commented out pending issue #82.
   it('should return navigation links to repeats within a subtable result set', () => {
     const fields = schemaAsLookup(getFormSchema({ xml: testData.forms.doubleRepeat }));
     const submission = { instanceId: 'double', xml: testData.instances.doubleRepeat.double };
@@ -189,7 +206,7 @@ describe('submissionToOData', () => {
         }
       }]);
     });
-  });
+  });*/
 
   it('should return second-order subtable results', () => {
     const fields = schemaAsLookup(getFormSchema({ xml: testData.forms.doubleRepeat }));
