@@ -2,6 +2,8 @@
 // takes care of instance envelope boilerplate.
 const instance = (formId, instanceId, data) =>
   `<data id="${formId}"><orx:meta><orx:instanceID>${instanceId}</orx:instanceID></orx:meta>${data}</data>`;
+const versionedInstance = (formId, version, instanceId, data) =>
+  `<data id="${formId}" version="${version}"><orx:meta><orx:instanceID>${instanceId}</orx:instanceID></orx:meta>${data}</data>`;
 
 module.exports = {
   forms: {
@@ -170,9 +172,9 @@ module.exports = {
       three: instance('simple', 'three', '<name>Chelsea</name><age>38</age>')
     },
     withrepeat: {
-      one: instance('withrepeat', 'one', '<name>Alice</name><age>30</age>'),
-      two: instance('withrepeat', 'two', '<name>Bob</name><age>34</age><children><child><name>Billy</name><age>4</age></child><child><name>Blaine</name><age>6</age></child></children>'),
-      three: instance('withrepeat', 'three', '<name>Chelsea</name><age>38</age><children><child><name>Candace</name><age>2</age></child></children>'),
+      one: versionedInstance('withrepeat', '1.0', 'one', '<name>Alice</name><age>30</age>'),
+      two: versionedInstance('withrepeat', '1.0', 'two', '<name>Bob</name><age>34</age><children><child><name>Billy</name><age>4</age></child><child><name>Blaine</name><age>6</age></child></children>'),
+      three: versionedInstance('withrepeat', '1.0', 'three', '<name>Chelsea</name><age>38</age><children><child><name>Candace</name><age>2</age></child></children>'),
     },
     simple2: {
       one: instance('simple2', 'one', '<name>Alice</name><age>30</age>'),
@@ -180,7 +182,7 @@ module.exports = {
       three: instance('simple2', 'three', '<name>Chelsea</name><age>38</age>')
     },
     doubleRepeat: {
-      double: `<data>
+      double: `<data id="doubleRepeat" version="1.0">
     <meta><instanceID>double</instanceID></meta>
     <name>Vick</name>
     <children>
