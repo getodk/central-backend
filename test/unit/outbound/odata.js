@@ -8,12 +8,12 @@ const testData = require(appRoot + '/test/integration/data');
 describe('odata message composition', () => {
   describe('service document', () => {
     it('should return the correct metadata context', () => {
-      serviceDocumentFor({ tables: () => [] }, '/forms/testform.svc')['@odata.context']
+      serviceDocumentFor({ tables: () => [] }, 'http://localhost:8989', '/forms/testform.svc')['@odata.context']
         .should.equal('http://localhost:8989/forms/testform.svc/$metadata');
     });
 
     it('should return the root table in all cases', () => {
-      serviceDocumentFor({ tables: () => [] }, '/forms/simple.svc').should.eql({
+      serviceDocumentFor({ tables: () => [] }, 'http://localhost:8989', '/forms/simple.svc').should.eql({
         '@odata.context': 'http://localhost:8989/forms/simple.svc/$metadata',
         value: [{ name: 'Submissions', kind: 'EntitySet', url: 'Submissions' }]
       });
@@ -21,7 +21,7 @@ describe('odata message composition', () => {
 
     it('should return all nested tables in addition to the root table', () => {
       const tables = [ 'children.child', 'children.child.toys.toy' ];
-      serviceDocumentFor({ tables: () => tables }, '/forms/doubleRepeat.svc').should.eql({
+      serviceDocumentFor({ tables: () => tables }, 'http://localhost:8989', '/forms/doubleRepeat.svc').should.eql({
         '@odata.context': 'http://localhost:8989/forms/doubleRepeat.svc/$metadata',
         value: [
           { name: 'Submissions', kind: 'EntitySet', url: 'Submissions' },
@@ -155,7 +155,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const inRows = streamTest.fromObjects([]);
         should.throws(() => {
-          rowStreamToOData(form, 'Dummy', '/simple.svc', {}, inRows, 0).pipe(streamTest.toText(identity))
+          rowStreamToOData(form, 'Dummy', 'http://localhost:8989', '/simple.svc', {}, inRows, 0).pipe(streamTest.toText(identity))
         });
       });
 
@@ -163,7 +163,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const inRows = streamTest.fromObjects([]);
         should.throws(() => {
-          rowStreamToOData(form, 'Submissions.nonexistent', '/withrepeat.svc', {}, inRows, 0).pipe(streamTest.toText(identity))
+          rowStreamToOData(form, 'Submissions.nonexistent', 'http://localhost:8989', '/withrepeat.svc', {}, inRows, 0).pipe(streamTest.toText(identity))
         });
       });
 
@@ -171,7 +171,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const inRows = streamTest.fromObjects([]);
         should.doesNotThrow(() => {
-          rowStreamToOData(form, 'Submissions', '/withrepeat.svc', {}, inRows, 0).pipe(streamTest.toText(identity))
+          rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/withrepeat.svc', {}, inRows, 0).pipe(streamTest.toText(identity))
         });
       });
 
@@ -179,7 +179,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const inRows = streamTest.fromObjects([]);
         should.doesNotThrow(() => {
-          rowStreamToOData(form, 'Submissions.children.child', '/withrepeat.svc', {}, inRows, 0).pipe(streamTest.toText(identity))
+          rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc', {}, inRows, 0).pipe(streamTest.toText(identity))
         });
       });
     });
@@ -188,7 +188,7 @@ describe('odata message composition', () => {
       it('should provide the correct context url for the toplevel table', (done) => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const inRows = streamTest.fromObjects([]);
-        rowStreamToOData(form, 'Submissions', '/simple.svc', {}, inRows).pipe(streamTest.toText((_, result) => {
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc', {}, inRows).pipe(streamTest.toText((_, result) => {
           const resultObj = JSON.parse(result);
           resultObj['@odata.context'].should.equal('http://localhost:8989/simple.svc/$metadata#Submissions');
           done();
@@ -198,7 +198,7 @@ describe('odata message composition', () => {
       it('should provide the correct context url for a subtable', (done) => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const inRows = streamTest.fromObjects([]);
-        rowStreamToOData(form, 'Submissions.children.child', '/withrepeat.svc', {}, inRows).pipe(streamTest.toText((_, result) => {
+        rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc', {}, inRows).pipe(streamTest.toText((_, result) => {
           const resultObj = JSON.parse(result);
           resultObj['@odata.context'].should.equal('http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child');
           done();
@@ -210,7 +210,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const query = { $top: '3', $skip: '7' };
         const inRows = streamTest.fromObjects(instances(10));
-        rowStreamToOData(form, 'Submissions', '/simple.svc/Submissions?$top=3&$skip=7', query, inRows).pipe(streamTest.toText((_, result) => {
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=7', query, inRows).pipe(streamTest.toText((_, result) => {
           const resultObj = JSON.parse(result);
           should.not.exist(resultObj['@odata.nextLink']);
           done();
@@ -221,7 +221,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const query = { $top: '3', $skip: '2' };
         const inRows = streamTest.fromObjects(instances(6)); // make it close to check the off-by-one.
-        rowStreamToOData(form, 'Submissions', '/simple.svc/Submissions?$top=3&$skip=2', query, inRows).pipe(streamTest.toText((_, result) => {
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=2', query, inRows).pipe(streamTest.toText((_, result) => {
           const resultObj = JSON.parse(result);
           resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24skip=5');
           done();
@@ -232,7 +232,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const query = { $top: '3', $skip: '2', $wkt: 'true', $count: 'true' };
         const inRows = streamTest.fromObjects(instances(6)); // make it close to check the off-by-one.
-        rowStreamToOData(form, 'Submissions', '/simple.svc/Submissions?$top=3&$skip=2&$wkt=true&$count=true', query, inRows).pipe(streamTest.toText((_, result) => {
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=2&$wkt=true&$count=true', query, inRows).pipe(streamTest.toText((_, result) => {
           const resultObj = JSON.parse(result);
           resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24skip=5&%24wkt=true&%24count=true');
           done();
@@ -243,7 +243,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const query = { $count: 'true' };
         const inRows = streamTest.fromObjects(instances(8)); // make it close to check the off-by-one.
-        rowStreamToOData(form, 'Submissions', '/simple.svc/Submissions?$count=true', query, inRows).pipe(streamTest.toText((_, result) => {
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$count=true', query, inRows).pipe(streamTest.toText((_, result) => {
           const resultObj = JSON.parse(result);
           resultObj['@odata.count'].should.equal(8);
           done();
@@ -254,7 +254,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const query = { $top: '1', $skip: '1', $count: 'true' };
         const inRows = streamTest.fromObjects(instances(8)); // make it close to check the off-by-one.
-        rowStreamToOData(form, 'Submissions', '/simple.svc/Submissions?$top=1&$skip=1&$count=true', query, inRows).pipe(streamTest.toText((_, result) => {
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=1&$skip=1&$count=true', query, inRows).pipe(streamTest.toText((_, result) => {
           const resultObj = JSON.parse(result);
           resultObj['@odata.count'].should.equal(8);
           done();
@@ -268,7 +268,7 @@ describe('odata message composition', () => {
       it('should output empty row data', (done) => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const inRows = streamTest.fromObjects([]);
-        rowStreamToOData(form, 'Submissions', '/simple.svc/Submissions', {}, inRows).pipe(streamTest.toText((_, result) => {
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions', {}, inRows).pipe(streamTest.toText((_, result) => {
           JSON.parse(result).should.eql({
             '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
           });
@@ -282,7 +282,7 @@ describe('odata message composition', () => {
           { instanceId: 'one', xml: testData.instances.simple.one },
           { instanceId: 'two', xml: testData.instances.simple.two }
         ]);
-        rowStreamToOData(form, 'Submissions', '/simple.svc/Submissions', {}, inRows).pipe(streamTest.toText((_, result) => {
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions', {}, inRows).pipe(streamTest.toText((_, result) => {
           JSON.parse(result).should.eql({
             '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
             value: [
@@ -302,7 +302,7 @@ describe('odata message composition', () => {
           { instanceId: 'two', xml: testData.instances.simple.two },
           { instanceId: 'three', xml: testData.instances.simple.three }
         ]);
-        rowStreamToOData(form, 'Submissions', '/simple.svc/Submissions?$top=2', query, inRows).pipe(streamTest.toText((_, result) => {
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=2', query, inRows).pipe(streamTest.toText((_, result) => {
           JSON.parse(result).should.eql({
             '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
             '@odata.nextLink': 'http://localhost:8989/simple.svc/Submissions?%24skip=2',
@@ -323,7 +323,7 @@ describe('odata message composition', () => {
           { instanceId: 'two', xml: testData.instances.simple.two },
           { instanceId: 'three', xml: testData.instances.simple.three }
         ]);
-        rowStreamToOData(form, 'Submissions', '/simple.svc/Submissions?$skip=2', query, inRows).pipe(streamTest.toText((_, result) => {
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$skip=2', query, inRows).pipe(streamTest.toText((_, result) => {
           JSON.parse(result).should.eql({
             '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
             value: [
@@ -342,7 +342,7 @@ describe('odata message composition', () => {
           { instanceId: 'two', xml: testData.instances.simple.two },
           { instanceId: 'three', xml: testData.instances.simple.three }
         ]);
-        rowStreamToOData(form, 'Submissions', '/simple.svc/Submissions?$top=1&$skip=1', query, inRows).pipe(streamTest.toText((_, result) => {
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=1&$skip=1', query, inRows).pipe(streamTest.toText((_, result) => {
           JSON.parse(result).should.eql({
             '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
             '@odata.nextLink': 'http://localhost:8989/simple.svc/Submissions?%24skip=2',
@@ -361,7 +361,7 @@ describe('odata message composition', () => {
           { instanceId: 'two', xml: testData.instances.withrepeat.two },
           { instanceId: 'three', xml: testData.instances.withrepeat.three }
         ]);
-        rowStreamToOData(form, 'Submissions.children.child', '/withrepeat.svc/Submissions', {}, inRows).pipe(streamTest.toText((_, result) => {
+        rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions', {}, inRows).pipe(streamTest.toText((_, result) => {
           JSON.parse(result).should.eql({
             '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
             value: [{
@@ -393,7 +393,7 @@ describe('odata message composition', () => {
           { instanceId: 'two', xml: testData.instances.withrepeat.two },
           { instanceId: 'three', xml: testData.instances.withrepeat.three }
         ]);
-        rowStreamToOData(form, 'Submissions.children.child', '/withrepeat.svc/Submissions.children.child?$top=2', query, inRows).pipe(streamTest.toText((_, result) => {
+        rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$top=2', query, inRows).pipe(streamTest.toText((_, result) => {
           JSON.parse(result).should.eql({
             '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
             '@odata.nextLink': 'http://localhost:8989/withrepeat.svc/Submissions.children.child?%24skip=2',
@@ -421,7 +421,7 @@ describe('odata message composition', () => {
           { instanceId: 'two', xml: testData.instances.withrepeat.two },
           { instanceId: 'three', xml: testData.instances.withrepeat.three }
         ]);
-        rowStreamToOData(form, 'Submissions.children.child', '/withrepeat.svc/Submissions.children.child?$skip=2', query, inRows).pipe(streamTest.toText((_, result) => {
+        rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=2', query, inRows).pipe(streamTest.toText((_, result) => {
           JSON.parse(result).should.eql({
             '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
             value: [{
@@ -448,7 +448,7 @@ describe('odata message composition', () => {
           { instanceId: 'two', xml: testData.instances.withrepeat.two },
           { instanceId: 'three', xml: testData.instances.withrepeat.three }
         ]);
-        rowStreamToOData(form, 'Submissions.children.child', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows).pipe(streamTest.toText((_, result) => {
+        rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows).pipe(streamTest.toText((_, result) => {
           JSON.parse(result).should.eql({
             '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
             '@odata.nextLink': 'http://localhost:8989/withrepeat.svc/Submissions.children.child?%24skip=2',
@@ -471,7 +471,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const submission = { instanceId: 'one', xml: testData.instances.simple.one };
         should.throws(() => {
-          singleRowToOData(form, submission, "/simple.svc/Nonexistent('one')", {});
+          singleRowToOData(form, submission, 'http://localhost:8989', "/simple.svc/Nonexistent('one')", {});
         });
       });
 
@@ -479,7 +479,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const submission = { instanceId: 'one', xml: testData.instances.withrepeat.one };
         should.throws(() => {
-          singleRowToOData(form, submission, "/withrepeat.svc/Submissions('one')/children/child/nonexistent", {});
+          singleRowToOData(form, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('one')/children/child/nonexistent", {});
         });
       });
 
@@ -487,7 +487,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const submission = { instanceId: 'one', xml: testData.instances.simple.one };
         should.doesNotThrow(() => {
-          singleRowToOData(form, submission, "/simple.svc/Submissions('one')", {});
+          singleRowToOData(form, submission, 'http://localhost:8989', "/simple.svc/Submissions('one')", {});
         });
       });
 
@@ -495,7 +495,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const submission = { instanceId: 'one', xml: testData.instances.withrepeat.one };
         should.doesNotThrow(() => {
-          singleRowToOData(form, submission, "/withrepeat.svc/Submissions('one')/children/child", {});
+          singleRowToOData(form, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('one')/children/child", {});
         });
       });
     });
@@ -504,7 +504,7 @@ describe('odata message composition', () => {
       it('should provide the correct context url for the toplevel table', () => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const submission = { instanceId: 'one', xml: testData.instances.simple.one };
-        return singleRowToOData(form, submission, "/simple.svc/Submissions('one')", {})
+        return singleRowToOData(form, submission, 'http://localhost:8989', "/simple.svc/Submissions('one')", {})
           .then(JSON.parse)
           .then((result) => {
             result['@odata.context'].should.equal('http://localhost:8989/simple.svc/$metadata#Submissions')
@@ -514,7 +514,7 @@ describe('odata message composition', () => {
       it('should provide the correct context url for a subtable', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const submission = { instanceId: 'one', xml: testData.instances.withrepeat.one };
-        return singleRowToOData(form, submission, "/withrepeat.svc/Submissions('one')/children/child", {})
+        return singleRowToOData(form, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('one')/children/child", {})
           .then(JSON.parse)
           .then((result) => {
             result['@odata.context'].should.equal('http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child')
@@ -524,7 +524,7 @@ describe('odata message composition', () => {
       it('should provide no nextUrl if the final row is accounted for', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const submission = { instanceId: 'two', xml: testData.instances.withrepeat.two };
-        return singleRowToOData(form, submission, "/withrepeat.svc/Submissions('two')/children/child", {})
+        return singleRowToOData(form, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child", {})
           .then(JSON.parse)
           .then((result) => {
             should.not.exist(result['@odata.nextLink']);
@@ -535,7 +535,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const submission = { instanceId: 'two', xml: testData.instances.withrepeat.two };
         const query = { $top: 1 };
-        return singleRowToOData(form, submission, "/withrepeat.svc/Submissions('two')/children/child?$top=1", query)
+        return singleRowToOData(form, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child?$top=1", query)
           .then(JSON.parse)
           .then((result) => {
             result['@odata.nextLink'].should.equal("http://localhost:8989/withrepeat.svc/Submissions('two')/children/child?%24skip=1");
@@ -546,7 +546,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const submission = { instanceId: 'two', xml: testData.instances.withrepeat.two };
         const query = { $top: 1, $wkt: 'true' };
-        return singleRowToOData(form, submission, "/withrepeat.svc/Submissions('two')/children/child?$top=1&$wkt=true", query)
+        return singleRowToOData(form, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child?$top=1&$wkt=true", query)
           .then(JSON.parse)
           .then((result) => {
             result['@odata.nextLink'].should.equal("http://localhost:8989/withrepeat.svc/Submissions('two')/children/child?%24wkt=true&%24skip=1");
@@ -557,7 +557,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const submission = { instanceId: 'two', xml: testData.instances.withrepeat.two };
         const query = { $count: 'true' };
-        return singleRowToOData(form, submission, "/withrepeat.svc/Submissions('two')/children/child?$count=true", query)
+        return singleRowToOData(form, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child?$count=true", query)
           .then(JSON.parse)
           .then((result) => {
             result['@odata.count'].should.equal(2);
@@ -568,7 +568,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const submission = { instanceId: 'two', xml: testData.instances.withrepeat.two };
         const query = { $top: '1', $count: 'true' };
-        return singleRowToOData(form, submission, "/withrepeat.svc/Submissions('two')/children/child?$top=1$count=true", query)
+        return singleRowToOData(form, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child?$top=1$count=true", query)
           .then(JSON.parse)
           .then((result) => {
             result['@odata.count'].should.equal(2);
@@ -580,7 +580,7 @@ describe('odata message composition', () => {
       it('should output single instance data', () => {
         const form = { xmlFormId: 'doubleRepeat', schema: () => getFormSchema({ xml: testData.forms.doubleRepeat }) };
         const submission = { instanceId: 'double', xml: testData.instances.doubleRepeat.double };
-        return singleRowToOData(form, submission, "/doubleRepeat.svc/Submissions('double')", {})
+        return singleRowToOData(form, submission, 'http://localhost:8989', "/doubleRepeat.svc/Submissions('double')", {})
           .then(JSON.parse)
           .then((result) => {
             result.should.eql({
@@ -598,7 +598,7 @@ describe('odata message composition', () => {
       it('should filter to a single subinstance', () => {
         const form = { xmlFormId: 'doubleRepeat', schema: () => getFormSchema({ xml: testData.forms.doubleRepeat }) };
         const submission = { instanceId: 'double', xml: testData.instances.doubleRepeat.double };
-        return singleRowToOData(form, submission, "/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy", {})
+        return singleRowToOData(form, submission, 'http://localhost:8989', "/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy", {})
           .then(JSON.parse)
           .then((result) => {
             result.should.eql({
@@ -628,7 +628,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'doubleRepeat', schema: () => getFormSchema({ xml: testData.forms.doubleRepeat }) };
         const submission = { instanceId: 'double', xml: testData.instances.doubleRepeat.double };
         const query = { $top: '2' };
-        return singleRowToOData(form, submission, "/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?$top=2", query)
+        return singleRowToOData(form, submission, 'http://localhost:8989', "/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?$top=2", query)
           .then(JSON.parse)
           .then((result) => {
             result.should.eql({
@@ -651,7 +651,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'doubleRepeat', schema: () => getFormSchema({ xml: testData.forms.doubleRepeat }) };
         const submission = { instanceId: 'double', xml: testData.instances.doubleRepeat.double };
         const query = { $skip: '1' };
-        return singleRowToOData(form, submission, "/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?$skip=1", query)
+        return singleRowToOData(form, submission, 'http://localhost:8989', "/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?$skip=1", query)
           .then(JSON.parse)
           .then((result) => {
             result.should.eql({
@@ -677,7 +677,7 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'doubleRepeat', schema: () => getFormSchema({ xml: testData.forms.doubleRepeat }) };
         const submission = { instanceId: 'double', xml: testData.instances.doubleRepeat.double };
         const query = { $skip: '1', $top: '2' };
-        return singleRowToOData(form, submission, "/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?$skip=1&$top=2", query)
+        return singleRowToOData(form, submission, 'http://localhost:8989', "/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?$skip=1&$top=2", query)
           .then(JSON.parse)
           .then((result) => {
             result.should.eql({

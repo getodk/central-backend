@@ -167,10 +167,6 @@ describe('api: /forms/:id.svc', () => {
               .expect(200)
               .then(() => callback(asAlice)))));
 
-    it('should reject if the submission does not exist', testService((service) =>
-      withSubmissions(service, (asAlice) =>
-        asAlice.get("/v1/forms/withrepeat.svc/Submissions('nonexistent')").expect(404))));
-
     it('should return toplevel rows', testService((service) =>
       withSubmissions(service, (asAlice) =>
         asAlice.get('/v1/forms/withrepeat.svc/Submissions')
@@ -244,6 +240,4 @@ describe('api: /forms/:id.svc', () => {
           }))));
   });
 });
-
-
 

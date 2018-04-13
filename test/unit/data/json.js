@@ -17,19 +17,6 @@ describe('submissionToOData', () => {
     });
   });
 
-  it('should parse and transform a basic submission', () => {
-    const fields = schemaAsLookup(getFormSchema({ xml: testData.forms.simple }));
-    const submission = { instanceId: 'one', xml: testData.instances.simple.one };
-    return submissionToOData(fields, 'Submissions', submission).then((result) => {
-      result.should.eql([{
-        __id: 'one',
-        meta: { instanceID: 'one' },
-        name: 'Alice',
-        age: 30
-      }]);
-    });
-  });
-
   it('should handle all primitive output types correctly', () => {
     const fields = {
       int: { name: 'int', type: 'int' },

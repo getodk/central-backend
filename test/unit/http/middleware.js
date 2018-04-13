@@ -66,6 +66,7 @@ describe('middleware', () => {
     it('should set no auth if no Authorization header is provided', (done) => {
       const request = createRequest();
       sessionParser({ Auth, Session: mockSession() })(request, null, () => {
+        // this is a mock object so we have to directly check the properties.
         should.not.exist(request.auth._session);
         should.not.exist(request.auth._actor);
         done();
@@ -75,6 +76,7 @@ describe('middleware', () => {
     it('should set no auth if Authorization mode is not Bearer or Basic', (done) => {
       const request = createRequest({ headers: { Authorization: 'Digest aabbccddeeff123' } });
       sessionParser({ Auth, Session: mockSession() })(request, null, () => {
+        // this is a mock object so we have to directly check the properties.
         should.not.exist(request.auth._session);
         should.not.exist(request.auth._actor);
         done();
@@ -130,16 +132,19 @@ describe('middleware', () => {
       });
     });
 
-    it('should fail the request if Basic auth is attempted with a successful auth present', (done) => {
-      const request = createRequest({ headers: {
-        Authorization: `Basic abcdef1234567890`,
-        'X-Forwarded-Proto': 'https'
-      } });
-      request.auth = { isAuthenticated: () => true };
-      sessionParser({ Auth, User: mockUser('alice@opendatakit.org') })(request, null, (failure) => {
-        failure.isProblem.should.equal(true);
-        failure.problemCode.should.equal(401.2);
-        done();
+    it('should fail the request if Basic auth is attempted with a successful auth present @slow', (done) => {
+      hashPassword('alice').point().then((hashed) => {
+        const encodedCredentials = Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64');
+        const request = createRequest({ headers: {
+          Authorization: `Basic ${encodedCredentials}`,
+          'X-Forwarded-Proto': 'https'
+        } });
+        request.auth = { isAuthenticated: () => true };
+        sessionParser({ Auth, User: mockUser('alice@opendatakit.org', hashed) })(request, null, (failure) => {
+          failure.isProblem.should.equal(true);
+          failure.problemCode.should.equal(401.2);
+          done();
+        });
       });
     });
 
