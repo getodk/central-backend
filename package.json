@@ -17,6 +17,7 @@
     "fast-xml-parser": "~2.9",
     "googleapis": "~27",
     "knex": "~0.14",
+    "htmlparser2": "~3.9",
     "luxon": "~0.3",
     "morgan": "~1.8",
     "multer": "~1.3",

@@ -1,7 +1,8 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { getFormSchema, flattenSchemaStructures, _findRepeats } = require(appRoot + '/lib/data/schema');
+const { getFormSchema, flattenSchemaStructures, _findRepeats, getSchemaTables, schemaAsLookup } = require(appRoot + '/lib/data/schema');
 const { toTraversable } = require(appRoot + '/lib/util/xml');
+const testData = require(appRoot + '/test/integration/data'); // TODO: probably misplaced.
 
 describe('form schema', () => {
   describe('parsing', () => {
@@ -19,14 +20,40 @@ describe('form schema', () => {
                 </data>
               </instance>
               <bind nodeset="/data/name" type="string"/>
-              <bind type="integer" nodeset="/data/age"/>
+              <bind type="int" nodeset="/data/age"/>
               <bind nodeset="/data/hometown" type="select1"/>
             </model>
           </h:head>
         </h:html>`;
       getFormSchema({ xml }).should.eql([
         { name: 'name', type: 'string' },
-        { name: 'age', type: 'integer' },
+        { name: 'age', type: 'int' },
+        { name: 'hometown', type: 'select1' }
+      ]);
+    });
+
+    it('should work with relative paths', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <age/>
+                  <hometown/>
+                </data>
+              </instance>
+              <bind nodeset="name" type="string"/>
+              <bind type="int" nodeset="age"/>
+              <bind nodeset="hometown" type="select1"/>
+            </model>
+          </h:head>
+        </h:html>`;
+      getFormSchema({ xml }).should.eql([
+        { name: 'name', type: 'string' },
+        { name: 'age', type: 'int' },
         { name: 'hometown', type: 'select1' }
       ]);
     });
@@ -48,7 +75,7 @@ describe('form schema', () => {
               </instance>
               <bind nodeset="/data/orx:meta/orx:instanceID" type="string"/>
               <bind nodeset="/data/name" type="string"/>
-              <bind type="integer" nodeset="/data/age"/>
+              <bind type="int" nodeset="/data/age"/>
             </model>
           </h:head>
         </h:html>`;
@@ -57,7 +84,7 @@ describe('form schema', () => {
           { name: 'instanceID', type: 'string' }
         ] },
         { name: 'name', type: 'string' },
-        { name: 'age', type: 'integer' }
+        { name: 'age', type: 'int' }
       ]);
     });
 
@@ -297,6 +324,47 @@ describe('form schema', () => {
             { path: [ 'project', 'due' ], type: 'date' }
           ] }
         ]);
+      });
+    });
+
+    describe('table listing', () => {
+      it('should return nothing for a schema without repeats', () => {
+        getSchemaTables(getFormSchema({ xml: testData.forms.simple })).should.eql([]);
+      });
+
+      it('should return relevant tables', () => {
+        getSchemaTables(getFormSchema({ xml: testData.forms.doubleRepeat })).should.eql([
+          'children.child',
+          'children.child.toys.toy'
+        ]);
+      });
+    });
+
+    describe('lookup', () => {
+      it('should flatten basic and group bindings into lookups', () => {
+        schemaAsLookup(getFormSchema({ xml: testData.forms.simple })).should.eql({
+          meta: { name: 'meta', type: 'structure', children: {
+            instanceID: { name: 'instanceID', type: 'string' } }
+          },
+          name: { name: 'name', type: 'string' },
+          age: { name: 'age', type: 'int' }
+        });
+      });
+
+      it('should flatten repeat bindings into lookups', () => {
+        schemaAsLookup(getFormSchema({ xml: testData.forms.withrepeat })).should.eql({
+          meta: { name: 'meta', type: 'structure', children: {
+            instanceID: { name: 'instanceID', type: 'string' }
+          } },
+          name: { name: 'name', type: 'string' },
+          age: { name: 'age', type: 'int' },
+          children: { name: 'children', type: 'structure', children: {
+            child: { name: 'child', type: 'repeat', children: {
+              name: { name: 'name', type: 'string' },
+              age: { name: 'age', type: 'int' }
+            } }
+          } }
+        });
       });
     });
   });
