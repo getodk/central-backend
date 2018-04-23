@@ -52,8 +52,7 @@ should.Assertion.add('User', function() {
 });
 
 const assertSubmissionBase = (obj) => {
-  Object.keys(obj).should.containDeep([ 'formId', 'instanceId', 'xml', 'createdAt', 'updatedAt', 'submitter' ]);
-  obj.formId.should.be.a.Number();
+  Object.keys(obj).should.containDeep([ 'instanceId', 'xml', 'createdAt', 'updatedAt', 'submitter' ]);
   obj.instanceId.should.be.a.String();
   obj.xml.should.be.a.String();
   validate(obj.xml).should.equal(true);
