@@ -55,6 +55,20 @@ describe('api: /field-keys', () => {
               should(key.token).equal(null);
             })))));
 
+    it('should sort revoked field keys to the bottom', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/field-keys').send({ displayName: 'test 1' }).expect(200)
+          .then(() => asAlice.post('/v1/field-keys').send({ displayName: 'test 2' }).expect(200))
+          .then(({ body }) => asAlice.delete('/v1/sessions/' + body.token).expect(200))
+          .then(() => asAlice.post('/v1/field-keys').send({ displayName: 'test 3' }).expect(200))
+          .then(() => asAlice.get('/v1/field-keys')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(3);
+              body.forEach((key) => key.should.be.a.FieldKey());
+              body.map((key) => key.displayName).should.eql([ 'test 3', 'test 1', 'test 2' ]);
+            })))));
+
     it('should join through additional data if extended metadata is requested', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/field-keys').send({ displayName: 'test 1' }).expect(200)
@@ -83,6 +97,21 @@ describe('api: /field-keys', () => {
                   body[0].lastUsed.should.be.a.recentIsoDate();
                   should(body[1].lastUsed).equal(null);
                 })))))));
+
+    it('should sort revoked field keys to the bottom in extended metadata', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/field-keys').send({ displayName: 'test 1' }).expect(200)
+          .then(() => asAlice.post('/v1/field-keys').send({ displayName: 'test 2' }).expect(200))
+          .then(({ body }) => asAlice.delete('/v1/sessions/' + body.token).expect(200))
+          .then(() => asAlice.post('/v1/field-keys').send({ displayName: 'test 3' }).expect(200))
+          .then(() => asAlice.get('/v1/field-keys')
+            .set('X-Extended-Metadata', 'true')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(3);
+              body.forEach((key) => key.should.be.an.ExtendedFieldKey());
+              body.map((key) => key.displayName).should.eql([ 'test 3', 'test 1', 'test 2' ]);
+            })))));
   });
 
   describe('/:id DELETE', () => {
