@@ -12,6 +12,7 @@ describe('task: config', () => {
         .then((result) => {
           result.key.should.equal('testConfig');
           JSON.parse(result.value).should.eql({ key: 'value' });
+          result.setAt.should.be.an.instanceof(Date);
         })));
 
     it('should reject if configuration is not found', testTask((_, finalize) =>
