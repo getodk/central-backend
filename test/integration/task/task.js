@@ -42,12 +42,12 @@ describe('task: runner', () => {
 describe('task: auditing', () => {
   context('on task success', () => {
     it('should log', testTask(({ simply, Audit }, finalize) =>
-      auditing('testAction', Promise.resolve(true))
+      auditing('testAction', Promise.resolve({ key: 'value' }))
         .then(() => finalize(simply.getAll('audits', Audit))
           .then((audits) => {
             audits.length.should.equal(1);
             audits[0].action.should.equal('testAction');
-            audits[0].details.should.eql({ success: true });
+            audits[0].details.should.eql({ success: true, key: 'value' });
           }))));
 
     it('should fault but passthrough on log failure', testTask(({ Audit }) => {
