@@ -21,8 +21,9 @@ describe('api: /config', () => {
             asAlice.get('/v1/config/backups')
               .expect(200)
               .then(({ body }) => {
-                body.config.should.eql({ type: 'google' });
-                (body.latest == null).should.equal(true);
+                body.type.should.equal('google');
+                body.setAt.should.be.an.isoDate();
+                body.recent.should.eql([]);
               })))));
 
       it('should return latest result if logged', testService((service, { all, Audit, Config }, finalize) =>
@@ -34,9 +35,9 @@ describe('api: /config', () => {
           asAlice.get('/v1/config/backups')
             .expect(200)
             .then(({ body }) => {
-              body.config.should.eql({ type: 'google' });
-              body.latest.details.should.eql({ order: 'second' });
-              body.latest.loggedAt.should.be.a.recentIsoDate();
+              body.type.should.equal('google');
+              body.recent.map((log) => log.details).should.eql([{ order: 'second' }, { order: 'first' }]);
+              body.recent.forEach((log) => log.loggedAt.should.be.a.recentIsoDate());
             })))));
     });
 
