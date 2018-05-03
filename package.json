@@ -7,7 +7,7 @@
   },
   "dependencies": {
     "archiver": "~2",
-    "bcrypt": "1.0.3",
+    "bcrypt": "~2",
     "body-parser": "~1.18",
     "cli": "~1",
     "config": "~1.26",
