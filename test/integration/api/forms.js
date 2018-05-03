@@ -212,14 +212,13 @@ describe('api: /forms', () => {
     it('should update allowed fields', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/forms/simple')
-          .send({ name: 'a fancy name', version: '2.0', state: 'draft' })
+          .send({ name: 'a fancy name', state: 'draft' })
           .expect(200)
           .then(() => asAlice.get('/v1/forms/simple')
             .expect(200)
             .then(({ body }) => {
               body.should.be.a.Form();
               body.name.should.equal('a fancy name');
-              body.version.should.equal('2.0');
               body.state.should.equal('draft');
               body.xml.should.equal(testData.forms.simple);
             })))));
