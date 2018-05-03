@@ -71,6 +71,11 @@ describe('api: /config', () => {
               body.url.should.match(/^https:\/\/accounts.google.com\/o\/oauth2/);
               body.token.should.be.a.token();
             }))));
+
+      it('should work given no passphrase', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/config/backups/initiate')
+            .expect(200))));
     });
 
     describe('/verify POST', () => {
