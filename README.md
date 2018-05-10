@@ -57,7 +57,7 @@ Various commands are available:
 
 ## Style Guidelines
 
-Details forthcoming prior to release.
+Please see the [Contribution Guide](https://github.com/nafundi/jubilant-garbanzo/blob/master/CONTRIBUTING.md) for complete information on our coding style.
 
 We use linting as _a part of_ coding style verification. To run the linter, run `make lint` from the repository root. We use [ESLint](https://eslint.org/) with [rules](.eslintrc.json) based on the [Airbnb JavaScript style guide](https://github.com/airbnb/javascript). The linter is not perfect; we will make exceptions when we have a consensus to do so.
 
