@@ -154,7 +154,7 @@ describe('api: /submission', () => {
           .attach('file1.txt', Buffer.from('this is test file two'), { filename: 'file2.txt' })
           .expect(400)
           .then(({ text }) => {
-            text.should.match(/resource already exists with a attachment file name of file1.txt/);
+            text.should.match(/resource already exists with \(attachment file names\) value\(s\) of file1.txt/);
           }))));
 
     // also tests /forms/_/submissions/_/attachments/_ return content. (mark2)

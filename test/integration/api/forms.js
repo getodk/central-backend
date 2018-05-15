@@ -134,8 +134,8 @@ describe('api: /forms', () => {
           .expect(400)
           .then(({ body }) => {
             body.code.should.equal(400.5);
-            body.details.field.should.equal('"xmlFormId"');
-            body.details.value.should.equal('simple');
+            body.details.fields.should.eql([ 'xmlFormId' ]);
+            body.details.values.should.eql([ 'simple' ]);
           }))));
 
     it('should return the created form upon success', testService((service) =>
