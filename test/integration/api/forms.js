@@ -19,7 +19,7 @@ describe('api: /forms', () => {
             body.forEach((form) => form.should.be.a.Form());
             body.map((form) => form.xmlFormId).should.eql([ 'withrepeat', 'simple' ]);
             body.map((form) => form.hash).should.eql([ '49382fd449601e40a1bd42934eeb3410', '5c09c21d4c71f2f13f6aa26227b2d133' ]);
-            body.map((form) => form.version).should.eql([ '1.0', null ]);
+            body.map((form) => form.version).should.eql([ '1.0', '' ]);
           }))));
 
     it('should provide extended metadata if requested', testService((service) =>
@@ -137,6 +137,23 @@ describe('api: /forms', () => {
             body.details.fields.should.eql([ 'xmlFormId' ]);
             body.details.values.should.eql([ 'simple' ]);
           }))));
+
+    // the simple form has no version declaration at all, which is what we want
+    // to test, as postgres does not enforce uniqueness on null values. the
+    // simple form is preloaded as part of the initial fixtures so we simply start
+    // by deleting it.
+    it('should reject if an empty form version already existed but was deleted', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/forms/simple')
+          .expect(200)
+          .then(() => asAlice.post('/v1/forms')
+            .send(testData.forms.simple)
+            .set('Content-Type', 'application/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.details.fields.should.eql([ 'xmlFormId', 'version' ]);
+              body.details.values.should.eql([ 'simple', '' ]);
+            })))));
 
     it('should return the created form upon success', testService((service) =>
       service.login('alice', (asAlice) =>
