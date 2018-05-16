@@ -54,10 +54,10 @@ describe('Form', () => {
       }).point();
     });
 
-    it('should reduce empty-string version to null', (done) => {
-      const xml = '<html><head><model><instance><data id="mycoolform" version=""><field/></data></instance></model></head></html>';
+    it('should squash null version to empty-string', (done) => {
+      const xml = '<html><head><model><instance><data id="mycoolform"><field/></data></instance></model></head></html>';
       Form.fromXml(xml).then((form) => {
-        (form.version === null).should.equal(true);
+        (form.version === '').should.equal(true);
         done();
       }).point();
     });

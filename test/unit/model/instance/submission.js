@@ -63,10 +63,10 @@ describe('Submission', () => {
       }).point();
     });
 
-    it('should squash version to null if empty string is given', (done) => {
-      const xml = '<data id="mycoolform" version=""><orx:meta><orx:instanceID>myinstance</orx:instanceID></orx:meta><field/></data>';
+    it('should squash null version to empty-string', (done) => {
+      const xml = '<data id="mycoolform"><orx:meta><orx:instanceID>myinstance</orx:instanceID></orx:meta><field/></data>';
       Submission.fromXml(xml).then((ps) => {
-        (ps.version === null).should.equal(true);
+        (ps.version === '').should.equal(true);
         done();
       }).point();
     });
@@ -88,7 +88,7 @@ describe('Submission', () => {
     const psp = Submission.fromXml(subXml).point();
     it('should complete given a form and no actor', (done) => {
       psp.then((ps) => {
-        const submission = ps.complete({ id: 42 }, Option.none());
+        const submission = ps.complete({ id: 42, version: '' }, Option.none());
         submission.instanceId.should.be.a.uuid();
         submission.xml.should.equal(subXml);
         submission.formId.should.equal(42);
@@ -100,7 +100,7 @@ describe('Submission', () => {
 
     it('should complete given a form and an actor', (done) => {
       psp.then((ps) => {
-        const submission = ps.complete({ id: 42 }, Option.of({ id: 75 }));
+        const submission = ps.complete({ id: 42, version: '' }, Option.of({ id: 75 }));
         submission.instanceId.should.be.a.uuid();
         submission.xml.should.equal(subXml);
         submission.formId.should.equal(42);
