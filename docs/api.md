@@ -467,9 +467,7 @@ We use `PATCH` rather than `PUT` to represent the update operation, so that you 
         + state (Form State, optional) - If supplied, the Form lifecycle state will move to this value.
 
 + Response 200 (application/json)
-    + Attributes (Form)
-        + name: `A New Name` (string, required) - The updated friendly name can be seen here.
-        + state: `closing` (Form State, required) - The updated `Form` state can be seen here.
+    + Attributes (Success)
 
 + Response 400 (application/json)
     + Attributes (Error 400)
