@@ -6,6 +6,9 @@
       "password": "jubilant",
       "database": "jubilant"
     },
+    "server": {
+      "port": 8383
+    },
     "email": {
       "serviceAccount": "no-reply@opendatakit.org",
       "transport": "json"
