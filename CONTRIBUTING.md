@@ -10,7 +10,7 @@ One of the easiest ways you can participate is to help us [track down bugs](http
 
 If you are having trouble with making Jubilant Garbanzo work correctly, we encourage you to visit the [community forum](https://forum.opendatakit.org) where a great many of your knowledgeable peers can help you with your problem.
 
-If you're looking for help or discussion on _how_ Jubilant Garbanzo works internally and how to understand or update its code, the ODK [developer Slack](https://opendatakit.slack.com) is for you. If you don't want to sign up for Slack, please feel free to open an issue ticket here on GitHub.
+If you're looking for help or discussion on _how_ Jubilant Garbanzo works internally and how to understand or update its code, the ODK [developer Slack](https://opendatakit.slack.com) is for you.
 
 # Contributing Code
 
@@ -24,7 +24,7 @@ If you're starting work on an issue ticket, please leave a comment saying so. If
 
 * Our **code style** is loosely based on the [AirBnB Javascript Style Guide](https://github.com/airbnb/javascript), and you can run `make lint` in the project directory to check your code against it. We do make [some exceptions](https://github.com/nafundi/jubilant-garbanzo/blob/master/.eslintrc.json) to their rules, and we do make exceptions to the linter when we have a reason and consensus to do so.
 * More broadly, we also try to keep our code as maintainable as possible by doing the following:
-    * Use [immutability](https://en.wikipedia.org/wiki/Immutable_object) (`const`), [pure functions](https://medium.com/@jamesjefferyuk/javascript-what-are-pure-functions-4d4d5392d49c), and [functional composition](https://hackernoon.com/javascript-functional-composition-for-every-day-use-22421ef65a10) wherever possible. It should almost always be possible. If you are not sure how to accomplish something with these techniques, please don't be afraid to ask for advice.
+    * Use [immutability](https://en.wikipedia.org/wiki/Immutable_object) (`const`), [pure functions](https://medium.com/@jamesjefferyuk/javascript-what-are-pure-functions-4d4d5392d49c), [higher-order-functions](https://medium.com/javascript-scene/higher-order-functions-composing-software-5365cf2cbe99) (eg when you see stacked arrow functions like `(x) => (y) => …`) and [functional composition](https://hackernoon.com/javascript-functional-composition-for-every-day-use-22421ef65a10) wherever possible. It should almost always be possible. If you are not sure how to accomplish something with these techniques, please don't be afraid to ask for advice.
     * Reduce or eliminate tight coupling and direct dependencies within the codebase as much as possible. Ideally, things you need can be passed in rather than directly instantiated or required; the dependency injection system we have built (see below) should help.
     * As with any Node.js project, use Streams and Promises whenever dealing with I/O (reading client requests, loading things from the filesystem, database requests, etc).
     * We use [Ramda](http://ramdajs.com/) to help manipulate our data structures. In general, if you have algorithmic data structure work to do, look to see if Ramda has an answer that can help you.
