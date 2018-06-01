@@ -4,13 +4,14 @@ const { Submission } = require('../../../../lib/model/package').withDefaults();
 
 describe('Submission', () => {
   describe('fromXml', () => {
+    /* gh #45 when we have a real xml validator we should re-enable this test:
     it('should reject invalid xml', (done) => {
       Submission.fromXml('<a><b/>').catch((failure) => {
         failure.isProblem.should.equal(true);
         failure.problemCode.should.equal(400.1);
         done();
       });
-    });
+    });*/
 
     it('should reject if the formId does not exist (1: no attribute)', (done) => {
       Submission.fromXml('<data><field/></data>').catch((failure) => {

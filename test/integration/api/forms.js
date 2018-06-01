@@ -111,8 +111,11 @@ describe('api: /forms', () => {
           .set('Content-Type', 'application/xml')
           .expect(400)
           .then(({ body }) => {
+            body.code.should.equal(400.2);
+            body.details.field.should.equal('formId');
+            /* gh #45 when we have a real xml validator this should be the response:
             body.code.should.equal(400.1);
-            body.details.should.eql({ format: 'xml', rawLength: 6 });
+            body.details.should.eql({ format: 'xml', rawLength: 6 });*/
           }))));
 
     it('should reject if the form id cannot be found', testService((service) =>
