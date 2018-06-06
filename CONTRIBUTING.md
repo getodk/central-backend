@@ -1,28 +1,28 @@
-# Contributing to Jubilant Garbanzo
+# Contributing to ODK Central Backend
 
-We want Jubilant Garbanzo to be easy to install and use, yet flexible and powerful for a wide variety of projects and organizations. To do that, we need your help! Even if you don't write code, you are a valuable member of our community, and there are many ways you can help improve the project.
+We want ODK Central Backend to be easy to install and use, yet flexible and powerful for a wide variety of projects and organizations. To do that, we need your help! Even if you don't write code, you are a valuable member of our community, and there are many ways you can help improve the project.
 
 # Getting Involved
 
-One of the easiest ways you can participate is to help us [track down bugs](https://github.com/nafundi/effective-spork/issues), which we do over in the [Effective Spork](https://github.com/nafundi/effective-spork) repository. Did you run into some odd or puzzling behaviour? Did you have trouble installing or updating the server? Is a form upload or data export not working the way you'd expect? We want to know! Please do a quick search of the issues list to see if it's something that's already been submitted. Please do make an effort to figure out if the issue is related to this server, or some other tool you are using (like XLSForm, Build, or Collect). But when in doubt, submit your problem anyway.
+One of the easiest ways you can participate is to help us [track down bugs](https://github.com/opendatakit/central/issues), which we do over in the [ODK Central](https://github.com/opendatakit/central) repository. Did you run into some odd or puzzling behaviour? Did you have trouble installing or updating the server? Is a form upload or data export not working the way you'd expect? We want to know! Please do a quick search of the issues list to see if it's something that's already been submitted. Please do make an effort to figure out if the issue is related to this server, or some other tool you are using (like XLSForm, Build, or Collect). But when in doubt, submit your problem anyway.
 
 ## Questions and Discussion
 
-If you are having trouble with making Jubilant Garbanzo work correctly, we encourage you to visit the [community forum](https://forum.opendatakit.org) where a great many of your knowledgeable peers can help you with your problem.
+If you are having trouble with making ODK Central Backend work correctly, we encourage you to visit the [community forum](https://forum.opendatakit.org) where a great many of your knowledgeable peers can help you with your problem.
 
-If you're looking for help or discussion on _how_ Jubilant Garbanzo works internally and how to understand or update its code, the ODK [developer Slack](https://opendatakit.slack.com) is for you.
+If you're looking for help or discussion on _how_ ODK Central Backend works internally and how to understand or update its code, the ODK [developer Slack](https://opendatakit.slack.com) is for you.
 
 # Contributing Code
 
 ## Getting Started
 
-Please see the [project README](https://github.com/nafundi/jubilant-garbanzo#setting-up-a-development-environment) for instructions on how to set up your development environment.
+Please see the [project README](https://github.com/opendatakit/central-backend#setting-up-a-development-environment) for instructions on how to set up your development environment.
 
 ## Guidelines
 
 If you're starting work on an issue ticket, please leave a comment saying so. If you run into trouble or have to stop working on a ticket, please leave a comment as well. As you write code, the usual guidelines apply; please ensure you are following existing conventions:
 
-* Our **code style** is loosely based on the [AirBnB Javascript Style Guide](https://github.com/airbnb/javascript), and you can run `make lint` in the project directory to check your code against it. We do make [some exceptions](https://github.com/nafundi/jubilant-garbanzo/blob/master/.eslintrc.json) to their rules, and we do make exceptions to the linter when we have a reason and consensus to do so.
+* Our **code style** is loosely based on the [AirBnB Javascript Style Guide](https://github.com/airbnb/javascript), and you can run `make lint` in the project directory to check your code against it. We do make [some exceptions](https://github.com/opendatakit/central-backend/blob/master/.eslintrc.json) to their rules, and we do make exceptions to the linter when we have a reason and consensus to do so.
 * More broadly, we also try to keep our code as maintainable as possible by doing the following:
     * Use [immutability](https://en.wikipedia.org/wiki/Immutable_object) (`const`), [pure functions](https://medium.com/@jamesjefferyuk/javascript-what-are-pure-functions-4d4d5392d49c), [higher-order-functions](https://medium.com/javascript-scene/higher-order-functions-composing-software-5365cf2cbe99) (eg when you see stacked arrow functions like `(x) => (y) => …`) and [functional composition](https://hackernoon.com/javascript-functional-composition-for-every-day-use-22421ef65a10) wherever possible. It should almost always be possible. If you are not sure how to accomplish something with these techniques, please don't be afraid to ask for advice.
     * Reduce or eliminate tight coupling and direct dependencies within the codebase as much as possible. Ideally, things you need can be passed in rather than directly instantiated or required; the dependency injection system we have built (see below) should help.
@@ -51,7 +51,7 @@ Once you feel ready to share your progress, please feel free to submit a Pull Re
 
 ## Framework Concepts
 
-We have built a lot of custom framework to try to keep Jubilant Garbanzo as flexible and easy to update as possible. We have structured the code in layers:
+We have built a lot of custom framework to try to keep ODK Central Backend as flexible and easy to update as possible. We have structured the code in layers:
 
 * The business logic defining the functionality and behavior of the server for users is the outermost layer, and it is the easiest to understand and update.
 * The model and database logic defining the Things in the server (Users, Forms, etc) and how they are stored and retrieved from the database are the middle layer. They are still easy to understand and update, but you'll need to understand a little bit more about how other code uses these Things and how the underlying framework works in order to make changes.
@@ -65,7 +65,7 @@ Transactions are a great example of why this might be useful: we might have some
 
 We have done a lot of work so that unless you are modifying the core framework code, you rarely have to understand how or why this construction works. For the most part, you can write code like `x.getUser().then((user) => user.update(…))` and because `user.update()` requires a transaction, one will automatically be created to manage the entire operation. If you need to manually require a transaction for an operation, you can chain `.transacting` before the operation: `x.transacting.getUser().then(…)`.
 
-The biggest downside to `ExplicitPromise`s come when mixing `ExplicitPromise`s and native `Promise`s (ie as returned by third-party libraries). In these cases, you will need to wrap the native `Promise`s with the `ExplicitPromise.of()` method. If you do wish to learn more about how this system works, please read the comment at the top of [this file](https://github.com/nafundi/jubilant-garbanzo/blob/master/lib/model/query/future-query.js).
+The biggest downside to `ExplicitPromise`s come when mixing `ExplicitPromise`s and native `Promise`s (ie as returned by third-party libraries). In these cases, you will need to wrap the native `Promise`s with the `ExplicitPromise.of()` method. If you do wish to learn more about how this system works, please read the comment at the top of [this file](https://github.com/opendatakit/central-backend/blob/master/lib/model/query/future-query.js).
 
 ### Dependency Injection
 
@@ -75,7 +75,7 @@ Additionally, the entire server relies heavily on using [dependency injection](h
 
 Here is an overview of the directory structure inside of `lib/`:
 
-* `bin/` contains all the executable scripts. These include `run-server.js`, which actually starts the Jubilant Garbanzo server, but also the `cli.js` command line administration utility, and scripts like the `backup.js` executable which runs the configured backup.
+* `bin/` contains all the executable scripts. These include `run-server.js`, which actually starts the ODK Central Backend server, but also the `cli.js` command line administration utility, and scripts like the `backup.js` executable which runs the configured backup.
 * `data/` files deal with Submission row data in various ways. They are very independent, callable from any context (they don't rely on any database code, for example), and so they are separated out here. The `schema.js` file contains a lot of utilities for understanding and using XForms XML schema definitions, while the other files deal with Submission row data.
 * `http/` defines a lot of core functionality for how we use Express, the Node.js server framework we rely on. The `endpoint.js` Endpoints are wrapper functions we use on most endpoints in our code (see `resources/`), `middleware.js` are middleware layers that catch the requests as they come in and decorate various common information onto them, and `service.js` is the glue code that actually ties together the middleware and resources to form an Express service.
 * `model/` is the most complex area of code; it defines all the Things (Users, Forms, etc) in the server and how they are stored and retrieved from the database. It also contains our database migrations.

@@ -1,7 +1,7 @@
 FORMAT: 1A
 
-# Jubilant Garbanzo API
-[Jubilant Garbanzo](https://github.com/nafundi/jubilant-garbanzo) is a RESTful API server that provides key functionality for creating and managing Open Data Kit data collection campaigns. It couples with [Super Adventure](https://github.com/nafundi/super-adventure), an independent frontend interface, to form [Effective Spork](https://github.com/nafundi/effective-spork), a complete user-installable ODK server solution. While Super Adventure is the primary consumer of the Jubilant Garbanzo API, the API this server provides is fully public and generic: anything that can be done in the user interface can be done directly via the API.
+# ODK Central API
+[ODK Central Backend](https://github.com/opendatakit/central-backend) is a RESTful API server that provides key functionality for creating and managing Open Data Kit data collection campaigns. It couples with [Central Frontend](https://github.com/opendatakit/central-frontend), an independent frontend interface, to form [ODK Central](https://github.com/opendatakit/central), a complete user-installable ODK server solution. While Central Frontend is the primary consumer of the ODK Central API, the API this server provides is fully public and generic: anything that can be done in the user interface can be done directly via the API.
 
 You can read on for a brief overview of the main concepts and how they fit together, or jump to one of the sections for a more in-depth description.
 
@@ -26,7 +26,7 @@ Finally, **system configuration** is available via a set of specialized resource
 
 # Group Authentication
 
-In Jubilant Garbanzo, the server thinks about identity and permissioning in terms of one core concept: the `Actor`. No matter how you authenticate with the API, you are doing so as an Actor of some kind or another, and when permissions are assigned and checked, they are done against the authenticated Actor.
+In ODK Central, the server thinks about identity and permissioning in terms of one core concept: the `Actor`. No matter how you authenticate with the API, you are doing so as an Actor of some kind or another, and when permissions are assigned and checked, they are done against the authenticated Actor.
 
 In practice, there are two types of Actors available in the system today:
 
@@ -39,7 +39,7 @@ Next, you will find documentation on each of the three authentication methods de
 
 ## Session Authentication [/v1/sessions]
 
-This is the authentication method used by the Super Adventure frontend packaged with Jubilant Garbanzo. Only `User`s can authenticate this way. It consists mostly of two steps:
+This is the authentication method used by the ODK Central Frontend packaged with Central Backend. Only `User`s can authenticate this way. It consists mostly of two steps:
 
 1. **Logging in**: presenting an Email Address and a Password for verification, after which a new `Session` is created. Associated with the Session is an expiration and a bearer token. Sessions expire 24 hours after they are created.
 2. **Using the session**: each request to the API needs a header attached to it: `Authorization: Bearer {token}`. This authenticates that particular request as belonging to the Session we created by logging in.
@@ -107,7 +107,7 @@ Logging out is not strictly necessary; all sessions expire 24 hours after they a
 
 Standard HTTP Basic Authentication is allowed, but **_strongly discouraged_**. This is because the server must verify your password with every single request, which is very slow to compute: typically, this will add hundreds of milliseconds to each request. For some one-off tasks and in cases where there is no other choice, it is reasonable to choose Basic authentication, but wherever possible we strongly encourage the use of any other authentication method.
 
-In addition, because credentials are sent in plaintext as part of the request, **the server will only accept Basic auth over HTTPS**. If your Jubilant Garbanzo server is set up over plain HTTP, it will not accept Basic auth.
+In addition, because credentials are sent in plaintext as part of the request, **the server will only accept Basic auth over HTTPS**. If your ODK Central server is set up over plain HTTP, it will not accept Basic auth.
 
 ### Using Basic Authentication [GET]
 
@@ -310,7 +310,7 @@ That said, if you do wish to delete the Field Key altogether, you can do so by i
 
 # Group Forms and Submissions
 
-`Form`s are the heart of Jubilant Garbanzo. They are created out of XML documents in the [ODK XForms](https://opendatakit.github.io/xforms-spec/) specification format. The [Intro to Forms](https://docs.opendatakit.org/form-design-intro/) on the ODK Documentation website is a good resource if you are unsure what this means. Once created, Forms can be retrieved in a variety of ways, their state can be managed, and they can be deleted.
+`Form`s are the heart of ODK. They are created out of XML documents in the [ODK XForms](https://opendatakit.github.io/xforms-spec/) specification format. The [Intro to Forms](https://docs.opendatakit.org/form-design-intro/) on the ODK Documentation website is a good resource if you are unsure what this means. Once created, Forms can be retrieved in a variety of ways, their state can be managed, and they can be deleted.
 
 `Submission`s are filled-out forms (also called `Instance`s in some other ODK documentation). Each is associated with a particular Form (and in many cases with a particular _version_ of a Form), and is also created out of a standard XML format based on the Form itself. Submissions can be sent with many accompanying multimedia attachments, such as photos taken in the course of the survey. Once created, the Submissions themselves as well as their attachments can be retrieved through this API.
 
@@ -318,7 +318,7 @@ These subsections cover only the modern RESTful API resources involving Forms an
 
 ## Forms [/v1/forms]
 
-In this API, `Form`s are distinguished by their [`formId`](https://opendatakit.github.io/xforms-spec/#primary-instance)s, which are a part of the XForms XML that defines each Form. In fact, as you will see below, many of the properties of a Form are extracted automatically from the XML: `hash`, `name`, `version`, as well as the `formId` itself (which to reduce confusion internally is known as `xmlFormId` in Jubilant Garbanzo).
+In this API, `Form`s are distinguished by their [`formId`](https://opendatakit.github.io/xforms-spec/#primary-instance)s, which are a part of the XForms XML that defines each Form. In fact, as you will see below, many of the properties of a Form are extracted automatically from the XML: `hash`, `name`, `version`, as well as the `formId` itself (which to reduce confusion internally is known as `xmlFormId` in ODK Central).
 
 The only other property Forms currently have is `state`, which can be used to control whether Forms show up in mobile clients like ODK Collect for download, as well as whether they accept new `Submission`s or not.
 
@@ -349,7 +349,7 @@ When creating a `Form`, the only required data is the actual XForms XML itself. 
 
 If the combination of (`xmlFormId`, `version`) conflict with any existing Form, current or deleted, the request will be rejected. We consider even deleted forms when enforcing this restriction to prevent confusion in case a survey client already has the other version of that Form downloaded.
 
-The API will currently check the XML's structure in order to extract the information we need about it, but Jubilant Garbanzo does _not_ run comprehensive validation on the full contents of the XML to ensure compliance with the ODK specification. Future versions will likely do this, but in the meantime you will have to use a tool like [ODK Validate](https://opendatakit.org/use/validate/) to be sure your Forms are correct.
+The API will currently check the XML's structure in order to extract the information we need about it, but ODK Central does _not_ run comprehensive validation on the full contents of the XML to ensure compliance with the ODK specification. Future versions will likely do this, but in the meantime you will have to use a tool like [ODK Validate](https://opendatakit.org/use/validate/) to be sure your Forms are correct.
 
 + Request (application/xml)
     + Body
@@ -554,7 +554,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 ## Attachments [/v1/forms/{xmlFormId}/submissions/{instanceId}/attachments]
 
-When `Submission`s are created via the OpenRosa `/submission` API, multimedia files can be attached. These might be, for example, photos or video taken as part of the survey. Jubilant Garbanzo keeps track of which files relate to which Submission, so that they may be reliably exported again. To directly retrieve them, you can use the `/attachments` subresource on the Submissions resource. It is only possible to list and download Attachments.
+When `Submission`s are created via the OpenRosa `/submission` API, multimedia files can be attached. These might be, for example, photos or video taken as part of the survey. ODK Central keeps track of which files relate to which Submission, so that they may be reliably exported again. To directly retrieve them, you can use the `/attachments` subresource on the Submissions resource. It is only possible to list and download Attachments.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
@@ -600,15 +600,15 @@ The `Content-Type` and `Content-Disposition` will be set appropriately based on 
 
 [OpenRosa](https://bitbucket.org/javarosa/javarosa/wiki/OpenRosaAPI) is an API standard which accompanies the ODK XForms XML standard, allowing compliant servers and clients to use a common protocol to communicate `Form`s and `Submission`s to each other. When survey clients like ODK Collect and Enketo submit Submission data to a Form, this is the API they use.
 
-Jubilant Garbanzo is _not_ a fully compliant OpenRosa server. OpenRosa requires compliance with five major components:
+ODK Central is _not_ a fully compliant OpenRosa server. OpenRosa requires compliance with five major components:
 
-1. [**Metadata Schema**](https://bitbucket.org/javarosa/javarosa/wiki/OpenRosaMetaDataSchema), which defines a standard way to include metadata like the survey device ID and survey duration with a Submission. Jubilant Garbanzo will accept and return this data, but does nothing special with anything besides the `instanceId` at this time.
-2. [**HTTP Request API**](https://bitbucket.org/javarosa/javarosa/wiki/OpenRosaRequest), which defines a set of requirements every OpenRosa request and response must follow. Jubilant Garbanzo is fully compliant with this component.
-3. [**Form Submission API**](https://bitbucket.org/javarosa/javarosa/wiki/FormSubmissionAPI), which defines how Submissions are submitted to the server. Jubilant Garbanzo is fully compliant with this component.
-4. [**Authentication API**](https://bitbucket.org/javarosa/javarosa/wiki/AuthenticationAPI), which defines how users authenticate with the server. Jubilant Garbanzo provides [three authentication methods](/reference/authentication). One of these is HTTPS Basic Authentication, which is recommended by the OpenRosa specification. However, because [we do not follow the try/retry pattern](/reference/authentication/https-basic-authentication/using-basic-authentication) required by the OpenRosa and the RFC specification, Jubilant Garbanzo is _not compliant_ with this component. Our recommendation generally is to use [Field Key Authentication](/reference/authentication/field-key-authentication) when submitting data from survey clients.
-5. [**Form Discovery (Listing) API**](https://bitbucket.org/javarosa/javarosa/wiki/FormListAPI), which returns a listing of Forms available for survey clients to download and submit to. At this time, Jubilant Garbanzo is _partially compliant_ with this component: the server will return a correctly formatted `formList` response, but it does not currently handle the optional filter parameters, nor does it supply a Manifest document.
+1. [**Metadata Schema**](https://bitbucket.org/javarosa/javarosa/wiki/OpenRosaMetaDataSchema), which defines a standard way to include metadata like the survey device ID and survey duration with a Submission. ODK Central will accept and return this data, but does nothing special with anything besides the `instanceId` at this time.
+2. [**HTTP Request API**](https://bitbucket.org/javarosa/javarosa/wiki/OpenRosaRequest), which defines a set of requirements every OpenRosa request and response must follow. ODK Central is fully compliant with this component.
+3. [**Form Submission API**](https://bitbucket.org/javarosa/javarosa/wiki/FormSubmissionAPI), which defines how Submissions are submitted to the server. ODK Central is fully compliant with this component.
+4. [**Authentication API**](https://bitbucket.org/javarosa/javarosa/wiki/AuthenticationAPI), which defines how users authenticate with the server. ODK Central provides [three authentication methods](/reference/authentication). One of these is HTTPS Basic Authentication, which is recommended by the OpenRosa specification. However, because [we do not follow the try/retry pattern](/reference/authentication/https-basic-authentication/using-basic-authentication) required by the OpenRosa and the RFC specification, ODK Central is _not compliant_ with this component. Our recommendation generally is to use [Field Key Authentication](/reference/authentication/field-key-authentication) when submitting data from survey clients.
+5. [**Form Discovery (Listing) API**](https://bitbucket.org/javarosa/javarosa/wiki/FormListAPI), which returns a listing of Forms available for survey clients to download and submit to. At this time, ODK Central is _partially compliant_ with this component: the server will return a correctly formatted `formList` response, but it does not currently handle the optional filter parameters, nor does it supply a Manifest document.
 
-In practical usage, ODK survey clients like Collect will interact with Jubilant Garbanzo in three places:
+In practical usage, ODK survey clients like Collect will interact with Central in three places:
 
 * The OpenRosa Form Listing API, [documented below](/reference/openrosa-endpoints/openrosa-form-listing-api), lists the Forms the client can retrieve.
 * The [Form XML download](/reference/forms-and-submissions/'-individual-form/retrieving-form-xml) endpoint, a part of the standard REST API for Forms, is linked in the Form Listing response and allows clients to then download the ODK XForms XML for each form.
@@ -619,21 +619,21 @@ As part of the **HTTP Request API** OpenRosa standards specification, there are 
 * `X-OpenRosa-Version` must be set to exactly `1.0` or the request will be rejected.
 * `Date` must be set to a _valid_ date in [RFC 2616 3.3.1 HTTP Date format](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date) or the request will be rejected.
     * Dates _must be real dates_; supplying the wrong day of the week for a given date, for example, will fail. As a concession to Android quirkiness, text following the required `GMT` timezone designation will be ignored rather than rejected.
-    * On the other hand, Jubilant Garbanzo does not actually use the supplied Date for anything, and so any valid Date will work. It does not, for instance, have to be a current or recent Date.
+    * On the other hand, ODK Central does not actually use the supplied Date for anything, and so any valid Date will work. It does not, for instance, have to be a current or recent Date.
 
 ## OpenRosa Form Listing API [GET /v1/formList]
 
 This is the mostly standards-compliant implementation of the [OpenRosa Form Discovery (Listing) API](https://bitbucket.org/javarosa/javarosa/wiki/FormListAPI). We will not attempt to redocument the standard here.
 
-The following aspects of the standard are _not_ supported by Jubilant Garbanzo:
+The following aspects of the standard are _not_ supported by ODK Central:
 
 * The `deviceID` may be provided with the request, but it will be ignored.
 * The `Accept-Language` header may be provided with the request, but it will be ignored.
 * The `?formID=` querystring parameter is not supported and will be ignored.
 * The `?verbose` querystring parameter is not supported and will be ignored.
-* The `?listAllVersions` querystring is not supported and will be ignored. Jubilant Garbanzo does not yet support multiple active versions of the same Form.
-* No `<manifestUrl/>` will ever be provided, as Jubilant Garbanzo does not yet support supporting survey files.
-* No `<xforms-group/>` will ever be provided, as Jubilant Garbanzo does not yet support this feature.
+* The `?listAllVersions` querystring is not supported and will be ignored. Central does not yet support multiple active versions of the same Form.
+* No `<manifestUrl/>` will ever be provided, as Central does not yet support supporting survey files.
+* No `<xforms-group/>` will ever be provided, as Central does not yet support this feature.
 
 By default, the given `<name/>` in the Form Listing response is the friendly name associated with the `Form` (`<title>` in the XML and `name` on the API resource). If no such value can be found, then the `xmlFormId` will be given as the `<name>` instead.
 
@@ -689,11 +689,11 @@ This is the fully standards-compliant implementation of the [OpenRosa Form Submi
 
 Some additional things to understand when using this API:
 
-* Jubilant Garbanzo will always provide an `X-OpenRosa-Accept-Content-Length` of 100 megabytes. In reality, this number depends on how the server has been deployed. The default Docker-based installation, for example, is limited to 100MB at the nginx layer.
+* ODK Central will always provide an `X-OpenRosa-Accept-Content-Length` of 100 megabytes. In reality, this number depends on how the server has been deployed. The default Docker-based installation, for example, is limited to 100MB at the nginx layer.
 * The `xml_submission_file` may have a Content Type of either `text/xml` _or_ `application/xml`.
-* Jubilant Garbanzo supports the `HEAD` request preflighting recommended by the specification, but does not require it. Because our supported authentication methods do not follow the try/retry pattern, only preflight your request if you are concerned about the other issues listed in the standards document, like proxies.
-* As stated in the standards document, it is possible to submit multimedia attachments with the `Submission` across multiple `POST` requests to this API. _However_, we impose the additional restriction that the Submission XML (`xml_submission_file`) _may not change_ between requests. If Jubilant Garbanzo sees a Submission with an `instanceId` it already knows about but the XML has changed in any way, it will respond with a `409 Conflict` error and reject the submission.
-* Jubilant Garbanzo will never return a `202` in any response from this API.
+* Central supports the `HEAD` request preflighting recommended by the specification, but does not require it. Because our supported authentication methods do not follow the try/retry pattern, only preflight your request if you are concerned about the other issues listed in the standards document, like proxies.
+* As stated in the standards document, it is possible to submit multimedia attachments with the `Submission` across multiple `POST` requests to this API. _However_, we impose the additional restriction that the Submission XML (`xml_submission_file`) _may not change_ between requests. If Central sees a Submission with an `instanceId` it already knows about but the XML has changed in any way, it will respond with a `409 Conflict` error and reject the submission.
+* Central will never return a `202` in any response from this API.
 * If you haven't already, please take a look at the **HTTP Request API** notes above on the required OpenRosa headers.
 
 + Request (multipart/form-data; boundary=28b9211a964e44a3b327c3c51a0dbd32)
@@ -766,7 +766,7 @@ Some additional things to understand when using this API:
 
 [OData](http://www.odata.org/) is an emerging standard for the formal description and transfer of data between web services. In its most ambitious form, it aims to be _the_ standard way for any REST or REST-like API to enable interoperability with other services, not unlike the API Blueprint format this document is written in. However, in practical usage today it is primarily a way for data-centric web services to describe and transfer their data to various clients for deeper analysis or presentation.
 
-Jubilant Garbanzo implements the [4.0 Minimal Conformance level](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#_Toc505771292) of the specification. Our goal is to enable data analysis and reporting through powerful third-party tools, sending them the data over OData, rather than attempt to create our own analysis tools. Today, our implementation primarily targets [Microsoft Power BI](https://docs.microsoft.com/en-us/power-bi/desktop-connect-odata) and [Tableau](https://onlinehelp.tableau.com/current/pro/desktop/en-us/examples_odata.html), two tools with reasonably robust free offerings that provide versatile analysis and visualization of data.
+ODK Central implements the [4.0 Minimal Conformance level](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#_Toc505771292) of the specification. Our goal is to enable data analysis and reporting through powerful third-party tools, sending them the data over OData, rather than attempt to create our own analysis tools. Today, our implementation primarily targets [Microsoft Power BI](https://docs.microsoft.com/en-us/power-bi/desktop-connect-odata) and [Tableau](https://onlinehelp.tableau.com/current/pro/desktop/en-us/examples_odata.html), two tools with reasonably robust free offerings that provide versatile analysis and visualization of data.
 
 While OData itself supports data of any sort of structure, Power BI and Tableau both think in terms of relational tables. This presents an interesting challenge for representing ODK's `group` and `repeat` structures in OData. Our current solution is to treat every `repeat` in the `Form` definition as its own relational table, and we invent stable join IDs to relate the tables together.
 
@@ -776,11 +776,11 @@ In general, the OData standard protocol consists of three API endpoints:
 * The **Metadata Document** is a formal XML-based EDMX schema description of every data object we might return. It is linked in every OData response.
 * The actual data documents, linked from the Service Document, are a simple JSON representation of the submission data, conforming to the schema we describe in our Metadata Document.
 
-As our focus is on the bulk-export of data from Jubilant Garbanzo so that more advanced analysis tools can handle the data themselves, we do not support most of the features at the Intermediate and above conformance levels, like `$sort` or `$filter`.
+As our focus is on the bulk-export of data from ODK Central so that more advanced analysis tools can handle the data themselves, we do not support most of the features at the Intermediate and above conformance levels, like `$sort` or `$filter`.
 
 ## OData Form Service [/v1/forms/{xmlFormId}.svc]
 
-Jubilant Garbanzo presents one OData service for every `Form` it knows about. Each service might have multiple tables related to that Form. To access the OData service, simply add `.svc` to the resource URL for the given Form.
+ODK Central presents one OData service for every `Form` it knows about. Each service might have multiple tables related to that Form. To access the OData service, simply add `.svc` to the resource URL for the given Form.
 
 + Parameters
     + `xmlFormId`: `simple` (string, required) - The `xmlFormId` of the `Form` whose OData service you wish to access.
@@ -830,7 +830,7 @@ Due to a limitation in Power BI, we do not take the extra step of advertising th
 
 This implementation of the OData standard includes a set of Annotations describing the supported features of the service in the form of the [Capabilities Vocabulary](https://github.com/oasis-tcs/odata-vocabularies/blob/master/vocabularies/Org.OData.Capabilities.V1.md). In general, however, you can assume that the server supports the Minimal Conformance level and nothing beyond.
 
-While the latest 4.01 OData specification adds a new JSON EDMX CSDL format, most servers and clients do not yet support that format, and so for this release of Jubilant Garbanzo only the older XML EDMX CSDL format is available.
+While the latest 4.01 OData specification adds a new JSON EDMX CSDL format, most servers and clients do not yet support that format, and so for this release of ODK Central only the older XML EDMX CSDL format is available.
 
 + Parameters
     + `xmlFormId`: `simple` (string, required) - The `xmlFormId` of the `Form` whose OData service you wish to access.
@@ -903,13 +903,13 @@ While the latest 4.01 OData specification adds a new JSON EDMX CSDL format, most
 
 The data documents are the straightforward JSON representation of each table of `Submission` data. They follow the [corresponding specification](http://docs.oasis-open.org/odata/odata-json-format/v4.01/odata-json-format-v4.01.html), but apart from the representation of geospatial data as GeoJSON rather than the ODK proprietary format, the output here should not be at all surprising. If you are looking for JSON output of Submission data, this is the best place to look.
 
-The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. While paging is possible through these parameters, it will not greatly improve the performance of exporting data. Jubilant Garbanzo prefers to bulk-export all of its data at once if possible.
+The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. While paging is possible through these parameters, it will not greatly improve the performance of exporting data. ODK Central prefers to bulk-export all of its data at once if possible.
 
-In this release of Jubilant Garbanzo, `$expand` is not yet supported. This will likely change in the future, once we can instate Navigation Properties.
+In this release of Central, `$expand` is not yet supported. This will likely change in the future, once we can instate Navigation Properties.
 
 The _nonstandard_ `$wkt` querystring parameter may be set to `true` to request that geospatial data is returned as a [Well-Known Text (WKT) string](https://en.wikipedia.org/wiki/Well-known_text) rather than a GeoJSON structure. This exists primarily to support Tableau, which cannot yet read GeoJSON, but you may find it useful as well depending on your mapping software. **Please note** that both GeoJSON and WKT follow a `(lon, lat, alt)` coördinate ordering rather than the ODK-proprietary `lat lon alt`. This is so that the values map neatly to `(x, y, z)`. GPS accuracy information is not a part of either standards specification, and so is presently omitted from OData output entirely. GeoJSON support may come in a future version.
 
-As the vast majority of clients only support the JSON OData format, that is the only format Jubilant Garbanzo offers.
+As the vast majority of clients only support the JSON OData format, that is the only format ODK Central offers.
 
 + Parameters
     + `xmlFormId`: `simple` (string, required) - The `xmlFormId` of the `Form` whose OData service you wish to access.
@@ -955,7 +955,7 @@ As the vast majority of clients only support the JSON OData format, that is the 
 
 # Group System Configuration
 
-Currently, the only system configuration present in Jubilant Garbanzo is the configuration of periodic backups. That API is described here.
+Currently, the only system configuration present in ODK Central is the configuration of periodic backups. That API is described here.
 
 ## Backups Configuration [/v1/config/backups]
 
@@ -1005,11 +1005,11 @@ Deleting the backups configuration will permanently remove it, stopping it from 
 
 This is the first of two steps required to initialize a new backup configuration.
 
-While the administrative interface packaged with Jubilant Garbanzo requires a backup to be terminated before a new one may be set up, the API has no such limitation. Should the initialization process succeed (with a `POST /v1/config/backups/verify` as [documented below](/reference/system-configuration/backups-configuration/completing-a-new-backup-configuration)), the existing backup will be overwritten with the new configuration.
+While the administrative interface packaged with ODK Central requires a backup to be terminated before a new one may be set up, the API has no such limitation. Should the initialization process succeed (with a `POST /v1/config/backups/verify` as [documented below](/reference/system-configuration/backups-configuration/completing-a-new-backup-configuration)), the existing backup will be overwritten with the new configuration.
 
-All Jubilant Garbanzo backups are encrypted before they are sent to Google Drive for storage. If a `passphrase` is not provided with this request, encryption will still occur with a `""` empty string passphrase.
+All ODK Central backups are encrypted before they are sent to Google Drive for storage. If a `passphrase` is not provided with this request, encryption will still occur with a `""` empty string passphrase.
 
-To complete the backup configuration, it is necessary to use the Google OAuth URL returned by this endpoint and have a human interactively undergo the Google OAuth process to authorize Jubilant Garbanzo to send files to their account. Because of the way we have set the OAuth structure up, it is not necessary for each installation of the server to provision its own Google Developer key.
+To complete the backup configuration, it is necessary to use the Google OAuth URL returned by this endpoint and have a human interactively undergo the Google OAuth process to authorize ODK Central to send files to their account. Because of the way we have set the OAuth structure up, it is not necessary for each installation of the server to provision its own Google Developer key.
 
 + Request (application/json)
     + Attributes
