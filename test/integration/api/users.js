@@ -60,7 +60,7 @@ describe('api: /users', () => {
             const email = global.inbox.pop();
             global.inbox.length.should.equal(0);
             email.to.should.eql([{ address: 'david@opendatakit.org', name: '' }]);
-            email.subject.should.equal('Data collection account created');
+            email.subject.should.equal('ODK Central account created');
           }))));
 
     it('should send a token which can reset the new user password', testService((service) =>
@@ -95,7 +95,7 @@ describe('api: /users', () => {
           const email = global.inbox.pop();
           global.inbox.length.should.equal(0);
           email.to.should.eql([{ address: 'winnifred@opendatakit.org', name: '' }]);
-          email.subject.should.equal('Data collection account password reset');
+          email.subject.should.equal('ODK Central account password reset');
           email.html.should.match(/no account exists/);
         })));
 
@@ -107,7 +107,7 @@ describe('api: /users', () => {
           const email = global.inbox.pop();
           global.inbox.length.should.equal(0);
           email.to.should.eql([{ address: 'alice@opendatakit.org', name: '' }]);
-          email.subject.should.equal('Data collection account password reset');
+          email.subject.should.equal('ODK Central account password reset');
           const token = /token=([^<]+)<\/p>/.exec(email.html)[1];
 
           return service.post('/v1/users/reset/verify')
@@ -147,7 +147,7 @@ describe('api: /users', () => {
             const email = global.inbox.pop();
             global.inbox.length.should.equal(0);
             email.to.should.eql([{ address: 'bob@opendatakit.org', name: '' }]);
-            email.subject.should.equal('Data collection account password reset');
+            email.subject.should.equal('ODK Central account password reset');
 
             return service.post('/v1/sessions')
               .send({ email: 'bob@opendatakit.org', password: 'bob' })
