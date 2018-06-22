@@ -285,11 +285,14 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => new Promise((done) =>
             zipStreamToFiles(asAlice.get('/v1/forms/simple/submissions.csv.zip'), (result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
-              result['simple.csv'].should.equal(`meta.instanceID,name,age
-one,Alice,30
-two,Bob,34
-three,Chelsea,38
-`);
+              const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+              csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY' ]);
+              csv[1].shift().should.be.an.recentIsoDate();
+              csv[1].should.eql([ 'one','Alice','30','one' ]);
+              csv[2].shift().should.be.an.recentIsoDate();
+              csv[2].should.eql([ 'two','Bob','34','two' ]);
+              csv[3].shift().should.be.an.recentIsoDate();
+              csv[3].should.eql([ 'three','Chelsea','38','three' ]);
               done();
             }))))));
 
