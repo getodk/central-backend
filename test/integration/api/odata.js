@@ -175,10 +175,11 @@ describe('api: /forms/:id.svc', () => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/forms/withrepeat.svc/$metadata#Submissions',
               value: [{
-                __id: "one",
-                meta: { instanceID: "one" },
-                name: "Alice",
-                age: 30
+                __id: "three",
+                meta: { instanceID: "three" },
+                name: "Chelsea",
+                age: 38,
+                children: {}
               }, {
                 __id: "two",
                 meta: { instanceID: "two" },
@@ -186,11 +187,10 @@ describe('api: /forms/:id.svc', () => {
                 age: 34,
                 children: {}
               }, {
-                __id: "three",
-                meta: { instanceID: "three" },
-                name: "Chelsea",
-                age: 38,
-                children: {}
+                __id: "one",
+                meta: { instanceID: "one" },
+                name: "Alice",
+                age: 30
               }]
             });
           }))));
@@ -203,6 +203,11 @@ describe('api: /forms/:id.svc', () => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/forms/withrepeat.svc/$metadata#Submissions.children.child',
               value: [{
+                __id: 'beaedcdba519e6e6b8037605c9ae3f6a719984fa',
+                '__Submissions-id': 'three',
+                name: 'Candace',
+                age: 2
+              }, {
                 __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d',
                 '__Submissions-id': 'two',
                 name: 'Billy',
@@ -212,11 +217,6 @@ describe('api: /forms/:id.svc', () => {
                 '__Submissions-id': 'two',
                 name: 'Blaine',
                 age: 6
-              }, {
-                __id: 'beaedcdba519e6e6b8037605c9ae3f6a719984fa',
-                '__Submissions-id': 'three',
-                name: 'Candace',
-                age: 2
               }]
             });
           }))));
@@ -231,10 +231,10 @@ describe('api: /forms/:id.svc', () => {
               '@odata.context': 'http://localhost:8989/v1/forms/withrepeat.svc/$metadata#Submissions.children.child',
               '@odata.nextLink': "http://localhost:8989/v1/forms/withrepeat.svc/Submissions.children.child?%24skip=2",
               value: [{
-                __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172',
+                __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d',
                 '__Submissions-id': 'two',
-                name: 'Blaine',
-                age: 6
+                name: 'Billy',
+                age: 4
               }]
             });
           }))));
