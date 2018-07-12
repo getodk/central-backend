@@ -3,17 +3,42 @@ const { getFormSchema, schemaAsLookup } = require(appRoot + '/lib/data/schema');
 const { submissionToOData } = require(appRoot + '/lib/data/json');
 const testData = require(appRoot + '/test/integration/data');
 
+const __system = {
+  submissionDate: '2017-09-20T17:10:43Z',
+  submitterId: '5',
+  submitterName: 'Alice'
+};
+const mockSubmission = (instanceId, xml) => ({
+  instanceId,
+  xml,
+  createdAt: '2017-09-20T17:10:43Z',
+  submitter: {
+    id: 5,
+    displayName: 'Alice'
+  }
+});
+
 describe('submissionToOData', () => {
   it('should parse and transform a basic submission', () => {
     const fields = schemaAsLookup(getFormSchema({ xml: testData.forms.simple }));
-    const submission = { instanceId: 'one', xml: testData.instances.simple.one };
+    const submission = mockSubmission('one', testData.instances.simple.one);
     return submissionToOData(fields, 'Submissions', submission).then((result) => {
       result.should.eql([{
         __id: 'one',
+        __system,
         meta: { instanceID: 'one' },
         name: 'Alice',
         age: 30
       }]);
+    });
+  });
+
+  // this is sort of repeatedly tested in all the other tests, but it's good to
+  // have one for explicity this purpose in case things change.
+  it('should include submission metadata on the root output', () => {
+    const submission = mockSubmission('test', testData.instances.simple.one);
+    return submissionToOData({}, 'Submissions', submission).then((result) => {
+      result.should.eql([{ __id: 'test', __system }]);
     });
   });
 
@@ -26,17 +51,18 @@ describe('submissionToOData', () => {
       text: { name: 'text', type: 'text' },
       other: { name: 'other', type: 'other' }
     };
-    const submission = { instanceId: 'types', xml: `<data>
+    const submission = mockSubmission('types', `<data>
         <int>42</int>
         <decimal>3.14</decimal>
         <geopoint>4.8 15.16 23.42</geopoint>
         <geopointNoAlt>11.38 -11.38</geopointNoAlt>
         <text>hello</text>
         <other>what could it be?</other>
-      </data>` };
+      </data>`);
     return submissionToOData(fields, 'Submissions', submission).then((result) => {
       result.should.eql([{
         __id: 'types',
+        __system,
         int: 42,
         decimal: 3.14,
         geopoint: { type: 'Point', coordinates: [ 15.16, 4.8, 23.42 ] },
@@ -52,12 +78,15 @@ describe('submissionToOData', () => {
       geopointNoLon: { name: 'geopointNoLon', type: 'geopoint' },
       geopointNonsense: { name: 'geopointNonsense', type: 'geopoint' }
     };
-    const submission = { instanceId: 'geo', xml: `<data>
+    const submission = mockSubmission('geo', `<data>
         <geopointNoLon>100</geopointNoLon>
         <geopointNonsense>this is nonsensical</geopointNonsense>
-      </data>` };
+      </data>`);
     return submissionToOData(fields, 'Submissions', submission).then((result) => {
-      result.should.eql([{ __id: 'geo' }]);
+      result.should.eql([{
+        __id: 'geo',
+        __system
+      }]);
     });
   });
 
@@ -66,13 +95,14 @@ describe('submissionToOData', () => {
       geopoint: { name: 'geopoint', type: 'geopoint' },
       geopointNoAlt: { name: 'geopointNoAlt', type: 'geopoint' }
     };
-    const submission = { instanceId: 'wkt', xml: `<data>
+    const submission = mockSubmission('wkt', `<data>
         <geopoint>4.8 15.16 23.42</geopoint>
         <geopointNoAlt>11.38 -11.38</geopointNoAlt>
-      </data>` };
+      </data>`);
     return submissionToOData(fields, 'Submissions', submission, { wkt: true }).then((result) => {
       result.should.eql([{
         __id: 'wkt',
+        __system,
         geopoint: 'POINT (15.16 4.8 23.42)',
         geopointNoAlt: 'POINT (-11.38 11.38)'
       }]);
@@ -83,10 +113,11 @@ describe('submissionToOData', () => {
   // all of which should be skipped successfully over.
   it('should ignore xml structures not in the schema', () => {
     const fields = { name: { name: 'name', type: 'string' }, age: { name: 'age', type: 'int' } };
-    const submission = { instanceId: 'one', xml: testData.instances.simple.one };
+    const submission = mockSubmission('one', testData.instances.simple.one);
     return submissionToOData(fields, 'Submissions', submission).then((result) => {
       result.should.eql([{
         __id: 'one',
+        __system,
         name: 'Alice',
         age: 30
       }]);
@@ -101,7 +132,7 @@ describe('submissionToOData', () => {
         three: { name: 'three', type: 'string' }
       } }
     };
-    const submission = { instanceId: 'nesting', xml: `<data>
+    const submission = mockSubmission('nesting', `<data>
         <group>
           <one>uno</one>
           <two>dos</two>
@@ -109,10 +140,11 @@ describe('submissionToOData', () => {
         <group>
           <three>tres</three>
         </group>
-      </data>` };
+      </data>`);
     return submissionToOData(fields, 'Submissions', submission).then((result) => {
       result.should.eql([{
         __id: 'nesting',
+        __system,
         group: { one: 'uno', two: 'dos', three: 'tres' }
       }]);
     });
@@ -125,6 +157,7 @@ describe('submissionToOData', () => {
     return submissionToOData(fields, 'Submissions', submission).then((result) => {
       result.should.eql([{
         __id: 'two',
+        __system,
         meta: { instanceID: 'two' },
         name: 'Bob',
         age: 34,
@@ -138,10 +171,11 @@ describe('submissionToOData', () => {
   // TODO: remove this test once #82 is resolved.
   it('should ignore repeats in data output', () => {
     const fields = schemaAsLookup(getFormSchema({ xml: testData.forms.withrepeat }));
-    const submission = { instanceId: 'two', xml: testData.instances.withrepeat.two };
+    const submission = mockSubmission('two', testData.instances.withrepeat.two);
     return submissionToOData(fields, 'Submissions', submission).then((result) => {
       result.should.eql([{
         __id: 'two',
+        __system,
         meta: { instanceID: 'two' },
         name: 'Bob',
         age: 34,

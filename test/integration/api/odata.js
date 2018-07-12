@@ -89,10 +89,19 @@ describe('api: /forms/:id.svc', () => {
         asAlice.get("/v1/forms/doubleRepeat.svc/Submissions('double')")
           .expect(200)
           .then(({ body }) => {
+            // have to manually check and clear the date for exact match:
+            body.value[0].__system.submissionDate.should.be.an.isoDate();
+            delete body.value[0].__system.submissionDate;
+
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/forms/doubleRepeat.svc/$metadata#Submissions',
               value: [{
                 __id: "double",
+                __system: {
+                  // submissionDate is checked above!
+                  submitterId: '5',
+                  submitterName: 'Alice'
+                },
                 children: {},
                 meta: { instanceID: "double" },
                 name: "Vick"
@@ -172,22 +181,42 @@ describe('api: /forms/:id.svc', () => {
         asAlice.get('/v1/forms/withrepeat.svc/Submissions')
           .expect(200)
           .then(({ body }) => {
+            for (const idx of [ 0, 1, 2 ]) {
+              body.value[idx].__system.submissionDate.should.be.an.isoDate();
+              delete body.value[idx].__system.submissionDate;
+            }
+
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/forms/withrepeat.svc/$metadata#Submissions',
               value: [{
                 __id: "three",
+                __system: {
+                  // submissionDate is checked above,
+                  submitterId: "5",
+                  submitterName: "Alice"
+                },
                 meta: { instanceID: "three" },
                 name: "Chelsea",
                 age: 38,
                 children: {}
               }, {
                 __id: "two",
+                __system: {
+                  // submissionDate is checked above,
+                  submitterId: "5",
+                  submitterName: "Alice"
+                },
                 meta: { instanceID: "two" },
                 name: "Bob",
                 age: 34,
                 children: {}
               }, {
                 __id: "one",
+                __system: {
+                  // submissionDate is checked above,
+                  submitterId: "5",
+                  submitterName: "Alice"
+                },
                 meta: { instanceID: "one" },
                 name: "Alice",
                 age: 30
