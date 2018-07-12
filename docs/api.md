@@ -455,6 +455,44 @@ To get only the XML of the `Form` rather than all of the details with the XML as
 + Response 403 (application/json)
     + Attributes (Error 403)
 
+#### Retrieving Form Schema JSON [GET /v1/forms/{xmlFormId}.schema.json{?flatten}]
+
+_(introduced: version 0.2.0)_
+
+For applications that do not rely on JavaRosa, it can be challenging to parse XForms XML into a simple schema structure. Because Central Backend already implements and performs such an operation for its own internal purposes, we also expose this utility for any downstream consumers which wish to make use of it.
+
+While this may eventually overlap with the new OData JSON CSDL specification, we are likely to maintain this API as it more closely mirrors the original XForms data types and structure.
+
+By default, XForms groups are represented as tree structures with children, just like repeats. However, for many purposes (such as outputting a table), this is extra homework. Once again, Central Backend already has a utility to make this easier; add the querystring parameter `?flatten=true` to flatten groups. This will give you a `path`-based field accessor scheme instead of a `name`-based one (see the sample output for details).
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + flatten: `false` (boolean, optional) - If set to `true`, will flatten groups.
+
++ Response 200 (application/json)
+    + Body
+
+            [{
+              name: 'meta', type: 'structure',
+              children: [{ name: 'instanceID', type: 'string' }]
+            }, {
+              name: 'name', type: 'string',
+            }, {
+              name: 'age', type: 'int',
+            }]
+
++ Response 200 (application/json; ?flatten=true)
+    + Body
+
+            [
+              { path: [ 'meta', 'instanceID' ], type: 'string' },
+              { path: [ 'name' ], type: 'string' },
+              { path: [ 'age' ], type: 'int' }
+            ]
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
 #### Modifying a Form [PATCH]
 
 It is currently possible to modify two things about a `Form`: its `name`, which is its friendly display name, and its `state`, which governs whether it is available for download onto survey clients and whether it accepts new `Submission`s. See the `state` Attribute in the Request documentation to the right to see the possible values and their meanings.
