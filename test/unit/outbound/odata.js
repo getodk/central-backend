@@ -46,10 +46,16 @@ describe('odata message composition', () => {
       <EntityType Name="Submissions">
         <Key><PropertyRef Name="__id"/></Key>
         <Property Name="__id" Type="Edm.String"/>
+        <Property Name="__system" Type="org.opendatakit.user.simple.__system"/>
         <Property Name="meta" Type="org.opendatakit.user.simple.meta"/>
         <Property Name="name" Type="Edm.String"/>
         <Property Name="age" Type="Edm.Int64"/>
       </EntityType>
+      <ComplexType Name="__system">
+        <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
+        <Property Name="submitterId" Type="Edm.String"/>
+        <Property Name="submitterName" Type="Edm.String"/>
+      </ComplexType>
       <ComplexType Name="meta">
         <Property Name="instanceID" Type="Edm.String"/>
       </ComplexType>
@@ -68,6 +74,7 @@ describe('odata message composition', () => {
       <EntityType Name="Submissions">
         <Key><PropertyRef Name="__id"/></Key>
         <Property Name="__id" Type="Edm.String"/>
+        <Property Name="__system" Type="org.opendatakit.user.withrepeat.__system"/>
         <Property Name="meta" Type="org.opendatakit.user.withrepeat.meta"/>
         <Property Name="name" Type="Edm.String"/>
         <Property Name="age" Type="Edm.Int64"/>
@@ -80,6 +87,11 @@ describe('odata message composition', () => {
         <Property Name="name" Type="Edm.String"/>
         <Property Name="age" Type="Edm.Int64"/>
       </EntityType>
+      <ComplexType Name="__system">
+        <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
+        <Property Name="submitterId" Type="Edm.String"/>
+        <Property Name="submitterName" Type="Edm.String"/>
+      </ComplexType>
       <ComplexType Name="meta">
         <Property Name="instanceID" Type="Edm.String"/>
       </ComplexType>
@@ -108,6 +120,7 @@ describe('odata message composition', () => {
       <EntityType Name="Submissions">
         <Key><PropertyRef Name="__id"/></Key>
         <Property Name="__id" Type="Edm.String"/>
+        <Property Name="__system" Type="org.opendatakit.user.withrepeat.__system"/>
         <Property Name="meta" Type="org.opendatakit.user.withrepeat.meta"/>
         <Property Name="name" Type="Edm.String"/>
         <Property Name="age" Type="Edm.Int64"/>
@@ -120,6 +133,11 @@ describe('odata message composition', () => {
         <Property Name="name" Type="Edm.String"/>
         <Property Name="age" Type="Edm.Int64"/>
       </EntityType>
+      <ComplexType Name="__system">
+        <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
+        <Property Name="submitterId" Type="Edm.String"/>
+        <Property Name="submitterName" Type="Edm.String"/>
+      </ComplexType>
       <ComplexType Name="meta">
         <Property Name="instanceID" Type="Edm.String"/>
       </ComplexType>
