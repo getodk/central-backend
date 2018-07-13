@@ -89,10 +89,19 @@ describe('api: /forms/:id.svc', () => {
         asAlice.get("/v1/forms/doubleRepeat.svc/Submissions('double')")
           .expect(200)
           .then(({ body }) => {
+            // have to manually check and clear the date for exact match:
+            body.value[0].__system.submissionDate.should.be.an.isoDate();
+            delete body.value[0].__system.submissionDate;
+
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/forms/doubleRepeat.svc/$metadata#Submissions',
               value: [{
                 __id: "double",
+                __system: {
+                  // submissionDate is checked above!
+                  submitterId: '5',
+                  submitterName: 'Alice'
+                },
                 children: {},
                 meta: { instanceID: "double" },
                 name: "Vick"
@@ -172,25 +181,45 @@ describe('api: /forms/:id.svc', () => {
         asAlice.get('/v1/forms/withrepeat.svc/Submissions')
           .expect(200)
           .then(({ body }) => {
+            for (const idx of [ 0, 1, 2 ]) {
+              body.value[idx].__system.submissionDate.should.be.an.isoDate();
+              delete body.value[idx].__system.submissionDate;
+            }
+
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/forms/withrepeat.svc/$metadata#Submissions',
               value: [{
-                __id: "one",
-                meta: { instanceID: "one" },
-                name: "Alice",
-                age: 30
+                __id: "three",
+                __system: {
+                  // submissionDate is checked above,
+                  submitterId: "5",
+                  submitterName: "Alice"
+                },
+                meta: { instanceID: "three" },
+                name: "Chelsea",
+                age: 38,
+                children: {}
               }, {
                 __id: "two",
+                __system: {
+                  // submissionDate is checked above,
+                  submitterId: "5",
+                  submitterName: "Alice"
+                },
                 meta: { instanceID: "two" },
                 name: "Bob",
                 age: 34,
                 children: {}
               }, {
-                __id: "three",
-                meta: { instanceID: "three" },
-                name: "Chelsea",
-                age: 38,
-                children: {}
+                __id: "one",
+                __system: {
+                  // submissionDate is checked above,
+                  submitterId: "5",
+                  submitterName: "Alice"
+                },
+                meta: { instanceID: "one" },
+                name: "Alice",
+                age: 30
               }]
             });
           }))));
@@ -203,6 +232,11 @@ describe('api: /forms/:id.svc', () => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/forms/withrepeat.svc/$metadata#Submissions.children.child',
               value: [{
+                __id: 'beaedcdba519e6e6b8037605c9ae3f6a719984fa',
+                '__Submissions-id': 'three',
+                name: 'Candace',
+                age: 2
+              }, {
                 __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d',
                 '__Submissions-id': 'two',
                 name: 'Billy',
@@ -212,11 +246,6 @@ describe('api: /forms/:id.svc', () => {
                 '__Submissions-id': 'two',
                 name: 'Blaine',
                 age: 6
-              }, {
-                __id: 'beaedcdba519e6e6b8037605c9ae3f6a719984fa',
-                '__Submissions-id': 'three',
-                name: 'Candace',
-                age: 2
               }]
             });
           }))));
@@ -231,10 +260,10 @@ describe('api: /forms/:id.svc', () => {
               '@odata.context': 'http://localhost:8989/v1/forms/withrepeat.svc/$metadata#Submissions.children.child',
               '@odata.nextLink': "http://localhost:8989/v1/forms/withrepeat.svc/Submissions.children.child?%24skip=2",
               value: [{
-                __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172',
+                __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d',
                 '__Submissions-id': 'two',
-                name: 'Blaine',
-                age: 6
+                name: 'Billy',
+                age: 4
               }]
             });
           }))));
