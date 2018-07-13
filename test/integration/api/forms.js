@@ -190,6 +190,42 @@ describe('api: /forms', () => {
               })))));
   });
 
+  describe('/:id.schema.json GET', () => {
+    // we do not deeply test the JSON itself; that is done in test/unit/data/schema.js
+    // here we just check all the plumbing.
+
+    it('should reject unless the user can read', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/forms/simple.schema.json').expect(403))));
+
+    it('should return a JSON schema structure', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/forms/simple.schema.json')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.eql([{
+              name: 'meta', type: 'structure',
+              children: [{ name: 'instanceID', type: 'string' }]
+            }, {
+              name: 'name', type: 'string',
+            }, {
+              name: 'age', type: 'int',
+            }])
+          }))));
+
+    it('should return a flattened JSON schema structure', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/forms/simple.schema.json?flatten=true')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.eql([
+              { path: [ 'meta', 'instanceID' ], type: 'string' },
+              { path: [ 'name' ], type: 'string' },
+              { path: [ 'age' ], type: 'int' }
+            ]);
+          }))));
+  });
+
   describe('/:id GET', () => {
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>

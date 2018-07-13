@@ -61,6 +61,10 @@ describe('util/http', () => {
           { forApi: () => 23 } ]
       ]).should.eql(['hello', 42, [ 'world', 23 ] ]); // TODO: is this actually the desired result?
     });
+
+    it('should not subserialize plain objects within an array', () => {
+      serialize([{ a: 1 }, { b: 2, c: 3 }]).should.eql([{ a: 1 }, { b: 2, c: 3 }])
+    });
   });
 
   describe('format response helpers', () => {
