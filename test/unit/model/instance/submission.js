@@ -19,7 +19,7 @@ describe('Submission', () => {
         failure.problemCode.should.equal(400.2);
         failure.problemDetails.field.should.equal('form ID xml attribute');
         done();
-      });
+      }).point();
     });
 
     it('should reject if the formId does not exist (2: blank)', (done) => {
@@ -28,28 +28,28 @@ describe('Submission', () => {
         failure.problemCode.should.equal(400.2);
         failure.problemDetails.field.should.equal('form ID xml attribute');
         done();
-      });
+      }).point();
     });
 
     it('should find instanceID in meta', (done) => {
-      Submission.fromXml('<data id="mycoolform"><orx:meta><orx:instanceID>idtest</orx:instanceID></orx:meta><field/></data>').point().then((ps) => {
+      Submission.fromXml('<data id="mycoolform"><orx:meta><orx:instanceID>idtest</orx:instanceID></orx:meta><field/></data>').then((ps) => {
         ps.instanceId.should.equal('idtest');
         done();
-      });
+      }).point();
     });
 
     it('should find instanceID directly in data envelope', (done) => {
-      Submission.fromXml('<data id="mycoolform"><instanceID>idtest</instanceID><field/></data>').point().then((ps) => {
+      Submission.fromXml('<data id="mycoolform"><instanceID>idtest</instanceID><field/></data>').then((ps) => {
         ps.instanceId.should.equal('idtest');
         done();
-      });
+      }).point();
     });
 
     it('should generate an instance id if not found', (done) => {
-      Submission.fromXml('<data id="mycoolform"><field/></data>').point().then((ps) => {
+      Submission.fromXml('<data id="mycoolform"><field/></data>').then((ps) => {
         ps.instanceId.should.be.a.uuid();
         done();
-      });
+      }).point();
     });
 
     it('should return a populated PartialSubmission given correct xml', (done) => {

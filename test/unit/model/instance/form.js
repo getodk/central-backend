@@ -17,7 +17,7 @@ describe('Form', () => {
         failure.isProblem.should.equal(true);
         failure.problemCode.should.equal(400.2);
         done();
-      });
+      }).point();
     });
 
     it('should reject if the formId cannot be found (2: attr nonexistent)', (done) => {
@@ -25,7 +25,7 @@ describe('Form', () => {
         failure.isProblem.should.equal(true);
         failure.problemCode.should.equal(400.2);
         done();
-      });
+      }).point();
     });
 
     it('should reject if the formId cannot be found (3: attr blank)', (done) => {
@@ -33,7 +33,7 @@ describe('Form', () => {
         failure.isProblem.should.equal(true);
         failure.problemCode.should.equal(400.2);
         done();
-      });
+      }).point();
     });
 
     it('should return a populated Form object if the xml passes', (done) => {
