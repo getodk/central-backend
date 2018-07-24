@@ -3,7 +3,7 @@ const should = require('should');
 const streamTest = require('streamtest').v2;
 const { Readable } = require('stream');
 const { always, identity } = require('ramda');
-const { traverseXml, Traversal, applyTraversal, findOne, findAll, root, node, attr, text, stripNamespacesFromPath } = require(appRoot + '/lib/util/xml');
+const { traverseXml, Traversal, applyTraversal, findOne, findAll, root, node, attr, text, tree, stripNamespacesFromPath } = require(appRoot + '/lib/util/xml');
 const Option = require(appRoot + '/lib/util/option');
 
 const forever = () => forever;
@@ -379,6 +379,26 @@ describe('util/xml', () => {
 
         it('should spin until it gets the right event', () => {
           text()('close')('open')('text', 'success').should.eql(Option.of('success'));
+        });
+      });
+
+      describe('tree', () => {
+        it('should do nothing if no tag is given', () => {
+          tree()('text')('text').should.be.a.Function();
+        });
+
+        it('should not return if the tree has not closed', () => {
+          tree()('open')('open')('close')('open')('close').should.be.a.Function();
+        });
+
+        it('should return the tree once it closes', () => {
+          tree()('open', 'root')('open', 'child')('close')('open', 'childtwo')('close')('close')
+            .should.eql({ name: 'root', children: [{ name: 'child' }, { name: 'childtwo' }] });
+        });
+
+        it('should work on two-level nests', () => {
+          tree()('open', 'root')('open', 'child')('open', 'childtwo')('close')('close')('close')
+            .should.eql({ name: 'root', children: [{ name: 'child', children: [{ name: 'childtwo' }] }] });
         });
       });
     });
