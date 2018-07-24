@@ -1,6 +1,5 @@
 const should = require('should');
 const { DateTime } = require('luxon');
-const { validate, parse } = require('fast-xml-parser');
 const { testService } = require('../setup');
 const testData = require('../data');
 const { zipStreamToFiles } = require('../../util/zip');
@@ -79,7 +78,6 @@ describe('api: /submission', () => {
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .expect(201)
           .then(({ text }) => {
-            validate(text).should.equal(true);
             text.should.match(/upload was successful/);
           })
           .then(() => asAlice.get('/v1/forms/simple/submissions/one')

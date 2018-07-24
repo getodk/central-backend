@@ -18,7 +18,8 @@ const instance = (id, data) => ({
 });
 
 const callAndParse = (form, inStream, callback) =>
-  zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, form)), callback);
+  streamBriefcaseCsvs(inStream, form).point().then((csvStream) =>
+    zipStreamToFiles(zipStreamFromParts(csvStream), callback));
 
 const mockForm = (data) => {
   data.schema = function() { return getFormSchema(this); };
@@ -129,7 +130,7 @@ describe('.csv.zip briefcase output @slow', () => {
                   </home>
                 </data>
               </instance>
-              <bind nodeset="/data/meta/instanceID" preload="uid" type="string"/>
+              <bind nodeset="/data/orx:meta/orx:instanceID" preload="uid" type="string"/>
               <bind nodeset="/data/name" type="string"/>
               <bind nodeset="/data/home/type" type="select1"/>
               <bind nodeset="/data/home/address/street" type="string"/>
@@ -147,7 +148,7 @@ describe('.csv.zip briefcase output @slow', () => {
     callAndParse(form, inStream, (result) => {
       result.filenames.should.eql([ 'structuredform.csv' ]);
       result['structuredform.csv'].should.equal(
-`SubmissionDate,meta-instanceID,name,home-type,home-address-street,home-address-city,KEY
+`SubmissionDate,orx:meta-orx:instanceID,name,home-type,home-address-street,home-address-city,KEY
 2018-01-01T00:00:00.000Z,one,Alice,Apartment,101 Pike St,"Seattle, WA",one
 2018-01-01T00:00:00.000Z,two,Bob,Condo,20 Broadway,"Portland, OR",two
 2018-01-01T00:00:00.000Z,three,Chelsea,House,99 Mission Ave,"San Francisco, CA",three
@@ -179,7 +180,7 @@ describe('.csv.zip briefcase output @slow', () => {
                   </children>
                 </data>
               </instance>
-              <bind nodeset="/data/meta/instanceID" preload="uid" type="string"/>
+              <bind nodeset="/data/orx:meta/orx:instanceID" preload="uid" type="string"/>
               <bind nodeset="/data/name" type="string"/>
               <bind nodeset="/data/age" type="integer"/>
               <bind nodeset="/data/children/child/name" type="string"/>
@@ -216,7 +217,7 @@ describe('.csv.zip briefcase output @slow', () => {
     callAndParse(form, inStream, (result) => {
       result.filenames.should.containDeep([ 'singlerepeat.csv', 'singlerepeat-children-child.csv' ]);
       result['singlerepeat.csv'].should.equal(
-`SubmissionDate,meta-instanceID,name,age,KEY
+`SubmissionDate,orx:meta-orx:instanceID,name,age,KEY
 2018-01-01T00:00:00.000Z,one,Alice,30,one
 2018-01-01T00:00:00.000Z,two,Bob,34,two
 2018-01-01T00:00:00.000Z,three,Chelsea,38,three
@@ -303,7 +304,7 @@ Candace,2,three,three/children/child[1]
     callAndParse(form, inStream, (result) => {
       result.filenames.should.containDeep([ 'multirepeat.csv', 'multirepeat-children-child.csv', 'multirepeat-children-child-toy.csv' ]);
       result['multirepeat.csv'].should.equal(
-`SubmissionDate,meta-instanceID,name,age,KEY
+`SubmissionDate,orx:meta-orx:instanceID,name,age,KEY
 2018-01-01T00:00:00.000Z,one,Alice,30,one
 2018-01-01T00:00:00.000Z,two,Bob,34,two
 2018-01-01T00:00:00.000Z,three,Chelsea,38,three
@@ -396,9 +397,9 @@ Pod racer,three/children/child[1],three/children/child[1]/toy[3]
   <some_geotrace>43.314926 -1.9869713 71.80000305175781 10.0;43.3149258 -1.9869694 71.80000305175781 10.0;43.3149258 -1.9869694 71.80000305175781 10.0;</some_geotrace>
   <some_geoshape>43.31513313655808 -1.9863833114504814 0.0 0.0;43.31552832470026 -1.987161487340927 0.0 0.0;43.315044828733015 -1.9877894595265388 0.0 0.0;43.31459255404834 -1.9869402050971987 0.0 0.0;43.31513313655808 -1.9863833114504814 0.0 0.0;</some_geoshape>
   <some_barcode>000049499094</some_barcode>
-  <n0:meta xmlns:n0="http://openrosa.org/xforms">
-    <n0:instanceID>uuid:39f3dd36-161e-45cb-a1a4-395831d253a7</n0:instanceID>
-  </n0:meta>
+  <meta xmlns:n0="http://openrosa.org/xforms">
+    <instanceID>uuid:39f3dd36-161e-45cb-a1a4-395831d253a7</instanceID>
+  </meta>
 </data>`
     }]);
 
@@ -523,9 +524,9 @@ Pod racer,three/children/child[1],three/children/child[1]/toy[3]
       </g3>
     </g2>
   </g1>
-  <n0:meta xmlns:n0="http://openrosa.org/xforms">
-    <n0:instanceID>uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b</n0:instanceID>
-  </n0:meta>
+  <meta xmlns:n0="http://openrosa.org/xforms">
+    <instanceID>uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b</instanceID>
+  </meta>
 </data>`
     }]);
 

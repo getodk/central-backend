@@ -1,6 +1,5 @@
 const should = require('should');
 const { testService } = require('../setup');
-const { validate } = require('fast-xml-parser');
 const testData = require('../data');
 
 // NOTE: for the data output tests, we do not attempt to extensively determine if every
@@ -55,7 +54,6 @@ describe('api: /forms/:id.svc', () => {
         asAlice.get('/v1/forms/simple.svc/$metadata')
           .expect(200)
           .then(({ text, headers }) => {
-            validate(text).should.equal(true);
             text.should.startWith('<?xml version="1.0" encoding="UTF-8"?>\n<edmx:Edmx');
           }))));
   });
@@ -103,7 +101,7 @@ describe('api: /forms/:id.svc', () => {
                   submitterName: 'Alice'
                 },
                 children: {},
-                meta: { instanceID: "double" },
+                'orx:meta': { 'orx:instanceID': "double" },
                 name: "Vick"
               }]
             });
@@ -195,7 +193,7 @@ describe('api: /forms/:id.svc', () => {
                   submitterId: "5",
                   submitterName: "Alice"
                 },
-                meta: { instanceID: "three" },
+                'orx:meta': { 'orx:instanceID': "three" },
                 name: "Chelsea",
                 age: 38,
                 children: {}
@@ -206,7 +204,7 @@ describe('api: /forms/:id.svc', () => {
                   submitterId: "5",
                   submitterName: "Alice"
                 },
-                meta: { instanceID: "two" },
+                'orx:meta': { 'orx:instanceID': "two" },
                 name: "Bob",
                 age: 34,
                 children: {}
@@ -217,7 +215,7 @@ describe('api: /forms/:id.svc', () => {
                   submitterId: "5",
                   submitterName: "Alice"
                 },
-                meta: { instanceID: "one" },
+                'orx:meta': { 'orx:instanceID': "one" },
                 name: "Alice",
                 age: 30
               }]

@@ -50,7 +50,7 @@ describe('util/crypto', () => {
 
   describe('generateKeypair', () => {
     const { generateKeypair } = crypto;
-    it('should return reasonable values in an ExplicitPromise', (done) => {
+    it('should return reasonable values in an ExplicitPromise @slow', (done) => {
       generateKeypair('test').point().then((result) => {
         result.pubkey.should.be.a.base64string();
         result.privkey.should.be.a.base64string();
@@ -63,7 +63,7 @@ describe('util/crypto', () => {
 
   describe('generateLocalCipherer', () => {
     const { generateKeypair, generateLocalCipherer } = crypto;
-    it('should return an encipherer with a local key', (done) => {
+    it('should return an encipherer with a local key @slow', (done) => {
       generateKeypair('test').point().then((keys) => {
         const [ localkey, cipherer ] = generateLocalCipherer(keys);
         localkey.should.be.a.base64string();
@@ -72,7 +72,7 @@ describe('util/crypto', () => {
       });
     });
 
-    it('should return an (iv, cipher) tuple when the cipherer is given an iv', (done) => {
+    it('should return an (iv, cipher) tuple when the cipherer is given an iv @slow', (done) => {
       generateKeypair('test').point().then((keys) => {
         const [ , cipherer ] = generateLocalCipherer(keys);
         const [ iv, cipher ] = cipherer();
@@ -86,7 +86,7 @@ describe('util/crypto', () => {
 
   describe('getLocalDecipherer', () => {
     const { generateKeypair, generateLocalCipherer, getLocalDecipherer } = crypto;
-    it('should successfully round-trip a piece of data', (done) => {
+    it('should successfully round-trip a piece of data @slow', (done) => {
       // init.
       generateKeypair('topsecret').point().then((initkeys) => {
         // create local cipher; encrypt our plaintext.
