@@ -227,7 +227,7 @@ describe('util/xml', () => {
         const result = applyTraversal(
           [ always(false), always(false), always(false) ],
           forever,
-          [ new Traversal(3, 0), new Traversal(1, 0), new Traversal(2, 3) ],
+          [ new Traversal(3, 0, forever), new Traversal(1, 0), new Traversal(2, 3) ],
           false, 'close');
         result[0].re.should.equal(2);
         result[0].im.should.equal(0);
@@ -269,6 +269,15 @@ describe('util/xml', () => {
           always('test'),
           [ new Traversal(2, 0, always('hello')) ],
           false, 'open');
+        result[0].data.should.equal('hello');
+      });
+
+      it('should run inner traverser one last time on matched-tag exit', () => {
+        const result = applyTraversal(
+          [ always(false), always(true) ],
+          always('test'),
+          [ new Traversal(2, 0, always('hello')) ],
+          false, 'close');
         result[0].data.should.equal('hello');
       });
     });
