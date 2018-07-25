@@ -1,7 +1,6 @@
 const should = require('should');
 const config = require('config');
 const { DateTime } = require('luxon');
-const { validate, parse } = require('fast-xml-parser');
 const { testService } = require('../setup');
 const testData = require('../data');
 
@@ -18,7 +17,7 @@ describe('api: /forms', () => {
           .then(({ body }) => {
             body.forEach((form) => form.should.be.a.Form());
             body.map((form) => form.xmlFormId).should.eql([ 'withrepeat', 'simple' ]);
-            body.map((form) => form.hash).should.eql([ '49382fd449601e40a1bd42934eeb3410', '5c09c21d4c71f2f13f6aa26227b2d133' ]);
+            body.map((form) => form.hash).should.eql([ 'e7e9e6b3f11fca713ff09742f4312029', '5c09c21d4c71f2f13f6aa26227b2d133' ]);
             body.map((form) => form.version).should.eql([ '1.0', '' ]);
           }))));
 
@@ -64,7 +63,7 @@ describe('api: /forms', () => {
       <formID>withrepeat</formID>
       <name>withrepeat</name>
       <version>1.0</version>
-      <hash>md5:49382fd449601e40a1bd42934eeb3410</hash>
+      <hash>md5:e7e9e6b3f11fca713ff09742f4312029</hash>
       <downloadUrl>${domain}/v1/forms/withrepeat.xml</downloadUrl>
     </xform>
     <xform>
@@ -186,7 +185,6 @@ describe('api: /forms', () => {
               .expect(200)
               .then(({ text }) => {
                 full.body.xml.should.equal(text);
-                validate(text).should.equal(true);
               })))));
   });
 

@@ -63,5 +63,18 @@ describe('util/util', () => {
       ensureArray([ undefined ]).should.eql([ undefined ]);
     });
   });
+
+  describe('blankStringToNull', () => {
+    const { blankStringToNull } = util;
+    it('should crush blank strings', () => {
+      (blankStringToNull('') === null).should.equal(true);
+    });
+
+    it('should leave everything else alone', () => {
+      (blankStringToNull(undefined) === undefined).should.equal(true);
+      (blankStringToNull(null) === null).should.equal(true);
+      (blankStringToNull(' ') === ' ').should.equal(true);
+    });
+  });
 });
 

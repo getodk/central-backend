@@ -17,7 +17,7 @@ describe('Form', () => {
         failure.isProblem.should.equal(true);
         failure.problemCode.should.equal(400.2);
         done();
-      });
+      }).point();
     });
 
     it('should reject if the formId cannot be found (2: attr nonexistent)', (done) => {
@@ -25,7 +25,7 @@ describe('Form', () => {
         failure.isProblem.should.equal(true);
         failure.problemCode.should.equal(400.2);
         done();
-      });
+      }).point();
     });
 
     it('should reject if the formId cannot be found (3: attr blank)', (done) => {
@@ -33,7 +33,7 @@ describe('Form', () => {
         failure.isProblem.should.equal(true);
         failure.problemCode.should.equal(400.2);
         done();
-      });
+      }).point();
     });
 
     it('should return a populated Form object if the xml passes', (done) => {
@@ -45,13 +45,13 @@ describe('Form', () => {
       }).point();
     });
 
-    it('should pick up additional form metadata', (done) => {
+    it('should pick up additional form metadata', () => {
       const xml = '<html><head><title>My Cool Form</title><model><instance><data id="mycoolform" version="1.0"><field/></data></instance></model></head></html>';
-      Form.fromXml(xml).then((form) => {
+      return Form.fromXml(xml).then((form) => {
+        console.log(form);
         form.name.should.equal('My Cool Form');
         form.version.should.equal('1.0');
         form.hash.should.equal('5ba55d383e978f07ee906fc62ff1b288');
-        done();
       }).point();
     });
 

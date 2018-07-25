@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { getFormSchema, flattenSchemaStructures, _findRepeats, getSchemaTables, schemaAsLookup } = require(appRoot + '/lib/data/schema');
+const { getFormSchema, flattenSchemaStructures, _findRepeats, getSchemaTables, schemaAsLookup, stripNamespacesFromSchema } = require(appRoot + '/lib/data/schema');
 const { toTraversable } = require(appRoot + '/lib/util/xml');
 const testData = require(appRoot + '/test/integration/data'); // TODO: probably misplaced.
 
@@ -25,11 +25,13 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-      getFormSchema({ xml }).should.eql([
-        { name: 'name', type: 'string' },
-        { name: 'age', type: 'int' },
-        { name: 'hometown', type: 'select1' }
-      ]);
+      return getFormSchema({ xml }).then((schema) => {
+        schema.should.eql([
+          { name: 'name', type: 'string' },
+          { name: 'age', type: 'int' },
+          { name: 'hometown', type: 'select1' }
+        ]);
+      }).point();
     });
 
     it('should work with relative paths', () => {
@@ -51,11 +53,13 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-      getFormSchema({ xml }).should.eql([
-        { name: 'name', type: 'string' },
-        { name: 'age', type: 'int' },
-        { name: 'hometown', type: 'select1' }
-      ]);
+      return getFormSchema({ xml }).then((schema) => {
+        schema.should.eql([
+          { name: 'name', type: 'string' },
+          { name: 'age', type: 'int' },
+          { name: 'hometown', type: 'select1' }
+        ]);
+      }).point();
     });
 
     it('should handle namespaced bindings correctly', () => {
@@ -79,13 +83,15 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-      getFormSchema({ xml }).should.eql([
-        { name: 'meta', type: 'structure', children: [
-          { name: 'instanceID', type: 'string' }
-        ] },
-        { name: 'name', type: 'string' },
-        { name: 'age', type: 'int' }
-      ]);
+      return getFormSchema({ xml }).then((schema) => {
+        schema.should.eql([
+          { name: 'orx:meta', type: 'structure', children: [
+            { name: 'orx:instanceID', type: 'string' }
+          ] },
+          { name: 'name', type: 'string' },
+          { name: 'age', type: 'int' }
+        ]);
+      }).point();
     });
 
     it('should deal correctly with nonbinding nested nodes', () => {
@@ -115,17 +121,19 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-      getFormSchema({ xml }).should.eql([
-        { name: 'name', type: 'string' },
-        { name: 'occupation', type: 'structure', children: [
-          { name: 'title', type: 'string' },
-          { name: 'salary', type: 'decimal' },
-          { name: 'dates', type: 'structure', children: [
-            { name: 'joined', type: 'date' },
-            { name: 'departed', type: 'date' }
+      return getFormSchema({ xml }).then((schema) => {
+        schema.should.eql([
+          { name: 'name', type: 'string' },
+          { name: 'occupation', type: 'structure', children: [
+            { name: 'title', type: 'string' },
+            { name: 'salary', type: 'decimal' },
+            { name: 'dates', type: 'structure', children: [
+              { name: 'joined', type: 'date' },
+              { name: 'departed', type: 'date' }
+            ] }
           ] }
-        ] }
-      ]);
+        ]);
+      }).point();
     });
 
     it('should deal correctly with repeats', () => {
@@ -174,53 +182,19 @@ describe('form schema', () => {
             </group>
           </h:body>
         </h:html>`;
-      getFormSchema({ xml }).should.eql([
-        { name: 'name', type: 'string' },
-        { name: 'children', type: 'structure', children: [
-          { name: 'child', type: 'repeat', children: [
-            { name: 'name', type: 'string' },
-            { name: 'toy', type: 'repeat', children: [
-              { name: 'name', type: 'string' }
+      return getFormSchema({ xml }).then((schema) => {
+        schema.should.eql([
+          { name: 'name', type: 'string' },
+          { name: 'children', type: 'structure', children: [
+            { name: 'child', type: 'repeat', children: [
+              { name: 'name', type: 'string' },
+              { name: 'toy', type: 'repeat', children: [
+                { name: 'name', type: 'string' }
+              ] }
             ] }
           ] }
-        ] }
-      ]);
-    });
-
-    describe('repeat locator', () => {
-      it('should find repeat nodes', () => {
-        const xml = `
-          <body>
-            <input/>
-            <group>
-              <repeat nodeset="one">
-                <repeat nodeset="two"/>
-                <group>
-                  <repeat nodeset="three">
-                    <input/>
-                  </repeat>
-                </group>
-              </repeat>
-            </group>
-          </body>`;
-        _findRepeats(toTraversable(xml)).should.eql([ 'one', 'two', 'three' ]);
-      });
-
-      it('does not crash given no body node', () => {
-        _findRepeats(null).should.eql([]);
-        _findRepeats(undefined).should.eql([]);
-      });
-
-      it('does not crash given a repeat with no nodeset', () => {
-        const xml = `
-          <body>
-            <repeat/>
-            <repeat>
-              <repeat nodeset="four"/>
-            </repeat>
-          </body>`;
-        _findRepeats(toTraversable(xml)).should.eql([ 'four' ]);
-      });
+        ]);
+      }).point();
     });
   });
 
@@ -253,13 +227,15 @@ describe('form schema', () => {
               </model>
             </h:head>
           </h:html>`;
-        flattenSchemaStructures(getFormSchema({ xml })).should.eql([
-          { path: [ 'name' ], type: 'string' },
-          { path: [ 'occupation', 'title' ], type: 'string' },
-          { path: [ 'occupation', 'salary' ], type: 'decimal' },
-          { path: [ 'occupation', 'dates', 'joined' ], type: 'date' },
-          { path: [ 'occupation', 'dates', 'departed' ], type: 'date' }
-        ]);
+        return getFormSchema({ xml }).then((schema) => {
+          flattenSchemaStructures(schema).should.eql([
+            { path: [ 'name' ], type: 'string' },
+            { path: [ 'occupation', 'title' ], type: 'string' },
+            { path: [ 'occupation', 'salary' ], type: 'decimal' },
+            { path: [ 'occupation', 'dates', 'joined' ], type: 'date' },
+            { path: [ 'occupation', 'dates', 'departed' ], type: 'date' }
+          ]);
+        }).point();
       });
 
       it('should flatten repeat-nested structures', () => {
@@ -315,57 +291,89 @@ describe('form schema', () => {
               </group>
             </h:body>
           </h:html>`;
-        flattenSchemaStructures(getFormSchema({ xml })).should.eql([
-          { path: [ 'name' ], type: 'string' },
-          { path: [ 'occupation', 'title' ], type: 'string' },
-          { path: [ 'occupation', 'reports', 'report' ], type: 'repeat', children: [
+        return getFormSchema({ xml }).then((schema) => {
+          flattenSchemaStructures(schema).should.eql([
             { path: [ 'name' ], type: 'string' },
-            { path: [ 'project', 'name' ], type: 'string' },
-            { path: [ 'project', 'due' ], type: 'date' }
-          ] }
-        ]);
+            { path: [ 'occupation', 'title' ], type: 'string' },
+            { path: [ 'occupation', 'reports', 'report' ], type: 'repeat', children: [
+              { path: [ 'name' ], type: 'string' },
+              { path: [ 'project', 'name' ], type: 'string' },
+              { path: [ 'project', 'due' ], type: 'date' }
+            ] }
+          ]);
+        }).point();
       });
     });
 
     describe('table listing', () => {
-      it('should return nothing for a schema without repeats', () => {
-        getSchemaTables(getFormSchema({ xml: testData.forms.simple })).should.eql([]);
-      });
+      it('should return nothing for a schema without repeats', () =>
+        getFormSchema({ xml: testData.forms.simple }).then((schema) => {
+          getSchemaTables(schema).should.eql([]);
+        }).point());
 
-      it('should return relevant tables', () => {
-        getSchemaTables(getFormSchema({ xml: testData.forms.doubleRepeat })).should.eql([
-          'children.child',
-          'children.child.toys.toy'
-        ]);
-      });
+      it('should return relevant tables', () =>
+        getFormSchema({ xml: testData.forms.doubleRepeat }).then((schema) => {
+          getSchemaTables(schema).should.eql([
+            'children.child',
+            'children.child.toys.toy'
+          ]);
+        }).point());
     });
 
     describe('lookup', () => {
-      it('should flatten basic and group bindings into lookups', () => {
-        schemaAsLookup(getFormSchema({ xml: testData.forms.simple })).should.eql({
-          meta: { name: 'meta', type: 'structure', children: {
-            instanceID: { name: 'instanceID', type: 'string' } }
-          },
-          name: { name: 'name', type: 'string' },
-          age: { name: 'age', type: 'int' }
-        });
-      });
+      it('should flatten basic and group bindings into lookups', () =>
+        getFormSchema({ xml: testData.forms.simple }).then((schema) => {
+          schemaAsLookup(schema).should.eql({
+            meta: { name: 'meta', type: 'structure', children: {
+              instanceID: { name: 'instanceID', type: 'string' } }
+            },
+            name: { name: 'name', type: 'string' },
+            age: { name: 'age', type: 'int' }
+          });
+        }).point());
 
-      it('should flatten repeat bindings into lookups', () => {
-        schemaAsLookup(getFormSchema({ xml: testData.forms.withrepeat })).should.eql({
-          meta: { name: 'meta', type: 'structure', children: {
-            instanceID: { name: 'instanceID', type: 'string' }
-          } },
-          name: { name: 'name', type: 'string' },
-          age: { name: 'age', type: 'int' },
-          children: { name: 'children', type: 'structure', children: {
-            child: { name: 'child', type: 'repeat', children: {
-              name: { name: 'name', type: 'string' },
-              age: { name: 'age', type: 'int' }
+      it('should flatten repeat bindings into lookups', () =>
+        getFormSchema({ xml: testData.forms.withrepeat }).then((schema) => {
+          schemaAsLookup(schema).should.eql({
+            'orx:meta': { name: 'orx:meta', type: 'structure', children: {
+              'orx:instanceID': { name: 'orx:instanceID', type: 'string' }
+            } },
+            name: { name: 'name', type: 'string' },
+            age: { name: 'age', type: 'int' },
+            children: { name: 'children', type: 'structure', children: {
+              child: { name: 'child', type: 'repeat', children: {
+                name: { name: 'name', type: 'string' },
+                age: { name: 'age', type: 'int' }
+              } }
             } }
-          } }
-        });
-      });
+          });
+        }).point());
+    });
+  });
+
+  describe('stripNamespacesFromSchema', () => {
+    it('should strip namespaces from multiple depths and leave normal tags alone', () => {
+      stripNamespacesFromSchema([{
+        name: 'orx:meta',
+        type: 'structure',
+        children: [{
+          name: 'orx:instanceID',
+          type: 'string'
+        }]
+      }, {
+        name: 'age',
+        type: 'int'
+      }]).should.eql([{
+        name: 'meta',
+        type: 'structure',
+        children: [{
+          name: 'instanceID',
+          type: 'string'
+        }]
+      }, {
+        name: 'age',
+        type: 'int'
+      }]);
     });
   });
 });

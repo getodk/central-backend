@@ -1,6 +1,5 @@
 const should = require('should');
 const { DateTime } = require('luxon');
-const { validate, parse } = require('fast-xml-parser');
 const { testService } = require('../setup');
 const testData = require('../data');
 const { zipStreamToFiles } = require('../../util/zip');
@@ -33,11 +32,7 @@ describe('api: /submission', () => {
         .set('Date', DateTime.local().toHTTP())
         .attach('xml_submission_file', Buffer.from('<test'), { filename: 'data.xml' })
         .expect(400)
-        .then(({ text }) => {
-          text.should.match(/data node missing/i);
-          /* gh #45 when we have a real xml validator this should be the response:
-          text.should.match(/Could not parse/i); */
-        })));
+        .then(({ text }) => { text.should.match(/form ID xml attribute/i); })));
 
     it('should return notfound if the form does not exist', testService((service) =>
       service.post('/v1/submission')
@@ -83,7 +78,6 @@ describe('api: /submission', () => {
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .expect(201)
           .then(({ text }) => {
-            validate(text).should.equal(true);
             text.should.match(/upload was successful/);
           })
           .then(() => asAlice.get('/v1/forms/simple/submissions/one')
@@ -212,10 +206,7 @@ describe('api: /forms/:id/submissions', () => {
           .expect(400)
           .then(({ body }) => {
             body.code.should.equal(400.2);
-            body.details.field.should.equal('data node');
-            /* gh #45 when we have a real xml validator this should be the response:
-            body.code.should.equal(400.1);
-            body.details.rawLength.should.equal(5); */
+            body.details.field.should.match(/form ID xml attribute/i);
           }))));
 
     it('should reject if the form ids do not match', testService((service) =>

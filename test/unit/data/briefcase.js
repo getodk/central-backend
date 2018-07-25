@@ -18,7 +18,8 @@ const instance = (id, data) => ({
 });
 
 const callAndParse = (form, inStream, callback) =>
-  zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, form)), callback);
+  streamBriefcaseCsvs(inStream, form).point().then((csvStream) =>
+    zipStreamToFiles(zipStreamFromParts(csvStream), callback));
 
 const mockForm = (data) => {
   data.schema = function() { return getFormSchema(this); };
@@ -129,7 +130,7 @@ describe('.csv.zip briefcase output @slow', () => {
                   </home>
                 </data>
               </instance>
-              <bind nodeset="/data/meta/instanceID" preload="uid" type="string"/>
+              <bind nodeset="/data/orx:meta/orx:instanceID" preload="uid" type="string"/>
               <bind nodeset="/data/name" type="string"/>
               <bind nodeset="/data/home/type" type="select1"/>
               <bind nodeset="/data/home/address/street" type="string"/>
@@ -179,7 +180,7 @@ describe('.csv.zip briefcase output @slow', () => {
                   </children>
                 </data>
               </instance>
-              <bind nodeset="/data/meta/instanceID" preload="uid" type="string"/>
+              <bind nodeset="/data/orx:meta/orx:instanceID" preload="uid" type="string"/>
               <bind nodeset="/data/name" type="string"/>
               <bind nodeset="/data/age" type="integer"/>
               <bind nodeset="/data/children/child/name" type="string"/>

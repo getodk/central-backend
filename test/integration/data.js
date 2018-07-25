@@ -1,8 +1,10 @@
 
 // takes care of instance envelope boilerplate.
 const instance = (formId, instanceId, data) =>
-  `<data id="${formId}"><orx:meta><orx:instanceID>${instanceId}</orx:instanceID></orx:meta>${data}</data>`;
-const versionedInstance = (formId, version, instanceId, data) =>
+  `<data id="${formId}"><meta><instanceID>${instanceId}</instanceID></meta>${data}</data>`;
+
+// provides orx: namespace on meta/instanceId and a form version.
+const fullInstance = (formId, version, instanceId, data) =>
   `<data id="${formId}" version="${version}"><orx:meta><orx:instanceID>${instanceId}</orx:instanceID></orx:meta>${data}</data>`;
 
 module.exports = {
@@ -56,7 +58,7 @@ module.exports = {
           </children>
         </data>
       </instance>
-      <bind nodeset="/data/meta/instanceID" preload="uid" type="string"/>
+      <bind nodeset="/data/orx:meta/orx:instanceID" preload="uid" type="string"/>
       <bind nodeset="/data/name" type="string"/>
       <bind nodeset="/data/age" type="int"/>
       <bind nodeset="/data/children/child/name" type="string"/>
@@ -136,7 +138,7 @@ module.exports = {
           </children>
         </data>
       </instance>
-      <bind nodeset="/data/meta/instanceID" preload="uid" type="string"/>
+      <bind nodeset="/data/orx:meta/orx:instanceID" preload="uid" type="string"/>
       <bind nodeset="/data/name" type="string"/>
       <bind nodeset="/data/children/child/name" type="string"/>
       <bind nodeset="/data/children/child/toys/toy/name" type="string"/>
@@ -172,9 +174,9 @@ module.exports = {
       three: instance('simple', 'three', '<name>Chelsea</name><age>38</age>')
     },
     withrepeat: {
-      one: versionedInstance('withrepeat', '1.0', 'one', '<name>Alice</name><age>30</age>'),
-      two: versionedInstance('withrepeat', '1.0', 'two', '<name>Bob</name><age>34</age><children><child><name>Billy</name><age>4</age></child><child><name>Blaine</name><age>6</age></child></children>'),
-      three: versionedInstance('withrepeat', '1.0', 'three', '<name>Chelsea</name><age>38</age><children><child><name>Candace</name><age>2</age></child></children>'),
+      one: fullInstance('withrepeat', '1.0', 'one', '<name>Alice</name><age>30</age>'),
+      two: fullInstance('withrepeat', '1.0', 'two', '<name>Bob</name><age>34</age><children><child><name>Billy</name><age>4</age></child><child><name>Blaine</name><age>6</age></child></children>'),
+      three: fullInstance('withrepeat', '1.0', 'three', '<name>Chelsea</name><age>38</age><children><child><name>Candace</name><age>2</age></child></children>'),
     },
     simple2: {
       one: instance('simple2', 'one', '<name>Alice</name><age>30</age>'),
@@ -183,7 +185,7 @@ module.exports = {
     },
     doubleRepeat: {
       double: `<data id="doubleRepeat" version="1.0">
-    <meta><instanceID>double</instanceID></meta>
+    <orx:meta><orx:instanceID>double</orx:instanceID></orx:meta>
     <name>Vick</name>
     <children>
       <child>

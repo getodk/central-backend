@@ -1,6 +1,5 @@
 const should = require('should');
 const { DateTime } = require('luxon');
-const { validate } = require('fast-xml-parser');
 
 should.Assertion.add('isoDate', function() {
   this.params = { operator: 'to be an ISO date string' };
@@ -55,7 +54,6 @@ const assertSubmissionBase = (obj) => {
   Object.keys(obj).should.containDeep([ 'instanceId', 'xml', 'createdAt', 'updatedAt', 'submitter' ]);
   obj.instanceId.should.be.a.String();
   obj.xml.should.be.a.String();
-  validate(obj.xml).should.equal(true);
   obj.createdAt.should.be.an.isoDate();
   if (obj.updatedAt != null) obj.updatedAt.should.be.an.isoDate();
 };
@@ -106,7 +104,6 @@ should.Assertion.add('Form', function() {
   Object.keys(this.obj).should.containDeep([ 'xmlFormId', 'xml', 'createdAt', 'updatedAt', 'name', 'version', 'hash' ]);
   this.obj.xmlFormId.should.be.a.String();
   this.obj.xml.should.be.a.String();
-  validate(this.obj.xml).should.equal(true);
   this.obj.createdAt.should.be.an.isoDate();
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
   if (this.obj.name != null) this.obj.name.should.be.a.String();

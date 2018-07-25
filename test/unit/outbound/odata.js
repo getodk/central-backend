@@ -22,27 +22,35 @@ const mockSubmission = (instanceId, xml) => ({
 describe('odata message composition', () => {
   describe('service document', () => {
     it('should return the correct metadata context', () => {
-      serviceDocumentFor({ tables: () => [] }, 'http://localhost:8989', '/forms/testform.svc')['@odata.context']
-        .should.equal('http://localhost:8989/forms/testform.svc/$metadata');
+      return serviceDocumentFor({ tables: () => Promise.resolve([]) }, 'http://localhost:8989', '/forms/testform.svc')
+        .then((doc) => {
+          doc['@odata.context'].should.equal('http://localhost:8989/forms/testform.svc/$metadata');
+        });
     });
 
     it('should return the root table in all cases', () => {
-      serviceDocumentFor({ tables: () => [] }, 'http://localhost:8989', '/forms/simple.svc').should.eql({
-        '@odata.context': 'http://localhost:8989/forms/simple.svc/$metadata',
-        value: [{ name: 'Submissions', kind: 'EntitySet', url: 'Submissions' }]
-      });
+      return serviceDocumentFor({ tables: () => Promise.resolve([]) }, 'http://localhost:8989', '/forms/simple.svc')
+        .then((doc) => {
+          doc.should.eql({
+            '@odata.context': 'http://localhost:8989/forms/simple.svc/$metadata',
+            value: [{ name: 'Submissions', kind: 'EntitySet', url: 'Submissions' }]
+          });
+        });
     });
 
     it('should return all nested tables in addition to the root table', () => {
       const tables = [ 'children.child', 'children.child.toys.toy' ];
-      serviceDocumentFor({ tables: () => tables }, 'http://localhost:8989', '/forms/doubleRepeat.svc').should.eql({
-        '@odata.context': 'http://localhost:8989/forms/doubleRepeat.svc/$metadata',
-        value: [
-          { name: 'Submissions', kind: 'EntitySet', url: 'Submissions' },
-          { name: 'Submissions.children.child', kind: 'EntitySet', url: 'Submissions.children.child' },
-          { name: 'Submissions.children.child.toys.toy', kind: 'EntitySet', url: 'Submissions.children.child.toys.toy' }
-        ]
-      });
+      return serviceDocumentFor({ tables: () => Promise.resolve(tables) }, 'http://localhost:8989', '/forms/doubleRepeat.svc')
+        .then((doc) => {
+          doc.should.eql({
+            '@odata.context': 'http://localhost:8989/forms/doubleRepeat.svc/$metadata',
+            value: [
+              { name: 'Submissions', kind: 'EntitySet', url: 'Submissions' },
+              { name: 'Submissions.children.child', kind: 'EntitySet', url: 'Submissions.children.child' },
+              { name: 'Submissions.children.child.toys.toy', kind: 'EntitySet', url: 'Submissions.children.child.toys.toy' }
+            ]
+          });
+        });
     });
   });
 
@@ -53,7 +61,8 @@ describe('odata message composition', () => {
 
     it('should return a basic metadata document', () => {
       const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
-      edmxFor(form).should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
+      return edmxFor(form).then((edmx) => {
+        edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
 <edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
   <edmx:DataServices>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.simple">
@@ -74,60 +83,62 @@ describe('odata message composition', () => {
         <Property Name="instanceID" Type="Edm.String"/>
       </ComplexType>
       <EntityContainer Name="simple">
-        <EntitySet Name="Submissions" EntityType="org.opendatakit.user.simple.Submissions">`);
+        <EntitySet Name="Submissions" EntityType="org.opendatakit.user.simple.Submissions">`)
+      }).point();
     });
 
     /* TODO: commented out pending resolution of issue ticket #82:
     it('should express repeats as entity types behind navigation properties', () => {
       const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
-      const edmx = edmxFor(form)
-      edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
-<edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
-  <edmx:DataServices>
-    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.withrepeat">
-      <EntityType Name="Submissions">
-        <Key><PropertyRef Name="__id"/></Key>
-        <Property Name="__id" Type="Edm.String"/>
-        <Property Name="__system" Type="org.opendatakit.user.withrepeat.__system"/>
-        <Property Name="meta" Type="org.opendatakit.user.withrepeat.meta"/>
-        <Property Name="name" Type="Edm.String"/>
-        <Property Name="age" Type="Edm.Int64"/>
-        <Property Name="children" Type="org.opendatakit.user.withrepeat.children"/>
-      </EntityType>
-      <EntityType Name="Submissions.children.child">
-        <Key><PropertyRef Name="__id"/></Key>
-        <Property Name="__id" Type="Edm.String"/>
-        <Property Name="__Submissions-id" Type="Edm.String"/>
-        <Property Name="name" Type="Edm.String"/>
-        <Property Name="age" Type="Edm.Int64"/>
-      </EntityType>
-      <ComplexType Name="__system">
-        <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
-        <Property Name="submitterId" Type="Edm.String"/>
-        <Property Name="submitterName" Type="Edm.String"/>
-      </ComplexType>
-      <ComplexType Name="meta">
-        <Property Name="instanceID" Type="Edm.String"/>
-      </ComplexType>
-      <ComplexType Name="children">
-        <NavigationProperty Name="child" Type="Collection(org.opendatakit.user.withrepeat.Submissions.children.child)"/>
-      </ComplexType>
-      <EntityContainer Name="withrepeat">
-        <EntitySet Name="Submissions" EntityType="org.opendatakit.user.withrepeat.Submissions">`);
+      return edmxFor(form).then((edmx) => {
+        edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
+  <edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
+    <edmx:DataServices>
+      <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.withrepeat">
+        <EntityType Name="Submissions">
+          <Key><PropertyRef Name="__id"/></Key>
+          <Property Name="__id" Type="Edm.String"/>
+          <Property Name="__system" Type="org.opendatakit.user.withrepeat.__system"/>
+          <Property Name="meta" Type="org.opendatakit.user.withrepeat.meta"/>
+          <Property Name="name" Type="Edm.String"/>
+          <Property Name="age" Type="Edm.Int64"/>
+          <Property Name="children" Type="org.opendatakit.user.withrepeat.children"/>
+        </EntityType>
+        <EntityType Name="Submissions.children.child">
+          <Key><PropertyRef Name="__id"/></Key>
+          <Property Name="__id" Type="Edm.String"/>
+          <Property Name="__Submissions-id" Type="Edm.String"/>
+          <Property Name="name" Type="Edm.String"/>
+          <Property Name="age" Type="Edm.Int64"/>
+        </EntityType>
+        <ComplexType Name="__system">
+          <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
+          <Property Name="submitterId" Type="Edm.String"/>
+          <Property Name="submitterName" Type="Edm.String"/>
+        </ComplexType>
+        <ComplexType Name="meta">
+          <Property Name="instanceID" Type="Edm.String"/>
+        </ComplexType>
+        <ComplexType Name="children">
+          <NavigationProperty Name="child" Type="Collection(org.opendatakit.user.withrepeat.Submissions.children.child)"/>
+        </ComplexType>
+        <EntityContainer Name="withrepeat">
+          <EntitySet Name="Submissions" EntityType="org.opendatakit.user.withrepeat.Submissions">`);
 
-      edmx.should.endWith(`<EntitySet Name="Submissions.children.child" EntityType="org.opendatakit.user.withrepeat.Submissions.children.child">
-        </EntitySet>
-      </EntityContainer>
-    </Schema>
-  </edmx:DataServices>
-</edmx:Edmx>`);
+        edmx.should.endWith(`<EntitySet Name="Submissions.children.child" EntityType="org.opendatakit.user.withrepeat.Submissions.children.child">
+          </EntitySet>
+        </EntityContainer>
+      </Schema>
+    </edmx:DataServices>
+  </edmx:Edmx>`);
+      }).point();
     });*/
 
     // TODO: remove the following test following resolution of issue ticket #82:
     it('should ignore repeats in schema output', () => {
       const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
-      const edmx = edmxFor(form)
-      edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
+      return edmxFor(form).then((edmx) => {
+        edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
 <edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
   <edmx:DataServices>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.withrepeat">
@@ -159,25 +170,29 @@ describe('odata message composition', () => {
       </ComplexType>
       <EntityContainer Name="withrepeat">
         <EntitySet Name="Submissions" EntityType="org.opendatakit.user.withrepeat.Submissions">`);
+      }).point();
     });
 
     it('should express repeats as entitysets', () => {
       const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
-      const edmx = edmxFor(form)
-      edmx.should.endWith(`<EntitySet Name="Submissions.children.child" EntityType="org.opendatakit.user.withrepeat.Submissions.children.child">
+      return edmxFor(form).then((edmx) => {
+        edmx.should.endWith(`<EntitySet Name="Submissions.children.child" EntityType="org.opendatakit.user.withrepeat.Submissions.children.child">
         </EntitySet>
       </EntityContainer>
     </Schema>
   </edmx:DataServices>
 </edmx:Edmx>`);
+      }).point();
     });
 
     it('should appropriately name repeat-parent join ids', () => {
       const form = { xmlFormId: 'double', schema: () => getFormSchema({ xml: testData.forms.doubleRepeat }) };
-      edmxFor(form).includes(`<EntityType Name="Submissions.children.child.toys.toy">
+      return edmxFor(form).then((edmx) => {
+        edmx.includes(`<EntityType Name="Submissions.children.child.toys.toy">
         <Key><PropertyRef Name="__id"/></Key>
         <Property Name="__id" Type="Edm.String"/>
         <Property Name="__Submissions-children-child-id" Type="Edm.String"/>`).should.equal(true);
+      }).point();
     });
   });
 
@@ -186,33 +201,29 @@ describe('odata message composition', () => {
       it('should reject with not found if the toplevel table is wrong', () => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const inRows = streamTest.fromObjects([]);
-        should.throws(() => {
-          rowStreamToOData(form, 'Dummy', 'http://localhost:8989', '/simple.svc', {}, inRows, 0).pipe(streamTest.toText(identity))
-        });
+        return rowStreamToOData(form, 'Dummy', 'http://localhost:8989', '/simple.svc', {}, inRows, 0)
+          .point().should.be.rejected();
       });
 
       it('should reject with not found if a subtable is wrong', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const inRows = streamTest.fromObjects([]);
-        should.throws(() => {
-          rowStreamToOData(form, 'Submissions.nonexistent', 'http://localhost:8989', '/withrepeat.svc', {}, inRows, 0).pipe(streamTest.toText(identity))
-        });
+        return rowStreamToOData(form, 'Submissions.nonexistent', 'http://localhost:8989', '/withrepeat.svc', {}, inRows, 0)
+          .point().should.be.rejected();
       });
 
       it('should pass if the toplevel table is correct', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const inRows = streamTest.fromObjects([]);
-        should.doesNotThrow(() => {
-          rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/withrepeat.svc', {}, inRows, 0).pipe(streamTest.toText(identity))
-        });
+        return rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/withrepeat.svc', {}, inRows, 0)
+          .point().should.not.be.rejected();
       });
 
       it('should pass if the subtable is correct', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const inRows = streamTest.fromObjects([]);
-        should.doesNotThrow(() => {
-          rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc', {}, inRows, 0).pipe(streamTest.toText(identity))
-        });
+        return rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc', {}, inRows, 0)
+          .point().should.not.be.rejected();
       });
     });
 
@@ -220,21 +231,23 @@ describe('odata message composition', () => {
       it('should provide the correct context url for the toplevel table', (done) => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const inRows = streamTest.fromObjects([]);
-        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc', {}, inRows).pipe(streamTest.toText((_, result) => {
-          const resultObj = JSON.parse(result);
-          resultObj['@odata.context'].should.equal('http://localhost:8989/simple.svc/$metadata#Submissions');
-          done();
-        }));
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc', {}, inRows)
+          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
+            const resultObj = JSON.parse(result);
+            resultObj['@odata.context'].should.equal('http://localhost:8989/simple.svc/$metadata#Submissions');
+            done();
+          }))).point();
       });
 
       it('should provide the correct context url for a subtable', (done) => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const inRows = streamTest.fromObjects([]);
-        rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc', {}, inRows).pipe(streamTest.toText((_, result) => {
-          const resultObj = JSON.parse(result);
-          resultObj['@odata.context'].should.equal('http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child');
-          done();
-        }));
+        rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc', {}, inRows)
+          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
+            const resultObj = JSON.parse(result);
+            resultObj['@odata.context'].should.equal('http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child');
+            done();
+          }))).point();
       });
 
       const instances = (count) => (new Array(count)).fill({ submitter, xml: '<data/>' });
@@ -242,55 +255,60 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const query = { $top: '3', $skip: '7' };
         const inRows = streamTest.fromObjects(instances(10));
-        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=7', query, inRows).pipe(streamTest.toText((_, result) => {
-          const resultObj = JSON.parse(result);
-          should.not.exist(resultObj['@odata.nextLink']);
-          done();
-        }));
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=7', query, inRows)
+          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
+            const resultObj = JSON.parse(result);
+            should.not.exist(resultObj['@odata.nextLink']);
+            done();
+          }))).point();
       });
 
       it('should provide the correct nextUrl if rows remain', (done) => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const query = { $top: '3', $skip: '2' };
         const inRows = streamTest.fromObjects(instances(6)); // make it close to check the off-by-one.
-        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=2', query, inRows).pipe(streamTest.toText((_, result) => {
-          const resultObj = JSON.parse(result);
-          resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24skip=5');
-          done();
-        }));
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=2', query, inRows)
+          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
+            const resultObj = JSON.parse(result);
+            resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24skip=5');
+            done();
+          }))).point();
       });
 
       it('should retain other parameters when giving the nextUrl', (done) => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const query = { $top: '3', $skip: '2', $wkt: 'true', $count: 'true' };
         const inRows = streamTest.fromObjects(instances(6)); // make it close to check the off-by-one.
-        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=2&$wkt=true&$count=true', query, inRows).pipe(streamTest.toText((_, result) => {
-          const resultObj = JSON.parse(result);
-          resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24skip=5&%24wkt=true&%24count=true');
-          done();
-        }));
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=2&$wkt=true&$count=true', query, inRows)
+          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
+            const resultObj = JSON.parse(result);
+            resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24skip=5&%24wkt=true&%24count=true');
+            done();
+          }))).point();
       });
 
       it('should provide the row count if requested', (done) => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const query = { $count: 'true' };
         const inRows = streamTest.fromObjects(instances(8)); // make it close to check the off-by-one.
-        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$count=true', query, inRows).pipe(streamTest.toText((_, result) => {
-          const resultObj = JSON.parse(result);
-          resultObj['@odata.count'].should.equal(8);
-          done();
-        }));
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$count=true', query, inRows)
+          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
+            const resultObj = JSON.parse(result);
+            resultObj['@odata.count'].should.equal(8);
+            done();
+          }))).point();
       });
 
       it('should provide the full row count even if windowed', (done) => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const query = { $top: '1', $skip: '1', $count: 'true' };
         const inRows = streamTest.fromObjects(instances(8)); // make it close to check the off-by-one.
-        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=1&$skip=1&$count=true', query, inRows).pipe(streamTest.toText((_, result) => {
-          const resultObj = JSON.parse(result);
-          resultObj['@odata.count'].should.equal(8);
-          done();
-        }));
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=1&$skip=1&$count=true', query, inRows)
+          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
+            const resultObj = JSON.parse(result);
+            resultObj['@odata.count'].should.equal(8);
+            done();
+          }))).point();
       });
     });
 
@@ -300,12 +318,13 @@ describe('odata message composition', () => {
       it('should output empty row data', (done) => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const inRows = streamTest.fromObjects([]);
-        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions', {}, inRows).pipe(streamTest.toText((_, result) => {
-          JSON.parse(result).should.eql({
-            '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
-          });
-          done();
-        }));
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions', {}, inRows)
+          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
+            JSON.parse(result).should.eql({
+              '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
+            });
+            done();
+          }))).point();
       });
 
       it('should output toplevel row data', (done) => {
@@ -314,16 +333,17 @@ describe('odata message composition', () => {
           mockSubmission('one', testData.instances.simple.one),
           mockSubmission('two', testData.instances.simple.two)
         ]);
-        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions', {}, inRows).pipe(streamTest.toText((_, result) => {
-          JSON.parse(result).should.eql({
-            '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
-            value: [
-              { __id: 'one', __system, meta: { instanceID: 'one' }, name: 'Alice', age: 30 },
-              { __id: 'two', __system, meta: { instanceID: 'two' }, name: 'Bob', age: 34 }
-            ]
-          });
-          done();
-        }));
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions', {}, inRows)
+          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
+            JSON.parse(result).should.eql({
+              '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
+              value: [
+                { __id: 'one', __system, meta: { instanceID: 'one' }, name: 'Alice', age: 30 },
+                { __id: 'two', __system, meta: { instanceID: 'two' }, name: 'Bob', age: 34 }
+              ]
+            });
+            done();
+          }))).point();
       });
 
       it('should limit toplevel row data', (done) => {
@@ -334,17 +354,18 @@ describe('odata message composition', () => {
           mockSubmission('two', testData.instances.simple.two),
           mockSubmission('three', testData.instances.simple.three)
         ]);
-        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=2', query, inRows).pipe(streamTest.toText((_, result) => {
-          JSON.parse(result).should.eql({
-            '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
-            '@odata.nextLink': 'http://localhost:8989/simple.svc/Submissions?%24skip=2',
-            value: [
-              { __id: 'one', __system, meta: { instanceID: 'one' }, name: 'Alice', age: 30 },
-              { __id: 'two', __system, meta: { instanceID: 'two' }, name: 'Bob', age: 34 }
-            ]
-          });
-          done();
-        }));
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=2', query, inRows)
+          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
+            JSON.parse(result).should.eql({
+              '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
+              '@odata.nextLink': 'http://localhost:8989/simple.svc/Submissions?%24skip=2',
+              value: [
+                { __id: 'one', __system, meta: { instanceID: 'one' }, name: 'Alice', age: 30 },
+                { __id: 'two', __system, meta: { instanceID: 'two' }, name: 'Bob', age: 34 }
+              ]
+            });
+            done();
+          }))).point();
       });
 
       it('should offset toplevel row data', (done) => {
@@ -355,15 +376,16 @@ describe('odata message composition', () => {
           mockSubmission('two', testData.instances.simple.two),
           mockSubmission('three', testData.instances.simple.three)
         ]);
-        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$skip=2', query, inRows).pipe(streamTest.toText((_, result) => {
-          JSON.parse(result).should.eql({
-            '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
-            value: [
-              { __id: 'three', __system, meta: { instanceID: 'three' }, name: 'Chelsea', age: 38 }
-            ]
-          });
-          done();
-        }));
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$skip=2', query, inRows)
+          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
+            JSON.parse(result).should.eql({
+              '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
+              value: [
+                { __id: 'three', __system, meta: { instanceID: 'three' }, name: 'Chelsea', age: 38 }
+              ]
+            });
+            done();
+          }))).point();
       });
 
       it('should limit and offset toplevel row data', (done) => {
@@ -374,16 +396,17 @@ describe('odata message composition', () => {
           mockSubmission('two', testData.instances.simple.two),
           mockSubmission('three', testData.instances.simple.three)
         ]);
-        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=1&$skip=1', query, inRows).pipe(streamTest.toText((_, result) => {
-          JSON.parse(result).should.eql({
-            '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
-            '@odata.nextLink': 'http://localhost:8989/simple.svc/Submissions?%24skip=2',
-            value: [
-              { __id: 'two', __system, meta: { instanceID: 'two' }, name: 'Bob', age: 34 }
-            ]
-          });
-          done();
-        }));
+        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=1&$skip=1', query, inRows)
+          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
+            JSON.parse(result).should.eql({
+              '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
+              '@odata.nextLink': 'http://localhost:8989/simple.svc/Submissions?%24skip=2',
+              value: [
+                { __id: 'two', __system, meta: { instanceID: 'two' }, name: 'Bob', age: 34 }
+              ]
+            });
+            done();
+          }))).point();
       });
 
       it('should output subtable row data', (done) => {
@@ -393,28 +416,29 @@ describe('odata message composition', () => {
           mockSubmission('two', testData.instances.withrepeat.two),
           mockSubmission('three', testData.instances.withrepeat.three)
         ]);
-        rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions', {}, inRows).pipe(streamTest.toText((_, result) => {
-          JSON.parse(result).should.eql({
-            '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
-            value: [{
-              __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d',
-              '__Submissions-id': 'two',
-              name: 'Billy',
-              age: 4
-            }, {
-              __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172',
-              '__Submissions-id': 'two',
-              name: 'Blaine',
-              age: 6
-            }, {
-              __id: 'beaedcdba519e6e6b8037605c9ae3f6a719984fa',
-              '__Submissions-id': 'three',
-              name: 'Candace',
-              age: 2
-            }]
-          });
-          done();
-        }));
+        rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions', {}, inRows)
+          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
+            JSON.parse(result).should.eql({
+              '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
+              value: [{
+                __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d',
+                '__Submissions-id': 'two',
+                name: 'Billy',
+                age: 4
+              }, {
+                __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172',
+                '__Submissions-id': 'two',
+                name: 'Blaine',
+                age: 6
+              }, {
+                __id: 'beaedcdba519e6e6b8037605c9ae3f6a719984fa',
+                '__Submissions-id': 'three',
+                name: 'Candace',
+                age: 2
+              }]
+            });
+            done();
+          }))).point();
       });
 
       it('should limit subtable row data', (done) => {
@@ -425,24 +449,25 @@ describe('odata message composition', () => {
           mockSubmission('two', testData.instances.withrepeat.two),
           mockSubmission('three', testData.instances.withrepeat.three)
         ]);
-        rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$top=2', query, inRows).pipe(streamTest.toText((_, result) => {
-          JSON.parse(result).should.eql({
-            '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
-            '@odata.nextLink': 'http://localhost:8989/withrepeat.svc/Submissions.children.child?%24skip=2',
-            value: [{
-              __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d',
-              '__Submissions-id': 'two',
-              name: 'Billy',
-              age: 4
-            }, {
-              __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172',
-              '__Submissions-id': 'two',
-              name: 'Blaine',
-              age: 6
-            }]
-          });
-          done();
-        }));
+        rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$top=2', query, inRows)
+          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
+            JSON.parse(result).should.eql({
+              '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
+              '@odata.nextLink': 'http://localhost:8989/withrepeat.svc/Submissions.children.child?%24skip=2',
+              value: [{
+                __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d',
+                '__Submissions-id': 'two',
+                name: 'Billy',
+                age: 4
+              }, {
+                __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172',
+                '__Submissions-id': 'two',
+                name: 'Blaine',
+                age: 6
+              }]
+            });
+            done();
+          }))).point();
       });
 
       it('should offset subtable row data', (done) => {
@@ -453,23 +478,24 @@ describe('odata message composition', () => {
           mockSubmission('two', testData.instances.withrepeat.two),
           mockSubmission('three', testData.instances.withrepeat.three)
         ]);
-        rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=2', query, inRows).pipe(streamTest.toText((_, result) => {
-          JSON.parse(result).should.eql({
-            '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
-            value: [{
-              __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172',
-              '__Submissions-id': 'two',
-              name: 'Blaine',
-              age: 6
-            }, {
-              __id: 'beaedcdba519e6e6b8037605c9ae3f6a719984fa',
-              '__Submissions-id': 'three',
-              name: 'Candace',
-              age: 2
-            }]
-          });
-          done();
-        }));
+        rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=2', query, inRows)
+          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
+            JSON.parse(result).should.eql({
+              '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
+              value: [{
+                __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172',
+                '__Submissions-id': 'two',
+                name: 'Blaine',
+                age: 6
+              }, {
+                __id: 'beaedcdba519e6e6b8037605c9ae3f6a719984fa',
+                '__Submissions-id': 'three',
+                name: 'Candace',
+                age: 2
+              }]
+            });
+            done();
+          }))).point();
       });
 
       it('should limit and offset subtable row data', (done) => {
@@ -480,19 +506,20 @@ describe('odata message composition', () => {
           mockSubmission('two', testData.instances.withrepeat.two),
           mockSubmission('three', testData.instances.withrepeat.three)
         ]);
-        rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows).pipe(streamTest.toText((_, result) => {
-          JSON.parse(result).should.eql({
-            '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
-            '@odata.nextLink': 'http://localhost:8989/withrepeat.svc/Submissions.children.child?%24skip=2',
-            value: [{
-              __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172',
-              '__Submissions-id': 'two',
-              name: 'Blaine',
-              age: 6
-            }]
-          });
-          done();
-        }));
+        rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows)
+          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
+            JSON.parse(result).should.eql({
+              '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
+              '@odata.nextLink': 'http://localhost:8989/withrepeat.svc/Submissions.children.child?%24skip=2',
+              value: [{
+                __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172',
+                '__Submissions-id': 'two',
+                name: 'Blaine',
+                age: 6
+              }]
+            });
+            done();
+          }))).point();
       });
     });
   });
@@ -502,33 +529,29 @@ describe('odata message composition', () => {
       it('should reject with not found if the toplevel table is wrong', () => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const submission = mockSubmission('one', testData.instances.simple.one);
-        should.throws(() => {
-          singleRowToOData(form, submission, 'http://localhost:8989', "/simple.svc/Nonexistent('one')", {});
-        });
+        singleRowToOData(form, submission, 'http://localhost:8989', "/simple.svc/Nonexistent('one')", {})
+          .point().should.be.rejected();
       });
 
       it('should reject with not found if a subtable is wrong', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const submission = mockSubmission('one', testData.instances.withrepeat.one);
-        should.throws(() => {
-          singleRowToOData(form, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('one')/children/child/nonexistent", {});
-        });
+        singleRowToOData(form, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('one')/children/child/nonexistent", {})
+          .point().should.be.rejected();
       });
 
       it('should pass if the toplevel table is correct', () => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const submission = mockSubmission('one', testData.instances.simple.one);
-        should.doesNotThrow(() => {
-          singleRowToOData(form, submission, 'http://localhost:8989', "/simple.svc/Submissions('one')", {});
-        });
+        singleRowToOData(form, submission, 'http://localhost:8989', "/simple.svc/Submissions('one')", {})
+          .point().should.not.be.rejected();
       });
 
       it('should pass if the subtable is correct', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const submission = mockSubmission('one', testData.instances.withrepeat.one);
-        should.doesNotThrow(() => {
-          singleRowToOData(form, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('one')/children/child", {});
-        });
+        singleRowToOData(form, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('one')/children/child", {})
+          .point().should.not.be.rejected();
       });
     });
 
@@ -540,7 +563,7 @@ describe('odata message composition', () => {
           .then(JSON.parse)
           .then((result) => {
             result['@odata.context'].should.equal('http://localhost:8989/simple.svc/$metadata#Submissions')
-          });
+          }).point();
       });
 
       it('should provide the correct context url for a subtable', () => {
@@ -550,7 +573,7 @@ describe('odata message composition', () => {
           .then(JSON.parse)
           .then((result) => {
             result['@odata.context'].should.equal('http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child')
-          });
+          }).point();
       });
 
       it('should provide no nextUrl if the final row is accounted for', () => {
@@ -560,7 +583,7 @@ describe('odata message composition', () => {
           .then(JSON.parse)
           .then((result) => {
             should.not.exist(result['@odata.nextLink']);
-          });
+          }).point();
       });
 
       it('should provide the correct nextUrl if rows remain', () => {
@@ -571,7 +594,7 @@ describe('odata message composition', () => {
           .then(JSON.parse)
           .then((result) => {
             result['@odata.nextLink'].should.equal("http://localhost:8989/withrepeat.svc/Submissions('two')/children/child?%24skip=1");
-          });
+          }).point();
       });
 
       it('should retain other parameters when giving the nextUrl', () => {
@@ -582,7 +605,7 @@ describe('odata message composition', () => {
           .then(JSON.parse)
           .then((result) => {
             result['@odata.nextLink'].should.equal("http://localhost:8989/withrepeat.svc/Submissions('two')/children/child?%24wkt=true&%24skip=1");
-          });
+          }).point();
       });
 
       it('should provide the row count if requested', () => {
@@ -593,7 +616,7 @@ describe('odata message composition', () => {
           .then(JSON.parse)
           .then((result) => {
             result['@odata.count'].should.equal(2);
-          });
+          }).point();
       });
 
       it('should provide the full row count even if windowed', () => {
@@ -604,7 +627,7 @@ describe('odata message composition', () => {
           .then(JSON.parse)
           .then((result) => {
             result['@odata.count'].should.equal(2);
-          });
+          }).point();
       });
     });
 
@@ -625,7 +648,7 @@ describe('odata message composition', () => {
                 children: {}
               }]
             });
-          });
+          }).point();
       });
 
       it('should filter to a single subinstance', () => {
@@ -654,7 +677,7 @@ describe('odata message composition', () => {
                 name: 'Spike'
               }]
             });
-          });
+          }).point();
       });
 
       it('should limit subtable data', () => {
@@ -677,7 +700,7 @@ describe('odata message composition', () => {
                 name: 'Pinkie Pie'
               }]
             });
-          });
+          }).point();
       });
 
       it('should offset subtable data', () => {
@@ -703,7 +726,7 @@ describe('odata message composition', () => {
                 name: 'Spike'
               }]
             });
-          });
+          }).point();
       });
 
       it('should limit and offset subtable data', () => {
@@ -726,7 +749,7 @@ describe('odata message composition', () => {
                 name: 'Applejack'
               }]
             });
-          });
+          }).point();
       });
     });
   });
