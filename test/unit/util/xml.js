@@ -93,20 +93,20 @@ describe('util/xml', () => {
 
     describe('Traversal', () => {
       it('should be real and valid given no im component', () => {
-        (new Traversal(3, 0)).isReal.should.equal(true);
-        (new Traversal(3, 0)).invalid.should.equal(false);
+        (new Traversal(3, 0)).hasMisses.should.equal(false);
+        (new Traversal(3, 0)).useless.should.equal(false);
 
-        (new Traversal(0, 0)).isReal.should.equal(true);
-        (new Traversal(0, 0)).invalid.should.equal(false);
+        (new Traversal(0, 0)).hasMisses.should.equal(false);
+        (new Traversal(0, 0)).useless.should.equal(false);
       });
 
       it('should be nonreal given an im component', () => {
-        (new Traversal(9, 2)).isReal.should.equal(false);
+        (new Traversal(9, 2)).hasMisses.should.equal(true);
       });
 
-      it('should be invalid if we are in negative realspace or on the im origin axis', () => {
-        (new Traversal(-1, 0)).invalid.should.equal(true);
-        (new Traversal(0, 1)).invalid.should.equal(true);
+      it('should be useless if we are in negative realspace or on the im origin axis', () => {
+        (new Traversal(-1, 0)).useless.should.equal(true);
+        (new Traversal(0, 1)).useless.should.equal(true);
       });
 
       it('should increment real if entering a node', () => {
@@ -331,6 +331,15 @@ describe('util/xml', () => {
 
         it('should not match past the root level', () => {
           findOne(node(), root())(always(42))('open')('open').should.be.a.Function();
+        });
+
+        it('should not match if the tagname does not match', () => {
+          findOne(root('div'))(always(42))('open', 'span').should.be.a.Function();
+          findOne(node(), root('div'))(always(42))('open')('open', 'div').should.be.a.Function();
+        });
+
+        it('should match at the root level if the tagname matches', () => {
+          findOne(root('hi'))(always(42))('open', 'hi').should.equal(42);
         });
       });
 

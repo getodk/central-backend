@@ -10,6 +10,7 @@
     "bcrypt": "~2",
     "body-parser": "~1.18",
     "cli": "~1",
+    "cloneable-readable": "~1",
     "config": "~1.26",
     "csv-stringify": "~1",
     "express": "~4.16",
