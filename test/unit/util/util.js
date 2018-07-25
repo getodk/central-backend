@@ -64,16 +64,16 @@ describe('util/util', () => {
     });
   });
 
-  describe('crushBlankString', () => {
-    const { crushBlankString } = util;
+  describe('blankStringToNull', () => {
+    const { blankStringToNull } = util;
     it('should crush blank strings', () => {
-      (crushBlankString('') === null).should.equal(true);
+      (blankStringToNull('') === null).should.equal(true);
     });
 
     it('should leave everything else alone', () => {
-      (crushBlankString(undefined) === undefined).should.equal(true);
-      (crushBlankString(null) === null).should.equal(true);
-      (crushBlankString(' ') === ' ').should.equal(true);
+      (blankStringToNull(undefined) === undefined).should.equal(true);
+      (blankStringToNull(null) === null).should.equal(true);
+      (blankStringToNull(' ') === ' ').should.equal(true);
     });
   });
 });
