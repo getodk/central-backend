@@ -1,5 +1,5 @@
 const appRoot = require('app-root-path');
-const { getFormSchema, schemaAsLookup } = require(appRoot + '/lib/data/schema');
+const { getFormSchema, schemaAsLookup, stripNamespacesFromSchema } = require(appRoot + '/lib/data/schema');
 const { submissionToOData } = require(appRoot + '/lib/data/json');
 const testData = require(appRoot + '/test/integration/data');
 
@@ -175,13 +175,13 @@ describe('submissionToOData', () => {
   // TODO: remove this test once #82 is resolved.
   it('should ignore repeats in data output', () => {
     return getFormSchema({ xml: testData.forms.withrepeat }).then((schema) => {
-      const fields = schemaAsLookup(schema);
+      const fields = schemaAsLookup(stripNamespacesFromSchema(schema));
       const submission = mockSubmission('two', testData.instances.withrepeat.two);
       return submissionToOData(fields, 'Submissions', submission).then((result) => {
         result.should.eql([{
           __id: 'two',
           __system,
-          'orx:meta': { 'orx:instanceID': 'two' },
+          meta: { instanceID: 'two' },
           name: 'Bob',
           age: 34,
           children: {}

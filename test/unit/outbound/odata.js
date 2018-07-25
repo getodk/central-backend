@@ -146,7 +146,7 @@ describe('odata message composition', () => {
         <Key><PropertyRef Name="__id"/></Key>
         <Property Name="__id" Type="Edm.String"/>
         <Property Name="__system" Type="org.opendatakit.user.withrepeat.__system"/>
-        <Property Name="orx:meta" Type="org.opendatakit.user.withrepeat.orx:meta"/>
+        <Property Name="meta" Type="org.opendatakit.user.withrepeat.meta"/>
         <Property Name="name" Type="Edm.String"/>
         <Property Name="age" Type="Edm.Int64"/>
         <Property Name="children" Type="org.opendatakit.user.withrepeat.children"/>
@@ -163,8 +163,8 @@ describe('odata message composition', () => {
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
       </ComplexType>
-      <ComplexType Name="orx:meta">
-        <Property Name="orx:instanceID" Type="Edm.String"/>
+      <ComplexType Name="meta">
+        <Property Name="instanceID" Type="Edm.String"/>
       </ComplexType>
       <ComplexType Name="children">
       </ComplexType>
@@ -643,7 +643,7 @@ describe('odata message composition', () => {
               value: [{
                 __id: 'double',
                 __system,
-                'orx:meta': { 'orx:instanceID': 'double' },
+                meta: { instanceID: 'double' },
                 name: 'Vick',
                 children: {}
               }]

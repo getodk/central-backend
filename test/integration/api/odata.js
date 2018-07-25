@@ -101,7 +101,7 @@ describe('api: /forms/:id.svc', () => {
                   submitterName: 'Alice'
                 },
                 children: {},
-                'orx:meta': { 'orx:instanceID': "double" },
+                meta: { instanceID: "double" },
                 name: "Vick"
               }]
             });
@@ -193,7 +193,7 @@ describe('api: /forms/:id.svc', () => {
                   submitterId: "5",
                   submitterName: "Alice"
                 },
-                'orx:meta': { 'orx:instanceID': "three" },
+                meta: { instanceID: "three" },
                 name: "Chelsea",
                 age: 38,
                 children: {}
@@ -204,7 +204,7 @@ describe('api: /forms/:id.svc', () => {
                   submitterId: "5",
                   submitterName: "Alice"
                 },
-                'orx:meta': { 'orx:instanceID': "two" },
+                meta: { instanceID: "two" },
                 name: "Bob",
                 age: 34,
                 children: {}
@@ -215,7 +215,7 @@ describe('api: /forms/:id.svc', () => {
                   submitterId: "5",
                   submitterName: "Alice"
                 },
-                'orx:meta': { 'orx:instanceID': "one" },
+                meta: { instanceID: "one" },
                 name: "Alice",
                 age: 30
               }]

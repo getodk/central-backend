@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { getFormSchema, flattenSchemaStructures, _findRepeats, getSchemaTables, schemaAsLookup } = require(appRoot + '/lib/data/schema');
+const { getFormSchema, flattenSchemaStructures, _findRepeats, getSchemaTables, schemaAsLookup, stripNamespacesFromSchema } = require(appRoot + '/lib/data/schema');
 const { toTraversable } = require(appRoot + '/lib/util/xml');
 const testData = require(appRoot + '/test/integration/data'); // TODO: probably misplaced.
 
@@ -348,6 +348,32 @@ describe('form schema', () => {
             } }
           });
         }).point());
+    });
+  });
+
+  describe('stripNamespacesFromSchema', () => {
+    it('should strip namespaces from multiple depths and leave normal tags alone', () => {
+      stripNamespacesFromSchema([{
+        name: 'orx:meta',
+        type: 'structure',
+        children: [{
+          name: 'orx:instanceID',
+          type: 'string'
+        }]
+      }, {
+        name: 'age',
+        type: 'int'
+      }]).should.eql([{
+        name: 'meta',
+        type: 'structure',
+        children: [{
+          name: 'instanceID',
+          type: 'string'
+        }]
+      }, {
+        name: 'age',
+        type: 'int'
+      }]);
     });
   });
 });
