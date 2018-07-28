@@ -3,7 +3,7 @@ const should = require('should');
 const streamTest = require('streamtest').v2;
 const { Readable } = require('stream');
 const { always, identity } = require('ramda');
-const { traverseXml, Traversal, applyTraversal, findOne, findAll, root, node, attr, text, tree, stripNamespacesFromPath } = require(appRoot + '/lib/util/xml');
+const { traverseXml, Traversal, applyTraversal, findOne, findAll, and, root, node, hasAttr, getAll, attr, text, tree, stripNamespacesFromPath } = require(appRoot + '/lib/util/xml');
 const Option = require(appRoot + '/lib/util/option');
 
 const forever = () => forever;
@@ -322,6 +322,30 @@ describe('util/xml', () => {
     });
 
     describe('find filters', () => {
+      describe('and', () => {
+        it('should pass arguments along to all subfilters', () => {
+          const calls = [];
+          and(
+            ((e, x, y) => { calls.push([ 'first', e, x, y ]); return true; }),
+            ((e, x, y) => { calls.push([ 'second', e, x, y ]); return true; })
+          )('open', 'html', { attrs: true });
+          calls.should.eql([
+            [ 'first', 'open', 'html', { attrs: true } ],
+            [ 'second', 'open', 'html', { attrs: true } ]
+          ]);
+        });
+
+        it('should return false if any subfilter returns false', () => {
+          and(always(false), always(true))().should.equal(false);
+          and(always(true), always(false))().should.equal(false);
+        });
+
+        it('should return true if all subfilters return true', () => {
+          and(always(true), always(true))().should.equal(true);
+          and(always(true), always(true), always(true))().should.equal(true);
+        });
+      });
+
       describe('root', () => {
         // we have to test root via find, since only at the find/apply mechanisms
         // do we actually understand treedepth.
@@ -359,9 +383,55 @@ describe('util/xml', () => {
           node('test')('orx:no').should.equal(false);
         });
       });
+
+      describe('hasAttr', () => {
+        it('should return whether the attr exists if no expected value was given', () => {
+          hasAttr('test')(null, { test: '' }).should.equal(true);
+          hasAttr('test')(null, {}).should.equal(false);
+        });
+
+        it('should return whether the attr equals if an expected value was given', () => {
+          hasAttr('test', 'value')(null, { test: 'value' }).should.equal(true);
+          hasAttr('test', 'value')(null, { test: '' }).should.equal(false);
+          hasAttr('test', 'value')(null, {}).should.equal(false);
+        });
+
+        it('should ignore namespaces', () => {
+          hasAttr('test')(null, { 'orx:test': '' }).should.equal(true);
+          hasAttr('test', 'value')(null, { 'orx:test': 'value' }).should.equal(true);
+        });
+      });
     });
 
     describe('value traversers', () => {
+      describe('getAll', () => {
+        it('should return a new function if not all traversers are happy', () => {
+          getAll([ always(true), forever ])().should.be.a.Function();
+          getAll([ always(true), forever ])()()().should.be.a.Function();
+        });
+
+        it('should pass events to traversers', () => {
+          const called = [];
+          const traverser = (name) => (e, x, y) => { called.push([ name, e, x, y ]) };
+          getAll([ traverser('first'), traverser('second') ])('open', 'html', { attr: 'hi' });
+          called.should.eql([
+            [ 'first', 'open', 'html', { attr: 'hi' } ],
+            [ 'second', 'open', 'html', { attr: 'hi' } ]
+          ]);
+        });
+
+        const spin = (count, then) => () => ((count === 0) ? then : spin(count - 1, then));
+        it('should return the found values when all traversers are happy', () => {
+          let t = getAll([ spin(3, 'done'), spin(1, 'donetwo') ])();
+          t.should.be.a.Function();
+          t = t();
+          t.should.be.a.Function();
+          t = t();
+          t.should.be.a.Function();
+          t().should.eql([ 'done', 'donetwo' ]);
+        });
+      });
+
       describe('attr', () => {
         it('should return all attributes if nothing specific was requested', () => {
           attr()('open', null, { id: 'test' }).should.eql(Option.of({ id: 'test' }));
