@@ -93,6 +93,45 @@ describe('api: /forms', () => {
   <xforms xmlns="http://openrosa.org/xforms/xformsList">
   </xforms>`);
               }))))));
+
+    it('should include a manifest node for forms with attachments', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/forms')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/formList')
+            .set('X-OpenRosa-Version', '1.0')
+            .set('Date', DateTime.local().toHTTP())
+            .expect(200)
+            .then(({ text }) => {
+              const domain = config.get('default.env.domain');
+              text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+  <xforms xmlns="http://openrosa.org/xforms/xformsList">
+    <xform>
+      <formID>withAttachments</formID>
+      <name>withAttachments</name>
+      <version></version>
+      <hash>md5:7eb21b5b123b0badcf2b8f50bcf1cbd0</hash>
+      <downloadUrl>${domain}/v1/forms/withAttachments.xml</downloadUrl>
+      <manifestUrl>${domain}/v1/forms/withAttachments/manifest</manifestUrl>
+    </xform>
+    <xform>
+      <formID>withrepeat</formID>
+      <name>withrepeat</name>
+      <version>1.0</version>
+      <hash>md5:e7e9e6b3f11fca713ff09742f4312029</hash>
+      <downloadUrl>${domain}/v1/forms/withrepeat.xml</downloadUrl>
+    </xform>
+    <xform>
+      <formID>simple</formID>
+      <name>Simple</name>
+      <version></version>
+      <hash>md5:5c09c21d4c71f2f13f6aa26227b2d133</hash>
+      <downloadUrl>${domain}/v1/forms/simple.xml</downloadUrl>
+    </xform>
+  </xforms>`);
+            })))));
   });
 
   describe('POST', () => {
@@ -186,6 +225,53 @@ describe('api: /forms', () => {
               .then(({ text }) => {
                 full.body.xml.should.equal(text);
               })))));
+  });
+
+  describe('/:id/manifest GET', () => {
+    it('should reject unless the user can read', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/forms/simple/manifest')
+          .set('X-OpenRosa-Version', '1.0')
+          .set('Date', DateTime.local().toHTTP())
+          .expect(403))));
+
+    it('should return no files if no attachments exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/forms/simple/manifest')
+          .set('X-OpenRosa-Version', '1.0')
+          .set('Date', DateTime.local().toHTTP())
+          .expect(200)
+          .then(({ text }) => {
+            text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+  <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
+  </manifest>`);
+          }))));
+
+    it('should include attachments that have been uploaded', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/forms')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/forms/withAttachments/attachments/goodone.csv')
+            .send('test,csv\n1,2')
+            .set('Content-Type', 'text/csv')
+            .expect(200)
+            .then(() => asAlice.get('/v1/forms/withAttachments/manifest')
+              .set('X-OpenRosa-Version', '1.0')
+              .set('Date', DateTime.local().toHTTP())
+              .expect(200)
+              .then(({ text }) => {
+                const domain = config.get('default.env.domain');
+                text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+  <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
+    <mediaFile>
+      <filename>goodone.csv</filename>
+      <hash>md5:d41d8cd98f00b204e9800998ecf8427e</hash>
+      <downloadUrl>${domain}/v1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
+    </mediaFile>
+  </manifest>`);
+              }))))));
   });
 
   describe('/:id.schema.json GET', () => {
