@@ -165,6 +165,34 @@ module.exports = {
       </repeat>
     </group>
   </h:body>
+</h:html>`,
+    withAttachments: `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <model>
+      <instance>
+        <data id="withAttachments">
+          <name/>
+          <age/>
+          <hometown/>
+        </data>
+      </instance>
+      <instance id="mydata" src="badnoroot.xls"/>
+      <instance id="seconddata" src="jr://files/badsubpath.csv"/>
+      <instance id="thirddata" src="jr://file/goodone.csv"/>
+      <instance id="fourthdata" src="jr://file/path/to/badnestedfile.csv"/>
+      <bind nodeset="/data/name" type="string"/>
+      <bind type="int" nodeset="/data/age"/>
+      <bind nodeset="/data/hometown" type="select1"/>
+      <itext>
+        <translation default="true()" lang="en">
+          <text id="/data/name:label">
+            <value form="audio">jr://audio/goodtwo.mp3</value>
+          </text>
+        </translation>
+      </itext>
+    </model>
+  </h:head>
 </h:html>`
   },
   instances: {
