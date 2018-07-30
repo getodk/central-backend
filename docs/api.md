@@ -523,6 +523,83 @@ Only `DELETE` a `Form` if you are sure you will never need it again. If your goa
 + Response 403 (application/json)
     + Attributes (Error 403)
 
+### › Form Attachments [/v1/forms/{xmlFormId}/attachments]
+
+Form Attachments for each form are automatically determined when the form is first created, by scanning the XForms definition for references to media or data files. Because of this, it is not possible to directly modify the list of form attachments; that list is fully determined by the given XForm. Instead, the focus of this API subresource is around communicating that expected list of files, and uploading binaries into those file slots.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+
+#### Listing expected Form Attachments [GET]
+
+As mentioned above, the list of expected form attachments is determined at form creation time, from the XForms definition. This endpoint allows you to fetch that list of expected files, and will tell you whether the server is in possession of each file or not.
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally fetch a `updatedAt` field indicating the last time each file's binary content was modified (set or cleared).
+
++ Response 200 (application/json)
+    This is the standard response, if Extended Metadata is not requested:
+
+    + Attributes (array[Form Attachment])
+
++ Response 200 (application/json; extended)
+    This is the Extended Metadata response, if requested via the appropriate header:
+
+    + Attributes (array[Extended Form Attachment])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Downloading a Form Attachment [GET /v1/forms/{xmlFormId}/attachments/{filename}]
+
+To download a single file, use this endpoint. The appropriate `Content-Disposition` (attachment with a filename) and `Content-Type` (based on the type supplied at upload time) will be given.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+
++ Response 200
+    + Headers
+
+            Content-Type: {the MIME type of the attachment file itself}
+            Content-Disposition: attachment; filename={the file's name}
+
+    + Body
+
+            (binary data)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Uploading a Form Attachment [POST /v1/forms/{xmlFormId}/attachments/{filename}]
+
+To upload a binary to an expected file slot, `POST` the binary to its endpoint. Supply a `Content-Type` MIME-type header if you have one.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+
++ Request (*/*)
+    + Body
+
+            (binary data)
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Clearing a Form Attachment [DELETE /v1/forms/{xmlFormId}/attachments/{filename}]
+
+Because Form Attachments are completely determined by the XForms definition of the form itself, there is no direct way to entirely remove a Form Attachment entry from the list, only to clear its uploaded content. Thus, when you issue a `DELETE` to the attachment's endpoint, that is what happens.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
 ## Submissions [/v1/forms/{xmlFormId}/submissions]
 
 `Submission`s are available as a subresource under `Form`s. So, for instance, `/v1/forms/myForm/submissions` refers only to the Submissions that have been submitted to the Form `myForm`.
@@ -644,7 +721,7 @@ ODK Central is _not_ a fully compliant OpenRosa server. OpenRosa requires compli
 2. [**HTTP Request API**](https://bitbucket.org/javarosa/javarosa/wiki/OpenRosaRequest), which defines a set of requirements every OpenRosa request and response must follow. ODK Central is fully compliant with this component.
 3. [**Form Submission API**](https://bitbucket.org/javarosa/javarosa/wiki/FormSubmissionAPI), which defines how Submissions are submitted to the server. ODK Central is fully compliant with this component.
 4. [**Authentication API**](https://bitbucket.org/javarosa/javarosa/wiki/AuthenticationAPI), which defines how users authenticate with the server. ODK Central provides [three authentication methods](/reference/authentication). One of these is HTTPS Basic Authentication, which is recommended by the OpenRosa specification. However, because [we do not follow the try/retry pattern](/reference/authentication/https-basic-authentication/using-basic-authentication) required by the OpenRosa and the RFC specification, ODK Central is _not compliant_ with this component. Our recommendation generally is to use [Field Key Authentication](/reference/authentication/field-key-authentication) when submitting data from survey clients.
-5. [**Form Discovery (Listing) API**](https://bitbucket.org/javarosa/javarosa/wiki/FormListAPI), which returns a listing of Forms available for survey clients to download and submit to. At this time, ODK Central is _partially compliant_ with this component: the server will return a correctly formatted `formList` response, but it does not currently handle the optional filter parameters, nor does it supply a Manifest document.
+5. [**Form Discovery (Listing) API**](https://bitbucket.org/javarosa/javarosa/wiki/FormListAPI), which returns a listing of Forms available for survey clients to download and submit to. At this time, ODK Central is _partially compliant_ with this component: the server will return a correctly formatted `formList` response, but it does not currently handle the optional filter parameters.
 
 In practical usage, ODK survey clients like Collect will interact with Central in three places:
 
@@ -670,10 +747,11 @@ The following aspects of the standard are _not_ supported by ODK Central:
 * The `?formID=` querystring parameter is not supported and will be ignored.
 * The `?verbose` querystring parameter is not supported and will be ignored.
 * The `?listAllVersions` querystring is not supported and will be ignored. Central does not yet support multiple active versions of the same Form.
-* No `<manifestUrl/>` will ever be provided, as Central does not yet support supporting survey files.
 * No `<xforms-group/>` will ever be provided, as Central does not yet support this feature.
 
 By default, the given `<name/>` in the Form Listing response is the friendly name associated with the `Form` (`<title>` in the XML and `name` on the API resource). If no such value can be found, then the `xmlFormId` will be given as the `<name>` instead.
+
+A `<manifestUrl/>` property will be given per `<xform>` if and only if that form is expected to have media or data file attachments associated with it, based on its XForms definition. It will appear even if no attachments have actually been uploaded to the server to fulfill those expectations.
 
 If you haven't already, please take a look at the **HTTP Request API** notes above on the required OpenRosa headers.
 
@@ -699,6 +777,7 @@ If you haven't already, please take a look at the **HTTP Request API** notes abo
                 <version></version>
                 <hash>md5:a64817a5688dd7c17563e32d4eb1cab2</hash>
                 <downloadUrl>https://your.odk.server/v1/forms/basic.xml</downloadUrl>
+                <manifestUrl>https://your.odk.server/v1/forms/basic/manifest</manifestUrl>
               </xform>
               <xform>
                 <formID>simple</formID>
@@ -798,6 +877,57 @@ Some additional things to understand when using this API:
 
             <OpenRosaResponse xmlns="http://openrosa.org/http/response" items="0">
               <message nature="error">A submission already exists with this ID, but with different XML. Resubmissions to attach additional multimedia must resubmit an identical xml_submission_file.</message>
+            </OpenRosaResponse>
+
+## OpenRosa Form Manifest API [GET /v1/forms/{xmlFormId}/manifest]
+
+_(introduced: version 0.2.0)_
+
+This is the fully standards-compliant implementation of the [OpenRosa Form Manifest API](https://bitbucket.org/javarosa/javarosa/wiki/FormListAPI#!the-manifest-document). We will not attempt to redocument the standard here.
+
+A Manifest document is available at this resource path for any form in the system. However:
+
+* A link to this document will not be given in the [Form Listing API](/reference/openrosa-endpoints/openrosa-form-listing-api) unless we expect the form to have media or data file attachments based on the XForms definition of the form.
+* The Manifest will only output information for files the server actually has in its possession. Any missing expected files will be omitted, as we cannot provide a `hash` or `downloadUrl` for them.
+
++ Request
+    + Headers
+
+            X-OpenRosa-Version: 1.0
+            Date: Fri, 20 Apr 2018 02:03:48 GMT
+
++ Response 200 (text/xml)
+    + Headers
+
+            X-OpenRosa-Version: 1.0
+            Date: Fri, 20 Apr 2018 02:03:49 GMT
+
+    + Body
+
+            <?xml version="1.0" encoding="UTF-8"?>
+            <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
+              <mediaFile>
+                <filename>question1.jpg</filename>
+                <hash>md5:a64817a5688dd7c17563e32d4eb1cab2</hash>
+                <downloadUrl>https://your.odk.server/v1/forms/basic/attachments/question1.jpg</downloadUrl>
+              </mediaFile>
+              <mediaFile>
+                <filename>question2.jpg</filename>
+                <hash>md5:a6fdc426037143cf71cced68e2532e3c</hash>
+                <downloadUrl>https://your.odk.server/v1/forms/basic/attachments/question2.jpg</downloadUrl>
+              </mediaFile>
+            </manifest>
+
++ Response 403 (text/xml)
+    + Headers
+
+            X-OpenRosa-Version: 1.0
+            Date: Fri, 20 Apr 2018 02:03:49 GMT
+
+    + Body
+
+            <OpenRosaResponse xmlns="http://openrosa.org/http/response" items="0">
+              <message nature="error">The authenticated actor does not have rights to perform that action.</message>
             </OpenRosaResponse>
 
 # Group OData Endpoints
@@ -1135,6 +1265,20 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Extended Form (Form)
 + submissions: `10` (number, required) - The number of `Submission`s that have been submitted to this `Form`.
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission, if any.
+
+## Form Attachment (object)
++ name: `myfile.mp3` (string, required) - The name of the file as specified in the XForm.
++ type: (Form Attachment Type, required) - The expected type of file as specified in the XForm.
++ exists: `true` (boolean, required) - Whether the server has the file or not.
+
+## Extended Form Attachment (Form Attachment)
++ updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format. The last time this file's binary content was set (POST) or cleared (DELETE).
+
+## Form Attachment Type (enum)
++ image (string) - An image (jpg, etc) file is expected.
++ audio (string) - An audio (mp3, etc) file is expected.
++ video (string) - A video (mp4, etc) file is expected.
++ file (string) - A data file of some kind (usually csv) is expected.
 
 ## Form State (enum)
 + open (string) - _(Default)_ This form is available for download and accepts submissions.
