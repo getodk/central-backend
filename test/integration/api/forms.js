@@ -583,7 +583,7 @@ describe('api: /forms', () => {
               .then(() => asAlice.get('/v1/forms/withAttachments/attachments/goodone.csv')
                 .expect(200)
                 .then(({ headers, text }) => {
-                  headers['content-disposition'].should.equal('attachment; filename=goodone.csv');
+                  headers['content-disposition'].should.equal('attachment; filename="goodone.csv"');
                   headers['content-type'].should.equal('text/csv; charset=utf-8');
                   text.should.equal('test,csv\n1,2');
                 }))))));
