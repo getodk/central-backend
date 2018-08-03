@@ -91,6 +91,21 @@ describe('util/http', () => {
     });
   });
 
+  describe('cookie setter', () => {
+    const { withCookie } = http;
+    const mockRequest = () => ({ set: function(key, value) { this[key] = value; } });
+
+    it('should ultimately return the result', () => {
+      withCookie()()(42)(null, mockRequest()).should.equal(42);
+    });
+
+    it('should assign the requested cookie', () => {
+      const request = mockRequest();
+      withCookie('mykey')('myvalue')(42)(null, request);
+      request['Set-Cookie'].should.equal('mykey=myvalue');
+    });
+  });
+
   describe('urlWithQueryParams', () => {
     const { urlWithQueryParams } = http;
     it('should return only a pathname', () => {

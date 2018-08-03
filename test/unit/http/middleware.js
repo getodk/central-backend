@@ -187,6 +187,67 @@ describe('middleware', () => {
         });
       });
     });
+
+    describe('by cookie', () => {
+      it('should never try cookie auth over HTTP', () => {
+        const request = createRequest({ method: 'GET', headers: { Cookie: '__Host-session=alohomora' } });
+        return sessionParser({ Auth, Session: mockSession('alohomora') })(request, null, () => {
+          should.not.exist(request.auth._session);
+          should.not.exist(request.auth._actor);
+        });
+      });
+
+      it('should not throw an error if the cookie is invalid', () => {
+        const request = createRequest({
+          method: 'GET', headers: {
+            'X-Forwarded-Proto': 'https',
+            Cookie: 'please just let me in'
+          }
+        });
+        return sessionParser({ Auth, Session: mockSession('alohomora') })(request, null, () => {
+          should.not.exist(request.auth._session);
+          should.not.exist(request.auth._actor);
+        });
+      });
+
+      it('should not throw an error if the token is invalid', () => {
+        const request = createRequest({
+          method: 'GET', headers: {
+            'X-Forwarded-Proto': 'https',
+            Cookie: '__Host-session=letmein'
+          }
+        });
+        return sessionParser({ Auth, Session: mockSession('alohomora') })(request, null, () => {
+          should.not.exist(request.auth._session);
+          should.not.exist(request.auth._actor);
+        });
+      });
+
+      it('should never try cookie auth for non-GET requests', () => {
+        const request = createRequest({
+          method: 'POST', headers: {
+            'X-Forwarded-Proto': 'https',
+            Cookie: '__Host-session=alohomora'
+          }
+        });
+        return sessionParser({ Auth, Session: mockSession('alohomora') })(request, null, () => {
+          should.not.exist(request.auth._session);
+          should.not.exist(request.auth._actor);
+        });
+      });
+
+      it('should work for HTTPS GET requests', () => {
+        const request = createRequest({
+          method: 'GET', headers: {
+            'X-Forwarded-Proto': 'https',
+            Cookie: '__Host-session=alohomora'
+          }
+        });
+        return sessionParser({ Auth, Session: mockSession('alohomora') })(request, null, () => {
+          request.auth._session.should.eql(Option.of('session'));
+        });
+      });
+    });
   });
 });
 
