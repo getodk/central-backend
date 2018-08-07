@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { getFormSchema, flattenSchemaStructures, _findRepeats, getSchemaTables, schemaAsLookup, stripNamespacesFromSchema } = require(appRoot + '/lib/data/schema');
+const { getFormSchema, flattenSchemaStructures, _findRepeats, getSchemaTables, schemaAsLookup, stripNamespacesFromSchema, expectedFormAttachments } = require(appRoot + '/lib/data/schema');
 const { toTraversable } = require(appRoot + '/lib/util/xml');
 const testData = require(appRoot + '/test/integration/data'); // TODO: probably misplaced.
 
@@ -374,6 +374,176 @@ describe('form schema', () => {
         name: 'age',
         type: 'int'
       }]);
+    });
+  });
+
+  describe('expectedFormAttachments', () => {
+    it('should find secondary external instance srcs', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <age/>
+                  <hometown/>
+                </data>
+              </instance>
+              <instance id="mydata" src="jr://file/mydata.csv"/>
+              <instance id="seconddata" src="jr://file-csv/seconddata.csv"/>
+              <bind nodeset="/data/name" type="string"/>
+              <bind type="int" nodeset="/data/age"/>
+              <bind nodeset="/data/hometown" type="select1"/>
+            </model>
+          </h:head>
+        </h:html>`;
+      return expectedFormAttachments(xml).then((attachments) => {
+        attachments.should.eql([
+          { type: 'file', name: 'mydata.csv' },
+          { type: 'file', name: 'seconddata.csv' }
+        ]);
+      }).point();
+    });
+
+    it('should ignore broken external instance srcs', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <age/>
+                  <hometown/>
+                </data>
+              </instance>
+              <instance id="mydata" src="coolfile.xls"/>
+              <instance id="seconddata" src="jr://files/seconddata.csv"/>
+              <instance id="thirddata" src="jr://file/goodfile.csv"/>
+              <instance id="fourthdata" src="jr://file/path/to/nestedfile.csv"/>
+              <instance id="fourthdata" src="jr://audio/mispathed.csv"/>
+              <bind nodeset="/data/name" type="string"/>
+              <bind type="int" nodeset="/data/age"/>
+              <bind nodeset="/data/hometown" type="select1"/>
+            </model>
+          </h:head>
+        </h:html>`;
+      return expectedFormAttachments(xml).then((attachments) => {
+        attachments.should.eql([
+          { type: 'file', name: 'goodfile.csv' },
+          { type: 'file', name: 'mispathed.csv' }
+        ]);
+      }).point();
+    });
+
+    it('should find media label files', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <age/>
+                  <hometown/>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind type="int" nodeset="/data/age"/>
+              <bind nodeset="/data/hometown" type="select1"/>
+              <itext>
+                <translation default="true()" lang="en">
+                  <text id="/data/name:label">
+                    <value form="image">jr://images/name.jpg</value>
+                  </text>
+                  <text id="/data/age:label">
+                    <value form="audio">jr://audio/age.mp3</value>
+                  </text>
+                  <text id="/data/hometown:label">
+                    <value form="video">jr://video/hometown.mp4</value>
+                  </text>
+                </translation>
+              </itext>
+            </model>
+          </h:head>
+        </h:html>`;
+      return expectedFormAttachments(xml).then((attachments) => {
+        attachments.should.eql([
+          { type: 'image', name: 'name.jpg' },
+          { type: 'audio', name: 'age.mp3' },
+          { type: 'video', name: 'hometown.mp4' }
+        ]);
+      }).point();
+    });
+
+    it('should interpret big-image as image and ignore other media form types', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <age/>
+                  <hometown/>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind type="int" nodeset="/data/age"/>
+              <bind nodeset="/data/hometown" type="select1"/>
+              <itext>
+                <translation default="true()" lang="en">
+                  <text id="/data/name:label">
+                    <value form="big-image">jr://images/name.jpg</value>
+                  </text>
+                  <text id="/data/age:label">
+                    <value form="something">jr://something/age.mp3</value>
+                  </text>
+                  <text id="/data/hometown:label">
+                    <value form="file">jr://file/hometown.mp4</value>
+                  </text>
+                </translation>
+              </itext>
+            </model>
+          </h:head>
+        </h:html>`;
+      return expectedFormAttachments(xml).then((attachments) => {
+        attachments.should.eql([ { type: 'image', name: 'name.jpg' } ]);
+      }).point();
+    });
+
+    it('should detect the need for itemsets.csv', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <age/>
+                  <hometown/>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind type="int" nodeset="/data/age"/>
+              <bind nodeset="/data/hometown" type="select1"/>
+            </model>
+          </h:head>
+          <h:body>
+            <input query="instance('counties')/root/item[state=/select_one_external1/state ]" ref="/select_one_external1/county">
+              <label ref="jr:itext('/select_one_external1/county:label')"/>
+            </input>
+          </h:body>
+        </h:html>`;
+      return expectedFormAttachments(xml).then((attachments) => {
+        attachments.should.eql([{ type: 'file', name: 'itemsets.csv' }]);
+      }).point();
     });
   });
 });

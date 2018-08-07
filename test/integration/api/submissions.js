@@ -167,7 +167,7 @@ describe('api: /submission', () => {
             .expect(200)
             .then(({ headers, text }) => {
               headers['content-type'].should.equal('text/plain; charset=utf-8');
-              headers['content-disposition'].should.equal('attachment; filename=file1.txt');
+              headers['content-disposition'].should.equal('attachment; filename="file1.txt"');
               text.should.equal('this is test file one');
             })))));
   });
