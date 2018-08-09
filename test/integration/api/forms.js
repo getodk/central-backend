@@ -267,7 +267,7 @@ describe('api: /forms', () => {
   <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
     <mediaFile>
       <filename>goodone.csv</filename>
-      <hash>md5:d41d8cd98f00b204e9800998ecf8427e</hash>
+      <hash>md5:2241de57bbec8144c8ad387e69b3a3ba</hash>
       <downloadUrl>${domain}/v1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
     </mediaFile>
   </manifest>`);
@@ -538,6 +538,26 @@ describe('api: /forms', () => {
               .then(({ body }) => {
                 body.should.eql({ success: true });
               })))));
+
+      it('should replace an extant file with another', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/forms/withAttachments/attachments/goodone.csv')
+              .send('test,csv\n1,2')
+              .set('Content-Type', 'text/csv')
+              .expect(200)
+              .then(() => asAlice.post('/v1/forms/withAttachments/attachments/goodone.csv')
+                .send('replaced,csv\n3,4')
+                .set('Content-Type', 'text/csv')
+                .expect(200)
+                .then(() => asAlice.get('/v1/forms/withAttachments/attachments/goodone.csv')
+                  .expect(200)
+                  .then(({ text }) => {
+                    text.should.equal('replaced,csv\n3,4');
+                  })))))));
     });
 
     // these tests mostly necessarily depend on /:name POST:
