@@ -19,7 +19,7 @@ describe('api: /sessions', () => {
         .then(({ body, headers }) => {
           // i don't know why this becomes an array but i think superagent does it.
           const cookie = headers['set-cookie'][0];
-          const matches = /__Host-session=([^;]+); Expires=([^;]+); SameSite=Strict; HttpOnly; Secure/.exec(cookie);
+          const matches = /__Host-session=([^;]+); Path=\/; Expires=([^;]+); SameSite=Strict; HttpOnly; Secure/.exec(cookie);
           should.exist(matches);
           matches[1].should.equal(body.token);
           matches[2].should.equal(DateTime.fromISO(body.expiresAt).toHTTP());
