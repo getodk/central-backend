@@ -69,40 +69,40 @@ describe('util/http', () => {
 
   describe('format response helpers', () => {
     const { contentType, xml, atom, json } = http;
-    const mockRequest = () => ({ type: function(value) { this.contentType = value } });
+    const mockResponse = () => ({ type: function(value) { this.contentType = value } });
     it('should ultimately return the result', () => {
-      contentType()(42)(null, mockRequest()).should.equal(42);
+      contentType()(42)(null, mockResponse()).should.equal(42);
     });
 
     it('should assign the requested content-type', () => {
-      const request = mockRequest();
+      const request = mockResponse();
       contentType('mime/test')()(null, request);
       request.contentType.should.equal('mime/test');
     });
 
     it('should provide working shortcuts for common types', () => {
-      const request = mockRequest();
-      xml()(null, request);
-      request.contentType.should.equal('application/xml');
-      atom()(null, request);
-      request.contentType.should.equal('application/atom+xml');
-      json()(null, request);
-      request.contentType.should.equal('application/json');
+      const response = mockResponse();
+      xml()(null, response);
+      response.contentType.should.equal('application/xml');
+      atom()(null, response);
+      response.contentType.should.equal('application/atom+xml');
+      json()(null, response);
+      response.contentType.should.equal('application/json');
     });
   });
 
   describe('cookie setter', () => {
     const { withCookie } = http;
-    const mockRequest = () => ({ set: function(key, value) { this[key] = value; } });
+    const mockResponse = () => ({ set: function(key, value) { this[key] = value; } });
 
     it('should ultimately return the result', () => {
-      withCookie()()(42)(null, mockRequest()).should.equal(42);
+      withCookie()()(42)(null, mockResponse()).should.equal(42);
     });
 
     it('should assign the requested cookie', () => {
-      const request = mockRequest();
-      withCookie('mykey')('myvalue')(42)(null, request);
-      request['Set-Cookie'].should.equal('mykey=myvalue');
+      const response = mockResponse();
+      withCookie('mykey')('myvalue')(42)(null, response);
+      response['Set-Cookie'].should.equal('mykey=myvalue');
     });
   });
 
