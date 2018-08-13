@@ -1,4 +1,5 @@
 const should = require('should');
+const { DateTime } = require('luxon');
 const { testService } = require('../setup');
 
 describe('api: /sessions', () => {
@@ -9,6 +10,19 @@ describe('api: /sessions', () => {
         .expect(200)
         .then(({ body }) => {
           body.should.be.a.Session();
+        })));
+
+    it('should set cookie information when the session returns', testService((service) =>
+      service.post('/v1/sessions')
+        .send({ email: 'chelsea@opendatakit.org', password: 'chelsea' })
+        .expect(200)
+        .then(({ body, headers }) => {
+          // i don't know why this becomes an array but i think superagent does it.
+          const cookie = headers['set-cookie'][0];
+          const matches = /__Host-session=([^;]+); Path=\/; Expires=([^;]+); SameSite=Strict; HttpOnly; Secure/.exec(cookie);
+          should.exist(matches);
+          matches[1].should.equal(body.token);
+          matches[2].should.equal(DateTime.fromISO(body.expiresAt).toHTTP());
         })));
 
     it('should return a 401 if the password is wrong', testService((service) =>
@@ -27,6 +41,27 @@ describe('api: /sessions', () => {
       service.post('/v1/sessions')
         .expect(400)
         .then(({ body }) => body.details.should.eql({ expected: [ 'email', 'password' ], got: {} }))));
+  });
+
+  describe('/restore GET', () => {
+    it('should fail if no valid session exists', testService((service) =>
+      service.get('/v1/sessions/restore')
+        .set('X-Forwarded-Proto', 'https')
+        .set('Cookie', '__Host-session: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+        .expect(404)));
+
+    it('should return the active session if it exists', testService((service) =>
+      service.post('/v1/sessions')
+        .send({ email: 'alice@opendatakit.org', password: 'alice' })
+        .expect(200)
+        .then(({ body }) => service.get('/v1/sessions/restore')
+          .set('X-Forwarded-Proto', 'https')
+          .set('Cookie', '__Host-session=' + body.token)
+          .expect(200)
+          .then((restore) => {
+            restore.body.should.be.a.Session();
+            restore.body.token.should.equal(body.token);
+          }))));
   });
 
   describe('/:token DELETE', () => {
@@ -56,6 +91,21 @@ describe('api: /sessions', () => {
             .then(() => service.get('/v1/users/current') // actually doesn't matter which route; we get 401 due to broken auth.
               .set('Authorization', 'Bearer ' + token)
               .expect(401));
+        })));
+
+    it('should clear the cookie if successful', testService((service) =>
+      service.post('/v1/sessions')
+        .send({ email: 'alice@opendatakit.org', password: 'alice' })
+        .expect(200)
+        .then(({ body }) => {
+          const token = body.token;
+          return service.delete('/v1/sessions/' + token)
+            .set('Authorization', 'Bearer ' + token)
+            .expect(200)
+            .then(({ headers }) => {
+              const cookie = headers['set-cookie'][0];
+              cookie.should.match(/__Host-session=null/);
+            });
         })));
   });
 });

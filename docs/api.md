@@ -52,6 +52,8 @@ In order to log a `User` in to a new `Session`, you must provide their credentia
 
 For security reasons, the only possible results are success or failure. No detail is provided upon failure.
 
+Successful responses will come with an HTTP-Only, Secure-Only cookie. This cookie is primarily meant for use by the Central frontend, and we do not recommend relying upon it. It will only work on `GET` requests, and it will only work over HTTPS.
+
 + Attributes (object)
     + email (string, required) - The `User`'s full email address.
     + password (string, required) - The `User`'s password.
