@@ -545,6 +545,87 @@ describe('form schema', () => {
         attachments.should.eql([{ type: 'file', name: 'itemsets.csv' }]);
       }).point();
     });
+
+    it('should deduplicate identical (name, type) pairs', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <age/>
+                  <hometown/>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind type="int" nodeset="/data/age"/>
+              <bind nodeset="/data/hometown" type="select1"/>
+              <itext>
+                <translation default="true()" lang="en">
+                  <text id="/data/name:label">
+                    <value form="image">jr://images/name.jpg</value>
+                  </text>
+                  <text id="/data/age:label">
+                    <value form="image">jr://images/name.jpg</value>
+                  </text>
+                  <text id="/data/hometown:label">
+                    <value form="video">jr://video/hometown.mp4</value>
+                  </text>
+                </translation>
+              </itext>
+            </model>
+          </h:head>
+        </h:html>`;
+      return expectedFormAttachments(xml).then((attachments) => {
+        attachments.should.eql([
+          { type: 'image', name: 'name.jpg' },
+          { type: 'video', name: 'hometown.mp4' }
+        ]);
+      }).point();
+    });
+
+    it('should not deduplicate identical names with different types', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <age/>
+                  <hometown/>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind type="int" nodeset="/data/age"/>
+              <bind nodeset="/data/hometown" type="select1"/>
+              <itext>
+                <translation default="true()" lang="en">
+                  <text id="/data/name:label">
+                    <value form="image">jr://images/name.file</value>
+                  </text>
+                  <text id="/data/age:label">
+                    <value form="audio">jr://images/name.file</value>
+                  </text>
+                  <text id="/data/hometown:label">
+                    <value form="video">jr://video/hometown.mp4</value>
+                  </text>
+                </translation>
+              </itext>
+            </model>
+          </h:head>
+        </h:html>`;
+      return expectedFormAttachments(xml).then((attachments) => {
+        attachments.should.eql([
+          { type: 'image', name: 'name.file' },
+          { type: 'audio', name: 'name.file' },
+          { type: 'video', name: 'hometown.mp4' }
+        ]);
+      }).point();
+    });
   });
 });
 
