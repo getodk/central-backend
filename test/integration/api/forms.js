@@ -94,6 +94,22 @@ describe('api: /forms', () => {
   </xforms>`);
               }))))));
 
+    it('should not include deleted forms', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/forms/withrepeat')
+          .expect(200)
+          .then(() => asAlice.delete('/v1/forms/simple')
+            .expect(200)
+            .then(() => asAlice.get('/v1/formList')
+              .set('X-OpenRosa-Version', '1.0')
+              .set('Date', DateTime.local().toHTTP())
+              .expect(200)
+              .then(({ text }) => {
+                text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+  <xforms xmlns="http://openrosa.org/xforms/xformsList">
+  </xforms>`);
+              }))))));
+
     it('should include a manifest node for forms with attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/forms')
