@@ -43,14 +43,12 @@ describe('api: /forms', () => {
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/formlist')
           .set('X-OpenRosa-Version', '1.0')
-          .set('Date', DateTime.local().toHTTP())
           .expect(403))));
 
     it('should return form details as xml', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/formlist')
           .set('X-OpenRosa-Version', '1.0')
-          .set('Date', DateTime.local().toHTTP())
           .expect(200)
           .then(({ text, headers }) => {
             // Collect is particular about this:
@@ -86,7 +84,6 @@ describe('api: /forms', () => {
             .expect(200)
             .then(() => asAlice.get('/v1/formList')
               .set('X-OpenRosa-Version', '1.0')
-              .set('Date', DateTime.local().toHTTP())
               .expect(200)
               .then(({ text }) => {
                 text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
@@ -102,7 +99,6 @@ describe('api: /forms', () => {
           .expect(200)
           .then(() => asAlice.get('/v1/formList')
             .set('X-OpenRosa-Version', '1.0')
-            .set('Date', DateTime.local().toHTTP())
             .expect(200)
             .then(({ text }) => {
               const domain = config.get('default.env.domain');
@@ -232,14 +228,12 @@ describe('api: /forms', () => {
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/forms/simple/manifest')
           .set('X-OpenRosa-Version', '1.0')
-          .set('Date', DateTime.local().toHTTP())
           .expect(403))));
 
     it('should return no files if no attachments exist', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/forms/simple/manifest')
           .set('X-OpenRosa-Version', '1.0')
-          .set('Date', DateTime.local().toHTTP())
           .expect(200)
           .then(({ text }) => {
             text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
@@ -259,7 +253,6 @@ describe('api: /forms', () => {
             .expect(200)
             .then(() => asAlice.get('/v1/forms/withAttachments/manifest')
               .set('X-OpenRosa-Version', '1.0')
-              .set('Date', DateTime.local().toHTTP())
               .expect(200)
               .then(({ text }) => {
                 const domain = config.get('default.env.domain');

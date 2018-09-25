@@ -3,7 +3,6 @@ const { EventEmitter } = require('events');
 const { createRequest, createResponse } = require('node-mocks-http');
 const streamTest = require('streamtest').v2;
 const { identity } = require('ramda');
-const { DateTime } = require('luxon');
 
 const appRoot = require('app-root-path');
 const { finalize, endpoint, openRosaEndpoint, odataEndpoint, sendError } = require(appRoot + '/lib/http/endpoint');
@@ -137,8 +136,7 @@ describe('endpoints', () => {
     // TODO: perhaps swap out forOpenRosa checks for the response check via sendError, as
     // forOpenRosa is an internal routing detail.
     it('should reject requests lacking a version', (done) => {
-      const headers = { 'Date': DateTime.local().toHTTP() };
-      openRosaEndpoint(identity)(createRequest({ headers }), createResponse(), (error) => {
+      openRosaEndpoint(identity)(createRequest(), createResponse(), (error) => {
         error.forOpenRosa.isProblem.should.equal(true);
         error.forOpenRosa.problemDetails.field.should.equal('X-OpenRosa-Version');
         done();
@@ -154,25 +152,7 @@ describe('endpoints', () => {
       });
     });
 
-    it('should reject requests lacking a date', (done) => {
-      const headers = { 'X-OpenRosa-Version': '1.0' };
-      openRosaEndpoint(identity)(createRequest({ headers }), createResponse(), (error) => {
-        error.forOpenRosa.isProblem.should.equal(true);
-        error.forOpenRosa.problemDetails.field.should.equal('Date');
-        done();
-      });
-    });
-
-    it('should reject requests with an invalid date format', (done) => {
-      const headers = { 'X-OpenRosa-Version': '1.0', 'Date': '2012-12-12T12:12:12z' };
-      openRosaEndpoint(identity)(createRequest({ headers }), createResponse(), (error) => {
-        error.forOpenRosa.isProblem.should.equal(true);
-        error.forOpenRosa.problemDetails.field.should.equal('Date');
-        done();
-      });
-    });
-
-    const goodHeaders = { 'X-OpenRosa-Version': '1.0', 'Date': DateTime.local().toHTTP() };
+    const goodHeaders = { 'X-OpenRosa-Version': '1.0' };
     it('should wrap returned problems into an openrosa response format', (done) => {
       const problem = new Problem(400, 'test message');
       const response = createModernResponse();
