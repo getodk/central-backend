@@ -52,6 +52,7 @@ const populate = (container, [ head, ...tail ] = fixtures) =>
 before(() => db
   .raw('drop owned by ' + owner)
   //.raw('drop owned by ?', [ owner ]) TODO: why does this <- not work?
+  .catch(() => null) // if the drop owned by statement fails we're on circleci which has a blank db anyway
   .then(() => db.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
   .then(() => populate(injector.withDefaults({ db })).point()));
 
