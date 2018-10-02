@@ -69,6 +69,13 @@ Various other commands are available:
 * As provided by default by our testing framework Mocha, add `.only` after any `describe` or `it` call in the tests to run only the marked tests (eg: `it.only('should do something`,…`).
 * To examine test coverage (runs both test suites), type `make test-coverage`.
 
+##Troubleshooting
+If you face error during installation of `ursa` npm package in windows environment, please follow the installation instrctions mentioned here: 
+https://www.npmjs.com/package/ursa
+
+Also, if you face error like: `LINK : fatal error LNK1181: cannot open input file 'C:\OpenSSL-Win64\lib\libeay32.lib'`, you can download lib from [here](https://github.com/ReadyTalk/win32/blob/master/msvc/lib/libeay32.lib) and copy to C:\OpenSSL-Win32\lib folder.
+
+
 ## Style Guidelines
 
 Please see the [Contribution Guide](https://github.com/opendatakit/central-backend/blob/master/CONTRIBUTING.md) for complete information on our coding style.
