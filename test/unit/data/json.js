@@ -75,6 +75,20 @@ describe('submissionToOData', () => {
     });
   });
 
+  it('should decode xml entities for output', () => {
+    const fields = { text: { name: 'text', type: 'text' } };
+    const submission = mockSubmission('entities', `<data>
+        <text>&#171;hello&#187;</text>
+      </data>`);
+    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+      result.should.eql([{
+        __id: 'entities',
+        __system,
+        text: '\xABhello\xBB'
+      }]);
+    });
+  });
+
   it('should not attempt to provide broken geospatial values', () => {
     const fields = {
       geopointNoLon: { name: 'geopointNoLon', type: 'geopoint' },

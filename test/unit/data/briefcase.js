@@ -67,6 +67,42 @@ describe('.csv.zip briefcase output @slow', () => {
     });
   });
 
+  it('should decode xml entities for output', (done) => {
+    const form = mockForm({
+      xmlFormId: 'mytestform',
+      xml: `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="mytestform">
+                  <name/>
+                  <age/>
+                  <hometown/>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind type="integer" nodeset="/data/age"/>
+              <bind nodeset="/data/hometown" type="select1"/>
+            </model>
+          </h:head>
+        </h:html>`
+    });
+    const inStream = streamTest.fromObjects([
+      instance('one', '<name>&#171;Alice&#187;</name><age>30</age><hometown>Seattle, WA</hometown>'),
+    ]);
+
+    callAndParse(form, inStream, (result) => {
+      result.filenames.should.eql([ 'mytestform.csv' ]);
+      result['mytestform.csv'].should.equal(
+`SubmissionDate,name,age,hometown,KEY
+2018-01-01T00:00:00.000Z,\xABAlice\xBB,30,"Seattle, WA",one
+`);
+      done();
+    });
+  });
+
   it('should split geopoint columns into four components', (done) => {
     const form = mockForm({
       xmlFormId: 'mytestform',
