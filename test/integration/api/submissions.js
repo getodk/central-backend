@@ -1,5 +1,4 @@
 const should = require('should');
-const { DateTime } = require('luxon');
 const { testService } = require('../setup');
 const testData = require('../data');
 const { zipStreamToFiles } = require('../../util/zip');
@@ -18,7 +17,6 @@ describe('api: /submission', () => {
     it('should reject if no xml file is given', testService((service) =>
       service.post('/v1/submission')
         .set('X-OpenRosa-Version', '1.0')
-        .set('Date', DateTime.local().toHTTP())
         .set('Content-Type', 'text/xml')
         .send(testData.instances.simple2.one)
         .expect(400)
@@ -29,7 +27,6 @@ describe('api: /submission', () => {
     it('should reject if the xml is not valid', testService((service) =>
       service.post('/v1/submission')
         .set('X-OpenRosa-Version', '1.0')
-        .set('Date', DateTime.local().toHTTP())
         .attach('xml_submission_file', Buffer.from('<test'), { filename: 'data.xml' })
         .expect(400)
         .then(({ text }) => { text.should.match(/form ID xml attribute/i); })));
@@ -37,14 +34,12 @@ describe('api: /submission', () => {
     it('should return notfound if the form does not exist', testService((service) =>
       service.post('/v1/submission')
         .set('X-OpenRosa-Version', '1.0')
-        .set('Date', DateTime.local().toHTTP())
         .attach('xml_submission_file', Buffer.from('<data id="nonexistent"><field/></data>'), { filename: 'data.xml' })
         .expect(404)));
 
     it('should reject if the user cannot submit', testService((service) =>
       service.post('/v1/submission')
         .set('X-OpenRosa-Version', '1.0')
-        .set('Date', DateTime.local().toHTTP())
         .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
         .expect(403)));
 
@@ -55,7 +50,6 @@ describe('api: /submission', () => {
           .expect(200)
           .then(() => asAlice.post('/v1/submission')
             .set('X-OpenRosa-Version', '1.0')
-            .set('Date', DateTime.local().toHTTP())
             .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
             .expect(409)))));
 
@@ -63,7 +57,6 @@ describe('api: /submission', () => {
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/submission')
           .set('X-OpenRosa-Version', '1.0')
-          .set('Date', DateTime.local().toHTTP())
           .attach('xml_submission_file', Buffer.from('<data id="simple" version="-1"><orx:meta><orx:instanceID>one</orx:instanceID></orx:meta></data>'), { filename: 'data.xml' })
           .expect(400)
           .then(({ text }) => {
@@ -74,7 +67,6 @@ describe('api: /submission', () => {
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/submission')
           .set('X-OpenRosa-Version', '1.0')
-          .set('Date', DateTime.local().toHTTP())
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .expect(201)
           .then(({ text }) => {
@@ -93,7 +85,6 @@ describe('api: /submission', () => {
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/submission')
           .set('X-OpenRosa-Version', '1.0')
-          .set('Date', DateTime.local().toHTTP())
           .attach('file1.txt', Buffer.from('this is test file one'), { filename: 'file1.txt' })
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .attach('file2.txt', Buffer.from('this is test file two'), { filename: 'file2.txt' })
@@ -108,12 +99,10 @@ describe('api: /submission', () => {
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/submission')
           .set('X-OpenRosa-Version', '1.0')
-          .set('Date', DateTime.local().toHTTP())
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .expect(201)
           .then(() => asAlice.post('/v1/submission')
             .set('X-OpenRosa-Version', '1.0')
-            .set('Date', DateTime.local().toHTTP())
             .attach('xml_submission_file', Buffer.from('<data id="simple"><meta><instanceID>one</instanceID></meta></data>'), { filename: 'data.xml' })
             .expect(409)
             .then(({ text }) => {
@@ -124,13 +113,11 @@ describe('api: /submission', () => {
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/submission')
           .set('X-OpenRosa-Version', '1.0')
-          .set('Date', DateTime.local().toHTTP())
           .attach('file1.txt', Buffer.from('this is test file one'), { filename: 'file1.txt' })
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .expect(201)
           .then(() => asAlice.post('/v1/submission')
             .set('X-OpenRosa-Version', '1.0')
-            .set('Date', DateTime.local().toHTTP())
             .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
             .attach('file2.txt', Buffer.from('this is test file two'), { filename: 'file2.txt' })
             .expect(201)
@@ -144,7 +131,6 @@ describe('api: /submission', () => {
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/submission')
           .set('X-OpenRosa-Version', '1.0')
-          .set('Date', DateTime.local().toHTTP())
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .attach('file1.txt', Buffer.from('this is test file one'), { filename: 'file1.txt' })
           .attach('file1.txt', Buffer.from('this is test file two'), { filename: 'file2.txt' })
@@ -159,7 +145,6 @@ describe('api: /submission', () => {
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/submission')
           .set('X-OpenRosa-Version', '1.0')
-          .set('Date', DateTime.local().toHTTP())
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .attach('file1.txt', Buffer.from('this is test file one'), { filename: 'file1.txt' })
           .expect(201)
@@ -291,14 +276,12 @@ describe('api: /forms/:id/submissions', () => {
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/submission')
           .set('X-OpenRosa-Version', '1.0')
-          .set('Date', DateTime.local().toHTTP())
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .attach('file1.txt', Buffer.from('this is test file one'), { filename: 'file1.txt' })
           .attach('file2.txt', Buffer.from('this is test file two'), { filename: 'file2.txt' })
           .expect(201)
           .then(() => asAlice.post('/v1/submission')
             .set('X-OpenRosa-Version', '1.0')
-            .set('Date', DateTime.local().toHTTP())
             .attach('xml_submission_file', Buffer.from(testData.instances.simple.two), { filename: 'data.xml' })
             .attach('file1.txt', Buffer.from('this is test file three'), { filename: 'file1.txt' })
             .expect(201))
@@ -471,7 +454,6 @@ describe('api: /forms/:id/submissions', () => {
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/submission')
           .set('X-OpenRosa-Version', '1.0')
-          .set('Date', DateTime.local().toHTTP())
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .attach('file.txt', Buffer.from('this is test file one'), { filename: 'file.txt' })
           .expect(201)

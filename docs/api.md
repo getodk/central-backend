@@ -731,12 +731,10 @@ In practical usage, ODK survey clients like Collect will interact with Central i
 * The [Form XML download](/reference/forms-and-submissions/'-individual-form/retrieving-form-xml) endpoint, a part of the standard REST API for Forms, is linked in the Form Listing response and allows clients to then download the ODK XForms XML for each form.
 * The OpenRosa Submission API, [documented below](/reference/openrosa-endpoints/openrosa-form-submission-api), allows survey clients to submit new Submissions to any Form.
 
-As part of the **HTTP Request API** OpenRosa standards specification, there are two required headers for any request:
+Where the **HTTP Request API** OpenRosa standards specification requires two headers for any request, Central requires only one:
 
-* `X-OpenRosa-Version` must be set to exactly `1.0` or the request will be rejected.
-* `Date` must be set to a _valid_ date in [RFC 2616 3.3.1 HTTP Date format](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date) or the request will be rejected.
-    * Dates _must be real dates_; supplying the wrong day of the week for a given date, for example, will fail. As a concession to Android quirkiness, text following the required `GMT` timezone designation will be ignored rather than rejected.
-    * On the other hand, ODK Central does not actually use the supplied Date for anything, and so any valid Date will work. It does not, for instance, have to be a current or recent Date.
+* `X-OpenRosa-Version` **must** be set to exactly `1.0` or the request will be rejected.
+* But Central does not require a `Date` header field. You may set it if you wish, but it will have no effect on Central.
 
 ## OpenRosa Form Listing API [GET /v1/formList]
 
@@ -761,13 +759,11 @@ If you haven't already, please take a look at the **HTTP Request API** notes abo
     + Headers
 
             X-OpenRosa-Version: 1.0
-            Date: Fri, 20 Apr 2018 02:03:48 GMT
 
 + Response 200 (text/xml)
     + Headers
 
             X-OpenRosa-Version: 1.0
-            Date: Fri, 20 Apr 2018 02:03:49 GMT
 
     + Body
 
@@ -794,7 +790,6 @@ If you haven't already, please take a look at the **HTTP Request API** notes abo
     + Headers
 
             X-OpenRosa-Version: 1.0
-            Date: Fri, 20 Apr 2018 02:03:49 GMT
 
     + Body
 
@@ -819,7 +814,6 @@ Some additional things to understand when using this API:
     + Headers
 
             X-OpenRosa-Version: 1.0
-            Date: Fri, 20 Apr 2018 02:03:48 GMT
 
     + Body
 
@@ -835,7 +829,6 @@ Some additional things to understand when using this API:
     + Headers
 
             X-OpenRosa-Version: 1.0
-            Date: Fri, 20 Apr 2018 02:03:49 GMT
 
     + Body
 
@@ -849,7 +842,6 @@ Some additional things to understand when using this API:
     + Headers
 
             X-OpenRosa-Version: 1.0
-            Date: Fri, 20 Apr 2018 02:03:49 GMT
 
     + Body
 
@@ -861,7 +853,6 @@ Some additional things to understand when using this API:
     + Headers
 
             X-OpenRosa-Version: 1.0
-            Date: Fri, 20 Apr 2018 02:03:49 GMT
 
     + Body
 
@@ -873,7 +864,6 @@ Some additional things to understand when using this API:
     + Headers
 
             X-OpenRosa-Version: 1.0
-            Date: Fri, 20 Apr 2018 02:03:49 GMT
 
     + Body
 
@@ -896,13 +886,11 @@ A Manifest document is available at this resource path for any form in the syste
     + Headers
 
             X-OpenRosa-Version: 1.0
-            Date: Fri, 20 Apr 2018 02:03:48 GMT
 
 + Response 200 (text/xml)
     + Headers
 
             X-OpenRosa-Version: 1.0
-            Date: Fri, 20 Apr 2018 02:03:49 GMT
 
     + Body
 
@@ -924,7 +912,6 @@ A Manifest document is available at this resource path for any form in the syste
     + Headers
 
             X-OpenRosa-Version: 1.0
-            Date: Fri, 20 Apr 2018 02:03:49 GMT
 
     + Body
 
