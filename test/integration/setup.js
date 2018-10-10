@@ -30,6 +30,9 @@ const googler = require(appRoot + '/lib/outbound/google');
 const realGoogle = googler(config.get('default.external.google'));
 const google = require('../util/google-mock')(realGoogle);
 
+// set up our sentry mock.
+const Sentry = require(appRoot + '/lib/util/sentry').init();
+
 // application things.
 const injector = require(appRoot + '/lib/model/package');
 const service = require(appRoot + '/lib/http/service');
@@ -93,7 +96,7 @@ const augment = (service) => {
 // somewhere, and it worries me. (#53)
 const testService = (test) => () => new Promise((resolve, reject) => {
   db.transaction((trxn) => {
-    const container = injector.withDefaults({ db, mail, env, google });
+    const container = injector.withDefaults({ db, mail, env, google, Sentry });
     Object.assign(container, { db: trxn, _alreadyTransacting: true });
     const rollback = (f) => (x) => trxn.rollback().then(() => f(x));
     const finalize = (proc) => proc.point(container);
