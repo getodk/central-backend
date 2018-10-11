@@ -12,6 +12,14 @@ describe('api: /sessions', () => {
           body.should.be.a.Session();
         })));
 
+    it('should treat email addresses case insensitively', testService((service) =>
+      service.post('/v1/sessions')
+        .send({ email: 'cHeLsEa@oPeNdAtAkIt.OrG', password: 'chelsea' })
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.a.Session();
+        })));
+
     it('should set cookie information when the session returns', testService((service) =>
       service.post('/v1/sessions')
         .send({ email: 'chelsea@opendatakit.org', password: 'chelsea' })
