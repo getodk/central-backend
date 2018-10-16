@@ -136,6 +136,50 @@ describe('form schema', () => {
       }).point();
     });
 
+    it('should deal correctly with structure nodes with bindings', () => { // gh147
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <occupation>
+                    <title/>
+                    <salary/>
+                    <dates>
+                      <joined/>
+                      <departed/>
+                    </dates>
+                  </occupation>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind nodeset="/data/occupation" relevant="/data/name='liz'"/>
+              <bind nodeset="/data/occupation/title" type="string"/>
+              <bind nodeset="/data/occupation/salary" type="decimal"/>
+              <bind nodeset="/data/occupation/dates" relevant="true()"/>
+              <bind nodeset="/data/occupation/dates/joined" type="date"/>
+              <bind nodeset="/data/occupation/dates/departed" type="date"/>
+            </model>
+          </h:head>
+        </h:html>`;
+      return getFormSchema({ xml }).then((schema) => {
+        schema.should.eql([
+          { name: 'name', type: 'string' },
+          { name: 'occupation', type: 'structure', children: [
+            { name: 'title', type: 'string' },
+            { name: 'salary', type: 'decimal' },
+            { name: 'dates', type: 'structure', children: [
+              { name: 'joined', type: 'date' },
+              { name: 'departed', type: 'date' }
+            ] }
+          ] }
+        ]);
+      }).point();
+    });
+
     it('should deal correctly with repeats', () => {
       const xml = `
         <?xml version="1.0"?>
