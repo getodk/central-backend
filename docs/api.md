@@ -233,7 +233,7 @@ You can `PATCH` JSON data to update User details. Not all user information is mo
 * `displayName` sets the friendly display name the web interface uses to refer to the user.
 * `email` sets the email address associated with the account.
 
-When user details are updated, the `modifiedAt` field will be automatically updated.
+When user details are updated, the `updatedAt` field will be automatically updated.
 
 + Parameters
     + actorId: `42` (string, required) - The integer ID of the `User`.
@@ -279,7 +279,7 @@ To directly update a user password, you will need to reprove the user's intentio
             }
 
 + Response 200 (application/json)
-    + Attributes (User)
+    + Attributes (Success)
 
 + Response 403 (application/json)
     + Attributes (Error 403)

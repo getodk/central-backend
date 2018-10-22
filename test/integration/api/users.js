@@ -231,8 +231,9 @@ describe('api: /users', () => {
             .expect(200)
             .then((after) => {
               before.body.id.should.equal(after.body.id);
+              after.body.displayName.should.equal('new alice');
               after.body.email.should.equal('newalice@odk.org');
-              after.body.meta.should.eql({ test: 'new meta' });
+              should.not.exist(after.body.meta);
               before.body.createdAt.should.equal(after.body.createdAt);
               after.body.updatedAt.should.be.a.recentIsoDate();
               return service.post('/v1/sessions')
