@@ -33,6 +33,7 @@ Next, create a database and user in Postgres. Either use the same settings as th
 ```sql
 CREATE USER jubilant WITH PASSWORD 'jubilant';
 CREATE DATABASE jubilant with owner=jubilant encoding=UTF8;
+CREATE EXTENSION IF NOT EXISTS CITEXT;
 ```
 
 Then, go to the repository root in a command line (where this README is) and run `make` with no arguments. This will install all npm dependencies and run all necessary migrations on the database; see the [makefile](Makefile) for details.
