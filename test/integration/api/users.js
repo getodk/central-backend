@@ -195,5 +195,90 @@ describe('api: /users', () => {
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/users/99').expect(404))));
   });
+
+  describe('/users/:id PATCH', () => {
+    it('should reject if the authed user cannot update', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current')
+          .expect(200)
+          .then(({ body }) => service.login('chelsea', (asChelsea) =>
+            asChelsea.patch(`/v1/users/${body.id}`)
+              .send({ displayName: 'not alice' })
+              .expect(403))))));
+
+    it('should reject if the user id cannot be found', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/users/99999')
+          .send({ displayName: 'test' })
+          .expect(404))));
+
+    it('should update only the allowed fields', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current')
+          .expect(200)
+          .then((before) => asAlice.patch(`/v1/users/${before.body.id}`)
+            .send({
+              id: 9999,
+              type: 'exahacker',
+              password: 'password',
+              email: 'newalice@odk.org',
+              displayName: 'new alice',
+              meta: { test: 'new meta' },
+              createdAt: '2006-01-01T00:00:00',
+              updatedAt: '2006-01-01T00:00:00',
+              deletedAt: '2006-01-01T00:00:00'
+            })
+            .expect(200)
+            .then((after) => {
+              before.body.id.should.equal(after.body.id);
+              after.body.displayName.should.equal('new alice');
+              after.body.email.should.equal('newalice@odk.org');
+              should.not.exist(after.body.meta);
+              before.body.createdAt.should.equal(after.body.createdAt);
+              after.body.updatedAt.should.be.a.recentIsoDate();
+              return service.post('/v1/sessions')
+                .send({ email: 'newalice@odk.org', password: 'alice' })
+                .expect(200);
+            })))));
+  });
+
+  describe('/users/:id/password PUT', () => {
+    it('should reject if the authed user cannot update', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current')
+          .expect(200)
+          .then(({ body }) => service.login('chelsea', (asChelsea) =>
+            asChelsea.put(`/v1/users/${body.id}/password`)
+              .send({ old: 'alice', 'new': 'chelsea' })
+              .expect(403))))));
+
+    it('should reject if the user does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.put(`/v1/users/9999/password`)
+          .send({ old: 'alice', 'new': 'chelsea' })
+          .expect(404))));
+
+    it('should reject if the old password is not correct', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current')
+          .expect(200)
+          .then(({ body }) => asAlice.put(`/v1/users/${body.id}/password`)
+            .send({ old: 'notalice', 'new': 'newpassword' })
+            .expect(401)))));
+
+    it('should change the password', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current')
+          .expect(200)
+          .then(({ body }) => asAlice.put(`/v1/users/${body.id}/password`)
+            .send({ old: 'alice', 'new': 'newpassword' })
+            .expect(200))
+          .then(({ body }) => {
+            body.success.should.equal(true);
+            return service.post('/v1/sessions')
+              .send({ email: 'alice@opendatakit.org', password: 'newpassword' })
+              .expect(200);
+          }))));
+  });
 });
 

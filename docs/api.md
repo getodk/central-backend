@@ -226,6 +226,64 @@ However, if you only have a Bearer token, for example, you don't have any inform
 + Response 403 (application/json)
     + Attributes (Error 403)
 
+### Modifying a User [PATCH /v1/users/{actorId}]
+
+You can `PATCH` JSON data to update User details. Not all user information is modifiable; right now, the following fields may be updated:
+
+* `displayName` sets the friendly display name the web interface uses to refer to the user.
+* `email` sets the email address associated with the account.
+
+When user details are updated, the `updatedAt` field will be automatically updated.
+
++ Parameters
+    + actorId: `42` (string, required) - The integer ID of the `User`.
+
++ Request (application/json)
+    + Attributes
+        + displayName: `New Name` (string, optional) - The friendly display name that should be associated with this User.
+        + email: `new.email.address@opendatakit.org` (string, optional) - The email address that should be associated with this User.
+
+    + Body
+
+            {
+              "displayName": "New Name",
+              "email": "new.email.address@opendatakit.org"
+            }
+
++ Response 200 (application/json)
+    + Attributes (User)
+
++ Response 400 (application/json)
+    + Attributes (Error 400)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Directly updating a user password [PUT /v1/users/{actorId}/password]
+
+To directly update a user password, you will need to reprove the user's intention by supplying the `old` password alongside the `new`. If you simply want to initiate an email-based password reset process, see the following endpoint.
+
++ Parameters
+    + actorId: `42` (string, required) - The integer ID of the `User`.
+
++ Request (application/json)
+    + Attributes
+        + old: `old.password` (string, required) - The user's current password.
+        + new: `new.password` (string, required) - The new password that the user wishes to set.
+
+    + Body
+
+            {
+              "old": "old.password",
+              "new": "new.password"
+            }
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
 ### Initating a password reset [POST /v1/users/reset/initiate{?invalidate}]
 
 Anybody can initate a reset of any user's password. An email will be sent with instructions on how to complete the password reset; it contains a token that is required to complete the process.
