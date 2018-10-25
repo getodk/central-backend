@@ -118,7 +118,7 @@ describe('endpoints', () => {
 
     it('should not attach a json Content-Type if one is already present', () => {
       const response = createModernResponse();
-      endpoint((request, response) => {
+      endpoint((_, request, response) => {
         response.setHeader('Content-Type', 'application/xml');
         return 'test';
       })(createRequest(), response);
