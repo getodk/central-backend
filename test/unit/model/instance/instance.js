@@ -137,20 +137,6 @@ describe('Instance', () => {
       a.without('w', 'y').should.eql(new SimpleInstance({ x: 2, z: 4 }));
       a.should.eql(new SimpleInstance({ w: 1, x: 2, y: 3, z: 4 }));
     });
-
-    it('should provide an instance transacting that calls transacting on the result of any method', () => {
-      const Instance = complete(builder(() => class {
-        foo(x) { return { transacting: () => x * 2 }; }
-      }));
-      (new Instance()).transacting.foo(2).should.equal(4);
-    });
-
-    it('should provide a static transacting that calls transacting on the result of any method', () => {
-      const Instance = complete(builder(() => class {
-        static foo(x) { return { transacting: () => x * 2 }; }
-      }));
-      Instance.transacting().foo(2).should.equal(4);
-    });
   });
 });
 

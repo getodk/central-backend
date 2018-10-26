@@ -2,8 +2,8 @@ const should = require('should');
 const builder = require('../../../../lib/model/query/builder');
 
 describe('query module builder', () => {
-  it('should return modules with an identical signature to the source, plus transacting', () => {
-    Object.keys(builder({ a: 1, b: 2, c: 3 })).should.eql([ 'a', 'b', 'c', 'transacting' ]);
+  it('should return modules with an identical signature to the source', () => {
+    Object.keys(builder({ a: 1, b: 2, c: 3 })).should.eql([ 'a', 'b', 'c' ]);
   });
 
   it('should call the bare function with the appropriate args', (done) => {
@@ -31,14 +31,6 @@ describe('query module builder', () => {
         result.should.equal(42);
         done();
       });
-  });
-
-  it('should provide a mirror of the source module under transacting', () => {
-    Object.keys(builder({ a: 1, b: 2, c: 3 }).transacting).should.eql([ 'a', 'b', 'c' ]);
-  });
-
-  it('should set transacting on ExplicitPromises obtained from .transacting', () => {
-    builder({ f: () => () => null }).transacting.f().options.transacting.should.equal(true);
   });
 });
 

@@ -57,7 +57,7 @@ before(() => db
   //.raw('drop owned by ?', [ owner ]) TODO: why does this <- not work?
   .catch(() => null) // if the drop owned by statement fails we're on circleci which has a blank db anyway
   .then(() => db.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
-  .then(() => populate(injector.withDefaults({ db })).point()));
+  .then(() => injector.withDefaults({ db }).transacting((container) => populate(container).point())));
 
 // augments a supertest object with a `.as(user, cb)` method, where user may be the
 // name of a fixture user or an object with email/password. the user will be logged
