@@ -8,7 +8,7 @@ describe('model injection', () => {
       const module = { proc: (x) => ({ db }) => Promise.resolve(x + db) };
       const { injected } = injector({ db: 7 }, { queries: { injected: module } });
 
-      injected.proc(8).point().then((result) => {
+      injected.proc(8).then((result) => {
         result.should.equal(15);
         done();
       });
@@ -21,7 +21,7 @@ describe('model injection', () => {
       };
       const { injected } = injector({ db: 7 }, { queries: { injected: module } });
 
-      injected.proc1().point().then((result) => {
+      injected.proc1().then((result) => {
         result.should.be.equal(6);
         done();
       });
@@ -32,7 +32,7 @@ describe('model injection', () => {
       const module2 = { proc: (y) => ({ db }) => Promise.resolve(y + db) };
       const { one } = injector({ db: 5 }, { queries: { one: module1, two: module2 } });
 
-      one.proc(8).point().then((result) => {
+      one.proc(8).then((result) => {
         result.should.be.equal(13);
         done();
       });
@@ -45,7 +45,7 @@ describe('model injection', () => {
       });
       const { injected } = injector(null, { queries: { injected: module }, instances: { Klass: TestInstance } });
 
-      injected.proc(4).point().then((result) => {
+      injected.proc(4).then((result) => {
         result.magic().should.equal(7);
         done();
       });
@@ -91,7 +91,7 @@ describe('model injection', () => {
       });
       const { Klass } = injector(null, { queries: { injected: module }, instances: { Klass: TestInstance } });
 
-      (new Klass()).getResult().point().then((result) => {
+      (new Klass()).getResult().then((result) => {
         result.should.equal(42);
         done();
       });
@@ -108,7 +108,7 @@ describe('model injection', () => {
     it('should allow individual query overrides', (done) => {
       const module = { proc: (x) => ({ db }) => Promise.resolve(x + db) };
       const container = injector.withDefaults({ db: 3 }, { queries: { simply: module } });
-      container.simply.proc(8).point().then((result) => {
+      container.simply.proc(8).then((result) => {
         result.should.equal(11);
         done();
       });

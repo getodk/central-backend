@@ -17,7 +17,7 @@ describe('Grant', () => {
             [ 42, 'write', 'abc' ]
           ]);
           done();
-        }).point();
+        });
     });
 
     it('should accept an actee id', (done) => {
@@ -33,7 +33,7 @@ describe('Grant', () => {
             [ 23, 'write', 'abc' ]
           ]);
           done();
-        }).point();
+        });
     });
 
     it('should accept a single verb', (done) => {
@@ -46,7 +46,7 @@ describe('Grant', () => {
         .then(() => {
           result.should.eql([ [ 23, '*', 'abc' ] ]);
           done();
-        }).point();
+        });
     });
   });
 
@@ -57,7 +57,7 @@ describe('Grant', () => {
         .then((result) => {
           result.should.equal(true);
           done();
-        }).point();
+        });
     });
 
     it('should accept Option[Actor] without complaint', (done) => {
@@ -66,7 +66,7 @@ describe('Grant', () => {
         .then((result) => {
           result.should.equal(true);
           done();
-        }).point();
+        });
     });
 
     it('should pass if grants are found', (done) => {
@@ -77,7 +77,7 @@ describe('Grant', () => {
         .then((result) => {
           result.should.equal(true);
           done();
-        }).point();
+        });
     });
 
     it('should fail if no grants are found', (done) => {
@@ -88,7 +88,7 @@ describe('Grant', () => {
         .then((result) => {
           result.should.equal(false);
           done();
-        }).point();
+        });
     });
   });
 });

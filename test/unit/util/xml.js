@@ -23,7 +23,7 @@ describe('util/xml', () => {
               [ 'text', 'sometext', undefined ],
               [ 'close', undefined, undefined ]
             ]);
-          }).point();
+          });
       });
 
       it('should distribute events to traversers from an xml stream', () => {
@@ -39,7 +39,7 @@ describe('util/xml', () => {
               [ 'text', 'sometext', undefined ],
               [ 'close', undefined, undefined ]
             ]);
-          }).point();
+          });
       });
 
       it('should distribute events to multiple traversers', () => {
@@ -58,15 +58,14 @@ describe('util/xml', () => {
             ];
             eventsA.should.eql(expected);
             eventsB.should.eql(expected);
-          }).point();
+          });
       });
 
       it('should give the Optioned results returned by each traverser', () => {
         const mtA = (e, x, y) => (e === 'open') ? x : mtA;
         const mtB = (e, x, y) => (e === 'text') ? x : mtB;
         return traverseXml('<root><child id="test"/>sometext</root>', [ mtA, mtB ])
-          .then((results) => { results.should.eql([ Option.of('root'), Option.of('sometext') ]); })
-          .point();
+          .then((results) => { results.should.eql([ Option.of('root'), Option.of('sometext') ]); });
       });
 
       it('should stop parsing early if every traverser has returned', () => {
@@ -78,16 +77,14 @@ describe('util/xml', () => {
         const stream = new Readable({ read() {} });
         stream.push('<root><child id="test"/>some');
         return traverseXml(stream, [ mtA, mtB ])
-          .then((results) => { results.should.eql([ Option.of('root'), Option.of({ id: 'test' }) ]); })
-          .point();
+          .then((results) => { results.should.eql([ Option.of('root'), Option.of({ id: 'test' }) ]); });
       });
 
       it('should return Option.none for traversers that never return', () => {
         const mtA = (e, x, y) => (e === 'open') ? x : mtA;
         const mtB = () => mtB;
         return traverseXml('<root><child id="test"/>sometext</root>', [ mtA, mtB ])
-          .then((results) => { results.should.eql([ Option.of('root'), Option.none() ]); })
-          .point();
+          .then((results) => { results.should.eql([ Option.of('root'), Option.none() ]); });
       });
     });
 

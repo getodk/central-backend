@@ -6,8 +6,8 @@ const { getConfiguration, getConfigurationJsonValue, setConfiguration } = requir
 
 describe('task: config', () => {
   describe('getConfiguration', () => {
-    it('should fetch configuration by key', testTask(({ Config }, finalize) =>
-      finalize(Config.set('testConfig', { key: 'value' }))
+    it('should fetch configuration by key', testTask(({ Config }) =>
+      Config.set('testConfig', { key: 'value' })
         .then(() => getConfiguration('testConfig'))
         .then((result) => {
           result.key.should.equal('testConfig');
@@ -15,26 +15,26 @@ describe('task: config', () => {
           result.setAt.should.be.an.instanceof(Date);
         })));
 
-    it('should reject if configuration is not found', testTask((_, finalize) =>
+    it('should reject if configuration is not found', testTask(() =>
       getConfiguration('nonexistent').should.be.rejected()));
   });
 
   describe('getConfigurationJsonValue', () => {
-    it('should parse the configuration value', testTask(({ Config }, finalize) =>
-      finalize(Config.set('testConfig', { key: 'value' }))
+    it('should parse the configuration value', testTask(({ Config }) =>
+      Config.set('testConfig', { key: 'value' })
         .then(() => getConfigurationJsonValue('testConfig'))
         .then((result) => {
           result.should.eql({ key: 'value' });
         })));
 
-    it('should reject if configuration is not found', testTask((_, finalize) =>
+    it('should reject if configuration is not found', testTask(() =>
       getConfigurationJsonValue('nonexistent').should.be.rejected()));
   });
 
   describe('setConfiguration', () => {
-    it('should save configuration by key', testTask(({ Config }, finalize) =>
+    it('should save configuration by key', testTask(({ Config }) =>
       setConfiguration('testConfig', { set: 'data' })
-        .then(() => finalize(Config.get('testConfig')))
+        .then(() => Config.get('testConfig'))
         .then(getOrNotFound)
         .then((config) => JSON.parse(config.value).should.eql({ set: 'data' }))));
   });

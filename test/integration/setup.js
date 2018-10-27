@@ -57,7 +57,7 @@ before(() => db
   //.raw('drop owned by ?', [ owner ]) TODO: why does this <- not work?
   .catch(() => null) // if the drop owned by statement fails we're on circleci which has a blank db anyway
   .then(() => db.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
-  .then(() => injector.withDefaults({ db }).transacting((container) => populate(container).point())));
+  .then(() => injector.withDefaults({ db }).transacting(populate)));
 
 // augments a supertest object with a `.as(user, cb)` method, where user may be the
 // name of a fixture user or an object with email/password. the user will be logged
@@ -99,8 +99,7 @@ const testService = (test) => () => new Promise((resolve, reject) => {
     const container = injector.withDefaults({ db, mail, env, google, Sentry });
     Object.assign(container, { db: trxn, _alreadyTransacting: true });
     const rollback = (f) => (x) => trxn.rollback().then(() => f(x));
-    const finalize = (proc) => proc.point(container);
-    test(augment(request(service(container))), container, finalize).then(rollback(resolve), rollback(reject));
+    test(augment(request(service(container))), container).then(rollback(resolve), rollback(reject));
     // we return nothing to prevent knex from auto-committing the transaction.
   }).catch(Promise.resolve.bind(Promise));
 });
@@ -109,9 +108,6 @@ const testService = (test) => () => new Promise((resolve, reject) => {
 // here instead our weird hijack work involves injecting our own constructed
 // container into the task context so it just picks it up and uses it.
 // 
-// we also provide a finalizer in case the test needs to use the container for
-// various post-task checks. eg: finalizer(User.getByEmail(abc)).then(…)
-//
 // TODO: very copypasta.
 const testTask = (test) => () => new Promise((resolve, reject) => {
   db.transaction((trxn) => {
@@ -121,8 +117,7 @@ const testTask = (test) => () => new Promise((resolve, reject) => {
       delete task._container;
       return trxn.rollback().then(() => f(x));
     };
-    const finalize = (proc) => proc.point(task._container);
-    test(task._container, finalize).then(rollback(resolve), rollback(reject));
+    test(task._container).then(rollback(resolve), rollback(reject));
     // we return nothing to prevent knex from auto-committing the transaction.
   }).catch(Promise.resolve.bind(Promise));
 });

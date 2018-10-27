@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { ExplicitPromise, resolve } = require(appRoot + '/lib/util/promise');
+const { resolve } = require(appRoot + '/lib/util/promise');
 const { task, run } = require(appRoot + '/lib/task/task');
 
 describe('task harness', () => {

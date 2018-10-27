@@ -38,7 +38,7 @@ describe('task: fs', () => {
       const filepath = await promisify(tmp.file)();
       await promisify(writeFile)(join(dirpath, 'one'), 'test file one');
       await promisify(writeFile)(join(dirpath, 'two'), 'test file two');
-      const keys = await generateKeypair(passphrase).point();
+      const keys = await generateKeypair(passphrase);
       await encryptToArchive(dirpath, filepath, keys);
       return filepath;
     };
