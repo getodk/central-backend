@@ -346,7 +346,7 @@ describe('odata message composition', () => {
           }))).point();
       });
 
-      it('should limit toplevel row data', (done) => {
+      it('should not limit toplevel row data (done by database)', (done) => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const query = { $top: 2 };
         const inRows = streamTest.fromObjects([
@@ -361,14 +361,15 @@ describe('odata message composition', () => {
               '@odata.nextLink': 'http://localhost:8989/simple.svc/Submissions?%24skip=2',
               value: [
                 { __id: 'one', __system, meta: { instanceID: 'one' }, name: 'Alice', age: 30 },
-                { __id: 'two', __system, meta: { instanceID: 'two' }, name: 'Bob', age: 34 }
+                { __id: 'two', __system, meta: { instanceID: 'two' }, name: 'Bob', age: 34 },
+                { __id: 'three', __system, meta: { instanceID: 'three' }, name: 'Chelsea', age: 38 }
               ]
             });
             done();
           }))).point();
       });
 
-      it('should offset toplevel row data', (done) => {
+      it('should not offset toplevel row data (done by database)', (done) => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const query = { $skip: 2 };
         const inRows = streamTest.fromObjects([
@@ -381,28 +382,9 @@ describe('odata message composition', () => {
             JSON.parse(result).should.eql({
               '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
               value: [
+                { __id: 'one', __system, meta: { instanceID: 'one' }, name: 'Alice', age: 30 },
+                { __id: 'two', __system, meta: { instanceID: 'two' }, name: 'Bob', age: 34 },
                 { __id: 'three', __system, meta: { instanceID: 'three' }, name: 'Chelsea', age: 38 }
-              ]
-            });
-            done();
-          }))).point();
-      });
-
-      it('should limit and offset toplevel row data', (done) => {
-        const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
-        const query = { $top: 1, $skip: 1 };
-        const inRows = streamTest.fromObjects([
-          mockSubmission('one', testData.instances.simple.one),
-          mockSubmission('two', testData.instances.simple.two),
-          mockSubmission('three', testData.instances.simple.three)
-        ]);
-        rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=1&$skip=1', query, inRows)
-          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
-            JSON.parse(result).should.eql({
-              '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
-              '@odata.nextLink': 'http://localhost:8989/simple.svc/Submissions?%24skip=2',
-              value: [
-                { __id: 'two', __system, meta: { instanceID: 'two' }, name: 'Bob', age: 34 }
               ]
             });
             done();
