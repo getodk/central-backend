@@ -248,7 +248,59 @@ describe('api: /forms/:id.svc', () => {
             });
           }))));
 
-    // no particular reason we choose subtable rather than toplevel here.
+    it('should limit and offset toplevel rows', testService((service) =>
+      withSubmissions(service, (asAlice) =>
+        asAlice.get("/v1/forms/withrepeat.svc/Submissions?$top=1&$skip=1")
+          .expect(200)
+          .then(({ body }) => {
+            body.value[0].__system.submissionDate.should.be.an.isoDate();
+            delete body.value[0].__system.submissionDate;
+
+            body.should.eql({
+              '@odata.context': 'http://localhost:8989/v1/forms/withrepeat.svc/$metadata#Submissions',
+              '@odata.nextLink': "http://localhost:8989/v1/forms/withrepeat.svc/Submissions?%24skip=2",
+              value: [{
+                __id: "two",
+                __system: {
+                  // submissionDate is checked above,
+                  submitterId: "5",
+                  submitterName: "Alice"
+                },
+                meta: { instanceID: "two" },
+                name: "Bob",
+                age: 34,
+                children: {}
+              }]
+            });
+          }))));
+
+    it('should provide toplevel row count if requested', testService((service) =>
+      withSubmissions(service, (asAlice) =>
+        asAlice.get("/v1/forms/withrepeat.svc/Submissions?$top=1&$count=true")
+          .expect(200)
+          .then(({ body }) => {
+            body.value[0].__system.submissionDate.should.be.an.isoDate();
+            delete body.value[0].__system.submissionDate;
+
+            body.should.eql({
+              '@odata.context': 'http://localhost:8989/v1/forms/withrepeat.svc/$metadata#Submissions',
+              '@odata.nextLink': "http://localhost:8989/v1/forms/withrepeat.svc/Submissions?%24count=true&%24skip=1",
+              '@odata.count': 3,
+              value: [{
+                __id: "three",
+                __system: {
+                  // submissionDate is checked above,
+                  submitterId: "5",
+                  submitterName: "Alice"
+                },
+                meta: { instanceID: "three" },
+                name: "Chelsea",
+                age: 38,
+                children: {}
+              }]
+            });
+          }))));
+
     it('should limit and offset subtable results', testService((service) =>
       withSubmissions(service, (asAlice) =>
         asAlice.get("/v1/forms/withrepeat.svc/Submissions.children.child?$top=1&$skip=1")
