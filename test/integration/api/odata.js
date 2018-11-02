@@ -222,6 +222,15 @@ describe('api: /forms/:id.svc', () => {
             });
           }))));
 
+    it('should return a count even if there are no rows', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/forms/withrepeat.svc/Submissions?$count=true')
+          .expect(200)
+          .then(({ body }) => {
+            console.log(body);
+            body['@odata.count'].should.equal(0);
+          }))));
+
     it('should return subtable results', testService((service) =>
       withSubmissions(service, (asAlice) =>
         asAlice.get('/v1/forms/withrepeat.svc/Submissions.children.child')
