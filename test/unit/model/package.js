@@ -40,7 +40,7 @@ describe('model injection', () => {
 
     it('should provide instance modules to query modules', (done) => {
       const module = { proc: (x) => ({ Klass }) => Promise.resolve(new Klass({ x })) };
-      const TestInstance = Instance(() => class {
+      const TestInstance = Instance()(() => class {
         magic() { return this.x + 3; }
       });
       const { injected } = injector(null, { queries: { injected: module }, instances: { Klass: TestInstance } });
@@ -54,7 +54,7 @@ describe('model injection', () => {
 
   describe('instance modules', () => {
     it('should provide database context to instance modules', () => {
-      const TestInstance = Instance(({ db }) => class {
+      const TestInstance = Instance()(({ db }) => class {
         echo() { return db; }
       });
       const { Klass } = injector({ db: 42 }, { instances: { Klass: TestInstance } });
@@ -63,7 +63,7 @@ describe('model injection', () => {
     });
 
     it('should provide own context to instance modules', () => {
-      const TestInstance = Instance(({ Klass }) => class {
+      const TestInstance = Instance()(({ Klass }) => class {
         getMagic() { return Klass.magic(); }
         static magic() { return 42; }
       });
@@ -73,10 +73,10 @@ describe('model injection', () => {
     });
 
     it('should provide cross context to instance modules', () => {
-      const TestInstance1 = Instance(({ Two }) => class {
+      const TestInstance1 = Instance()(({ Two }) => class {
         transmute(x) { return new Two({ x }); }
       });
-      const TestInstance2 = Instance(() => class {
+      const TestInstance2 = Instance()(() => class {
         result() { return this.x * 3; }
       });
       const { One } = injector(null, { instances: { One: TestInstance1, Two: TestInstance2 } });
@@ -86,7 +86,7 @@ describe('model injection', () => {
 
     it('should provide query modules to instance modules', (done) => {
       const module = { proc: () => () => Promise.resolve(42) };
-      const TestInstance = Instance(({ injected }) => class {
+      const TestInstance = Instance()(({ injected }) => class {
         getResult() { return injected.proc(); }
       });
       const { Klass } = injector(null, { queries: { injected: module }, instances: { Klass: TestInstance } });
@@ -115,7 +115,7 @@ describe('model injection', () => {
     });
 
     it('should allow individual instance overrides', () => {
-      const TestInstance = Instance(() => class {
+      const TestInstance = Instance()(() => class {
         magic() { return 42; }
       });
       const container = injector.withDefaults(null, { instances: { Form: TestInstance } });

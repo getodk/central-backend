@@ -35,7 +35,7 @@ should.Assertion.add('base64string', function() {
 should.Assertion.add('Actor', function() {
   this.params = { operator: 'to be an Actor' };
 
-  Object.keys(this.obj).should.containDeep([ 'createdAt', 'displayName', 'id', 'meta', 'updatedAt' ]);
+  Object.keys(this.obj).should.containDeep([ 'createdAt', 'displayName', 'id', 'updatedAt' ]);
   this.obj.id.should.be.a.Number();
   this.obj.displayName.should.be.a.String();
   this.obj.createdAt.should.be.an.isoDate();
