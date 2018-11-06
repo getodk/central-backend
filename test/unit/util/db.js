@@ -12,15 +12,42 @@ class X {
 describe('util/db', () => {
   describe('fieldsForJoin', () => {
     const { fieldsForJoin } = util;
-    it('should return a set of flattened fields', () => {
+    it('should return a set of flattened fields given Instances', () => {
       fieldsForJoin({
-        prop1: { table: 'prop1table', fields: [ 'a', 'b' ] },
-        prop2: { table: 'prop2table', fields: [ 'c', 'd' ] }
+        prop1: { table: 'prop1table', fields: { all: [ 'a', 'b' ] } },
+        prop2: { table: 'prop2table', fields: { all: [ 'c', 'd' ] } }
       }).should.eql({
         'prop1!a': 'prop1table.a',
         'prop1!b': 'prop1table.b',
         'prop2!c': 'prop2table.c',
         'prop2!d': 'prop2table.d'
+      });
+    });
+
+    it('should return a set of flattened fields given of/table declarations', () => {
+      fieldsForJoin({
+        prop1: { of: { table: 'prop1table', fields: { all: [ 'a', 'b' ] } }, table: 'override1table' },
+        prop2: { of: { table: 'prop2table', fields: { all: [ 'c', 'd' ] } } }
+      }).should.eql({
+        'prop1!a': 'override1table.a',
+        'prop1!b': 'override1table.b',
+        'prop2!c': 'prop2table.c',
+        'prop2!d': 'prop2table.d'
+      });
+    });
+
+    it('should pick up join field declarations', () => {
+      fieldsForJoin({
+        prop1: { table: 'prop1table', fields: { all: [ 'a', 'b' ], joined: [ 'm' ] } },
+        prop2: { of: { table: 'prop2table', fields: { all: [ 'c', 'd' ], joined: [ 'x', 'y' ] } }, table: 'override2table' }
+      }).should.eql({
+        'prop1!a': 'prop1table.a',
+        'prop1!b': 'prop1table.b',
+        'prop1!m': 'm',
+        'prop2!c': 'override2table.c',
+        'prop2!d': 'override2table.d',
+        'prop2!x': 'x',
+        'prop2!y': 'y'
       });
     });
   });

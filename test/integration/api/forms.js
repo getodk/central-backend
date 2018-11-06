@@ -345,6 +345,7 @@ describe('api: /forms', () => {
             .then(({ body }) => {
               body.should.be.an.ExtendedForm();
               body.xmlFormId.should.equal('simple2');
+              (body.lastSubmission == null).should.equal(true);
               body.submissions.should.equal(0);
               body.createdBy.should.be.an.Actor();
               body.createdBy.displayName.should.equal('Alice');
