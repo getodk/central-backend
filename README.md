@@ -18,7 +18,7 @@ For information on how to install and deploy ODK Central Backend for use as an O
 
 ### Command line scripts
 
-A number of operational tasks (creating accounts, setting passwords, etc) may be accomplished directly via local command line. These may be accessed by running `node lib/bin/cli.js` from the project root. The full list of commands and arguments will be provided by the script.
+A number of operational tasks (creating accounts, setting passwords, etc) may be accomplished directly via local command line. These may be accessed by running `node lib/bin/cli.js` from the project root. If you run that script without arguments, it will provide the full list of available commands. For an overview of using Central command line tools in a production environment, see the [Central docs](https://docs.opendatakit.org/central-command-line/).
 
 ### Accessing the API
 
