@@ -42,6 +42,9 @@ To run the server, run `make run` from the repository root. Once started, the se
 
 You can also run `make debug` to run the server with a standard node inspector port running (use your favorite tool, or visit [`about:inspect`](chrome://inspect) in Chrome to attach breakpoints and step through statements).
 
+### Tips for Windows
+Some of the native packages can be a little bit tricky to install successfuly on Windows. In particular, the `ursa` encryption library provides some [pointers of its own](https://www.npmjs.com/package/ursa), and if you run into link issues with `libeay32.lib` then [this issue ticket](https://github.com/ethereumjs/ethereumjs-util/issues/43#issuecomment-347819435) provides some useful information.
+
 ### Sending email
 
 It isn't necessary to actually send email when working on this code. The default email configuration (see `config/default.json`) uses the `json` transport (as does the test configuration), in which case emails are printed to the local server log and delivery is not attempted.
