@@ -8,7 +8,6 @@ const appRoot = require('app-root-path');
 const { finalize, endpoint, openRosaEndpoint, odataEndpoint, sendError } = require(appRoot + '/lib/http/endpoint');
 const Problem = require(appRoot + '/lib/util/problem');
 const Option = require(appRoot + '/lib/util/option');
-const { ExplicitPromise } = require(appRoot + '/lib/util/promise');
 
 const createModernResponse = () => {
   const result = createResponse({ eventEmitter: EventEmitter });
@@ -85,13 +84,6 @@ describe('endpoints', () => {
       requestTest.emit('close');
     });
 
-    it('should point any ExplicitPromises it finds', (done) => {
-      finalize((result) => {
-        result.should.equal(42);
-        done();
-      })(ExplicitPromise.of(ExplicitPromise.of(Promise.resolve(42))));
-    });
-
     it('should attach to any Promises it finds', (done) => {
       let resolve;
       const p = new Promise((r) => { resolve = r; });
@@ -118,7 +110,7 @@ describe('endpoints', () => {
 
     it('should not attach a json Content-Type if one is already present', () => {
       const response = createModernResponse();
-      endpoint((request, response) => {
+      endpoint((_, request, response) => {
         response.setHeader('Content-Type', 'application/xml');
         return 'test';
       })(createRequest(), response);

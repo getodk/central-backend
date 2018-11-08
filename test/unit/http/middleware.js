@@ -5,7 +5,6 @@ const appRoot = require('app-root-path');
 const middleware = require(appRoot + '/lib/http/middleware');
 const Problem = require(appRoot + '/lib/util/problem');
 const Option = require(appRoot + '/lib/util/option');
-const { ExplicitPromise } = require(appRoot + '/lib/util/promise');
 const { hashPassword } = require(appRoot + '/lib/util/crypto');
 
 describe('middleware', () => {
@@ -53,14 +52,14 @@ describe('middleware', () => {
     // some mock helpers to simplify testing this module in isolation:
     class Auth { constructor(data) { Object.assign(this, data); } }
     const mockSession = (expectedToken) => ({
-      getByBearerToken: (token) => ExplicitPromise.of(Promise.resolve((token === expectedToken)
+      getByBearerToken: (token) => Promise.resolve((token === expectedToken)
         ? Option.of('session')
-        : Option.none()))
+        : Option.none())
     });
     const mockUser = (expectedEmail, password) => ({
-      getByEmail: (email) => ExplicitPromise.of(Promise.resolve((email === expectedEmail)
+      getByEmail: (email) => Promise.resolve((email === expectedEmail)
         ? Option.of({ password, actor: 'actor' })
-        : Option.none()))
+        : Option.none())
     });
 
     it('should set no auth if no Authorization header is provided', (done) => {
@@ -133,7 +132,7 @@ describe('middleware', () => {
     });
 
     it('should fail the request if Basic auth is attempted with a successful auth present @slow', (done) => {
-      hashPassword('alice').point().then((hashed) => {
+      hashPassword('alice').then((hashed) => {
         const encodedCredentials = Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64');
         const request = createRequest({ headers: {
           Authorization: `Basic ${encodedCredentials}`,
@@ -175,7 +174,7 @@ describe('middleware', () => {
     });
 
     it('should set the appropriate session if valid Basic auth credentials are given @slow', (done) => {
-      hashPassword('alice').point().then((hashed) => {
+      hashPassword('alice').then((hashed) => {
         const encodedCredentials = Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64');
         const request = createRequest({ headers: {
           Authorization: `Basic ${encodedCredentials}`,

@@ -19,7 +19,7 @@ describe('Submission', () => {
         failure.problemCode.should.equal(400.2);
         failure.problemDetails.field.should.equal('form ID xml attribute');
         done();
-      }).point();
+      });
     });
 
     it('should reject if the formId does not exist (2: blank)', (done) => {
@@ -28,28 +28,28 @@ describe('Submission', () => {
         failure.problemCode.should.equal(400.2);
         failure.problemDetails.field.should.equal('form ID xml attribute');
         done();
-      }).point();
+      });
     });
 
     it('should find instanceID in meta', (done) => {
       Submission.fromXml('<data id="mycoolform"><orx:meta><orx:instanceID>idtest</orx:instanceID></orx:meta><field/></data>').then((ps) => {
         ps.instanceId.should.equal('idtest');
         done();
-      }).point();
+      });
     });
 
     it('should find instanceID directly in data envelope', (done) => {
       Submission.fromXml('<data id="mycoolform"><instanceID>idtest</instanceID><field/></data>').then((ps) => {
         ps.instanceId.should.equal('idtest');
         done();
-      }).point();
+      });
     });
 
     it('should generate an instance id if not found', (done) => {
       Submission.fromXml('<data id="mycoolform"><field/></data>').then((ps) => {
         ps.instanceId.should.be.a.uuid();
         done();
-      }).point();
+      });
     });
 
     it('should return a populated PartialSubmission given correct xml', (done) => {
@@ -61,7 +61,7 @@ describe('Submission', () => {
         ps.version.should.equal('coolest');
         ps.xml.should.equal(xml);
         done();
-      }).point();
+      });
     });
 
     it('should squash null version to empty-string', (done) => {
@@ -69,7 +69,7 @@ describe('Submission', () => {
       Submission.fromXml(xml).then((ps) => {
         (ps.version === '').should.equal(true);
         done();
-      }).point();
+      });
     });
 
     it('should work given an xml preamble', (done) => {
@@ -80,13 +80,13 @@ describe('Submission', () => {
         ps.instanceId.should.equal('myinstance');
         ps.xml.should.equal(xml);
         done();
-      }).point();
+      });
     });
   });
 
   describe('PartialSubmission', () => {
     const subXml = '<data id="mycoolform"><field/></data>';
-    const psp = Submission.fromXml(subXml).point();
+    const psp = Submission.fromXml(subXml);
     it('should complete given a form and no actor', (done) => {
       psp.then((ps) => {
         const submission = ps.complete({ id: 42, version: '' }, Option.none());

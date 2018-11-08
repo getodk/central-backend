@@ -17,7 +17,7 @@ describe('Form', () => {
         failure.isProblem.should.equal(true);
         failure.problemCode.should.equal(400.2);
         done();
-      }).point();
+      });
     });
 
     it('should reject if the formId cannot be found (2: attr nonexistent)', (done) => {
@@ -25,7 +25,7 @@ describe('Form', () => {
         failure.isProblem.should.equal(true);
         failure.problemCode.should.equal(400.2);
         done();
-      }).point();
+      });
     });
 
     it('should reject if the formId cannot be found (3: attr blank)', (done) => {
@@ -33,7 +33,7 @@ describe('Form', () => {
         failure.isProblem.should.equal(true);
         failure.problemCode.should.equal(400.2);
         done();
-      }).point();
+      });
     });
 
     it('should return a populated Form object if the xml passes', (done) => {
@@ -42,7 +42,7 @@ describe('Form', () => {
         form.xml.should.equal(xml);
         form.xmlFormId.should.equal('mycoolform');
         done();
-      }).point();
+      });
     });
 
     it('should pick up additional form metadata', () => {
@@ -52,7 +52,7 @@ describe('Form', () => {
         form.name.should.equal('My Cool Form');
         form.version.should.equal('1.0');
         form.hash.should.equal('5ba55d383e978f07ee906fc62ff1b288');
-      }).point();
+      });
     });
 
     it('should squash null version to empty-string', (done) => {
@@ -60,7 +60,7 @@ describe('Form', () => {
       Form.fromXml(xml).then((form) => {
         (form.version === '').should.equal(true);
         done();
-      }).point();
+      });
     });
   });
 });

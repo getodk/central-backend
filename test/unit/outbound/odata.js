@@ -84,7 +84,7 @@ describe('odata message composition', () => {
       </ComplexType>
       <EntityContainer Name="simple">
         <EntitySet Name="Submissions" EntityType="org.opendatakit.user.simple.Submissions">`)
-      }).point();
+      });
     });
 
     /* TODO: commented out pending resolution of issue ticket #82:
@@ -131,7 +131,7 @@ describe('odata message composition', () => {
       </Schema>
     </edmx:DataServices>
   </edmx:Edmx>`);
-      }).point();
+      });
     });*/
 
     // TODO: remove the following test following resolution of issue ticket #82:
@@ -170,7 +170,7 @@ describe('odata message composition', () => {
       </ComplexType>
       <EntityContainer Name="withrepeat">
         <EntitySet Name="Submissions" EntityType="org.opendatakit.user.withrepeat.Submissions">`);
-      }).point();
+      });
     });
 
     it('should express repeats as entitysets', () => {
@@ -182,7 +182,7 @@ describe('odata message composition', () => {
     </Schema>
   </edmx:DataServices>
 </edmx:Edmx>`);
-      }).point();
+      });
     });
 
     it('should appropriately name repeat-parent join ids', () => {
@@ -192,7 +192,7 @@ describe('odata message composition', () => {
         <Key><PropertyRef Name="__id"/></Key>
         <Property Name="__id" Type="Edm.String"/>
         <Property Name="__Submissions-children-child-id" Type="Edm.String"/>`).should.equal(true);
-      }).point();
+      });
     });
   });
 
@@ -202,28 +202,28 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const inRows = streamTest.fromObjects([]);
         return rowStreamToOData(form, 'Dummy', 'http://localhost:8989', '/simple.svc', {}, inRows, 0)
-          .point().should.be.rejected();
+          .should.be.rejected();
       });
 
       it('should reject with not found if a subtable is wrong', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const inRows = streamTest.fromObjects([]);
         return rowStreamToOData(form, 'Submissions.nonexistent', 'http://localhost:8989', '/withrepeat.svc', {}, inRows, 0)
-          .point().should.be.rejected();
+          .should.be.rejected();
       });
 
       it('should pass if the toplevel table is correct', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const inRows = streamTest.fromObjects([]);
         return rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/withrepeat.svc', {}, inRows, 0)
-          .point().should.not.be.rejected();
+          .should.not.be.rejected();
       });
 
       it('should pass if the subtable is correct', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const inRows = streamTest.fromObjects([]);
         return rowStreamToOData(form, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc', {}, inRows, 0)
-          .point().should.not.be.rejected();
+          .should.not.be.rejected();
       });
     });
 
@@ -236,7 +236,7 @@ describe('odata message composition', () => {
             const resultObj = JSON.parse(result);
             resultObj['@odata.context'].should.equal('http://localhost:8989/simple.svc/$metadata#Submissions');
             done();
-          }))).point();
+          })));
       });
 
       it('should provide the correct context url for a subtable', (done) => {
@@ -247,7 +247,7 @@ describe('odata message composition', () => {
             const resultObj = JSON.parse(result);
             resultObj['@odata.context'].should.equal('http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child');
             done();
-          }))).point();
+          })));
       });
 
       const instances = (count) => (new Array(count)).fill({ submitter, xml: '<data/>' });
@@ -260,7 +260,7 @@ describe('odata message composition', () => {
             const resultObj = JSON.parse(result);
             should.not.exist(resultObj['@odata.nextLink']);
             done();
-          }))).point();
+          })));
       });
 
       it('should provide the correct nextUrl if rows remain', (done) => {
@@ -272,7 +272,7 @@ describe('odata message composition', () => {
             const resultObj = JSON.parse(result);
             resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24skip=5');
             done();
-          }))).point();
+          })));
       });
 
       it('should retain other parameters when giving the nextUrl', (done) => {
@@ -284,7 +284,7 @@ describe('odata message composition', () => {
             const resultObj = JSON.parse(result);
             resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24skip=5&%24wkt=true&%24count=true');
             done();
-          }))).point();
+          })));
       });
 
       it('should provide the row count if requested', (done) => {
@@ -296,7 +296,7 @@ describe('odata message composition', () => {
             const resultObj = JSON.parse(result);
             resultObj['@odata.count'].should.equal(8);
             done();
-          }))).point();
+          })));
       });
 
       it('should provide the full row count even if windowed', (done) => {
@@ -308,7 +308,7 @@ describe('odata message composition', () => {
             const resultObj = JSON.parse(result);
             resultObj['@odata.count'].should.equal(8);
             done();
-          }))).point();
+          })));
       });
     });
 
@@ -324,7 +324,7 @@ describe('odata message composition', () => {
               '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
             });
             done();
-          }))).point();
+          })));
       });
 
       it('should output toplevel row data', (done) => {
@@ -343,7 +343,7 @@ describe('odata message composition', () => {
               ]
             });
             done();
-          }))).point();
+          })));
       });
 
       it('should not limit toplevel row data (done by database)', (done) => {
@@ -366,7 +366,7 @@ describe('odata message composition', () => {
               ]
             });
             done();
-          }))).point();
+          })));
       });
 
       it('should not offset toplevel row data (done by database)', (done) => {
@@ -388,7 +388,7 @@ describe('odata message composition', () => {
               ]
             });
             done();
-          }))).point();
+          })));
       });
 
       it('should output subtable row data', (done) => {
@@ -420,7 +420,7 @@ describe('odata message composition', () => {
               }]
             });
             done();
-          }))).point();
+          })));
       });
 
       it('should limit subtable row data', (done) => {
@@ -449,7 +449,7 @@ describe('odata message composition', () => {
               }]
             });
             done();
-          }))).point();
+          })));
       });
 
       it('should offset subtable row data', (done) => {
@@ -477,7 +477,7 @@ describe('odata message composition', () => {
               }]
             });
             done();
-          }))).point();
+          })));
       });
 
       it('should limit and offset subtable row data', (done) => {
@@ -501,7 +501,7 @@ describe('odata message composition', () => {
               }]
             });
             done();
-          }))).point();
+          })));
       });
     });
   });
@@ -512,28 +512,28 @@ describe('odata message composition', () => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const submission = mockSubmission('one', testData.instances.simple.one);
         singleRowToOData(form, submission, 'http://localhost:8989', "/simple.svc/Nonexistent('one')", {})
-          .point().should.be.rejected();
+          .should.be.rejected();
       });
 
       it('should reject with not found if a subtable is wrong', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const submission = mockSubmission('one', testData.instances.withrepeat.one);
         singleRowToOData(form, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('one')/children/child/nonexistent", {})
-          .point().should.be.rejected();
+          .should.be.rejected();
       });
 
       it('should pass if the toplevel table is correct', () => {
         const form = { xmlFormId: 'simple', schema: () => getFormSchema({ xml: testData.forms.simple }) };
         const submission = mockSubmission('one', testData.instances.simple.one);
         singleRowToOData(form, submission, 'http://localhost:8989', "/simple.svc/Submissions('one')", {})
-          .point().should.not.be.rejected();
+          .should.not.be.rejected();
       });
 
       it('should pass if the subtable is correct', () => {
         const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
         const submission = mockSubmission('one', testData.instances.withrepeat.one);
         singleRowToOData(form, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('one')/children/child", {})
-          .point().should.not.be.rejected();
+          .should.not.be.rejected();
       });
     });
 
@@ -545,7 +545,7 @@ describe('odata message composition', () => {
           .then(JSON.parse)
           .then((result) => {
             result['@odata.context'].should.equal('http://localhost:8989/simple.svc/$metadata#Submissions')
-          }).point();
+          });
       });
 
       it('should provide the correct context url for a subtable', () => {
@@ -555,7 +555,7 @@ describe('odata message composition', () => {
           .then(JSON.parse)
           .then((result) => {
             result['@odata.context'].should.equal('http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child')
-          }).point();
+          });
       });
 
       it('should provide no nextUrl if the final row is accounted for', () => {
@@ -565,7 +565,7 @@ describe('odata message composition', () => {
           .then(JSON.parse)
           .then((result) => {
             should.not.exist(result['@odata.nextLink']);
-          }).point();
+          });
       });
 
       it('should provide the correct nextUrl if rows remain', () => {
@@ -576,7 +576,7 @@ describe('odata message composition', () => {
           .then(JSON.parse)
           .then((result) => {
             result['@odata.nextLink'].should.equal("http://localhost:8989/withrepeat.svc/Submissions('two')/children/child?%24skip=1");
-          }).point();
+          });
       });
 
       it('should retain other parameters when giving the nextUrl', () => {
@@ -587,7 +587,7 @@ describe('odata message composition', () => {
           .then(JSON.parse)
           .then((result) => {
             result['@odata.nextLink'].should.equal("http://localhost:8989/withrepeat.svc/Submissions('two')/children/child?%24wkt=true&%24skip=1");
-          }).point();
+          });
       });
 
       it('should provide the row count if requested', () => {
@@ -598,7 +598,7 @@ describe('odata message composition', () => {
           .then(JSON.parse)
           .then((result) => {
             result['@odata.count'].should.equal(2);
-          }).point();
+          });
       });
 
       it('should provide the full row count even if windowed', () => {
@@ -609,7 +609,7 @@ describe('odata message composition', () => {
           .then(JSON.parse)
           .then((result) => {
             result['@odata.count'].should.equal(2);
-          }).point();
+          });
       });
     });
 
@@ -630,7 +630,7 @@ describe('odata message composition', () => {
                 children: {}
               }]
             });
-          }).point();
+          });
       });
 
       it('should filter to a single subinstance', () => {
@@ -659,7 +659,7 @@ describe('odata message composition', () => {
                 name: 'Spike'
               }]
             });
-          }).point();
+          });
       });
 
       it('should limit subtable data', () => {
@@ -682,7 +682,7 @@ describe('odata message composition', () => {
                 name: 'Pinkie Pie'
               }]
             });
-          }).point();
+          });
       });
 
       it('should offset subtable data', () => {
@@ -708,7 +708,7 @@ describe('odata message composition', () => {
                 name: 'Spike'
               }]
             });
-          }).point();
+          });
       });
 
       it('should limit and offset subtable data', () => {
@@ -731,7 +731,7 @@ describe('odata message composition', () => {
                 name: 'Applejack'
               }]
             });
-          }).point();
+          });
       });
     });
   });

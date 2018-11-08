@@ -31,7 +31,7 @@ describe('form schema', () => {
           { name: 'age', type: 'int' },
           { name: 'hometown', type: 'select1' }
         ]);
-      }).point();
+      });
     });
 
     it('should work with relative paths', () => {
@@ -59,7 +59,7 @@ describe('form schema', () => {
           { name: 'age', type: 'int' },
           { name: 'hometown', type: 'select1' }
         ]);
-      }).point();
+      });
     });
 
     it('should handle namespaced bindings correctly', () => {
@@ -91,7 +91,7 @@ describe('form schema', () => {
           { name: 'name', type: 'string' },
           { name: 'age', type: 'int' }
         ]);
-      }).point();
+      });
     });
 
     it('should deal correctly with nonbinding nested nodes', () => {
@@ -133,7 +133,7 @@ describe('form schema', () => {
             ] }
           ] }
         ]);
-      }).point();
+      });
     });
 
     it('should deal correctly with structure nodes with bindings', () => { // gh147
@@ -177,7 +177,7 @@ describe('form schema', () => {
             ] }
           ] }
         ]);
-      }).point();
+      });
     });
 
     it('should deal correctly with repeats', () => {
@@ -238,7 +238,7 @@ describe('form schema', () => {
             ] }
           ] }
         ]);
-      }).point();
+      });
     });
   });
 
@@ -279,7 +279,7 @@ describe('form schema', () => {
             { path: [ 'occupation', 'dates', 'joined' ], type: 'date' },
             { path: [ 'occupation', 'dates', 'departed' ], type: 'date' }
           ]);
-        }).point();
+        });
       });
 
       it('should flatten repeat-nested structures', () => {
@@ -345,7 +345,7 @@ describe('form schema', () => {
               { path: [ 'project', 'due' ], type: 'date' }
             ] }
           ]);
-        }).point();
+        });
       });
     });
 
@@ -353,7 +353,7 @@ describe('form schema', () => {
       it('should return nothing for a schema without repeats', () =>
         getFormSchema({ xml: testData.forms.simple }).then((schema) => {
           getSchemaTables(schema).should.eql([]);
-        }).point());
+        }));
 
       it('should return relevant tables', () =>
         getFormSchema({ xml: testData.forms.doubleRepeat }).then((schema) => {
@@ -361,7 +361,7 @@ describe('form schema', () => {
             'children.child',
             'children.child.toys.toy'
           ]);
-        }).point());
+        }));
     });
 
     describe('lookup', () => {
@@ -374,7 +374,7 @@ describe('form schema', () => {
             name: { name: 'name', type: 'string' },
             age: { name: 'age', type: 'int' }
           });
-        }).point());
+        }));
 
       it('should flatten repeat bindings into lookups', () =>
         getFormSchema({ xml: testData.forms.withrepeat }).then((schema) => {
@@ -391,7 +391,7 @@ describe('form schema', () => {
               } }
             } }
           });
-        }).point());
+        }));
     });
   });
 
@@ -448,7 +448,7 @@ describe('form schema', () => {
           { type: 'file', name: 'mydata.csv' },
           { type: 'file', name: 'seconddata.csv' }
         ]);
-      }).point();
+      });
     });
 
     it('should ignore broken external instance srcs', () => {
@@ -480,7 +480,7 @@ describe('form schema', () => {
           { type: 'file', name: 'goodfile.csv' },
           { type: 'file', name: 'mispathed.csv' }
         ]);
-      }).point();
+      });
     });
 
     it('should find media label files', () => {
@@ -521,7 +521,7 @@ describe('form schema', () => {
           { type: 'audio', name: 'age.mp3' },
           { type: 'video', name: 'hometown.mp4' }
         ]);
-      }).point();
+      });
     });
 
     it('should interpret big-image as image and ignore other media form types', () => {
@@ -558,7 +558,7 @@ describe('form schema', () => {
         </h:html>`;
       return expectedFormAttachments(xml).then((attachments) => {
         attachments.should.eql([ { type: 'image', name: 'name.jpg' } ]);
-      }).point();
+      });
     });
 
     it('should detect the need for itemsets.csv', () => {
@@ -587,7 +587,7 @@ describe('form schema', () => {
         </h:html>`;
       return expectedFormAttachments(xml).then((attachments) => {
         attachments.should.eql([{ type: 'file', name: 'itemsets.csv' }]);
-      }).point();
+      });
     });
 
     it('should deduplicate identical (name, type) pairs', () => {
@@ -627,7 +627,7 @@ describe('form schema', () => {
           { type: 'image', name: 'name.jpg' },
           { type: 'video', name: 'hometown.mp4' }
         ]);
-      }).point();
+      });
     });
 
     it('should not deduplicate identical names with different types', () => {
@@ -668,7 +668,7 @@ describe('form schema', () => {
           { type: 'audio', name: 'name.file' },
           { type: 'video', name: 'hometown.mp4' }
         ]);
-      }).point();
+      });
     });
   });
 });

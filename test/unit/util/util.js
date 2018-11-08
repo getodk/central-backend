@@ -76,5 +76,20 @@ describe('util/util', () => {
       (blankStringToNull(' ') === ' ').should.equal(true);
     });
   });
+
+  describe('superproto', () => {
+    const { superproto } = util;
+    it('should call superclass instance methods', () => {
+      class A {
+        test() { return 42; }
+      }
+
+      class B extends A {
+        test() { return superproto(this).test() / 2; }
+      }
+
+      (new B()).test().should.equal(21);
+    });
+  });
 });
 

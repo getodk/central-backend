@@ -17,6 +17,7 @@
     "no-restricted-syntax": "off",
     "no-underscore-dangle": "off",
     "object-curly-newline": [ "error", {
+      "ObjectExpression": { "consistent": true },
       "ObjectPattern": { "minProperties": 0 }
     } ],
     "object-property-newline": "off",

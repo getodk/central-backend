@@ -18,7 +18,7 @@ const instance = (id, data) => ({
 });
 
 const callAndParse = (form, inStream, callback) =>
-  streamBriefcaseCsvs(inStream, form).point().then((csvStream) =>
+  streamBriefcaseCsvs(inStream, form).then((csvStream) =>
     zipStreamToFiles(zipStreamFromParts(csvStream), callback));
 
 const mockForm = (data) => {

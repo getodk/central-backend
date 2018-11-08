@@ -7,7 +7,6 @@ const { exec } = require('child_process');
 const { identity } = require('ramda');
 const { task, auditing, run } = require(appRoot + '/lib/task/task');
 const Problem = require(appRoot + '/lib/util/problem');
-const { ExplicitPromise } = require(appRoot + '/lib/util/promise');
 const tmp = require('tmp');
 
 describe('task: runner', () => {
@@ -41,9 +40,9 @@ describe('task: runner', () => {
 
 describe('task: auditing', () => {
   context('on task success', () => {
-    it('should log', testTask(({ simply, Audit }, finalize) =>
+    it('should log', testTask(({ simply, Audit }) =>
       auditing('testAction', Promise.resolve({ key: 'value' }))
-        .then(() => finalize(simply.getAll('audits', Audit))
+        .then(() => simply.getAll('audits', Audit)
           .then((audits) => {
             audits.length.should.equal(1);
             audits[0].action.should.equal('testAction');
@@ -53,7 +52,7 @@ describe('task: auditing', () => {
     it('should fault but passthrough on log failure', testTask(({ Audit }) => {
       // hijack Audit.log to crash. new container is made for each test so we don't have
       // to restore a working one.
-      Audit.log = () => ExplicitPromise.of(Promise.reject(false));
+      Audit.log = () => Promise.reject(false);
       return auditing('testAction', Promise.resolve(true))
         .then((result) => {
           // too difficult to test stderr output.
@@ -64,9 +63,9 @@ describe('task: auditing', () => {
   });
 
   context('on task failure', () => {
-    it('should log', testTask(({ simply, Audit }, finalize) =>
+    it('should log', testTask(({ simply, Audit }) =>
       auditing('testAction', Promise.reject(Problem.user.missingParameter({ field: 'test' })))
-        .then(identity, () => finalize(simply.getAll('audits', Audit))
+        .then(identity, () => simply.getAll('audits', Audit)
           .then((audits) => {
             audits.length.should.equal(1);
             audits[0].action.should.equal('testAction');
@@ -76,7 +75,7 @@ describe('task: auditing', () => {
 
     it('should fault but passthrough on log failure', testTask(({ Audit }) => {
       // ditto above.
-      Audit.log = () => ExplicitPromise.of(Promise.reject(Problem.user.missingParameter({ field: 'test' })));
+      Audit.log = () => Promise.reject(Problem.user.missingParameter({ field: 'test' }));
       return auditing('testAction', Promise.reject(true))
         .then(identity, (result) => {
           // too difficult to test stderr output.

@@ -1,9 +1,10 @@
 const should = require('should');
 const builder = require('../../../../lib/model/query/builder');
+const streamTest = require('streamtest').v2;
 
 describe('query module builder', () => {
-  it('should return modules with an identical signature to the source, plus transacting', () => {
-    Object.keys(builder({ a: 1, b: 2, c: 3 })).should.eql([ 'a', 'b', 'c', 'transacting' ]);
+  it('should return modules with an identical signature to the source', () => {
+    Object.keys(builder({ a: 1, b: 2, c: 3 })).should.eql([ 'a', 'b', 'c' ]);
   });
 
   it('should call the bare function with the appropriate args', (done) => {
@@ -14,31 +15,41 @@ describe('query module builder', () => {
     } }).f(42, 23);
   });
 
-  it('should wrap the bare result proc in an ExplicitPromise', (done) => {
-    const result = builder({ f: (x) => (y) => Promise.resolve(x + y) }).f(7);
-    result.isExplicitPromise.should.equal(true);
-    result.point(8).then((result) => {
-      result.should.equal(15);
-      done();
-    });
-  });
-
   it('should by default provide the initial container as the proc container', (done) => {
     builder({ f: () => (container) => Promise.resolve(container) }, 42)
       .f()
-      .point()
       .then((result) => {
         result.should.equal(42);
         done();
       });
   });
 
-  it('should provide a mirror of the source module under transacting', () => {
-    Object.keys(builder({ a: 1, b: 2, c: 3 }).transacting).should.eql([ 'a', 'b', 'c' ]);
+  it('should automatically catch postgres exceptions', (done) => {
+    builder({ f: () => () => Promise.reject(new Error('Key (id)=(42) already exists.')) })
+      .f()
+      .catch((result) => {
+        result.isProblem.should.equal(true);
+        done();
+      });
   });
 
-  it('should set transacting on ExplicitPromises obtained from .transacting', () => {
-    builder({ f: () => () => null }).transacting.f().options.transacting.should.equal(true);
+  it('should wrap returned streams with promises', (done) => {
+    builder({ f: () => () => streamTest.fromObjects([ {} ]) })
+      .f()
+      .then((result) => {
+        // the fact that .then() does not crash is really the point here.
+        done();
+      });
+  });
+
+  it('should not wrap helper results with anything', () => {
+    builder({ helper: { f: (x) => (container) => {
+      x.should.equal(14);
+      container.should.equal(42);
+      return 128;
+    } } }, 42)
+      .helper.f(14)
+      .should.equal(128);
   });
 });
 

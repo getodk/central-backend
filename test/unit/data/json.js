@@ -32,7 +32,7 @@ describe('submissionToOData', () => {
           age: 30
         }]);
       });
-    }).point();
+    });
   });
 
   // this is sort of repeatedly tested in all the other tests, but it's good to
@@ -183,7 +183,7 @@ describe('submissionToOData', () => {
           }
         }]);
       });
-    }).point();
+    });
   });*/
 
   // TODO: remove this test once #82 is resolved.
@@ -201,7 +201,7 @@ describe('submissionToOData', () => {
           children: {}
         }]);
       });
-    }).point();
+    });
   });
 
   it('should extract subtable rows within repeats', () => {
@@ -221,7 +221,7 @@ describe('submissionToOData', () => {
           name: 'Blaine'
         }]);
       });
-    }).point();
+    });
   });
 
   /* TODO: commented out pending issue #82.
@@ -250,7 +250,7 @@ describe('submissionToOData', () => {
           }
         }]);
       });
-    }).point();
+    });
   });*/
 
   it('should return second-order subtable results', () => {
@@ -292,7 +292,7 @@ describe('submissionToOData', () => {
           name: 'Princess Luna'
         }]);
       });
-    }).point();
+    });
   });
 });
 

@@ -10,7 +10,7 @@ describe('Instance', () => {
 
   describe('builder', () => {
     it('should surface provided instance methods', () => {
-      const Klass = complete(builder(() => class {
+      const Klass = complete(builder()(() => class {
         foo() { return 42; }
         bar(x) { return x * 2; }
       }));
@@ -20,7 +20,7 @@ describe('Instance', () => {
     });
 
     it('should surface provided class methods', () => {
-      const Klass = complete(builder(() => class {
+      const Klass = complete(builder()(() => class {
         static foo() { return 42; }
         static bar(x) { return x * 2; }
       }));
@@ -30,7 +30,7 @@ describe('Instance', () => {
     });
 
     it('should provide the given container', () => {
-      const Klass = complete(builder((container) => class {
+      const Klass = complete(builder()((container) => class {
         foo() { return 2 * container; }
         static bar(x) { return x * container; }
       }), 3);
@@ -44,7 +44,7 @@ describe('Instance', () => {
         static bar(x) { return x * 2; }
         baz(y) { return y * 3; }
       };
-      const Klass = complete(builder.with(Trait)((container) => class {
+      const Klass = complete(builder.with(Trait)()((container) => class {
         foo() { return 42; }
       }));
 
@@ -57,7 +57,7 @@ describe('Instance', () => {
       const Trait = (container) => class {
         bar(x) { return x + container; }
       };
-      const Klass = complete(builder.with(Trait)((container) => class {}), 42);
+      const Klass = complete(builder.with(Trait)()((container) => class {}), 42);
 
       (new Klass()).bar(5).should.equal(47);
     });
@@ -72,7 +72,7 @@ describe('Instance', () => {
         bar(x) { return x * 4; }
         baz(y) { return y * 5; }
       };
-      const Klass = complete(builder.with(Trait1, Trait2)((container) => class {
+      const Klass = complete(builder.with(Trait1, Trait2)()((container) => class {
         baz(y) { return y * 6; }
       }));
 
@@ -91,7 +91,7 @@ describe('Instance', () => {
         static bar(x) { return x * 4; }
         static baz(y) { return y * 5; }
       };
-      const Klass = complete(builder.with(Trait1, Trait2)((container) => class {
+      const Klass = complete(builder.with(Trait1, Trait2)()((container) => class {
         static baz(y) { return y * 6; }
       }));
 
@@ -99,10 +99,26 @@ describe('Instance', () => {
       Klass.bar(3).should.equal(12);
       Klass.baz(4).should.equal(24);
     });
+
+    it('should decorate the given table information', () => {
+      const Klass = complete(builder('mytable')(() => class {}));
+      Klass.table.should.equal('mytable');
+    });
+
+    it('should decorate the given field information', () => {
+      const Klass = complete(builder(null, {
+        all: [ 'one', 'two', 'three' ],
+        readable: [ 'one' ],
+        writable: [ 'two' ]
+      })(() => class {}));
+      Klass.fields.all.should.eql([ 'one', 'two', 'three' ]);
+      Klass.fields.readable.should.eql([ 'one' ]);
+      Klass.fields.writable.should.eql([ 'two' ]);
+    });
   });
 
   describe('instance', () => {
-    const SimpleInstance = complete(builder(() => class {}));
+    const SimpleInstance = complete(builder()(() => class {}));
     it('should be immutable', () => {
       should.throws(() => {
         'use strict';
@@ -116,14 +132,22 @@ describe('Instance', () => {
       instance.y.should.equal(3);
     });
 
-    it('should by default return all fields for creation', () => {
+    it('should by default return itself for creation', () => {
       const data = { x: 2, y: 3, z: 4 };
-      (new SimpleInstance(data)).should.eql((new SimpleInstance(data)).forCreate());
+      const instance = new SimpleInstance(data);
+      instance.forCreate().should.equal(instance);
     });
 
-    it('should by default return all fields for api', () => {
+    it('should by default populate writable fields from api', () => {
       const data = { x: 2, y: 3, z: 4 };
-      (new SimpleInstance(data)).should.eql((new SimpleInstance(data)).forApi());
+      const WritableInstance = complete(builder(null, { writable: [ 'a', 'y' ] })(() => class {}));
+      WritableInstance.fromApi(data).should.eql(new WritableInstance({ y: 3 }));
+    });
+
+    it('should by default return readable fields for api', () => {
+      const data = { x: 2, y: 3, z: 4 };
+      const ReadableInstance = complete(builder(null, { readable: [ 'x', 'z' ] })(() => class {}));
+      (new ReadableInstance(data)).forApi().should.eql({ x: 2, z: 4 });
     });
 
     it('should merge additional data into a new instance via with', () => {
@@ -136,20 +160,6 @@ describe('Instance', () => {
       const a = new SimpleInstance({ w: 1, x: 2, y: 3, z: 4 });
       a.without('w', 'y').should.eql(new SimpleInstance({ x: 2, z: 4 }));
       a.should.eql(new SimpleInstance({ w: 1, x: 2, y: 3, z: 4 }));
-    });
-
-    it('should provide an instance transacting that calls transacting on the result of any method', () => {
-      const Instance = complete(builder(() => class {
-        foo(x) { return { transacting: () => x * 2 }; }
-      }));
-      (new Instance()).transacting.foo(2).should.equal(4);
-    });
-
-    it('should provide a static transacting that calls transacting on the result of any method', () => {
-      const Instance = complete(builder(() => class {
-        static foo(x) { return { transacting: () => x * 2 }; }
-      }));
-      Instance.transacting().foo(2).should.equal(4);
     });
   });
 });
