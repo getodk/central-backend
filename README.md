@@ -26,13 +26,14 @@ ODK Central Backend is, first and foremost, a RESTful HTTP API server that manag
 
 ## Setting up a development environment
 
-First, install Node.js 8 or higher.
+First, install Node.js 8.
 
 Next, create a database and user in Postgres. Either use the same settings as the [default configuration file](config/default.json), or update your local configuration file to match the settings you choose. For example:
 
 ```sql
 CREATE USER jubilant WITH PASSWORD 'jubilant';
 CREATE DATABASE jubilant with owner=jubilant encoding=UTF8;
+\c jubilant;
 CREATE EXTENSION IF NOT EXISTS CITEXT;
 ```
 
