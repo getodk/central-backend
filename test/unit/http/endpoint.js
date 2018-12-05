@@ -302,6 +302,86 @@ describe('endpoints', () => {
         });
       });
     });
+
+    describe('transaction management', () => {
+      it('should initiate a transaction given a write request', () =>
+        Promise.all([ 'POST', 'PUT', 'PATCH', 'DELETE' ].map((method) => {
+          let transacted = false;
+          const container = { transacting(cb) {
+            transacted = true;
+            return cb();
+          } };
+
+          return endpointBase({ resultWriter: noop })(container)(always(true))({ method })
+            .then(() => { transacted.should.equal(true); });
+        })));
+
+      it('should not initiate a transaction given a read request', () =>
+        Promise.all([ 'GET', 'HEAD', 'OPTIONS' ].map((method) => {
+          let transacted = false;
+          const container = { transacting(cb) {
+            transacted = true;
+            return cb();
+          } };
+
+          return endpointBase({ resultWriter: noop })(container)(always(true))({ method })
+            .then(() => { transacted.should.equal(false); });
+        })));
+
+      it('should reject on the transacting promise on preprocessor failure', () => {
+        // we still check the transacted flag just to be sure the rejectedWith assertion runs.
+        let transacted = false;
+        const container = { transacting(cb) {
+          transacted = true;
+          return cb().should.be.rejectedWith(Problem, { problemCode: 404.1 });
+        } };
+
+        return endpointBase({ resultWriter: noop })(container, [
+          () => Promise.reject(Problem.user.notFound())
+        ])(always(true))({ method: 'POST' })
+          .then(() => { transacted.should.equal(true); });
+      });
+
+      it('should reject on the transacting promise on before failure', () => {
+        // we still check the transacted flag just to be sure the rejectedWith assertion runs.
+        let transacted = false;
+        const container = { transacting(cb) {
+          transacted = true;
+          return cb().should.be.rejectedWith(Problem, { problemCode: 404.1 });
+        } };
+
+        return endpointBase({
+          before() { throw Problem.user.notFound(); }
+        })(container)(always(true))({ method: 'POST' })
+          .then(() => { transacted.should.equal(true); });
+      });
+
+      it('should reject on the transacting promise on resource failure', () => {
+        // we still check the transacted flag just to be sure the rejectedWith assertion runs.
+        let transacted = false;
+        const container = { transacting(cb) {
+          transacted = true;
+          return cb().should.be.rejectedWith(Problem, { problemCode: 404.1 });
+        } };
+
+        return endpointBase({})(container)(() => { throw Problem.user.notFound(); })({ method: 'POST' })
+          .then(() => { transacted.should.equal(true); });
+      });
+
+      it('should reject on the transacting promise on resultWriter failure', () => {
+        // we still check the transacted flag just to be sure the rejectedWith assertion runs.
+        let transacted = false;
+        const container = { transacting(cb) {
+          transacted = true;
+          return cb().should.be.rejectedWith(Problem, { problemCode: 404.1 });
+        } };
+
+        return endpointBase({
+          resultWriter() { throw Problem.user.notFound(); }
+        })(container)(always(true))({ method: 'POST' })
+          .then(() => { transacted.should.equal(true); });
+      });
+    });
   });
 
   describe('default format (outputter)', () => {
