@@ -2,10 +2,11 @@ const should = require('should');
 const { EventEmitter } = require('events');
 const { createRequest, createResponse } = require('node-mocks-http');
 const streamTest = require('streamtest').v2;
-const { identity } = require('ramda');
+const { always, identity } = require('ramda');
 
 const appRoot = require('app-root-path');
-const { finalize, endpoint, openRosaEndpoint, odataEndpoint, sendError } = require(appRoot + '/lib/http/endpoint');
+const { endpointBase, defaultErrorWriter, Context, defaultResultWriter, openRosaPreprocessor, openRosaBefore, openRosaResultWriter, openRosaErrorWriter, odataPreprocessor, odataBefore } = require(appRoot + '/lib/http/endpoint');
+const { noop } = require(appRoot + '/lib/util/util');
 const Problem = require(appRoot + '/lib/util/problem');
 const Option = require(appRoot + '/lib/util/option');
 
@@ -26,205 +27,14 @@ const createModernResponse = () => {
 };
 
 describe('endpoints', () => {
-  describe('finalize', () => {
-    it('should simply return simple values', () => {
-      let result, writeResult = (x) => { result = x };
-      finalize(writeResult)(42);
-      result.should.equal(42);
-
-      finalize(writeResult)('test');
-      result.should.equal('test');
-
-      finalize(writeResult)({ x: 1 });
-      result.should.eql({ x: 1 });
-    });
-
-    it('should pass Some[value] as value', () => {
-      let result, writeResult = (x) => { result = x };
-      finalize(writeResult)(Option.of('test'));
-      result.should.equal('test');
-    });
-
-    it('should fail None with the empty result internal Problem', () => {
-      let result, writeResult = (x) => { result = x };
-      finalize(null, writeResult)(Option.none());
-      result.isProblem.should.equal(true);
-      result.problemCode.should.equal(500.3);
-    });
-
-    it('should pipe through stream results', (done) => {
-      let result, writeResult = (x) => { result = x };
-      const requestTest = streamTest.fromChunks();
-      const responseTest = streamTest.toText((_, result) => {
-        result.should.equal('ateststream');
-        done();
-      });
-      finalize(null, null, requestTest, responseTest)(streamTest.fromChunks([ 'a', 'test', 'stream' ]));
-    });
-
-    it('should immediately abort the database query if the request is aborted', (done) => {
-      const requestTest = new EventEmitter();
-      const responseTest = streamTest.toText((_, result) => {
-        result.should.not.equal('ateststream');
-      });
-      const source = streamTest.fromChunks([ 'a', 'test', 'stream' ], 1000);
-      source.end = done;
-      finalize(null, null, requestTest, responseTest)(source);
-      requestTest.emit('close');
-    });
-
-
-    it('should not crash if the request is aborted but the stream is not endable', () => {
-      const requestTest = new EventEmitter();
-      const responseTest = streamTest.toText((_, result) => {
-        result.should.not.equal('ateststream');
-      });
-      const source = streamTest.fromChunks([ 'a', 'test', 'stream' ], 1000);
-      finalize(null, null, requestTest, responseTest)(source);
-      requestTest.emit('close');
-    });
-
-    it('should attach to any Promises it finds', (done) => {
-      let resolve;
-      const p = new Promise((r) => { resolve = r; });
-      finalize((result) => {
-        result.should.equal(42);
-        done();
-      })(p);
-      resolve(42);
-    });
-
-    it('should call failure if a Problem is found', () => {
-      let result, writeResult = (x) => { result = x };
-      finalize(null, writeResult)(Problem.user.notFound());
-      result.isProblem.should.equal(true);
-    });
-  });
-
-  describe('endpoint', (done) => {
-    it('should attach a json Content-Type absent any other', () => {
-      const response = createModernResponse();
-      endpoint(() => 'test')(createRequest(), response);
-      response.getHeader('Content-Type').should.equal('application/json');
-    });
-
-    it('should not attach a json Content-Type if one is already present', () => {
-      const response = createModernResponse();
-      endpoint((_, request, response) => {
-        response.setHeader('Content-Type', 'application/xml');
-        return 'test';
-      })(createRequest(), response);
-      response.getHeader('Content-Type').should.equal('application/xml');
-    });
-
-    it('should send the given response', () => {
-      const response = createModernResponse();
-      endpoint(() => 'test')(createRequest(), response);
-      response._getData().should.equal('test');
-    });
-  });
-
-  describe('openRosaEndpoint', () => {
-    // TODO: perhaps swap out forOpenRosa checks for the response check via sendError, as
-    // forOpenRosa is an internal routing detail.
-    it('should reject requests lacking a version', (done) => {
-      openRosaEndpoint(identity)(createRequest(), createResponse(), (error) => {
-        error.forOpenRosa.isProblem.should.equal(true);
-        error.forOpenRosa.problemDetails.field.should.equal('X-OpenRosa-Version');
-        done();
-      });
-    });
-
-    it('should reject requests with an unexpected version', (done) => {
-      const headers = { 'X-OpenRosa-Version': '2.0' };
-      openRosaEndpoint(identity)(createRequest({ headers }), createResponse(), (error) => {
-        error.forOpenRosa.isProblem.should.equal(true);
-        error.forOpenRosa.problemDetails.field.should.equal('X-OpenRosa-Version');
-        done();
-      });
-    });
-
-    const goodHeaders = { 'X-OpenRosa-Version': '1.0' };
-    it('should wrap returned problems into an openrosa response format', (done) => {
-      const problem = new Problem(400, 'test message');
-      const response = createModernResponse();
-
-      response.on('end', () => {
-        response.statusCode.should.equal(400);
-        response._getData().trim().should.equal('<OpenRosaResponse xmlns="http://openrosa.org/http/response" items="0">\n    <message nature="error">test message</message>\n  </OpenRosaResponse>');
-        done();
-      });
-
-      openRosaEndpoint(() => problem)(createRequest({ headers: goodHeaders }), response, sendError);
-    });
-
-    it('should pass successful OpenRosa responses straight through', (done) => {
-      const response = createModernResponse();
-      response.on('end', () => {
-        response.statusCode.should.equal(200);
-        response._getData().should.equal('test');
-        done();
-      });
-      openRosaEndpoint(() => ({ code: 200, body: 'test' }))(createRequest({ headers: goodHeaders }), response);
-    });
-  });
-
-  describe('odataEndpoint', () => {
-    it('should reject json requests to xml endpoints', (done) => {
-      const request = createRequest({ headers: { Accept: 'application/json' } });
-      const response = createModernResponse();
-      odataEndpoint.xml(null)(request, response, (error) => {
-        error.problemCode.should.equal(406.1);
-        done();
-      });
-    });
-
-    it('should reject xml requests to json endpoints', (done) => {
-      const request = createRequest({ headers: { Accept: 'atom' } });
-      const response = createModernResponse();
-      odataEndpoint.json(null)(request, response, (error) => {
-        error.problemCode.should.equal(406.1);
-        done();
-      });
-    });
-
-    it('should reject requests for OData max-versions below 4.0', (done) => {
-      const request = createRequest({ headers: { 'OData-MaxVersion': '3.0' } });
-      const response = createModernResponse();
-      odataEndpoint.json(null)(request, response, (error) => {
-        error.problemCode.should.equal(404.1);
-        done();
-      });
-    });
-
-    it('should reject requests for unsupported OData features', (done) => {
-      const request = createRequest({ url: '/odata.svc?$orderby=magic' });
-      const response = createModernResponse();
-      odataEndpoint.json(null)(request, response, (error) => {
-        error.problemCode.should.equal(501.1);
-        done();
-      });
-    });
-
-    it('should set the appropriate OData version', (done) => {
-      const request = createRequest();
-      const response = createModernResponse();
-      response.on('end', () => {
-        response.getHeader('OData-Version').should.equal('4.0');
-        done();
-      });
-      odataEndpoint.json(() => ({ success: true }))(request, response);
-    });
-  });
-
-  describe('sendError', () => {
+  describe('defaultErrorWriter', () => {
     it('should adapt Problem code to http code', (done) => {
       const response = createModernResponse();
       response.on('end', () => {
         response.statusCode.should.equal(409);
         done();
       });
-      sendError(new Problem(409.1138, 'test message'), null, response);
+      defaultErrorWriter(new Problem(409.1138, 'test message'), null, response);
     });
 
     it('should set json return type', (done) => {
@@ -233,7 +43,7 @@ describe('endpoints', () => {
         response.getHeader('Content-Type').should.equal('application/json');
         done();
       });
-      sendError(new Problem(409.1138, 'test message'), null, response);
+      defaultErrorWriter(new Problem(409.1138, 'test message'), null, response);
     });
 
     it('should provide Problem details in the body', (done) => {
@@ -244,27 +54,7 @@ describe('endpoints', () => {
         response._getData().details.should.eql({ x: 1 });
         done();
       });
-      sendError(new Problem(409.1138, 'test message', { x: 1 }), null, response);
-    });
-
-    it('should detect and translate errors from the bodyparser middleware', (done) => {
-      const bodyParser = require('body-parser');
-      const request = createRequest({
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': 8
-        }
-      });
-      request.resume = identity;
-      const response = createModernResponse();
-      response.on('end', () => {
-        response.statusCode.should.equal(400);
-        response._getData().details.should.eql({ format: 'json', rawLength: 8 });
-        done();
-      });
-      bodyParser.json({ type: 'application/json' })(request, response, (error) => sendError(error, request, response));
-      request.emit('data', 'not json');
-      request.emit('end');
+      defaultErrorWriter(new Problem(409.1138, 'test message', { x: 1 }), null, response);
     });
 
     it('should turn remaining errors into unknown Problems', (done) => {
@@ -276,7 +66,7 @@ describe('endpoints', () => {
         response._getData().message.should.equal('Completely unhandled exception: oops');
         done();
       });
-      sendError(error, null, response);
+      defaultErrorWriter(error, null, response);
     });
 
     it('should translate 403 replies to Tableau into 401 Basic auth directives', (done) => {
@@ -291,9 +81,412 @@ describe('endpoints', () => {
         response.header('WWW-Authenticate').should.equal('Basic charset="UTF-8"');
         done();
       });
-      sendError(Problem.user.insufficientRights(), request, response);
+      defaultErrorWriter(Problem.user.insufficientRights(), request, response);
     });
   });
 
+  describe('framework', () => {
+    describe('preprocessors', () => {
+      it('should run the format preprocessor', () => {
+        let ran = false;
+        const resource = endpointBase({
+          preprocessor: () => { ran = true; },
+          resultWriter: noop
+        })()(always(true));
+
+        return resource(createRequest(), createModernResponse())
+          .then(() => { ran.should.equal(true); });
+      });
+
+      it('should run the format preprocessor before the middleware preprocessors', () => {
+        const result = [];
+        const push = (str) => () => { result.push(str); };
+
+        const resource = endpointBase({
+          preprocessor: push('format'),
+          resultWriter: noop
+        })(null, [ push('mid1'), push('mid2') ])(always(true));
+
+        return resource(createRequest(), createModernResponse())
+          .then(() => { result.should.eql([ 'format', 'mid1', 'mid2' ]); });
+      });
+
+      it('should fail the overall promise if the format preprocessor fails', () =>
+        endpointBase({
+          preprocessor: () => Promise.reject(new Error('format failure')),
+          resultWriter: noop
+        })()()(createRequest(), createModernResponse())
+          .should.be.rejectedWith({ message: 'format failure' }));
+
+      it('should fail the overall promise if a middleware preprocessor fails', () =>
+        endpointBase({ resultWriter: noop })(null, [
+          () => { return true; },
+          () => Promise.reject(new Error('middleware failure'))
+        ])()(createRequest(), createModernResponse())
+          .should.be.rejectedWith({ message: 'middleware failure' }));
+
+      it('should accept Promise results from preprocessors', () => {
+        let waited = false;
+        return endpointBase({ resultWriter: noop })(null, [
+          () => new Promise((resolve) => {
+            setTimeout(() => { waited = true; resolve(); }, 0);
+          })
+        ])(always(true))(createRequest(), createModernResponse()).then(() => {
+          waited.should.equal(true);
+        });
+      });
+
+      it('should provide appropriate call arguments to preprocessors', () => {
+        let checked = false;
+        return endpointBase({
+          preprocessor: (container, context, request) => {
+            container.should.equal(42);
+            context.should.be.an.instanceof(Context);
+            request.method.should.equal('TEST');
+            checked = true;
+          },
+          resultWriter: noop
+        })(42)(always(true))({ method: 'TEST' }).then(() => {
+          checked.should.equal(true);
+        });
+      });
+
+      it('should leave Context alone between preprocessors if nothing is returned', () => {
+        let checked = false;
+        return endpointBase({ resultWriter: noop })(null, [
+          (_, context) => { context.method.should.equal('TEST'); },
+          (_, context) => {
+            context.method.should.equal('TEST');
+            checked = true;
+          }
+        ])(always(true))({ method: 'TEST' }, createModernResponse()).then(() => {
+          checked.should.equal(true);
+        });
+      });
+
+      it('should accept the new Context if returned directly by a preprocessor', () => {
+        let checked = false;
+        return endpointBase({ resultWriter: noop })(null, [
+          (_, context) => context.with({ test2: true }),
+          (_, context) => {
+            context.method.should.equal('TEST');
+            context.test2.should.equal(true);
+            checked = true;
+          }
+        ])(always(true))({ method: 'TEST' }, createModernResponse()).then(() => {
+          checked.should.equal(true);
+        });
+      });
+
+      it('should accept the new Context if returned within Promise by a preprocessor', () => {
+        let checked = false;
+        return endpointBase({ resultWriter: noop })(null, [
+          (_, context) => new Promise((resolve) => {
+            setTimeout(resolve(context.with({ test2: true })), 0);
+          }),
+          (_, context) => {
+            context.method.should.equal('TEST');
+            context.test2.should.equal(true);
+            checked = true;
+          }
+        ])(always(true))({ method: 'TEST' }, createModernResponse()).then(() => {
+          checked.should.equal(true);
+        });
+      });
+
+      it('should pass along the final context result to the actual resource', () => {
+        let checked = false;
+        return endpointBase({ resultWriter: noop })(null, [
+          (_, context) => context.with({ test2: true })
+        ])((_, context) => {
+          context.method.should.equal('TEST');
+          context.test2.should.equal(true);
+          checked = true;
+          return true;
+        })({ method: 'TEST' }, createModernResponse()).then(() => {
+          checked.should.equal(true);
+        });
+      });
+    });
+
+    describe('before handler', () => {
+      it('should run after preprocessors and before the resource', () => {
+        let ran = [];
+        const push = (str) => () => { ran.push(str); };
+        return endpointBase({
+          before: push('before'),
+          resultWriter: noop
+        })(null, [ push('pre') ])(() => {
+          ran.push('resource');
+          return true;
+        })(createRequest(), createModernResponse()).then(() => {
+          ran.should.eql([ 'pre', 'before', 'resource' ]);
+        });
+      });
+
+      it('should receive the appropriate argument', () => {
+        let checked = false;
+        return endpointBase({
+          before: (response) => {
+            response.should.equal(42);
+            checked = true;
+          },
+          resultWriter: noop
+        })()(always(true))({ method: 'TEST' }, 42).then(() => {
+          checked.should.equal(true);
+        });
+      });
+    });
+
+    describe('resource/finalize2/output/error', () => {
+      it('should fail the Promise if nothing is returned', () =>
+        endpointBase({})()(noop)(createRequest(), createModernResponse())
+          .should.be.rejectedWith(Problem, { problemCode: 500.3 }));
+
+      it('should fail the Promise if an unhandled exception is returned', () =>
+        endpointBase({})()(() => { hello; })(createRequest(), createModernResponse())
+          .should.be.rejectedWith(ReferenceError));
+
+      it('should passthrough to error handler if a Promise rejection occurs', () => {
+        let errored = false;
+        return endpointBase({
+          errorWriter: (error) => {
+            error.problemCode.should.equal(404.1);
+            errored = true;
+          }
+        })()(() => Promise.reject(Problem.user.notFound()))(createRequest(), createModernResponse()).then(() => {
+          errored.should.equal(true);
+        });
+      });
+
+      // sort of tests two things, but.. eh
+      it('should pass directly returned values to resultWriter, with appropriate args', () => {
+        let outputted = false;
+        return endpointBase({
+          resultWriter: (result, request, response) => {
+            result.should.equal(42);
+            request.method.should.equal('TEST');
+            response.should.equal(108);
+            outputted = true;
+          }
+        })()(always(42))({ method: 'TEST' }, 108).then(() => {
+          outputted.should.equal(true);
+        });
+      });
+
+      it('should, given a function return, call it with appropriate args', () => {
+        let outputted = false;
+        return endpointBase({
+          resultWriter: (result) => {
+            result.should.equal(42);
+            outputted = true;
+          }
+        })()(() => (request, response) => {
+          request.method.should.equal('TEST');
+          response.should.equal(108);
+          return 42;
+        })({ method: 'TEST' }, 108).then(() => {
+          outputted.should.equal(true);
+        });
+      });
+
+      it('should pass stream results through', () => {
+        let outputted = false;
+        return endpointBase({
+          resultWriter: (result) => {
+            result.pipe.should.be.a.Function();
+            outputted = true;
+          }
+        })()(always({ pipe() {} }))({ method: 'TEST' }, 108).then(() => {
+          outputted.should.equal(true);
+        });
+      });
+    });
+  });
+
+  describe('default format (outputter)', () => {
+    it('should attach a json Content-Type absent any other', () => {
+      const response = createModernResponse();
+      defaultResultWriter({}, createRequest(), response);
+      response.getHeader('Content-Type').should.equal('application/json');
+    });
+
+    it('should not attach a json Content-Type if one is already present', () => {
+      const response = createModernResponse();
+      response.setHeader('Content-Type', 'application/xml');
+      defaultResultWriter({}, createRequest(), response);
+      response.getHeader('Content-Type').should.equal('application/xml');
+    });
+
+    it('should send the given plain response', () => {
+      const response = createModernResponse();
+      defaultResultWriter('hello', createRequest(), response);
+      response._getData().should.equal('hello');
+    });
+
+    it('should send nothing given a 204 response', () => {
+      const response = createModernResponse();
+      response.status(204);
+      defaultResultWriter({}, createRequest(), response);
+      should.not.exist(response.body);
+    });
+
+    it('should pipe through stream results', (done) => {
+      let result, writeResult = (x) => { result = x };
+      const requestTest = streamTest.fromChunks();
+      const responseTest = streamTest.toText((_, result) => {
+        result.should.equal('ateststream');
+        done();
+      });
+      responseTest.hasHeader = function() { return true; };
+      defaultResultWriter(streamTest.fromChunks([ 'a', 'test', 'stream' ]), requestTest, responseTest);
+    });
+
+    it('should immediately abort the database query if the request is aborted', (done) => {
+      const requestTest = new EventEmitter();
+      const responseTest = streamTest.toText((_, result) => {
+        result.should.not.equal('ateststream');
+      });
+      responseTest.hasHeader = function() { return true; };
+      const source = streamTest.fromChunks([ 'a', 'test', 'stream' ], 1000);
+      source.end = done;
+      defaultResultWriter(source, requestTest, responseTest);
+      requestTest.emit('close');
+    });
+
+    it('should not crash if the request is aborted but the stream is not endable', () => {
+      const requestTest = new EventEmitter();
+      const responseTest = streamTest.toText((_, result) => {
+        result.should.not.equal('ateststream');
+      });
+      responseTest.hasHeader = function() { return true; };
+      const source = streamTest.fromChunks([ 'a', 'test', 'stream' ], 1000);
+      defaultResultWriter(source, requestTest, responseTest);
+      requestTest.emit('close');
+    });
+  });
+
+  describe('openRosa', () => {
+    describe('preprocessor', () => {
+      it('should reject requests lacking a version', () =>
+        openRosaPreprocessor(null, { headers: {} })
+          .should.be.rejectedWith(Problem, { problemDetails: { field: 'X-OpenRosa-Version' } }));
+
+      it('should reject requests with an unexpected version', () =>
+        openRosaPreprocessor(null, { headers: { 'X-OpenRosa-Version': '2.0' } })
+          .should.be.rejectedWith(Problem, { problemDetails: { field: 'X-OpenRosa-Version' } }));
+
+      it('should allow requests with the correct version', () => {
+        should.not.exist(openRosaPreprocessor(null, { headers: { 'x-openrosa-version': '1.0' } }));
+      });
+    });
+
+    describe('before', () => {
+      it('should set the appropriate headers', () => {
+        const response = createModernResponse();
+        openRosaBefore(response);
+
+        response.get('Content-Language').should.equal('en');
+        response.get('X-OpenRosa-Version').should.equal('1.0');
+        response.get('X-OpenRosa-Accept-Content-Length').should.equal('20000000');
+        response.get('Date').should.be.an.httpDate();
+      });
+    });
+
+    describe('resultWriter', () => {
+      const { createdMessage } = require(appRoot + '/lib/outbound/openrosa');
+
+      it('should send the appropriate content with the appropriate header', () => {
+        const response = createModernResponse();
+        openRosaResultWriter(createdMessage({}), null, response);
+
+        response.statusCode.should.equal(201);
+        response.getHeader('Content-Type').should.equal('text/xml');
+        response._getData().trim().should.equal('<OpenRosaResponse xmlns="http://openrosa.org/http/response" items="0">\n    <message nature=""></message>\n  </OpenRosaResponse>');
+      });
+    });
+
+    describe('error', () => {
+      it('should delegate to defaultErrorWriter for uncaught exceptions', () => {
+        const response = createModernResponse();
+        try {
+          openRosaErrorWriter(new Error('test'), null, response);
+        } catch (_) {}
+
+        response.statusCode.should.equal(500);
+        response.getHeader('Content-Type').should.equal('application/json');
+        response._getData().message.should.equal('Completely unhandled exception: test');
+      });
+
+      it('should wrap problems in openrosa xml envelopes', () => {
+        const response = createModernResponse();
+        openRosaErrorWriter(Problem.user.notFound(), null, response);
+
+        response.statusCode.should.equal(404);
+        response.getHeader('Content-Type').should.equal('text/xml');
+        response._getData().trim().should.equal('<OpenRosaResponse xmlns="http://openrosa.org/http/response" items="0">\n    <message nature="error">Could not find the resource you were looking for.</message>\n  </OpenRosaResponse>');
+      });
+    });
+  });
+
+  describe('odata', () => {
+    describe('preprocessor', () => {
+      it('should reject json requests to xml endpoints (header)', () => {
+        const request = createRequest({ headers: { accept: 'application/json' } });
+        return odataPreprocessor('xml')(null, new Context(request), request)
+          .should.be.rejectedWith(Problem, { problemCode: 406.1 });
+      });
+
+      it('should reject json requests to xml endpoints (querystring)', () => {
+        const request = createRequest({ url: '/odata.svc?$format=json' });
+        return odataPreprocessor('xml')(null, new Context(request), request)
+          .should.be.rejectedWith(Problem, { problemCode: 406.1 });
+      });
+
+      it('should reject xml requests to json endpoints (header)', () => {
+        const request = createRequest({ headers: { accept: 'application/xml' } });
+        return odataPreprocessor('json')(null, new Context(request), request)
+          .should.be.rejectedWith(Problem, { problemCode: 406.1 });
+      });
+
+      it('should reject xml requests to json endpoints (querystring)', () => {
+        const request = createRequest({ url: '/odata.svc?$format=xml' });
+        return odataPreprocessor('json')(null, new Context(request), request)
+          .should.be.rejectedWith(Problem, { problemCode: 406.1 });
+      });
+
+      it('should treat $format with precendence over accept', () => {
+        const request = createRequest({ url: '/odata.svc?$format=json', headers: { accept: 'application/xml' } });
+        return odataPreprocessor('json')(null, new Context(request), request)
+          .should.be.rejectedWith(Problem, { problemCode: 406.1 });
+      });
+
+      it('should reject requests for OData max-versions below 4.0', () => {
+        const request = createRequest({ headers: { 'OData-MaxVersion': '3.0' } });
+        return odataPreprocessor('json')(null, new Context(request), request)
+          .should.be.rejectedWith(Problem, { problemCode: 404.1 });
+      });
+
+      it('should reject requests for unsupported OData features', () => {
+        const request = createRequest({ url: '/odata.svc?$orderby=magic' });
+        return odataPreprocessor('json')(null, new Context(request), request)
+          .should.be.rejectedWith(Problem, { problemCode: 501.1 });
+      });
+
+      it('should allow appropriate requests through', () => {
+        const request = createRequest({ url: '/odata.svc?$top=50', headers: { 'OData-MaxVersion': '4.0', accept: 'application/json' } });
+        should.not.exist(odataPreprocessor('json')(null, new Context(request), request));
+      });
+    });
+
+    describe('before', () => {
+      it('should set the appropriate OData version', () => {
+        const response = createModernResponse();
+        odataBefore(response);
+
+        response.get('OData-Version').should.equal('4.0');
+      });
+    });
+  });
 });
 

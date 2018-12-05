@@ -1,6 +1,11 @@
 const should = require('should');
 const { DateTime } = require('luxon');
 
+should.Assertion.add('httpDate', function() {
+  this.params = { operator: 'to be an HTTP date string' };
+  DateTime.fromHTTP(this.obj).isValid.should.equal(true);
+});
+
 should.Assertion.add('isoDate', function() {
   this.params = { operator: 'to be an ISO date string' };
   DateTime.fromISO(this.obj).isValid.should.equal(true);

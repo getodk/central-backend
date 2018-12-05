@@ -89,33 +89,28 @@ const augment = (service) => {
 ////////////////////////////////////////////////////////////////////////////////
 // FINAL TEST WRAPPERS
 
+const baseContainer = injector.withDefaults({ db, mail, env, google, Sentry });
+
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
 // gets rolled back for a clean slate on the next test.
-// TODO: why do we have to make this container /last/? we are leaking state
-// somewhere, and it worries me. (#53)
 const testService = (test) => () => new Promise((resolve, reject) => {
-  db.transaction((trxn) => {
-    const container = injector.withDefaults({ db, mail, env, google, Sentry });
-    Object.assign(container, { db: trxn, _alreadyTransacting: true });
-    const rollback = (f) => (x) => trxn.rollback().then(() => f(x));
+  baseContainer.transacting((container) => {
+    const rollback = (f) => (x) => container.db.rollback().then(() => f(x));
     test(augment(request(service(container))), container).then(rollback(resolve), rollback(reject));
     // we return nothing to prevent knex from auto-committing the transaction.
   }).catch(Promise.resolve.bind(Promise));
 });
 
-// called to get a container context per task. ditto all the above.
+// called to get a container context per task. ditto all // from testService.
 // here instead our weird hijack work involves injecting our own constructed
 // container into the task context so it just picks it up and uses it.
-// 
-// TODO: very copypasta.
 const testTask = (test) => () => new Promise((resolve, reject) => {
-  db.transaction((trxn) => {
-    task._container = injector.withDefaults({ db, mail, env, google });
-    Object.assign(task._container, { db: trxn, _alreadyTransacting: true });
+  baseContainer.transacting((container) => {
+    task._container = container;
     const rollback = (f) => (x) => {
       delete task._container;
-      return trxn.rollback().then(() => f(x));
+      return container.db.rollback().then(() => f(x));
     };
     test(task._container).then(rollback(resolve), rollback(reject));
     // we return nothing to prevent knex from auto-committing the transaction.

@@ -57,6 +57,16 @@ We have built a lot of custom framework to try to keep ODK Central Backend as fl
 * The model and database logic defining the Things in the server (Users, Forms, etc) and how they are stored and retrieved from the database are the middle layer. They are still easy to understand and update, but you'll need to understand a little bit more about how other code uses these Things and how the underlying framework works in order to make changes.
 * The innermost layer is the framework code, which provides for the other layers easy ways to define and glue together bits of work. It is internally the most intricate, but it should not need to be changed very often.
 
+### Middleware and Preprocessors
+
+We do something a little bit odd: we only use actual Express middleware sparingly. Besides the usual assortment of stock/packaged parsers and loggers, only middleware that rewrites the incoming request URL are actually implemented as Express middleware; everything else we run as what we call a preprocessor.
+
+What this looks like is as follows: an incoming request gets sent through the usual Express stack, including the small number of actual middleware we have. Express the routes the request to a specific resource handler (for instance in `service.post('/some/path', handler)`). We wrap all our `handler`s in an `endpoint(handler)`, which you'll see used in context as you look at the code. The first thing this does is run a series of middleware-like preprocessors that do things like attach user authentication to the request context, one after another, sort of like Express would with actual middleware. The primary difference is that our preprocessors work based on Promises rather than callbacks and mutable Response state.
+
+And in fact, this difference is exactly the reason we have gone with this route: the way `endpoint` formulates the entire lifecycle from preprocessors to the format handler to the actual resource handler itself through to success and failure wire output is as a singular Promise tree. This means that we have a single notion of pass and fail, which we can then hand off to the database transaction manager to determine whether the request operations should be commited or rolled back with a single decision point.
+
+You will find more information about this in the comments in the code itself.
+
 ### Dependency Injection
 
 Additionally, the entire server relies heavily on using [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection) rather than direct `require()` statements to pull in dependent code. This helps reduce coupling between files and improves our ability to mock various things for tests. For the most part, if you follow the code patterns that already exist, the usage should become clear. But if you are adding new `Instance` or `query` modules, you will need to visit `/lib/model/package.js` and add references to those modules at the bottom, again following the existing pattern. There are notes in the following documentation to help explain these usages.

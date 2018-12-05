@@ -141,7 +141,7 @@ describe('api: /key/:key', () => {
 
   it('should return 401 if two credentials are presented', testService((service) =>
     service.login('alice', (asAlice) => asAlice.post('/v1/field-keys').send({ displayName: 'fktest' })
-      .then(({ body }) => asAlice.post(`/v1/key/${body.token}/users/current`)
+      .then(({ body }) => asAlice.get(`/v1/key/${body.token}/users/current`)
         .expect(401)))));
 
   it('should reject non-field tokens', testService((service) =>
