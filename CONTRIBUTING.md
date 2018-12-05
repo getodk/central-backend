@@ -71,6 +71,14 @@ You will find more information about this in the comments in the code itself.
 
 Additionally, the entire server relies heavily on using [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection) rather than direct `require()` statements to pull in dependent code. This helps reduce coupling between files and improves our ability to mock various things for tests. For the most part, if you follow the code patterns that already exist, the usage should become clear. But if you are adding new `Instance` or `query` modules, you will need to visit `/lib/model/package.js` and add references to those modules at the bottom, again following the existing pattern. There are notes in the following documentation to help explain these usages.
 
+### Wire Security
+
+Our general way of handling data element security (eg the user should be able to save things like `displayName` to their own account, but should not be able to directly set `password`; and we will query things like `password` out of the database but it should never be returned to the user over the API) is always at the outermost boundary: the moment of serialization to the wire or deserialization from the wire.
+
+You will find all this management in the various `Instance` classes. The default implementation of methods `forApi` and `fromApi` will use the whitelist schema definitions `readable` and `writable` to determine what values should be allowed to be serialized to the user, and deserialized into a local data object in memory, respectively. Any data object in local memory is presumed to be completely safe to do with at will; there is not, for instance, a separate data security check at the database write level.
+
+If you override the default `forApi` and `fromApi`, it will be up to you to maintain this pattern.
+
 ## Navigating the Code
 
 Here is an overview of the directory structure inside of `lib/`:
