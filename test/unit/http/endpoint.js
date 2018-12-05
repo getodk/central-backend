@@ -238,7 +238,7 @@ describe('endpoints', () => {
       });
     });
 
-    describe('resource/finalize2/output/error', () => {
+    describe('resource/finalize/output/error', () => {
       it('should fail the Promise if nothing is returned', () =>
         endpointBase({})()(noop)(createRequest(), createModernResponse())
           .should.be.rejectedWith(Problem, { problemCode: 500.3 }));
