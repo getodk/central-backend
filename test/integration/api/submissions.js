@@ -73,6 +73,7 @@ describe('api: /submission', () => {
             text.should.match(/upload was successful/);
           })
           .then(() => asAlice.get('/v1/forms/simple/submissions/one')
+            .set('X-Extended-Metadata', 'true')
             .expect(200)
             .then(({ body }) => {
               body.createdAt.should.be.a.recentIsoDate();
@@ -349,6 +350,7 @@ describe('api: /forms/:id/submissions', () => {
               body.length.should.equal(1);
               body[0].should.be.an.ExtendedSubmission();
               body[0].submitter.displayName.should.equal('Alice');
+              body[0].xml.should.equal('<data id="simple"><meta><instanceID>one</instanceID></meta><name>Alice</name><age>30</age></data>');
             })))));
   });
 
@@ -395,6 +397,7 @@ describe('api: /forms/:id/submissions', () => {
             .then(({ body }) => {
               body.should.be.an.ExtendedSubmission();
               body.submitter.displayName.should.equal('Alice');
+              body.xml.should.equal(testData.instances.simple.one);
             })))));
   });
 

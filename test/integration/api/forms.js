@@ -35,6 +35,7 @@ describe('api: /forms', () => {
               const simple = body.find((form) => form.xmlFormId === 'simple');
               simple.submissions.should.equal(1);
               simple.lastSubmission.should.be.a.recentIsoDate();
+              simple.xml.should.startWith('<');
             })))));
   });
 
@@ -230,6 +231,7 @@ describe('api: /forms', () => {
     it('should return just xml', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/forms/simple')
+          .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then((full) => 
             asAlice.get('/v1/forms/simple.xml')
@@ -349,6 +351,7 @@ describe('api: /forms', () => {
               body.submissions.should.equal(0);
               body.createdBy.should.be.an.Actor();
               body.createdBy.displayName.should.equal('Alice');
+              body.xml.should.equal(testData.forms.simple2);
             })))));
   });
 
@@ -370,7 +373,6 @@ describe('api: /forms', () => {
               body.should.be.a.Form();
               body.name.should.equal('a fancy name');
               body.state.should.equal('draft');
-              body.xml.should.equal(testData.forms.simple);
             })))));
 
     it('should reject if state is invalid', testService((service) =>
@@ -385,6 +387,7 @@ describe('api: /forms', () => {
           .send({ xmlFormId: 'changed', xml: 'changed', hash: 'changed' })
           .expect(200)
           .then(() => asAlice.get('/v1/forms/simple')
+            .set('X-Extended-Metadata', 'true')
             .expect(200)
             .then(({ body }) => {
               body.xmlFormId.should.equal('simple');
