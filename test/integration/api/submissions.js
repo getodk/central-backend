@@ -354,6 +354,21 @@ describe('api: /forms/:id/submissions', () => {
             })))));
   });
 
+  describe('/:instanceId.xml GET', () => {
+    it('should return submission details', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/forms/simple/submissions/one.xml')
+            .expect(200)
+            .then(({ header, text }) => {
+              header['content-type'].should.equal('application/xml; charset=utf-8');
+              text.should.equal(testData.instances.simple.one);
+            })))));
+  });
+
   describe('/:instanceId GET', () => {
     it('should return notfound if the form does not exist', testService((service) =>
       service.login('alice', (asAlice) =>

@@ -727,6 +727,23 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 + Response 403 (application/json)
     + Attributes (Error 403)
 
+#### Retrieving Submission XML [GET /v1/forms/{xmlFormId}/submissions/{instanceId}.xml]
+
+To get only the XML of the `Submission` rather than all of the details with the XML as one of many properties, just add `.xml` to the end of the request URL.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the Submission being referenced.
+
++ Response 200 (application/xml)
+    + Body
+
+            <data id="simple">
+              <orx:meta><orx:instanceID>uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44</orx:instanceID></orx:meta>
+              <name>Alice</name>
+              <age>32</age>
+            </data>
+
 ## Attachments [/v1/forms/{xmlFormId}/submissions/{instanceId}/attachments]
 
 When `Submission`s are created via the OpenRosa `/submission` API, multimedia files can be attached. These might be, for example, photos or video taken as part of the survey. ODK Central keeps track of which files relate to which Submission, so that they may be reliably exported again. To directly retrieve them, you can use the `/attachments` subresource on the Submissions resource. It is only possible to list and download Attachments.
