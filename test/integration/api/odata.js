@@ -227,7 +227,6 @@ describe('api: /forms/:id.svc', () => {
         asAlice.get('/v1/forms/withrepeat.svc/Submissions?$count=true')
           .expect(200)
           .then(({ body }) => {
-            console.log(body);
             body['@odata.count'].should.equal(0);
           }))));
 

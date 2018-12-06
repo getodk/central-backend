@@ -46,205 +46,31 @@ describe('middleware', () => {
     });
   });
 
-  describe('sessionParser', () => {
-    const { sessionParser } = middleware;
-
-    // some mock helpers to simplify testing this module in isolation:
-    class Auth { constructor(data) { Object.assign(this, data); } }
-    const mockSession = (expectedToken) => ({
-      getByBearerToken: (token) => Promise.resolve((token === expectedToken)
-        ? Option.of('session')
-        : Option.none())
-    });
-    const mockUser = (expectedEmail, password) => ({
-      getByEmail: (email) => Promise.resolve((email === expectedEmail)
-        ? Option.of({ password, actor: 'actor' })
-        : Option.none())
-    });
-
-    it('should set no auth if no Authorization header is provided', (done) => {
-      const request = createRequest();
-      sessionParser({ Auth, Session: mockSession() })(request, null, () => {
-        // this is a mock object so we have to directly check the properties.
-        should.not.exist(request.auth._session);
-        should.not.exist(request.auth._actor);
+  describe('fieldKeyParser', () => {
+    const { fieldKeyParser } = middleware;
+    it('should always set request.fieldKey None if nothing is given', (done) => {
+      const request = createRequest({ url: '/users/23' });
+      fieldKeyParser(request, null, () => {
+        request.fieldKey.should.equal(Option.none());
         done();
       });
     });
 
-    it('should set no auth if Authorization mode is not Bearer or Basic', (done) => {
-      const request = createRequest({ headers: { Authorization: 'Digest aabbccddeeff123' } });
-      sessionParser({ Auth, Session: mockSession() })(request, null, () => {
-        // this is a mock object so we have to directly check the properties.
-        should.not.exist(request.auth._session);
-        should.not.exist(request.auth._actor);
+    it('should set None and leave the URL if the key is invalid', (done) => {
+      const request = createRequest({ url: '/key/12345/users/23' });
+      fieldKeyParser(request, null, () => {
+        request.fieldKey.should.equal(Option.none());
+        request.url.should.equal('/key/12345/users/23');
         done();
       });
     });
 
-    it('should fail the request if Bearer auth is attempted with a successful auth present', (done) => {
-      const request = createRequest({ headers: { Authorization: 'Bearer aabbccddeeff123' } });
-      request.auth = { isAuthenticated: () => true };
-      sessionParser({ Auth, Session: mockSession() })(request, null, (failure) => {
-        failure.isProblem.should.equal(true);
-        failure.problemCode.should.equal(401.2);
+    it('should set Some(fk) and rewrite URL if a key is found', (done) => {
+      const request = createRequest({ url: '/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/23' });
+      fieldKeyParser(request, null, () => {
+        request.fieldKey.should.eql(Option.of('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'));
+        request.url.should.equal('/users/23');
         done();
-      });
-    });
-
-    it('should fail the request if an invalid Bearer token is given', (done) => {
-      const request = createRequest({ headers: { Authorization: 'Bearer abracadabra' } });
-      sessionParser({ Auth, Session: mockSession('alohomora') })(request, null, (failure) => {
-        failure.isProblem.should.equal(true);
-        failure.problemCode.should.equal(401.2);
-        done();
-      });
-    });
-
-    it('should set the appropriate session if a valid Bearer token is given', (done) => {
-      const request = createRequest({ headers: { Authorization: 'Bearer alohomora' } });
-      sessionParser({ Auth, Session: mockSession('alohomora') })(request, null, () => {
-        request.auth._session.should.eql(Option.of('session'));
-        done();
-      });
-    });
-
-    it('should reject non-https Basic auth requests', (done) => {
-      const request = createRequest({ headers: { Authorization: 'Basic abracadabra', } });
-      sessionParser({ Auth, User: mockUser('alice@opendatakit.org') })(request, null, (failure) => {
-        failure.isProblem.should.equal(true);
-        failure.problemCode.should.equal(401.3);
-        done();
-      });
-    });
-
-    it('should fail the request if an improperly-formatted Basic auth is given', (done) => {
-      const encodedCredentials = Buffer.from('alice@opendatakit.org:', 'utf8').toString('base64');
-      const request = createRequest({ headers: {
-        Authorization: `Basic ${encodedCredentials}`,
-        'X-Forwarded-Proto': 'https'
-      } });
-      sessionParser({ Auth, User: mockUser('alice@opendatakit.org') })(request, null, (failure) => {
-        failure.isProblem.should.equal(true);
-        failure.problemCode.should.equal(401.2);
-        done();
-      });
-    });
-
-    it('should fail the request if Basic auth is attempted with a successful auth present @slow', (done) => {
-      hashPassword('alice').then((hashed) => {
-        const encodedCredentials = Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64');
-        const request = createRequest({ headers: {
-          Authorization: `Basic ${encodedCredentials}`,
-          'X-Forwarded-Proto': 'https'
-        } });
-        request.auth = { isAuthenticated: () => true };
-        sessionParser({ Auth, User: mockUser('alice@opendatakit.org', hashed) })(request, null, (failure) => {
-          failure.isProblem.should.equal(true);
-          failure.problemCode.should.equal(401.2);
-          done();
-        });
-      });
-    });
-
-    it('should fail the request if the Basic auth user cannot be found', (done) => {
-      const encodedCredentials = Buffer.from('bob@opendatakit.org:bob', 'utf8').toString('base64');
-      const request = createRequest({ headers: {
-        Authorization: `Basic ${encodedCredentials}`,
-        'X-Forwarded-Proto': 'https'
-      } });
-      sessionParser({ Auth, User: mockUser('alice@opendatakit.org') })(request, null, (failure) => {
-        failure.isProblem.should.equal(true);
-        failure.problemCode.should.equal(401.2);
-        done();
-      });
-    });
-
-    it('should fail the request if the Basic auth credentials are not right', (done) => {
-      const encodedCredentials = Buffer.from('alice@opendatakit.org:password', 'utf8').toString('base64');
-      const request = createRequest({ headers: {
-        Authorization: `Basic ${encodedCredentials}`,
-        'X-Forwarded-Proto': 'https'
-      } });
-      sessionParser({ Auth, User: mockUser('alice@opendatakit.org', 'willnevermatch') })(request, null, (failure) => {
-        failure.isProblem.should.equal(true);
-        failure.problemCode.should.equal(401.2);
-        done();
-      });
-    });
-
-    it('should set the appropriate session if valid Basic auth credentials are given @slow', (done) => {
-      hashPassword('alice').then((hashed) => {
-        const encodedCredentials = Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64');
-        const request = createRequest({ headers: {
-          Authorization: `Basic ${encodedCredentials}`,
-          'X-Forwarded-Proto': 'https'
-        } });
-        sessionParser({ Auth, User: mockUser('alice@opendatakit.org', hashed) })(request, null, () => {
-          request.auth._actor.should.equal('actor');
-          done();
-        });
-      });
-    });
-
-    describe('by cookie', () => {
-      it('should never try cookie auth over HTTP', () => {
-        const request = createRequest({ method: 'GET', headers: { Cookie: '__Host-session=alohomora' } });
-        return sessionParser({ Auth, Session: mockSession('alohomora') })(request, null, () => {
-          should.not.exist(request.auth._session);
-          should.not.exist(request.auth._actor);
-        });
-      });
-
-      it('should not throw an error if the cookie is invalid', () => {
-        const request = createRequest({
-          method: 'GET', headers: {
-            'X-Forwarded-Proto': 'https',
-            Cookie: 'please just let me in'
-          }
-        });
-        return sessionParser({ Auth, Session: mockSession('alohomora') })(request, null, () => {
-          should.not.exist(request.auth._session);
-          should.not.exist(request.auth._actor);
-        });
-      });
-
-      it('should not throw an error if the token is invalid', () => {
-        const request = createRequest({
-          method: 'GET', headers: {
-            'X-Forwarded-Proto': 'https',
-            Cookie: '__Host-session=letmein'
-          }
-        });
-        return sessionParser({ Auth, Session: mockSession('alohomora') })(request, null, () => {
-          should.not.exist(request.auth._session);
-          should.not.exist(request.auth._actor);
-        });
-      });
-
-      it('should never try cookie auth for non-GET requests', () => {
-        const request = createRequest({
-          method: 'POST', headers: {
-            'X-Forwarded-Proto': 'https',
-            Cookie: '__Host-session=alohomora'
-          }
-        });
-        return sessionParser({ Auth, Session: mockSession('alohomora') })(request, null, () => {
-          should.not.exist(request.auth._session);
-          should.not.exist(request.auth._actor);
-        });
-      });
-
-      it('should work for HTTPS GET requests', () => {
-        const request = createRequest({
-          method: 'GET', headers: {
-            'X-Forwarded-Proto': 'https',
-            Cookie: '__Host-session=alohomora'
-          }
-        });
-        return sessionParser({ Auth, Session: mockSession('alohomora') })(request, null, () => {
-          request.auth._session.should.eql(Option.of('session'));
-        });
       });
     });
   });

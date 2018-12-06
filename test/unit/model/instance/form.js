@@ -48,7 +48,6 @@ describe('Form', () => {
     it('should pick up additional form metadata', () => {
       const xml = '<html><head><title>My Cool Form</title><model><instance><data id="mycoolform" version="1.0"><field/></data></instance></model></head></html>';
       return Form.fromXml(xml).then((form) => {
-        console.log(form);
         form.name.should.equal('My Cool Form');
         form.version.should.equal('1.0');
         form.hash.should.equal('5ba55d383e978f07ee906fc62ff1b288');
