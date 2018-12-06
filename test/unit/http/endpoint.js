@@ -537,7 +537,7 @@ describe('endpoints', () => {
 
       it('should treat $format with precendence over accept', () => {
         const request = createRequest({ url: '/odata.svc?$format=json', headers: { accept: 'application/xml' } });
-        return odataPreprocessor('json')(null, new Context(request), request)
+        return odataPreprocessor('xml')(null, new Context(request), request)
           .should.be.rejectedWith(Problem, { problemCode: 406.1 });
       });
 
