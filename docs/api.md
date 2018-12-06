@@ -388,7 +388,7 @@ It is not yet possible to modify a Form's XML definition once it is created.
 
 Currently, there are no paging or filtering options, so listing `Form`s will get you every Form in the system, every time.
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that each Form has, as well as the `lastSubmission` most recent submission timestamp.
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that each Form has, as well as the `lastSubmission` most recent submission timestamp and the actual `xml` XForms XML form definition backing the form.
 
 + Response 200 (application/json)
     This is the standard response, if Extended Metadata is not requested:
@@ -460,7 +460,7 @@ The API will currently check the XML's structure in order to extract the informa
 
 #### Getting Form Details [GET]
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that this Form has, as well as the `lastSubmission` most recent submission timestamp.
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that this Form has, as well as the `lastSubmission` most recent submission timestamp and the actual `xml` XForms XML form definition backing the form.
 
 + Response 200 (application/json)
     This is the standard response, if Extended Metadata is not requested:
@@ -670,7 +670,7 @@ Once created (which, like with Forms, is done by way of their XML data rather th
 
 Currently, there are no paging or filtering options, so listing `Submission`s will get you every Submission in the system, every time.
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to inflate the `submitter` from an `Actor` ID reference to an actual Actor metadata object.
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to inflate the `submitter` from an `Actor` ID reference to an actual Actor metadata object and return the actual `xml` submission XML data.
 
 + Response 200 (application/json)
     This is the standard response, if Extended Metadata is not requested:
@@ -708,7 +708,7 @@ To export all the `Submission` data associated with a `Form`, just add `.csv.zip
 
 Like how `Form`s are addressed by their XML `formId`, individual `Submission`s are addressed in the URL by their `instanceId`.
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to inflate the `submitter` from an `Actor` ID reference to an actual Actor metadata object.
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to inflate the `submitter` from an `Actor` ID reference to an actual Actor metadata object and return the actual `xml` submission XML data.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
@@ -726,6 +726,23 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 + Response 403 (application/json)
     + Attributes (Error 403)
+
+#### Retrieving Submission XML [GET /v1/forms/{xmlFormId}/submissions/{instanceId}.xml]
+
+To get only the XML of the `Submission` rather than all of the details with the XML as one of many properties, just add `.xml` to the end of the request URL.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the Submission being referenced.
+
++ Response 200 (application/xml)
+    + Body
+
+            <data id="simple">
+              <orx:meta><orx:instanceID>uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44</orx:instanceID></orx:meta>
+              <name>Alice</name>
+              <age>32</age>
+            </data>
 
 ## Attachments [/v1/forms/{xmlFormId}/submissions/{instanceId}/attachments]
 
@@ -1305,13 +1322,13 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + version: `2.1` (string, optional) - The `version` of this form as given in its XForms XML definition. Empty string and `null` are treated equally as a single version.
 + hash: `51a93eab3a1974dbffc4c7913fa5a16a` (string, required) - An MD5 sum automatically computed based on the XForms XML definition. This is required for OpenRosa compliance.
 + state (Form State, required) - The present lifecycle status of this form. Controls whether it is available for download on survey clients or accepts new submissions.
-+ xml: `…` (string, required) - The XForms XML that defines this form.
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format
 
 ## Extended Form (Form)
 + submissions: `10` (number, required) - The number of `Submission`s that have been submitted to this `Form`.
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission, if any.
++ xml: `…` (string, required) - The XForms XML that defines this form.
 
 ## Form Attachment (object)
 + name: `myfile.mp3` (string, required) - The name of the file as specified in the XForm.
@@ -1347,12 +1364,12 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Submission (object)
 + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the `Submission`, given by the Submission XML.
 + submitter: `23` (number, required) - The ID of the `Actor` (`Field Key` or `User`) that submitted this `Submission`.
-+ xml: `…` (string, required) - The actual `Submission` XML.
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format
 
 ## Extended Submission (Submission)
 + submitter (Actor, required) - The full details of the `Actor` that submitted this `Submission`.
++ xml: `…` (string, required) - The actual `Submission` XML.
 
 ## Success (object)
 + success: `true` (boolean, required)
