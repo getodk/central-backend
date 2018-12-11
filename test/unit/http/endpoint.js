@@ -111,19 +111,27 @@ describe('endpoints', () => {
           .then(() => { result.should.eql([ 'format', 'mid1', 'mid2' ]); });
       });
 
-      it('should fail the overall promise if the format preprocessor fails', () =>
-        endpointBase({
+      it('should fail the overall promise if the format preprocessor fails', () => {
+        let failed = false;
+        return endpointBase({
           preprocessor: () => Promise.reject(new Error('format failure')),
           resultWriter: noop
-        })()()(createRequest(), createModernResponse())
-          .should.be.rejectedWith({ message: 'format failure' }));
+        })()()(createRequest(), createModernResponse(), (failure) => {
+          failure.message.should.equal('format failure');
+          failed = true;
+        }).then(() => { failed.should.equal(true); });
+      });
 
-      it('should fail the overall promise if a middleware preprocessor fails', () =>
-        endpointBase({ resultWriter: noop })(null, [
+      it('should fail the overall promise if a middleware preprocessor fails', () => {
+        let failed = false;
+        return endpointBase({ resultWriter: noop })(null, [
           () => { return true; },
           () => Promise.reject(new Error('middleware failure'))
-        ])()(createRequest(), createModernResponse())
-          .should.be.rejectedWith({ message: 'middleware failure' }));
+        ])()(createRequest(), createModernResponse(), (failure) => {
+          failure.message.should.equal('middleware failure');
+          failed = true;
+        }).then(() => { failed.should.equal(true); });
+      });
 
       it('should accept Promise results from preprocessors', () => {
         let waited = false;
@@ -239,13 +247,21 @@ describe('endpoints', () => {
     });
 
     describe('resource/finalize/output/error', () => {
-      it('should fail the Promise if nothing is returned', () =>
-        endpointBase({})()(noop)(createRequest(), createModernResponse())
-          .should.be.rejectedWith(Problem, { problemCode: 500.3 }));
+      it('should fail the Promise if nothing is returned', () => {
+        let failed = false;
+        return endpointBase({})()(noop)(createRequest(), createModernResponse(), (failure) => {
+          failure.problemCode.should.equal(500.3);
+          failed = true;
+        }).then(() => { failed.should.equal(true); });
+      });
 
-      it('should fail the Promise if an unhandled exception is returned', () =>
-        endpointBase({})()(() => { hello; })(createRequest(), createModernResponse())
-          .should.be.rejectedWith(ReferenceError));
+      it('should fail the Promise if an unhandled exception is returned', () => {
+        let failed = false;
+        return endpointBase({})()(() => { hello; })(createRequest(), createModernResponse(), (failure) => {
+          failure.should.be.an.instanceof(ReferenceError);
+          failed = true;
+        }).then(() => { failed.should.equal(true); });
+      });
 
       it('should passthrough to error handler if a Promise rejection occurs', () => {
         let errored = false;
