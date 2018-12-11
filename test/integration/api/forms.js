@@ -4,15 +4,15 @@ const { DateTime } = require('luxon');
 const { testService } = require('../setup');
 const testData = require('../data');
 
-describe('api: /forms', () => {
+describe('api: /projects/:id/forms', () => {
   describe('GET', () => {
     it('should reject unless the user can list', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.get('/v1/forms').expect(403))));
+        asChelsea.get('/v1/projects/1/forms').expect(403))));
 
     it('should list forms in order', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms')
+        asAlice.get('/v1/projects/1/forms')
           .expect(200)
           .then(({ body }) => {
             body.forEach((form) => form.should.be.a.Form());
@@ -23,11 +23,11 @@ describe('api: /forms', () => {
 
     it('should provide extended metadata if requested', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms/simple/submissions')
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'application/xml')
           .expect(200)
-          .then(() => asAlice.get('/v1/forms')
+          .then(() => asAlice.get('/v1/projects/1/forms')
             .set('X-Extended-Metadata', 'true')
             .expect(200)
             .then(({ body }) => {
@@ -42,13 +42,13 @@ describe('api: /forms', () => {
   describe('../formList GET', () => {
     it('should reject unless the user can list', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.get('/v1/formlist')
+        asChelsea.get('/v1/projects/1/formList')
           .set('X-OpenRosa-Version', '1.0')
           .expect(403))));
 
     it('should return form details as xml', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/formlist')
+        asAlice.get('/v1/projects/1/formList')
           .set('X-OpenRosa-Version', '1.0')
           .expect(200)
           .then(({ text, headers }) => {
@@ -63,27 +63,27 @@ describe('api: /forms', () => {
       <name>withrepeat</name>
       <version>1.0</version>
       <hash>md5:e7e9e6b3f11fca713ff09742f4312029</hash>
-      <downloadUrl>${domain}/v1/forms/withrepeat.xml</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/withrepeat.xml</downloadUrl>
     </xform>
     <xform>
       <formID>simple</formID>
       <name>Simple</name>
       <version></version>
       <hash>md5:5c09c21d4c71f2f13f6aa26227b2d133</hash>
-      <downloadUrl>${domain}/v1/forms/simple.xml</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/simple.xml</downloadUrl>
     </xform>
   </xforms>`);
           }))));
 
     it('should not include closing/closed forms', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.patch('/v1/forms/withrepeat')
+        asAlice.patch('/v1/projects/1/forms/withrepeat')
           .send({ state: 'closing' })
           .expect(200)
-          .then(() => asAlice.patch('/v1/forms/simple')
+          .then(() => asAlice.patch('/v1/projects/1/forms/simple')
             .send({ state: 'closing' })
             .expect(200)
-            .then(() => asAlice.get('/v1/formList')
+            .then(() => asAlice.get('/v1/projects/1/formList')
               .set('X-OpenRosa-Version', '1.0')
               .expect(200)
               .then(({ text }) => {
@@ -94,11 +94,11 @@ describe('api: /forms', () => {
 
     it('should not include deleted forms', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.delete('/v1/forms/withrepeat')
+        asAlice.delete('/v1/projects/1/forms/withrepeat')
           .expect(200)
-          .then(() => asAlice.delete('/v1/forms/simple')
+          .then(() => asAlice.delete('/v1/projects/1/forms/simple')
             .expect(200)
-            .then(() => asAlice.get('/v1/formList')
+            .then(() => asAlice.get('/v1/projects/1/formList')
               .set('X-OpenRosa-Version', '1.0')
               .set('Date', DateTime.local().toHTTP())
               .expect(200)
@@ -110,11 +110,11 @@ describe('api: /forms', () => {
 
     it('should include a manifest node for forms with attachments', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms')
+        asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.withAttachments)
           .set('Content-Type', 'application/xml')
           .expect(200)
-          .then(() => asAlice.get('/v1/formList')
+          .then(() => asAlice.get('/v1/projects/1/formList')
             .set('X-OpenRosa-Version', '1.0')
             .expect(200)
             .then(({ text }) => {
@@ -126,22 +126,22 @@ describe('api: /forms', () => {
       <name>withAttachments</name>
       <version></version>
       <hash>md5:7eb21b5b123b0badcf2b8f50bcf1cbd0</hash>
-      <downloadUrl>${domain}/v1/forms/withAttachments.xml</downloadUrl>
-      <manifestUrl>${domain}/v1/forms/withAttachments/manifest</manifestUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/withAttachments.xml</downloadUrl>
+      <manifestUrl>${domain}/v1/projects/1/forms/withAttachments/manifest</manifestUrl>
     </xform>
     <xform>
       <formID>withrepeat</formID>
       <name>withrepeat</name>
       <version>1.0</version>
       <hash>md5:e7e9e6b3f11fca713ff09742f4312029</hash>
-      <downloadUrl>${domain}/v1/forms/withrepeat.xml</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/withrepeat.xml</downloadUrl>
     </xform>
     <xform>
       <formID>simple</formID>
       <name>Simple</name>
       <version></version>
       <hash>md5:5c09c21d4c71f2f13f6aa26227b2d133</hash>
-      <downloadUrl>${domain}/v1/forms/simple.xml</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/simple.xml</downloadUrl>
     </xform>
   </xforms>`);
             })))));
@@ -150,14 +150,14 @@ describe('api: /forms', () => {
   describe('POST', () => {
     it('should reject unless the user can create', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.post('/v1/forms')
+        asChelsea.post('/v1/projects/1/forms')
           .send(testData.forms.simple2)
           .set('Content-Type', 'application/xml')
           .expect(403))));
 
     it('should reject if the xml is malformed', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms')
+        asAlice.post('/v1/projects/1/forms')
           .send('<hello')
           .set('Content-Type', 'application/xml')
           .expect(400)
@@ -171,7 +171,7 @@ describe('api: /forms', () => {
 
     it('should reject if the form id cannot be found', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms')
+        asAlice.post('/v1/projects/1/forms')
           .send('<test/>')
           .set('Content-Type', 'application/xml')
           .expect(400)
@@ -182,14 +182,14 @@ describe('api: /forms', () => {
 
     it('should reject if the form id already exists', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms')
+        asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.simple)
           .set('Content-Type', 'application/xml')
           .expect(400)
           .then(({ body }) => {
             body.code.should.equal(400.5);
-            body.details.fields.should.eql([ 'xmlFormId' ]);
-            body.details.values.should.eql([ 'simple' ]);
+            body.details.fields.should.eql([ 'xmlFormId', 'version', 'projectId' ]);
+            body.details.values.should.eql([ 'simple', '', '1' ]);
           }))));
 
     // the simple form has no version declaration at all, which is what we want
@@ -198,20 +198,20 @@ describe('api: /forms', () => {
     // by deleting it.
     it('should reject if an empty form version already existed but was deleted', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.delete('/v1/forms/simple')
+        asAlice.delete('/v1/projects/1/forms/simple')
           .expect(200)
-          .then(() => asAlice.post('/v1/forms')
+          .then(() => asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.simple)
             .set('Content-Type', 'application/xml')
             .expect(400)
             .then(({ body }) => {
-              body.details.fields.should.eql([ 'xmlFormId', 'version' ]);
-              body.details.values.should.eql([ 'simple', '' ]);
+              body.details.fields.should.eql([ 'xmlFormId', 'version', 'projectId' ]);
+              body.details.values.should.eql([ 'simple', '', '1' ]);
             })))));
 
     it('should return the created form upon success', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms')
+        asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.simple2)
           .set('Content-Type', 'application/xml')
           .expect(200)
@@ -226,15 +226,15 @@ describe('api: /forms', () => {
   describe('/:id.xml GET', () => {
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.get('/v1/forms/simple.xml').expect(403))));
+        asChelsea.get('/v1/projects/1/forms/simple.xml').expect(403))));
 
     it('should return just xml', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms/simple')
+        asAlice.get('/v1/projects/1/forms/simple')
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then((full) => 
-            asAlice.get('/v1/forms/simple.xml')
+            asAlice.get('/v1/projects/1/forms/simple.xml')
               .expect(200)
               .then(({ text }) => {
                 full.body.xml.should.equal(text);
@@ -244,13 +244,13 @@ describe('api: /forms', () => {
   describe('/:id/manifest GET', () => {
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.get('/v1/forms/simple/manifest')
+        asChelsea.get('/v1/projects/1/forms/simple/manifest')
           .set('X-OpenRosa-Version', '1.0')
           .expect(403))));
 
     it('should return no files if no attachments exist', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms/simple/manifest')
+        asAlice.get('/v1/projects/1/forms/simple/manifest')
           .set('X-OpenRosa-Version', '1.0')
           .expect(200)
           .then(({ text }) => {
@@ -261,15 +261,15 @@ describe('api: /forms', () => {
 
     it('should include attachments that have been uploaded', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms')
+        asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.withAttachments)
           .set('Content-Type', 'application/xml')
           .expect(200)
-          .then(() => asAlice.post('/v1/forms/withAttachments/attachments/goodone.csv')
+          .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
             .send('test,csv\n1,2')
             .set('Content-Type', 'text/csv')
             .expect(200)
-            .then(() => asAlice.get('/v1/forms/withAttachments/manifest')
+            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
               .set('X-OpenRosa-Version', '1.0')
               .expect(200)
               .then(({ text }) => {
@@ -279,7 +279,7 @@ describe('api: /forms', () => {
     <mediaFile>
       <filename>goodone.csv</filename>
       <hash>md5:2241de57bbec8144c8ad387e69b3a3ba</hash>
-      <downloadUrl>${domain}/v1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
     </mediaFile>
   </manifest>`);
               }))))));
@@ -291,11 +291,11 @@ describe('api: /forms', () => {
 
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.get('/v1/forms/simple.schema.json').expect(403))));
+        asChelsea.get('/v1/projects/1/forms/simple.schema.json').expect(403))));
 
     it('should return a JSON schema structure', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms/simple.schema.json')
+        asAlice.get('/v1/projects/1/forms/simple.schema.json')
           .expect(200)
           .then(({ body }) => {
             body.should.eql([{
@@ -310,7 +310,7 @@ describe('api: /forms', () => {
 
     it('should return a flattened JSON schema structure', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms/simple.schema.json?flatten=true')
+        asAlice.get('/v1/projects/1/forms/simple.schema.json?flatten=true')
           .expect(200)
           .then(({ body }) => {
             body.should.eql([
@@ -324,11 +324,11 @@ describe('api: /forms', () => {
   describe('/:id GET', () => {
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.get('/v1/forms/simple').expect(403))));
+        asChelsea.get('/v1/projects/1/forms/simple').expect(403))));
 
     it('should return basic form details', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms/simple')
+        asAlice.get('/v1/projects/1/forms/simple')
           .expect(200)
           .then(({ body }) => {
             body.should.be.a.Form();
@@ -337,11 +337,11 @@ describe('api: /forms', () => {
 
     it('should return extended form details', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms')
+        asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.simple2)
           .set('Content-Type', 'application/xml')
           .expect(200)
-          .then(() => asAlice.get('/v1/forms/simple2')
+          .then(() => asAlice.get('/v1/projects/1/forms/simple2')
             .set('X-Extended-Metadata', 'true')
             .expect(200)
             .then(({ body }) => {
@@ -358,16 +358,16 @@ describe('api: /forms', () => {
   describe('/:id PATCH', () => {
     it('should reject unless the user can update', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.patch('/v1/forms/simple')
+        asChelsea.patch('/v1/projects/1/forms/simple')
           .send({ name: 'a new name!' })
           .expect(403))));
 
     it('should update allowed fields', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.patch('/v1/forms/simple')
+        asAlice.patch('/v1/projects/1/forms/simple')
           .send({ name: 'a fancy name', state: 'draft' })
           .expect(200)
-          .then(() => asAlice.get('/v1/forms/simple')
+          .then(() => asAlice.get('/v1/projects/1/forms/simple')
             .expect(200)
             .then(({ body }) => {
               body.should.be.a.Form();
@@ -377,16 +377,16 @@ describe('api: /forms', () => {
 
     it('should reject if state is invalid', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.patch('/v1/forms/simple')
+        asAlice.patch('/v1/projects/1/forms/simple')
           .send({ name: 'a cool name', state: 'the coolest' })
           .expect(400))));
 
     it('should not update disallowed fields', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.patch('/v1/forms/simple')
+        asAlice.patch('/v1/projects/1/forms/simple')
           .send({ xmlFormId: 'changed', xml: 'changed', hash: 'changed' })
           .expect(200)
-          .then(() => asAlice.get('/v1/forms/simple')
+          .then(() => asAlice.get('/v1/projects/1/forms/simple')
             .set('X-Extended-Metadata', 'true')
             .expect(200)
             .then(({ body }) => {
@@ -399,13 +399,13 @@ describe('api: /forms', () => {
   describe('/:id DELETE', () => {
     it('should reject unless the user can delete', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.delete('/v1/forms/simple').expect(403))));
+        asChelsea.delete('/v1/projects/1/forms/simple').expect(403))));
 
     it('should delete the form', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.delete('/v1/forms/simple')
+        asAlice.delete('/v1/projects/1/forms/simple')
           .expect(200)
-          .then(() => asAlice.get('/v1/forms/simple')
+          .then(() => asAlice.get('/v1/projects/1/forms/simple')
             .expect(404)))));
   });
 
@@ -414,21 +414,21 @@ describe('api: /forms', () => {
     describe('/ GET', () => {
       it('should reject notfound if the form does not exist', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.get('/v1/forms/withAttachments/attachments').expect(404))));
+          asAlice.get('/v1/projects/1/forms/withAttachments/attachments').expect(404))));
 
       it('should reject if the user cannot read the form', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/forms')
+          asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
             .then(() => service.login('chelsea', (asChelsea) =>
-              asChelsea.get('/v1/forms/withAttachments/attachments')
+              asChelsea.get('/v1/projects/1/forms/withAttachments/attachments')
                 .expect(403))))));
 
       it('should return an empty list if no attachments exist', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.get('/v1/forms/simple/attachments')
+          asAlice.get('/v1/projects/1/forms/simple/attachments')
             .expect(200)
             .then(({ body }) => {
               body.should.eql([]);
@@ -436,11 +436,11 @@ describe('api: /forms', () => {
 
       it('should return a list of files', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/forms')
+          asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.get('/v1/forms/withAttachments/attachments')
+            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
               .expect(200)
               .then(({ body }) => {
                 body.should.eql([
@@ -452,15 +452,15 @@ describe('api: /forms', () => {
       // this test overlaps with/depends on POST /:name
       it('should flag exists: true for extant files', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/forms')
+          asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.post('/v1/forms/withAttachments/attachments/goodone.csv')
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
               .send('test,csv\n1,2')
               .set('Content-Type', 'text/csv')
               .expect(200)
-              .then(() => asAlice.get('/v1/forms/withAttachments/attachments')
+              .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
                 .expect(200)
                 .then(({ body }) => {
                   body.should.eql([
@@ -472,15 +472,15 @@ describe('api: /forms', () => {
       // this test overlaps with/depends on POST /:name
       it('should return upload updatedAt for extended metadata', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/forms')
+          asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.post('/v1/forms/withAttachments/attachments/goodone.csv')
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
               .send('test,csv\n1,2')
               .set('Content-Type', 'text/csv')
               .expect(200)
-              .then(() => asAlice.get('/v1/forms/withAttachments/attachments')
+              .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
                 .set('X-Extended-Metadata', 'true')
                 .expect(200)
                 .then(({ body }) => {
@@ -492,20 +492,20 @@ describe('api: /forms', () => {
       // this test overlaps with/depends on POST /:name and DELETE /:name
       it('should return deletion exists and updatedAt for extended metadata', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/forms')
+          asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.post('/v1/forms/withAttachments/attachments/goodone.csv')
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
               .send('test,csv\n1,2')
               .set('Content-Type', 'text/csv')
               .expect(200)
-              .then(() => asAlice.get('/v1/forms/withAttachments/attachments')
+              .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
                 .set('X-Extended-Metadata', 'true')
                 .expect(200)
-                .then((firstListing) => asAlice.delete('/v1/forms/withAttachments/attachments/goodone.csv')
+                .then((firstListing) => asAlice.delete('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
                   .expect(200)
-                  .then(() => asAlice.get('/v1/forms/withAttachments/attachments')
+                  .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
                     .set('X-Extended-Metadata', 'true')
                     .expect(200)
                     .then((secondListing) => {
@@ -521,30 +521,30 @@ describe('api: /forms', () => {
     describe('/:name POST', () => {
       it('should reject notfound if the form does not exist', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/forms/withAttachments/attachments/goodone.csv')
+          asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
             .send('test,csv\n1,2')
             .set('Content-Type', 'text/csv')
             .expect(404))));
 
       it('should reject unless the user may modify the form', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/forms')
+          asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
             .then(() => service.login('chelsea', (asChelsea) =>
-              asChelsea.post('/v1/forms/withAttachments/attachments/goodone.csv')
+              asChelsea.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
                 .send('test,csv\n1,2')
                 .set('Content-Type', 'text/csv')
                 .expect(403))))));
 
       it('should accept the file with a success result', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/forms')
+          asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.post('/v1/forms/withAttachments/attachments/goodone.csv')
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
               .send('test,csv\n1,2')
               .set('Content-Type', 'text/csv')
               .expect(200)
@@ -554,19 +554,19 @@ describe('api: /forms', () => {
 
       it('should replace an extant file with another', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/forms')
+          asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.post('/v1/forms/withAttachments/attachments/goodone.csv')
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
               .send('test,csv\n1,2')
               .set('Content-Type', 'text/csv')
               .expect(200)
-              .then(() => asAlice.post('/v1/forms/withAttachments/attachments/goodone.csv')
+              .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
                 .send('replaced,csv\n3,4')
                 .set('Content-Type', 'text/csv')
                 .expect(200)
-                .then(() => asAlice.get('/v1/forms/withAttachments/attachments/goodone.csv')
+                .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
                   .expect(200)
                   .then(({ text }) => {
                     text.should.equal('replaced,csv\n3,4');
@@ -574,15 +574,15 @@ describe('api: /forms', () => {
 
       it('should allow the same file in different slots', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/forms')
+          asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.post('/v1/forms/withAttachments/attachments/goodone.csv')
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
               .send('test,csv\n1,2')
               .set('Content-Type', 'text/csv')
               .expect(200)
-              .then(() => asAlice.post('/v1/forms/withAttachments/attachments/goodtwo.mp3')
+              .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodtwo.mp3')
                 .send('test,csv\n1,2')
                 .set('Content-Type', 'text/csv')
                 .expect(200))))));
@@ -592,43 +592,43 @@ describe('api: /forms', () => {
     describe('/:name GET', () => {
       it('should reject notfound if the form does not exist', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.get('/v1/forms/withAttachments/attachments/goodone.csv')
+          asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
             .expect(404))));
 
       it('should reject unless the user may read the form', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/forms')
+          asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.post('/v1/forms/withAttachments/attachments/goodone.csv')
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
               .send('test,csv\n1,2')
               .set('Content-Type', 'text/csv')
               .expect(200)
               .then(() => service.login('chelsea', (asChelsea) =>
-                asChelsea.get('/v1/forms/withAttachments/attachments/goodone.csv')
+                asChelsea.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
                 .expect(403)))))));
 
       it('should reject notfound if the file does not exist', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/forms')
+          asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.get('/v1/forms/withAttachments/attachments/goodone.csv')
+            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
               .expect(404)))));
 
       it('should return file contents with appropriate headers', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/forms')
+          asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.post('/v1/forms/withAttachments/attachments/goodone.csv')
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
               .send('test,csv\n1,2')
               .set('Content-Type', 'text/csv')
               .expect(200)
-              .then(() => asAlice.get('/v1/forms/withAttachments/attachments/goodone.csv')
+              .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
                 .expect(200)
                 .then(({ headers, text }) => {
                   headers['content-disposition'].should.equal('attachment; filename="goodone.csv"');
@@ -641,45 +641,45 @@ describe('api: /forms', () => {
     describe('/:name DELETE', () => {
       it('should reject notfound if the form does not exist', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.delete('/v1/forms/withAttachments/attachments/goodone.csv')
+          asAlice.delete('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
             .expect(404))));
 
       it('should reject unless the user may update the form', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/forms')
+          asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.post('/v1/forms/withAttachments/attachments/goodone.csv')
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
               .send('test,csv\n1,2')
               .set('Content-Type', 'text/csv')
               .expect(200)
               .then(() => service.login('chelsea', (asChelsea) =>
-                asChelsea.delete('/v1/forms/withAttachments/attachments/goodone.csv')
+                asChelsea.delete('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
                 .expect(403)))))));
 
       it('should reject notfound if the file does not exist', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/forms')
+          asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.delete('/v1/forms/withAttachments/attachments/goodone.csv')
+            .then(() => asAlice.delete('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
               .expect(404)))));
 
       it('should delete the attachment contents', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/forms')
+          asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.post('/v1/forms/withAttachments/attachments/goodone.csv')
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
               .send('test,csv\n1,2')
               .set('Content-Type', 'text/csv')
               .expect(200)
-              .then(() => asAlice.delete('/v1/forms/withAttachments/attachments/goodone.csv')
+              .then(() => asAlice.delete('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
                 .expect(200)
-                .then(() => asAlice.get('/v1/forms/withAttachments/attachments/goodone.csv')
+                .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
                   .expect(404)))))));
 
       // n.b. setting the appropriate updatedAt value is tested above in the / GET

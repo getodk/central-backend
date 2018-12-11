@@ -4,7 +4,7 @@ const { testService } = require('../setup');
 describe('bodyParser', () => {
   it('should return a reasonable error on unparseable requests', testService((service) =>
     service.login('alice', (asAlice) =>
-      asAlice.post('/v1/submission')
+      asAlice.post('/v1/projects')
         .set('Content-Type', 'application/json')
         .send('{"broken JSON":')
         .expect(400)

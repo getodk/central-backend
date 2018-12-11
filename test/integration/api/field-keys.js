@@ -85,7 +85,7 @@ describe('api: /field-keys', () => {
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/field-keys').send({ displayName: 'test 1' }).expect(200)
           .then(() => asAlice.post('/v1/field-keys').send({ displayName: 'test 2' })
-            .then(({ body }) => service.post(`/v1/key/${body.token}/forms/simple/submissions`)
+            .then(({ body }) => service.post(`/v1/key/${body.token}/projects/1/forms/simple/submissions`)
               .send(testData.instances.simple.one)
               .set('Content-Type', 'application/xml')
               .expect(200)
@@ -151,7 +151,7 @@ describe('api: /key/:key', () => {
 
   it('should passthrough to the appropriate route with successful auth', testService((service) =>
     service.login('alice', (asAlice) => asAlice.post('/v1/field-keys').send({ displayName: 'fktest' })
-      .then(({ body }) => service.post(`/v1/key/${body.token}/forms/simple/submissions`)
+      .then(({ body }) => service.post(`/v1/key/${body.token}/projects/1/forms/simple/submissions`)
         .send(testData.instances.simple.one)
         .set('Content-Type', 'application/xml')
         .expect(200)))));

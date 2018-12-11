@@ -6,56 +6,59 @@ const { zipStreamToFiles } = require('../../util/zip');
 describe('api: /submission', () => {
   describe('HEAD', () => {
     it('should return a 204 with no content', testService((service) =>
-      service.head('/v1/submission').expect(204)));
+      service.head('/v1/projects/1/submission').expect(204)));
 
     it('should fail on authentication given broken credentials', testService((service) =>
-      service.head('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/submission')
+      service.head('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/submission')
         .expect(401)));
   });
 
   describe('POST', () => {
     it('should reject if no xml file is given', testService((service) =>
-      service.post('/v1/submission')
-        .set('X-OpenRosa-Version', '1.0')
-        .set('Content-Type', 'text/xml')
-        .send(testData.instances.simple2.one)
-        .expect(400)
-        .then(({ text }) => {
-          text.should.match(/Required multipart POST field xml_submission_file missing./);
-        })));
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .set('Content-Type', 'text/xml')
+          .send(testData.instances.simple2.one)
+          .expect(400)
+          .then(({ text }) => {
+            text.should.match(/Required multipart POST field xml_submission_file missing./);
+          }))));
 
     it('should reject if the xml is not valid', testService((service) =>
-      service.post('/v1/submission')
-        .set('X-OpenRosa-Version', '1.0')
-        .attach('xml_submission_file', Buffer.from('<test'), { filename: 'data.xml' })
-        .expect(400)
-        .then(({ text }) => { text.should.match(/form ID xml attribute/i); })));
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from('<test'), { filename: 'data.xml' })
+          .expect(400)
+          .then(({ text }) => { text.should.match(/form ID xml attribute/i); }))));
 
     it('should return notfound if the form does not exist', testService((service) =>
-      service.post('/v1/submission')
-        .set('X-OpenRosa-Version', '1.0')
-        .attach('xml_submission_file', Buffer.from('<data id="nonexistent"><field/></data>'), { filename: 'data.xml' })
-        .expect(404)));
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from('<data id="nonexistent"><field/></data>'), { filename: 'data.xml' })
+          .expect(404))));
 
     it('should reject if the user cannot submit', testService((service) =>
-      service.post('/v1/submission')
+      service.post('/v1/projects/1/submission')
         .set('X-OpenRosa-Version', '1.0')
         .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
         .expect(403)));
 
     it('should reject if the form is not taking submissions', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.patch('/v1/forms/simple')
+        asAlice.patch('/v1/projects/1/forms/simple')
           .send({ state: 'closed' })
           .expect(200)
-          .then(() => asAlice.post('/v1/submission')
+          .then(() => asAlice.post('/v1/projects/1/submission')
             .set('X-OpenRosa-Version', '1.0')
             .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
             .expect(409)))));
 
     it('should reject if the form and submission versions mismatch', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/submission')
+        asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
           .attach('xml_submission_file', Buffer.from('<data id="simple" version="-1"><orx:meta><orx:instanceID>one</orx:instanceID></orx:meta></data>'), { filename: 'data.xml' })
           .expect(400)
@@ -65,14 +68,14 @@ describe('api: /submission', () => {
 
     it('should save the submission to the appropriate form', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/submission')
+        asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .expect(201)
           .then(({ text }) => {
             text.should.match(/upload was successful/);
           })
-          .then(() => asAlice.get('/v1/forms/simple/submissions/one')
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
             .set('X-Extended-Metadata', 'true')
             .expect(200)
             .then(({ body }) => {
@@ -84,13 +87,13 @@ describe('api: /submission', () => {
     // no point in replicating it.
     it('should save given attachments', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/submission')
+        asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
           .attach('file1.txt', Buffer.from('this is test file one'), { filename: 'file1.txt' })
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .attach('file2.txt', Buffer.from('this is test file two'), { filename: 'file2.txt' })
           .expect(201)
-          .then(() => asAlice.get('/v1/forms/simple/submissions/one/attachments')
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/attachments')
             .expect(200)
             .then(({ body }) => {
               body.should.containDeep([ 'file1.txt', 'file2.txt' ]);
@@ -98,11 +101,11 @@ describe('api: /submission', () => {
 
     it('should reject if the xml changes between posts', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/submission')
+        asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .expect(201)
-          .then(() => asAlice.post('/v1/submission')
+          .then(() => asAlice.post('/v1/projects/1/submission')
             .set('X-OpenRosa-Version', '1.0')
             .attach('xml_submission_file', Buffer.from('<data id="simple"><meta><instanceID>one</instanceID></meta></data>'), { filename: 'data.xml' })
             .expect(409)
@@ -112,17 +115,17 @@ describe('api: /submission', () => {
 
     it('should take in additional attachments via additional POSTs', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/submission')
+        asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
           .attach('file1.txt', Buffer.from('this is test file one'), { filename: 'file1.txt' })
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .expect(201)
-          .then(() => asAlice.post('/v1/submission')
+          .then(() => asAlice.post('/v1/projects/1/submission')
             .set('X-OpenRosa-Version', '1.0')
             .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
             .attach('file2.txt', Buffer.from('this is test file two'), { filename: 'file2.txt' })
             .expect(201)
-            .then(() => asAlice.get('/v1/forms/simple/submissions/one/attachments')
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/attachments')
               .expect(200)
               .then(({ body }) => {
                 body.should.eql([ 'file1.txt', 'file2.txt' ]);
@@ -130,7 +133,7 @@ describe('api: /submission', () => {
 
     it('should reject given conflicting attachment names', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/submission')
+        asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .attach('file1.txt', Buffer.from('this is test file one'), { filename: 'file1.txt' })
@@ -144,12 +147,12 @@ describe('api: /submission', () => {
     // no point in replicating it.
     it('should successfully save attachment binary data', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/submission')
+        asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .attach('file1.txt', Buffer.from('this is test file one'), { filename: 'file1.txt' })
           .expect(201)
-          .then(() => asAlice.get('/v1/forms/simple/submissions/one/attachments/file1.txt')
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/attachments/file1.txt')
             .expect(200)
             .then(({ headers, text }) => {
               headers['content-type'].should.equal('text/plain; charset=utf-8');
@@ -162,31 +165,32 @@ describe('api: /submission', () => {
 describe('api: /forms/:id/submissions', () => {
   describe('POST', () => {
     it('should return notfound if the form does not exist', testService((service) =>
-      service.post('/v1/forms/nonexistent/submissions')
-        .send(testData.instances.simple.one)
-        .set('Content-Type', 'text/xml')
-        .expect(404)));
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/nonexistent/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(404))));
 
     it('should reject if the user cannot submit', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.post('/v1/forms/simple/submissions')
+        asChelsea.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'text/xml')
           .expect(403))));
 
     it('should reject if the form is not taking submissions', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.patch('/v1/forms/simple')
+        asAlice.patch('/v1/projects/1/forms/simple')
           .send({ state: 'closed' })
           .expect(200)
-          .then(() => asAlice.post('/v1/forms/simple/submissions')
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
             .send(testData.instances.simple.one)
             .set('Content-Type', 'application/xml')
             .expect(409)))));
 
     it('should reject if the submission body is not valid xml', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms/simple/submissions')
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send('<aoeu')
           .set('Content-Type', 'text/xml')
           .expect(400)
@@ -197,7 +201,7 @@ describe('api: /forms/:id/submissions', () => {
 
     it('should reject if the form ids do not match', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms/simple/submissions')
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.withrepeat.one)
           .set('Content-Type', 'text/xml')
           .expect(400)
@@ -208,10 +212,10 @@ describe('api: /forms/:id/submissions', () => {
 
     it('should reject if the form is not taking submissions', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.patch('/v1/forms/simple')
+        asAlice.patch('/v1/projects/1/forms/simple')
           .send({ state: 'closed' })
           .expect(200)
-          .then(() => asAlice.post('/v1/forms/simple/submissions')
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
             .send(testData.instances.simple.one)
             .set('Content-Type', 'text/xml')
             .expect(409)
@@ -222,7 +226,7 @@ describe('api: /forms/:id/submissions', () => {
 
     it('should reject if the form and submission versions do not match', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms/simple/submissions')
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(Buffer.from('<data id="simple" version="-1"><meta><instanceID>one</instanceID></meta></data>'))
           .set('Content-Type', 'text/xml')
           .expect(400)
@@ -233,7 +237,7 @@ describe('api: /forms/:id/submissions', () => {
 
     it('should submit if all details are provided', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms/simple/submissions')
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
@@ -247,20 +251,20 @@ describe('api: /forms/:id/submissions', () => {
   describe('.csv.zip GET', () => {
     it('should return a zipfile with the relevant data', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms/simple/submissions')
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => asAlice.post('/v1/forms/simple/submissions')
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
             .send(testData.instances.simple.two)
             .set('Content-Type', 'text/xml')
             .expect(200))
-          .then(() => asAlice.post('/v1/forms/simple/submissions')
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
             .send(testData.instances.simple.three)
             .set('Content-Type', 'text/xml')
             .expect(200))
           .then(() => new Promise((done) =>
-            zipStreamToFiles(asAlice.get('/v1/forms/simple/submissions.csv.zip'), (result) => {
+            zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
               const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
               csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY' ]);
@@ -275,19 +279,19 @@ describe('api: /forms/:id/submissions', () => {
 
     it('should return a zipfile with the relevant attachments', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/submission')
+        asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .attach('file1.txt', Buffer.from('this is test file one'), { filename: 'file1.txt' })
           .attach('file2.txt', Buffer.from('this is test file two'), { filename: 'file2.txt' })
           .expect(201)
-          .then(() => asAlice.post('/v1/submission')
+          .then(() => asAlice.post('/v1/projects/1/submission')
             .set('X-OpenRosa-Version', '1.0')
             .attach('xml_submission_file', Buffer.from(testData.instances.simple.two), { filename: 'data.xml' })
             .attach('file1.txt', Buffer.from('this is test file three'), { filename: 'file1.txt' })
             .expect(201))
           .then(() => new Promise((done) =>
-            zipStreamToFiles(asAlice.get('/v1/forms/simple/submissions.csv.zip'), (result) => {
+            zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
               result.filenames.should.containDeep([
                 'simple.csv',
                 'files/one/file1.txt',
@@ -306,15 +310,15 @@ describe('api: /forms/:id/submissions', () => {
   describe('GET', () => {
     it('should return notfound if the form does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms/nonexistent/submissions').expect(404))));
+        asAlice.get('/v1/projects/1/forms/nonexistent/submissions').expect(404))));
 
     it('should reject if the user cannot read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.get('/v1/forms/simple/submissions').expect(403))));
+        asChelsea.get('/v1/projects/1/forms/simple/submissions').expect(403))));
 
     it('should happily return given no submissions', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms/simple/submissions')
+        asAlice.get('/v1/projects/1/forms/simple/submissions')
           .expect(200)
           .then(({ body }) => {
             body.should.eql([]);
@@ -322,15 +326,15 @@ describe('api: /forms/:id/submissions', () => {
 
     it('should return a list of submissions', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms/simple/submissions')
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => asAlice.post('/v1/forms/simple/submissions')
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
             .send(testData.instances.simple.two)
             .set('Content-Type', 'text/xml')
             .expect(200))
-          .then(() => asAlice.get('/v1/forms/simple/submissions')
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions')
             .expect(200)
             .then(({ body }) => {
               body.forEach((submission) => submission.should.be.a.Submission());
@@ -339,11 +343,11 @@ describe('api: /forms/:id/submissions', () => {
 
     it('should list with extended metadata if requested', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms/simple/submissions')
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => asAlice.get('/v1/forms/simple/submissions')
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions')
             .set('X-Extended-Metadata', 'true')
             .expect(200)
             .then(({ body }) => {
@@ -357,11 +361,11 @@ describe('api: /forms/:id/submissions', () => {
   describe('/:instanceId.xml GET', () => {
     it('should return submission details', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms/simple/submissions')
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => asAlice.get('/v1/forms/simple/submissions/one.xml')
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one.xml')
             .expect(200)
             .then(({ header, text }) => {
               header['content-type'].should.equal('application/xml; charset=utf-8');
@@ -372,28 +376,28 @@ describe('api: /forms/:id/submissions', () => {
   describe('/:instanceId GET', () => {
     it('should return notfound if the form does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms/nonexistent/submissions/one').expect(404))));
+        asAlice.get('/v1/projects/1/forms/nonexistent/submissions/one').expect(404))));
 
     it('should return notfound if the submission does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms/simple/submissions/nonexistent').expect(404))));
+        asAlice.get('/v1/projects/1/forms/simple/submissions/nonexistent').expect(404))));
 
     it('should reject if the user cannot read', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms/simple/submissions')
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
           .then(() => service.login('chelsea', (asChelsea) =>
-            asChelsea.get('/v1/forms/simple/submissions/one').expect(403))))));
+            asChelsea.get('/v1/projects/1/forms/simple/submissions/one').expect(403))))));
 
     it('should return submission details', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms/simple/submissions')
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => asAlice.get('/v1/forms/simple/submissions/one')
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
             .expect(200)
             .then(({ body }) => {
               body.should.be.a.Submission();
@@ -402,11 +406,11 @@ describe('api: /forms/:id/submissions', () => {
 
     it('should return with extended metadata if requested', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms/simple/submissions')
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => asAlice.get('/v1/forms/simple/submissions/one')
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
             .set('X-Extended-Metadata', 'true')
             .expect(200)
             .then(({ body }) => {
@@ -421,28 +425,28 @@ describe('api: /forms/:id/submissions', () => {
   describe('/:instanceId/attachments GET', () => {
     it('should return notfound if the form does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms/nonexistent/submissions/one/attachments').expect(404))));
+        asAlice.get('/v1/projects/1/forms/nonexistent/submissions/one/attachments').expect(404))));
 
     it('should return notfound if the submission does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms/simple/submissions/nonexistent/attachments').expect(404))));
+        asAlice.get('/v1/projects/1/forms/simple/submissions/nonexistent/attachments').expect(404))));
 
     it('should reject if the user cannot read', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms/simple/submissions')
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
           .then(() => service.login('chelsea', (asChelsea) =>
-            asChelsea.get('/v1/forms/simple/submissions/one/attachments').expect(403))))));
+            asChelsea.get('/v1/projects/1/forms/simple/submissions/one/attachments').expect(403))))));
 
     it('should happily return given no attachments', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms/simple/submissions')
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => asAlice.get('/v1/forms/simple/submissions/one/attachments')
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/attachments')
             .expect(200)
             .then(({ body }) => {
               body.should.eql([]);
@@ -454,29 +458,29 @@ describe('api: /forms/:id/submissions', () => {
   describe('/:instanceId/attachments/:name GET', () => {
     it('should return notfound if the form does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms/nonexistent/submissions/one/attachments/file.txt').expect(404))));
+        asAlice.get('/v1/projects/1/forms/nonexistent/submissions/one/attachments/file.txt').expect(404))));
 
     it('should return notfound if the submission does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms/simple/submissions/nonexistent/attachments/file.txt').expect(404))));
+        asAlice.get('/v1/projects/1/forms/simple/submissions/nonexistent/attachments/file.txt').expect(404))));
 
     it('should return notfound if the attachment does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms/simple/submissions')
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => asAlice.get('/v1/forms/simple/submissions/one/attachments/file.txt').expect(404)))));
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/attachments/file.txt').expect(404)))));
 
     it('should reject if the user cannot read', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/submission')
+        asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .attach('file.txt', Buffer.from('this is test file one'), { filename: 'file.txt' })
           .expect(201)
           .then(() => service.login('chelsea', (asChelsea) =>
-            asChelsea.get('/v1/forms/simple/submissions/one/attachments/file.txt').expect(403))))));
+            asChelsea.get('/v1/projects/1/forms/simple/submissions/one/attachments/file.txt').expect(403))))));
   });
 });
 
