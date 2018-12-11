@@ -571,6 +571,21 @@ describe('api: /forms', () => {
                   .then(({ text }) => {
                     text.should.equal('replaced,csv\n3,4');
                   })))))));
+
+      it('should allow the same file in different slots', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/forms/withAttachments/attachments/goodone.csv')
+              .send('test,csv\n1,2')
+              .set('Content-Type', 'text/csv')
+              .expect(200)
+              .then(() => asAlice.post('/v1/forms/withAttachments/attachments/goodtwo.mp3')
+                .send('test,csv\n1,2')
+                .set('Content-Type', 'text/csv')
+                .expect(200))))));
     });
 
     // these tests mostly necessarily depend on /:name POST:
