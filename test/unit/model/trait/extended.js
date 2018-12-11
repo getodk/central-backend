@@ -5,8 +5,9 @@ const { ExtendedInstance, HasExtended } = require('../../../../lib/model/trait/e
 describe('ExtendedInstance/HasExtended', () => {
   // convenience test helper that completes the dependency injection shuffle-dance.
   const complete = (partial, container = {}) => {
-    partial[1](container);
-    return partial[0];
+    let result;
+    partial((instance) => { result = instance; })(container);
+    return result;
   };
 
   it('should add an Extended property containing a subclass', () => {
