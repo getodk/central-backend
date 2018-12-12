@@ -160,12 +160,17 @@ describe('api: /projects', () => {
           .send({ name: 'New Test Name' })
           .expect(403))));
 
-    it('should update the project name', testService((service) =>
+    it('should update the project name and return the new project data', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1')
           .set('Content-Type', 'application/json')
           .send({ name: 'New Test Name' })
           .expect(200)
+          .then(({ body }) => {
+            body.should.be.a.Project();
+            body.name.should.equal('New Test Name');
+          })
+          // paranoia:
           .then(() => asAlice.get('/v1/projects/1')
             .expect(200)
             .then(({ body }) => {
