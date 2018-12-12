@@ -51,13 +51,24 @@ describe('ExtendedInstance/HasExtended', () => {
 
   it('should override fields if given', () => {
     const ExtendedBase = ExtendedInstance({
+      fields: { readable: [ 'extended', 'base', 'fields' ] }
+    });
+    const SimpleBase = complete(Instance.with(HasExtended(ExtendedBase))(null, {
+      readable: [ 'base', 'fields' ]
+    })(() => class {}));
+
+    SimpleBase.Extended.fields.readable.should.eql([ 'extended', 'base', 'fields' ]);
+  });
+
+  it('should never override fields.all', () => {
+    const ExtendedBase = ExtendedInstance({
       fields: { all: [ 'extended', 'base', 'fields' ] }
     });
     const SimpleBase = complete(Instance.with(HasExtended(ExtendedBase))(null, {
       all: [ 'base', 'fields' ]
     })(() => class {}));
 
-    SimpleBase.Extended.fields.all.should.eql([ 'extended', 'base', 'fields' ]);
+    SimpleBase.Extended.fields.all.should.eql([ 'base', 'fields' ]);
   });
 
   it('should leave fields alone if not provided', () => {
