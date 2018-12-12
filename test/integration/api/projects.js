@@ -1,5 +1,6 @@
 const should = require('should');
 const { testService } = require('../setup');
+const testData = require('../data');
 
 describe('api: /projects', () => {
   describe('GET', () => {
@@ -15,6 +16,38 @@ describe('api: /projects', () => {
             body.length.should.equal(1);
             body[0].should.be.a.Project();
           }))));
+
+    it('should return extended metadata if requested', testService((service) =>
+      service.login('alice', (asAlice) => Promise.all([
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200),
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200),
+        asAlice.post('/v1/projects')
+          .send({ name: 'A Test Project' })
+          .set('Content-Type', 'application/json')
+          .expect(200)
+      ])
+        .then(() => asAlice.get('/v1/projects')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(2);
+            body[0].should.be.an.ExtendedProject();
+            body[1].should.be.an.ExtendedProject();
+
+            body[0].name.should.equal('A Test Project');
+            body[0].forms.should.equal(0);
+            should.not.exist(body[0].lastSubmission);
+
+            body[1].name.should.equal('Default Project');
+            body[1].forms.should.equal(2);
+            body[1].lastSubmission.should.be.a.recentIsoDate();
+          })))));
   });
 
   describe('POST', () => {
@@ -82,6 +115,35 @@ describe('api: /projects', () => {
             body.name.should.equal('Default Project');
             body.should.be.a.Project();
           }))));
+
+    it('should return extended metadata if requested', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.an.ExtendedProject();
+            body.forms.should.equal(2);
+            should.not.exist(body.lastSubmission);
+          })
+          .then(() => Promise.all([
+            asAlice.post('/v1/projects/1/forms/simple/submissions')
+              .send(testData.instances.simple.one)
+              .set('Content-Type', 'application/xml')
+              .expect(200),
+            asAlice.post('/v1/projects/1/forms/simple/submissions')
+              .send(testData.instances.simple.two)
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+          ]))
+          .then(() => asAlice.get('/v1/projects/1')
+            .set('X-Extended-Metadata', 'true')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.an.ExtendedProject();
+              body.forms.should.equal(2);
+              body.lastSubmission.should.be.a.recentIsoDate();
+            })))));
   });
 
   describe('/:id PATCH', () => {

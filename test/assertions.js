@@ -135,3 +135,12 @@ should.Assertion.add('Project', function() {
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 
+should.Assertion.add('ExtendedProject', function() {
+  this.params = { operator: 'to be a Project' };
+
+  this.obj.should.be.a.Project();
+  Object.keys(this.obj).should.containDeep([ 'forms', 'lastSubmission' ]);
+  this.obj.forms.should.be.a.Number();
+  if (this.obj.lastSubmission != null) this.obj.lastSubmission.should.be.an.isoDate();
+});
+
