@@ -21,13 +21,13 @@ describe('task: accounts', () => {
     // species to verify the */* grant. eventually we should be more precise.
     it('should promote a user account to admin', testTask(({ Actee, User }) =>
       User.fromApi({ email: 'testuser@opendatakit.org', displayName: 'test user' }).create()
-        .then((user) => user.actor.can('create', User.species()))
+        .then((user) => user.actor.can('user.create', User.species()))
         .then((allowed) => {
           allowed.should.equal(false);
           return promoteUser('testuser@opendatakit.org')
             .then(() => User.getByEmail('testuser@opendatakit.org')
               .then(getOrNotFound)
-              .then((user) => user.actor.can('create', User.species()))
+              .then((user) => user.actor.can('user.create', User.species()))
               .then((allowed) => allowed.should.equal(true)));
         })));
   });
