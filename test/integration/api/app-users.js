@@ -143,6 +143,17 @@ describe('api: /projects/:id/app-users', () => {
           .then(() => asAlice.get('/v1/projects/1/app-users')
             .expect(200)
             .then(({ body }) => body.should.eql([]))))));
+
+    it('should only delete the token if it is part of the project', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects')
+          .send({ name: 'project 2' })
+          .expect(200)
+          .then((project) => asAlice.post('/v1/projects/1/app-users')
+            .send({ displayName: 'fktest' })
+            .expect(200)
+            .then(({ body }) => asAlice.delete(`/v1/projects/2/app-users/${body.id}`)
+              .expect(404))))));
   });
 });
 
