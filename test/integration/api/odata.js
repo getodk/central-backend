@@ -11,19 +11,20 @@ const testData = require('../data');
 describe('api: /forms/:id.svc', () => {
   describe('GET', () => {
     it('should reject unless the form exists', testService((service) =>
-      service.get('/v1/forms/nonexistent.svc').expect(404)));
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/nonexistent.svc').expect(404))));
 
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.get('/v1/forms/simple.svc').expect(403))));
+        asChelsea.get('/v1/projects/1/forms/simple.svc').expect(403))));
 
     it('should return an OData service document', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms/withrepeat.svc')
+        asAlice.get('/v1/projects/1/forms/withrepeat.svc')
           .expect(200)
           .then(({ body }) => {
             body.should.eql({
-              '@odata.context': 'http://localhost:8989/v1/forms/withrepeat.svc/$metadata',
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata',
               value: [
                 { name: 'Submissions', kind: 'EntitySet', url: 'Submissions' },
                 { name: 'Submissions.children.child', kind: 'EntitySet', url: 'Submissions.children.child' }
@@ -33,7 +34,7 @@ describe('api: /forms/:id.svc', () => {
 
     it('should set the appropriate response headers', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms/withrepeat.svc')
+        asAlice.get('/v1/projects/1/forms/withrepeat.svc')
           .expect(200)
           .then(({ headers }) => {
             headers['odata-version'].should.equal('4.0');
@@ -43,15 +44,16 @@ describe('api: /forms/:id.svc', () => {
 
   describe('/$metadata GET', () => {
     it('should reject unless the form exists', testService((service) =>
-      service.get('/v1/forms/nonexistent.svc/$metadata').expect(404)));
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/nonexistent.svc/$metadata').expect(404))));
 
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.get('/v1/forms/simple.svc/$metadata').expect(403))));
+        asChelsea.get('/v1/projects/1/forms/simple.svc/$metadata').expect(403))));
 
     it('should return an EDMX metadata document', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms/simple.svc/$metadata')
+        asAlice.get('/v1/projects/1/forms/simple.svc/$metadata')
           .expect(200)
           .then(({ text, headers }) => {
             text.should.startWith('<?xml version="1.0" encoding="UTF-8"?>\n<edmx:Edmx');
@@ -60,19 +62,20 @@ describe('api: /forms/:id.svc', () => {
 
   describe("/Submissions(id)/… GET", () => {
     it('should reject unless the form exists', testService((service) =>
-      service.get("/v1/forms/nonexistent.svc/Submissions('xyz')").expect(404)));
+      service.login('alice', (asAlice) =>
+        asAlice.get("/v1/projects/1/forms/nonexistent.svc/Submissions('xyz')").expect(404))));
 
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.get("/v1/forms/simple.svc/Submissions('xyz')").expect(403))));
+        asChelsea.get("/v1/projects/1/forms/simple.svc/Submissions('xyz')").expect(403))));
 
     const withSubmission = (service, callback) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms')
+        asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.doubleRepeat)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => asAlice.post('/v1/forms/doubleRepeat/submissions')
+          .then(() => asAlice.post('/v1/projects/1/forms/doubleRepeat/submissions')
             .send(testData.instances.doubleRepeat.double)
             .set('Content-Type', 'text/xml')
             .expect(200)
@@ -80,11 +83,11 @@ describe('api: /forms/:id.svc', () => {
 
     it('should reject if the submission does not exist', testService((service) =>
       withSubmission(service, (asAlice) =>
-        asAlice.get("/v1/forms/doubleRepeat.svc/Submissions('nonexistent')").expect(404))));
+        asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('nonexistent')").expect(404))));
 
     it('should return a single row result', testService((service) =>
       withSubmission(service, (asAlice) =>
-        asAlice.get("/v1/forms/doubleRepeat.svc/Submissions('double')")
+        asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')")
           .expect(200)
           .then(({ body }) => {
             // have to manually check and clear the date for exact match:
@@ -92,7 +95,7 @@ describe('api: /forms/:id.svc', () => {
             delete body.value[0].__system.submissionDate;
 
             body.should.eql({
-              '@odata.context': 'http://localhost:8989/v1/forms/doubleRepeat.svc/$metadata#Submissions',
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions',
               value: [{
                 __id: "double",
                 __system: {
@@ -109,11 +112,11 @@ describe('api: /forms/:id.svc', () => {
 
     it('should return subtable results', testService((service) =>
       withSubmission(service, (asAlice) =>
-        asAlice.get("/v1/forms/doubleRepeat.svc/Submissions('double')/children/child")
+        asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')/children/child")
           .expect(200)
           .then(({ body }) => {
             body.should.eql({
-              '@odata.context': 'http://localhost:8989/v1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
               value: [{
                 __id: '46ebf42ee83ddec5028c42b2c054402d1e700208',
                 '__Submissions-id': 'double',
@@ -134,12 +137,12 @@ describe('api: /forms/:id.svc', () => {
 
     it('should limit and offset subtable results', testService((service) =>
       withSubmission(service, (asAlice) =>
-        asAlice.get("/v1/forms/doubleRepeat.svc/Submissions('double')/children/child?$top=1&$skip=1")
+        asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')/children/child?$top=1&$skip=1")
           .expect(200)
           .then(({ body }) => {
             body.should.eql({
-              '@odata.context': 'http://localhost:8989/v1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
-              '@odata.nextLink': "http://localhost:8989/v1/forms/doubleRepeat.svc/Submissions('double')/children/child?%24skip=2",
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
+              '@odata.nextLink': "http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')/children/child?%24skip=2",
               value: [{
                 __id: 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
                 '__Submissions-id': 'double',
@@ -152,23 +155,24 @@ describe('api: /forms/:id.svc', () => {
 
   describe("/Submissions.xyz.* GET", () => {
     it('should reject unless the form exists', testService((service) =>
-      service.get("/v1/forms/nonexistent.svc/Submissions").expect(404)));
+      service.login('alice', (asAlice) =>
+        asAlice.get("/v1/projects/1/forms/nonexistent.svc/Submissions").expect(404))));
 
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.get("/v1/forms/simple.svc/Submissions").expect(403))));
+        asChelsea.get("/v1/projects/1/forms/simple.svc/Submissions").expect(403))));
 
     const withSubmissions = (service, callback) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/forms/withrepeat/submissions')
+        asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
           .send(testData.instances.withrepeat.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => asAlice.post('/v1/forms/withrepeat/submissions')
+          .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
             .send(testData.instances.withrepeat.two)
             .set('Content-Type', 'text/xml')
             .expect(200)
-            .then(() => asAlice.post('/v1/forms/withrepeat/submissions')
+            .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
               .send(testData.instances.withrepeat.three)
               .set('Content-Type', 'text/xml')
               .expect(200)
@@ -176,7 +180,7 @@ describe('api: /forms/:id.svc', () => {
 
     it('should return toplevel rows', testService((service) =>
       withSubmissions(service, (asAlice) =>
-        asAlice.get('/v1/forms/withrepeat.svc/Submissions')
+        asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions')
           .expect(200)
           .then(({ body }) => {
             for (const idx of [ 0, 1, 2 ]) {
@@ -185,7 +189,7 @@ describe('api: /forms/:id.svc', () => {
             }
 
             body.should.eql({
-              '@odata.context': 'http://localhost:8989/v1/forms/withrepeat.svc/$metadata#Submissions',
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
               value: [{
                 __id: "three",
                 __system: {
@@ -224,7 +228,7 @@ describe('api: /forms/:id.svc', () => {
 
     it('should return a count even if there are no rows', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/forms/withrepeat.svc/Submissions?$count=true')
+        asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$count=true')
           .expect(200)
           .then(({ body }) => {
             body['@odata.count'].should.equal(0);
@@ -232,11 +236,11 @@ describe('api: /forms/:id.svc', () => {
 
     it('should return subtable results', testService((service) =>
       withSubmissions(service, (asAlice) =>
-        asAlice.get('/v1/forms/withrepeat.svc/Submissions.children.child')
+        asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child')
           .expect(200)
           .then(({ body }) => {
             body.should.eql({
-              '@odata.context': 'http://localhost:8989/v1/forms/withrepeat.svc/$metadata#Submissions.children.child',
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions.children.child',
               value: [{
                 __id: 'beaedcdba519e6e6b8037605c9ae3f6a719984fa',
                 '__Submissions-id': 'three',
@@ -258,15 +262,15 @@ describe('api: /forms/:id.svc', () => {
 
     it('should limit and offset toplevel rows', testService((service) =>
       withSubmissions(service, (asAlice) =>
-        asAlice.get("/v1/forms/withrepeat.svc/Submissions?$top=1&$skip=1")
+        asAlice.get("/v1/projects/1/forms/withrepeat.svc/Submissions?$top=1&$skip=1")
           .expect(200)
           .then(({ body }) => {
             body.value[0].__system.submissionDate.should.be.an.isoDate();
             delete body.value[0].__system.submissionDate;
 
             body.should.eql({
-              '@odata.context': 'http://localhost:8989/v1/forms/withrepeat.svc/$metadata#Submissions',
-              '@odata.nextLink': "http://localhost:8989/v1/forms/withrepeat.svc/Submissions?%24skip=2",
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+              '@odata.nextLink': "http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24skip=2",
               value: [{
                 __id: "two",
                 __system: {
@@ -284,15 +288,15 @@ describe('api: /forms/:id.svc', () => {
 
     it('should provide toplevel row count if requested', testService((service) =>
       withSubmissions(service, (asAlice) =>
-        asAlice.get("/v1/forms/withrepeat.svc/Submissions?$top=1&$count=true")
+        asAlice.get("/v1/projects/1/forms/withrepeat.svc/Submissions?$top=1&$count=true")
           .expect(200)
           .then(({ body }) => {
             body.value[0].__system.submissionDate.should.be.an.isoDate();
             delete body.value[0].__system.submissionDate;
 
             body.should.eql({
-              '@odata.context': 'http://localhost:8989/v1/forms/withrepeat.svc/$metadata#Submissions',
-              '@odata.nextLink': "http://localhost:8989/v1/forms/withrepeat.svc/Submissions?%24count=true&%24skip=1",
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+              '@odata.nextLink': "http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24count=true&%24skip=1",
               '@odata.count': 3,
               value: [{
                 __id: "three",
@@ -311,12 +315,12 @@ describe('api: /forms/:id.svc', () => {
 
     it('should limit and offset subtable results', testService((service) =>
       withSubmissions(service, (asAlice) =>
-        asAlice.get("/v1/forms/withrepeat.svc/Submissions.children.child?$top=1&$skip=1")
+        asAlice.get("/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=1&$skip=1")
           .expect(200)
           .then(({ body }) => {
             body.should.eql({
-              '@odata.context': 'http://localhost:8989/v1/forms/withrepeat.svc/$metadata#Submissions.children.child',
-              '@odata.nextLink': "http://localhost:8989/v1/forms/withrepeat.svc/Submissions.children.child?%24skip=2",
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions.children.child',
+              '@odata.nextLink': "http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24skip=2",
               value: [{
                 __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d',
                 '__Submissions-id': 'two',
