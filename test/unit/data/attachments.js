@@ -10,18 +10,18 @@ describe('.zip attachments streaming', () => {
     const inStream = streamTest.fromObjects([
       { instanceId: 'subone', name: 'firstfile.ext', content: 'this is my first file' },
       { instanceId: 'subone', name: 'secondfile.ext', content: 'this is my second file' },
-      { instanceId: 'subtwo', name: 'firstfile.ext', content: 'this is my other first file' }
+      { instanceId: 'subtwo', name: 'thirdfile.ext', content: 'this is my third file' }
     ]);
     zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream)), (result) => {
       result.filenames.should.eql([
-        'files/subone/firstfile.ext', 
-        'files/subone/secondfile.ext', 
-        'files/subtwo/firstfile.ext'
+        'media/firstfile.ext', 
+        'media/secondfile.ext', 
+        'media/thirdfile.ext'
       ]);
 
-      result['files/subone/firstfile.ext'].should.equal('this is my first file');
-      result['files/subone/secondfile.ext'].should.equal('this is my second file');
-      result['files/subtwo/firstfile.ext'].should.equal('this is my other first file');
+      result['media/firstfile.ext'].should.equal('this is my first file');
+      result['media/secondfile.ext'].should.equal('this is my second file');
+      result['media/thirdfile.ext'].should.equal('this is my third file');
 
       done();
     });
@@ -35,9 +35,9 @@ describe('.zip attachments streaming', () => {
     ]);
     zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream)), (result) => {
       result.filenames.should.eql([
-        'files/..subone/firstfile.ext',
-        'files/subone/..secondfile.ext',
-        'files/subone/..secondfile.ext'
+        'media/firstfile.ext',
+        'media/..secondfile.ext',
+        'media/..secondfile.ext'
       ]);
 
       done();
