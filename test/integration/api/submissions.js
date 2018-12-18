@@ -284,20 +284,20 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => asAlice.post('/v1/submission')
             .set('X-OpenRosa-Version', '1.0')
             .attach('xml_submission_file', Buffer.from(testData.instances.simple.two), { filename: 'data.xml' })
-            .attach('file1.txt', Buffer.from('this is test file three'), { filename: 'file1.txt' })
+            .attach('file3.txt', Buffer.from('this is test file three'), { filename: 'file3.txt' })
             .expect(201))
           .then(() => new Promise((done) =>
             zipStreamToFiles(asAlice.get('/v1/forms/simple/submissions.csv.zip'), (result) => {
               result.filenames.should.containDeep([
                 'simple.csv',
-                'files/one/file1.txt',
-                'files/one/file2.txt',
-                'files/two/file1.txt'
+                'media/file1.txt',
+                'media/file2.txt',
+                'media/file3.txt'
               ]);
 
-              result['files/one/file1.txt'].should.equal('this is test file one');
-              result['files/one/file2.txt'].should.equal('this is test file two');
-              result['files/two/file1.txt'].should.equal('this is test file three');
+              result['media/file1.txt'].should.equal('this is test file one');
+              result['media/file2.txt'].should.equal('this is test file two');
+              result['media/file3.txt'].should.equal('this is test file three');
 
               done();
             }))))));
