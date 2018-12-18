@@ -11,11 +11,13 @@ To use the API to manage your data collection campaigns, you will need to **auth
 
 In future versions of this server, the primary way an API consumer would authenticate with this server will be as a simple Actor through a standard OAuth 2.0 mechanism. That Actor can be granted a constrained set of rights to safely perform only all the actions it needs to. In this initial release, however, all Users are granted full administrative access, and password-based authentication as a User is the only way to gain full access to the system.
 
-The rest of system is made up mostly of standard REST resources and subresources.
+The `/users` resource can be used to create, manage, and delete **Users**. These are the staff members who have administrative rights on your server, some projects, or both. Additional tasks like resetting a user's password are also available. You could use this API to, for example, synchronize accounts with another system or mass-provision Users.
 
-The `/users` and `/field-keys` resources can be used to create, manage, and delete **Users and Field Keys**. Additional tasks like resetting a user's password are also available. You can use these resources to, for example, synchronize accounts with another system or mass-provision Users or Field Keys.
+The rest of system is made up mostly of standard REST resources and subresources, nested under and partitioned by the `/projects` Projects resource. Forms, submissions to those forms, attachments on forms or submissions, and Field Keys ("App Users" in the management interface), are all subresources within `/projects`. This way, each project is essentially its own sandbox which can be managed and manipulated at will.
 
-The `/forms` resource and its subresource `/forms/…/submissions` provide full access to create, manage, and delete **`Form`s and `Submission`s to those Forms**. Each Form is a single ODK XForms survey, and many Submissions (filled-out forms, also sometimes called `Instance`s) may be attached to each Form. These resources are somewhat unique in that they are created by sending XML in the ODK XForms format instead of JSON. One can also retrieve all the multimedia attachments associated with any submission through the `/forms/…/submissions/…/attachments` subresource.
+The `/projects/:id/field-keys` subresource can be used to create, manage, and delete **Field Keys**.
+
+The `/projects/:id/forms` resource and its subresource `/projects/:id/forms/…/submissions` provide full access to create, manage, and delete **`Form`s and `Submission`s to those Forms**. Each Form is a single ODK XForms survey, and many Submissions (filled-out forms, also sometimes called `Instance`s) may be attached to each Form. These resources are somewhat unique in that they are created by sending XML in the ODK XForms format instead of JSON. One can also retrieve all the multimedia attachments associated with any submission through the `/projects/:id/forms/…/submissions/…/attachments` subresource.
 
 Forms and their submissions are also accessible through two **open standards specifications** that we follow:
 
@@ -171,7 +173,7 @@ Note, however, that a Field Key cannot revoke itself; a `User` must perform this
 
 # Group Accounts and Users
 
-Today, there are two types of accounts: `Users`, which are the administrative accounts held by staff members managing the data collection process, and `Field Keys`, which are restricted access keys granted to data collection clients in the field. Although both of these entities are backed by `Actor`s as we explain in the [Authentication section](/reference/authentication) above, there is not yet any way to directly create or manipulate an Actor. Today, you can only create, manage, and delete Users and Field Keys.
+Today, there are two types of accounts: `Users`, which are the administrative accounts held by staff members managing the data collection process, and `Field Keys`, which are restricted access keys granted per Project to data collection clients in the field. Although both of these entities are backed by `Actor`s as we explain in the [Authentication section](/reference/authentication) above, there is not yet any way to directly create or manipulate an Actor. Today, you can only create, manage, and delete Users and Field Keys.
 
 ## Users [/v1/users]
 
@@ -309,9 +311,14 @@ If the email address provided does not match any user in the system, that addres
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-## Field Keys [/v1/field-keys]
+## Field Keys [/v1/projects/{projectId}/field-keys]
 
-Through the `Field Key`s API resource, you can create, list, and delete Field Keys. Because they have extremely limited permissions, Field Keys cannot manage themselves; only `User`s may access this API.
+Field Keys may only be created, fetched, and manipulated within the nested Projects subresource, as Field Keys themselves are limited to the Project in which they are created. Through the `Field Key`s API, you can create, list, and delete the Field Keys of any given Project. Because they have extremely limited permissions, Field Keys cannot manage themselves; only `User`s may access this API.
+
+For more information about the `/projects` containing resource, please see the following section.
+
++ Parameters
+    + projectId: `7` (number, required) - The numeric ID of the Project
 
 ### Listing all Field Keys [GET]
 
@@ -353,7 +360,7 @@ The only information required to create a new `Field Key` is its `displayName` (
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Deleting a Field Key [DELETE /v1/field-keys/{id}]
+### Deleting a Field Key [DELETE /v1/projects/{projectId}/field-keys/{id}]
 
 You don't have to delete a `Field Key` in order to cut off its access. Using a `User`'s credentials you can simply [log the Field Key's session out](/reference/authentication/field-key-authentication/revoking-a-field-key) using its token. This will end its session without actually deleting the Field Key, which allows you to still see it in the configuration panel and inspect its history. This is what the administrative panel does when you choose to "Revoke" the Field Key.
 
@@ -361,6 +368,109 @@ That said, if you do wish to delete the Field Key altogether, you can do so by i
 
 + Parameters
     + id: `16` (number, required) - The numeric ID of the Field Key
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+# Group Project Management
+
+Apart from staff users ("Web Users" in the Central management interface) and some site-wide configuration details like backups, all of ODK Central's objects (Forms, Submissions, Field Keys) are partitioned by Project, and available only as subresources below the main Projects resource.
+
+## Projects [/v1/projects]
+
+_(introduced: version 0.4.0)_
+
+You must create a containing Project before you can create any of these subobjects.
+
+### Listing all Projects [GET]
+
+Currently, there are no paging or filtering options, so listing `Project`s will get you every Project in the system, every time.
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `forms` count of forms within the Project, as well as the `lastSubmission` timestamp of the latest submission to any for in the project, if any.
+
++ Response 200 (application/json)
+    This is the standard response, if Extended Metadata is not requested:
+
+    + Attributes (array[Project])
+
++ Response 200 (application/json; extended)
+    This is the Extended Metadata response, if requested via the appropriate header:
+
+    + Attributes (array[Extended Project])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Creating a Project [POST /v1/projects]
+
+To create a Project, the only information you must supply (via POST body) is the desired name of the Project.
+
++ Request (application/json)
+    + Attributes
+        + name: `Project Name` (string, required) - The desired name of the Project.
+
+    + Body
+
+            { "name": "Project Name" }
+
++ Response 200 (application/json)
+    + Attributes (Project)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Getting Project Details [GET /v1/projects/{id}]
+
+To get just the details of a single Project, `GET` its single resource route by its numeric ID.
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `forms` count of forms within the Project, as well as the `lastSubmission` timestamp of the latest submission to any for in the project, if any.
+
++ Parameters
+    + id: `16` (number, required) - The numeric ID of the Project
+
++ Response 200 (application/json)
+    This is the standard response, if Extended Metadata is not requested:
+
+    + Attributes (Project)
+
++ Response 200 (application/json; extended)
+    This is the Extended Metadata response, if requested via the appropriate header:
+
+    + Attributes (Extended Project)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Updating Project Details [PATCH /v1/projects/{id}]
+
+Currently, the only Project information that may be updated is its name.
+
++ Parameters
+    + id: `16` (number, required) - The numeric ID of the Project
+
++ Request (application/json)
+    + Attributes
+        + name: `New Project Name` (string, required) - The desired name of the Project.
+
+    + Body
+
+            { "name": "New Project Name" }
+
++ Response 200 (application/json)
+    + Attributes (Project)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Deleting a Project [DELETE /v1/projects/{id}]
+
+Deleting a Project will remove it from the management interface and make it permanently inaccessible. Do not do this unless you are certain you will never need any of its data again.
+
++ Parameters
+    + id: `16` (number, required) - The numeric ID of the Project
 
 + Response 200 (application/json)
     + Attributes (Success)
@@ -376,13 +486,16 @@ That said, if you do wish to delete the Field Key altogether, you can do so by i
 
 These subsections cover only the modern RESTful API resources involving Forms and Submissions. For documentation on the OpenRosa endpoints (which can be used to list Forms and submit Submissions), or the OData endpoints (which can be used to bulk-export the data in the standardize OData format), see those sections below.
 
-## Forms [/v1/forms]
+## Forms [/v1/projects/{projectId}/forms]
 
 In this API, `Form`s are distinguished by their [`formId`](https://opendatakit.github.io/xforms-spec/#primary-instance)s, which are a part of the XForms XML that defines each Form. In fact, as you will see below, many of the properties of a Form are extracted automatically from the XML: `hash`, `name`, `version`, as well as the `formId` itself (which to reduce confusion internally is known as `xmlFormId` in ODK Central).
 
 The only other property Forms currently have is `state`, which can be used to control whether Forms show up in mobile clients like ODK Collect for download, as well as whether they accept new `Submission`s or not.
 
 It is not yet possible to modify a Form's XML definition once it is created.
+
++ Parameters
+    + projectId: `16` (number, required) - The numeric ID of the Project
 
 ### List all Forms [GET]
 
@@ -453,7 +566,7 @@ The API will currently check the XML's structure in order to extract the informa
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### › Individual Form [/v1/forms/{xmlFormId}]
+### › Individual Form [/v1/projects/{projectId}/forms/{xmlFormId}]
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
@@ -475,7 +588,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-#### Retrieving Form XML [GET /v1/forms/{xmlFormId}.xml]
+#### Retrieving Form XML [GET /v1/projects/{projectId}/forms/{xmlFormId}.xml]
 
 To get only the XML of the `Form` rather than all of the details with the XML as one of many properties, just add `.xml` to the end of the request URL. This endpoint primarily exists so that OpenRosa survey clients have a way to directly retrieve the XML.
 
@@ -515,7 +628,7 @@ To get only the XML of the `Form` rather than all of the details with the XML as
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-#### Retrieving Form Schema JSON [GET /v1/forms/{xmlFormId}.schema.json{?flatten}]
+#### Retrieving Form Schema JSON [GET /v1/projects/{projectId}/forms/{xmlFormId}.schema.json{?flatten}]
 
 _(introduced: version 0.2.0)_
 
@@ -583,7 +696,7 @@ Only `DELETE` a `Form` if you are sure you will never need it again. If your goa
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### › Form Attachments [/v1/forms/{xmlFormId}/attachments]
+### › Form Attachments [/v1/projects/{projectId}/forms/{xmlFormId}/attachments]
 
 Form Attachments for each form are automatically determined when the form is first created, by scanning the XForms definition for references to media or data files. Because of this, it is not possible to directly modify the list of form attachments; that list is fully determined by the given XForm. Instead, the focus of this API subresource is around communicating that expected list of files, and uploading binaries into those file slots.
 
@@ -609,7 +722,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-#### Downloading a Form Attachment [GET /v1/forms/{xmlFormId}/attachments/{filename}]
+#### Downloading a Form Attachment [GET /v1/projects/{projectId}/forms/{xmlFormId}/attachments/{filename}]
 
 To download a single file, use this endpoint. The appropriate `Content-Disposition` (attachment with a filename) and `Content-Type` (based on the type supplied at upload time) will be given.
 
@@ -629,7 +742,7 @@ To download a single file, use this endpoint. The appropriate `Content-Dispositi
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-#### Uploading a Form Attachment [POST /v1/forms/{xmlFormId}/attachments/{filename}]
+#### Uploading a Form Attachment [POST /v1/projects/{projectId}/forms/{xmlFormId}/attachments/{filename}]
 
 To upload a binary to an expected file slot, `POST` the binary to its endpoint. Supply a `Content-Type` MIME-type header if you have one.
 
@@ -647,7 +760,7 @@ To upload a binary to an expected file slot, `POST` the binary to its endpoint. 
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-#### Clearing a Form Attachment [DELETE /v1/forms/{xmlFormId}/attachments/{filename}]
+#### Clearing a Form Attachment [DELETE /v1/projects/{projectId}/forms/{xmlFormId}/attachments/{filename}]
 
 Because Form Attachments are completely determined by the XForms definition of the form itself, there is no direct way to entirely remove a Form Attachment entry from the list, only to clear its uploaded content. Thus, when you issue a `DELETE` to the attachment's endpoint, that is what happens.
 
@@ -660,11 +773,15 @@ Because Form Attachments are completely determined by the XForms definition of t
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-## Submissions [/v1/forms/{xmlFormId}/submissions]
+## Submissions [/v1/projects/{projectId}/forms/{xmlFormId}/submissions]
 
-`Submission`s are available as a subresource under `Form`s. So, for instance, `/v1/forms/myForm/submissions` refers only to the Submissions that have been submitted to the Form `myForm`.
+`Submission`s are available as a subresource under `Form`s. So, for instance, `/v1/projects/1/forms/myForm/submissions` refers only to the Submissions that have been submitted to the Form `myForm`.
 
 Once created (which, like with Forms, is done by way of their XML data rather than a JSON description), it is possible to retrieve and export Submissions in a number of ways, as well as to access the multimedia `Attachment`s associated with each Submission.
+
++ Parameters
+    + projectId: `16` (number, required) - The numeric ID of the Project
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
 
 ### Listing all Submissions on a Form [GET]
 
@@ -685,7 +802,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Exporting Form Submissions to CSV [GET /v1/forms/{xmlFormId}/submissions.csv.zip]
+### Exporting Form Submissions to CSV [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip]
 
 To export all the `Submission` data associated with a `Form`, just add `.csv.zip` to the end of the listing URL. The response will be a ZIP file containing one or more CSV files, as well as all multimedia attachments associated with the included Submissions.
 
@@ -704,7 +821,7 @@ To export all the `Submission` data associated with a `Form`, just add `.csv.zip
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Getting Submission details [GET /v1/forms/{xmlFormId}/submissions/{instanceId}]
+### Getting Submission details [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}]
 
 Like how `Form`s are addressed by their XML `formId`, individual `Submission`s are addressed in the URL by their `instanceId`.
 
@@ -727,7 +844,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-#### Retrieving Submission XML [GET /v1/forms/{xmlFormId}/submissions/{instanceId}.xml]
+#### Retrieving Submission XML [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}.xml]
 
 To get only the XML of the `Submission` rather than all of the details with the XML as one of many properties, just add `.xml` to the end of the request URL.
 
@@ -744,7 +861,7 @@ To get only the XML of the `Submission` rather than all of the details with the 
               <age>32</age>
             </data>
 
-## Attachments [/v1/forms/{xmlFormId}/submissions/{instanceId}/attachments]
+## Attachments [/v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments]
 
 When `Submission`s are created via the OpenRosa `/submission` API, multimedia files can be attached. These might be, for example, photos or video taken as part of the survey. ODK Central keeps track of which files relate to which Submission, so that they may be reliably exported again. To directly retrieve them, you can use the `/attachments` subresource on the Submissions resource. It is only possible to list and download Attachments.
 
@@ -766,7 +883,7 @@ When listing attachments, the response will be a plain JSON array containing onl
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Downloading an Attachment [GET /v1/forms/{xmlFormId}/submissions/{instanceId}/attachments/{filename}]
+### Downloading an Attachment [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments/{filename}]
 
 The `Content-Type` and `Content-Disposition` will be set appropriately based on the file itself when requesting an attachment file download.
 
@@ -806,12 +923,14 @@ In practical usage, ODK survey clients like Collect will interact with Central i
 * The [Form XML download](/reference/forms-and-submissions/'-individual-form/retrieving-form-xml) endpoint, a part of the standard REST API for Forms, is linked in the Form Listing response and allows clients to then download the ODK XForms XML for each form.
 * The OpenRosa Submission API, [documented below](/reference/openrosa-endpoints/openrosa-form-submission-api), allows survey clients to submit new Submissions to any Form.
 
+The Form Listing and Submission APIs are partitioned by Project, and their URLs are nested under the Project in question as a result. When you List or Submit, you will only be able to get forms from and submit submissions to that particular Project at a time.
+
 Where the **HTTP Request API** OpenRosa standards specification requires two headers for any request, Central requires only one:
 
 * `X-OpenRosa-Version` **must** be set to exactly `1.0` or the request will be rejected.
 * But Central does not require a `Date` header field. You may set it if you wish, but it will have no effect on Central.
 
-## OpenRosa Form Listing API [GET /v1/formList]
+## OpenRosa Form Listing API [GET /v1/projects/{projectId}/formList]
 
 This is the mostly standards-compliant implementation of the [OpenRosa Form Discovery (Listing) API](https://bitbucket.org/javarosa/javarosa/wiki/FormListAPI). We will not attempt to redocument the standard here.
 
@@ -829,6 +948,9 @@ By default, the given `<name/>` in the Form Listing response is the friendly nam
 A `<manifestUrl/>` property will be given per `<xform>` if and only if that form is expected to have media or data file attachments associated with it, based on its XForms definition. It will appear even if no attachments have actually been uploaded to the server to fulfill those expectations.
 
 If you haven't already, please take a look at the **HTTP Request API** notes above on the required OpenRosa headers.
+
++ Parameters
+    + projectId: `7` (number, required) - The numeric ID of the Project
 
 + Request
     + Headers
@@ -849,15 +971,15 @@ If you haven't already, please take a look at the **HTTP Request API** notes abo
                 <name>basic</name>
                 <version></version>
                 <hash>md5:a64817a5688dd7c17563e32d4eb1cab2</hash>
-                <downloadUrl>https://your.odk.server/v1/forms/basic.xml</downloadUrl>
-                <manifestUrl>https://your.odk.server/v1/forms/basic/manifest</manifestUrl>
+                <downloadUrl>https://your.odk.server/v1/projects/7/forms/basic.xml</downloadUrl>
+                <manifestUrl>https://your.odk.server/v1/projects/7/forms/basic/manifest</manifestUrl>
               </xform>
               <xform>
                 <formID>simple</formID>
                 <name>Simple</name>
                 <version></version>
                 <hash>md5:</hash>
-                <downloadUrl>https://your.odk.server/v1/forms/simple.xml</downloadUrl>
+                <downloadUrl>https://your.odk.server/v1/projects/7/forms/simple.xml</downloadUrl>
               </xform>
             </xforms>
 
@@ -872,7 +994,7 @@ If you haven't already, please take a look at the **HTTP Request API** notes abo
               <message nature="error">The authenticated actor does not have rights to perform that action.</message>
             </OpenRosaResponse>
 
-## OpenRosa Form Submission API [POST /v1/submission]
+## OpenRosa Form Submission API [POST /v1/projects/{projectId}/submission]
 
 This is the fully standards-compliant implementation of the [OpenRosa Form Submission API](https://bitbucket.org/javarosa/javarosa/wiki/FormSubmissionAPI). We will not attempt to redocument the standard here.
 
@@ -884,6 +1006,9 @@ Some additional things to understand when using this API:
 * As stated in the standards document, it is possible to submit multimedia attachments with the `Submission` across multiple `POST` requests to this API. _However_, we impose the additional restriction that the Submission XML (`xml_submission_file`) _may not change_ between requests. If Central sees a Submission with an `instanceId` it already knows about but the XML has changed in any way, it will respond with a `409 Conflict` error and reject the submission.
 * Central will never return a `202` in any response from this API.
 * If you haven't already, please take a look at the **HTTP Request API** notes above on the required OpenRosa headers.
+
++ Parameters
+    + projectId: `7` (number, required) - The numeric ID of the Project
 
 + Request (multipart/form-data; boundary=28b9211a964e44a3b327c3c51a0dbd32)
     + Headers
@@ -946,7 +1071,7 @@ Some additional things to understand when using this API:
               <message nature="error">A submission already exists with this ID, but with different XML. Resubmissions to attach additional multimedia must resubmit an identical xml_submission_file.</message>
             </OpenRosaResponse>
 
-## OpenRosa Form Manifest API [GET /v1/forms/{xmlFormId}/manifest]
+## OpenRosa Form Manifest API [GET /v1/projects/{projectId}/forms/{xmlFormId}/manifest]
 
 _(introduced: version 0.2.0)_
 
@@ -956,6 +1081,9 @@ A Manifest document is available at this resource path for any form in the syste
 
 * A link to this document will not be given in the [Form Listing API](/reference/openrosa-endpoints/openrosa-form-listing-api) unless we expect the form to have media or data file attachments based on the XForms definition of the form.
 * The Manifest will only output information for files the server actually has in its possession. Any missing expected files will be omitted, as we cannot provide a `hash` or `downloadUrl` for them.
+
++ Parameters
+    + projectId: `7` (number, required) - The numeric ID of the Project
 
 + Request
     + Headers
@@ -974,12 +1102,12 @@ A Manifest document is available at this resource path for any form in the syste
               <mediaFile>
                 <filename>question1.jpg</filename>
                 <hash>md5:a64817a5688dd7c17563e32d4eb1cab2</hash>
-                <downloadUrl>https://your.odk.server/v1/forms/basic/attachments/question1.jpg</downloadUrl>
+                <downloadUrl>https://your.odk.server/v1/projects/7/forms/basic/attachments/question1.jpg</downloadUrl>
               </mediaFile>
               <mediaFile>
                 <filename>question2.jpg</filename>
                 <hash>md5:a6fdc426037143cf71cced68e2532e3c</hash>
-                <downloadUrl>https://your.odk.server/v1/forms/basic/attachments/question2.jpg</downloadUrl>
+                <downloadUrl>https://your.odk.server/v1/projects/7/forms/basic/attachments/question2.jpg</downloadUrl>
               </mediaFile>
             </manifest>
 
@@ -1010,11 +1138,13 @@ In general, the OData standard protocol consists of three API endpoints:
 
 As our focus is on the bulk-export of data from ODK Central so that more advanced analysis tools can handle the data themselves, we do not support most of the features at the Intermediate and above conformance levels, like `$sort` or `$filter`.
 
-## OData Form Service [/v1/forms/{xmlFormId}.svc]
+## OData Form Service [/v1/projects/{projectId}/forms/{xmlFormId}.svc]
 
 ODK Central presents one OData service for every `Form` it knows about. Each service might have multiple tables related to that Form. To access the OData service, simply add `.svc` to the resource URL for the given Form.
 
 + Parameters
+    + projectId: `7` (number, required) - The numeric ID of the Project
+
     + `xmlFormId`: `simple` (string, required) - The `xmlFormId` of the `Form` whose OData service you wish to access.
 
 ### Service Document [GET]
@@ -1029,7 +1159,7 @@ This document is available only in JSON format.
     + Body
 
             {
-                "@odata.context": "https://your.odk.server/v1/forms/sample.svc/$metadata",
+                "@odata.context": "https://your.odk.server/v1/projects/7/forms/sample.svc/$metadata",
                 "value": [
                     {
                         "kind": "EntitySet",
@@ -1050,7 +1180,7 @@ This document is available only in JSON format.
 + Response 406 (application/json)
     + Attributes (Error 406)
 
-### Metadata Document [GET /v1/forms/{xmlFormId}.svc/$metadata]
+### Metadata Document [GET /v1/projects/{projectId}/forms/{xmlFormId}.svc/$metadata]
 
 The Metadata Document describes, in [EDMX CSDL](http://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html), the schema of all the data you can retrieve from the OData Form Service in question (essentially, this is the XForms form schema translated into the OData format). EDMX/CSDL is very similar in concept to UML: there are objects, they have properties, and some of those properties are relationships to other objects.
 
@@ -1131,7 +1261,7 @@ While the latest 4.01 OData specification adds a new JSON EDMX CSDL format, most
 + Response 406 (application/json)
     + Attributes (Error 406)
 
-### Data Document [GET /v1/forms/{xmlFormId}.svc/{table}{?%24skip,%24top,%24count,%24wkt}]
+### Data Document [GET /v1/projects/{projectId}/forms/{xmlFormId}.svc/{table}{?%24skip,%24top,%24count,%24wkt}]
 
 The data documents are the straightforward JSON representation of each table of `Submission` data. They follow the [corresponding specification](http://docs.oasis-open.org/odata/odata-json-format/v4.01/odata-json-format-v4.01.html), but apart from the representation of geospatial data as GeoJSON rather than the ODK proprietary format, the output here should not be at all surprising. If you are looking for JSON output of Submission data, this is the best place to look.
 
@@ -1155,7 +1285,7 @@ As the vast majority of clients only support the JSON OData format, that is the 
     + Body
 
             {
-                "@odata.context": "https://your.odk.server/v1/forms/simple.svc/$metadata#Submissions",
+                "@odata.context": "https://your.odk.server/v1/projects/7/forms/simple.svc/$metadata#Submissions",
                 "value": [
                     {
                         "__id": "uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44",
@@ -1352,6 +1482,14 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Extended Field Key (Field Key)
 + createdBy (Actor, required) - The full details about the `Actor` that created this `Field Key`.
 + lastUsed: `2018-04-14T08:34:21.633Z` (string, optional) - ISO date format. The last time this `Field Key` was used to authenticate a request.
+
+## Project (object)
+  + id: `1` (number) - The numerical ID of the Project.
+  + name: `Default Project` (string, required) - The name of the Project.
+
+## Extended Project (Project)
+  + forms: `7` (number) - The number of forms within this Project.
+  + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission to any form in this project, if any.
 
 ## User (Actor)
 + email: `my.email.address@opendatakit.org` (string, required) - Only `User`s have email addresses associated with them
