@@ -367,7 +367,8 @@ describe('endpoints', () => {
         } };
 
         return endpointBase({
-          before() { throw Problem.user.notFound(); }
+          before() { throw Problem.user.notFound(); },
+          resultWriter() {}
         })(container)(always(true))({ method: 'POST' })
           .then(() => { transacted.should.equal(true); });
       });
@@ -380,21 +381,9 @@ describe('endpoints', () => {
           return cb().should.be.rejectedWith(Problem, { problemCode: 404.1 });
         } };
 
-        return endpointBase({})(container)(() => { throw Problem.user.notFound(); })({ method: 'POST' })
-          .then(() => { transacted.should.equal(true); });
-      });
-
-      it('should reject on the transacting promise on resultWriter failure', () => {
-        // we still check the transacted flag just to be sure the rejectedWith assertion runs.
-        let transacted = false;
-        const container = { transacting(cb) {
-          transacted = true;
-          return cb().should.be.rejectedWith(Problem, { problemCode: 404.1 });
-        } };
-
         return endpointBase({
-          resultWriter() { throw Problem.user.notFound(); }
-        })(container)(always(true))({ method: 'POST' })
+          resultWriter() {}
+        })(container)(() => { throw Problem.user.notFound(); })({ method: 'POST' })
           .then(() => { transacted.should.equal(true); });
       });
     });
