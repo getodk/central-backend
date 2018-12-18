@@ -367,6 +367,11 @@ describe('api: /projects/:id/forms', () => {
         asAlice.patch('/v1/projects/1/forms/simple')
           .send({ name: 'a fancy name', state: 'draft' })
           .expect(200)
+          .then(({ body }) => {
+            body.should.be.a.Form();
+            body.name.should.equal('a fancy name');
+            body.state.should.equal('draft');
+          })
           .then(() => asAlice.get('/v1/projects/1/forms/simple')
             .expect(200)
             .then(({ body }) => {
