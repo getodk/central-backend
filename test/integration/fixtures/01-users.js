@@ -10,6 +10,6 @@ module.exports = ({ all, User, Actor, Membership }) => {
   // mark transaction so the whole thing happens in one commit rather than many (slow).
   return Promise.all(users.map((user) => user.withHashedPassword(user.password)))
     .then((users) => all.mapSequential(users, (user) => user.create()))
-    .then(([ alice, bob, chelsea ]) => alice.actor.addToSystemGroup('admins'));
+    .then(([ alice, bob, chelsea ]) => alice.actor.assignSystemRole('admin', '*'));
 };
 
