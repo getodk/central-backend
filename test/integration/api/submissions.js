@@ -267,13 +267,13 @@ describe('api: /forms/:id/submissions', () => {
             zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
               const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
-              csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY' ]);
+              csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName' ]);
               csv[1].shift().should.be.an.recentIsoDate();
-              csv[1].should.eql([ 'three','Chelsea','38','three' ]);
+              csv[1].should.eql([ 'three','Chelsea','38','three', '5', 'Alice' ]);
               csv[2].shift().should.be.an.recentIsoDate();
-              csv[2].should.eql([ 'two','Bob','34','two' ]);
+              csv[2].should.eql([ 'two','Bob','34','two', '5', 'Alice' ]);
               csv[3].shift().should.be.an.recentIsoDate();
-              csv[3].should.eql([ 'one','Alice','30','one' ]);
+              csv[3].should.eql([ 'one','Alice','30','one', '5', 'Alice' ]);
               done();
             }))))));
 
