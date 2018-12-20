@@ -482,5 +482,110 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => service.login('chelsea', (asChelsea) =>
             asChelsea.get('/v1/projects/1/forms/simple/submissions/one/attachments/file.txt').expect(403))))));
   });
+
+  describe('/:instanceId/attachments/:name POST', () => {
+    it('should return notfound if the form does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/nonexistent/submissions/one/attachments/file.jpg')
+          .set('Content-Type', 'image/jpeg')
+          .send('testimage')
+          .expect(404))));
+
+    it('should return notfound if the submission does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions/nonexistent/attachments/file.jpg')
+          .set('Content-Type', 'image/jpeg')
+          .send('testimage')
+          .expect(404))));
+
+    it('should reject if the user cannot update a submission', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.post('/v1/projects/1/forms/simple/submissions/one/attachments/file.jpg')
+          .set('Content-Type', 'image/jpeg')
+          .send('testimage')
+          .expect(403))));
+
+    it('should attach the given file', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions/one/attachments/file.jpg')
+            .set('Content-Type', 'image/jpeg')
+            .send('testimage')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/attachments/file.jpg')
+              .expect(200)
+              .then(({ headers, body }) => {
+                headers['content-type'].should.equal('image/jpeg');
+                body.toString().should.equal('testimage');
+              }))))));
+  });
+
+  describe('/:instanceId/attachments/:name DELETE', () => {
+    it('should return notfound if the form does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/nonexistent/submissions/one/attachments/file.jpg')
+          .set('Content-Type', 'image/jpeg')
+          .send('testimage')
+          .expect(404))));
+
+    it('should return notfound if the submission does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/simple/submissions/nonexistent/attachments/file.jpg')
+          .set('Content-Type', 'image/jpeg')
+          .send('testimage')
+          .expect(404))));
+
+    it('should reject if the user cannot update a submission', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.delete('/v1/projects/1/forms/simple/submissions/one/attachments/file.jpg')
+          .set('Content-Type', 'image/jpeg')
+          .send('testimage')
+          .expect(403))));
+
+    it('should delete the given attachment', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions/one/attachments/file.jpg')
+            .set('Content-Type', 'image/jpeg')
+            .send('testimage')
+            .expect(200)
+            .then(() => asAlice.delete('/v1/projects/1/forms/simple/submissions/one/attachments/file.jpg')
+              .expect(200)
+              .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/attachments/file.jpg')
+                .expect(404)))))));
+
+    it('should log an audit entry about the deletion', testService((service, { Audit, Form }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions/one/attachments/file.jpg')
+            .set('Content-Type', 'image/jpeg')
+            .send('testimage')
+            .expect(200)
+            .then(() => asAlice.delete('/v1/projects/1/forms/simple/submissions/one/attachments/file.jpg')
+              .expect(200)
+              .then(() => Promise.all([
+                asAlice.get('/v1/users/current').expect(200),
+                Form.getByXmlFormId('simple'), // TODO/CR: sort of imprecise
+                Audit.getLatestWhere({ action: 'submission.attachment.delete' })
+              ])
+                .then(([ user, maybeSubmission, maybeLog ]) => {
+                  maybeLog.isDefined().should.equal(true);
+                  const log = maybeLog.get();
+
+                  log.actorId.should.equal(user.body.id);
+                  log.acteeId.should.equal(maybeSubmission.get().acteeId);
+                  log.details.name.should.equal('file.jpg');
+                  log.details.blobId.should.be.a.Number();
+                })))))));
+  });
 });
 
