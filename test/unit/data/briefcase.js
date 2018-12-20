@@ -251,14 +251,14 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     callAndParse(form, inStream, (result) => {
-      result.filenames.should.containDeep([ 'singlerepeat.csv', 'singlerepeat-children-child.csv' ]);
+      result.filenames.should.containDeep([ 'singlerepeat.csv', 'singlerepeat-child.csv' ]);
       result['singlerepeat.csv'].should.equal(
 `SubmissionDate,meta-instanceID,name,age,KEY
 2018-01-01T00:00:00.000Z,one,Alice,30,one
 2018-01-01T00:00:00.000Z,two,Bob,34,two
 2018-01-01T00:00:00.000Z,three,Chelsea,38,three
 `);
-      result['singlerepeat-children-child.csv'].should.equal(
+      result['singlerepeat-child.csv'].should.equal(
 `name,age,PARENT_KEY,KEY
 Billy,4,two,two/children/child[1]
 Blaine,6,two,two/children/child[2]
@@ -338,21 +338,21 @@ Candace,2,three,three/children/child[1]
     ]);
 
     callAndParse(form, inStream, (result) => {
-      result.filenames.should.containDeep([ 'multirepeat.csv', 'multirepeat-children-child.csv', 'multirepeat-children-child-toy.csv' ]);
+      result.filenames.should.containDeep([ 'multirepeat.csv', 'multirepeat-child.csv', 'multirepeat-toy.csv' ]);
       result['multirepeat.csv'].should.equal(
 `SubmissionDate,meta-instanceID,name,age,KEY
 2018-01-01T00:00:00.000Z,one,Alice,30,one
 2018-01-01T00:00:00.000Z,two,Bob,34,two
 2018-01-01T00:00:00.000Z,three,Chelsea,38,three
 `);
-      result['multirepeat-children-child.csv'].should.equal(
+      result['multirepeat-child.csv'].should.equal(
 `name,age,PARENT_KEY,KEY
 Billy,4,two,two/children/child[1]
 Blaine,6,two,two/children/child[2]
 Baker,7,two,two/children/child[3]
 Candace,2,three,three/children/child[1]
 `);
-      result['multirepeat-children-child-toy.csv'].should.equal(
+      result['multirepeat-toy.csv'].should.equal(
 `name,PARENT_KEY,KEY
 R2-D2,two/children/child[1],two/children/child[1]/toy[1]
 BB-8,two/children/child[2],two/children/child[2]/toy[1]
@@ -567,7 +567,7 @@ Pod racer,three/children/child[1],three/children/child[1]/toy[3]
     }]);
 
     callAndParse(form, inStream, (result) => {
-      result.filenames.should.containDeep([ 'nested-repeats.csv', 'nested-repeats-g1.csv', 'nested-repeats-g1-g2.csv', 'nested-repeats-g1-g2-g3.csv' ]);
+      result.filenames.should.containDeep([ 'nested-repeats.csv', 'nested-repeats-g1.csv', 'nested-repeats-g2.csv', 'nested-repeats-g3.csv' ]);
       result['nested-repeats.csv'].should.equal(
 `SubmissionDate,meta-instanceID,KEY
 2018-02-01T11:35:19.178Z,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b
@@ -578,20 +578,101 @@ some text 1,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b,uuid:0a1b861f-a5fd-4f49-84
 some text 2,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[2]
 some text 3,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]
 `);
-      result['nested-repeats-g1-g2.csv'].should.equal(
+      result['nested-repeats-g2.csv'].should.equal(
 `t2,PARENT_KEY,KEY
 some text 1.1,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[1],uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[1]/g2[1]
 some text 1.2,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[1],uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[1]/g2[2]
 some text 2.1,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[2],uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[2]/g2[1]
 some text 3.1,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3],uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]/g2[1]
 `);
-      result['nested-repeats-g1-g2-g3.csv'].should.equal(
+      result['nested-repeats-g3.csv'].should.equal(
 `t3,PARENT_KEY,KEY
 some text 1.1.1,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[1]/g2[1],uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[1]/g2[1]/g3[1]
 some text 3.1.1,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]/g2[1],uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]/g2[1]/g3[1]
 some text 3.1.2,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]/g2[1],uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]/g2[1]/g3[2]
 some text 3.1.3,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]/g2[1],uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]/g2[1]/g3[3]
 some text 3.1.4,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]/g2[1],uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]/g2[1]/g3[4]
+`);
+      done();
+    });
+  });
+
+  it('should disambiguate conflictingly named repeat groups', (done) => {
+    const form = mockForm({
+      xmlFormId: 'ambiguous',
+      xml: `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="ambiguous">
+                  <orx:meta>
+                    <orx:instanceID/>
+                  </orx:meta>
+                  <name/>
+                  <jobs>
+                    <entry><name/></entry>
+                  </jobs>
+                  <friends>
+                    <entry><name/></entry>
+                  </friends>
+                </data>
+              </instance>
+              <bind nodeset="/data/meta/instanceID" preload="uid" type="string"/>
+              <bind nodeset="/data/name" type="string"/>
+              <bind nodeset="/data/jobs/entry/name" type="string"/>
+              <bind nodeset="/data/friends/entry/name" type="string"/>
+            </model>
+          </h:head>
+          <h:body>
+            <input ref="/data/name">
+              <label>What is your name?</label>
+            </input>
+            <group ref="/data/jobs/entry">
+              <label>Job</label>
+              <repeat nodeset="/data/jobs/entry">
+                <input ref="/data/jobs/entry/name">
+                  <label>What is the employer name?</label>
+                </input>
+              </repeat>
+            </group>
+            <group ref="/data/friends/entry">
+              <label>Friend</label>
+              <repeat nodeset="/data/friends/entry">
+                <input ref="/data/friends/entry/name">
+                  <label>What is the person's name?</label>
+                </input>
+              </repeat>
+            </group>
+          </h:body>
+        </h:html>`
+    });
+    const inStream = streamTest.fromObjects([
+      instance('one', '<orx:meta><orx:instanceID>one</orx:instanceID></orx:meta><name>Alice</name>'),
+      instance('two', '<orx:meta><orx:instanceID>two</orx:instanceID></orx:meta><name>Bob</name><jobs><entry><name>Bobs Hardware</name></entry><entry><name>Local Coffee</name></entry></jobs><friends><entry><name>Nasrin</name></entry></friends>'),
+      instance('three', '<orx:meta><orx:instanceID>three</orx:instanceID></orx:meta><name>Chelsea</name><jobs><entry><name>Instantaneous Food</name></entry></jobs><friends><entry><name>Ferrence</name></entry><entry><name>Mick</name></entry></friends>'),
+    ]);
+
+    callAndParse(form, inStream, (result) => {
+      result.filenames.should.containDeep([ 'ambiguous.csv', 'ambiguous-entry~1.csv', 'ambiguous-entry~2.csv' ]);
+      result['ambiguous.csv'].should.equal(
+`SubmissionDate,meta-instanceID,name,KEY
+2018-01-01T00:00:00.000Z,one,Alice,one
+2018-01-01T00:00:00.000Z,two,Bob,two
+2018-01-01T00:00:00.000Z,three,Chelsea,three
+`);
+      result['ambiguous-entry~1.csv'].should.equal(
+`name,PARENT_KEY,KEY
+Bobs Hardware,two,two/jobs/entry[1]
+Local Coffee,two,two/jobs/entry[2]
+Instantaneous Food,three,three/jobs/entry[1]
+`);
+      result['ambiguous-entry~2.csv'].should.equal(
+`name,PARENT_KEY,KEY
+Nasrin,two,two/friends/entry[1]
+Ferrence,three,three/friends/entry[1]
+Mick,three,three/friends/entry[2]
 `);
       done();
     });
