@@ -240,6 +240,31 @@ describe('api: /users', () => {
                 .send({ email: 'newalice@odk.org', password: 'alice' })
                 .expect(200);
             })))));
+
+    it('should send an email to the user\'s previous email when their email changes', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current')
+          .expect(200)
+          .then((before) => asAlice.patch(`/v1/users/${before.body.id}`)
+            .send({ email: 'david123@opendatakit.org' })
+            .expect(200)
+            .then(() => {
+              const email = global.inbox.pop();
+              global.inbox.length.should.equal(0);
+              email.to.should.eql([{ address: 'alice@opendatakit.org', name: '' }]);
+              email.subject.should.equal('ODK Central account email changed');
+            })))));
+
+    it('should not send an email to a user when their email does not change', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current')
+          .expect(200)
+          .then((before) => asAlice.patch(`/v1/users/${before.body.id}`)
+            .send({ email: 'alice@opendatakit.org' })
+            .expect(200)
+            .then(() => {
+              global.inbox.length.should.equal(0);
+            })))));
   });
 
   describe('/users/:id/password PUT', () => {
@@ -279,6 +304,20 @@ describe('api: /users', () => {
               .send({ email: 'alice@opendatakit.org', password: 'newpassword' })
               .expect(200);
           }))));
+
+    it('should send an email to a user when their password changes', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current')
+          .expect(200)
+          .then(({ body }) => asAlice.put(`/v1/users/${body.id}/password`)
+            .send({ old: 'alice', new: 'newpassword' })
+            .expect(200)
+            .then(() => {
+              const email = global.inbox.pop();
+              global.inbox.length.should.equal(0);
+              email.to.should.eql([{ address: 'alice@opendatakit.org', name: '' }]);
+              email.subject.should.equal('ODK Central account password change');
+            })))));
   });
 });
 
