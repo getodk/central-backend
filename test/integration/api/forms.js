@@ -16,9 +16,9 @@ describe('api: /projects/:id/forms', () => {
           .expect(200)
           .then(({ body }) => {
             body.forEach((form) => form.should.be.a.Form());
-            body.map((form) => form.xmlFormId).should.eql([ 'withrepeat', 'simple' ]);
-            body.map((form) => form.hash).should.eql([ 'e7e9e6b3f11fca713ff09742f4312029', '5c09c21d4c71f2f13f6aa26227b2d133' ]);
-            body.map((form) => form.version).should.eql([ '1.0', '' ]);
+            body.map((form) => form.xmlFormId).should.eql([ 'simple', 'withrepeat' ]);
+            body.map((form) => form.hash).should.eql([ '5c09c21d4c71f2f13f6aa26227b2d133', 'e7e9e6b3f11fca713ff09742f4312029' ]);
+            body.map((form) => form.version).should.eql([ '', '1.0' ]);
           }))));
 
     it('should provide extended metadata if requested', testService((service) =>
@@ -59,18 +59,18 @@ describe('api: /projects/:id/forms', () => {
             text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <xforms xmlns="http://openrosa.org/xforms/xformsList">
     <xform>
-      <formID>withrepeat</formID>
-      <name>withrepeat</name>
-      <version>1.0</version>
-      <hash>md5:e7e9e6b3f11fca713ff09742f4312029</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/withrepeat.xml</downloadUrl>
-    </xform>
-    <xform>
       <formID>simple</formID>
       <name>Simple</name>
       <version></version>
       <hash>md5:5c09c21d4c71f2f13f6aa26227b2d133</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/simple.xml</downloadUrl>
+    </xform>
+    <xform>
+      <formID>withrepeat</formID>
+      <name>withrepeat</name>
+      <version>1.0</version>
+      <hash>md5:e7e9e6b3f11fca713ff09742f4312029</hash>
+      <downloadUrl>${domain}/v1/projects/1/forms/withrepeat.xml</downloadUrl>
     </xform>
   </xforms>`);
           }))));
@@ -122,6 +122,13 @@ describe('api: /projects/:id/forms', () => {
               text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <xforms xmlns="http://openrosa.org/xforms/xformsList">
     <xform>
+      <formID>simple</formID>
+      <name>Simple</name>
+      <version></version>
+      <hash>md5:5c09c21d4c71f2f13f6aa26227b2d133</hash>
+      <downloadUrl>${domain}/v1/projects/1/forms/simple.xml</downloadUrl>
+    </xform>
+    <xform>
       <formID>withAttachments</formID>
       <name>withAttachments</name>
       <version></version>
@@ -135,13 +142,6 @@ describe('api: /projects/:id/forms', () => {
       <version>1.0</version>
       <hash>md5:e7e9e6b3f11fca713ff09742f4312029</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withrepeat.xml</downloadUrl>
-    </xform>
-    <xform>
-      <formID>simple</formID>
-      <name>Simple</name>
-      <version></version>
-      <hash>md5:5c09c21d4c71f2f13f6aa26227b2d133</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/simple.xml</downloadUrl>
     </xform>
   </xforms>`);
             })))));
