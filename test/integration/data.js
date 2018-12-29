@@ -193,6 +193,35 @@ module.exports = {
       </itext>
     </model>
   </h:head>
+</h:html>`,
+    binaryType: `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Submission </h:title>
+    <model>
+      <instance>
+        <data id="binaryType">
+          <meta>
+            <instanceID/>
+          </meta>
+          <file1/>
+          <file2/>
+        </data>
+      </instance>
+
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+      <bind nodeset="/data/file1" type="binary"/>
+      <bind nodeset="/data/file2" type="binary"/>
+    </model>
+
+  </h:head>
+  <h:body>
+    <upload ref="/data/file1" accept="image/*">
+      <label>Give me an image.</label>
+    </upload>
+    <upload ref="/data/file2" accept="video/*">
+      <label>Give me a video./label>
+    </upload>
+  </h:body>
 </h:html>`
   },
   instances: {
@@ -239,6 +268,11 @@ module.exports = {
       </child>
     </children>
   </data>`
+    },
+    binaryType: {
+      one: instance('binaryType', 'one', '<file1>my_file1.mp4</file1>'),
+      two: instance('binaryType', 'two', '<file2>here_is_file2.jpg</file2>'),
+      both: instance('binaryType', 'both', '<file1>my_file1.mp4</file1><file2>here_is_file2.jpg</file2>')
     }
   }
 };
