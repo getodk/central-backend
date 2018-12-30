@@ -66,7 +66,7 @@ describe('api: /submission', () => {
             text.should.match(/outdated version/);
           }))));
 
-    it('should save the submission to the appropriate form', testService((service) =>
+    it('should save the submission to the appropriate form without device id', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
@@ -81,6 +81,43 @@ describe('api: /submission', () => {
             .then(({ body }) => {
               body.createdAt.should.be.a.recentIsoDate();
               body.xml.should.equal(testData.instances.simple.one);
+              should.not.exist(body.deviceId);
+            })))));
+
+    it('should save the submission to the appropriate form with device id as null when query string is empty', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission?deviceID=')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+          .expect(201)
+          .then(({ text }) => {
+            text.should.match(/upload was successful/);
+          })
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+            .set('X-Extended-Metadata', 'true')
+            .expect(200)
+            .then(({ body }) => {
+              body.createdAt.should.be.a.recentIsoDate();
+              body.xml.should.equal(testData.instances.simple.one);
+              should.not.exist(body.deviceId);
+            })))));
+
+    it('should save the submission to the appropriate form with device id', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission?deviceID=imei%3A358240051111110')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+          .expect(201)
+          .then(({ text }) => {
+            text.should.match(/upload was successful/);
+          })
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+            .set('X-Extended-Metadata', 'true')
+            .expect(200)
+            .then(({ body }) => {
+              body.createdAt.should.be.a.recentIsoDate();
+              body.xml.should.equal(testData.instances.simple.one);
+              body.deviceId.should.equal('imei:358240051111110');
             })))));
 
     // also tests /forms/_/submissions/_/attachments return content. (mark1)
