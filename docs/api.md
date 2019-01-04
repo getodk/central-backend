@@ -863,22 +863,33 @@ To get only the XML of the `Submission` rather than all of the details with the 
 
 ## Attachments [/v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments]
 
-When `Submission`s are created via the OpenRosa `/submission` API, multimedia files can be attached. These might be, for example, photos or video taken as part of the survey. ODK Central keeps track of which files relate to which Submission, so that they may be reliably exported again. To directly retrieve them, you can use the `/attachments` subresource on the Submissions resource. It is only possible to list and download Attachments.
+When a `Submission` is created, either over the OpenRosa or the REST interface, its XML data is analyzed to determine which file attachments it references: these may be photos or video taken as part of the survey, or an audit/timing log, among other things. Each reference is an expected attachment, and these expectations are recorded permanently alongside the Submission.
+
+With this subresource, you can list the expected attachments, see whether the server actually has a copy or not, and download, upload, re-upload, or clear binary data for any particular attachment.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
     + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the Submission being referenced.
 
-### Listing Submission Attachments [GET]
+### Listing expected Submission Attachments [GET]
 
-When listing attachments, the response will be a plain JSON array containing only strings representing the names of the attached files. You can then append any of those names to the request URL to download only that file.
+ You can retrieve the list of expected Submission attachments at this route, along with a boolean flag indicating whether the server actually has a copy of the expected file or not. If the server has a file, you can then append its filename to the request URL to download only that file (see below).
 
 + Response 200 (application/json)
-    + Attributes (array[string])
+    + Attributes (array[Submission Attachment])
 
     + Body
 
-            [ "file1.jpg", "file2.jpg", "file3.mp4" ]
+            [{
+                "name": "file1.jpg",
+                "exists": true
+            }, {
+                "name": "file2.jpg",
+                "exists": false
+            }, {
+                "name": "file3.jpg",
+                "exists": true
+            }]
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -888,8 +899,6 @@ When listing attachments, the response will be a plain JSON array containing onl
 The `Content-Type` and `Content-Disposition` will be set appropriately based on the file itself when requesting an attachment file download.
 
 + Parameters
-    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
-    + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the Submission being referenced.
     + filename: `file1.jpg` (string, required) - The name of the file as given by the Attachments listing resource.
 
 + Response 200
@@ -901,6 +910,41 @@ The `Content-Type` and `Content-Disposition` will be set appropriately based on 
     + Body
 
             (binary data)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Uploading an Attachment [POST /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments/{filename}]
+
+_(introduced: version 0.4.0)_
+
+To upload a binary to an expected file slot, `POST` the binary to its endpoint. Supply a `Content-Type` MIME-type header if you have one.
+
++ Parameters
+    + filename: `file1.jpg` (string, required) - The name of the file as given by the Attachments listing resource.
+
++ Request (*/*)
+    + Body
+
+            (binary data)
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Clearing a Submission Attachment [DELETE /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments/{filename}]
+
+_(introduced: version 0.4.0)_
+
+Because Submission Attachments are completely determined by the XML data of the submission itself, there is no direct way to entirely remove a Submission Attachment entry from the list, only to clear its uploaded content. Thus, when you issue a `DELETE` to the attachment's endpoint, that is what happens.
+
++ Parameters
+    + filename: `file1.jpg` (string, required) - The name of the file as given by the Attachments listing resource.
+
++ Response 200 (application/json)
+    + Attributes (Success)
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -1508,6 +1552,10 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Extended Submission (Submission)
 + submitter (Actor, required) - The full details of the `Actor` that submitted this `Submission`.
 + xml: `…` (string, required) - The actual `Submission` XML.
+
+## Submission Attachment (object)
++ name: `myfile.mp3` (string, required) - The name of the file as specified in the Submission XML.
++ exists: `true` (boolean, required) - Whether the server has the file or not.
 
 ## Success (object)
 + success: `true` (boolean, required)
