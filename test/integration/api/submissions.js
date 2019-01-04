@@ -101,8 +101,8 @@ describe('api: /submission', () => {
               .expect(200)
               .then(({ body }) => {
                 body.should.eql([
-                  { name: 'my_file1.mp4', exists: true },
-                  { name: 'here_is_file2.jpg', exists: true }
+                  { name: 'here_is_file2.jpg', exists: true },
+                  { name: 'my_file1.mp4', exists: true }
                 ]);
               }))))));
 
@@ -122,8 +122,8 @@ describe('api: /submission', () => {
               .expect(200)
               .then(({ body }) => {
                 body.should.eql([
-                  { name: 'my_file1.mp4', exists: false },
-                  { name: 'here_is_file2.jpg', exists: false }
+                  { name: 'here_is_file2.jpg', exists: false },
+                  { name: 'my_file1.mp4', exists: false }
                 ]);
               }))))));
 
@@ -328,8 +328,8 @@ describe('api: /forms/:id/submissions', () => {
               .expect(200)
               .then(({ body }) => {
                 body.should.eql([
-                  { name: 'my_file1.mp4', exists: false },
-                  { name: 'here_is_file2.jpg', exists: false }
+                  { name: 'here_is_file2.jpg', exists: false },
+                  { name: 'my_file1.mp4', exists: false }
                 ]);
               }))))));
   });
@@ -673,8 +673,8 @@ describe('api: /forms/:id/submissions', () => {
                     .expect(200)
                     .then(({ body }) =>  {
                       body.should.eql([
-                        { name: 'my_file1.mp4', exists: false },
-                        { name: 'here_is_file2.jpg', exists: false }
+                        { name: 'here_is_file2.jpg', exists: false },
+                        { name: 'my_file1.mp4', exists: false }
                       ]);
                     })))))))));
 
