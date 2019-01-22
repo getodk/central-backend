@@ -48,6 +48,20 @@ describe('api: /projects', () => {
             body[1].forms.should.equal(2);
             body[1].lastSubmission.should.be.a.recentIsoDate();
           })))));
+
+    it('should return extended metadata if requested', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/simple')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects')
+            .set('X-Extended-Metadata', 'true')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].should.be.an.ExtendedProject();
+              body[0].name.should.equal('Default Project');
+              body[0].forms.should.equal(1);
+            })))));
   });
 
   describe('POST', () => {
