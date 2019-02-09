@@ -416,6 +416,13 @@ describe('endpoints', () => {
       should.not.exist(response.body);
     });
 
+    it('should send nothing given a 3xx response', () => {
+      const response = createModernResponse();
+      response.status(302);
+      defaultResultWriter({}, createRequest(), response);
+      should.not.exist(response.body);
+    });
+
     it('should pipe through stream results', (done) => {
       let result, writeResult = (x) => { result = x };
       const requestTest = streamTest.fromChunks();
