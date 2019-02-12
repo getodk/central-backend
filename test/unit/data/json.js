@@ -50,6 +50,9 @@ describe('submissionToOData', () => {
       decimal: { name: 'decimal', type: 'decimal' },
       geopoint: { name: 'geopoint', type: 'geopoint' },
       geopointNoAlt: { name: 'geopointNoAlt', type: 'geopoint' },
+      dateTime: { name: 'dateTime', type: 'dateTime' },
+      dateTimeWhitespace: { name: 'dateTimeWhitespace', type: 'dateTime' },
+      dateTimeCorrect: { name: 'dateTimeCorrect', type: 'dateTime' },
       text: { name: 'text', type: 'text' },
       other: { name: 'other', type: 'other' }
     };
@@ -58,6 +61,11 @@ describe('submissionToOData', () => {
         <decimal>3.14</decimal>
         <geopoint>4.8 15.16 23.42</geopoint>
         <geopointNoAlt>11.38 -11.38</geopointNoAlt>
+        <dateTime>2019-01-01T00:00:00.000-08</dateTime>
+        <dateTimeWhitespace>
+          2019-01-01T00:00:00.000-08
+        </dateTimeWhitespace>
+        <dateTimeCorrect>2019-01-01T00:00:00.000-08:00</dateTimeCorrect>
         <text>hello</text>
         <other>what could it be?</other>
       </data>`);
@@ -69,6 +77,9 @@ describe('submissionToOData', () => {
         decimal: 3.14,
         geopoint: { type: 'Point', coordinates: [ 15.16, 4.8, 23.42 ] },
         geopointNoAlt: { type: 'Point', coordinates: [ -11.38, 11.38 ] },
+        dateTime: '2019-01-01T00:00:00.000-08:00',
+        dateTimeWhitespace: '2019-01-01T00:00:00.000-08:00',
+        dateTimeCorrect: '2019-01-01T00:00:00.000-08:00',
         text: 'hello',
         other: 'what could it be?'
       }]);
