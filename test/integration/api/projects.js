@@ -116,6 +116,13 @@ describe('api: /projects', () => {
     it('should return notfound if the project does not exist', testService((service) =>
       service.get('/v1/projects/99').expect(404)));
 
+    it('should reject if id is non-numeric', testService((service) =>
+      service.login('alice', (asAlice) =>
+      asAlice.get('/v1/projects/1a')
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.11)}))));
+
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/projects/1').expect(403))));
