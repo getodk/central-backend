@@ -293,6 +293,18 @@ describe('preprocessors', () => {
       const result = queryOptionsHandler(null, new Context(request));
       should(result.queryOptions.limit).equal(undefined);
     });
+
+    it('should set q if a value is given', () => {
+      const request = createRequest({ method: 'GET', query: { q: 'maltese falcon' } });
+      const result = queryOptionsHandler(null, new Context(request));
+      should(result.queryOptions.q).equal('maltese falcon');
+    });
+
+    it('should set no q if no value is given', () => {
+      const request = createRequest({ method: 'GET', query: { q: null } });
+      const result = queryOptionsHandler(null, new Context(request));
+      should(result.queryOptions.q).equal(undefined);
+    });
   });
 });
 
