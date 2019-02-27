@@ -271,27 +271,39 @@ describe('preprocessors', () => {
     });
 
     it('should set offset if a value is given', () => {
-      const request = createRequest({ method: 'GET', params: { offset: '42' } });
+      const request = createRequest({ method: 'GET', query: { offset: '42' } });
       const result = queryOptionsHandler(null, new Context(request));
       result.queryOptions.offset.should.equal(42);
     });
 
     it('should set no offset if no value is given', () => {
-      const request = createRequest({ method: 'GET', params: { offset: null } });
+      const request = createRequest({ method: 'GET', query: { offset: null } });
       const result = queryOptionsHandler(null, new Context(request));
       should(result.queryOptions.offset).equal(undefined);
     });
 
     it('should set limit if a value is given', () => {
-      const request = createRequest({ method: 'GET', params: { limit: '42' } });
+      const request = createRequest({ method: 'GET', query: { limit: '42' } });
       const result = queryOptionsHandler(null, new Context(request));
       result.queryOptions.limit.should.equal(42);
     });
 
     it('should set no limit if no value is given', () => {
-      const request = createRequest({ method: 'GET', params: { limit: null } });
+      const request = createRequest({ method: 'GET', query: { limit: null } });
       const result = queryOptionsHandler(null, new Context(request));
       should(result.queryOptions.limit).equal(undefined);
+    });
+
+    it('should set q if a value is given', () => {
+      const request = createRequest({ method: 'GET', query: { q: 'maltese falcon' } });
+      const result = queryOptionsHandler(null, new Context(request));
+      should(result.queryOptions.q).equal('maltese falcon');
+    });
+
+    it('should set no q if no value is given', () => {
+      const request = createRequest({ method: 'GET', query: { q: null } });
+      const result = queryOptionsHandler(null, new Context(request));
+      should(result.queryOptions.q).equal(undefined);
     });
   });
 });

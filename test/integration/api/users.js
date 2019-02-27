@@ -15,6 +15,46 @@ describe('api: /users', () => {
             body.map((user) => user.displayName).should.eql([ 'Alice', 'Bob', 'Chelsea' ]);
             body.map((user) => user.email).should.eql([ 'alice@opendatakit.org', 'bob@opendatakit.org', 'chelsea@opendatakit.org' ]);
           }))));
+
+    it('should search user display names if a query is given', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'test@email.org', displayName: 'alicia' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/users?q=alice')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(2);
+              body.forEach((user) => user.should.be.a.User());
+              body.map((user) => user.displayName).should.eql([ 'Alice', 'alicia' ]);
+              body.map((user) => user.email).should.eql([ 'alice@opendatakit.org', 'test@email.org' ]);
+            })))));
+
+    it('should search user emails if a query is given', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'david@closeddatakit.org', displayName: 'David' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/users?q=opendatakit')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(3);
+              body.forEach((user) => user.should.be.a.User());
+              body.map((user) => user.displayName).should.containDeep([ 'Alice', 'Bob', 'Chelsea' ]);
+              body.map((user) => user.email).should.containDeep([ 'alice@opendatakit.org', 'bob@opendatakit.org', 'chelsea@opendatakit.org' ]);
+            })))));
+
+    it('should search with compound phrases if given', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users?q=chelsea opendatakit')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(3);
+            body.forEach((user) => user.should.be.a.User());
+            // bob always comes ahead of alice, since the email is shorter and so it's
+            // technically more of a match.
+            body.map((user) => user.displayName).should.eql([ 'Chelsea', 'Bob', 'Alice' ]);
+          }))));
   });
 
   describe('POST', () => {
