@@ -144,3 +144,14 @@ should.Assertion.add('ExtendedProject', function() {
   if (this.obj.lastSubmission != null) this.obj.lastSubmission.should.be.an.isoDate();
 });
 
+should.Assertion.add('Role', function() {
+  this.params = { operator: 'to be a Role' };
+
+  Object.keys(this.obj).should.containDeep([ 'id', 'name', 'verbs', 'createdAt', 'updatedAt' ]);
+  if (this.obj.system != null) this.obj.system.should.be.a.String();
+  this.obj.verbs.should.an.Array();
+  this.obj.verbs.forEach((verb) => verb.should.be.a.String());
+  this.obj.createdAt.should.be.an.isoDate();
+  if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
+});
+
