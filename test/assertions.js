@@ -151,7 +151,7 @@ should.Assertion.add('Role', function() {
   if (this.obj.system != null) this.obj.system.should.be.a.String();
   this.obj.verbs.should.an.Array();
   this.obj.verbs.forEach((verb) => verb.should.be.a.String());
-  this.obj.createdAt.should.be.an.isoDate();
+  if (this.obj.createdAt != null) this.obj.createdAt.should.be.an.isoDate();
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 
