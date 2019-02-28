@@ -40,17 +40,6 @@ describe('api: /users', () => {
           .then(() => service.login({ email: 'david@opendatakit.org', password: '' }, (failed) =>
             failed.get('/v1/users/current').expect(401))))));
 
-    // TODO: this is for initial release /only!/ therefore also the check is a little
-    // shallow since we don't have a capabilities/rights api yet, so we just see if
-    // the new user can list users.
-    it('should automatically make new users admins', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.post('/v1/users')
-          .send({ email: 'david@opendatakit.org', password: 'david' })
-          .expect(200)
-          .then(() => service.login('david', (asDavid) =>
-            asDavid.get('/v1/users').expect(200))))));
-
     it('should send an email to provisioned users', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users')
