@@ -70,5 +70,99 @@ describe('api: /assignments', () => {
           actors[0].displayName.should.equal('Alice');
         }))));
   });
+
+  describe('/:roleId/:Id', () => {
+    describe('POST', () => {
+      it('should prohibit anonymous users from creating assignments', testService((service) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+            .then((chelseaId) => service.post('/v1/assignments/admin/' + chelseaId)
+              .expect(403)))));
+
+      it('should prohibit unprivileged users from creating assignments', testService((service) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+            .then((chelseaId) => asChelsea.post('/v1/assignments/admin/' + chelseaId)
+              .expect(403)))));
+
+      it('should return notfound if the role does not exist', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+            .then((aliceId) => service.post('/v1/assignments/99/' + aliceId)
+              .expect(404)))));
+
+      it('should return notfound if the user does not exist', testService((service) =>
+        service.post('/v1/assignments/admin/999').expect(404)));
+
+      it('should create an assignment by role system id', testService((service) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+            .then((chelseaId) => service.login('alice', (asAlice) =>
+              asAlice.post('/v1/assignments/admin/' + chelseaId)
+                .expect(200)
+                // now verify that chelsea is empowered:
+                .then(() => asChelsea.get('/v1/assignments/admin')
+                  .expect(200)))))));
+
+      it('should create an assignment by role numeric id', testService((service) =>
+        service.login('alice', (asAlice) => service.login('chelsea', (asChelsea) =>
+          Promise.all([
+            asChelsea.get('/v1/users/current').expect(200).then(({ body }) => body.id),
+            asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id )
+          ]).then(([ chelseaId, roleId ]) =>
+            asAlice.post(`/v1/assignments/${roleId}/${chelseaId}`)
+              .expect(200)
+              // now verify that chelsea is empowered:
+              .then(() => asChelsea.get('/v1/assignments/admin')
+                .expect(200)))))));
+    });
+
+    describe('DELETE', () => {
+      it('should prohibit anonymous users from creating assignments', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+            .then((aliceId) => service.delete('/v1/assignments/admin/' + aliceId)
+              .expect(403)))));
+
+      it('should prohibit anonymous users from creating assignments', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+            .then((aliceId) => service.login('chelsea', (asChelsea) =>
+              asChelsea.delete('/v1/assignments/admin/' + aliceId).expect(403))))));
+
+      it('should return notfound if the role does not exist', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+            .then((aliceId) => service.delete('/v1/assignments/99/' + aliceId)
+              .expect(404)))));
+
+      it('should return notfound if the user does not exist', testService((service) =>
+        service.delete('/v1/assignments/admin/999').expect(404)));
+
+      it('should return notfound if the assignment does not exist', testService((service) =>
+        service.login('alice', (asAlice) => service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+            .then((chelseaId) => asAlice.delete('/v1/assignments/admin/' + chelseaId)
+              .expect(404))))));
+
+      it('should remove an assignment by role name', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+            .then((aliceId) => asAlice.delete('/v1/assignments/admin/' + aliceId)
+              .expect(200)
+              // again, verify the self-demotion.
+              .then(() => asAlice.get('/v1/assignments').expect(403))))));
+
+      it('should remove an assignment by role numeric id', testService((service) =>
+        service.login('alice', (asAlice) => Promise.all([
+          asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id ),
+          asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+        ])
+          .then(([ roleId, aliceId ]) => asAlice.delete(`/v1/assignments/${roleId}/${aliceId}`)
+              .expect(200)
+              // again, verify the self-demotion.
+              .then(() => asAlice.get('/v1/assignments').expect(403))))));
+    });
+  });
 });
 
