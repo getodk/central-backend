@@ -4,18 +4,43 @@ const testData = require('../data');
 
 describe('api: /projects', () => {
   describe('GET', () => {
-    it('should reject unless the user can list', testService((service) =>
-      service.login('chelsea', (asChelsea) =>
-        asChelsea.get('/v1/projects').expect(403))));
+    it('should return an empty array if not logged in', testService((service) =>
+      service.get('/v1/projects')
+        .expect(200)
+        .then(({ body }) => { body.should.eql([]); })));
 
-    it('should return a list of projects', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.get('/v1/projects')
+    it('should return an empty array if the user has no rights', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/projects')
           .expect(200)
-          .then(({ body }) => {
-            body.length.should.equal(1);
-            body[0].should.be.a.Project();
-          }))));
+          .then(({ body }) => { body.should.eql([]); }))));
+
+    it('should return all projects for an administrator', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects')
+          .send({ name: 'Project Two' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(2);
+              body[0].should.be.a.Project();
+              body[0].name.should.equal('Default Project');
+              body[1].should.be.a.Project();
+              body[1].name.should.equal('Project Two');
+            })))));
+
+    it('should return only granted projects for a non-administrator', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects').send({ name: 'Project Two' }).expect(200)
+          .then(() => service.login('bob', (asBob) =>
+            asBob.get('/v1/projects')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(1);
+                body[0].should.be.a.Project();
+                body[0].name.should.equal('Default Project');
+              }))))));
 
     it('should return extended metadata if requested', testService((service) =>
       service.login('alice', (asAlice) => Promise.all([
