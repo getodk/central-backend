@@ -42,6 +42,19 @@ describe('api: /projects', () => {
                 body[0].name.should.equal('Default Project');
               }))))));
 
+    it('should only return each project once even if multiply assigned', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+          .then((aliceId) => asAlice.post('/v1/projects/1/assignments/manager/' + aliceId)
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(1);
+                body[0].should.be.a.Project();
+                body[0].name.should.equal('Default Project');
+              }))))));
+
     it('should return extended metadata if requested', testService((service) =>
       service.login('alice', (asAlice) => Promise.all([
         asAlice.post('/v1/projects/1/forms/simple/submissions')
