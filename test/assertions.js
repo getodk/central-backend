@@ -45,6 +45,9 @@ should.Assertion.add('Actor', function() {
   this.obj.displayName.should.be.a.String();
   this.obj.createdAt.should.be.an.isoDate();
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
+
+  should.not.exist(this.obj.acteeId);
+  should.not.exist(this.obj.meta);
 });
 
 should.Assertion.add('User', function() {

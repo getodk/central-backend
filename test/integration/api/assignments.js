@@ -29,6 +29,7 @@ describe('api: /assignments', () => {
       ]).then(([ assignments, adminRoleId ]) => {
         assignments.length.should.equal(1);
         Object.keys(assignments[0]).should.eql([ 'actor', 'roleId' ]);
+        assignments[0].actor.should.be.an.Actor();
         assignments[0].actor.displayName.should.equal('Alice');
         assignments[0].roleId.should.equal(adminRoleId);
       }))));
