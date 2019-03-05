@@ -142,8 +142,9 @@ should.Assertion.add('ExtendedProject', function() {
   this.params = { operator: 'to be a Project' };
 
   this.obj.should.be.a.Project();
-  Object.keys(this.obj).should.containDeep([ 'forms', 'lastSubmission' ]);
+  Object.keys(this.obj).should.containDeep([ 'forms', 'appUsers', 'lastSubmission' ]);
   this.obj.forms.should.be.a.Number();
+  this.obj.appUsers.should.be.a.Number();
   if (this.obj.lastSubmission != null) this.obj.lastSubmission.should.be.an.isoDate();
 });
 
