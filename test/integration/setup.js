@@ -33,6 +33,11 @@ const google = require('../util/google-mock')(realGoogle);
 // set up our sentry mock.
 const Sentry = require(appRoot + '/lib/util/sentry').init();
 
+// set up our crypto module; possibly mock or not based on params.
+const crypto = (process.env.BCRYPT === 'no')
+  ? require('../util/crypto-mock')
+  : require(appRoot + '/lib/util/crypto');
+
 // application things.
 const injector = require(appRoot + '/lib/model/package');
 const service = require(appRoot + '/lib/http/service');
@@ -57,7 +62,7 @@ before(() => db
   //.raw('drop owned by ?', [ owner ]) TODO: why does this <- not work?
   .catch(() => null) // if the drop owned by statement fails we're on circleci which has a blank db anyway
   .then(() => db.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
-  .then(() => injector.withDefaults({ db }).transacting(populate)));
+  .then(() => injector.withDefaults({ db, crypto }).transacting(populate)));
 
 // augments a supertest object with a `.as(user, cb)` method, where user may be the
 // name of a fixture user or an object with email/password. the user will be logged
@@ -89,7 +94,7 @@ const augment = (service) => {
 ////////////////////////////////////////////////////////////////////////////////
 // FINAL TEST WRAPPERS
 
-const baseContainer = injector.withDefaults({ db, mail, env, google, Sentry });
+const baseContainer = injector.withDefaults({ db, mail, env, google, crypto, Sentry });
 
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then

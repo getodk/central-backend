@@ -16,6 +16,8 @@ debug: base
 	node --debug --inspect lib/bin/run-server.js
 
 test: node_modules
+	env BCRYPT=no node node_modules/mocha/bin/mocha --recursive
+test-full: node_modules
 	node node_modules/mocha/bin/mocha --recursive
 
 test-integration: node_modules
