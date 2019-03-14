@@ -211,6 +211,35 @@ describe('api: /projects', () => {
               body.forms.should.equal(2);
               body.lastSubmission.should.be.a.recentIsoDate();
             })))));
+
+    it('should not return verb information unless extended metata is requested', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1')
+          .expect(200)
+          .then(({ body }) => { should.not.exist(body.verbs); }))));
+
+    it('should return verb information with extended metadata (alice)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.verbs.should.be.an.Array();
+            body.verbs.length.should.be.greaterThan(30);
+            body.verbs.should.containDeep([ 'assignment.create', 'project.delete' ]);
+          }))));
+
+    it('should return verb information with extended metadata (bob)', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.get('/v1/projects/1')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.verbs.should.be.an.Array();
+            body.verbs.length.should.be.lessThan(20);
+            body.verbs.should.containDeep([ 'assignment.create', 'project.delete' ]);
+            body.verbs.should.not.containDeep([ 'project.create' ]);
+          }))));
   });
 
   describe('/:id PATCH', () => {
