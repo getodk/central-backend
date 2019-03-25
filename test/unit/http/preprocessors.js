@@ -6,7 +6,8 @@ const preprocessors = require(appRoot + '/lib/http/preprocessors');
 const { Context } = require(appRoot + '/lib/http/endpoint');
 const Problem = require(appRoot + '/lib/util/problem');
 const Option = require(appRoot + '/lib/util/option');
-const { hashPassword } = require(appRoot + '/lib/util/crypto');
+const crypto = require(appRoot + '/lib/util/crypto');
+const { hashPassword } = crypto;
 
 describe('preprocessors', () => {
   // some mock helpers to simplify testing this module in isolation:
@@ -108,7 +109,7 @@ describe('preprocessors', () => {
 
       it('should fail the request if the Basic auth credentials are not right', () =>
         Promise.resolve(sessionHandler(
-          { Auth, User: mockUser('alice@opendatakit.org', 'willnevermatch') },
+          { Auth, User: mockUser('alice@opendatakit.org', 'willnevermatch'), crypto },
           new Context(createRequest({ headers: {
             Authorization: `Basic ${Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64')}`,
             'X-Forwarded-Proto': 'https'
@@ -118,7 +119,7 @@ describe('preprocessors', () => {
       it('should set the appropriate session if valid Basic auth credentials are given @slow', () =>
         hashPassword('alice').then((hashed) =>
           Promise.resolve(sessionHandler(
-            { Auth, User: mockUser('alice@opendatakit.org', hashed) },
+            { Auth, User: mockUser('alice@opendatakit.org', hashed), crypto },
             new Context(createRequest({ headers: {
               Authorization: `Basic ${Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64')}`,
               'X-Forwarded-Proto': 'https'

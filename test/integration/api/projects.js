@@ -57,6 +57,12 @@ describe('api: /projects', () => {
 
     it('should return extended metadata if requested', testService((service) =>
       service.login('alice', (asAlice) => Promise.all([
+        asAlice.post(`/v1/projects/1/app-users`)
+          .send({ displayName: 'test 1' })
+          .expect(200),
+        asAlice.post(`/v1/projects/1/app-users`)
+          .send({ displayName: 'test 2' })
+          .expect(200),
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'application/xml')
@@ -80,10 +86,12 @@ describe('api: /projects', () => {
 
             body[0].name.should.equal('A Test Project');
             body[0].forms.should.equal(0);
+            body[0].appUsers.should.equal(0);
             should.not.exist(body[0].lastSubmission);
 
             body[1].name.should.equal('Default Project');
             body[1].forms.should.equal(2);
+            body[1].appUsers.should.equal(2);
             body[1].lastSubmission.should.be.a.recentIsoDate();
           })))));
 
