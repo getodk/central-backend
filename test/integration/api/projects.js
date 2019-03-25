@@ -226,7 +226,7 @@ describe('api: /projects', () => {
           .then(({ body }) => {
             body.verbs.should.be.an.Array();
             body.verbs.length.should.be.greaterThan(30);
-            body.verbs.should.containDeep([ 'assignment.create', 'project.delete' ]);
+            body.verbs.should.containDeep([ 'user.password.invalidate', 'project.delete' ]);
           }))));
 
     it('should return verb information with extended metadata (bob)', testService((service) =>
