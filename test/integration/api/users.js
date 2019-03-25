@@ -159,6 +159,35 @@ describe('api: /users', () => {
         asChelsea.get('/v1/users/current')
           .expect(200)
           .then(({ body }) => body.email.should.equal('chelsea@opendatakit.org')))));
+
+    it('should not return sidewide verbs if not extended', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current')
+          .expect(200)
+          .then(({ body }) => { should.not.exist(body.verbs); }))));
+
+    it('should return sidewide verbs if logged in (alice)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.verbs.should.be.an.Array();
+            // we leave this vagueish so we don't tie ourselves too deeply to the current
+            // set of verbs, etc. just check for a lot, and some high-powered verbs.
+            body.verbs.length.should.be.greaterThan(30);
+            body.verbs.should.containDeep([ 'user.password.invalidate', 'assignment.create', 'role.update' ]);
+          }))));
+
+    it('should return sidewide verbs if logged in (chelsea)', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/users/current')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.verbs.should.be.an.Array();
+            body.verbs.length.should.equal(0);
+          }))));
   });
 
   describe('/users/:id GET', () => {
