@@ -45,6 +45,9 @@ should.Assertion.add('Actor', function() {
   this.obj.displayName.should.be.a.String();
   this.obj.createdAt.should.be.an.isoDate();
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
+
+  should.not.exist(this.obj.acteeId);
+  should.not.exist(this.obj.meta);
 });
 
 should.Assertion.add('User', function() {
@@ -139,8 +142,20 @@ should.Assertion.add('ExtendedProject', function() {
   this.params = { operator: 'to be a Project' };
 
   this.obj.should.be.a.Project();
-  Object.keys(this.obj).should.containDeep([ 'forms', 'lastSubmission' ]);
+  Object.keys(this.obj).should.containDeep([ 'forms', 'appUsers', 'lastSubmission' ]);
   this.obj.forms.should.be.a.Number();
+  this.obj.appUsers.should.be.a.Number();
   if (this.obj.lastSubmission != null) this.obj.lastSubmission.should.be.an.isoDate();
+});
+
+should.Assertion.add('Role', function() {
+  this.params = { operator: 'to be a Role' };
+
+  Object.keys(this.obj).should.containDeep([ 'id', 'name', 'verbs', 'createdAt', 'updatedAt' ]);
+  if (this.obj.system != null) this.obj.system.should.be.a.String();
+  this.obj.verbs.should.an.Array();
+  this.obj.verbs.forEach((verb) => verb.should.be.a.String());
+  if (this.obj.createdAt != null) this.obj.createdAt.should.be.an.isoDate();
+  if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 

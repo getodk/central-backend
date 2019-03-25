@@ -2,7 +2,6 @@ const appRoot = require('app-root-path');
 const should = require('should');
 const { testTask } = require('../setup');
 const { getOrNotFound } = require(appRoot + '/lib/util/promise');
-const { verifyPassword } = require(appRoot + '/lib/util/crypto');
 const { createUser, promoteUser, setUserPassword } = require(appRoot + '/lib/task/account');
 
 describe('task: accounts', () => {
@@ -33,12 +32,12 @@ describe('task: accounts', () => {
   });
 
   describe('setUserPassword', () => {
-    it('should set a user password', testTask(({ User }) =>
+    it('should set a user password', testTask(({ User, crypto }) =>
       User.fromApi({ email: 'testuser@opendatakit.org', displayName: 'test user' }).create()
         .then(() => setUserPassword('testuser@opendatakit.org', 'aoeu'))
         .then(() => User.getByEmail('testuser@opendatakit.org'))
         .then(getOrNotFound)
-        .then((user) => verifyPassword('aoeu', user.password))
+        .then((user) => crypto.verifyPassword('aoeu', user.password))
         .then((verified) => verified.should.equal(true))));
   });
 });

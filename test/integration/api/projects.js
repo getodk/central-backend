@@ -4,21 +4,65 @@ const testData = require('../data');
 
 describe('api: /projects', () => {
   describe('GET', () => {
-    it('should reject unless the user can list', testService((service) =>
-      service.login('chelsea', (asChelsea) =>
-        asChelsea.get('/v1/projects').expect(403))));
+    it('should return an empty array if not logged in', testService((service) =>
+      service.get('/v1/projects')
+        .expect(200)
+        .then(({ body }) => { body.should.eql([]); })));
 
-    it('should return a list of projects', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.get('/v1/projects')
+    it('should return an empty array if the user has no rights', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/projects')
           .expect(200)
-          .then(({ body }) => {
-            body.length.should.equal(1);
-            body[0].should.be.a.Project();
-          }))));
+          .then(({ body }) => { body.should.eql([]); }))));
+
+    it('should return all projects for an administrator', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects')
+          .send({ name: 'Project Two' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(2);
+              body[0].should.be.a.Project();
+              body[0].name.should.equal('Default Project');
+              body[1].should.be.a.Project();
+              body[1].name.should.equal('Project Two');
+            })))));
+
+    it('should return only granted projects for a non-administrator', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects').send({ name: 'Project Two' }).expect(200)
+          .then(() => service.login('bob', (asBob) =>
+            asBob.get('/v1/projects')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(1);
+                body[0].should.be.a.Project();
+                body[0].name.should.equal('Default Project');
+              }))))));
+
+    it('should only return each project once even if multiply assigned', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+          .then((aliceId) => asAlice.post('/v1/projects/1/assignments/manager/' + aliceId)
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(1);
+                body[0].should.be.a.Project();
+                body[0].name.should.equal('Default Project');
+              }))))));
 
     it('should return extended metadata if requested', testService((service) =>
       service.login('alice', (asAlice) => Promise.all([
+        asAlice.post(`/v1/projects/1/app-users`)
+          .send({ displayName: 'test 1' })
+          .expect(200),
+        asAlice.post(`/v1/projects/1/app-users`)
+          .send({ displayName: 'test 2' })
+          .expect(200),
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'application/xml')
@@ -42,10 +86,12 @@ describe('api: /projects', () => {
 
             body[0].name.should.equal('A Test Project');
             body[0].forms.should.equal(0);
+            body[0].appUsers.should.equal(0);
             should.not.exist(body[0].lastSubmission);
 
             body[1].name.should.equal('Default Project');
             body[1].forms.should.equal(2);
+            body[1].appUsers.should.equal(2);
             body[1].lastSubmission.should.be.a.recentIsoDate();
           })))));
 
@@ -165,6 +211,35 @@ describe('api: /projects', () => {
               body.forms.should.equal(2);
               body.lastSubmission.should.be.a.recentIsoDate();
             })))));
+
+    it('should not return verb information unless extended metata is requested', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1')
+          .expect(200)
+          .then(({ body }) => { should.not.exist(body.verbs); }))));
+
+    it('should return verb information with extended metadata (alice)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.verbs.should.be.an.Array();
+            body.verbs.length.should.be.greaterThan(30);
+            body.verbs.should.containDeep([ 'user.password.invalidate', 'project.delete' ]);
+          }))));
+
+    it('should return verb information with extended metadata (bob)', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.get('/v1/projects/1')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.verbs.should.be.an.Array();
+            body.verbs.length.should.be.lessThan(20);
+            body.verbs.should.containDeep([ 'assignment.create', 'project.delete' ]);
+            body.verbs.should.not.containDeep([ 'project.create' ]);
+          }))));
   });
 
   describe('/:id PATCH', () => {
