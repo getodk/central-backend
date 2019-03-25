@@ -62,17 +62,18 @@ describe('api: /assignments', () => {
         asAlice.get('/v1/assignments/999').expect(404))));
 
     it('should return all assigned actors by numeric id', testService((service) =>
-      service.login('alice', (asAlice) => Promise.all([
-          asAlice.get('/v1/assignments/admin').expect(200).then(({ body }) => body),
-          asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id )
-        ]).then(([ actors, adminRoleId ]) => {
-          actors.length.should.equal(1);
-          actors[0].should.be.an.Actor();
-          actors[0].displayName.should.equal('Alice');
-        }))));
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id )
+          .then((adminRoleId) => asAlice.get('/v1/assignments/' + adminRoleId)
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].should.be.an.Actor();
+              body[0].displayName.should.equal('Alice');
+            })))));
   });
 
-  describe('/:roleId/:Id', () => {
+  describe('/:roleId/:actorId', () => {
     describe('POST', () => {
       it('should prohibit anonymous users from creating assignments', testService((service) =>
         service.login('chelsea', (asChelsea) =>
@@ -130,7 +131,7 @@ describe('api: /assignments', () => {
             .then((aliceId) => service.delete('/v1/assignments/admin/' + aliceId)
               .expect(403)))));
 
-      it('should prohibit anonymous users from creating assignments', testService((service) =>
+      it('should prohibit unprivileged users from creating assignments', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
             .then((aliceId) => service.login('chelsea', (asChelsea) =>
