@@ -128,6 +128,24 @@ describe('api: /users', () => {
           email.html.should.match(/no account exists/);
         })));
 
+    it('should send a specific email if an account existed but was deleted', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current')
+            .then(({ body }) => body.id)
+            .then((chelseaId) => asAlice.delete('/v1/users/' + chelseaId)
+              .expect(200)
+              .then(() => service.post('/v1/users/reset/initiate')
+                .send({ email: 'chelsea@opendatakit.org' })
+                .expect(200)
+                .then(() => {
+                  const email = global.inbox.pop();
+                  global.inbox.length.should.equal(0);
+                  email.to.should.eql([{ address: 'chelsea@opendatakit.org', name: '' }]);
+                  email.subject.should.equal('ODK Central account password reset');
+                  email.html.should.match(/account has been deleted/);
+                })))))));
+
     it('should send an email with a token which can reset the user password', testService((service) =>
       service.post('/v1/users/reset/initiate')
         .send({ email: 'alice@opendatakit.org' })
