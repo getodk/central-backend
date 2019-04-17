@@ -55,6 +55,34 @@ describe('api: /projects', () => {
                 body[0].name.should.equal('Default Project');
               }))))));
 
+    it('should order projects appropriately', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects')
+          .send({ name: 'A Test Project', archived: true })
+          .set('Content-Type', 'application/json')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects')
+            .send({ name: 'Other Project', archived: true })
+            .set('Content-Type', 'application/json')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects')
+              .send({ name: 'Aardvark Project' })
+              .set('Content-Type', 'application/json')
+              .expect(200)
+              .then(() => asAlice.get('/v1/projects')
+                .expect(200)
+                .then(({ body }) => {
+                  body.length.should.equal(4);
+                  body.map((p) => p.name).should.eql([
+                    'Aardvark Project',
+                    'Default Project',
+                    'A Test Project',
+                    'Other Project'
+                  ]);
+                  body[2].archived.should.equal(true);
+                  body[3].archived.should.equal(true);
+                })))))));
+
     it('should return extended metadata if requested', testService((service) =>
       service.login('alice', (asAlice) => Promise.all([
         asAlice.post(`/v1/projects/1/app-users`)
@@ -108,6 +136,36 @@ describe('api: /projects', () => {
               body[0].name.should.equal('Default Project');
               body[0].forms.should.equal(1);
             })))));
+
+    it('should order extended metadata projects appropriately', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects')
+          .send({ name: 'A Test Project', archived: true })
+          .set('Content-Type', 'application/json')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects')
+            .send({ name: 'Other Project', archived: true })
+            .set('Content-Type', 'application/json')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects')
+              .send({ name: 'Aardvark Project' })
+              .set('Content-Type', 'application/json')
+              .expect(200)
+              .then(() => asAlice.get('/v1/projects')
+                .set('X-Extended-Metadata', 'true')
+                .expect(200)
+                .then(({ body }) => {
+                  console.log(body);
+                  body.length.should.equal(4);
+                  body.map((p) => p.name).should.eql([
+                    'Aardvark Project',
+                    'Default Project',
+                    'A Test Project',
+                    'Other Project'
+                  ]);
+                  body[2].archived.should.equal(true);
+                  body[3].archived.should.equal(true);
+                })))))));
   });
 
   describe('POST', () => {
@@ -256,21 +314,35 @@ describe('api: /projects', () => {
           .send({ name: 'New Test Name' })
           .expect(403))));
 
-    it('should update the project name and return the new project data', testService((service) =>
+    it('should return a sensible error given a nonboolean value', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1')
           .set('Content-Type', 'application/json')
-          .send({ name: 'New Test Name' })
+          .send({ name: 'New Test Name', archived: 'aaa' })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.11);
+            body.details.value.should.equal('aaa');
+            body.details.expected.includes('boolean').should.equal(true);
+          }))));
+
+    it('should update the project details and return the new project data', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1')
+          .set('Content-Type', 'application/json')
+          .send({ name: 'New Test Name', archived: true })
           .expect(200)
           .then(({ body }) => {
             body.should.be.a.Project();
             body.name.should.equal('New Test Name');
+            body.archived.should.equal(true);
           })
           // paranoia:
           .then(() => asAlice.get('/v1/projects/1')
             .expect(200)
             .then(({ body }) => {
               body.name.should.equal('New Test Name');
+              body.archived.should.equal(true);
             })))));
 
     it('should log an audit record', testService((service, { Audit, Project }) =>
