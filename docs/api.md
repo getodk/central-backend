@@ -26,6 +26,26 @@ Forms and their submissions are also accessible through two **open standards spe
 
 Finally, **system configuration** is available via a set of specialized resources. Currently, the only available configuration allows you to set up data backups.
 
+## Changelog
+
+Here major and breaking changes to the API are listed by version.
+
+### ODK Central v0.4
+
+**Added**:
+
+* Projects resource at `/projects`.
+* Submission XML resource fetch at `GET /projects/…/forms/…/submissions/….xml`.
+* Submission attachment management over REST, at the `/attachments` subresource within Submissions.
+
+**Changed**:
+
+* **Renamed** all `/field-keys` routes to `/app-users`.
+* **Moved** all Forms, Submissions, and Field Key resources under Projects (eg `/forms/simple` would now be something like `/projects/1/forms/simple`).
+* **Changed** `GET` Form to not return Form XML. The Extended Metadata version of those requests will give the XML.
+* **Changed** both OpenRosa and REST Submission creation processes to create and accept only the attachment filenames that are indicated to exist by the Submission XML.
+* **Changed** `GET` Submission Attachemnts listing to return an array of objects containing attachment details rather than an array of filename strings.
+
 # Group Authentication
 
 In ODK Central, the server thinks about identity and permissioning in terms of one core concept: the `Actor`. No matter how you authenticate with the API, you are doing so as an Actor of some kind or another, and when permissions are assigned and checked, they are done against the authenticated Actor.
