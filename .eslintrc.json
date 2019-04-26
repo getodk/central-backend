@@ -9,17 +9,23 @@
     "consistent-return": "off",
     "curly": "off",
     "global-require": "off",
+    "implicit-arrow-linebreak": "off",
     "import/newline-after-import": "off",
+    "import/order": "off",
+    "lines-between-class-members": "off",
     "max-len": "off",
     "no-debugger": "off",
+    "no-else-return": "off",
     "no-multiple-empty-lines": "off",
     "no-restricted-syntax": "off",
     "no-underscore-dangle": "off",
+    "nonblock-statement-body-position": "off",
     "object-curly-newline": [ "error", {
       "ObjectExpression": { "consistent": true },
       "ObjectPattern": { "minProperties": 0 }
     } ],
     "object-property-newline": "off",
+    "operator-linebreak": "off",
     "padded-blocks": "off",
     "spaced-comment": "off"
   }
