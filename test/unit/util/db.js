@@ -208,7 +208,7 @@ describe('util/db', () => {
 
     it('recognizes unique_violation', (done) => {
       postgresErrorToProblem(errorWith({ code: '23505', detail: 'Key (x)=(42) already exists.' })).catch((result) => {
-        result.problemCode.should.equal(400.5);
+        result.problemCode.should.equal(409.3);
         result.problemDetails.fields.should.eql([ 'x' ]);
         result.problemDetails.values.should.eql([ '42' ]);
         done();
@@ -217,7 +217,7 @@ describe('util/db', () => {
 
     it('recognizes and parses multi-column unique_violation', (done) => { // github #93
       postgresErrorToProblem(errorWith({ code: '23505', detail: 'Key ("xmlFormId", version)=(widgets, 1) already exists.' })).catch((result) => {
-        result.problemCode.should.equal(400.5);
+        result.problemCode.should.equal(409.3);
         result.problemDetails.fields.should.eql([ 'xmlFormId', 'version' ]);
         result.problemDetails.values.should.eql([ 'widgets', '1' ]);
         done();

@@ -185,9 +185,9 @@ describe('api: /projects/:id/forms', () => {
         asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.simple)
           .set('Content-Type', 'application/xml')
-          .expect(400)
+          .expect(409)
           .then(({ body }) => {
-            body.code.should.equal(400.5);
+            body.code.should.equal(409.3);
             body.details.fields.should.eql([ 'xmlFormId', 'version', 'projectId' ]);
             body.details.values.should.eql([ 'simple', '', '1' ]);
           }))));
@@ -203,7 +203,7 @@ describe('api: /projects/:id/forms', () => {
           .then(() => asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.simple)
             .set('Content-Type', 'application/xml')
-            .expect(400)
+            .expect(409)
             .then(({ body }) => {
               body.details.fields.should.eql([ 'xmlFormId', 'version', 'projectId' ]);
               body.details.values.should.eql([ 'simple', '', '1' ]);
