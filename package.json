@@ -7,7 +7,7 @@
   },
   "dependencies": {
     "archiver": "~3",
-    "bcrypt": "~2",
+    "bcrypt": "~3",
     "body-parser": "~1.18",
     "cli": "~1",
     "cloneable-readable": "~1",
