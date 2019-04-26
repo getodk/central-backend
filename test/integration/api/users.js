@@ -128,6 +128,24 @@ describe('api: /users', () => {
           email.html.should.match(/no account exists/);
         })));
 
+    it('should send a specific email if an account existed but was deleted', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current')
+            .then(({ body }) => body.id)
+            .then((chelseaId) => asAlice.delete('/v1/users/' + chelseaId)
+              .expect(200)
+              .then(() => service.post('/v1/users/reset/initiate')
+                .send({ email: 'chelsea@opendatakit.org' })
+                .expect(200)
+                .then(() => {
+                  const email = global.inbox.pop();
+                  global.inbox.length.should.equal(0);
+                  email.to.should.eql([{ address: 'chelsea@opendatakit.org', name: '' }]);
+                  email.subject.should.equal('ODK Central account password reset');
+                  email.html.should.match(/account has been deleted/);
+                })))))));
+
     it('should send an email with a token which can reset the user password', testService((service) =>
       service.post('/v1/users/reset/initiate')
         .send({ email: 'alice@opendatakit.org' })
@@ -377,6 +395,71 @@ describe('api: /users', () => {
               email.to.should.eql([{ address: 'alice@opendatakit.org', name: '' }]);
               email.subject.should.equal('ODK Central account password change');
             })))));
+  });
+
+  describe('/users/:id DELETE', () => {
+    it('should reject if the authed user cannot delete', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current')
+          .expect(200)
+          .then(({ body }) => service.login('chelsea', (asChelsea) =>
+            asChelsea.delete(`/v1/users/${body.id}`)
+              .expect(403))))));
+
+    it('should reject if the user does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/users/999')
+          .expect(404))));
+
+    it('should delete the user', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current')
+            .expect(200)
+            .then(({ body }) => body.id)
+            .then((chelseaId) => asAlice.delete('/v1/users/' + chelseaId)
+              .expect(200)
+              .then(() => asAlice.get('/v1/users/' + chelseaId)
+                .expect(404)))))));
+
+    it('should log an audit upon delete', testService((service, { Audit, User }) =>
+      service.login('alice', (asAlice) =>
+        User.getByEmail('chelsea@opendatakit.org')
+          .then((maybeChelsea) => maybeChelsea.get())
+          .then((chelsea) => asAlice.delete('/v1/users/' + chelsea.actor.id)
+            .expect(200)
+            .then(() => Promise.all([
+              Audit.getLatestWhere({ action: 'user.delete' }),
+              asAlice.get('/v1/users/current').then(({ body }) => body.id)
+            ])
+              .then(([ audit, aliceId ]) => {
+                audit.isDefined().should.equal(true);
+                audit.get().actorId.should.equal(aliceId);
+                audit.get().acteeId.should.equal(chelsea.actor.acteeId);
+              }))))));
+
+    it('should prevent login after delete', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current')
+            .expect(200)
+            .then(({ body }) => body.id)
+            .then((chelseaId) => asAlice.delete('/v1/users/' + chelseaId)
+              .expect(200)
+              .then(() => service.post('/v1/sessions')
+                .send({ email: 'chelsea@opendatakit.org', password: 'chelsea' })
+                .expect(401)))))));
+
+    it('should disable active sessions', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current')
+            .expect(200)
+            .then(({ body }) => body.id)
+            .then((chelseaId) => asAlice.delete('/v1/users/' + chelseaId)
+              .expect(200)
+              .then(() => asChelsea.get('/v1/projects')
+                .expect(401)))))));
   });
 });
 

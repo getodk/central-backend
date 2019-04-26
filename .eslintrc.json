@@ -12,7 +12,6 @@
     "import/newline-after-import": "off",
     "max-len": "off",
     "no-debugger": "off",
-    "no-iterator": "off",
     "no-multiple-empty-lines": "off",
     "no-restricted-syntax": "off",
     "no-underscore-dangle": "off",
@@ -22,7 +21,6 @@
     } ],
     "object-property-newline": "off",
     "padded-blocks": "off",
-    "space-before-function-paren": "off",
     "spaced-comment": "off"
   }
 }
