@@ -267,6 +267,16 @@ describe('api: /users', () => {
               body.email.should.equal('alice@opendatakit.org');
             })))));
 
+    it('should allow nonadministrator users to get themselves', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+          .then((chelseaId) => asChelsea.get('/v1/users/' + chelseaId)
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.a.User();
+              body.email.should.equal('chelsea@opendatakit.org');
+            })))));
+
     it('should reject if the user does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/users/99').expect(404))));
@@ -316,6 +326,19 @@ describe('api: /users', () => {
                 .send({ email: 'newalice@odk.org', password: 'alice' })
                 .expect(200);
             })))));
+
+    it('should allow nonadministrator users to update themselves', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+          .then((chelseaId) => asChelsea.patch('/v1/users/' + chelseaId)
+            .send({ displayName: 'a new display name' })
+            .expect(200)
+            .then(() => asChelsea.get('/v1/users/' + chelseaId)
+              .then(({ body }) => {
+                body.should.be.a.User();
+                body.email.should.equal('chelsea@opendatakit.org');
+                body.displayName.should.equal('a new display name');
+              }))))));
 
     it('should send an email to the user\'s previous email when their email changes', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -381,6 +404,16 @@ describe('api: /users', () => {
               .send({ email: 'alice@opendatakit.org', password: 'newpassword' })
               .expect(200);
           }))));
+
+    it('should allow nonadministrator users to set their own password', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+          .then((chelseaId) => asChelsea.put(`/v1/users/${chelseaId}/password`)
+            .send({ old: 'chelsea', new: 'newchelsea' })
+            .expect(200)
+            .then(() => service.post('/v1/sessions')
+              .send({ email: 'chelsea@opendatakit.org', password: 'newchelsea' })
+              .expect(200))))));
 
     it('should send an email to a user when their password changes', testService((service) =>
       service.login('alice', (asAlice) =>
