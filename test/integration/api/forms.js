@@ -145,6 +145,58 @@ describe('api: /projects/:id/forms', () => {
     </xform>
   </xforms>`);
             })))));
+
+    it('should list the correct form given duplicates across projects', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects')
+          .send({ name: 'Project Two' })
+          .expect(200)
+          .then(({ body }) => body.id)
+          .then((projectTwoId) => asAlice.post(`/v1/projects/${projectTwoId}/forms`)
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="two"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => Promise.all([
+              asAlice.get('/v1/projects/1/formList')
+                .set('X-OpenRosa-Version', '1.0')
+                .expect(200)
+                .then(({ text }) => {
+                  const domain = config.get('default.env.domain');
+                  text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+  <xforms xmlns="http://openrosa.org/xforms/xformsList">
+    <xform>
+      <formID>simple</formID>
+      <name>Simple</name>
+      <version></version>
+      <hash>md5:5c09c21d4c71f2f13f6aa26227b2d133</hash>
+      <downloadUrl>${domain}/v1/projects/1/forms/simple.xml</downloadUrl>
+    </xform>
+    <xform>
+      <formID>withrepeat</formID>
+      <name>withrepeat</name>
+      <version>1.0</version>
+      <hash>md5:e7e9e6b3f11fca713ff09742f4312029</hash>
+      <downloadUrl>${domain}/v1/projects/1/forms/withrepeat.xml</downloadUrl>
+    </xform>
+  </xforms>`);
+                }),
+              asAlice.get(`/v1/projects/${projectTwoId}/formList`)
+                .set('X-OpenRosa-Version', '1.0')
+                .expect(200)
+                .then(({ text }) => {
+                  const domain = config.get('default.env.domain');
+                  text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+  <xforms xmlns="http://openrosa.org/xforms/xformsList">
+    <xform>
+      <formID>simple</formID>
+      <name>Simple</name>
+      <version>two</version>
+      <hash>md5:8240cdc372a373170ee87c1eab2c60bc</hash>
+      <downloadUrl>${domain}/v1/projects/${projectTwoId}/forms/simple.xml</downloadUrl>
+    </xform>
+  </xforms>`);
+                })
+            ]))))));
   });
 
   describe('POST', () => {
@@ -239,6 +291,25 @@ describe('api: /projects/:id/forms', () => {
               .then(({ text }) => {
                 full.body.xml.should.equal(text);
               })))));
+
+    it('should get the correct form given duplicates across projects', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects')
+          .send({ name: 'Project Two' })
+          .expect(200)
+          .then(({ body }) => body.id)
+          .then((projectTwoId) => asAlice.post(`/v1/projects/${projectTwoId}/forms`)
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="two"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => Promise.all([
+              asAlice.get('/v1/projects/1/forms/simple.xml')
+                .expect(200)
+                .then(({ text }) => { text.includes('version="two"').should.equal(false); }),
+              asAlice.get(`/v1/projects/${projectTwoId}/forms/simple.xml`)
+                .expect(200)
+                .then(({ text }) => { text.includes('version="two"').should.equal(true); })
+            ]))))));
   });
 
   describe('/:id/manifest GET', () => {
