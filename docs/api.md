@@ -68,7 +68,7 @@ Here major and breaking changes to the API are listed by version.
 **Changed**:
 
 * **Renamed** all `/field-keys` routes to `/app-users`.
-* **Moved** all Forms, Submissions, and App User resources under Projects (eg `/forms/simple` would now be something like `/projects/1/forms/simple`).
+* **Moved** all Forms, Submissions, and App User resources under Projects (e.g. `/forms/simple` would now be something like `/projects/1/forms/simple`).
 * **Changed** `GET` Form to not return Form XML. The Extended Metadata version of those requests will give the XML.
 * **Changed** both OpenRosa and REST Submission creation processes to create and accept only the attachment filenames that are indicated to exist by the Submission XML.
 * **Changed** `GET` Submission Attachemnts listing to return an array of objects containing attachment details rather than an array of filename strings.
@@ -399,7 +399,7 @@ Upon User deletion:
 
 * The account will be removed,
 * the user will be logged out of all existing sessions,
-* and should the user attempt to reset their password, they will receive a special email informing them that their account has been removed.
+* and should the user attempt to reset their password, they will receive an email informing them that their account has been removed.
 
 The User record will remain on file within the database, so that when for example information about the creator of a Form or Submission is requested, basic details are still available on file. A new User account may be created with the same email address as any deleted accounts.
 
@@ -506,7 +506,7 @@ As with Role listing, there are no authorization restrictions upon this endpoint
 
 _(introduced: version 0.5)_
 
-There are _two_ Assignments resources. This one, upon the API root (`/v1/assignments`), manages Role assignment to the entire system (eg if you are assigned a Role that gives you `form.create`, you may create a form anywhere on the entire server). The [other one](/reference/project-management/project-assignments), nested under Projects, manages Role assignment to that Project in particular.
+There are _two_ Assignments resources. This one, upon the API root (`/v1/assignments`), manages Role assignment to the entire system (e.g. if you are assigned a Role that gives you `form.create`, you may create a form anywhere on the entire server). The [other one](/reference/project-management/project-assignments), nested under Projects, manages Role assignment to that Project in particular.
 
 Assignments may be created (`POST`) and deleted (`DELETE`) like any other resource in the system. Here, creating an Assignment grants the referenced Actor the verbs associated with the referenced Role upon all system objects. The pathing for creation and deletion is not quite REST-standard: we represent the relationship between Role and Actor directly in the URL rather than as body data: `assignments/{role}/{actor}` represents the assignment of the given Role to the given Actor.
 
