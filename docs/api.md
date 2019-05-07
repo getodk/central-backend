@@ -7,15 +7,17 @@ You can read on for a brief overview of the main concepts and how they fit toget
 
 ## API Overview
 
-To use the API to manage your data collection campaigns, you will need to **authenticate** with it, so it knows who you are and what you are allowed to do. We provide multiple methods to authenticate with the API, as well as different models for managing the identities and permissions in your system. Human staff users that manage data collection campaigns are `User`s, and mobile devices are granted access via `Field Key`s, and each of these account types have their own way of authenticating. But, these concepts both boil down to `Actor`s, which are how the API actually thinks about authentication and permissioning.
+To use the API to manage your data collection campaigns, you will need to **authenticate** with it, so it knows who you are and what you are allowed to do. We provide multiple methods to authenticate with the API, as well as different models for managing the identities and permissions in your system. Human staff users that manage data collection campaigns are `User`s, and mobile devices are granted access via `App User`s, and each of these account types have their own way of authenticating. But, these concepts both boil down to `Actor`s, which are how the API actually thinks about authentication and permissioning.
 
-In future versions of this server, the primary way an API consumer would authenticate with this server will be as a simple Actor through a standard OAuth 2.0 mechanism. That Actor can be granted a constrained set of rights to safely perform only all the actions it needs to. In this initial release, however, all Users are granted full administrative access, and password-based authentication as a User is the only way to gain full access to the system.
+In future versions of this server, the primary way an API consumer would authenticate with this server will be as a simple Actor through a standard OAuth 2.0 mechanism. That Actor can be granted a constrained set of rights to safely perform only all the actions it needs to. In these early releases, however, password-based authentication as a User is the only way to gain full access to the system.
 
 The `/users` resource can be used to create, manage, and delete **Users**. These are the staff members who have administrative rights on your server, some projects, or both. Additional tasks like resetting a user's password are also available. You could use this API to, for example, synchronize accounts with another system or mass-provision Users.
 
-The rest of system is made up mostly of standard REST resources and subresources, nested under and partitioned by the `/projects` Projects resource. Forms, submissions to those forms, attachments on forms or submissions, and Field Keys ("App Users" in the management interface), are all subresources within `/projects`. This way, each project is essentially its own sandbox which can be managed and manipulated at will.
+Actors (and thus Users) may be granted rights via Assignments. In short, a Roles API is available which describes the defined Roles within the system, each of which allows some set of verbs. The Assignments APIs, in turn, assign Roles to certain Actors upon certain system objects. More information on these may be found below, under [Accounts and Users](/reference/accounts-and-users).
 
-The `/projects/:id/app-users` subresource can be used to create, manage, and delete **Field Keys**.
+The rest of system is made up mostly of standard REST resources and subresources, nested under and partitioned by the `/projects` Projects resource. Forms, submissions to those forms, attachments on forms or submissions, and App Users ("App Users" in the management interface), are all subresources within `/projects`. This way, each project is essentially its own sandbox which can be managed and manipulated at will.
+
+The `/projects/:id/app-users` subresource can be used to create, manage, and delete **App Users**.
 
 The `/projects/:id/forms` resource and its subresource `/projects/:id/forms/…/submissions` provide full access to create, manage, and delete **`Form`s and `Submission`s to those Forms**. Each Form is a single ODK XForms survey, and many Submissions (filled-out forms, also sometimes called `Instance`s) may be attached to each Form. These resources are somewhat unique in that they are created by sending XML in the ODK XForms format instead of JSON. One can also retrieve all the multimedia attachments associated with any submission through the `/projects/:id/forms/…/submissions/…/attachments` subresource.
 
@@ -26,14 +28,59 @@ Forms and their submissions are also accessible through two **open standards spe
 
 Finally, **system configuration** is available via a set of specialized resources. Currently, the only available configuration allows you to set up data backups.
 
+## Changelog
+
+Here major and breaking changes to the API are listed by version.
+
+### ODK Central v0.5
+
+**Added**:
+
+* Roles and Assignments resources at `/roles`, `/assignments`, and `/projects/…/assignments`.
+* Optional `?q=` querystring parameter on Users `GET` listing, for searching users.
+* Extended `GET /users/current`: added `verbs` list of verbs the authenticated Actor may perform server-wide.
+* Extended Project `GET`: added `appUsers` count of App Users and `verbs` list of verbs the authenticated Actor may perform upon/within the Project.
+* User `DELETE`.
+* Projects now have an `archived` flag which may be set to clear a Project out of the way without deleting it.
+
+**Changed**:
+
+* **Removed** autopromotion of Users to Administrator upon creation (`POST`). Roles must be assigned separately and explicitly.
+* **Changed** Project Listing (`GET /projects`) to never reject based on authentication; instead it filters the response based on the access of the authenticated Actor.
+* **Changed** `xmlFormId`/`version` conflict errors on `POST`ing a new Form from a `400` code to a `409` code.
+* **Changed** all remaining textual references to "Field Keys" to "App Users" in the documentation.
+
+**Fixed**:
+
+* Corrected Actor documentation to match reality: **removed** `meta` field and added `type` field.
+* Corrected Extended Form documentation: **added** `createdBy` field.
+* Corrected Backup Config documentation. It was almost entirely wrong.
+* Added Submission POST REST documentation.
+
+### ODK Central v0.4
+
+**Added**:
+
+* Projects resource at `/projects`.
+* Submission XML resource fetch at `GET /projects/…/forms/…/submissions/….xml`.
+* Submission attachment management over REST, at the `/attachments` subresource within Submissions.
+
+**Changed**:
+
+* **Renamed** all `/field-keys` routes to `/app-users`.
+* **Moved** all Forms, Submissions, and App User resources under Projects (e.g. `/forms/simple` would now be something like `/projects/1/forms/simple`).
+* **Changed** `GET` Form to not return Form XML. The Extended Metadata version of those requests will give the XML.
+* **Changed** both OpenRosa and REST Submission creation processes to create and accept only the attachment filenames that are indicated to exist by the Submission XML.
+* **Changed** `GET` Submission Attachemnts listing to return an array of objects containing attachment details rather than an array of filename strings.
+
 # Group Authentication
 
 In ODK Central, the server thinks about identity and permissioning in terms of one core concept: the `Actor`. No matter how you authenticate with the API, you are doing so as an Actor of some kind or another, and when permissions are assigned and checked, they are done against the authenticated Actor.
 
 In practice, there are two types of Actors available in the system today:
 
-* `User`s are accounts used by the staff members who manage the server and the data collection campaigns. Presently, all Users have full administrative permissions to do anything in the system. They are the only account types that have passwords associated with them. They also always have an email address. Users can authenticate using **Session Bearer Tokens** or using **HTTPS Basic** authentication.
-* `Field Key`s are only allowed to access the OpenRosa parts of the API: in essence, they are allowed to list forms, download form definitions, and create new submissions against those forms. They can only authenticate using **Field Key URL**s.
+* `User`s are accounts used by the staff members who manage the server and the data collection campaigns. They each have a set of rights assigned to them via Roles and Assignments. They are the only account types that have passwords associated with them. They also always have an email address. Users can authenticate using **Session Bearer Tokens** or using **HTTPS Basic** authentication.
+* `App User`s are only allowed to access the OpenRosa parts of the API: in essence, they are allowed to list forms, download form definitions, and create new submissions against those forms. They can only authenticate using **App User URL**s.
 
 In a future version of the API, programmatic consumers will be more directly supported as their own Actor type, which can be granted limited permissions and can authenticate over **OAuth 2.0**.
 
@@ -133,29 +180,29 @@ _(There is not really anything at `/v1/example`; this section only demonstrates 
 + Response 200 (application/json)
     + Attributes (Success)
 
-## Field Key Authentication [/v1/key/{fieldKey}/example]
+## App User Authentication [/v1/key/{appUser}/example]
 
-Field keys are only allowed to list and download forms, and upload new submissions to those forms. Primarily, this is to allow clients like ODK Collect to use the OpenRosa API (`/formList` and `/submission`), but any action in this API reference falling into those categories will be allowed.
+App Users are only allowed to list and download forms, and upload new submissions to those forms. Primarily, this is to allow clients like ODK Collect to use the OpenRosa API (`/formList` and `/submission`), but any action in this API reference falling into those categories will be allowed.
 
 + Parameters
-    + `fieldKey`: `!Ms7V3$Zdnd63j5HFacIPFEvFAuwNqTUZW$AsVOmaQFf$vIC!F8dJjdgiDnJXXOt` (string, required) - The field key token. As with Session Bearer tokens, these tokens only contain URL-safe characters, so no escaping is required.
+    + `appUser`: `!Ms7V3$Zdnd63j5HFacIPFEvFAuwNqTUZW$AsVOmaQFf$vIC!F8dJjdgiDnJXXOt` (string, required) - The App User token. As with Session Bearer tokens, these tokens only contain URL-safe characters, so no escaping is required.
 
-### Using Field Key Authentication [GET]
+### Using App User Authentication [GET]
 
-To use Field Key Authentication, first obtain a Field Key, typically by using the configuration panel in the user interface, or else by using the [Field Key API Resource(/reference/accounts-and-users/app-users). Once you have the token, you can apply it to any eligible action by prefixing the URL with `/key/{fieldKey}` as follows:
+To use App User Authentication, first obtain a App User, typically by using the configuration panel in the user interface, or else by using the [App User API Resource(/reference/accounts-and-users/app-users). Once you have the token, you can apply it to any eligible action by prefixing the URL with `/key/{appUser}` as follows:
 
     `/v1/key/!Ms7V3$Zdnd63j5HFacIPFEvFAuwNqTUZW$AsVOmaQFf$vIC!F8dJjdgiDnJXXOt/example/request/path`
 
-_(There is not really anything at `/v1/example`; this section only demonstrates how generally to use Field Key Authentication.)_
+_(There is not really anything at `/v1/example`; this section only demonstrates how generally to use App User Authentication.)_
 
 + Response 200 (application/json)
     + Attributes (Success)
 
-### Revoking a Field Key [DELETE /v1/sessions/{token}]
+### Revoking an App User [DELETE /v1/sessions/{token}]
 
-The token associated with a Field Key is actually just its Session Token. As a result, although a Field Key Token can uniquely be used as a URL prefix as described here, the session associated with it can be revoked in exactly the same way a session is logged out, by issuing a `DELETE` request to its Session resource.
+The token associated with a App User is actually just its Session Token. As a result, although a App User Token can uniquely be used as a URL prefix as described here, the session associated with it can be revoked in exactly the same way a session is logged out, by issuing a `DELETE` request to its Session resource.
 
-Note, however, that a Field Key cannot revoke itself; a `User` must perform this action.
+Note, however, that a App User cannot revoke itself; a `User` must perform this action.
 
 + Parameters
     + token: `lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7` (string, required) - The session bearer token, obtained at login time.
@@ -173,15 +220,26 @@ Note, however, that a Field Key cannot revoke itself; a `User` must perform this
 
 # Group Accounts and Users
 
-Today, there are two types of accounts: `Users`, which are the administrative accounts held by staff members managing the data collection process, and `Field Keys`, which are restricted access keys granted per Project to data collection clients in the field. Although both of these entities are backed by `Actor`s as we explain in the [Authentication section](/reference/authentication) above, there is not yet any way to directly create or manipulate an Actor. Today, you can only create, manage, and delete Users and Field Keys.
+Today, there are two types of accounts: `Users`, which are the administrative accounts held by staff members managing the data collection process, and `App Users`, which are restricted access keys granted per Project to data collection clients in the field. Although both of these entities are backed by `Actor`s as we explain in the [Authentication section](/reference/authentication) above, there is not yet any way to directly create or manipulate an Actor. Today, you can only create, manage, and delete Users and App Users.
+
+Actors (and thus Users) may be granted rights via Roles. The `/roles` Roles API is open for all to access, which describes all defined roles on the server. Getting information for an individual role from that same API will reveal which verbs are associated with each role: some role might allow only `submission.create` and `submission.update`, for example.
+
+Right now, there are two predefined system roles: Administrator (`admin`) and Project Manager (`manager`). Administrators are allowed to perform any action upon the server, while Project Managers are allowed to perform any action upon the projects they are assigned to manage.
+
+The Roles API alone does not, however, tell you which Actors have been assigned with Roles upon which system objects. For that, you will need to consult the various Assignments resources. There are two, one under the API root (`/v1/assignments`), which manages assignments to the entire system, and another nested under each Project (`/v1/projects/…/assignments`) which manage assignments to that Project.
 
 ## Users [/v1/users]
 
 Presently, it is possible to create and list `User`s in the system, as well as to perform password reset operations. In future versions of this API it will be possible to manage existing user information and delete accounts as well.
 
-### Listing all Users [GET]
+### Listing all Users [GET /v1/users{?q}]
 
 Currently, there are no paging or filtering options, so listing `User`s will get you every User in the system, every time.
+
+Optionally, a `q` querystring parameter may be provided to filter the returned users by any given string. The search is performed via a [trigram similarity index](https://www.postgresql.org/docs/9.6/pgtrgm.html) over both the Email and Display Name fields, and results are ordered by match score, best matches first.
+
++ Parameters
+    + q: `alice` (string, optional) - An optional search parameter.
 
 + Response 200 (application/json)
     + Attributes (array[User])
@@ -194,6 +252,8 @@ Currently, there are no paging or filtering options, so listing `User`s will get
 All that is required to create a new user is an email address. That email address will receive a message instructing the new user on how to claim their new account and set a password.
 
 Optionally, a password may also be supplied as a part of this request. If it is, the account is immediately usable with the given credentials. However, an email will still be dispatched with claim instructions as above.
+
+Users are not able to do anything upon creation besides log in and change their own profile information. To allow Users to perform useful actions, you will need to [assign them one or more Roles](/reference/accounts-and-users/assignments).
 
 + Request (application/json)
     + Attributes
@@ -213,17 +273,39 @@ Optionally, a password may also be supplied as a part of this request. If it is,
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Getting user details [GET /v1/users/{actorId}]
+### Getting User details [GET /v1/users/{actorId}]
 
 Typically, you supply the integer ID to get information about the user associated with that id.
 
-However, if you only have a Bearer token, for example, you don't have any information about the user attached to that session, including even the ID with which to get more information. So you can instead supply the text `current` to get the user information associated with the authenticated session.
+It is also possible to supply the text `current` instead of an integer ID; please see the following endpoint for documentation about this.
 
 + Parameters
     + actorId: `42` (string, required) - Typically the integer ID of the `User`. For getting user details, you can also supply the text `current`, which will tell you about the currently authenticated user.
 
 + Response 200 (application/json)
     + Attributes (User)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Getting authenticated User details [GET /v1/users/current]
+
+Typically, you would get User details by the User's numeric Actor ID.
+
+However, if you only have a Bearer token, for example, you don't have any information about the user attached to that session, including even the ID with which to get more information. So you can instead supply the text `current` to get the user information associated with the authenticated session.
+
+If you _do_ use `current`, you may request extended metadata. Supply an `X-Extended-Metadata` header value of `true` to additionally retrieve an array of strings of the `verbs` the authenticated User/Actor is allowed to perform server-wide.
+
++ Response 200 (application/json)
+    This is the standard response, if Extended Metadata is not requested:
+
+    + Attributes (User)
+
++ Response 200 (application/json; extended)
+    This is the Extended Metadata response, if requested via the appropriate header:
+
+    + Attributes (User)
+        + verbs: `project.create`, `project.update` (array[string], required) - The verbs the authenticated Actor is allowed to perform server-wide.
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -311,48 +393,64 @@ If the email address provided does not match any user in the system, that addres
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-## Field Keys [/v1/projects/{projectId}/app-users]
+### Deleting a User [DELETE /v1/users/{actorId}]
 
-Field Keys may only be created, fetched, and manipulated within the nested Projects subresource, as Field Keys themselves are limited to the Project in which they are created. Through the `Field Key`s API, you can create, list, and delete the Field Keys of any given Project. Because they have extremely limited permissions, Field Keys cannot manage themselves; only `User`s may access this API.
+Upon User deletion:
+
+* The account will be removed,
+* the user will be logged out of all existing sessions,
+* and should the user attempt to reset their password, they will receive an email informing them that their account has been removed.
+
+The User record will remain on file within the database, so that when for example information about the creator of a Form or Submission is requested, basic details are still available on file. A new User account may be created with the same email address as any deleted accounts.
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## App Users [/v1/projects/{projectId}/app-users]
+
+App Users may only be created, fetched, and manipulated within the nested Projects subresource, as App Users themselves are limited to the Project in which they are created. Through the `App User`s API, you can create, list, and delete the App Users of any given Project. Because they have extremely limited permissions, App Users cannot manage themselves; only `User`s may access this API.
 
 For more information about the `/projects` containing resource, please see the following section.
 
 + Parameters
     + projectId: `7` (number, required) - The numeric ID of the Project
 
-### Listing all Field Keys [GET]
+### Listing all App Users [GET]
 
-Currently, there are no paging or filtering options, so listing `Field Key`s will get you every Field Key in the system, every time.
+Currently, there are no paging or filtering options, so listing `App User`s will get you every App User in the system, every time.
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `lastUsed` timestamp of each Field Key, as well as to inflate the `createdBy` from an `Actor` ID reference to an actual Actor metadata object.
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `lastUsed` timestamp of each App User, as well as to inflate the `createdBy` from an `Actor` ID reference to an actual Actor metadata object.
 
 + Response 200 (application/json)
     This is the standard response, if Extended Metadata is not requested:
 
-    + Attributes (array[Field Key])
+    + Attributes (array[App User])
 
 + Response 200 (application/json; extended)
     This is the Extended Metadata response, if requested via the appropriate header:
 
-    + Attributes (array[Extended Field Key])
+    + Attributes (array[Extended App User])
 
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Creating a new Field Key [POST]
+### Creating a new App User [POST]
 
-The only information required to create a new `Field Key` is its `displayName` (this is called "Nickname" in the administrative panel).
+The only information required to create a new `App User` is its `displayName` (this is called "Nickname" in the administrative panel).
 
 + Request (application/json)
     + Attributes
-        + displayName: `My Display Name` (string, required) - The friendly nickname of the `Field Key` to be created.
+        + displayName: `My Display Name` (string, required) - The friendly nickname of the `App User` to be created.
 
     + Body
 
             { "displayName": "My Display Name" }
 
 + Response 200 (application/json)
-    + Attributes (Field Key)
+    + Attributes (App User)
 
 + Response 400 (application/json)
     + Attributes (Error 400)
@@ -360,14 +458,113 @@ The only information required to create a new `Field Key` is its `displayName` (
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Deleting a Field Key [DELETE /v1/projects/{projectId}/app-users/{id}]
+### Deleting a App User [DELETE /v1/projects/{projectId}/app-users/{id}]
 
-You don't have to delete a `Field Key` in order to cut off its access. Using a `User`'s credentials you can simply [log the Field Key's session out](/reference/authentication/field-key-authentication/revoking-a-field-key) using its token. This will end its session without actually deleting the Field Key, which allows you to still see it in the configuration panel and inspect its history. This is what the administrative panel does when you choose to "Revoke" the Field Key.
+You don't have to delete a `App User` in order to cut off its access. Using a `User`'s credentials you can simply [log the App User's session out](/reference/authentication/app-user-authentication/revoking-an-app-user) using its token. This will end its session without actually deleting the App User, which allows you to still see it in the configuration panel and inspect its history. This is what the administrative panel does when you choose to "Revoke" the App User.
 
-That said, if you do wish to delete the Field Key altogether, you can do so by issuing a `DELETE` request to its resource path. Field Keys cannot delete themselves.
+That said, if you do wish to delete the App User altogether, you can do so by issuing a `DELETE` request to its resource path. App Users cannot delete themselves.
 
 + Parameters
-    + id: `16` (number, required) - The numeric ID of the Field Key
+    + id: `16` (number, required) - The numeric ID of the App User
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Roles [/v1/roles]
+
+_(introduced: version 0.5)_
+
+The Roles API lists and describes each known Role within the system. Right now, Roles may not be created or customized via the API, but this will likely change in the future.
+
+Each Role contains information about the verbs it allows its assignees to perform. Some Roles have a system name associated with them; the Roles may always be referenced by this system name in request URLs, and system Roles are always read-only.
+
+### Listing all Roles [GET]
+
+Currently, there are no paging or filtering options, so listing `Role`s will get you every Role in the system, every time. There are no authorization restrictions upon this endpoint: anybody is allowed to list all Role information at any time.
+
++ Response 200 (application/json)
+    + Attributes (array[Role])
+
+### Getting Role Details [GET /v1/roles/{id}]
+
+Getting an individual Role does not reveal any additional information over listing all Roles. It is, however, useful for direct lookup of a specific role:
+
+The `id` parameter for Roles here and elsewhere will accept the numeric ID associated with that Role, _or_ a `system` name if there is one associated with the Role. Thus, you may request `/v1/roles/admin` on any ODK Central server and receive information about the Administrator role.
+
+As with Role listing, there are no authorization restrictions upon this endpoint: anybody is allowed to get information about any Role at any time.
+
++ Parameters
+    + id: `1` (string, required) - Typically the integer ID of the `Role`. You may also supply the Role `system` name if it has one.
+
++ Response 200 (application/json)
+    + Attributes (Role)
+
+## Assignments [/v1/assignments]
+
+_(introduced: version 0.5)_
+
+There are _two_ Assignments resources. This one, upon the API root (`/v1/assignments`), manages Role assignment to the entire system (e.g. if you are assigned a Role that gives you `form.create`, you may create a form anywhere on the entire server). The [other one](/reference/project-management/project-assignments), nested under Projects, manages Role assignment to that Project in particular.
+
+Assignments may be created (`POST`) and deleted (`DELETE`) like any other resource in the system. Here, creating an Assignment grants the referenced Actor the verbs associated with the referenced Role upon all system objects. The pathing for creation and deletion is not quite REST-standard: we represent the relationship between Role and Actor directly in the URL rather than as body data: `assignments/{role}/{actor}` represents the assignment of the given Role to the given Actor.
+
+### Listing all Assignments [GET]
+
+This will list every server-wide assignment, in the form of `actorId`/`roleId` pairs. It will _not_ list Project-specific Assignments. To find those, you will need the [Assignments subresource](/reference/project-management/project-assignments) within Projects.
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to expand the `actorId` into a full `actor` objects. The Role reference remains a numeric ID.
+
++ Response 200 (application/json)
+    This is the standard response, if Extended Metadata is not requested:
+
+    + Attributes (array[Assignment])
+
++ Response 200 (application/json; extended)
+    This is the Extended Metadata response, if requested via the appropriate header:
+
+    + Attributes (array[Extended Assignment])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Listing all Actors assigned some Role [GET /v1/assignments/{roleId}]
+
+Given a `roleId`, which may be a numeric ID or a string role `system` name, this endpoint lists all `Actors` that have been assigned that Role on a server-wide basis.
+
++ Parameters
+    + roleId: `admin` (string, required) - Typically the integer ID of the `Role`. You may also supply the Role `system` name if it has one.
+
++ Response 200 (application/json)
+    + Attributes (array[Actor])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Assigning an Actor to a server-wide Role [POST /v1/assignments/{roleId}/{actorId}]
+
+Given a `roleId`, which may be a numeric ID or a string role `system` name, and a numeric `actorId`, assigns that Role to that Actor across the entire server.
+
+No `POST` body data is required, and if provided it will be ignored.
+
++ Parameters
+    + roleId: `admin` (string, required) - Typically the integer ID of the `Role`. You may also supply the Role `system` name if it has one.
+    + actorId: `14` (number, required) - The integer ID of the `Actor`.
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Stripping an Role Assignment from an Actor [DELETE /v1/assignments/{roleId}/{actorId}]
+
+Given a `roleId`, which may be a numeric ID or a string role `system` name, and a numeric `actorId`, unassigns that Role from that Actor across the entire server.
+
++ Parameters
+    + roleId: `admin` (string, required) - Typically the integer ID of the `Role`. You may also supply the Role `system` name if it has one.
+    + actorId: `14` (number, required) - The integer ID of the `Actor`.
 
 + Response 200 (application/json)
     + Attributes (Success)
@@ -377,19 +574,21 @@ That said, if you do wish to delete the Field Key altogether, you can do so by i
 
 # Group Project Management
 
-Apart from staff users ("Web Users" in the Central management interface) and some site-wide configuration details like backups, all of ODK Central's objects (Forms, Submissions, Field Keys) are partitioned by Project, and available only as subresources below the main Projects resource.
+Apart from staff users ("Web Users" in the Central management interface) and some site-wide configuration details like backups, all of ODK Central's objects (Forms, Submissions, App Users) are partitioned by Project, and available only as subresources below the main Projects resource.
 
 ## Projects [/v1/projects]
 
-_(introduced: version 0.4.0)_
+_(introduced: version 0.4)_
 
 You must create a containing Project before you can create any of its subobjects.
 
-### Listing all Projects [GET]
+### Listing Projects [GET]
 
-Currently, there are no paging or filtering options, so listing `Project`s will get you every Project in the system, every time.
+The Projects listing endpoint is somewhat unique in that it is freely accessible to anybody, even unauthenticated clients. Rather than reject the user with a `403` or similar error, the Projects listing will only return Projects that the authenticated Actor is allowed to see. In most cases, this means that unauthenticated requests will receive `[]` in reply.
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `forms` count of forms within the Project, as well as the `lastSubmission` timestamp of the latest submission to any for in the project, if any.
+Currently, there are no paging or filtering options, so listing `Project`s will get you every Project you have access to.
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `appUsers` count of App Users and `forms` count of Forms within the Project, as well as the `lastSubmission` timestamp of the latest submission to any for in the project, if any.
 
 + Response 200 (application/json)
     This is the standard response, if Extended Metadata is not requested:
@@ -400,9 +599,6 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
     This is the Extended Metadata response, if requested via the appropriate header:
 
     + Attributes (array[Extended Project])
-
-+ Response 403 (application/json)
-    + Attributes (Error 403)
 
 ### Creating a Project [POST /v1/projects]
 
@@ -426,7 +622,9 @@ To create a Project, the only information you must supply (via POST body) is the
 
 To get just the details of a single Project, `GET` its single resource route by its numeric ID.
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `forms` count of forms within the Project, as well as the `lastSubmission` timestamp of the latest submission to any for in the project, if any.
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `appUsers` count of App Users and `forms` count of forms within the Project, as well as the `lastSubmission` timestamp of the latest submission to any for in the project, if any.
+
+In addition, the extended metadata version of this endpoint (but not the overall Project listing) returns an array of the `verbs` the authenticated Actor is able to perform on/within the Project.
 
 + Parameters
     + id: `16` (number, required) - The numeric ID of the Project
@@ -440,13 +638,16 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
     This is the Extended Metadata response, if requested via the appropriate header:
 
     + Attributes (Extended Project)
+        + verbs: `form.create`, `form.delete` (array[string], required) - The array of string verbs the authenticated Actor may perform on and within this Project.
 
 + Response 403 (application/json)
     + Attributes (Error 403)
 
 ### Updating Project Details [PATCH /v1/projects/{id}]
 
-Currently, the only Project information that may be updated is its name.
+The Project name may be updated, as well as the `archived` flag.
+
+By default, `archived` is not set, which is equivalent to `false`. If `archived` is set to `true`, the Project will be sorted to the bottom of the list, and in the web management application the Project will become effectively read-only. API write access will not be affected.
 
 + Parameters
     + id: `16` (number, required) - The numeric ID of the Project
@@ -454,10 +655,11 @@ Currently, the only Project information that may be updated is its name.
 + Request (application/json)
     + Attributes
         + name: `New Project Name` (string, required) - The desired name of the Project.
+        + archived: `true` (boolean, optional) - Archives the Project.
 
     + Body
 
-            { "name": "New Project Name" }
+            { "name": "New Project Name", "archived": true }
 
 + Response 200 (application/json)
     + Attributes (Project)
@@ -471,6 +673,81 @@ Deleting a Project will remove it from the management interface and make it perm
 
 + Parameters
     + id: `16` (number, required) - The numeric ID of the Project
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Project Assignments [/v1//projects/{projectId}/assignments]
+
+_(introduced: version 0.5)_
+
+There are _two_ Assignments resources. This one, specific to the Project it is nested within, only governs Role assignments to objects within that Project. Assigning an Actor a Role that grants, for example, a verb `submission.create`, allows that Actor to create a submission anywhere within this Project.
+
+The [other Assignments resource](/reference/accounts-and-users/assignments), at the API root, manages Role assignments for all objects across the server. Apart from this difference in scope, the introduction to that section contains information useful for understanding the following endpoints.
+
+There are only one set of Roles, applicable to either scenario. There are not a separate set of Roles used only upon Projects.
+
++ Parameters
+    + projectId: `2` (number, required) - The numeric ID of the Project
+
+### Listing all Project Assignments [GET]
+
+This will list every assignment upon this Project, in the form of `actorId`/`roleId` pairs.
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to expand the `actorId` into a full `actor` objects. The Role reference remains a numeric ID.
+
++ Response 200 (application/json)
+    This is the standard response, if Extended Metadata is not requested:
+
+    + Attributes (array[Assignment])
+
++ Response 200 (application/json; extended)
+    This is the Extended Metadata response, if requested via the appropriate header:
+
+    + Attributes (array[Extended Assignment])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Listing all Actors assigned some Project Role [GET /v1/projects/{projectId}/assignments/{roleId}]
+
+Given a `roleId`, which may be a numeric ID or a string role `system` name, this endpoint lists all `Actors` that have been assigned that Role upon this particular Project.
+
++ Parameters
+    + roleId: `manager` (string, required) - Typically the integer ID of the `Role`. You may also supply the Role `system` name if it has one.
+
++ Response 200 (application/json)
+    + Attributes (array[Actor])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Assigning an Actor to a Project Role [POST /v1/projects/{projectId}/assignments/{roleId}/{actorId}]
+
+Given a `roleId`, which may be a numeric ID or a string role `system` name, and a numeric `actorId`, assigns that Role to that Actor for this particular Project.
+
+No `POST` body data is required, and if provided it will be ignored.
+
++ Parameters
+    + roleId: `manager` (string, required) - Typically the integer ID of the `Role`. You may also supply the Role `system` name if it has one.
+    + actorId: `14` (number, required) - The integer ID of the `Actor`.
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Stripping an Project Role Assignment from an Actor [DELETE /v1/projects/{projectId}/assignments/{roleId}/{actorId}]
+
+Given a `roleId`, which may be a numeric ID or a string role `system` name, and a numeric `actorId`, unassigns that Role from that Actor for this particular Project.
+
++ Parameters
+    + roleId: `manager` (string, required) - Typically the integer ID of the `Role`. You may also supply the Role `system` name if it has one.
+    + actorId: `14` (number, required) - The integer ID of the `Actor`.
 
 + Response 200 (application/json)
     + Attributes (Success)
@@ -501,7 +778,7 @@ It is not yet possible to modify a Form's XML definition once it is created.
 
 Currently, there are no paging or filtering options, so listing `Form`s will get you every Form in the system, every time.
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that each Form has, as well as the `lastSubmission` most recent submission timestamp and the actual `xml` XForms XML form definition backing the form.
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that each Form has and the `lastSubmission` most recent submission timestamp, as well as the Actor the Form was `createdBy`, and the actual `xml` XForms XML form definition backing the form.
 
 + Response 200 (application/json)
     This is the standard response, if Extended Metadata is not requested:
@@ -520,7 +797,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 When creating a `Form`, the only required data is the actual XForms XML itself. Use it as the `POST` body with a `Content-Type` header of `application/xml` (`text/xml` works too), and the Form will be created.
 
-If the combination of (`xmlFormId`, `version`) conflict with any existing Form, current or deleted, the request will be rejected. We consider even deleted forms when enforcing this restriction to prevent confusion in case a survey client already has the other version of that Form downloaded.
+If the combination of (`xmlFormId`, `version`) conflict with any existing Form, current or deleted, the request will be rejected with error code `409`. We consider even deleted forms when enforcing this restriction to prevent confusion in case a survey client already has the other version of that Form downloaded.
 
 The API will currently check the XML's structure in order to extract the information we need about it, but ODK Central does _not_ run comprehensive validation on the full contents of the XML to ensure compliance with the ODK specification. Future versions will likely do this, but in the meantime you will have to use a tool like [ODK Validate](https://opendatakit.org/use/validate/) to be sure your Forms are correct.
 
@@ -565,6 +842,9 @@ The API will currently check the XML's structure in order to extract the informa
 
 + Response 403 (application/json)
     + Attributes (Error 403)
+
++ Response 409 (application/json)
+    + Attributes (Error 409)
 
 ### › Individual Form [/v1/projects/{projectId}/forms/{xmlFormId}]
 
@@ -630,7 +910,7 @@ To get only the XML of the `Form` rather than all of the details with the XML as
 
 #### Retrieving Form Schema JSON [GET /v1/projects/{projectId}/forms/{xmlFormId}.schema.json{?flatten}]
 
-_(introduced: version 0.2.0)_
+_(introduced: version 0.2)_
 
 For applications that do not rely on JavaRosa, it can be challenging to parse XForms XML into a simple schema structure. Because Central Backend already implements and performs such an operation for its own internal purposes, we also expose this utility for any downstream consumers which wish to make use of it.
 
@@ -861,6 +1141,38 @@ To get only the XML of the `Submission` rather than all of the details with the 
               <age>32</age>
             </data>
 
+#### Creating a Submission [POST /v1/projects/{projectId}/forms/{xmlFormId}/submissions]
+
+To create a Submission by REST rather than over the [OpenRosa interface](/reference/openrosa-endpoints/openrosa-form-submission-api), you may `POST` the Submission XML to this endpoint. The request must have an XML `Content-Type` (`text/xml` or `application/xml`).
+
+Unlike the OpenRosa Form Submission API, this interface does _not_ accept Submission attachments upon Submission creation. Instead, the server will determine which attachments are expected based on the Submission XML, and you may use the endpoints found in the following section to add the appropriate attachments and check the attachment status and content.
+
+If the XML is unparseable or there is some other input problem with your data, you will get a `400` error in response. If a submission already exists with the given `instanceId`, you will get a `409` error in response.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+
++ Request (application/xml)
+    + Body
+
+            <data id="simple">
+              <orx:meta><orx:instanceID>uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44</orx:instanceID></orx:meta>
+              <name>Alice</name>
+              <age>32</age>
+            </data>
+
++ Response 200 (application/json)
+    + Attributes (Submission)
+
++ Response 400 (application/json)
+    + Attributes (Error 400)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
++ Response 409 (application/json)
+    + Attributes (Error 409)
+
 ## Attachments [/v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments]
 
 When a `Submission` is created, either over the OpenRosa or the REST interface, its XML data is analyzed to determine which file attachments it references: these may be photos or video taken as part of the survey, or an audit/timing log, among other things. Each reference is an expected attachment, and these expectations are recorded permanently alongside the Submission.
@@ -916,7 +1228,7 @@ The `Content-Type` and `Content-Disposition` will be set appropriately based on 
 
 ## Uploading an Attachment [POST /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments/{filename}]
 
-_(introduced: version 0.4.0)_
+_(introduced: version 0.4)_
 
 To upload a binary to an expected file slot, `POST` the binary to its endpoint. Supply a `Content-Type` MIME-type header if you have one.
 
@@ -936,7 +1248,7 @@ To upload a binary to an expected file slot, `POST` the binary to its endpoint. 
 
 ## Clearing a Submission Attachment [DELETE /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments/{filename}]
 
-_(introduced: version 0.4.0)_
+_(introduced: version 0.4)_
 
 Because Submission Attachments are completely determined by the XML data of the submission itself, there is no direct way to entirely remove a Submission Attachment entry from the list, only to clear its uploaded content. Thus, when you issue a `DELETE` to the attachment's endpoint, that is what happens.
 
@@ -958,7 +1270,7 @@ ODK Central is _not_ a fully compliant OpenRosa server. OpenRosa requires compli
 1. [**Metadata Schema**](https://bitbucket.org/javarosa/javarosa/wiki/OpenRosaMetaDataSchema), which defines a standard way to include metadata like the survey device ID and survey duration with a Submission. ODK Central will accept and return this data, but does nothing special with anything besides the `instanceId` at this time.
 2. [**HTTP Request API**](https://bitbucket.org/javarosa/javarosa/wiki/OpenRosaRequest), which defines a set of requirements every OpenRosa request and response must follow. ODK Central is fully compliant with this component.
 3. [**Form Submission API**](https://bitbucket.org/javarosa/javarosa/wiki/FormSubmissionAPI), which defines how Submissions are submitted to the server. ODK Central is fully compliant with this component.
-4. [**Authentication API**](https://bitbucket.org/javarosa/javarosa/wiki/AuthenticationAPI), which defines how users authenticate with the server. ODK Central provides [three authentication methods](/reference/authentication). One of these is HTTPS Basic Authentication, which is recommended by the OpenRosa specification. However, because [we do not follow the try/retry pattern](/reference/authentication/https-basic-authentication/using-basic-authentication) required by the OpenRosa and the RFC specification, ODK Central is _not compliant_ with this component. Our recommendation generally is to use [Field Key Authentication](/reference/authentication/field-key-authentication) when submitting data from survey clients.
+4. [**Authentication API**](https://bitbucket.org/javarosa/javarosa/wiki/AuthenticationAPI), which defines how users authenticate with the server. ODK Central provides [three authentication methods](/reference/authentication). One of these is HTTPS Basic Authentication, which is recommended by the OpenRosa specification. However, because [we do not follow the try/retry pattern](/reference/authentication/https-basic-authentication/using-basic-authentication) required by the OpenRosa and the RFC specification, ODK Central is _not compliant_ with this component. Our recommendation generally is to use [App User Authentication](/reference/authentication/app-user-authentication) when submitting data from survey clients.
 5. [**Form Discovery (Listing) API**](https://bitbucket.org/javarosa/javarosa/wiki/FormListAPI), which returns a listing of Forms available for survey clients to download and submit to. At this time, ODK Central is _partially compliant_ with this component: the server will return a correctly formatted `formList` response, but it does not currently handle the optional filter parameters.
 
 In practical usage, ODK survey clients like Collect will interact with Central in three places:
@@ -1117,7 +1429,7 @@ Some additional things to understand when using this API:
 
 ## OpenRosa Form Manifest API [GET /v1/projects/{projectId}/forms/{xmlFormId}/manifest]
 
-_(introduced: version 0.2.0)_
+_(introduced: version 0.2)_
 
 This is the fully standards-compliant implementation of the [OpenRosa Form Manifest API](https://bitbucket.org/javarosa/javarosa/wiki/FormListAPI#!the-manifest-document). We will not attempt to redocument the standard here.
 
@@ -1377,10 +1689,9 @@ If no backups are configured, this endpoint will return a `404`.
     + Body
 
             {
-                "config": {
-                    "type": "google"
-                },
-                "latest": {
+                "type": "google",
+                "setAt": "2018-01-06T00:32:52.787Z",
+                "recent": [{
                     "acteeId": null,
                     "action": "backup",
                     "actorId": null,
@@ -1388,7 +1699,7 @@ If no backups are configured, this endpoint will return a `404`.
                         "success": true
                     },
                     "loggedAt": "2018-03-21T03:47:03.504Z"
-                }
+                }]
             }
 
 + Response 403 (application/json)
@@ -1458,8 +1769,21 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + createdAt: `2018-04-18T23:19:14.802Z` (string, required) - ISO date format
 + displayName: `My Display Name` (string, required) - All `Actor`s, regardless of type, have a display name
 + id: `115` (number, required)
-+ meta: `{ "json": "data" }` (string, optional) - Sometimes additional information is tracked in this JSON object. Modify with care.
++ type: (Actor Type, required) - the Type of this Actor; typically this will be `user`.
 + updatedAt: `2018-04-18T23:42:11.406Z` (string, optional) - ISO date format
+
+## Actor Type (enum)
++ user (string) - A User with an email and login password.
++ fieldKey (string) - An App User which can submit data to a form. ("Field Key" is a legacy internal name for "App User".)
++ singleUse (string) - A temporary token authorized to perform some specific action, like reset one password.
+
+## Assignment (object)
++ actorId: `42` (number, required) - The numeric Actor ID being assigned.
++ roleId: `4` (number, required) - The numeric Role ID being assigned.
+
+## Extended Assignment (object)
++ actor: (Actor, required) - The full Actor data for this assignment.
++ roleId: `4` (number, required) - The numeric Role ID being assigned.
 
 ## Error 400 (object)
 + code: `400` (string, required)
@@ -1482,13 +1806,17 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + code: `406.1` (string, required)
 + message: `Requested format not acceptable; this resource allows: (application/json, json).` (string)
 
+## Error 409 (object)
++ code: `409.1` (string, required)
++ message: `A resource already exists with id value(s) of 1.` (string)
+
 ## Error 501 (object)
 + code: `501.1` (string, required)
 + message: `The requested feature $unsupported is not supported by this server.` (string)
 
-## Field Key (Actor)
-+ createdBy: `42` (number, required) - The ID of the `Actor` that created this `Field Key`.
-+ token: `d1!E2GVHgpr4h9bpxxtqUJ7EVJ1Q$Dusm2RBXg8XyVJMCBCbvyE8cGacxUx3bcUT` (string, optional) - If present, this is the Token that can be used to authenticate a request as this `Field Key`. If not present, this `Field Key`'s access has been revoked.
+## App User (Actor)
++ createdBy: `42` (number, required) - The ID of the `Actor` that created this `App User`.
++ token: `d1!E2GVHgpr4h9bpxxtqUJ7EVJ1Q$Dusm2RBXg8XyVJMCBCbvyE8cGacxUx3bcUT` (string, optional) - If present, this is the Token that can be used to authenticate a request as this `App User`. If not present, this `App User`'s access has been revoked.
 
 ## Form (object)
 + xmlFormId: `simple` (string, required) - The `id` of this form as given in its XForms XML definition
@@ -1502,6 +1830,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Extended Form (Form)
 + submissions: `10` (number, required) - The number of `Submission`s that have been submitted to this `Form`.
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission, if any.
++ createdBy: (Actor, optional) - The full information of the Actor who created this Form.
 + xml: `…` (string, required) - The XForms XML that defines this form.
 
 ## Form Attachment (object)
@@ -1523,20 +1852,30 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + closing (string) - This form is _not_ available for download but still accepts submissions.
 + closed (string) - This form is _not_ available for download, and it does _not_ accept submissions.
 
-## Extended Field Key (Field Key)
-+ createdBy (Actor, required) - The full details about the `Actor` that created this `Field Key`.
-+ lastUsed: `2018-04-14T08:34:21.633Z` (string, optional) - ISO date format. The last time this `Field Key` was used to authenticate a request.
+## Extended App User (App User)
++ createdBy (Actor, required) - The full details about the `Actor` that created this `App User`.
++ lastUsed: `2018-04-14T08:34:21.633Z` (string, optional) - ISO date format. The last time this `App User` was used to authenticate a request.
 
 ## Project (object)
-  + id: `1` (number) - The numerical ID of the Project.
-  + name: `Default Project` (string, required) - The name of the Project.
++ id: `1` (number) - The numerical ID of the Project.
++ name: `Default Project` (string, required) - The name of the Project.
++ archived: false (boolean, optional) - Whether the Project is archived or not. `null` is equivalent to `false`. All this does is sort the Project to the bottom of the list and disable management features in the web management application.
 
 ## Extended Project (Project)
-  + forms: `7` (number) - The number of forms within this Project.
-  + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission to any form in this project, if any.
++ appUsers: `4` (number, required) - The number of App Users created within this Project.
++ forms: `7` (number, required) - The number of forms within this Project.
++ lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission to any form in this project, if any.
 
 ## User (Actor)
 + email: `my.email.address@opendatakit.org` (string, required) - Only `User`s have email addresses associated with them
+
+## Role (object)
++ id: `4` (number, required) - The numerical ID of the Role.
++ name: `Project Manager` (string, required) - The human-readable name for the Role.
++ system: `manager` (string, optional) - The system name of the Role. Roles that have system names may not be modified.
++ verbs: `project.update`, `project.delete` (array[string], required) - The array of string verbs this Role confers.
++ createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format
++ updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format
 
 ## Session (object)
 + createdAt: `2018-04-18T03:04:51.695Z` (string, required) - ISO date format
@@ -1545,7 +1884,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 
 ## Submission (object)
 + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the `Submission`, given by the Submission XML.
-+ submitter: `23` (number, required) - The ID of the `Actor` (`Field Key` or `User`) that submitted this `Submission`.
++ submitter: `23` (number, required) - The ID of the `Actor` (`App User` or `User`) that submitted this `Submission`.
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format
 
