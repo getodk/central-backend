@@ -96,6 +96,32 @@ describe('util/db', () => {
     });
   });
 
+  describe('QueryOptions', () => {
+    const { QueryOptions, applyPagingOptions } = util;
+    it('should cascade conditions properly', () => {
+      const query = QueryOptions.extended.withCondition({ a: 1 }).withCondition({ b: 2 });
+      query.condition.should.eql({ a: 1, b: 2 });
+      query.extended.should.equal(true);
+    });
+
+    it('should correctly determine if paging exists', () => {
+      (new QueryOptions()).hasPaging().should.equal(false);
+      (new QueryOptions({ offset: 0 })).hasPaging().should.equal(true);
+      (new QueryOptions({ limit: 0 })).hasPaging().should.equal(true);
+    });
+
+    const mockDb = () => ({
+      offset: function(val) { this._offset = val; return this; },
+      limit: function(val) { this._limit = val; return this; }
+    });
+    it('should correctly apply paging via applyPagingOptions', () => {
+      const db = mockDb();
+      applyPagingOptions(new QueryOptions({ offset: 17, limit: 42 }))(db);
+      db._offset.should.equal(17);
+      db._limit.should.equal(42);
+    });
+  });
+
   describe('rowToInstance', () => {
     const { rowToInstance } = util;
     it('should instantiate the first row result as the given class', () => {
