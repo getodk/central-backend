@@ -155,7 +155,6 @@ describe('api: /projects', () => {
                 .set('X-Extended-Metadata', 'true')
                 .expect(200)
                 .then(({ body }) => {
-                  console.log(body);
                   body.length.should.equal(4);
                   body.map((p) => p.name).should.eql([
                     'Aardvark Project',
