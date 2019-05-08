@@ -372,6 +372,15 @@ describe('api: /forms/:id/submissions', () => {
   });
 
   describe('.csv.zip GET', () => {
+    it('should return a zipfile with the relevant headers', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip')
+          .expect(200)
+          .then(({ headers }) => {
+            headers['content-disposition'].should.equal('attachment; filename="simple.zip"');
+            headers['content-type'].should.equal('application/zip');
+          }))));
+
     it('should return a zipfile with the relevant data', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
