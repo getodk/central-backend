@@ -88,6 +88,25 @@ describe('submissionToOData', () => {
     });
   });
 
+  it('should sanitize fieldnames', () => {
+    const fields = {
+      'q1.8': { name: 'q1.8', type: 'string' },
+      '42': { name: '42', type: 'int' }
+    };
+    const submission = mockSubmission('sanitize', `<data>
+        <q1.8>hello</q1.8>
+        <42>108</42>
+      </data>`);
+    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+      result.should.eql([{
+        __id: 'sanitize',
+        __system,
+        q1_8: 'hello',
+        _42: 108
+      }]);
+    });
+  });
+
   it('should decode xml entities for output', () => {
     const fields = { text: { name: 'text', type: 'text' } };
     const submission = mockSubmission('entities', `<data>

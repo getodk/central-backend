@@ -196,6 +196,42 @@ describe('odata message composition', () => {
         <Property Name="__Submissions-children-child-id" Type="Edm.String"/>`).should.equal(true);
       });
     });
+
+    it('should appropriately sanitize identifiers', () => {
+      const form = { xmlFormId: 'sanitize', def: { schema: () => getFormSchema({ xml: `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Illegal OData Chars</h:title>
+    <model>
+      <instance>
+        <data id="sanitize">
+          <meta>
+            <instanceID/>
+          </meta>
+          <q1.8/>
+          <42/>
+        </data>
+      </instance>
+
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+      <bind nodeset="/data/q1.8" type="string"/>
+      <bind nodeset="/data/42" type="int"/>
+    </model>
+
+  </h:head>
+  <h:body>
+    <input ref="/data/q1.8">
+      <label>What is your name?</label>
+    </input>
+    <input ref="/data/42">
+      <label>What is your age?</label>
+    </input>
+  </h:body>
+</h:html>` }) } };
+      return edmxFor(form).then((edmx) => {
+        edmx.includes('<Property Name="q1_8" Type="Edm.String"/>').should.equal(true);
+        edmx.includes('<Property Name="_42" Type="Edm.Int64"/>').should.equal(true);
+      });
+    });
   });
 
   describe('rowstream conversion', () => {
