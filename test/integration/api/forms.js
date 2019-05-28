@@ -240,8 +240,8 @@ describe('api: /projects/:id/forms', () => {
           .expect(409)
           .then(({ body }) => {
             body.code.should.equal(409.3);
-            body.details.fields.should.eql([ 'xmlFormId', 'version', 'projectId' ]);
-            body.details.values.should.eql([ 'simple', '', '1' ]);
+            body.details.fields.should.eql([ 'projectId', 'xmlFormId' ]);
+            body.details.values.should.eql([ '1', 'simple' ]);
           }))));
 
     // the simple form has no version declaration at all, which is what we want
@@ -257,8 +257,8 @@ describe('api: /projects/:id/forms', () => {
             .set('Content-Type', 'application/xml')
             .expect(409)
             .then(({ body }) => {
-              body.details.fields.should.eql([ 'xmlFormId', 'version', 'projectId' ]);
-              body.details.values.should.eql([ 'simple', '', '1' ]);
+              body.details.fields.should.eql([ 'projectId', 'xmlFormId', 'version' ]);
+              body.details.values.should.eql([ '1', 'simple', '' ]);
             })))));
 
     it('should return the created form upon success', testService((service) =>
@@ -404,6 +404,7 @@ describe('api: /projects/:id/forms', () => {
           .then(({ body }) => {
             body.should.be.a.Form();
             body.xmlFormId.should.equal('simple');
+            body.hash.should.equal('5c09c21d4c71f2f13f6aa26227b2d133');
           }))));
 
     it('should return extended form details', testService((service) =>
