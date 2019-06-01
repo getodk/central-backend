@@ -348,7 +348,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(({ body }) => {
             body.should.be.a.Submission();
             body.createdAt.should.be.a.recentIsoDate();
-            body.submitter.should.equal(5);
+            body.submitterId.should.equal(5);
           }))));
 
     it('should create expected attachments', testService((service) =>

@@ -12,36 +12,29 @@ describe('Form', () => {
       });
     });*/
 
-    it('should reject if the formId cannot be found (1: node nonexistent)', (done) => {
+    it('should reject if the formId cannot be found (1: node nonexistent)', () =>
       Form.fromXml('<html/>').catch((failure) => {
         failure.isProblem.should.equal(true);
         failure.problemCode.should.equal(400.2);
-        done();
-      });
-    });
+      }));
 
-    it('should reject if the formId cannot be found (2: attr nonexistent)', (done) => {
+    it('should reject if the formId cannot be found (2: attr nonexistent)', () =>
       Form.fromXml('<html><head><model><instance><data><field/></data></instance></model></head></html>').catch((failure) => {
         failure.isProblem.should.equal(true);
         failure.problemCode.should.equal(400.2);
-        done();
-      });
-    });
+      }));
 
-    it('should reject if the formId cannot be found (3: attr blank)', (done) => {
+    it('should reject if the formId cannot be found (3: attr blank)', () =>
       Form.fromXml('<html><head><model><instance><data id=""><field/></data></instance></model></head></html>').catch((failure) => {
         failure.isProblem.should.equal(true);
         failure.problemCode.should.equal(400.2);
-        done();
-      });
-    });
+      }));
 
-    it('should return a populated Form object if the xml passes', (done) => {
+    it('should return a populated Form object if the xml passes', () => {
       const xml = '<html><head><model><instance><data id="mycoolform"><field/></data></instance></model></head></html>';
-      Form.fromXml(xml).then((form) => {
-        form.xml.should.equal(xml);
+      return Form.fromXml(xml).then((form) => {
+        form.xform.xml.should.equal(xml);
         form.xmlFormId.should.equal('mycoolform');
-        done();
       });
     });
 
@@ -49,16 +42,17 @@ describe('Form', () => {
       const xml = '<html><head><title>My Cool Form</title><model><instance><data id="mycoolform" version="1.0"><field/></data></instance></model></head></html>';
       return Form.fromXml(xml).then((form) => {
         form.name.should.equal('My Cool Form');
-        form.version.should.equal('1.0');
-        form.hash.should.equal('5ba55d383e978f07ee906fc62ff1b288');
+        form.xform.version.should.equal('1.0');
+        form.xform.hash.should.equal('5ba55d383e978f07ee906fc62ff1b288');
+        form.xform.sha.should.equal('89a2f70b74c690a128afce777a7c4b63d737e9be');
+        form.xform.sha256.should.equal('103c7a532de07f6a429a55f90949bb010297562c3731feea1131b54b9088c221');
       });
     });
 
-    it('should squash null version to empty-string', (done) => {
+    it('should squash null version to empty-string', () => {
       const xml = '<html><head><model><instance><data id="mycoolform"><field/></data></instance></model></head></html>';
-      Form.fromXml(xml).then((form) => {
-        (form.version === '').should.equal(true);
-        done();
+      return Form.fromXml(xml).then((form) => {
+        (form.xform.version === '').should.equal(true);
       });
     });
   });

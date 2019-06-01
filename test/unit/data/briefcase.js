@@ -23,9 +23,11 @@ const callAndParse = (form, inStream, callback) =>
   streamBriefcaseCsvs(inStream, form).then((csvStream) =>
     zipStreamToFiles(zipStreamFromParts(csvStream), callback));
 
-const mockForm = (data) => {
-  data.schema = function() { return getFormSchema(this); };
-  return data;
+const mockForm = ({ xmlFormId, xml }) => {
+  return {
+    xmlFormId,
+    xform: { xml, schema() { return getFormSchema(this); } }
+  };
 };
 
 describe('.csv.zip briefcase output @slow', () => {

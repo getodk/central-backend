@@ -2,7 +2,7 @@ require('should');
 const appRoot = require('app-root-path');
 const { always } = require('ramda');
 const { toObjects } = require('streamtest').v2;
-const { submissionToFieldStream } = require(appRoot + '/lib/data/submission');
+const { submissionXmlToFieldStream } = require(appRoot + '/lib/data/submission');
 const { getFormSchema } = require(appRoot + '/lib/data/schema');
 const testData = require(appRoot + '/test/integration/data');
 
@@ -10,7 +10,7 @@ describe('submission field streamer', () => {
   const mockForm = (xml) => ({ schema: always(getFormSchema({ xml })) });
 
   it('should return a stream of records', (done) => {
-    submissionToFieldStream({ xml: testData.instances.simple.one }, mockForm(testData.forms.simple))
+    submissionXmlToFieldStream(testData.instances.simple.one, mockForm(testData.forms.simple))
       .then((fieldStream) => fieldStream.pipe(toObjects((error, result) => {
         result.should.eql([
           { field: { name: 'instanceID', type: 'string' }, text: 'one' },
@@ -22,7 +22,7 @@ describe('submission field streamer', () => {
   });
 
   it('should deal correctly with repeats', (done) => {
-    submissionToFieldStream({ xml: testData.instances.doubleRepeat.double }, mockForm(testData.forms.doubleRepeat))
+    submissionXmlToFieldStream(testData.instances.doubleRepeat.double, mockForm(testData.forms.doubleRepeat))
       .then((fieldStream) => fieldStream.pipe(toObjects((error, result) => {
         result.should.eql([
           { field: { name: 'instanceID', type: 'string' }, text: 'double' },
