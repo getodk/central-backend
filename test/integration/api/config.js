@@ -88,7 +88,7 @@ describe('api: /config', () => {
           asAlice.post('/v1/config/backups/verify').expect(403))));
 
       // does the entire round-trip:
-      it('should store all configuration in the database', testService((service, { all, Config }) =>
+      it('should store all configuration in the database', testService((service, { Config }) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/config/backups/initiate')
             .send({ passphrase: 'super secure' })
@@ -99,7 +99,7 @@ describe('api: /config', () => {
               .expect(200)
               .then(() => asAlice.get('/v1/config/backups')
                 .expect(200)
-                .then(() => all.do([ 'backups.main', 'backups.google' ].map(Config.get))
+                .then(() => Promise.all([ 'backups.main', 'backups.google' ].map(Config.get))
                   .then(map(getOrNotFound))
                   .then(map((x) => JSON.parse(x.value)))
                   .then(([ main, google ]) => {
