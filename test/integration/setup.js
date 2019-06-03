@@ -58,8 +58,7 @@ const populate = (container, [ head, ...tail ] = fixtures) =>
 // this hook won't run if `test-unit` is called, as this directory is skipped
 // in that case.
 before(() => db
-  .raw('drop owned by ' + owner)
-  //.raw('drop owned by ?', [ owner ]) TODO: why does this <- not work?
+  .raw('drop owned by ??', [ owner ])
   .catch(() => null) // if the drop owned by statement fails we're on circleci which has a blank db anyway
   .then(() => db.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
   .then(() => injector.withDefaults({ db, crypto }).transacting(populate)));
