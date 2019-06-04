@@ -120,6 +120,25 @@ describe('api: /submission', () => {
               body.deviceId.should.equal('imei:358240051111110');
             })))));
 
+    it('should store the correct xform and actor ids', testService((service, { db }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+          .expect(201)
+          .then(() => Promise.all([
+            asAlice.get('/v1/users/current').then(({ body }) => body.id),
+            db.select('xformId', 'actorId').from('submission_versions')
+          ]))
+          .then(([ aliceId, submissions ]) => {
+            submissions.length.should.equal(1);
+            submissions[0].actorId.should.equal(aliceId);
+            return db.select('xml').from('xforms').where({ id: submissions[0].xformId })
+              .then(([ xform ]) => {
+                xform.xml.should.equal(testData.forms.simple);
+              });
+          }))));
+
     // also tests /forms/_/submissions/_/attachments return content. (mark1)
     // no point in replicating it.
     it('should save given attachments', testService((service) =>
@@ -369,6 +388,25 @@ describe('api: /forms/:id/submissions', () => {
                   { name: 'my_file1.mp4', exists: false }
                 ]);
               }))))));
+
+    it('should store the correct xform and actor ids', testService((service, { db }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => Promise.all([
+            asAlice.get('/v1/users/current').then(({ body }) => body.id),
+            db.select('xformId', 'actorId').from('submission_versions')
+          ]))
+          .then(([ aliceId, submissions ]) => {
+            submissions.length.should.equal(1);
+            submissions[0].actorId.should.equal(aliceId);
+            return db.select('xml').from('xforms').where({ id: submissions[0].xformId })
+              .then(([ xform ]) => {
+                xform.xml.should.equal(testData.forms.simple);
+              });
+          }))));
   });
 
   describe('.csv.zip GET', () => {
