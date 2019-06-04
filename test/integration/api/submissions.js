@@ -75,14 +75,17 @@ describe('api: /submission', () => {
           .then(({ text }) => {
             text.should.match(/upload was successful/);
           })
-          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
-            .set('X-Extended-Metadata', 'true')
-            .expect(200)
-            .then(({ body }) => {
-              body.createdAt.should.be.a.recentIsoDate();
-              body.xml.should.equal(testData.instances.simple.one);
-              should.not.exist(body.deviceId);
-            })))));
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+              .expect(200)
+              .then(({ body }) => {
+                body.createdAt.should.be.a.recentIsoDate();
+                should.not.exist(body.deviceId);
+              }),
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one.xml')
+              .expect(200)
+              .then(({ text }) => { text.should.equal(testData.instances.simple.one); })
+          ])))));
 
     it('should save the submission to the appropriate form with device id as null when query string is empty', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -93,14 +96,17 @@ describe('api: /submission', () => {
           .then(({ text }) => {
             text.should.match(/upload was successful/);
           })
-          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
-            .set('X-Extended-Metadata', 'true')
-            .expect(200)
-            .then(({ body }) => {
-              body.createdAt.should.be.a.recentIsoDate();
-              body.xml.should.equal(testData.instances.simple.one);
-              should.not.exist(body.deviceId);
-            })))));
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+              .expect(200)
+              .then(({ body }) => {
+                body.createdAt.should.be.a.recentIsoDate();
+                should.not.exist(body.deviceId);
+              }),
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one.xml')
+              .expect(200)
+              .then(({ text }) => { text.should.equal(testData.instances.simple.one); })
+          ])))));
 
     it('should save the submission to the appropriate form with device id', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -111,14 +117,17 @@ describe('api: /submission', () => {
           .then(({ text }) => {
             text.should.match(/upload was successful/);
           })
-          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
-            .set('X-Extended-Metadata', 'true')
-            .expect(200)
-            .then(({ body }) => {
-              body.createdAt.should.be.a.recentIsoDate();
-              body.xml.should.equal(testData.instances.simple.one);
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+              .expect(200)
+              .then(({ body }) => {
+                body.createdAt.should.be.a.recentIsoDate();
               body.deviceId.should.equal('imei:358240051111110');
-            })))));
+              }),
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one.xml')
+              .expect(200)
+              .then(({ text }) => { text.should.equal(testData.instances.simple.one); })
+          ])))));
 
     it('should store the correct xform and actor ids', testService((service, { db }) =>
       service.login('alice', (asAlice) =>
@@ -525,7 +534,6 @@ describe('api: /forms/:id/submissions', () => {
               body.length.should.equal(1);
               body[0].should.be.an.ExtendedSubmission();
               body[0].submitter.displayName.should.equal('Alice');
-              body[0].xml.should.equal('<data id="simple"><meta><instanceID>one</instanceID></meta><name>Alice</name><age>30</age></data>');
             })))));
   });
 
@@ -587,7 +595,6 @@ describe('api: /forms/:id/submissions', () => {
             .then(({ body }) => {
               body.should.be.an.ExtendedSubmission();
               body.submitter.displayName.should.equal('Alice');
-              body.xml.should.equal(testData.instances.simple.one);
             })))));
   });
 

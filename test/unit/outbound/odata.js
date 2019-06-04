@@ -13,10 +13,12 @@ const __system = {
   submitterName: submitter.displayName
 };
 const mockSubmission = (instanceId, xml) => ({
-  instanceId,
-  submitter,
   xml,
-  createdAt: __system.submissionDate
+  submission: {
+    instanceId,
+    createdAt: __system.submissionDate
+  },
+  submitter
 });
 
 describe('odata message composition', () => {
@@ -250,7 +252,7 @@ describe('odata message composition', () => {
           })));
       });
 
-      const instances = (count) => (new Array(count)).fill({ submitter, xml: '<data/>' });
+      const instances = (count) => (new Array(count)).fill({ xml: '<data/>', submission: {}, submitter });
       it('should provide no nextUrl if the final row is accounted for', (done) => {
         const form = { xmlFormId: 'simple', xform: { schema: () => getFormSchema({ xml: testData.forms.simple }) } };
         const query = { $top: '3', $skip: '7' };

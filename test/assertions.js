@@ -73,7 +73,6 @@ should.Assertion.add('ExtendedSubmission', function() {
 
   Object.keys(this.obj).should.containDeep([ 'instanceId', 'createdAt', 'updatedAt', 'submitter' ]);
   this.obj.instanceId.should.be.a.String();
-  this.obj.xml.should.be.a.String();
   this.obj.submitter.should.be.an.Actor();
   this.obj.createdAt.should.be.an.isoDate();
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
