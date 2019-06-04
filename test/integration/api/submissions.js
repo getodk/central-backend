@@ -446,6 +446,7 @@ describe('api: /forms/:id/submissions', () => {
             zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
               const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+              csv.length.should.equal(5); // header + 3 data rows + newline
               csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName' ]);
               csv[1].shift().should.be.an.recentIsoDate();
               csv[1].should.eql([ 'three','Chelsea','38','three', '5', 'Alice' ]);
@@ -453,8 +454,43 @@ describe('api: /forms/:id/submissions', () => {
               csv[2].should.eql([ 'two','Bob','34','two', '5', 'Alice' ]);
               csv[3].shift().should.be.an.recentIsoDate();
               csv[3].should.eql([ 'one','Alice','30','one', '5', 'Alice' ]);
+              csv[4].should.eql([ '' ]);
               done();
             }))))));
+
+    it('should not include data from other forms', testService((service) =>
+      service.login('alice', (asAlice) => Promise.all([
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.simple.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200)),
+        asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+          .send(testData.instances.withrepeat.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+            .send(testData.instances.withrepeat.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+      ])
+        .then(() => new Promise((done) =>
+          zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
+            result.filenames.should.eql([ 'simple.csv' ]);
+            const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+          console.log(csv);
+            csv.length.should.equal(4); // header + 2 data rows + newline
+            csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName' ]);
+            csv[1].shift().should.be.an.recentIsoDate();
+            csv[1].should.eql([ 'two','Bob','34','two', '5', 'Alice' ]);
+            csv[2].shift().should.be.an.recentIsoDate();
+            csv[2].should.eql([ 'one','Alice','30','one', '5', 'Alice' ]);
+            csv[3].should.eql([ '' ]);
+            done();
+          }))))));
 
     it('should return a zipfile with the relevant attachments', testService((service) =>
       service.login('alice', (asAlice) =>
