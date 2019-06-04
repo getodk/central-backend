@@ -35,7 +35,6 @@ describe('api: /projects/:id/forms', () => {
               const simple = body.find((form) => form.xmlFormId === 'simple');
               simple.submissions.should.equal(1);
               simple.lastSubmission.should.be.a.recentIsoDate();
-              simple.xml.should.startWith('<');
             })))));
   });
 
@@ -282,15 +281,11 @@ describe('api: /projects/:id/forms', () => {
 
     it('should return just xml', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/projects/1/forms/simple')
-          .set('X-Extended-Metadata', 'true')
+        asAlice.get('/v1/projects/1/forms/simple.xml')
           .expect(200)
-          .then((full) => 
-            asAlice.get('/v1/projects/1/forms/simple.xml')
-              .expect(200)
-              .then(({ text }) => {
-                full.body.xml.should.equal(text);
-              })))));
+          .then(({ text }) => {
+            text.should.equal(testData.forms.simple);
+          }))));
 
     it('should get the correct form given duplicates across projects', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -423,7 +418,6 @@ describe('api: /projects/:id/forms', () => {
               body.submissions.should.equal(0);
               body.createdBy.should.be.an.Actor();
               body.createdBy.displayName.should.equal('Alice');
-              body.xml.should.equal(testData.forms.simple2);
             })))));
   });
 
@@ -463,14 +457,20 @@ describe('api: /projects/:id/forms', () => {
         asAlice.patch('/v1/projects/1/forms/simple')
           .send({ xmlFormId: 'changed', xml: 'changed', hash: 'changed' })
           .expect(200)
-          .then(() => asAlice.get('/v1/projects/1/forms/simple')
-            .set('X-Extended-Metadata', 'true')
-            .expect(200)
-            .then(({ body }) => {
-              body.xmlFormId.should.equal('simple');
-              body.xml.should.equal(testData.forms.simple);
-              body.hash.should.equal('5c09c21d4c71f2f13f6aa26227b2d133');
-            })))));
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/simple')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.xmlFormId.should.equal('simple');
+                body.hash.should.equal('5c09c21d4c71f2f13f6aa26227b2d133');
+              }),
+            asAlice.get('/v1/projects/1/forms/simple.xml')
+              .expect(200)
+              .then(({ text }) => {
+                text.should.equal(testData.forms.simple);
+              })
+          ])))));
   });
 
   describe('/:id DELETE', () => {
