@@ -113,6 +113,28 @@ describe('api: /users', () => {
         asAlice.post('/v1/users')
           .send({ email: 'david@opendatakit.org' })
           .then(({ body }) => body.displayName.should.equal('david@opendatakit.org')))));
+
+    it('should log the action in the audit log', testService((service, { Audit, User }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'david@opendatakit.org' })
+          .expect(200)
+          .then(() => Promise.all([
+            User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+            User.getByEmail('david@opendatakit.org').then((o) => o.get()),
+            Audit.getLatestByAction('user.create').then((o) => o.get())
+          ])
+          .then(([ alice, david, log ]) => {
+            log.actorId.should.equal(alice.actor.id);
+            log.acteeId.should.equal(david.actor.acteeId);
+            log.details.should.eql({
+              data: {
+                email: 'david@opendatakit.org',
+                actor: { displayName: 'david@opendatakit.org', type: 'user' },
+                password: null
+              }
+            });
+          })))));
   });
 
   describe('/reset/initiate POST', () => {
@@ -365,6 +387,22 @@ describe('api: /users', () => {
             .then(() => {
               global.inbox.length.should.equal(0);
             })))));
+
+    it('should log the action in the audit log', testService((service, { User, Audit }) =>
+      service.login('alice', (asAlice) =>
+        User.getByEmail('chelsea@opendatakit.org').then((o) => o.get())
+          .then((chelsea) => asAlice.patch('/v1/users/' + chelsea.actor.id)
+            .send({ displayName: 'cool chelsea', other: 'data' })
+            .expect(200)
+            .then(() => Promise.all([
+              User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+              Audit.getLatestByAction('user.update').then((o) => o.get())
+            ])
+          .then(([ alice, log ]) => {
+            log.actorId.should.equal(alice.actor.id);
+            log.acteeId.should.equal(chelsea.actor.acteeId);
+            log.details.should.eql({ data: { actor: { displayName: 'cool chelsea' } } });
+          }))))));
   });
 
   describe('/users/:id/password PUT', () => {

@@ -471,6 +471,23 @@ describe('api: /projects/:id/forms', () => {
                 text.should.equal(testData.forms.simple);
               })
           ])))));
+
+    it('should log the action in the audit log', testService((service, { Project, Form, User, Audit }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple')
+          .send({ name: 'a fancy name', state: 'draft' })
+          .expect(200)
+          .then(() => Promise.all([
+            User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+            Project.getById(1).then((o) => o.get())
+              .then((project) => project.getFormByXmlFormId('simple')).then((o) => o.get()),
+            Audit.getLatestByAction('form.update').then((o) => o.get())
+          ])
+          .then(([ alice, form, log ]) => {
+            log.actorId.should.equal(alice.actor.id);
+            log.acteeId.should.equal(form.acteeId);
+            log.details.should.eql({ data: { name: 'a fancy name', state: 'draft', def: {} } });
+          })))));
   });
 
   describe('/:id DELETE', () => {
@@ -484,6 +501,21 @@ describe('api: /projects/:id/forms', () => {
           .expect(200)
           .then(() => asAlice.get('/v1/projects/1/forms/simple')
             .expect(404)))));
+
+    it('should log the action in the audit log', testService((service, { Project, Form, User, Audit }) =>
+      service.login('alice', (asAlice) =>
+        Project.getById(1).then((o) => o.get())
+          .then((project) => project.getFormByXmlFormId('simple')).then((o) => o.get())
+          .then((form) => asAlice.delete('/v1/projects/1/forms/simple')
+            .expect(200)
+            .then(() => Promise.all([
+              User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+              Audit.getLatestByAction('form.delete').then((o) => o.get())
+            ])
+            .then(([ alice, log ]) => {
+              log.actorId.should.equal(alice.actor.id);
+              log.acteeId.should.equal(form.acteeId);
+            }))))));
   });
 
   // Form attachments tests:
@@ -663,6 +695,44 @@ describe('api: /projects/:id/forms', () => {
                 .send('test,csv\n1,2')
                 .set('Content-Type', 'text/csv')
                 .expect(200))))));
+
+      it('should log the action in the audit log', testService((service, { Project, Form, FormAttachment, User, Audit }) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+              .send('test,csv\n1,2')
+              .set('Content-Type', 'text/csv')
+              .expect(200)
+              .then(() => Promise.all([
+                User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+                Project.getById(1).then((o) => o.get())
+                  .then((project) => project.getFormByXmlFormId('withAttachments')).then((o) => o.get())
+                  .then((form) => FormAttachment.getByFormDefIdAndName(form.currentDefId, 'goodone.csv')
+                    .then((o) => o.get())
+                    .then((attachment) => [ form, attachment ])),
+                Audit.getLatestByAction('form.attachment.update').then((o) => o.get())
+              ])
+              .then(([ alice, [ form, attachment ], log ]) => {
+                log.actorId.should.equal(alice.actor.id);
+                log.acteeId.should.equal(attachment.acteeId);
+                log.details.should.eql({ oldBlobId: null, newBlobId: attachment.blobId });
+                return asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+                  .send('replaced,csv\n3,4')
+                  .set('Content-Type', 'text/csv')
+                  .expect(200)
+                  .then(() => Promise.all([
+                    FormAttachment.getByFormDefIdAndName(form.currentDefId, 'goodone.csv').then((o) => o.get()),
+                    Audit.getLatestByAction('form.attachment.update').then((o) => o.get())
+                  ]))
+                  .then(([ attachment2, log2 ]) => {
+                    log2.actorId.should.equal(alice.actor.id);
+                    log2.acteeId.should.equal(attachment.acteeId);
+                    log2.details.should.eql({ oldBlobId: attachment.blobId, newBlobId: attachment2.blobId });
+                  });
+              }))))));
     });
 
     // these tests mostly necessarily depend on /:name POST:
@@ -758,6 +828,34 @@ describe('api: /projects/:id/forms', () => {
                 .expect(200)
                 .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
                   .expect(404)))))));
+
+      it('should log the action in the audit log', testService((service, { Project, Form, FormAttachment, User, Audit }) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+              .send('test,csv\n1,2')
+              .set('Content-Type', 'text/csv')
+              .expect(200)
+              .then(() => Promise.all([
+                User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+                Project.getById(1).then((o) => o.get())
+                  .then((project) => project.getFormByXmlFormId('withAttachments'))
+                  .then((o) => o.get())
+                  .then((form) => FormAttachment.getByFormDefIdAndName(form.currentDefId, 'goodone.csv'))
+                  .then((o) => o.get())
+              ]))
+              .then(([ alice, attachment ]) =>
+                asAlice.delete('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+                  .expect(200)
+                  .then(() => Audit.getLatestByAction('form.attachment.update').then((o) => o.get()))
+                  .then((log) => {
+                    log.actorId.should.equal(alice.actor.id);
+                    log.acteeId.should.equal(attachment.acteeId);
+                    log.details.should.eql({ oldBlobId: attachment.blobId, newBlobId: null });
+                  }))))));
 
       // n.b. setting the appropriate updatedAt value is tested above in the / GET
       // extended metadata listing test!
