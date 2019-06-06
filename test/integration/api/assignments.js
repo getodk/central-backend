@@ -138,7 +138,7 @@ describe('api: /assignments', () => {
                   audit.isDefined().should.equal(true);
                   audit.get().actorId.should.equal(alice.actor.id);
                   audit.get().acteeId.should.equal(chelsea.actor.acteeId);
-                  audit.get().details.should.eql({ role: adminRoleId, acteeId: '*' });
+                  audit.get().details.should.eql({ roleId: adminRoleId, grantedActeeId: '*' });
                 }))))));
     });
 
@@ -200,7 +200,7 @@ describe('api: /assignments', () => {
                   audit.isDefined().should.equal(true);
                   audit.get().actorId.should.equal(alice.actor.id);
                   audit.get().acteeId.should.equal(alice.actor.acteeId);
-                  audit.get().details.should.eql({ role: adminRoleId, acteeId: '*' });
+                  audit.get().details.should.eql({ roleId: adminRoleId, revokedActeeId: '*' });
                 }))))));
     });
   });
@@ -326,7 +326,7 @@ describe('/projects/:id/assignments', () => {
                   audit.isDefined().should.equal(true);
                   audit.get().actorId.should.equal(alice.actor.id);
                   audit.get().acteeId.should.equal(chelsea.actor.acteeId);
-                  audit.get().details.should.eql({ role: adminRoleId, acteeId: project.acteeId });
+                  audit.get().details.should.eql({ roleId: adminRoleId, grantedActeeId: project.acteeId });
                 }))))));
   });
 
@@ -391,7 +391,7 @@ describe('/projects/:id/assignments', () => {
                   audit.isDefined().should.equal(true);
                   audit.get().actorId.should.equal(alice.actor.id);
                   audit.get().acteeId.should.equal(bob.actor.acteeId);
-                  audit.get().details.should.eql({ role: managerRoleId, acteeId: project.acteeId });
+                  audit.get().details.should.eql({ roleId: managerRoleId, revokedActeeId: project.acteeId });
                 }))))));
   });
 });
