@@ -54,6 +54,22 @@ describe('form forward versioning', () => {
           newForm.def.sha.should.equal('6f3b4ee76e0ac9a1e2007ef987be40e02c24d75e');
         })))); // TODO: actually assert that the new def actually exists.
 
+  it('should set an identity transformation', testService((_, { db, Project, Form, FormDef }) =>
+    Promise.all([
+      FormDef.parseXml(newXml).then((data) => FormDef.fromData(data)),
+      Project.getById(1).then(force)
+        .then((project) => project.getFormByXmlFormId('simple')).then(force)
+    ])
+      .then(([ newDef, oldForm ]) => oldForm.createNewVersion(newDef))
+      .then(() => Promise.all([
+        Project.getById(1).then(force)
+          .then((project) => project.getFormByXmlFormId('simple')).then(force),
+        db.select('*').from('transformations').where({ system: 'identity' }).then(([ row ]) => row)
+      ])
+      .then(([ newForm, identityTransformation ]) => {
+        newForm.def.transformationId.should.equal(identityTransformation.id);
+      }))));
+
   it('should preserve submissions', testService((service, { Project, Blob, Form, FormDef, FormAttachment }) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms/simple/submissions')
