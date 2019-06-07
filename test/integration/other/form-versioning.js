@@ -22,23 +22,6 @@ describe('form forward versioning', () => {
         newForm.def.sha.should.equal('5a31610cb649ccd2482709664e2a6268df66112f');
       })));
 
-  it('should use an extant def and update the version', testService((_, { Project, Form, FormDef }) =>
-    Promise.all([
-      Project.getById(1).then(force)
-        .then((project) => project.getFormByXmlFormId('simple')).then(force),
-      Form.fromXml(newXml),
-      (new Project({ name: 'Second Project' })).create()
-    ])
-      .then(([ oldForm, newForm, projectTwo ]) => newForm.with({ projectId: projectTwo.id }).create()
-        .then(() => oldForm.createNewVersion(newForm.def))
-        .then(() => Project.getById(1)).then(force)
-        .then((project) => project.getFormByXmlFormId('simple')).then(force)
-        .then((newForm) => {
-          newForm.currentDefId.should.equal(newForm.def.id);
-          /version="two"/.test(newForm.def.xml).should.equal(true);
-          newForm.def.sha.should.equal('5a31610cb649ccd2482709664e2a6268df66112f');
-        }))));
-
   it('should create a new def and not update the version', testService((_, { Project, Form, FormDef }) =>
     Promise.all([
       FormDef.parseXml(newXml).then((data) => FormDef.fromData(data)),
