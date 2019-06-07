@@ -13,22 +13,27 @@ describe('Form', () => {
     });*/
 
     it('should reject if the formId cannot be found (1: node nonexistent)', () =>
-      Form.fromXml('<html/>').catch((failure) => {
-        failure.isProblem.should.equal(true);
-        failure.problemCode.should.equal(400.2);
-      }));
+      Form.fromXml('<html/>').should.be.rejected()
+        .then((failure) => {
+          failure.isProblem.should.equal(true);
+          failure.problemCode.should.equal(400.2);
+        }));
 
     it('should reject if the formId cannot be found (2: attr nonexistent)', () =>
-      Form.fromXml('<html><head><model><instance><data><field/></data></instance></model></head></html>').catch((failure) => {
-        failure.isProblem.should.equal(true);
-        failure.problemCode.should.equal(400.2);
-      }));
+      Form.fromXml('<html><head><model><instance><data><field/></data></instance></model></head></html>')
+        .should.be.rejected()
+        .then((failure) => {
+          failure.isProblem.should.equal(true);
+          failure.problemCode.should.equal(400.2);
+        }));
 
     it('should reject if the formId cannot be found (3: attr blank)', () =>
-      Form.fromXml('<html><head><model><instance><data id=""><field/></data></instance></model></head></html>').catch((failure) => {
-        failure.isProblem.should.equal(true);
-        failure.problemCode.should.equal(400.2);
-      }));
+      Form.fromXml('<html><head><model><instance><data id=""><field/></data></instance></model></head></html>')
+        .should.be.rejected()
+        .then((failure) => {
+          failure.isProblem.should.equal(true);
+          failure.problemCode.should.equal(400.2);
+        }));
 
     it('should return a populated Form object if the xml passes', () => {
       const xml = '<html><head><model><instance><data id="mycoolform"><field/></data></instance></model></head></html>';
