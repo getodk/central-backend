@@ -129,7 +129,7 @@ describe('api: /submission', () => {
               .then(({ text }) => { text.should.equal(testData.instances.simple.one); })
           ])))));
 
-    it('should store the correct xform and actor ids', testService((service, { db }) =>
+    it('should store the correct formdef and actor ids', testService((service, { db }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
@@ -137,14 +137,14 @@ describe('api: /submission', () => {
           .expect(201)
           .then(() => Promise.all([
             asAlice.get('/v1/users/current').then(({ body }) => body.id),
-            db.select('xformId', 'actorId').from('submission_versions')
+            db.select('formDefId', 'actorId').from('submission_defs')
           ]))
           .then(([ aliceId, submissions ]) => {
             submissions.length.should.equal(1);
             submissions[0].actorId.should.equal(aliceId);
-            return db.select('xml').from('xforms').where({ id: submissions[0].xformId })
-              .then(([ xform ]) => {
-                xform.xml.should.equal(testData.forms.simple);
+            return db.select('xml').from('form_defs').where({ id: submissions[0].formDefId })
+              .then(([ def ]) => {
+                def.xml.should.equal(testData.forms.simple);
               });
           }))));
 
@@ -398,7 +398,7 @@ describe('api: /forms/:id/submissions', () => {
                 ]);
               }))))));
 
-    it('should store the correct xform and actor ids', testService((service, { db }) =>
+    it('should store the correct formdef and actor ids', testService((service, { db }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
@@ -406,14 +406,14 @@ describe('api: /forms/:id/submissions', () => {
           .expect(200)
           .then(() => Promise.all([
             asAlice.get('/v1/users/current').then(({ body }) => body.id),
-            db.select('xformId', 'actorId').from('submission_versions')
+            db.select('formDefId', 'actorId').from('submission_defs')
           ]))
           .then(([ aliceId, submissions ]) => {
             submissions.length.should.equal(1);
             submissions[0].actorId.should.equal(aliceId);
-            return db.select('xml').from('xforms').where({ id: submissions[0].xformId })
-              .then(([ xform ]) => {
-                xform.xml.should.equal(testData.forms.simple);
+            return db.select('xml').from('form_defs').where({ id: submissions[0].formDefId })
+              .then(([ def ]) => {
+                def.xml.should.equal(testData.forms.simple);
               });
           }))));
   });
