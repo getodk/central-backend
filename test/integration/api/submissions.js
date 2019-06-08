@@ -805,7 +805,7 @@ describe('api: /forms/:id/submissions', () => {
                       ]);
                     })))))))));
 
-    it('should log an audit entry about the deletion', testService((service, { Audit, Project }) =>
+    it('should log an audit entry about the deletion', testService((service, { Audit, Project, Submission, SubmissionAttachment, SubmissionDef }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
           .set('Content-Type', 'application/xml')
@@ -814,28 +814,39 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions')
             .send(testData.instances.binaryType.both)
             .set('Content-Type', 'text/xml')
-            .expect(200)
-            .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
-              .set('Content-Type', 'video/mp4')
-              .send('testvideo')
-              .expect(200)
-              .then(() => asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
-                .expect(200)
-                .then(() => Promise.all([
-                  asAlice.get('/v1/users/current').expect(200),
-                  Project.getById(1)
-                    .then((project) => project.get().getFormByXmlFormId('binaryType')),
-                  Audit.getLatestWhere({ action: 'submission.attachment.clear' })
-                ])
-                  .then(([ user, maybeForm, maybeLog ]) => {
-                    maybeLog.isDefined().should.equal(true);
-                    const log = maybeLog.get();
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+            .set('Content-Type', 'video/mp4')
+            .send('testvideo')
+            .expect(200))
+          .then(() => Project.getById(1))
+          .then((project) => project.get().getFormByXmlFormId('binaryType'))
+          .then((o) => o.get())
+          .then((form) => Submission.getById(form.id, 'both')
+            .then((o) => o.get())
+            .then((submission) => submission.getCurrentVersion()
+              .then((o) => o.get())
+              .then((def) => SubmissionAttachment.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4')
+                .then((o) => o.get())
+                .then((attachment) => asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+                  .expect(200)
+                  .then(() => Promise.all([
+                    asAlice.get('/v1/users/current').expect(200),
+                    Audit.getLatestWhere({ action: 'submission.attachment.update' })
+                  ])
+                    .then(([ user, maybeLog ]) => {
+                      maybeLog.isDefined().should.equal(true);
+                      const log = maybeLog.get();
 
-                    log.actorId.should.equal(user.body.id);
-                    log.acteeId.should.equal(maybeForm.get().acteeId);
-                    log.details.name.should.equal('my_file1.mp4');
-                    log.details.blobId.should.be.a.Number();
-                  }))))))));
+                      log.actorId.should.equal(user.body.id);
+                      log.acteeId.should.equal(form.acteeId);
+                      log.details.should.eql({
+                        instanceId: 'both',
+                        submissionDefId: def.id,
+                        name: 'my_file1.mp4',
+                        oldBlobId: attachment.blobId
+                      });
+                    })))))))));
   });
 });
 

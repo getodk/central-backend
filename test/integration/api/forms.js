@@ -717,8 +717,14 @@ describe('api: /projects/:id/forms', () => {
               ])
               .then(([ alice, [ form, attachment ], log ]) => {
                 log.actorId.should.equal(alice.actor.id);
-                log.acteeId.should.equal(attachment.acteeId);
-                log.details.should.eql({ oldBlobId: null, newBlobId: attachment.blobId });
+                log.acteeId.should.equal(form.acteeId);
+                log.details.should.eql({
+                  formDefId: form.def.id,
+                  name: attachment.name,
+                  oldBlobId: null,
+                  newBlobId: attachment.blobId
+                });
+
                 return asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
                   .send('replaced,csv\n3,4')
                   .set('Content-Type', 'text/csv')
@@ -729,8 +735,13 @@ describe('api: /projects/:id/forms', () => {
                   ]))
                   .then(([ attachment2, log2 ]) => {
                     log2.actorId.should.equal(alice.actor.id);
-                    log2.acteeId.should.equal(attachment.acteeId);
-                    log2.details.should.eql({ oldBlobId: attachment.blobId, newBlobId: attachment2.blobId });
+                    log2.acteeId.should.equal(form.acteeId);
+                    log2.details.should.eql({
+                      formDefId: form.def.id,
+                      name: attachment.name,
+                      oldBlobId: attachment.blobId,
+                      newBlobId: attachment2.blobId
+                    });
                   });
               }))))));
     });
@@ -844,17 +855,23 @@ describe('api: /projects/:id/forms', () => {
                 Project.getById(1).then((o) => o.get())
                   .then((project) => project.getFormByXmlFormId('withAttachments'))
                   .then((o) => o.get())
-                  .then((form) => FormAttachment.getByFormDefIdAndName(form.currentDefId, 'goodone.csv'))
-                  .then((o) => o.get())
+                  .then((form) => FormAttachment.getByFormDefIdAndName(form.currentDefId, 'goodone.csv')
+                    .then((o) => o.get())
+                    .then((attachment) => [ form, attachment ]))
               ]))
-              .then(([ alice, attachment ]) =>
+              .then(([ alice, [ form, attachment ] ]) =>
                 asAlice.delete('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
                   .expect(200)
                   .then(() => Audit.getLatestByAction('form.attachment.update').then((o) => o.get()))
                   .then((log) => {
                     log.actorId.should.equal(alice.actor.id);
-                    log.acteeId.should.equal(attachment.acteeId);
-                    log.details.should.eql({ oldBlobId: attachment.blobId, newBlobId: null });
+                    log.acteeId.should.equal(form.acteeId);
+                    log.details.should.eql({
+                      formDefId: form.def.id,
+                      name: 'goodone.csv',
+                      oldBlobId: attachment.blobId,
+                      newBlobId: null
+                    });
                   }))))));
 
       // n.b. setting the appropriate updatedAt value is tested above in the / GET
