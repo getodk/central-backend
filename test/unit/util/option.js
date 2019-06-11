@@ -18,6 +18,18 @@ describe('(libs/FP) Option type', () => {
     Option.none().should.be.instanceOf(Option);
   });
 
+  describe('firstDefined', () => {
+    it("Will give you first defined if it exists", () => {
+      Option.firstDefined([ Option.none(), Option.none(), Option.of(42), Option.of(16) ])
+        .should.deepEqual(Option.of(42));
+    });
+
+    it("Will give you none if none exists", () => {
+      Option.firstDefined([ Option.none(), Option.none(), Option.none() ])
+        .should.deepEqual(Option.none());
+    });
+  });
+
   context("Holding something", () => {
     const o = Option.of(33);
 
