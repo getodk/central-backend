@@ -207,6 +207,7 @@ describe('api: /projects', () => {
             .then(([ audit, user ]) => {
               audit.isDefined().should.equal(true);
               audit.get().actorId.should.equal(user.body.id);
+              audit.get().details.should.eql({ data: { name: 'Test Project' } });
               return simply.getOneWhere('projects', { acteeId: audit.get().acteeId }, Project)
                 .then((project) => {
                   project.isDefined().should.equal(true);
