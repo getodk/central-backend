@@ -9,9 +9,11 @@ const __system = {
   submitterName: 'Alice'
 };
 const mockSubmission = (instanceId, xml) => ({
-  instanceId,
   xml,
-  createdAt: '2017-09-20T17:10:43Z',
+  submission: {
+    instanceId,
+    createdAt: '2017-09-20T17:10:43Z',
+  },
   submitter: {
     id: 5,
     displayName: 'Alice'
@@ -218,8 +220,8 @@ describe('submissionToOData', () => {
   it('should extract subtable rows within repeats', () => {
     return getFormSchema({ xml: testData.forms.withrepeat }).then((schema) => {
       const fields = schemaAsLookup(schema);
-      const submission = { instanceId: 'two', xml: testData.instances.withrepeat.two };
-      return submissionToOData(fields, 'Submissions.children.child', submission).then((result) => {
+      const row = { submission: { instanceId: 'two' }, xml: testData.instances.withrepeat.two };
+      return submissionToOData(fields, 'Submissions.children.child', row).then((result) => {
         result.should.eql([{
           '__Submissions-id': 'two',
           __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d',
@@ -239,8 +241,8 @@ describe('submissionToOData', () => {
   it('should return navigation links to repeats within a subtable result set', () => {
     return getFormSchema({ xml: testData.forms.doubleRepeat }).then((schema) => {
       const fields = schemaAsLookup(schema);
-      const submission = { instanceId: 'double', xml: testData.instances.doubleRepeat.double };
-      return submissionToOData(fields, 'Submissions.children.child', submission).then((result) => {
+      const row = { submission: { instanceId: 'double' }, xml: testData.instances.doubleRepeat.double };
+      return submissionToOData(fields, 'Submissions.children.child', row).then((result) => {
         result.should.eql([{
           __id: '46ebf42ee83ddec5028c42b2c054402d1e700208',
           '__Submissions-id': 'double',
@@ -267,8 +269,8 @@ describe('submissionToOData', () => {
   it('should return second-order subtable results', () => {
     return getFormSchema({ xml: testData.forms.doubleRepeat }).then((schema) => {
       const fields = schemaAsLookup(schema);
-      const submission = { instanceId: 'double', xml: testData.instances.doubleRepeat.double };
-      return submissionToOData(fields, 'Submissions.children.child.toys.toy', submission).then((result) => {
+      const row = { submission: { instanceId: 'double' }, xml: testData.instances.doubleRepeat.double };
+      return submissionToOData(fields, 'Submissions.children.child.toys.toy', row).then((result) => {
         result.should.eql([{
           __id: 'a9058d7b2ed9557205ae53f5b1dc4224043eca2a',
           '__Submissions-children-child-id': 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',

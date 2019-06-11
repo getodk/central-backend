@@ -35,7 +35,6 @@ describe('api: /projects/:id/forms', () => {
               const simple = body.find((form) => form.xmlFormId === 'simple');
               simple.submissions.should.equal(1);
               simple.lastSubmission.should.be.a.recentIsoDate();
-              simple.xml.should.startWith('<');
             })))));
   });
 
@@ -240,8 +239,8 @@ describe('api: /projects/:id/forms', () => {
           .expect(409)
           .then(({ body }) => {
             body.code.should.equal(409.3);
-            body.details.fields.should.eql([ 'xmlFormId', 'version', 'projectId' ]);
-            body.details.values.should.eql([ 'simple', '', '1' ]);
+            body.details.fields.should.eql([ 'projectId', 'xmlFormId' ]);
+            body.details.values.should.eql([ '1', 'simple' ]);
           }))));
 
     // the simple form has no version declaration at all, which is what we want
@@ -257,8 +256,8 @@ describe('api: /projects/:id/forms', () => {
             .set('Content-Type', 'application/xml')
             .expect(409)
             .then(({ body }) => {
-              body.details.fields.should.eql([ 'xmlFormId', 'version', 'projectId' ]);
-              body.details.values.should.eql([ 'simple', '', '1' ]);
+              body.details.fields.should.eql([ 'projectId', 'xmlFormId', 'version' ]);
+              body.details.values.should.eql([ '1', 'simple', '' ]);
             })))));
 
     it('should return the created form upon success', testService((service) =>
@@ -282,15 +281,11 @@ describe('api: /projects/:id/forms', () => {
 
     it('should return just xml', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/projects/1/forms/simple')
-          .set('X-Extended-Metadata', 'true')
+        asAlice.get('/v1/projects/1/forms/simple.xml')
           .expect(200)
-          .then((full) => 
-            asAlice.get('/v1/projects/1/forms/simple.xml')
-              .expect(200)
-              .then(({ text }) => {
-                full.body.xml.should.equal(text);
-              })))));
+          .then(({ text }) => {
+            text.should.equal(testData.forms.simple);
+          }))));
 
     it('should get the correct form given duplicates across projects', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -404,6 +399,7 @@ describe('api: /projects/:id/forms', () => {
           .then(({ body }) => {
             body.should.be.a.Form();
             body.xmlFormId.should.equal('simple');
+            body.hash.should.equal('5c09c21d4c71f2f13f6aa26227b2d133');
           }))));
 
     it('should return extended form details', testService((service) =>
@@ -422,7 +418,6 @@ describe('api: /projects/:id/forms', () => {
               body.submissions.should.equal(0);
               body.createdBy.should.be.an.Actor();
               body.createdBy.displayName.should.equal('Alice');
-              body.xml.should.equal(testData.forms.simple2);
             })))));
   });
 
@@ -462,14 +457,20 @@ describe('api: /projects/:id/forms', () => {
         asAlice.patch('/v1/projects/1/forms/simple')
           .send({ xmlFormId: 'changed', xml: 'changed', hash: 'changed' })
           .expect(200)
-          .then(() => asAlice.get('/v1/projects/1/forms/simple')
-            .set('X-Extended-Metadata', 'true')
-            .expect(200)
-            .then(({ body }) => {
-              body.xmlFormId.should.equal('simple');
-              body.xml.should.equal(testData.forms.simple);
-              body.hash.should.equal('5c09c21d4c71f2f13f6aa26227b2d133');
-            })))));
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/simple')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.xmlFormId.should.equal('simple');
+                body.hash.should.equal('5c09c21d4c71f2f13f6aa26227b2d133');
+              }),
+            asAlice.get('/v1/projects/1/forms/simple.xml')
+              .expect(200)
+              .then(({ text }) => {
+                text.should.equal(testData.forms.simple);
+              })
+          ])))));
   });
 
   describe('/:id DELETE', () => {

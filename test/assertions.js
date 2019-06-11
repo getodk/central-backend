@@ -58,26 +58,24 @@ should.Assertion.add('User', function() {
   this.obj.email.should.be.a.String();
 });
 
-const assertSubmissionBase = (obj) => {
-  Object.keys(obj).should.containDeep([ 'instanceId', 'createdAt', 'updatedAt', 'submitter' ]);
-  obj.instanceId.should.be.a.String();
-  obj.createdAt.should.be.an.isoDate();
-  if (obj.updatedAt != null) obj.updatedAt.should.be.an.isoDate();
-};
-
 should.Assertion.add('Submission', function() {
   this.params = { operator: 'to be a Submission' };
 
-  assertSubmissionBase(this.obj);
-  this.obj.submitter.should.be.a.Number();
+  Object.keys(this.obj).should.containDeep([ 'instanceId', 'createdAt', 'updatedAt', 'submitterId' ]);
+  this.obj.instanceId.should.be.a.String();
+  this.obj.submitterId.should.be.a.Number();
+  this.obj.createdAt.should.be.an.isoDate();
+  if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 
 should.Assertion.add('ExtendedSubmission', function() {
   this.params = { operator: 'to be an extended Submission' };
 
-  assertSubmissionBase(this.obj);
+  Object.keys(this.obj).should.containDeep([ 'instanceId', 'createdAt', 'updatedAt', 'submitter' ]);
+  this.obj.instanceId.should.be.a.String();
   this.obj.submitter.should.be.an.Actor();
-  this.obj.xml.should.be.a.String();
+  this.obj.createdAt.should.be.an.isoDate();
+  if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 
 should.Assertion.add('Session', function() {
@@ -122,8 +120,7 @@ should.Assertion.add('ExtendedForm', function() {
   this.params = { operator: 'to be a ExtendedForm' };
 
   this.obj.should.be.a.Form();
-  Object.keys(this.obj).should.containDeep([ 'xml', 'submissions', 'lastSubmission' ]);
-  this.obj.xml.should.be.a.String();
+  Object.keys(this.obj).should.containDeep([ 'submissions', 'lastSubmission' ]);
   if (this.obj.submissions != null) this.obj.submissions.should.be.a.Number();
   if (this.obj.lastSubmission != null) this.obj.lastSubmission.should.be.an.isoDate();
 });

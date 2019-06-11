@@ -153,7 +153,7 @@ describe('api: /forms/:id.svc', () => {
           }))));
   });
 
-  describe("/Submissions.xyz.* GET", () => {
+  describe('/Submissions.xyz.* GET', () => {
     it('should reject unless the form exists', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get("/v1/projects/1/forms/nonexistent.svc/Submissions").expect(404))));

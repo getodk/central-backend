@@ -12,8 +12,10 @@ const { zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 
 // takes care of instance envelope boilerplate.
 const instance = (id, data) => ({
-  instanceId: id,
-  createdAt: new Date('2018-01-01T00:00:00Z'),
+  submission: {
+    instanceId: id,
+    createdAt: new Date('2018-01-01T00:00:00Z')
+  },
   xml: `<data id="data">${data}</data>`
 });
 
@@ -23,9 +25,11 @@ const callAndParse = (form, inStream, callback) =>
   streamBriefcaseCsvs(inStream, form).then((csvStream) =>
     zipStreamToFiles(zipStreamFromParts(csvStream), callback));
 
-const mockForm = (data) => {
-  data.schema = function() { return getFormSchema(this); };
-  return data;
+const mockForm = ({ xmlFormId, xml }) => {
+  return {
+    xmlFormId,
+    def: { xml, schema() { return getFormSchema(this); } }
+  };
 };
 
 describe('.csv.zip briefcase output @slow', () => {
@@ -461,8 +465,10 @@ Pod racer,three/children/child[1],three/children/child[1]/toy[3]
 </h:html>`
     });
     const inStream = streamTest.fromObjects([{
-      instanceId: 'uuid:39f3dd36-161e-45cb-a1a4-395831d253a7',
-      createdAt: '2018-04-26T08:58:20.525Z',
+      submission: {
+        instanceId: 'uuid:39f3dd36-161e-45cb-a1a4-395831d253a7',
+        createdAt: '2018-04-26T08:58:20.525Z'
+      },
       xml: `
 <data id="all-data-types" instanceID="uuid:39f3dd36-161e-45cb-a1a4-395831d253a7" submissionDate="2018-04-26T08:58:20.525Z" isComplete="true" markedAsCompleteDate="2018-04-26T08:58:20.525Z" xmlns="http://opendatakit.org/submissions">
   <some_string>Hola</some_string>
@@ -560,8 +566,10 @@ Pod racer,three/children/child[1],three/children/child[1]/toy[3]
 </h:html>`
     });
     const inStream = streamTest.fromObjects([{
-      instanceId: 'uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b',
-      createdAt: '2018-02-01T11:35:19.178Z',
+      submission: {
+        instanceId: 'uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b',
+        createdAt: '2018-02-01T11:35:19.178Z'
+      },
       xml: `
 <data id="nested-repeats" instanceID="uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b" version="2018012404" submissionDate="2018-02-01T11:35:19.178Z" isComplete="true" markedAsCompleteDate="2018-02-01T11:35:19.178Z" xmlns="http://opendatakit.org/submissions">
   <g1>

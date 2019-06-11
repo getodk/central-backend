@@ -75,14 +75,17 @@ describe('api: /submission', () => {
           .then(({ text }) => {
             text.should.match(/upload was successful/);
           })
-          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
-            .set('X-Extended-Metadata', 'true')
-            .expect(200)
-            .then(({ body }) => {
-              body.createdAt.should.be.a.recentIsoDate();
-              body.xml.should.equal(testData.instances.simple.one);
-              should.not.exist(body.deviceId);
-            })))));
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+              .expect(200)
+              .then(({ body }) => {
+                body.createdAt.should.be.a.recentIsoDate();
+                should.not.exist(body.deviceId);
+              }),
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one.xml')
+              .expect(200)
+              .then(({ text }) => { text.should.equal(testData.instances.simple.one); })
+          ])))));
 
     it('should save the submission to the appropriate form with device id as null when query string is empty', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -93,14 +96,17 @@ describe('api: /submission', () => {
           .then(({ text }) => {
             text.should.match(/upload was successful/);
           })
-          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
-            .set('X-Extended-Metadata', 'true')
-            .expect(200)
-            .then(({ body }) => {
-              body.createdAt.should.be.a.recentIsoDate();
-              body.xml.should.equal(testData.instances.simple.one);
-              should.not.exist(body.deviceId);
-            })))));
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+              .expect(200)
+              .then(({ body }) => {
+                body.createdAt.should.be.a.recentIsoDate();
+                should.not.exist(body.deviceId);
+              }),
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one.xml')
+              .expect(200)
+              .then(({ text }) => { text.should.equal(testData.instances.simple.one); })
+          ])))));
 
     it('should save the submission to the appropriate form with device id', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -111,14 +117,36 @@ describe('api: /submission', () => {
           .then(({ text }) => {
             text.should.match(/upload was successful/);
           })
-          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
-            .set('X-Extended-Metadata', 'true')
-            .expect(200)
-            .then(({ body }) => {
-              body.createdAt.should.be.a.recentIsoDate();
-              body.xml.should.equal(testData.instances.simple.one);
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+              .expect(200)
+              .then(({ body }) => {
+                body.createdAt.should.be.a.recentIsoDate();
               body.deviceId.should.equal('imei:358240051111110');
-            })))));
+              }),
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one.xml')
+              .expect(200)
+              .then(({ text }) => { text.should.equal(testData.instances.simple.one); })
+          ])))));
+
+    it('should store the correct formdef and actor ids', testService((service, { db }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+          .expect(201)
+          .then(() => Promise.all([
+            asAlice.get('/v1/users/current').then(({ body }) => body.id),
+            db.select('formDefId', 'actorId').from('submission_defs')
+          ]))
+          .then(([ aliceId, submissions ]) => {
+            submissions.length.should.equal(1);
+            submissions[0].actorId.should.equal(aliceId);
+            return db.select('xml').from('form_defs').where({ id: submissions[0].formDefId })
+              .then(([ def ]) => {
+                def.xml.should.equal(testData.forms.simple);
+              });
+          }))));
 
     // also tests /forms/_/submissions/_/attachments return content. (mark1)
     // no point in replicating it.
@@ -348,7 +376,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(({ body }) => {
             body.should.be.a.Submission();
             body.createdAt.should.be.a.recentIsoDate();
-            body.submitter.should.equal(5);
+            body.submitterId.should.equal(5);
           }))));
 
     it('should create expected attachments', testService((service) =>
@@ -369,6 +397,25 @@ describe('api: /forms/:id/submissions', () => {
                   { name: 'my_file1.mp4', exists: false }
                 ]);
               }))))));
+
+    it('should store the correct formdef and actor ids', testService((service, { db }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => Promise.all([
+            asAlice.get('/v1/users/current').then(({ body }) => body.id),
+            db.select('formDefId', 'actorId').from('submission_defs')
+          ]))
+          .then(([ aliceId, submissions ]) => {
+            submissions.length.should.equal(1);
+            submissions[0].actorId.should.equal(aliceId);
+            return db.select('xml').from('form_defs').where({ id: submissions[0].formDefId })
+              .then(([ def ]) => {
+                def.xml.should.equal(testData.forms.simple);
+              });
+          }))));
   });
 
   describe('.csv.zip GET', () => {
@@ -399,6 +446,7 @@ describe('api: /forms/:id/submissions', () => {
             zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
               const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+              csv.length.should.equal(5); // header + 3 data rows + newline
               csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName' ]);
               csv[1].shift().should.be.an.recentIsoDate();
               csv[1].should.eql([ 'three','Chelsea','38','three', '5', 'Alice' ]);
@@ -406,8 +454,43 @@ describe('api: /forms/:id/submissions', () => {
               csv[2].should.eql([ 'two','Bob','34','two', '5', 'Alice' ]);
               csv[3].shift().should.be.an.recentIsoDate();
               csv[3].should.eql([ 'one','Alice','30','one', '5', 'Alice' ]);
+              csv[4].should.eql([ '' ]);
               done();
             }))))));
+
+    it('should not include data from other forms', testService((service) =>
+      service.login('alice', (asAlice) => Promise.all([
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.simple.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200)),
+        asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+          .send(testData.instances.withrepeat.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+            .send(testData.instances.withrepeat.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+      ])
+        .then(() => new Promise((done) =>
+          zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
+            result.filenames.should.eql([ 'simple.csv' ]);
+            const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+          console.log(csv);
+            csv.length.should.equal(4); // header + 2 data rows + newline
+            csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName' ]);
+            csv[1].shift().should.be.an.recentIsoDate();
+            csv[1].should.eql([ 'two','Bob','34','two', '5', 'Alice' ]);
+            csv[2].shift().should.be.an.recentIsoDate();
+            csv[2].should.eql([ 'one','Alice','30','one', '5', 'Alice' ]);
+            csv[3].should.eql([ '' ]);
+            done();
+          }))))));
 
     it('should return a zipfile with the relevant attachments', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -487,7 +570,6 @@ describe('api: /forms/:id/submissions', () => {
               body.length.should.equal(1);
               body[0].should.be.an.ExtendedSubmission();
               body[0].submitter.displayName.should.equal('Alice');
-              body[0].xml.should.equal('<data id="simple"><meta><instanceID>one</instanceID></meta><name>Alice</name><age>30</age></data>');
             })))));
   });
 
@@ -549,7 +631,6 @@ describe('api: /forms/:id/submissions', () => {
             .then(({ body }) => {
               body.should.be.an.ExtendedSubmission();
               body.submitter.displayName.should.equal('Alice');
-              body.xml.should.equal(testData.instances.simple.one);
             })))));
   });
 
