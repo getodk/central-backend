@@ -156,3 +156,13 @@ should.Assertion.add('Role', function() {
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 
+should.Assertion.add('Audit', function() {
+  this.params = { operator: 'to be an Audit' };
+
+  Object.keys(this.obj).should.containDeep([ 'actorId', 'action', 'acteeId', 'details', 'loggedAt' ]);
+  this.obj.actorId.should.be.a.Number();
+  this.obj.action.should.be.a.String();
+  this.obj.acteeId.should.be.a.uuid();
+  this.obj.loggedAt.should.be.an.isoDate();
+});
+

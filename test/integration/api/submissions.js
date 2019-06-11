@@ -481,7 +481,6 @@ describe('api: /forms/:id/submissions', () => {
           zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
             result.filenames.should.eql([ 'simple.csv' ]);
             const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
-          console.log(csv);
             csv.length.should.equal(4); // header + 2 data rows + newline
             csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName' ]);
             csv[1].shift().should.be.an.recentIsoDate();
