@@ -10,13 +10,27 @@ class X {
 }
 
 describe('util/db', () => {
-  describe('fieldsForJoin', () => {
-    const { fieldsForJoin } = util;
+  describe('withJoin', () => {
+    const { withJoin } = util;
+
+    class TestInstance {
+      constructor(props) { Object.assign(this, props); }
+    }
+    class TestMain extends TestInstance {
+      static get fields() { return { all: [ 'a', 'b', 'inner' ] }; }
+    }
+    class TestSecondary extends TestInstance {
+      static get fields() { return { all: [ 'c', 'd' ] }; }
+    }
+
+    const getFields = (fields) => fields;
+    const getUnjoiner = (_, unjoiner) => unjoiner;
+
     it('should return a set of flattened fields given Instances', () => {
-      fieldsForJoin({
+      withJoin('', {
         prop1: { table: 'prop1table', fields: { all: [ 'a', 'b' ] } },
         prop2: { table: 'prop2table', fields: { all: [ 'c', 'd' ] } }
-      }).should.eql({
+      }, getFields).should.eql({
         'prop1!a': 'prop1table.a',
         'prop1!b': 'prop1table.b',
         'prop2!c': 'prop2table.c',
@@ -25,10 +39,10 @@ describe('util/db', () => {
     });
 
     it('should return a set of flattened fields given of/table declarations', () => {
-      fieldsForJoin({
-        prop1: { of: { table: 'prop1table', fields: { all: [ 'a', 'b' ] } }, table: 'override1table' },
-        prop2: { of: { table: 'prop2table', fields: { all: [ 'c', 'd' ] } } }
-      }).should.eql({
+      withJoin('', {
+        prop1: { Instance: { table: 'prop1table', fields: { all: [ 'a', 'b' ] } }, table: 'override1table' },
+        prop2: { Instance: { table: 'prop2table', fields: { all: [ 'c', 'd' ] } } }
+      }, getFields).should.eql({
         'prop1!a': 'override1table.a',
         'prop1!b': 'override1table.b',
         'prop2!c': 'prop2table.c',
@@ -37,10 +51,10 @@ describe('util/db', () => {
     });
 
     it('should pick up join field declarations', () => {
-      fieldsForJoin({
+      withJoin('', {
         prop1: { table: 'prop1table', fields: { all: [ 'a', 'b' ], joined: [ 'm' ] } },
-        prop2: { of: { table: 'prop2table', fields: { all: [ 'c', 'd' ], joined: [ 'x', 'y' ] } }, table: 'override2table' }
-      }).should.eql({
+        prop2: { Instance: { table: 'prop2table', fields: { all: [ 'c', 'd' ], joined: [ 'x', 'y' ] } }, table: 'override2table' }
+      }, getFields).should.eql({
         'prop1!a': 'prop1table.a',
         'prop1!b': 'prop1table.b',
         'prop1!m': 'm',
@@ -50,21 +64,21 @@ describe('util/db', () => {
         'prop2!y': 'y'
       });
     });
-  });
 
-  describe('joinRowToInstance', () => {
-    const { joinRowToInstance } = util;
-    class TestInstance {
-      constructor(props) { Object.assign(this, props); }
-    }
-    class TestMain extends TestInstance {
-      static fields() { return [ 'a', 'b', 'inner' ]; }
-    }
-    class TestSecondary extends TestInstance {
-      static fields() { return [ 'c', 'd' ]; }
-    }
+    it('should deal correctly with Optioned instances', () => {
+      withJoin('', {
+        prop1: Option.of({ fields: { all: [ 'a', 'b' ] }, table: 'override1table' }),
+        prop2: { Instance: Option.of({ table: 'prop2table', fields: { all: [ 'c', 'd' ] } }) }
+      }, getFields).should.eql({
+        'prop1!a': 'override1table.a',
+        'prop1!b': 'override1table.b',
+        'prop2!c': 'prop2table.c',
+        'prop2!d': 'prop2table.d'
+      });
+    });
+
     it('should inflate instances', () => {
-      const result = joinRowToInstance('main', { main: TestMain, inner: TestSecondary })({
+      const result = withJoin('main', { main: TestMain, inner: TestSecondary }, getUnjoiner)({
         'main!a': 1,
         'main!b': 2,
         'inner!c': 3,
@@ -74,8 +88,9 @@ describe('util/db', () => {
       result.should.be.an.instanceof(TestMain);
       result.inner.should.be.an.instanceof(TestSecondary);
     });
+
     it('should handle optional instances', () => {
-      const result = joinRowToInstance('main', { main: TestMain, one: Option.of(TestSecondary), two: Option.of(TestSecondary) })({
+      const result = withJoin('main', { main: TestMain, one: Option.of(TestSecondary), two: Option.of(TestSecondary) }, getUnjoiner)({
         'main!a': 1,
         'main!b': 2,
         'two!c': 3,
@@ -86,13 +101,26 @@ describe('util/db', () => {
       result.one.should.equal(Option.none());
       result.two.get().should.be.an.instanceof(TestSecondary);
     });
+
     it('should consider an optional instance nonpresent given empty values', () => {
-      const result = joinRowToInstance('main', { main: TestMain, inner: Option.of(TestSecondary) })({
+      const result = withJoin('main', { main: TestMain, inner: Option.of(TestSecondary) }, getUnjoiner)({
         'main!a': 1,
         'inner!b': null,
         'inner!c': undefined
       });
       result.should.eql(new TestMain({ a: 1, inner: Option.none() }));
+    });
+
+    it('should deal correctly with aliased tables', () => {
+      const result = withJoin('main', { main: TestMain, inner: { Instance: TestSecondary, table: 'some_alias' } }, getUnjoiner)({
+        'main!a': 1,
+        'main!b': 2,
+        'inner!c': 3,
+        'inner!d': 4
+      });
+      result.should.eql(new TestMain({ a: 1, b: 2, inner: new TestSecondary({ c: 3, d: 4 }) }));
+      result.should.be.an.instanceof(TestMain);
+      result.inner.should.be.an.instanceof(TestSecondary);
     });
   });
 
