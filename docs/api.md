@@ -32,6 +32,12 @@ Finally, **system configuration** is available via a set of specialized resource
 
 Here major and breaking changes to the API are listed by version.
 
+### ODK Central v0.6
+
+**Changed**:
+
+* `GET /projects/…/forms/…/attachments` now always returns `updatedAt`. There is no longer a separate Extended Metadata response for this resource.
+
 ### ODK Central v0.5
 
 **Added**:
@@ -987,17 +993,8 @@ Form Attachments for each form are automatically determined when the form is fir
 
 As mentioned above, the list of expected form attachments is determined at form creation time, from the XForms definition. This endpoint allows you to fetch that list of expected files, and will tell you whether the server is in possession of each file or not.
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally fetch a `updatedAt` field indicating the last time each file's binary content was modified (set or cleared).
-
 + Response 200 (application/json)
-    This is the standard response, if Extended Metadata is not requested:
-
     + Attributes (array[Form Attachment])
-
-+ Response 200 (application/json; extended)
-    This is the Extended Metadata response, if requested via the appropriate header:
-
-    + Attributes (array[Extended Form Attachment])
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -1837,8 +1834,6 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + name: `myfile.mp3` (string, required) - The name of the file as specified in the XForm.
 + type: (Form Attachment Type, required) - The expected type of file as specified in the XForm.
 + exists: `true` (boolean, required) - Whether the server has the file or not.
-
-## Extended Form Attachment (Form Attachment)
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format. The last time this file's binary content was set (POST) or cleared (DELETE).
 
 ## Form Attachment Type (enum)

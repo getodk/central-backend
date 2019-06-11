@@ -572,6 +572,9 @@ describe('api: /projects/:id/forms', () => {
               .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
                 .expect(200)
                 .then(({ body }) => {
+                  body[0].updatedAt.should.be.a.recentIsoDate();
+                  delete body[0].updatedAt;
+
                   body.should.eql([
                     { name: 'goodone.csv', type: 'file', exists: true },
                     { name: 'goodtwo.mp3', type: 'audio', exists: false }
