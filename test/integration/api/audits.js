@@ -145,6 +145,173 @@ describe('/audits', () => {
               body[0].details.instanceId.should.equal('two');
               body[0].actee.xmlFormId.should.equal('simple');
             })))));
+
+    it('should filter by action', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects')
+          .send({ name: 'audit project' })
+          .expect(200)
+          .then(({ body }) => body.id)
+          .then((projectId) => asAlice.post(`/v1/projects/${projectId}/forms`)
+            .send(testData.forms.simple)
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/users')
+              .send({ displayName: 'david', email: 'david@opendatakit.org' })
+              .expect(200))
+            .then(() => asAlice.get('/v1/audits?action=form.create')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(1);
+                body[0].action.should.equal('form.create');
+              }))))));
+
+    it('should filter extended data by action', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects')
+          .send({ name: 'audit project' })
+          .expect(200)
+          .then(({ body }) => body.id)
+          .then((projectId) => asAlice.post(`/v1/projects/${projectId}/forms`)
+            .send(testData.forms.simple)
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/users')
+              .send({ displayName: 'david', email: 'david@opendatakit.org' })
+              .expect(200))
+            .then(() => asAlice.get('/v1/audits?action=form.create')
+              .set('X-Extended-Metadata', true)
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(1);
+                body[0].action.should.equal('form.create');
+                body[0].actor.displayName.should.equal('Alice');
+                body[0].actee.xmlFormId.should.equal('simple');
+              }))))));
+
+    it('should filter (inclusively) by start date', testService((service, { db, Audit }) =>
+      Promise.all(
+        [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+          .map((day) => new Audit({ loggedAt: `2000-01-${day}T00:00Z`, action: `test.${day}` }))
+          .map((data) => db.insert(data).into('audits'))
+      )
+        .then(() => service.login('alice', (asAlice) =>
+          asAlice.get('/v1/audits?start=2000-01-08Z')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(3);
+
+              body[0].action.should.equal('test.10');
+              body[0].loggedAt.should.equal('2000-01-10T00:00:00.000Z');
+              body[1].action.should.equal('test.9');
+              body[1].loggedAt.should.equal('2000-01-09T00:00:00.000Z');
+              body[2].action.should.equal('test.8');
+              body[2].loggedAt.should.equal('2000-01-08T00:00:00.000Z');
+            })))));
+
+    it('should filter by start date+time', testService((service, { db, Audit }) =>
+      Promise.all(
+        [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+          .map((day) => new Audit({ loggedAt: `2000-01-${day}T00:00Z`, action: `test.${day}` }))
+          .map((data) => db.insert(data).into('audits'))
+      )
+        .then(() => service.login('alice', (asAlice) =>
+          asAlice.get('/v1/audits?start=2000-01-08T12:00Z')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(2);
+
+              body[0].action.should.equal('test.10');
+              body[0].loggedAt.should.equal('2000-01-10T00:00:00.000Z');
+              body[1].action.should.equal('test.9');
+              body[1].loggedAt.should.equal('2000-01-09T00:00:00.000Z');
+            })))));
+
+    it('should filter extended data by start date+time', testService((service, { db, Audit, User }) =>
+      User.getByEmail('alice@opendatakit.org').then((o) => o.get())
+        .then((alice) => Promise.all(
+          [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+            .map((day) => new Audit({ loggedAt: `2000-01-${day}T00:00Z`, action: `test.${day}`, actorId: alice.actor.id, acteeId: alice.actor.acteeId }))
+            .map((data) => db.insert(data).into('audits'))
+        )
+          .then(() => service.login('alice', (asAlice) =>
+            asAlice.get('/v1/audits?start=2000-01-08T12:00Z')
+              .set('X-Extended-Metadata', true)
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(2);
+
+                body[0].action.should.equal('test.10');
+                body[0].loggedAt.should.equal('2000-01-10T00:00:00.000Z');
+                body[0].actor.displayName.should.equal('Alice');
+                body[0].actee.displayName.should.equal('Alice');
+                body[1].action.should.equal('test.9');
+                body[1].loggedAt.should.equal('2000-01-09T00:00:00.000Z');
+                body[1].actor.displayName.should.equal('Alice');
+                body[1].actee.displayName.should.equal('Alice');
+              }))))));
+
+    it('should filter (inclusively) by end date', testService((service, { db, Audit }) =>
+      Promise.all(
+        [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+          .map((day) => new Audit({ loggedAt: `2000-01-${day}T00:00Z`, action: `test.${day}` }))
+          .map((data) => db.insert(data).into('audits'))
+      )
+        .then(() => service.login('alice', (asAlice) =>
+          asAlice.get('/v1/audits?end=2000-01-03Z')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(3);
+
+              body[0].action.should.equal('test.3');
+              body[0].loggedAt.should.equal('2000-01-03T00:00:00.000Z');
+              body[1].action.should.equal('test.2');
+              body[1].loggedAt.should.equal('2000-01-02T00:00:00.000Z');
+              body[2].action.should.equal('test.1');
+              body[2].loggedAt.should.equal('2000-01-01T00:00:00.000Z');
+            })))));
+
+    it('should filter by end date+time', testService((service, { db, Audit }) =>
+      Promise.all(
+        [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+          .map((day) => new Audit({ loggedAt: `2000-01-${day}T00:00Z`, action: `test.${day}` }))
+          .map((data) => db.insert(data).into('audits'))
+      )
+        .then(() => service.login('alice', (asAlice) =>
+          asAlice.get('/v1/audits?end=2000-01-02T12:00Z')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(2);
+
+              body[0].action.should.equal('test.2');
+              body[0].loggedAt.should.equal('2000-01-02T00:00:00.000Z');
+              body[1].action.should.equal('test.1');
+              body[1].loggedAt.should.equal('2000-01-01T00:00:00.000Z');
+            })))));
+
+    it('should filter extended data by end date+time', testService((service, { db, Audit, User }) =>
+      User.getByEmail('alice@opendatakit.org').then((o) => o.get())
+        .then((alice) => Promise.all(
+          [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+            .map((day) => new Audit({ loggedAt: `2000-01-${day}T00:00Z`, action: `test.${day}`, actorId: alice.actor.id, acteeId: alice.actor.acteeId }))
+            .map((data) => db.insert(data).into('audits'))
+        )
+          .then(() => service.login('alice', (asAlice) =>
+            asAlice.get('/v1/audits?end=2000-01-02T12:00Z')
+              .set('X-Extended-Metadata', true)
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(2);
+
+                body[0].action.should.equal('test.2');
+                body[0].loggedAt.should.equal('2000-01-02T00:00:00.000Z');
+                body[0].actor.displayName.should.equal('Alice');
+                body[0].actee.displayName.should.equal('Alice');
+                body[1].action.should.equal('test.1');
+                body[1].loggedAt.should.equal('2000-01-01T00:00:00.000Z');
+                body[1].actor.displayName.should.equal('Alice');
+                body[1].actee.displayName.should.equal('Alice');
+              }))))));
   });
 });
 
