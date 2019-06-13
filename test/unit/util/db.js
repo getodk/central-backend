@@ -138,15 +138,60 @@ describe('util/db', () => {
       (new QueryOptions({ limit: 0 })).hasPaging().should.equal(true);
     });
 
-    const mockDb = () => ({
-      offset: function(val) { this._offset = val; return this; },
-      limit: function(val) { this._limit = val; return this; }
+    it('should transfer allowed args from quarantine on allowArgs', () => {
+      (new QueryOptions({ argData: { a: 1, b: 2, c: 3, d: 4 } }))
+        .allowArgs('b', 'c', 'e')
+        .args.should.eql({ b: 2, c: 3 });
     });
-    it('should correctly apply paging via applyPagingOptions', () => {
-      const db = mockDb();
-      applyPagingOptions(new QueryOptions({ offset: 17, limit: 42 }))(db);
-      db._offset.should.equal(17);
-      db._limit.should.equal(42);
+
+    it('should merge with existing args on allowArgs', () => {
+      (new QueryOptions({ args: { b: 4, f: 9 }, argData: { a: 1, b: 2, c: 3, d: 4 } }))
+        .allowArgs('b', 'c', 'e')
+        .args.should.eql({ b: 2, c: 3, f: 9 });
+    });
+
+    it('should merge explicit args on withArgs', () => {
+      (new QueryOptions({ args: { b: 4, f: 9 } }))
+        .withArgs({ b: 7, d: 11 })
+        .args.should.eql({ b: 7, d: 11, f: 9 });
+    });
+
+    describe('related functions', () => {
+      const { ifArg } = util;
+      const mockDb = () => ({
+        offset: function(val) { this._offset = val; return this; },
+        limit: function(val) { this._limit = val; return this; }
+      });
+      it('should correctly apply paging via applyPagingOptions', () => {
+        const db = mockDb();
+        applyPagingOptions(new QueryOptions({ offset: 17, limit: 42 }))(db);
+        db._offset.should.equal(17);
+        db._limit.should.equal(42);
+      });
+
+      it('should run the handler only if the arg is present', () => {
+        let ran = false;
+        const options = new QueryOptions({ args: { b: 42 }, argData: { c: 17 } });
+        ifArg('c', options, () => { ran = true; })();
+        ran.should.equal(false);
+        ifArg('b', options, () => { ran = true; })();
+        ran.should.equal(true);
+      });
+
+      it('should provide the correct arguments to the handler', () => {
+        let ran = false;
+        const options = new QueryOptions({ args: { b: 42 } });
+        ifArg('b', options, (a, b) => {
+          a.should.equal(42);
+          b.should.equal(17);
+          ran = true;
+        })(17);
+        ran.should.equal(true);
+      });
+
+      it('should passthrough the query if the arg is not present', () => {
+        ifArg('z', {}, () => {})(42).should.equal(42);
+      });
     });
   });
 

@@ -315,16 +315,16 @@ describe('preprocessors', () => {
         });
     });
 
-    it('should set q if a value is given', () => {
-      const request = createRequest({ method: 'GET', query: { q: 'maltese falcon' } });
+    it('should store uri-decoded query parameters in argData', () => {
+      const request = createRequest({ method: 'GET', query: { type: 'xyz', q: 'test%20search' } });
       const result = queryOptionsHandler(null, new Context(request));
-      should(result.queryOptions.q).equal('maltese falcon');
+      result.queryOptions.argData.should.eql({ type: 'xyz', q: 'test search' });
     });
 
-    it('should set no q if no value is given', () => {
-      const request = createRequest({ method: 'GET', query: { q: null } });
+    it('should not story query parameters as allowed args', () => {
+      const request = createRequest({ method: 'GET', query: { type: 'xyz', q: 'test%20search' } });
       const result = queryOptionsHandler(null, new Context(request));
-      should(result.queryOptions.q).equal(undefined);
+      should.not.exist(result.queryOptions.args);
     });
   });
 });
