@@ -283,6 +283,16 @@ describe('preprocessors', () => {
       should(result.queryOptions.offset).equal(undefined);
     });
 
+    it('should throw an error if a non-numeric offset is given', () => {
+      const request = createRequest({ method: 'GET', query: { offset: 'abc' } });
+      return queryOptionsHandler(null, new Context(request))
+        .should.be.rejected()
+        .then((error) => {
+          error.problemCode.should.equal(400.11);
+          error.problemDetails.should.eql({ field: 'offset', expected: 'integer' });
+        });
+    });
+
     it('should set limit if a value is given', () => {
       const request = createRequest({ method: 'GET', query: { limit: '42' } });
       const result = queryOptionsHandler(null, new Context(request));
@@ -293,6 +303,16 @@ describe('preprocessors', () => {
       const request = createRequest({ method: 'GET', query: { limit: null } });
       const result = queryOptionsHandler(null, new Context(request));
       should(result.queryOptions.limit).equal(undefined);
+    });
+
+    it('should throw an error if a non-numeric limit is given', () => {
+      const request = createRequest({ method: 'GET', query: { limit: 'abc' } });
+      return queryOptionsHandler(null, new Context(request))
+        .should.be.rejected()
+        .then((error) => {
+          error.problemCode.should.equal(400.11);
+          error.problemDetails.should.eql({ field: 'limit', expected: 'integer' });
+        });
     });
 
     it('should set q if a value is given', () => {
