@@ -41,6 +41,11 @@ Here major and breaking changes to the API are listed by version.
 **Changed**:
 
 * `GET /projects/…/forms/…/attachments` now always returns `updatedAt`. There is no longer a separate Extended Metadata response for this resource.
+* The Submission response format now provides the submitter ID at `submitterId` rather than `submitter`. This is so that the Extended responses for Submissions can use `submitter` to provide the full Actor subobject rather than replacing it. This brings the response format to be more similar to the other Extended formats.
+
+**Removed**:
+
+* The Extended responses for Forms and Submissions no longer include an `xml` property. To retrieve Form or Submission XML, use the dedicated endpoints for [Form XML](/reference/forms-and-submissions/'-individual-form/retrieving-form-xml) and [Submission XML](/reference/forms-and-submissions/submissions/retrieving-submission-xml).
 
 ### ODK Central v0.5
 
@@ -788,7 +793,7 @@ It is not yet possible to modify a Form's XML definition once it is created.
 
 Currently, there are no paging or filtering options, so listing `Form`s will get you every Form in the system, every time.
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that each Form has and the `lastSubmission` most recent submission timestamp, as well as the Actor the Form was `createdBy`, and the actual `xml` XForms XML form definition backing the form.
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that each Form has and the `lastSubmission` most recent submission timestamp, as well as the Actor the Form was `createdBy`.
 
 + Response 200 (application/json)
     This is the standard response, if Extended Metadata is not requested:
@@ -863,7 +868,7 @@ The API will currently check the XML's structure in order to extract the informa
 
 #### Getting Form Details [GET]
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that this Form has, as well as the `lastSubmission` most recent submission timestamp and the actual `xml` XForms XML form definition backing the form.
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that this Form has, as well as the `lastSubmission` most recent submission timestamp.
 
 + Response 200 (application/json)
     This is the standard response, if Extended Metadata is not requested:
@@ -880,7 +885,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 #### Retrieving Form XML [GET /v1/projects/{projectId}/forms/{xmlFormId}.xml]
 
-To get only the XML of the `Form` rather than all of the details with the XML as one of many properties, just add `.xml` to the end of the request URL. This endpoint primarily exists so that OpenRosa survey clients have a way to directly retrieve the XML.
+To get only the XML of the `Form` rather than all of the details with the XML as one of many properties, just add `.xml` to the end of the request URL.
 
 + Response 200 (application/xml)
     + Body
@@ -1068,7 +1073,7 @@ Once created (which, like with Forms, is done by way of their XML data rather th
 
 Currently, there are no paging or filtering options, so listing `Submission`s will get you every Submission in the system, every time.
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to inflate the `submitter` from an `Actor` ID reference to an actual Actor metadata object and return the actual `xml` submission XML data.
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to return a `submitter` data object alongside the `submitterId` Actor ID reference.
 
 + Response 200 (application/json)
     This is the standard response, if Extended Metadata is not requested:
@@ -1106,7 +1111,7 @@ To export all the `Submission` data associated with a `Form`, just add `.csv.zip
 
 Like how `Form`s are addressed by their XML `formId`, individual `Submission`s are addressed in the URL by their `instanceId`.
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to inflate the `submitter` from an `Actor` ID reference to an actual Actor metadata object and return the actual `xml` submission XML data.
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to return a `submitter` data object alongside the `submitterId` Actor ID reference.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
@@ -1945,7 +1950,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 
 ## Submission (object)
 + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the `Submission`, given by the Submission XML.
-+ submitter: `23` (number, required) - The ID of the `Actor` (`App User` or `User`) that submitted this `Submission`.
++ submitterId: `23` (number, required) - The ID of the `Actor` (`App User` or `User`) that submitted this `Submission`.
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format
 
