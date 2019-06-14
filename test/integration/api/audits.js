@@ -312,6 +312,29 @@ describe('/audits', () => {
                 body[1].actor.displayName.should.equal('Alice');
                 body[1].actee.displayName.should.equal('Alice');
               }))))));
+
+    it('should filter out submission and backup events given action=nonverbose', testService((service, { db, Audit }) =>
+      service.login('alice', (asAlice) =>
+        Promise.all([
+          (new Audit({ action: 'backup', details: '{"success":true}' })).create(),
+          asAlice.post('/v1/projects/1/forms')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.binaryType)
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .expect(201)
+              .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+                .send('attachment')
+                .expect(200)))
+        ])
+          .then(() => asAlice.get('/v1/audits?action=nonverbose')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].action.should.equal('form.create');
+            })))));
   });
 });
 
