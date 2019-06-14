@@ -26,13 +26,17 @@ Forms and their submissions are also accessible through two **open standards spe
 * The [OpenRosa](https://docs.opendatakit.org/openrosa/) standard allows standard integration with tools like the [ODK Collect](https://docs.opendatakit.org/collect-intro/) mobile data collection app, or various other compatible tools like [Enketo](https://enketo.org/). It allows them to see the forms available on the server, and to send new submissions to them.
 * The [OData](http://odata.org/) standard allows data to be shared between platforms for analysis and reporting. Tools like [Microsoft Power BI](https://powerbi.microsoft.com/en-us/) and [Tableau](https://public.tableau.com/en-us/s/) are examples of clients that consume the standard OData format and provide advanced features beyond what we offer. If you are looking for a straightforward JSON output of your data, or you are considering building a visualization or reporting tool, this is your best option.
 
-Finally, **system configuration** is available via a set of specialized resources. Currently, the only available configuration allows you to set up data backups.
+Finally, **system information and configuration** is available via a set of specialized resources. Currently, you may set the Backups configuration, and retrieve Server Audit Logs.
 
 ## Changelog
 
 Here major and breaking changes to the API are listed by version.
 
 ### ODK Central v0.6
+
+**Added**:
+
+* `GET /audits` Server Audit Log retrieval resource.
 
 **Changed**:
 
@@ -1668,9 +1672,9 @@ As the vast majority of clients only support the JSON OData format, that is the 
 + Response 501 (application/json)
     + Attributes (Error 501)
 
-# Group System Configuration
+# Group System Endpoints
 
-Currently, the only system configuration present in ODK Central is the configuration of periodic backups. That API is described here.
+There are some resources available for getting or setting system information and configuration. You can [set the Backups configuration](/reference/system-endpoints/backups-configuration) for the server, or you can [retrieve the Server Audit Logs](/reference/system-endpoints/server-audit-logs).
 
 ## Backups Configuration [/v1/config/backups]
 
@@ -1719,7 +1723,7 @@ Deleting the backups configuration will permanently remove it, stopping it from 
 
 This is the first of two steps required to initialize a new backup configuration.
 
-While the administrative interface packaged with ODK Central requires a backup to be terminated before a new one may be set up, the API has no such limitation. Should the initialization process succeed (with a `POST /v1/config/backups/verify` as [documented below](/reference/system-configuration/backups-configuration/completing-a-new-backup-configuration)), the existing backup will be overwritten with the new configuration.
+While the administrative interface packaged with ODK Central requires a backup to be terminated before a new one may be set up, the API has no such limitation. Should the initialization process succeed (with a `POST /v1/config/backups/verify` as [documented below](/reference/system-endpoints/backups-configuration/completing-a-new-backup-configuration)), the existing backup will be overwritten with the new configuration.
 
 All ODK Central backups are encrypted before they are sent to Google Drive for storage. If a `passphrase` is not provided with this request, encryption will still occur with a `""` empty string passphrase.
 
@@ -1741,7 +1745,7 @@ To complete the backup configuration, it is necessary to use the Google OAuth UR
 
 This is the second of two steps required to initialize a new backup configuration. As noted in step 1 above, if a backup already exists and this request succeeds, it will be overwritten with the new configuration.
 
-This endpoint has two requirements, both relating to [step 1](/reference/system-configuration/backups-configuration/initiating-a-new-backup-configuration):
+This endpoint has two requirements, both relating to [step 1](/reference/system-endpoints/backups-configuration/initiating-a-new-backup-configuration):
 
 * It _must_ be called via Session Bearer Token auth (`Authorization: Bearer {token}`), with the token provided in the response to step 1. Attempting to authenticate as any other `Actor` will fail.
 * It needs to be provided with the verification `code` the user receives at the end of their Google OAuth process.
@@ -1754,6 +1758,57 @@ If these two things are present and correct, and Google can be reached to verify
 
 + Response 200 (application/json)
     + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Server Audit Logs [/v1/audits]
+
+As of version 0.6, Server Audit Logs entries are created for the following `action`s:
+
+* `user.create` when a new User is created.
+* `user.update` when User information is updated, like email or password.
+* `user.delete` when a User is deleted.
+* `assignment.create` when an Actor is assigned to a Server Role.
+* `assignment.delete` when an Actor is unassigned from a Server Role.
+* `project.create` when a new Project is created.
+* `project.update` when top-level Project information is updated, like its name.
+* `project.delete` when a Project is deleted.
+* `form.create` when a new Form is created.
+* `form.update` when top-level Form information is updated, like its name or state.
+* `form.delete` when a Form is deleted.
+* `form.attachment.update` when a Form Attachment binary is set or cleared.
+* `submission.create` when a new Submission is created.
+* `submission.attachment.updated` when a Submission Attachment binary is set or cleared.
+* `backup` when a backup operation is attempted.
+
+### Getting Audit Log Entries [GET /v1/audits{?action,start,end,limit,offset}]
+
+This resource allows access to those log entries, with some paging and filtering options. These are provided by querystring parameters: `action` allows filtering by the action types listed above, `start` and `end` allow filtering by log timestamp (see below), and `limit` and `offset` control paging. If no paging parameters are given, the server will attempt to return every audit log entry that it has.
+
+The `start` and `end` parameters work based on exact timestamps, given in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format. It is possible to provide just a datestring (eg `2000-01-01`), in which case midnight will be inferred. But this value alone leaves the timezone unspecified. When no timezone is given, the server's local time will be used: the standard [Docker deployment](https://docs.opendatakit.org/central-install/) will always set server local time to UTC, but installations may have been customized, and there is no guarantee the UTC default hasn't been overridden.
+
+For this reason, **we recommend always setting a timezone** when querying based on `start` and `end`: either by appending a `z` to indicate UTC (eg `2000-01-01z`) or by explicitly specifying a timezone per ISO 8601 (eg `2000-01-01+08`). The same applies for full timestamps (eg `2000-01-01T12:12:12z`, `2000-01-01T12:12:12+08`).
+
+`start` may be given without `end`, and vice versa, in which case the timestamp filter will only be bounded on the specified side. They are both inclusive (`>=` and `<=`, respectively).
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally expand the `actorId` into full `actor` details, and `acteeId` into full `actee` details. The `actor` will always be an Actor, but the `actee` may be an Actor, a Project, a Form, or some other type of object depending on the type of action.
+
++ Parameters
+    + `action`: `form.create` (string, optional) - The name of the `action` to filter by.
+    + `start`: `2000-01-01z` (string, optional) - The timestamp before which log entries are to be filtered out.
+    + `end`: `2000-12-31T23:59.999z` (string, optional) - The timestamp after which log entries are to be filtered out.
+    + `limit`: `100` (number, optional) - The maximum number of entries to return.
+    + `offset`: `200` (number, optional) - The zero-indexed number of entries to skip from the result.
+
++ Response 200 (application/json)
+    + Attributes (array[Audit])
+
++ Response 200 (application/json; extended)
+    + Attributes (array[Extended Audit])
+
++ Response 400 (application/json)
+    + Attributes (Error 400)
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -1781,6 +1836,17 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Extended Assignment (object)
 + actor: (Actor, required) - The full Actor data for this assignment.
 + roleId: `4` (number, required) - The numeric Role ID being assigned.
+
+## Audit (object)
++ actorId: `42` (number, optional) - The ID of the actor, if any, that initiated the action.
++ action: `form.create` (string, required) - The action that was taken.
++ acteeId: `85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, optional) - The ID of the permissioning object against which the action was taken.
++ details: (object, optional) - Additional details about the action that vary according to the type of action.
++ loggedAt: `2018-04-18T23:19:14.802Z` (string, required) - ISO date format
+
+## Extended Audit (Audit)
++ actor: (Actor, optional) - The details of the actor given by `actorId`.
++ actee: (object, optional) - The details of the actee given by `acteeId`. Depending on the action type, this could be a number of object types, including an `Actor`, a `Project`, or a `Form`.
 
 ## Error 400 (object)
 + code: `400` (string, required)
