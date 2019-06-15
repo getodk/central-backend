@@ -1784,7 +1784,7 @@ As of version 0.6, Server Audit Logs entries are created for the following `acti
 * `form.delete` when a Form is deleted.
 * `form.attachment.update` when a Form Attachment binary is set or cleared.
 * `submission.create` when a new Submission is created.
-* `submission.attachment.updated` when a Submission Attachment binary is set or cleared.
+* `submission.attachment.update` when a Submission Attachment binary is set or cleared, but _only via the REST API_. Attachments created alongside the submission over the OpenRosa `/submission` API (including submissions from Collect) do not generate audit log entries.
 * `backup` when a backup operation is attempted.
 
 ### Getting Audit Log Entries [GET /v1/audits{?action,start,end,limit,offset}]
