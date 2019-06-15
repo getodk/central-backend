@@ -466,6 +466,23 @@ describe('api: /users', () => {
               email.to.should.eql([{ address: 'alice@opendatakit.org', name: '' }]);
               email.subject.should.equal('ODK Central account password change');
             })))));
+
+    it('should log an audit on password change', testService((service, { Audit, User }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current')
+          .expect(200)
+          .then(({ body }) => asAlice.put(`/v1/users/${body.id}/password`)
+            .send({ old: 'alice', new: 'newpassword' })
+            .expect(200)
+            .then(() => Promise.all([
+              User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+              Audit.getLatestWhere({ action: 'user.update' }).then((o) => o.get())
+            ]))
+            .then(([ alice, log ]) => {
+              log.actorId.should.equal(alice.actor.id);
+              log.details.should.eql({ data: { password: true } });
+              log.acteeId.should.equal(alice.actor.acteeId);
+            })))));
   });
 
   describe('/users/:id DELETE', () => {
