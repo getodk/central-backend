@@ -32,6 +32,12 @@ Finally, **system configuration** is available via a set of specialized resource
 
 Here major and breaking changes to the API are listed by version.
 
+### ODK Central v0.6
+
+**Added**:
+
+* `?odata=true` option on `GET /projects/…/forms/….schema.json` to sanitize the field names to match the way they will be outputted for OData.
+
 ### ODK Central v0.5
 
 **Added**:
@@ -908,7 +914,7 @@ To get only the XML of the `Form` rather than all of the details with the XML as
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-#### Retrieving Form Schema JSON [GET /v1/projects/{projectId}/forms/{xmlFormId}.schema.json{?flatten}]
+#### Retrieving Form Schema JSON [GET /v1/projects/{projectId}/forms/{xmlFormId}.schema.json{?flatten,odata}]
 
 _(introduced: version 0.2)_
 
@@ -918,9 +924,14 @@ While this may eventually overlap with the new OData JSON CSDL specification, we
 
 By default, XForms groups are represented as tree structures with children, just like repeats. However, for many purposes (such as outputting a table), this is extra homework. Once again, Central Backend already has a utility to make this easier; add the querystring parameter `?flatten=true` to flatten groups. This will give you a `path`-based field accessor scheme instead of a `name`-based one (see the sample output for details).
 
+You may additionally add the querystring parameter `?odata=true` to sanitize the field names to match the way they will be outputted for OData. While the original field names as given in the XForms definition may be used as-is for CSV output, OData has some restrictions related to the domain-qualified identifier syntax it uses.
+
+The `?flatten` and `?odata` flags may be used together.
+
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
     + flatten: `false` (boolean, optional) - If set to `true`, will flatten groups.
+    + odata: `false` (boolean, optional) - If set to `true`, will sanitize field names.
 
 + Response 200 (application/json)
     + Body

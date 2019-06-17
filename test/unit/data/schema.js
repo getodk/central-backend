@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { getFormSchema, flattenSchemaStructures, _findRepeats, getSchemaTables, schemaAsLookup, stripNamespacesFromSchema, expectedFormAttachments } = require(appRoot + '/lib/data/schema');
+const { getFormSchema, flattenSchemaStructures, _findRepeats, getSchemaTables, schemaAsLookup, stripNamespacesFromSchema, sanitizeOdataIdentifiers, expectedFormAttachments } = require(appRoot + '/lib/data/schema');
 const { toTraversable } = require(appRoot + '/lib/util/xml');
 const testData = require(appRoot + '/test/integration/data'); // TODO: probably misplaced.
 
@@ -416,6 +416,32 @@ describe('form schema', () => {
         }]
       }, {
         name: 'age',
+        type: 'int'
+      }]);
+    });
+  });
+
+  describe('sanitizeOdataIdentifiers', () => {
+    it('should sanitize all identifiers', () => {
+      sanitizeOdataIdentifiers([{
+        name: 'q1.8',
+        type: 'structure',
+        children: [{
+          name: '17',
+          type: 'string'
+        }]
+      }, {
+        name: '4.2',
+        type: 'int'
+      }]).should.eql([{
+        name: 'q1_8',
+        type: 'structure',
+        children: [{
+          name: '_17',
+          type: 'string'
+        }]
+      }, {
+        name: '_4_2',
         type: 'int'
       }]);
     });
