@@ -385,6 +385,68 @@ describe('api: /projects/:id/forms', () => {
               { path: [ 'age' ], type: 'int' }
             ]);
           }))));
+
+    const sanitizeXml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Sanitize</h:title>
+    <model>
+      <instance>
+        <data id="sanitize">
+          <q1.8>
+            <17/>
+          </q1.8>
+          <4.2/>
+        </data>
+      </instance>
+
+      <bind nodeset="/data/q1.8/17" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+      <bind nodeset="/data/4.2" type="number"/>
+    </model>
+
+  </h:head>
+  <h:body>
+    <input ref="/data/4.2">
+      <label>What is your age?</label>
+    </input>
+  </h:body>
+</h:html>`;
+
+    it('should return a sanitized JSON schema structure', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(sanitizeXml)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/sanitize.schema.json?odata=true')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.eql([{
+                name: 'q1_8',
+                type: 'structure',
+                children: [{
+                  name: '_17',
+                  type: 'string'
+                }]
+              }, {
+                name: '_4_2',
+                type: 'number'
+              }]);
+            })))));
+
+    it('should return a sanitized flattened JSON schema structure', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(sanitizeXml)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/sanitize.schema.json?odata=true&flatten=true')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.eql([
+                { path: [ 'q1_8', '_17' ], type: 'string' },
+                { path: [ '_4_2' ], type: 'number' }
+              ]);
+            })))));
   });
 
   describe('/:id GET', () => {

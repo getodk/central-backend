@@ -196,6 +196,55 @@ describe('odata message composition', () => {
         <Property Name="__Submissions-children-child-id" Type="Edm.String"/>`).should.equal(true);
       });
     });
+
+    it('should appropriately sanitize identifiers', () => {
+      const form = { xmlFormId: 'sanitize', def: { schema: () => getFormSchema({ xml: `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Illegal OData Chars</h:title>
+    <model>
+      <instance>
+        <data id="sanitize">
+          <meta>
+            <instanceID/>
+          </meta>
+          <q1.8/>
+          <42/>
+          <2.4><q3.6><a/></q3.6></2.4>
+        </data>
+      </instance>
+
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+      <bind nodeset="/data/q1.8" type="string"/>
+      <bind nodeset="/data/42" type="int"/>
+      <bind nodeset="/data/2.4/a" type="string"/>
+    </model>
+
+  </h:head>
+  <h:body>
+    <input ref="/data/q1.8">
+      <label>What is your name?</label>
+    </input>
+    <input ref="/data/42">
+      <label>What is your age?</label>
+    </input>
+    <group ref="/data/2.4">
+      <label>2.4 group</label>
+      <repeat nodeset="/data/2.4/q3.6">
+        <input ref="/data/2.4/a">
+          <label>a?</label>
+        </input>
+      </repeat>
+    </group>
+  </h:body>
+</h:html>` }) } };
+      return edmxFor(form).then((edmx) => {
+        edmx.includes('<Property Name="q1_8" Type="Edm.String"/>').should.equal(true);
+        edmx.includes('<Property Name="_42" Type="Edm.Int64"/>').should.equal(true);
+        edmx.includes('<Property Name="_2_4" Type="org.opendatakit.user.sanitize._2_4"/>').should.equal(true);
+        edmx.includes('<ComplexType Name="_2_4">').should.equal(true);
+        edmx.includes('<EntityType Name="Submissions._2_4.q3_6">').should.equal(true);
+      });
+    });
   });
 
   describe('rowstream conversion', () => {
