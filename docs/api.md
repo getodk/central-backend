@@ -37,6 +37,7 @@ Here major and breaking changes to the API are listed by version.
 **Added**:
 
 * `GET /audits` Server Audit Log retrieval resource.
+* Form resource data now includes `projectId`.
 
 **Changed**:
 
@@ -1887,6 +1888,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + token: `d1!E2GVHgpr4h9bpxxtqUJ7EVJ1Q$Dusm2RBXg8XyVJMCBCbvyE8cGacxUx3bcUT` (string, optional) - If present, this is the Token that can be used to authenticate a request as this `App User`. If not present, this `App User`'s access has been revoked.
 
 ## Form (object)
++ projectId: `1` (number, required) - The `id` of the project this form belongs to.
 + xmlFormId: `simple` (string, required) - The `id` of this form as given in its XForms XML definition
 + name: `Simple` (string, optional) - The friendly name of this form. It is given by the `<title>` in the XForms XML definition.
 + version: `2.1` (string, optional) - The `version` of this form as given in its XForms XML definition. Empty string and `null` are treated equally as a single version.

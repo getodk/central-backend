@@ -107,7 +107,8 @@ should.Assertion.add('ExtendedFieldKey', function() {
 should.Assertion.add('Form', function() {
   this.params = { operator: 'to be a Form' };
 
-  Object.keys(this.obj).should.containDeep([ 'xmlFormId', 'createdAt', 'updatedAt', 'name', 'version', 'hash' ]);
+  Object.keys(this.obj).should.containDeep([ 'projectId', 'xmlFormId', 'createdAt', 'updatedAt', 'name', 'version', 'hash' ]);
+  this.obj.projectId.should.be.a.Number();
   this.obj.xmlFormId.should.be.a.String();
   this.obj.createdAt.should.be.an.isoDate();
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();

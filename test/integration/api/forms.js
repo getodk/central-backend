@@ -16,6 +16,7 @@ describe('api: /projects/:id/forms', () => {
           .expect(200)
           .then(({ body }) => {
             body.forEach((form) => form.should.be.a.Form());
+            body.map((form) => form.projectId).should.eql([ 1, 1 ]);
             body.map((form) => form.xmlFormId).should.eql([ 'simple', 'withrepeat' ]);
             body.map((form) => form.hash).should.eql([ '5c09c21d4c71f2f13f6aa26227b2d133', 'e7e9e6b3f11fca713ff09742f4312029' ]);
             body.map((form) => form.version).should.eql([ '', '1.0' ]);
