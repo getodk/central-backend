@@ -88,6 +88,52 @@ describe('submissionToOData', () => {
     });
   });
 
+  it('should output null field records for missing root atomic values', () => {
+    const fields = {
+      earth: { name: 'earth', type: 'int' },
+      mars: { name: 'mars', type: 'decimal' },
+      jupiter: { name: 'jupiter', type: 'geopoint' },
+      saturn: { name: 'saturn', type: 'structure', children: [] },
+      uranus: { name: 'uranus', type: 'repeat', children: [] }
+    };
+    const submission = mockSubmission('nulls', '<data><earth>42</earth></data>');
+    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+      result.should.eql([{
+        __id: 'nulls',
+        __system,
+        earth: 42,
+        mars: null,
+        jupiter: null
+      }]);
+    });
+  });
+
+  it('should output null field records for missing nested atomic values', () => {
+    const fields = {
+      sun: { name: 'sun', type: 'structure',
+        children: {
+          earth: { name: 'earth', type: 'int' },
+          mars: { name: 'mars', type: 'decimal' },
+          jupiter: { name: 'jupiter', type: 'geopoint' },
+          saturn: { name: 'saturn', type: 'structure', children: [] },
+          uranus: { name: 'uranus', type: 'repeat', children: [] }
+        }
+      }
+    };
+    const submission = mockSubmission('nulls', '<data><sun><earth>42</earth></sun></data>');
+    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+      result.should.eql([{
+        __id: 'nulls',
+        __system,
+        sun: {
+          earth: 42,
+          mars: null,
+          jupiter: null
+        }
+      }]);
+    });
+  });
+
   it('should sanitize fieldnames', () => {
     const fields = {
       'q1.8': { name: 'q1.8', type: 'string' },
@@ -155,7 +201,9 @@ describe('submissionToOData', () => {
     return submissionToOData(fields, 'Submissions', submission).then((result) => {
       result.should.eql([{
         __id: 'geo',
-        __system
+        __system,
+        geopointNoLon: null,
+        geopointNonsense: null
       }]);
     });
   });
