@@ -123,6 +123,16 @@ describe('/audits', () => {
               audits[2].loggedAt.should.be.a.recentIsoDate();
             })))));
 
+    it('should not expand actor if there is no actor', testService((service, { Audit }) =>
+      (new Audit({ action: 'backup', details: '{"success":true}' })).create()
+        .then(() => service.login('alice', (asAlice) =>
+          asAlice.get('/v1/audits')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              should.not.exist(body[0].actor);
+            })))));
+
     it('should page data', testService((service, SubmissionDef) =>
       service.login('alice', (asAlice) =>
         submitThree(asAlice)
