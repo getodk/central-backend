@@ -167,3 +167,9 @@ should.Assertion.add('Audit', function() {
   this.obj.loggedAt.should.be.an.isoDate();
 });
 
+should.Assertion.add('Key', function() {
+  this.params = { operator: 'to be an Key' };
+
+  Object.keys(this.obj).should.containDeep([ 'hint', 'managed', 'public' ]);
+});
+

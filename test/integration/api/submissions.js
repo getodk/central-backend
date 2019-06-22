@@ -572,6 +572,107 @@ describe('api: /forms/:id/submissions', () => {
             })))));
   });
 
+  describe('/keys GET', () => {
+    it('should return notfound if the form does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/nonexistent/submissions/keys').expect(404))));
+
+    it('should reject if the user cannot read', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/projects/1/forms/nonexistent/submissions/keys').expect(403))));
+
+    it('should return an empty array if encryption is not being used', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.eql([]);
+            })))));
+
+    // a bit of a compound test, since there is no way as of time of writing to verify
+    // that the form def key parsing and storage works. so this test catches form /and/
+    // submission key handling.
+    const withSelfKey = testData.forms.simple
+      .replace('simple', 'selfencrypted')
+      .replace('</model>', '<submission base64RsaPublicKey="thisisabase64rsapublickey"/></model>');
+    it('should return a self-managed key if it is used', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(withSelfKey)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/selfencrypted/submissions')
+            .send(testData.instances.simple.one.replace('simple', 'selfencrypted'))
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/selfencrypted/submissions/keys')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].should.be.a.Key();
+              body[0].public.should.equal('thisisabase64rsapublickey');
+            })))));
+
+    const withSelfKey2 = withSelfKey.replace('thisisabase64rsapublickey', 'secondkey');
+    it('should return multiple self-managed keys if they are used', testService((service, { db, Project, FormDef, FormPartial }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(withSelfKey)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/selfencrypted/submissions')
+            .send(testData.instances.simple.one.replace('simple', 'selfencrypted'))
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => Promise.all([
+            Project.getById(1).then((o) => o.get())
+              .then((project) => project.getFormByXmlFormId('selfencrypted')).then((o) => o.get()),
+            FormPartial.fromXml(withSelfKey2)
+          ])
+            .then(([ form, partial ]) => partial.with({ iversion: new Date() }).createVersion(form))
+            .then(() => asAlice.post('/v1/projects/1/forms/selfencrypted/submissions')
+              .send(testData.instances.simple.two.replace('simple', 'selfencrypted'))
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/selfencrypted/submissions/keys')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(2);
+                body[0].should.be.a.Key();
+                body[0].public.should.equal('thisisabase64rsapublickey');
+                body[1].should.be.a.Key();
+                body[1].public.should.equal('secondkey');
+              }))))));
+
+    it('should not return unused keys', testService((service, { Project, FormDef, FormPartial }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(withSelfKey)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => Promise.all([
+            Project.getById(1).then((o) => o.get())
+              .then((project) => project.getFormByXmlFormId('selfencrypted')).then((o) => o.get()),
+            FormPartial.fromXml(withSelfKey2)
+          ])
+            .then(([ form, partial ]) => partial.with({ iversion: new Date() }).createVersion(form))
+            .then(() => asAlice.post('/v1/projects/1/forms/selfencrypted/submissions')
+              .send(testData.instances.simple.two.replace('simple', 'selfencrypted'))
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/selfencrypted/submissions/keys')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(1);
+                body[0].should.be.a.Key();
+                body[0].public.should.equal('secondkey');
+              }))))));
+  });
+
   describe('/:instanceId.xml GET', () => {
     it('should return submission details', testService((service) =>
       service.login('alice', (asAlice) =>

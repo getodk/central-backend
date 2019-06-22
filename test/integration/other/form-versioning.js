@@ -9,11 +9,11 @@ describe('form forward versioning', () => {
 
   it('should create a new def and update the version', testService((_, { Project, Form, FormDef, FormPartial }) =>
     Promise.all([
-      FormPartial.fromXml(newXml).then((partial) => FormDef.fromData(partial)),
+      FormPartial.fromXml(newXml),
       Project.getById(1).then(force)
         .then((project) => project.getFormByXmlFormId('simple')).then(force)
     ])
-      .then(([ newDef, oldForm ]) => oldForm.createNewVersion(newDef))
+      .then(([ partial, oldForm ]) => partial.createVersion(oldForm))
       .then(() => Project.getById(1)).then(force)
       .then((project) => project.getFormByXmlFormId('simple')).then(force)
       .then((newForm) => {
@@ -24,11 +24,11 @@ describe('form forward versioning', () => {
 
   it('should create a new def and not update the version', testService((_, { Project, Form, FormDef, FormPartial }) =>
     Promise.all([
-      FormPartial.fromXml(newXml).then((partial) => FormDef.fromData(partial)),
+      FormPartial.fromXml(newXml),
       Project.getById(1).then(force)
         .then((project) => project.getFormByXmlFormId('simple')).then(force)
     ])
-      .then(([ newDef, oldForm ]) => oldForm.createNewVersion(newDef, false)
+      .then(([ partial, oldForm ]) => partial.createVersion(oldForm, false)
         .then(() => Project.getById(1)).then(force)
         .then((project) => project.getFormByXmlFormId('simple')).then(force)
         .then((newForm) => {
@@ -39,11 +39,11 @@ describe('form forward versioning', () => {
 
   it('should set an identity transformation', testService((_, { db, Project, Form, FormDef, FormPartial }) =>
     Promise.all([
-      FormPartial.fromXml(newXml).then((partial) => FormDef.fromData(partial)),
+      FormPartial.fromXml(newXml),
       Project.getById(1).then(force)
         .then((project) => project.getFormByXmlFormId('simple')).then(force)
     ])
-      .then(([ newDef, oldForm ]) => oldForm.createNewVersion(newDef))
+      .then(([ partial, oldForm ]) => partial.createVersion(oldForm))
       .then(() => Promise.all([
         Project.getById(1).then(force)
           .then((project) => project.getFormByXmlFormId('simple')).then(force),
@@ -68,11 +68,11 @@ describe('form forward versioning', () => {
           .set('Content-Type', 'text/xml')
           .expect(200))
         .then(() => Promise.all([
-          FormPartial.fromXml(newXml).then((partial) => FormDef.fromData(partial)),
+          FormPartial.fromXml(newXml),
           Project.getById(1).then(force)
             .then((project) => project.getFormByXmlFormId('simple')).then(force)
         ])
-        .then(([ def, form ]) => form.createNewVersion(def))
+        .then(([ partial, form ]) => partial.createVersion(form))
         .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions')
           .expect(200)
           .then(({ body }) => {
@@ -88,15 +88,14 @@ describe('form forward versioning', () => {
       FormPartial.fromXml(testData.forms.withAttachments),
       Blob.fromFile(__filename).then((blob) => blob.create())
     ])
-      .then(([ project, partial, blob ]) => partial.with({ projectId: project.id }).createAll()
+      .then(([ project, partial, blob ]) => partial.with({ projectId: project.id }).createNew()
         .then((savedForm) => Promise.all([ 'goodone.csv', 'goodtwo.mp3' ]
           .map((name) => FormAttachment.getByFormDefIdAndName(savedForm.def.id, name)
             .then(force)
             .then((attachment) => attachment.with({ blobId: blob.id }).update()))
         )
           .then(() => FormPartial.fromXml(withAttachmentsMatching))
-          .then((partial) => FormDef.fromData(partial))
-          .then((def2) => savedForm.createNewVersion(def2))
+          .then((partial) => partial.createVersion(savedForm))
           .then(() => project.getFormByXmlFormId('withAttachments')).then(force)
           .then((finalForm) => FormAttachment.getAllByFormDefId(finalForm.currentDefId)
             .then((attachments) => {
@@ -121,15 +120,14 @@ describe('form forward versioning', () => {
       FormPartial.fromXml(testData.forms.withAttachments),
       Blob.fromFile(__filename).then((blob) => blob.create())
     ])
-      .then(([ project, partial, blob ]) => partial.with({ projectId: project.id }).createAll()
+      .then(([ project, partial, blob ]) => partial.with({ projectId: project.id }).createNew()
         .then((savedForm) => Promise.all([ 'goodone.csv', 'goodtwo.mp3' ]
           .map((name) => FormAttachment.getByFormDefIdAndName(savedForm.def.id, name)
             .then(force)
             .then((attachment) => attachment.with({ blobId: blob.id }).update()))
         )
           .then(() => FormPartial.fromXml(withAttachmentsNonmatching))
-          .then((partial2) => FormDef.fromData(partial2))
-          .then((def2) => savedForm.createNewVersion(def2))
+          .then((partial2) => partial2.createVersion(savedForm))
           .then(() => project.getFormByXmlFormId('withAttachments')).then(force)
           .then((finalForm) => FormAttachment.getAllByFormDefId(finalForm.currentDefId)
             .then((attachments) => {
