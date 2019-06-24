@@ -23,6 +23,7 @@ describe('task: accounts', () => {
         .then(([ user, log ]) => {
           log.acteeId.should.equal(user.actor.acteeId);
           log.details.data.email.should.equal(user.email);
+          log.details.odkcmd.should.equal(true);
         })));
   });
 
@@ -52,6 +53,7 @@ describe('task: accounts', () => {
             log.acteeId.should.equal(user.actor.acteeId);
             log.details.roleId.should.equal(role.id);
             log.details.grantedActeeId.should.equal('*');
+            log.details.odkcmd.should.equal(true);
           }))));
   });
 
@@ -74,6 +76,7 @@ describe('task: accounts', () => {
         .then(([ log, user ]) => {
           log.acteeId.should.equal(user.actor.acteeId);
           log.details.data.should.eql({ password: true });
+          log.details.odkcmd.should.equal(true);
         }))));
   });
 });

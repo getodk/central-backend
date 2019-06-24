@@ -127,6 +127,7 @@ describe('/audits', () => {
       (new Audit({ action: 'backup', details: '{"success":true}' })).create()
         .then(() => service.login('alice', (asAlice) =>
           asAlice.get('/v1/audits')
+            .set('X-Extended-Metadata', true)
             .expect(200)
             .then(({ body }) => {
               body.length.should.equal(1);
