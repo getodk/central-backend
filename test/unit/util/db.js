@@ -122,6 +122,16 @@ describe('util/db', () => {
       result.should.be.an.instanceof(TestMain);
       result.inner.should.be.an.instanceof(TestSecondary);
     });
+
+    it('should deal correctly with optional aliased tables', () => {
+      const result = withJoin('main', { main: TestMain, inner: { Instance: Option.of(TestSecondary), table: 'some_alias' } }, getUnjoiner)({
+        'main!a': 1,
+        'main!b': 2,
+        'inner!c': 3,
+        'inner!d': 4
+      });
+      result.should.eql(new TestMain({ a: 1, b: 2, inner: Option.of(new TestSecondary({ c: 3, d: 4 })) }));
+    });
   });
 
   describe('QueryOptions', () => {
