@@ -6,7 +6,8 @@ const testData = require(appRoot + '/test/data/xml');
 const __system = {
   submissionDate: '2017-09-20T17:10:43Z',
   submitterId: '5',
-  submitterName: 'Alice'
+  submitterName: 'Alice',
+  encrypted: false
 };
 const mockSubmission = (instanceId, xml) => ({
   xml,

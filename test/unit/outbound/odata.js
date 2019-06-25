@@ -10,7 +10,8 @@ const submitter = { id: 5, displayName: 'Alice' };
 const __system = {
   submissionDate: '2017-09-20T17:10:43Z',
   submitterId: submitter.id.toString(),
-  submitterName: submitter.displayName
+  submitterName: submitter.displayName,
+  encrypted: false
 };
 const mockSubmission = (instanceId, xml) => ({
   xml,
