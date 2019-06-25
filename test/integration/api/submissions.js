@@ -617,7 +617,9 @@ describe('api: /forms/:id/submissions', () => {
               body[0].public.should.equal('thisisabase64rsapublickey');
             })))));
 
-    const withSelfKey2 = withSelfKey.replace('thisisabase64rsapublickey', 'secondkey');
+    const withSelfKey2 = withSelfKey
+      .replace('selfencrypted', 'selfencrypted" version="two')
+      .replace('thisisabase64rsapublickey', 'secondkey');
     it('should return multiple self-managed keys if they are used', testService((service, { db, Project, FormDef, FormPartial }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
@@ -633,9 +635,9 @@ describe('api: /forms/:id/submissions', () => {
               .then((project) => project.getFormByXmlFormId('selfencrypted')).then((o) => o.get()),
             FormPartial.fromXml(withSelfKey2)
           ])
-            .then(([ form, partial ]) => partial.with({ iversion: new Date() }).createVersion(form))
+            .then(([ form, partial ]) => partial.createVersion(form))
             .then(() => asAlice.post('/v1/projects/1/forms/selfencrypted/submissions')
-              .send(testData.instances.simple.two.replace('simple', 'selfencrypted'))
+              .send(testData.instances.simple.two.replace('simple', 'selfencrypted" version="two'))
               .set('Content-Type', 'text/xml')
               .expect(200))
             .then(() => asAlice.get('/v1/projects/1/forms/selfencrypted/submissions/keys')
@@ -659,9 +661,9 @@ describe('api: /forms/:id/submissions', () => {
               .then((project) => project.getFormByXmlFormId('selfencrypted')).then((o) => o.get()),
             FormPartial.fromXml(withSelfKey2)
           ])
-            .then(([ form, partial ]) => partial.with({ iversion: new Date() }).createVersion(form))
+            .then(([ form, partial ]) => partial.createVersion(form))
             .then(() => asAlice.post('/v1/projects/1/forms/selfencrypted/submissions')
-              .send(testData.instances.simple.two.replace('simple', 'selfencrypted'))
+              .send(testData.instances.simple.two.replace('simple', 'selfencrypted" version="two'))
               .set('Content-Type', 'text/xml')
               .expect(200))
             .then(() => asAlice.get('/v1/projects/1/forms/selfencrypted/submissions/keys')
