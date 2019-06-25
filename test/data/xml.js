@@ -217,10 +217,10 @@ module.exports = {
 
   </h:head>
   <h:body>
-    <upload ref="/data/file1" accept="image/*">
+    <upload ref="/data/file1" mediatype="image/*">
       <label>Give me an image.</label>
     </upload>
-    <upload ref="/data/file2" accept="video/*">
+    <upload ref="/data/file2" mediatype="video/*">
       <label>Give me a video./label>
     </upload>
   </h:body>
