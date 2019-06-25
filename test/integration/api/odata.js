@@ -1,6 +1,6 @@
 const should = require('should');
 const { testService } = require('../setup');
-const testData = require('../data');
+const testData = require('../../data/xml');
 
 // NOTE: for the data output tests, we do not attempt to extensively determine if every
 // internal case is covered; there are already two layers of tests below these, at

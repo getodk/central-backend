@@ -1,6 +1,6 @@
 const should = require('should');
 const { testService } = require('../setup');
-const testData = require('../data');
+const testData = require('../../data/xml');
 
 describe('api: /projects', () => {
   describe('GET', () => {

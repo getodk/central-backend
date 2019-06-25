@@ -3,7 +3,7 @@ const streamTest = require('streamtest').v2;
 const { identity } = require('ramda');
 const { getFormSchema } = require(appRoot + '/lib/data/schema');
 const { serviceDocumentFor, edmxFor, rowStreamToOData, singleRowToOData } = require(appRoot + '/lib/outbound/odata');
-const testData = require(appRoot + '/test/integration/data');
+const testData = require(appRoot + '/test/data/xml');
 
 // Helpers to deal with repeated system metadata generation.
 const submitter = { id: 5, displayName: 'Alice' };

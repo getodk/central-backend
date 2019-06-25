@@ -2,7 +2,7 @@ const appRoot = require('app-root-path');
 const should = require('should');
 const { getFormSchema, flattenSchemaStructures, _findRepeats, getSchemaTables, schemaAsLookup, stripNamespacesFromSchema, sanitizeOdataIdentifiers, expectedFormAttachments } = require(appRoot + '/lib/data/schema');
 const { toTraversable } = require(appRoot + '/lib/util/xml');
-const testData = require(appRoot + '/test/integration/data'); // TODO: probably misplaced.
+const testData = require(appRoot + '/test/data/xml');
 
 describe('form schema', () => {
   describe('parsing', () => {

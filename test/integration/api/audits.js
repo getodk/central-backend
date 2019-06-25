@@ -1,6 +1,6 @@
 const should = require('should');
 const { testService } = require('../setup');
-const testData = require('../data');
+const testData = require('../../data/xml');
 
 const submitThree = (asAlice) =>
   asAlice.post('/v1/projects/1/forms/simple/submissions')

@@ -2,7 +2,7 @@ const should = require('should');
 const config = require('config');
 const { DateTime } = require('luxon');
 const { testService } = require('../setup');
-const testData = require('../data');
+const testData = require('../../data/xml');
 
 describe('api: /projects/:id/forms', () => {
   describe('GET', () => {

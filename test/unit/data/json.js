@@ -1,7 +1,7 @@
 const appRoot = require('app-root-path');
 const { getFormSchema, schemaAsLookup, stripNamespacesFromSchema } = require(appRoot + '/lib/data/schema');
 const { submissionToOData } = require(appRoot + '/lib/data/json');
-const testData = require(appRoot + '/test/integration/data');
+const testData = require(appRoot + '/test/data/xml');
 
 const __system = {
   submissionDate: '2017-09-20T17:10:43Z',

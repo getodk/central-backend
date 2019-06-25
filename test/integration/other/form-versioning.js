@@ -1,7 +1,7 @@
 const should = require('should');
 const { pick } = require('ramda');
 const { testService } = require('../setup');
-const testData = require('../data');
+const testData = require('../../data/xml');
 
 describe('form forward versioning', () => {
   const force = (x) => x.get();

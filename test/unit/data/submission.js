@@ -4,7 +4,7 @@ const { always } = require('ramda');
 const { toObjects } = require('streamtest').v2;
 const { submissionXmlToFieldStream } = require(appRoot + '/lib/data/submission');
 const { getFormSchema } = require(appRoot + '/lib/data/schema');
-const testData = require(appRoot + '/test/integration/data');
+const testData = require(appRoot + '/test/data/xml');
 
 describe('submission field streamer', () => {
   const mockForm = (xml) => ({ schema: always(getFormSchema({ xml })) });
