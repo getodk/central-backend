@@ -291,6 +291,37 @@ describe('api: /submission', () => {
                   headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"');
                   body.toString('utf8').should.equal('this is test file two');
                 })))))));
+
+    it('should accept encrypted submissions, with attachments', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.encrypted)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('submission.xml.enc', Buffer.from('this is test file one'), { filename: 'submission.xml.enc' })
+            .attach('1561432508817.jpg.enc', Buffer.from('this is test file two'), { filename: '1561432508817.jpg.enc' })
+            // also attach a file that the manifest does not expect.
+            .attach('extraneous.enc', Buffer.from('this is test file three'), { filename: 'extraneous.enc' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.encrypted.one), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/encrypted/submissions/uuid:dcf4a151-5088-453f-99e6-369d67828f7a.xml')
+              .expect(200)
+              .then(({ text }) => { text.should.equal(testData.instances.encrypted.one); }),
+            asAlice.get('/v1/projects/1/forms/encrypted/submissions/uuid:dcf4a151-5088-453f-99e6-369d67828f7a/attachments')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.eql([
+                  { exists: true, name: '1561432508817.jpg.enc' },
+                  { exists: true, name: 'submission.xml.enc' }
+                ]);
+              }),
+            asAlice.get('/v1/projects/1/forms/encrypted/submissions/uuid:dcf4a151-5088-453f-99e6-369d67828f7a/attachments/submission.xml.enc')
+              .expect(200)
+              .then(({ body }) => { body.toString('utf8').should.equal('this is test file one'); })
+          ])))));
   });
 });
 
@@ -416,6 +447,30 @@ describe('api: /forms/:id/submissions', () => {
                 def.xml.should.equal(testData.forms.simple);
               });
           }))));
+
+    it('should accept encrypted submissions, with attachments', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.encrypted)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/encrypted/submissions/uuid:dcf4a151-5088-453f-99e6-369d67828f7a.xml')
+              .expect(200)
+              .then(({ text }) => { text.should.equal(testData.instances.encrypted.one); }),
+            asAlice.get('/v1/projects/1/forms/encrypted/submissions/uuid:dcf4a151-5088-453f-99e6-369d67828f7a/attachments')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.eql([
+                  { exists: false, name: '1561432508817.jpg.enc' },
+                  { exists: false, name: 'submission.xml.enc' }
+                ]);
+              })
+          ])))));
   });
 
   describe('.csv.zip GET', () => {

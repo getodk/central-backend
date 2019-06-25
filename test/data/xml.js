@@ -166,6 +166,7 @@ module.exports = {
     </group>
   </h:body>
 </h:html>`,
+
     withAttachments: `<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
   <h:head>
@@ -194,6 +195,7 @@ module.exports = {
     </model>
   </h:head>
 </h:html>`,
+
     binaryType: `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
   <h:head>
     <h:title>Submission </h:title>
@@ -220,6 +222,43 @@ module.exports = {
     </upload>
     <upload ref="/data/file2" accept="video/*">
       <label>Give me a video./label>
+    </upload>
+  </h:body>
+</h:html>`,
+
+    encrypted: `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Encrypted</h:title>
+    <model>
+      <instance>
+        <data id="encrypted" version="working3">
+          <meta>
+            <instanceID/>
+          </meta>
+          <name/>
+          <age/>
+          <file/>
+        </data>
+      </instance>
+
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+      <bind nodeset="/data/name" type="string"/>
+      <bind nodeset="/data/age" type="int"/>
+      <bind nodeset="/data/file" type="binary"/>
+
+      <submission base64RsaPublicKey="MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYh7bSui/0xppQ+J3i5xghfao+559Rqg9X0xNbdMEsW35CzYUfmC8sOzeeUiE4pG7HIEUmiJal+mo70UMDUlywXj9z053n0g6MmtLlUyBw0ZGhEZWHsfBxPQixdzY/c5i7sh0dFzWVBZ7UrqBc2qjRFUYxeXqHsAxSPClTH1nW47Mr2h4juBLC7tBNZA3biZA/XTPt//hAuzv1d6MGiF3vQJXvFTNdfsh6Ckq4KXUsAv+07cLtON4KjrKhqsVNNGbFssTUHVL4A9N3gsuRGt329LHOKBxQUGEnhMM2MEtvk4kaVQrgCqpk1pMU/4HlFtRjOoKdAIuzzxIl56gNdRUQIDAQAB"/>
+    </model>
+
+  </h:head>
+  <h:body>
+    <input ref="/data/name">
+      <label>What is your name?</label>
+    </input>
+    <input ref="/data/age">
+      <label>What is your age?</label>
+    </input>
+    <upload ref="/data/file" mediatype="image/*">
+      <label>Give me an image.</label>
     </upload>
   </h:body>
 </h:html>`
@@ -273,6 +312,24 @@ module.exports = {
       one: instance('binaryType', 'one', '<file1>my_file1.mp4</file1>'),
       two: instance('binaryType', 'two', '<file2>here_is_file2.jpg</file2>'),
       both: instance('binaryType', 'both', '<file1>my_file1.mp4</file1><file2>here_is_file2.jpg</file2>')
+    },
+    encrypted: {
+      // TODO: the jpg binary associated with this sample blob is >3MB. will replace
+      // with something i actually feel comfortable committing.
+      one: `<data id="encrypted" version="working3" encrypted="yes" xmlns="http://www.opendatakit.org/xforms/encrypted">
+  <base64EncryptedKey>pFT0+tIo8l104xRF8MkyG955oI0eLvdp/Vxy4UH6AvpGVW8fpotfv4Rc51PeDn9jV7kmNk2Q9WGwJs2YmYipxwAZT8genpktoYQR77nT3nqMpkzDfVXLGyl9o8lfuVZNjMRGkaI4Vy7DdsYJI1tkPY03sEopZIBHOl9Du9anyn9FIDbGgcC+W8GDx4jnYRAD3joDFK4wHZTZF7D5/OoDSQjxcMpM6TPmEDPszjHpfXbkf8mtTvy2F5knG9HWmFbaJRy8POC9GQrh68xK8RUJbQX8PBCt/zgR+rTibolgoIKy5KplAS/wKQoi19QfwVRAq9jDzDJeW22tdmBa86X/Fg==</base64EncryptedKey>
+  <orx:meta xmlns:orx="http://openrosa.org/xforms"><orx:instanceID>uuid:dcf4a151-5088-453f-99e6-369d67828f7a</orx:instanceID></orx:meta>
+  <media><file>1561432508817.jpg.enc</file></media>
+  <encryptedXmlFile>submission.xml.enc</encryptedXmlFile>
+  <base64EncryptedElementSignature>UHIobs8lmLCeKGoPxVFiwXp5JsItoBEwdgmUPF8evnmvRd7Tm1o1wOh9WQNcTGXU+uBH0c/w4UkcFq/GA7JYzxjuMu8QGbjlVd936MM0ynAsrzRxHkiZChnabObeCYzab24dHZooiraVs/yPeyGKykJRpAz3jcXNEUz9X7qLrscEab0wvFamiNBC0C+YzewMI2hGpdkGC1DikbkPbHKNgeyLHCYduAj7rhjKsuhSeRFHvgqYGF6yfLNX6/M3rEnOFOHuVOH7yvI/eqC5bHM5PAv/w9zkFqn1Se5uQHNf7bgCRfhfwpRiLrfzlyQlVCpuEQuD9r+aDoShU9nA2Iw6LA==</base64EncryptedElementSignature>
+</data>`,
+      two: `<data id="encrypted" version="working3" encrypted="yes" xmlns="http://www.opendatakit.org/xforms/encrypted">
+  <base64EncryptedKey>iyEB1LAlvVE8uaW0HuhLhzwcLceIukqfgusDNdDEE2FFxVtUtSI3FiOuNxhgI/Zbgnaabh/vqeZ3yLXwv0f66pAbN0n8kM9f84VJR18fdUp6doOz7o8IQD7gc3ZfbRXweab/NxnahfYa9ij0Kax1LTKS05Oodk2MewkzwfBhdbf/CfiBP1HSskDio40jdW5f04GkqZsFCPUluF2DfMnwYCo0wdwf2m8o+lSNR+vrFeEYG7LtGE4X90pVrQnJHwFWHGjSwJpg/USn5skBioDKUCv/Dva9xJ+JXUz+QSg6LOuP+SDxsrmf36WKrnE8kWfN4oaBdmIwFSStkLH9foNXUw==</base64EncryptedKey>
+  <orx:meta xmlns:orx="http://openrosa.org/xforms"><orx:instanceID>uuid:99b303d9-6494-477b-a30d-d8aae8867335</orx:instanceID></orx:meta>
+  <media><file>1561432532482.jpg.enc</file></media>
+  <encryptedXmlFile>submission.xml.enc</encryptedXmlFile>
+  <base64EncryptedElementSignature>a5A29xMc/7Aas1q1EpxJ/+D8dXsK3I6s9SVyzZRl6+2bILpHvPzG6LuFgTf6SM06Tnr13VNioNJLiTxvxna/nPHak015VSg4TWNvXcDpIbkDNS/2v6BZYv86zrao2DpG2lM9h8oPKy1vbHFcponu1/WVtEgZA/TzNMleJCMKCKQqDxt+n6og1QmWF4LBtsPaGB23ucvziQ57Yp8p+sVvqxs2OrJFYHGJReetqmbIUbyS4xvn3BJQa6BSiNMP35mFSvbLL+sCDSx/PiTTgtJ/oMUP+tqsR376l1TWXQhRHHFsCpwQQeS8GkhjEE6GD1XYscy5ATFv8W0cy2Y6GfN1jA==</base64EncryptedElementSignature>
+</data>`
     }
   }
 };
