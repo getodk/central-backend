@@ -13,6 +13,18 @@ describe('task: accounts', () => {
           return User.getByEmail('testuser@opendatakit.org')
             .then((user) => user.isDefined().should.equal(true));
         })));
+
+    it('should log an audit entry', testTask(({ Audit, User }) =>
+      createUser('testuser@opendatakit.org', 'aoeu')
+        .then((result) => Promise.all([
+          User.getByEmail('testuser@opendatakit.org').then((o) => o.get()),
+          Audit.getLatestWhere({ action: 'user.create' }).then((o) => o.get())
+        ]))
+        .then(([ user, log ]) => {
+          log.acteeId.should.equal(user.actor.acteeId);
+          log.details.data.email.should.equal(user.email);
+          log.details.odkcmd.should.equal(true);
+        })));
   });
 
   describe('promoteUser', () => {
@@ -29,6 +41,20 @@ describe('task: accounts', () => {
               .then((user) => user.actor.can('user.create', User.species()))
               .then((allowed) => allowed.should.equal(true)));
         })));
+
+    it('should log an audit entry', testTask(({ Audit, Role, User }) =>
+      User.fromApi({ email: 'testuser@opendatakit.org', displayName: 'test user' }).create()
+        .then((user) => promoteUser('testuser@opendatakit.org')
+          .then(() => Promise.all([
+            Audit.getLatestWhere({ action: 'assignment.create' }).then((o) => o.get()),
+            Role.getBySystemName('admin').then((o) => o.get())
+          ]))
+          .then(([ log, role ]) => {
+            log.acteeId.should.equal(user.actor.acteeId);
+            log.details.roleId.should.equal(role.id);
+            log.details.grantedActeeId.should.equal('*');
+            log.details.odkcmd.should.equal(true);
+          }))));
   });
 
   describe('setUserPassword', () => {
@@ -39,6 +65,19 @@ describe('task: accounts', () => {
         .then(getOrNotFound)
         .then((user) => crypto.verifyPassword('aoeu', user.password))
         .then((verified) => verified.should.equal(true))));
+
+    it('should log an audit entry', testTask(({ Audit, User, crypto }) =>
+      User.fromApi({ email: 'testuser@opendatakit.org', displayName: 'test user' }).create()
+        .then(() => setUserPassword('testuser@opendatakit.org', 'aoeu'))
+        .then(() => Promise.all([
+          Audit.getLatestWhere({ action: 'user.update' }).then((o) => o.get()),
+          User.getByEmail('testuser@opendatakit.org').then((o) => o.get())
+        ])
+        .then(([ log, user ]) => {
+          log.acteeId.should.equal(user.actor.acteeId);
+          log.details.data.should.eql({ password: true });
+          log.details.odkcmd.should.equal(true);
+        }))));
   });
 });
 

@@ -107,7 +107,8 @@ should.Assertion.add('ExtendedFieldKey', function() {
 should.Assertion.add('Form', function() {
   this.params = { operator: 'to be a Form' };
 
-  Object.keys(this.obj).should.containDeep([ 'xmlFormId', 'createdAt', 'updatedAt', 'name', 'version', 'hash' ]);
+  Object.keys(this.obj).should.containDeep([ 'projectId', 'xmlFormId', 'createdAt', 'updatedAt', 'name', 'version', 'hash' ]);
+  this.obj.projectId.should.be.a.Number();
   this.obj.xmlFormId.should.be.a.String();
   this.obj.createdAt.should.be.an.isoDate();
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
@@ -154,5 +155,15 @@ should.Assertion.add('Role', function() {
   this.obj.verbs.forEach((verb) => verb.should.be.a.String());
   if (this.obj.createdAt != null) this.obj.createdAt.should.be.an.isoDate();
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
+});
+
+should.Assertion.add('Audit', function() {
+  this.params = { operator: 'to be an Audit' };
+
+  Object.keys(this.obj).should.containDeep([ 'actorId', 'action', 'acteeId', 'details', 'loggedAt' ]);
+  this.obj.actorId.should.be.a.Number();
+  this.obj.action.should.be.a.String();
+  this.obj.acteeId.should.be.a.uuid();
+  this.obj.loggedAt.should.be.an.isoDate();
 });
 

@@ -207,6 +207,7 @@ describe('api: /projects', () => {
             .then(([ audit, user ]) => {
               audit.isDefined().should.equal(true);
               audit.get().actorId.should.equal(user.body.id);
+              audit.get().details.should.eql({ data: { name: 'Test Project' } });
               return simply.getOneWhere('projects', { acteeId: audit.get().acteeId }, Project)
                 .then((project) => {
                   project.isDefined().should.equal(true);
@@ -344,7 +345,7 @@ describe('api: /projects', () => {
               body.archived.should.equal(true);
             })))));
 
-    it('should log an audit record', testService((service, { Audit, Project }) =>
+    it('should log the action in the audit log', testService((service, { Audit, Project }) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1')
           .set('Content-Type', 'application/json')
@@ -361,7 +362,7 @@ describe('api: /projects', () => {
 
             audit.get().actorId.should.equal(user.body.id);
             audit.get().acteeId.should.equal(project.get().acteeId);
-            audit.get().details.should.eql({ name: 'New Test Name' });
+            audit.get().details.should.eql({ data: { name: 'New Test Name' } });
           }))));
   });
 

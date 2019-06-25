@@ -61,7 +61,7 @@ describe('submissionToOData', () => {
     const submission = mockSubmission('types', `<data>
         <int>42</int>
         <decimal>3.14</decimal>
-        <geopoint>4.8 15.16 23.42</geopoint>
+        <geopoint>4.8 15.16 23.42 108</geopoint>
         <geopointNoAlt>11.38 -11.38</geopointNoAlt>
         <dateTime>2019-01-01T00:00:00.000-08</dateTime>
         <dateTimeWhitespace>
@@ -77,7 +77,7 @@ describe('submissionToOData', () => {
         __system,
         int: 42,
         decimal: 3.14,
-        geopoint: { type: 'Point', coordinates: [ 15.16, 4.8, 23.42 ] },
+        geopoint: { type: 'Point', coordinates: [ 15.16, 4.8, 23.42 ], properties: { accuracy: 108 } },
         geopointNoAlt: { type: 'Point', coordinates: [ -11.38, 11.38 ] },
         dateTime: '2019-01-01T00:00:00.000-08:00',
         dateTimeWhitespace: '2019-01-01T00:00:00.000-08:00',

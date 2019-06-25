@@ -283,6 +283,16 @@ describe('preprocessors', () => {
       should(result.queryOptions.offset).equal(undefined);
     });
 
+    it('should throw an error if a non-numeric offset is given', () => {
+      const request = createRequest({ method: 'GET', query: { offset: 'abc' } });
+      return queryOptionsHandler(null, new Context(request))
+        .should.be.rejected()
+        .then((error) => {
+          error.problemCode.should.equal(400.11);
+          error.problemDetails.should.eql({ field: 'offset', expected: 'integer' });
+        });
+    });
+
     it('should set limit if a value is given', () => {
       const request = createRequest({ method: 'GET', query: { limit: '42' } });
       const result = queryOptionsHandler(null, new Context(request));
@@ -295,16 +305,26 @@ describe('preprocessors', () => {
       should(result.queryOptions.limit).equal(undefined);
     });
 
-    it('should set q if a value is given', () => {
-      const request = createRequest({ method: 'GET', query: { q: 'maltese falcon' } });
-      const result = queryOptionsHandler(null, new Context(request));
-      should(result.queryOptions.q).equal('maltese falcon');
+    it('should throw an error if a non-numeric limit is given', () => {
+      const request = createRequest({ method: 'GET', query: { limit: 'abc' } });
+      return queryOptionsHandler(null, new Context(request))
+        .should.be.rejected()
+        .then((error) => {
+          error.problemCode.should.equal(400.11);
+          error.problemDetails.should.eql({ field: 'limit', expected: 'integer' });
+        });
     });
 
-    it('should set no q if no value is given', () => {
-      const request = createRequest({ method: 'GET', query: { q: null } });
+    it('should store uri-decoded query parameters in argData', () => {
+      const request = createRequest({ method: 'GET', query: { type: 'xyz', q: 'test%20search' } });
       const result = queryOptionsHandler(null, new Context(request));
-      should(result.queryOptions.q).equal(undefined);
+      result.queryOptions.argData.should.eql({ type: 'xyz', q: 'test search' });
+    });
+
+    it('should not story query parameters as allowed args', () => {
+      const request = createRequest({ method: 'GET', query: { type: 'xyz', q: 'test%20search' } });
+      const result = queryOptionsHandler(null, new Context(request));
+      should.not.exist(result.queryOptions.args);
     });
   });
 });
