@@ -26,7 +26,7 @@ ODK Central Backend is, first and foremost, a RESTful HTTP API server that manag
 
 ## Setting up a development environment
 
-First, install Node.js 8.
+First, install Node.js 12+.
 
 Next, create a database and user in Postgres. Either use the same settings as the [default configuration file](config/default.json), or update your local configuration file to match the settings you choose. For example:
 
@@ -43,9 +43,6 @@ Then, go to the repository root in a command line (where this README is) and run
 To run the server, run `make run` from the repository root. Once started, the server will be available on port `8383`. If you run into trouble with this step, the typical solution is to run `npm install` manually.
 
 You can also run `make debug` to run the server with a standard node inspector port running (use your favorite tool, or visit [`about:inspect`](chrome://inspect) in Chrome to attach breakpoints and step through statements).
-
-### Tips for Windows
-Some of the native packages can be a little bit tricky to install successfuly on Windows. In particular, the `ursa` encryption library provides some [pointers of its own](https://www.npmjs.com/package/ursa), and if you run into link issues with `libeay32.lib` then [this issue ticket](https://github.com/ethereumjs/ethereumjs-util/issues/43#issuecomment-347819435) provides some useful information.
 
 ### Sending email
 
