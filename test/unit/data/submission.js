@@ -7,10 +7,10 @@ const { getFormSchema } = require(appRoot + '/lib/data/schema');
 const testData = require(appRoot + '/test/data/xml');
 
 describe('submission field streamer', () => {
-  const mockForm = (xml) => ({ schema: always(getFormSchema({ xml })) });
+  const mockFormDef = (xml) => ({ schema: always(getFormSchema({ xml })) });
 
   it('should return a stream of records', (done) => {
-    submissionXmlToFieldStream(testData.instances.simple.one, mockForm(testData.forms.simple))
+    submissionXmlToFieldStream(mockFormDef(testData.forms.simple), testData.instances.simple.one)
       .then((fieldStream) => fieldStream.pipe(toObjects((error, result) => {
         result.should.eql([
           { field: { name: 'instanceID', type: 'string' }, text: 'one' },
@@ -22,7 +22,7 @@ describe('submission field streamer', () => {
   });
 
   it('should deal correctly with repeats', (done) => {
-    submissionXmlToFieldStream(testData.instances.doubleRepeat.double, mockForm(testData.forms.doubleRepeat))
+    submissionXmlToFieldStream(mockFormDef(testData.forms.doubleRepeat), testData.instances.doubleRepeat.double)
       .then((fieldStream) => fieldStream.pipe(toObjects((error, result) => {
         result.should.eql([
           { field: { name: 'instanceID', type: 'string' }, text: 'double' },
