@@ -651,83 +651,83 @@ describe('api: /forms/:id/submissions', () => {
     // a bit of a compound test, since there is no way as of time of writing to verify
     // that the form def key parsing and storage works. so this test catches form /and/
     // submission key handling.
-    const withSelfKey = testData.forms.simple
-      .replace('simple', 'selfencrypted')
-      .replace('</model>', '<submission base64RsaPublicKey="thisisabase64rsapublickey"/></model>');
     it('should return a self-managed key if it is used', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
-          .send(withSelfKey)
+          .send(testData.forms.encrypted)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => asAlice.post('/v1/projects/1/forms/selfencrypted/submissions')
-            .send(testData.instances.simple.one.replace('simple', 'selfencrypted'))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.one)
             .set('Content-Type', 'text/xml')
             .expect(200))
-          .then(() => asAlice.get('/v1/projects/1/forms/selfencrypted/submissions/keys')
+          .then(() => asAlice.get('/v1/projects/1/forms/encrypted/submissions/keys')
             .expect(200)
             .then(({ body }) => {
               body.length.should.equal(1);
               body[0].should.be.a.Key();
-              body[0].public.should.equal('thisisabase64rsapublickey');
+              body[0].public.should.equal('MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYh7bSui/0xppQ+J3i5xghfao+559Rqg9X0xNbdMEsW35CzYUfmC8sOzeeUiE4pG7HIEUmiJal+mo70UMDUlywXj9z053n0g6MmtLlUyBw0ZGhEZWHsfBxPQixdzY/c5i7sh0dFzWVBZ7UrqBc2qjRFUYxeXqHsAxSPClTH1nW47Mr2h4juBLC7tBNZA3biZA/XTPt//hAuzv1d6MGiF3vQJXvFTNdfsh6Ckq4KXUsAv+07cLtON4KjrKhqsVNNGbFssTUHVL4A9N3gsuRGt329LHOKBxQUGEnhMM2MEtvk4kaVQrgCqpk1pMU/4HlFtRjOoKdAIuzzxIl56gNdRUQIDAQAB');
             })))));
 
-    const withSelfKey2 = withSelfKey
-      .replace('selfencrypted', 'selfencrypted" version="two')
-      .replace('thisisabase64rsapublickey', 'secondkey');
     it('should return multiple self-managed keys if they are used', testService((service, { db, Project, FormDef, FormPartial }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
-          .send(withSelfKey)
+          .send(testData.forms.encrypted)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => asAlice.post('/v1/projects/1/forms/selfencrypted/submissions')
-            .send(testData.instances.simple.one.replace('simple', 'selfencrypted'))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.one)
             .set('Content-Type', 'text/xml')
             .expect(200))
           .then(() => Promise.all([
             Project.getById(1).then((o) => o.get())
-              .then((project) => project.getFormByXmlFormId('selfencrypted')).then((o) => o.get()),
-            FormPartial.fromXml(withSelfKey2)
-          ])
-            .then(([ form, partial ]) => partial.createVersion(form))
-            .then(() => asAlice.post('/v1/projects/1/forms/selfencrypted/submissions')
-              .send(testData.instances.simple.two.replace('simple', 'selfencrypted" version="two'))
-              .set('Content-Type', 'text/xml')
-              .expect(200))
-            .then(() => asAlice.get('/v1/projects/1/forms/selfencrypted/submissions/keys')
-              .expect(200)
-              .then(({ body }) => {
-                body.length.should.equal(2);
-                body[0].should.be.a.Key();
-                body[0].public.should.equal('thisisabase64rsapublickey');
-                body[1].should.be.a.Key();
-                body[1].public.should.equal('secondkey');
-              }))))));
+              .then((project) => project.getFormByXmlFormId('encrypted')).then((o) => o.get()),
+            FormPartial.fromXml(testData.forms.encrypted
+              .replace(/PublicKey="[a-z0-9+\/]+"/i, 'PublicKey="keytwo"')
+              .replace('working3', 'working4'))
+          ]))
+          .then(([ form, partial ]) => partial.createVersion(form))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.two
+              .replace(/EncryptedKey.*EncryptedKey/, 'EncryptedKey>keytwo</base64EncryptedKey')
+              .replace('working3', 'working4'))
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/encrypted/submissions/keys')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(2);
+              body[0].should.be.a.Key();
+              body[0].public.should.equal('keytwo');
+              body[1].should.be.a.Key();
+              body[1].public.should.equal('MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYh7bSui/0xppQ+J3i5xghfao+559Rqg9X0xNbdMEsW35CzYUfmC8sOzeeUiE4pG7HIEUmiJal+mo70UMDUlywXj9z053n0g6MmtLlUyBw0ZGhEZWHsfBxPQixdzY/c5i7sh0dFzWVBZ7UrqBc2qjRFUYxeXqHsAxSPClTH1nW47Mr2h4juBLC7tBNZA3biZA/XTPt//hAuzv1d6MGiF3vQJXvFTNdfsh6Ckq4KXUsAv+07cLtON4KjrKhqsVNNGbFssTUHVL4A9N3gsuRGt329LHOKBxQUGEnhMM2MEtvk4kaVQrgCqpk1pMU/4HlFtRjOoKdAIuzzxIl56gNdRUQIDAQAB');
+            })))));
 
     it('should not return unused keys', testService((service, { Project, FormDef, FormPartial }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
-          .send(withSelfKey)
+          .send(testData.forms.encrypted)
           .set('Content-Type', 'text/xml')
           .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
           .then(() => Promise.all([
             Project.getById(1).then((o) => o.get())
-              .then((project) => project.getFormByXmlFormId('selfencrypted')).then((o) => o.get()),
-            FormPartial.fromXml(withSelfKey2)
-          ])
-            .then(([ form, partial ]) => partial.createVersion(form))
-            .then(() => asAlice.post('/v1/projects/1/forms/selfencrypted/submissions')
-              .send(testData.instances.simple.two.replace('simple', 'selfencrypted" version="two'))
-              .set('Content-Type', 'text/xml')
-              .expect(200))
-            .then(() => asAlice.get('/v1/projects/1/forms/selfencrypted/submissions/keys')
-              .expect(200)
-              .then(({ body }) => {
-                body.length.should.equal(1);
-                body[0].should.be.a.Key();
-                body[0].public.should.equal('secondkey');
-              }))))));
+              .then((project) => project.getFormByXmlFormId('encrypted')).then((o) => o.get()),
+            FormPartial.fromXml(testData.forms.encrypted
+              .replace(/PublicKey="[a-z0-9+\/]+"/i, 'PublicKey="keytwo"')
+              .replace('working3', 'working4'))
+          ]))
+          .then(([ form, partial ]) => partial.createVersion(form))
+          .then(() => asAlice.get('/v1/projects/1/forms/encrypted/submissions/keys')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].should.be.a.Key();
+              body[0].public.should.equal('MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYh7bSui/0xppQ+J3i5xghfao+559Rqg9X0xNbdMEsW35CzYUfmC8sOzeeUiE4pG7HIEUmiJal+mo70UMDUlywXj9z053n0g6MmtLlUyBw0ZGhEZWHsfBxPQixdzY/c5i7sh0dFzWVBZ7UrqBc2qjRFUYxeXqHsAxSPClTH1nW47Mr2h4juBLC7tBNZA3biZA/XTPt//hAuzv1d6MGiF3vQJXvFTNdfsh6Ckq4KXUsAv+07cLtON4KjrKhqsVNNGbFssTUHVL4A9N3gsuRGt329LHOKBxQUGEnhMM2MEtvk4kaVQrgCqpk1pMU/4HlFtRjOoKdAIuzzxIl56gNdRUQIDAQAB');
+            })))));
   });
 
   describe('/:instanceId.xml GET', () => {
