@@ -728,6 +728,28 @@ describe('api: /forms/:id/submissions', () => {
               body[0].should.be.a.Key();
               body[0].public.should.equal('MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYh7bSui/0xppQ+J3i5xghfao+559Rqg9X0xNbdMEsW35CzYUfmC8sOzeeUiE4pG7HIEUmiJal+mo70UMDUlywXj9z053n0g6MmtLlUyBw0ZGhEZWHsfBxPQixdzY/c5i7sh0dFzWVBZ7UrqBc2qjRFUYxeXqHsAxSPClTH1nW47Mr2h4juBLC7tBNZA3biZA/XTPt//hAuzv1d6MGiF3vQJXvFTNdfsh6Ckq4KXUsAv+07cLtON4KjrKhqsVNNGbFssTUHVL4A9N3gsuRGt329LHOKBxQUGEnhMM2MEtvk4kaVQrgCqpk1pMU/4HlFtRjOoKdAIuzzxIl56gNdRUQIDAQAB');
             })))));
+
+    it('should return managed keys, with hint', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple')
+            .expect(200)
+            .then(({ body }) => body.version))
+          .then((version) => asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.encrypted.one
+              .replace('id="encrypted" version="working3"', `id="simple" version="${version}"`))
+            .set('Content-Type', 'application/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].should.be.a.Key();
+              body[0].managed.should.equal(true);
+              body[0].hint.should.equal('it is a secret');
+            })))));
   });
 
   describe('/:instanceId.xml GET', () => {
