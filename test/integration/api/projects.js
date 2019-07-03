@@ -383,5 +383,59 @@ describe('api: /projects', () => {
             .expect(200)
             .then(({ body }) => body.should.eql([]))))));
   });
+
+  describe('/:id/key POST', () => {
+    it('should reject if the user cannot update the project', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.post('/v1/projects/1/key').expect(403))));
+
+    it('should reject if no passphrase is provided', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: '' })
+          .expect(400))));
+
+    it('should reject if managed encryption is already active', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/key')
+            .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+            .expect(409)))));
+
+    it('should modify extant forms', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+          .expect(200)
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/simple.xml')
+              .expect(200)
+              .then(({ text }) => {
+                text.should.match(/<data id="simple" version="\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
+                text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
+              }),
+            asAlice.get('/v1/projects/1/forms/withrepeat.xml')
+              .expect(200)
+              .then(({ text }) => {
+                text.should.match(/<data id="withrepeat" orx:version="1.0\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
+                text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
+              })
+          ])))));
+
+    it('should not modify already-encrypted forms', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.encrypted)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/encrypted.xml')
+            .expect(200)
+            .then(({ text }) => {
+              text.indexOf('<data id="encrypted" version="working3">').should.be.greaterThan(-1);
+              text.indexOf('<submission base64RsaPublicKey="MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYh7bSui/0xppQ+J3i5xghfao+559Rqg9X0xNbdMEsW35CzYUfmC8sOzeeUiE4pG7HIEUmiJal+mo70UMDUlywXj9z053n0g6MmtLlUyBw0ZGhEZWHsfBxPQixdzY/c5i7sh0dFzWVBZ7UrqBc2qjRFUYxeXqHsAxSPClTH1nW47Mr2h4juBLC7tBNZA3biZA/XTPt//hAuzv1d6MGiF3vQJXvFTNdfsh6Ckq4KXUsAv+07cLtON4KjrKhqsVNNGbFssTUHVL4A9N3gsuRGt329LHOKBxQUGEnhMM2MEtvk4kaVQrgCqpk1pMU/4HlFtRjOoKdAIuzzxIl56gNdRUQIDAQAB"/>').should.be.greaterThan(-1);
+            })))));
+  });
 });
 

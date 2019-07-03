@@ -51,6 +51,20 @@ describe('util/crypto', () => {
     });
   });
 
+  describe('stripPemEnvelope', () => {
+    const { stripPemEnvelope } = crypto;
+    it('should strip the envelope', () => {
+      stripPemEnvelope('-----BEGIN PUBLIC KEY-----\n' +
+        'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAreufmd474DLrlZGNJVMB\n' +
+        'os/C+UNjMCb7mqJO9GxI1+Z4NFxUT0jEiiU3OkL8aEXmJObne90O+eWWLT9lrLeJ\n' +
+        'VqPLj2Yov7UUpGGymrIpt5Z9+GwYPQ88Yczm8pg1M8n7FXy8ZrmgAwKxw+pM6enW\n' +
+        '6NiMknxVOjJ6PcNGBAIqrfxMRg2BntiIZ/sP+jjQgDb7xDBfjjNQLlvcwL4BN3aj\n' +
+        'VNgYXqN4Xtf49aXOJXN4yCqfRjeJEosR5d5hPihvcNbyA4DrDYeNC2hv0YLJ+UiQ\n' +
+        'iFFE9DTPVzh4awS8IAbjUerEv3ffJU6Cyaf/GIyWp/1kywNgAIzkMKb4UHrp69HH\n8QIDAQAB\n' +
+        '-----END PUBLIC KEY-----\n').should.equal('MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAreufmd474DLrlZGNJVMBos/C+UNjMCb7mqJO9GxI1+Z4NFxUT0jEiiU3OkL8aEXmJObne90O+eWWLT9lrLeJVqPLj2Yov7UUpGGymrIpt5Z9+GwYPQ88Yczm8pg1M8n7FXy8ZrmgAwKxw+pM6enW6NiMknxVOjJ6PcNGBAIqrfxMRg2BntiIZ/sP+jjQgDb7xDBfjjNQLlvcwL4BN3ajVNgYXqN4Xtf49aXOJXN4yCqfRjeJEosR5d5hPihvcNbyA4DrDYeNC2hv0YLJ+UiQiFFE9DTPVzh4awS8IAbjUerEv3ffJU6Cyaf/GIyWp/1kywNgAIzkMKb4UHrp69HH8QIDAQAB');
+    });
+  });
+
   describe('generateKeypair', () => {
     const { generateKeypair } = crypto;
     it('should return reasonable values in a Promise @slow', (done) => {
