@@ -430,6 +430,9 @@ describe('api: /projects', () => {
           .send(testData.forms.encrypted)
           .set('Content-Type', 'text/xml')
           .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/key')
+            .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+            .expect(200))
           .then(() => asAlice.get('/v1/projects/1/forms/encrypted.xml')
             .expect(200)
             .then(({ text }) => {
