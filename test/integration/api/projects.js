@@ -457,6 +457,22 @@ describe('api: /projects', () => {
             .then(({ text }) => {
               text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9+/]{392}"\/>/);
             })))));
+
+    it('should log the action in the audit log', testService((service, { Audit, Project, User }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+          .expect(200)
+          .then(() => Promise.all([
+            Project.getById(1).then((o) => o.get()),
+            User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+            Audit.getLatestWhere({ action: 'project.update' }).then((o) => o.get())
+          ]))
+          .then(([ project, alice, log ]) => {
+            log.actorId.should.equal(alice.actor.id);
+            log.acteeId.should.equal(project.acteeId);
+            log.details.should.eql({ encrypted: true });
+          }))));
   });
 });
 
