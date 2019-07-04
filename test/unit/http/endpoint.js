@@ -83,6 +83,16 @@ describe('endpoints', () => {
       });
       defaultErrorWriter(Problem.user.insufficientRights(), request, response);
     });
+
+    it('should not translate 403 to 401 if user agent header is not present', (done) => {
+      const response = createModernResponse();
+      const request = createRequest();
+      response.on('end', () => {
+        response.statusCode.should.equal(403);
+        done();
+      });
+      defaultErrorWriter(Problem.user.insufficientRights(), request, response);
+    });
   });
 
   describe('framework', () => {
