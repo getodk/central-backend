@@ -1,6 +1,7 @@
 const appRoot = require('app-root-path');
 const { readFileSync } = require('fs');
 const should = require('should');
+const streamTest = require('streamtest').v2;
 const crypto = require(appRoot + '/lib/util/crypto');
 const Problem = require(appRoot + '/lib/util/problem');
 
@@ -131,7 +132,7 @@ describe('util/crypto', () => {
   });
 
   describe('submission decryption', () => {
-    const { getSubmissionKey, getSubmissionIvs, getSubmissionCleartext } = crypto;
+    const { getSubmissionKey, getSubmissionIvs, getSubmissionCleartext, streamSubmissionCleartext } = crypto;
 
     // test keypair used for some of the below tests:
     const priv = readFileSync(appRoot + '/test/data/priv.pem', 'utf8');
@@ -169,12 +170,49 @@ describe('util/crypto', () => {
       const ciphertext = Buffer.from('kMhJdk0mZOqvlxndUO3v4+UPvfYoc+bbkPmF3QmhoP7lP/QjHbzqw/IfZxQ54D328eCc4V6jtbrjeAXV+m1cWsCGGLW5KwTAxBjPBXzsZrUeY0RISVJ1g9BJoXfSRAjYMrFYOM907BFUIYYxMqpVWGy1lo8ljqY+Sgq1VphkQk/TQGgOVYFALHDLOYnLKuLHvwBLQQwK3lje8CwNlf/b2rY9qfGC4P1emoiP+YzkLp8eH6x/HfMvRIFoZEaom1i5s3SU4WVwe2Tno4jKD69ojMlQN6VKB7DK4xaRSs2C7zfDm63n1WCyyOAj8mASIFhb3sc3hD56HTJFUV/TH3UVlzP7oPm/Mm7nEcU3+HdSSwm3I1qFYhsXfVRym41IlbC4Twf660/kUZrugA7Zqd5K9Un3lOVTzYowaF+m5OIOO56wff3zPBxeOVjANDKR7V6/', 'base64');
       const plaintext = `<?xml version='1.0' ?><data id="encrypted" version="working3" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa"><meta><instanceID>uuid:99b303d9-6494-477b-a30d-d8aae8867335</instanceID></meta><name>bob</name><age>30</age><file>1561432532482.jpg</file></data>`;
 
-      it('should successfully decrypt data @slow', () => {
+      it('should successfully decrypt data syncronously @slow', () => {
         const aesKey = getSubmissionKey(priv, encAesKey);
         const ivs = getSubmissionIvs(instanceId, aesKey, 2);
 
         const result = getSubmissionCleartext(aesKey, ivs[1], ciphertext);
         result.toString('utf8').should.equal(plaintext);
+      });
+
+      it('should successfully decrypt data by stream (chunk pattern 1) @slow', (done) => {
+        const aesKey = getSubmissionKey(priv, encAesKey);
+        const ivs = getSubmissionIvs(instanceId, aesKey, 2);
+
+        // the ciphertext above is 336 bytes. we divide this into chunks of 16 bytes
+        // except the last chunk which we split into two chunks of 8 bytes just
+        // to try to trip up the debufferer.
+        const chunks = [];
+        for (let i = 0; i < 18; i++) { chunks.push(ciphertext.subarray(i * 16, (i + 1) * 16)); }
+        chunks.push(ciphertext.subarray(288, 328));
+        chunks.push(ciphertext.subarray(328, 336));
+
+        streamSubmissionCleartext(aesKey, ivs[1], streamTest.fromChunks(chunks))
+          .pipe(streamTest.toText((_, result) => {
+            result.should.equal(plaintext);
+            done();
+          }));
+      });
+
+      // we do that test again with a slightly different chunking pattern to exercise
+      // all the possible branch paths.
+      it('should successfully decrypt data by stream (chunk pattern 2) @slow', (done) => {
+        const aesKey = getSubmissionKey(priv, encAesKey);
+        const ivs = getSubmissionIvs(instanceId, aesKey, 2);
+
+        const chunks = [];
+        for (let i = 0; i < 20; i++) { chunks.push(ciphertext.subarray(i * 16, (i + 1) * 16)); }
+        chunks.push(ciphertext.subarray(320, 332));
+        chunks.push(ciphertext.subarray(332, 336));
+
+        streamSubmissionCleartext(aesKey, ivs[1], streamTest.fromChunks(chunks))
+          .pipe(streamTest.toText((_, result) => {
+            result.should.equal(plaintext);
+            done();
+          }));
       });
 
       it('should throw a Problem if the padding is invalid', () => {
@@ -190,10 +228,6 @@ describe('util/crypto', () => {
           thrown = true;
         }
         thrown.should.equal(true);
-        /*const { createCipheriv } = require('crypto');
-        const encryptor = createCipheriv('aes-256-cfb', aesKey, ivs[1]);
-        const result = Buffer.concat([ encryptor.update(plaintext), encryptor.final() ]);
-        console.log(result.toString('base64'));*/
       });
     });
   });
