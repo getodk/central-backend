@@ -51,6 +51,13 @@ describe('util/crypto', () => {
     });
   });
 
+  describe('generateVersionSuffix', () => {
+    const { generateVersionSuffix } = crypto;
+    it('should generate a suffix', () => {
+      generateVersionSuffix().should.match(/^\[encrypted:[a-zA-Z0-9+/]{8}\]$/);
+    });
+  });
+
   describe('stripPemEnvelope', () => {
     const { stripPemEnvelope } = crypto;
     it('should strip the envelope', () => {
