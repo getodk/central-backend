@@ -73,6 +73,46 @@ describe('.csv.zip briefcase output @slow', () => {
     });
   });
 
+  it('should work with an xml stream', (done) => {
+    const form = mockForm({
+      xmlFormId: 'mytestform',
+      xml: streamTest.fromChunks([`
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="mytestform">
+                  <name/>
+                  <age/>
+                  <hometown/>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind type="integer" nodeset="/data/age"/>
+              <bind nodeset="/data/hometown" type="select1"/>
+            </model>
+          </h:head>
+        </h:html>`])
+    });
+    const inStream = streamTest.fromObjects([
+      instance('one', '<name>Alice</name><age>30</age><hometown>Seattle, WA</hometown>'),
+      instance('two', '<name>Bob</name><age>34</age><hometown>Portland, OR</hometown>'),
+      instance('three', '<name>Chelsea</name><age>38</age><hometown>San Francisco, CA</hometown>')
+    ]);
+
+    callAndParse(form, inStream, (result) => {
+      result.filenames.should.eql([ 'mytestform.csv' ]);
+      result['mytestform.csv'].should.equal(
+`SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName
+2018-01-01T00:00:00.000Z,Alice,30,"Seattle, WA",one
+2018-01-01T00:00:00.000Z,Bob,34,"Portland, OR",two
+2018-01-01T00:00:00.000Z,Chelsea,38,"San Francisco, CA",three
+`);
+      done();
+    });
+  });
+
   it('should attach submitter information if present', (done) => {
     const form = mockForm({
       xmlFormId: 'mytestform',
