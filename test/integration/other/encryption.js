@@ -89,12 +89,12 @@ describe('managed encryption', () => {
               // create alpha decrypt stream:
               const encAlpha = encryptInstance(makePubkey(keys[0].public), '', testData.instances.simple.one);
               const clearAlpha = decryptor(encAlpha.encInstance, keys[0].id, encAlpha.encAeskey.toString('base64'),
-                'one', 0, 1);
+                'one', 0);
 
               // create beta decrypt stream:
               const encBeta = encryptInstance(makePubkey(keys[1].public), '', testData.instances.simple.two);
               const clearBeta = decryptor(encBeta.encInstance, keys[1].id, encBeta.encAeskey.toString('base64'),
-                'two', 0, 1);
+                'two', 0);
 
               // verify no charlie:
               (decryptor(null, keys[2].id) === null).should.equal(true);

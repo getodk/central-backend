@@ -84,6 +84,9 @@ const encryptInstance = (pubkey, version, instance) => {
   const paddedAeskey = padOaep(aeskey);
   const encAeskey = publicEncrypt({ key: pubkey, padding: RSA_NO_PADDING }, paddedAeskey);
 
+  const fileCount = Object.keys(files).length + 1;
+  const ivs = getSubmissionIvs(instanceId, aeskey);
+
   // generate envelope:
   const filesXml = '';
   const envelope = `<?xml version="1.0"?>
@@ -98,8 +101,7 @@ ${filesXml}
 </data>`;
 
   // generate encrypted instance:
-  const iv = getSubmissionIvs(instanceId, aeskey, 1)[0];
-  const cipher = createCipheriv('aes-256-cfb', aeskey, iv).setAutoPadding(false);
+  const cipher = createCipheriv('aes-256-cfb', aeskey, ivs(fileCount - 1)).setAutoPadding(false);
   const padded = padPkcs7(Buffer.from(instance, 'utf8'));
   const encInstance = Buffer.concat([ cipher.update(padded), cipher.final() ]);
 

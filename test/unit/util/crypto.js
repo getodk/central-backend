@@ -153,13 +153,13 @@ describe('util/crypto', () => {
         const instanceId = 'uuid:22525f8e-4f2d-41ed-94da-4c46a2478448';
         const aesKey = Buffer.from('3TJoHf74zHbDwG3Ta+bcvfUr50C6yF/astfu+CdSnQU=', 'base64');
 
-        const results = getSubmissionIvs(instanceId, aesKey, 32);
-        results[ 0].equals(Buffer.from('39bbb0890f3222269da68b172146477a', 'hex')).should.equal(true);
-        results[ 1].equals(Buffer.from('39bcb0890f3222269da68b172146477a', 'hex')).should.equal(true);
-        results[ 8].equals(Buffer.from('39bcb18a103323279ea68b172146477a', 'hex')).should.equal(true);
-        results[15].equals(Buffer.from('39bcb18a103323279ea78c182247487b', 'hex')).should.equal(true);
-        results[23].equals(Buffer.from('3abdb28b113424289ea78c182247487b', 'hex')).should.equal(true);
-        results[31].equals(Buffer.from('3abdb28b113424289fa88d192348497c', 'hex')).should.equal(true);
+        const ivs = getSubmissionIvs(instanceId, aesKey);
+        ivs( 0).equals(Buffer.from('39bbb0890f3222269da68b172146477a', 'hex')).should.equal(true);
+        ivs( 1).equals(Buffer.from('39bcb0890f3222269da68b172146477a', 'hex')).should.equal(true);
+        ivs( 8).equals(Buffer.from('39bcb18a103323279ea68b172146477a', 'hex')).should.equal(true);
+        ivs(15).equals(Buffer.from('39bcb18a103323279ea78c182247487b', 'hex')).should.equal(true);
+        ivs(23).equals(Buffer.from('3abdb28b113424289ea78c182247487b', 'hex')).should.equal(true);
+        ivs(31).equals(Buffer.from('3abdb28b113424289fa88d192348497c', 'hex')).should.equal(true);
       });
     });
 
@@ -172,15 +172,15 @@ describe('util/crypto', () => {
 
       it('should successfully decrypt data syncronously @slow', () => {
         const aesKey = getSubmissionKey(priv, encAesKey);
-        const ivs = getSubmissionIvs(instanceId, aesKey, 2);
+        const ivs = getSubmissionIvs(instanceId, aesKey);
 
-        const result = getSubmissionCleartext(aesKey, ivs[1], ciphertext);
+        const result = getSubmissionCleartext(aesKey, ivs(1), ciphertext);
         result.toString('utf8').should.equal(plaintext);
       });
 
       it('should successfully decrypt data by stream (chunk pattern 1) @slow', (done) => {
         const aesKey = getSubmissionKey(priv, encAesKey);
-        const ivs = getSubmissionIvs(instanceId, aesKey, 2);
+        const ivs = getSubmissionIvs(instanceId, aesKey);
 
         // the ciphertext above is 336 bytes. we divide this into chunks of 16 bytes
         // except the last chunk which we split into two chunks of 8 bytes just
@@ -190,7 +190,7 @@ describe('util/crypto', () => {
         chunks.push(ciphertext.subarray(288, 328));
         chunks.push(ciphertext.subarray(328, 336));
 
-        streamSubmissionCleartext(aesKey, ivs[1], streamTest.fromChunks(chunks))
+        streamSubmissionCleartext(aesKey, ivs(1), streamTest.fromChunks(chunks))
           .pipe(streamTest.toText((_, result) => {
             result.should.equal(plaintext);
             done();
@@ -201,14 +201,14 @@ describe('util/crypto', () => {
       // all the possible branch paths.
       it('should successfully decrypt data by stream (chunk pattern 2) @slow', (done) => {
         const aesKey = getSubmissionKey(priv, encAesKey);
-        const ivs = getSubmissionIvs(instanceId, aesKey, 2);
+        const ivs = getSubmissionIvs(instanceId, aesKey);
 
         const chunks = [];
         for (let i = 0; i < 20; i++) { chunks.push(ciphertext.subarray(i * 16, (i + 1) * 16)); }
         chunks.push(ciphertext.subarray(320, 332));
         chunks.push(ciphertext.subarray(332, 336));
 
-        streamSubmissionCleartext(aesKey, ivs[1], streamTest.fromChunks(chunks))
+        streamSubmissionCleartext(aesKey, ivs(1), streamTest.fromChunks(chunks))
           .pipe(streamTest.toText((_, result) => {
             result.should.equal(plaintext);
             done();
@@ -218,11 +218,11 @@ describe('util/crypto', () => {
       it('should throw a Problem if the padding is invalid', () => {
         const unpaddedCiphertext = Buffer.from('kMhJdk0mZOqvlxndUO3v4+UPvfYoc+bbkPmF3QmhoP7lP/QjHbzqw/IfZxQ54D328eCc4V6jtbrjeAXV+m1cWsCGGLW5KwTAxBjPBXzsZrUeY0RISVJ1g9BJoXfSRAjYMrFYOM907BFUIYYxMqpVWGy1lo8ljqY+Sgq1VphkQk/TQGgOVYFALHDLOYnLKuLHvwBLQQwK3lje8CwNlf/b2rY9qfGC4P1emoiP+YzkLp8eH6x/HfMvRIFoZEaom1i5s3SU4WVwe2Tno4jKD69ojMlQN6VKB7DK4xaRSs2C7zfDm63n1WCyyOAj8mASIFhb3sc3hD56HTJFUV/TH3UVlzP7oPm/Mm7nEcU3+HdSSwm3I1qFYhsXfVRym41IlbC4Twf660/kUZrugA7Zqd5K9Un3lOVTzYowaF+m5OIOO56wff3zPBxeOVjANA==', 'base64');
         const aesKey = getSubmissionKey(priv, encAesKey);
-        const ivs = getSubmissionIvs(instanceId, aesKey, 2);
+        const ivs = getSubmissionIvs(instanceId, aesKey);
 
         let thrown = false;
         try { // i know about should.throws but i can't get it to assert the specific error type.
-          getSubmissionCleartext(aesKey, ivs[1], unpaddedCiphertext);
+          getSubmissionCleartext(aesKey, ivs(1), unpaddedCiphertext);
         } catch (ex) {
           ex.message.should.equal('Could not perform decryption. Double check your passphrase and your data and try again.');
           thrown = true;
