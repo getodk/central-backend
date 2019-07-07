@@ -111,7 +111,7 @@ describe('managed encryption', () => {
   });
 
   describe('end-to-end', () => {
-    const { extractPubkey, extractVersion, sendEncrypted, internal } = require(appRoot + '/test/util/crypto-odk');
+    const { extractPubkey, extractVersion, encryptInstance, sendEncrypted, internal } = require(appRoot + '/test/util/crypto-odk');
 
     describe('odk encryption simulation', () => {
       // because (sigh) there is so much code in crypto-odk just to simulate the
@@ -278,6 +278,37 @@ describe('managed encryption', () => {
                 done();
               })))))));
 
+    it('should handle mixed[still-encrypted/plaintext] cases', testService((service, { Project, FormPartial }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/key')
+            .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple.xml')
+              .expect(200)
+              .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
+              .then((send) => send(testData.instances.simple.two)
+                .then(() => send(testData.instances.simple.three))))
+            .then(() => new Promise((done) =>
+              zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip`), (result) => {
+                result.filenames.should.eql([ 'simple.csv' ]);
+
+                const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+                csv.length.should.equal(5); // header + 3 data rows + newline
+                csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'Status' ]);
+                csv[1].shift().should.be.an.recentIsoDate();
+                csv[1].should.eql([ '','','','three','5','Alice','not decrypted' ]);
+                csv[2].shift().should.be.an.recentIsoDate();
+                csv[2].should.eql([ '','','','two','5','Alice','not decrypted' ]);
+                csv[3].shift().should.be.an.recentIsoDate();
+                csv[3].should.eql([ 'one','Alice','30','one','5','Alice' ]);
+                csv[4].should.eql([ '' ]);
+                done();
+              })))))));
+
     // we have to sort of cheat at this to get two different managed keys in effect.
     it('should handle mixed[managedA/managedB] source records', testService((service, { Project, FormPartial }) =>
       service.login('alice', (asAlice) =>
@@ -320,6 +351,71 @@ describe('managed encryption', () => {
               result['simple.csv'].should.be.a.SimpleCsv();
               done();
             }))))));
+
+    it('should handle mixed [missing-xml/plaintext] cases (decrypting)', testService((service, { Project, FormPartial }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/key')
+            .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple.xml')
+              .expect(200)
+              .then(({ text }) => encryptInstance(extractPubkey(text), extractVersion(text), testData.instances.simple.two))
+              .then(({ envelope }) => asAlice.post('/v1/projects/1/forms/simple/submissions')
+                .send(envelope)
+                .set('Content-Type', 'text/xml')
+                .expect(200)))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
+              .expect(200)
+              .then(({ body }) => body[0].id))
+            .then((keyId) => new Promise((done) =>
+              zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?1=supersecret`), (result) => {
+                result.filenames.should.eql([ 'simple.csv' ]);
+
+                const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+                csv.length.should.equal(4); // header + 2 data rows + newline
+                csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'Status' ]);
+                csv[1].shift().should.be.an.recentIsoDate();
+                csv[1].should.eql([ '','','','two','5','Alice','missing encrypted form data' ]);
+                csv[2].shift().should.be.an.recentIsoDate();
+                csv[2].should.eql([ 'one','Alice','30','one','5','Alice' ]);
+                csv[3].should.eql([ '' ]);
+                done();
+              })))))));
+
+    it('should handle mixed [missing-xml/plaintext] cases (not decrypting)', testService((service, { Project, FormPartial }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/key')
+            .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple.xml')
+              .expect(200)
+              .then(({ text }) => encryptInstance(extractPubkey(text), extractVersion(text), testData.instances.simple.two))
+              .then(({ envelope }) => asAlice.post('/v1/projects/1/forms/simple/submissions')
+                .send(envelope)
+                .set('Content-Type', 'text/xml')
+                .expect(200)))
+            .then(() => new Promise((done) =>
+              zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip`), (result) => {
+                result.filenames.should.eql([ 'simple.csv' ]);
+
+                const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+                csv.length.should.equal(4); // header + 2 data rows + newline
+                csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'Status' ]);
+                csv[1].shift().should.be.an.recentIsoDate();
+                csv[1].should.eql([ '','','','two','5','Alice','missing encrypted form data' ]);
+                csv[2].shift().should.be.an.recentIsoDate();
+                csv[2].should.eql([ 'one','Alice','30','one','5','Alice' ]);
+                csv[3].should.eql([ '' ]);
+                done();
+              })))))));
   });
 });
 
