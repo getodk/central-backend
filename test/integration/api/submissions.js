@@ -474,6 +474,8 @@ describe('api: /forms/:id/submissions', () => {
   });
 
   describe('.csv.zip GET', () => {
+    // NOTE: tests related to decryption of .csv.zip export are located in test/integration/other/encryption.js
+
     it('should return a zipfile with the relevant headers', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip')
@@ -500,16 +502,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => new Promise((done) =>
             zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
-              const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
-              csv.length.should.equal(5); // header + 3 data rows + newline
-              csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName' ]);
-              csv[1].shift().should.be.an.recentIsoDate();
-              csv[1].should.eql([ 'three','Chelsea','38','three', '5', 'Alice' ]);
-              csv[2].shift().should.be.an.recentIsoDate();
-              csv[2].should.eql([ 'two','Bob','34','two', '5', 'Alice' ]);
-              csv[3].shift().should.be.an.recentIsoDate();
-              csv[3].should.eql([ 'one','Alice','30','one', '5', 'Alice' ]);
-              csv[4].should.eql([ '' ]);
+              result['simple.csv'].should.be.a.SimpleCsv();
               done();
             }))))));
 
@@ -537,11 +530,11 @@ describe('api: /forms/:id/submissions', () => {
             result.filenames.should.eql([ 'simple.csv' ]);
             const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
             csv.length.should.equal(4); // header + 2 data rows + newline
-            csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName' ]);
+            csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'Status' ]);
             csv[1].shift().should.be.an.recentIsoDate();
-            csv[1].should.eql([ 'two','Bob','34','two', '5', 'Alice' ]);
+            csv[1].should.eql([ 'two','Bob','34','two','5','Alice' ]);
             csv[2].shift().should.be.an.recentIsoDate();
-            csv[2].should.eql([ 'one','Alice','30','one', '5', 'Alice' ]);
+            csv[2].should.eql([ 'one','Alice','30','one','5','Alice' ]);
             csv[3].should.eql([ '' ]);
             done();
           }))))));
