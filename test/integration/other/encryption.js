@@ -1,5 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
+const { toText } = require('streamtest').v2;
 const { testService, testContainer } = require(appRoot + '/test/integration/setup');
 const testData = require(appRoot + '/test/data/xml');
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
@@ -67,9 +68,11 @@ describe('managed encryption', () => {
     }));
   });
 
-  describe('private key retrieval', () => {
+  describe('decryptor', () => {
+    const { makePubkey, encryptInstance } = require(appRoot + '/test/util/crypto-odk');
     const { generateKeypair, stripPemEnvelope } = require(appRoot + '/lib/util/crypto');
-    it('should obtain the requested private keys', testService((service, { all, Key, db }) =>
+
+    it('should give a decryptor for the given passphrases', testService((service, { all, Key, SubmissionPartial, db }) =>
       Promise.all([ 'alpha', 'beta' ].map(generateKeypair))
         .then((pairs) =>
           all.mapSequential(
@@ -81,14 +84,30 @@ describe('managed encryption', () => {
               .concat([ new Key({ public: 'test' }) ]),
             (k) => k.create()
           )
-          .then(() => db.select('id').from('keys').then((ks) => ks.map((k) => k.id)))
-          .then((ids) => Key.getPrivates({ [ids[0]]: 'alpha', [ids[1]]: 'beta' })
-            .then((result) => {
-              // n.b. private key extraction will fail with an exception given incorrect passphrases.
-              Object.keys(result).length.should.equal(2);
-              result[ids[0]].type.should.equal('private');
-              result[ids[1]].type.should.equal('private');
-            })))));
+          .then((keys) => Key.getDecryptor({ [keys[0].id]: 'alpha', [keys[1].id]: 'beta', [keys[2].id]: 'charlie' })
+            .then((decryptor) => new Promise((done) => {
+              // create alpha decrypt stream:
+              const encAlpha = encryptInstance(makePubkey(keys[0].public), '', testData.instances.simple.one);
+              const clearAlpha = decryptor(encAlpha.encInstance, keys[0].id, encAlpha.encAeskey.toString('base64'),
+                'one', 0, 1);
+
+              // create beta decrypt stream:
+              const encBeta = encryptInstance(makePubkey(keys[1].public), '', testData.instances.simple.two);
+              const clearBeta = decryptor(encBeta.encInstance, keys[1].id, encBeta.encAeskey.toString('base64'),
+                'two', 0, 1);
+
+              // verify no charlie:
+              (decryptor(null, keys[2].id) === null).should.equal(true);
+
+              clearAlpha.pipe(toText((_, textAlpha) => {
+                textAlpha.should.equal(testData.instances.simple.one);
+
+                clearBeta.pipe(toText((_, textBeta) => {
+                  textBeta.should.equal(testData.instances.simple.two);
+                  done();
+                }));
+              }));
+            }))))));
   });
 
   describe('end-to-end', () => {

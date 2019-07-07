@@ -10,9 +10,11 @@ const { injectPemEnvelope, getSubmissionIvs } = require(appRoot + '/lib/util/cry
 
 // parse our public key and reformulate it into a proper PEM format
 // to inflate into a real public key (grumble grumble grumble).
-const extractPubkey = (xml) => {
-  const keystr = /base64RsaPublicKey="([a-zA-Z0-9+\/]{392})"/.exec(xml)[1];
-  const pem = `-----BEGIN PUBLIC KEY-----\n${keystr}\n-----END PUBLIC KEY-----`;
+const extractPubkey = (xml) =>
+  makePubkey(/base64RsaPublicKey="([a-zA-Z0-9+\/]{392})"/.exec(xml)[1]);
+
+const makePubkey = (b64) => {
+  const pem = `-----BEGIN PUBLIC KEY-----\n${b64}\n-----END PUBLIC KEY-----`;
   return createPublicKey(Buffer.from(pem, 'utf8'));
 };
 
@@ -74,7 +76,7 @@ const padPkcs7 = (payload) => {
 // WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
 
 
-const sendEncrypted = (svc, version, pubkey) => async (instance, files = {}) => {
+const encryptInstance = (pubkey, version, instance) => {
   // generate encryption information:
   const instanceId = /<instanceID>([a-z]+)<\/instanceID>/.exec(instance)[1];
 
@@ -82,7 +84,7 @@ const sendEncrypted = (svc, version, pubkey) => async (instance, files = {}) => 
   const paddedAeskey = padOaep(aeskey);
   const encAeskey = publicEncrypt({ key: pubkey, padding: RSA_NO_PADDING }, paddedAeskey);
 
-  // generate and send envelope:
+  // generate envelope:
   const filesXml = '';
   const envelope = `<?xml version="1.0"?>
 <data xmlns="http://opendatakit.org/submissions" id="simple" encrypted="yes", version="${version}">
@@ -94,20 +96,29 @@ ${filesXml}
     <instanceID>${instanceId}</instanceID>
 </meta>
 </data>`;
-  await svc.post('/v1/projects/1/forms/simple/submissions')
-    .send(envelope).set('Content-Type', 'text/xml').expect(200);
 
-  // generate and send encrypted instance:
+  // generate encrypted instance:
   const iv = getSubmissionIvs(instanceId, aeskey, 1)[0];
   const cipher = createCipheriv('aes-256-cfb', aeskey, iv).setAutoPadding(false);
   const padded = padPkcs7(Buffer.from(instance, 'utf8'));
   const encInstance = Buffer.concat([ cipher.update(padded), cipher.final() ]);
 
+  return { instanceId, envelope, encInstance, encAeskey };
+};
+
+const sendEncrypted = (svc, version, pubkey) => async (instance, files = {}) => {
+  const { instanceId, envelope, encInstance } = encryptInstance(pubkey, version, instance);
+
+  await svc.post('/v1/projects/1/forms/simple/submissions')
+    .send(envelope).set('Content-Type', 'text/xml').expect(200);
+
   await svc.post(`/v1/projects/1/forms/simple/submissions/${instanceId}/attachments/submission.xml.enc`)
     .send(encInstance).expect(200);
-
 };
 
 
-module.exports = { extractPubkey, extractVersion, sendEncrypted, internal: { padOaep, padPkcs7 } };
+module.exports = {
+  extractPubkey, makePubkey, extractVersion, encryptInstance, sendEncrypted,
+  internal: { padOaep, padPkcs7 }
+};
 
