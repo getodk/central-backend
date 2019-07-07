@@ -1,3 +1,4 @@
+const should = require('should');
 const tmp = require('tmp');
 const yauzl = require('yauzl');
 const { createWriteStream } = require('fs');
@@ -23,6 +24,7 @@ const zipStreamToFiles = (zipStream, callback) => {
           let entries = [];
           let completed = 0;
 
+          should.exist(zipfile);
           zipfile.on('entry', (entry) => entries.push(entry));
           zipfile.on('end', () => {
             if (entries.length === 0) {
