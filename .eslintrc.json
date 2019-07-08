@@ -17,6 +17,7 @@
     "no-debugger": "off",
     "no-else-return": "off",
     "no-multiple-empty-lines": "off",
+    "no-nested-ternary": "off",
     "no-restricted-syntax": "off",
     "no-underscore-dangle": "off",
     "nonblock-statement-body-position": "off",
