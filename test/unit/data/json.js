@@ -38,6 +38,13 @@ describe('submissionToOData', () => {
     });
   });
 
+  it('should not hang on incomplete markup', () =>
+    getFormSchema({ xml: testData.forms.simple }).then((schema) => {
+      const fields = schemaAsLookup(schema);
+      const submission = mockSubmission('one', '<data><meta><instanceID>');
+      return submissionToOData(fields, 'Submissions', submission);
+    }));
+
   // this is sort of repeatedly tested in all the other tests, but it's good to
   // have one for explicity this purpose in case things change.
   it('should include submission metadata on the root output', () => {

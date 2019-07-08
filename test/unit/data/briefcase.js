@@ -1,6 +1,7 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 const streamTest = require('streamtest').v2;
+const testData = require(appRoot + '/test/data/xml');
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
 const { getFormSchema } = require(appRoot + '/lib/data/schema');
 const { streamBriefcaseCsvs } = require(appRoot + '/lib/data/briefcase');
@@ -111,6 +112,16 @@ describe('.csv.zip briefcase output @slow', () => {
 `);
       done();
     });
+  });
+
+  it('should not hang given incomplete markup', (done) => {
+    const form = mockForm({ xmlFormId: 'simple', xml: testData.forms.simple });
+    const inStream = streamTest.fromObjects([{
+      submission: { instanceId: 'one', createdAt: new Date('2018-01-01T00:00:00Z') },
+      xml: '<data id="data">'
+    }]);
+
+    callAndParse(form, inStream, () => { done(); }); // not hanging is the assertion here.
   });
 
   it('should attach submitter information if present', (done) => {

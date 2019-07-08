@@ -42,5 +42,21 @@ describe('submission field streamer', () => {
         done();
       })));
   });
+
+  it('should not hang given malformed non-closing xml', (done) => {
+    submissionXmlToFieldStream(mockFormDef(testData.forms.simple), '<data><meta><instanceID>')
+      .then((stream) => {
+        stream.on('data', () => {});
+        stream.on('end', done); // not hanging/timing out is the assertion here
+      })
+  });
+
+  it('should not crash given malformed over-closing xml', (done) => {
+    submissionXmlToFieldStream(mockFormDef(testData.forms.simple), '<data></goodbye></goodbye></goodbye>')
+      .then((stream) => {
+        stream.on('data', () => {});
+        stream.on('end', done); // not hanging/timing out is the assertion here
+      })
+  });
 });
 
