@@ -102,7 +102,7 @@ describe('api: /forms/:id.svc', () => {
                   // submissionDate is checked above!
                   submitterId: '5',
                   submitterName: 'Alice',
-                  encrypted: false
+                  status: null
                 },
                 children: {},
                 meta: { instanceID: "double" },
@@ -111,7 +111,7 @@ describe('api: /forms/:id.svc', () => {
             });
           }))));
 
-    it('should return a single encrypted frame', testService((service) =>
+    it('should return a single encrypted frame (no formdata)', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.encrypted)
@@ -136,7 +136,41 @@ describe('api: /forms/:id.svc', () => {
                     // submissionDate is checked above!
                     submitterId: '5',
                     submitterName: 'Alice',
-                    encrypted: true
+                    status: 'MissingEncryptedFormData'
+                  }
+                }]
+              })
+            })))));
+
+    it('should return a single encrypted frame (has formdata)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.encrypted)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions/uuid:dcf4a151-5088-453f-99e6-369d67828f7a/attachments/submission.xml.enc')
+            .send('encrypted data')
+            .expect(200))
+          .then(() => asAlice.get("/v1/projects/1/forms/encrypted.svc/Submissions('uuid:dcf4a151-5088-453f-99e6-369d67828f7a')")
+            .expect(200)
+            .then(({ body }) => {
+              // have to manually check and clear the date for exact match:
+              body.value[0].__system.submissionDate.should.be.an.isoDate();
+              delete body.value[0].__system.submissionDate;
+
+              body.should.eql({
+                '@odata.context': 'http://localhost:8989/v1/projects/1/forms/encrypted.svc/$metadata#Submissions',
+                value: [{
+                  __id: 'uuid:dcf4a151-5088-453f-99e6-369d67828f7a',
+                  __system: {
+                    // submissionDate is checked above!
+                    submitterId: '5',
+                    submitterName: 'Alice',
+                    status: 'NotDecrypted'
                   }
                 }]
               })
@@ -251,7 +285,7 @@ describe('api: /forms/:id.svc', () => {
                   // submissionDate is checked above,
                   submitterId: "5",
                   submitterName: "Alice",
-                  encrypted: false
+                  status: null
                 },
                 meta: { instanceID: "three" },
                 name: "Chelsea",
@@ -263,7 +297,7 @@ describe('api: /forms/:id.svc', () => {
                   // submissionDate is checked above,
                   submitterId: "5",
                   submitterName: "Alice",
-                  encrypted: false
+                  status: null
                 },
                 meta: { instanceID: "two" },
                 name: "Bob",
@@ -275,7 +309,7 @@ describe('api: /forms/:id.svc', () => {
                   // submissionDate is checked above,
                   submitterId: "5",
                   submitterName: "Alice",
-                  encrypted: false
+                  status: null
                 },
                 meta: { instanceID: "one" },
                 name: "Alice",
@@ -335,7 +369,7 @@ describe('api: /forms/:id.svc', () => {
                   // submissionDate is checked above,
                   submitterId: "5",
                   submitterName: "Alice",
-                  encrypted: false
+                  status: null
                 },
                 meta: { instanceID: "two" },
                 name: "Bob",
@@ -363,7 +397,7 @@ describe('api: /forms/:id.svc', () => {
                   // submissionDate is checked above,
                   submitterId: "5",
                   submitterName: "Alice",
-                  encrypted: false
+                  status: null
                 },
                 meta: { instanceID: "three" },
                 name: "Chelsea",
@@ -373,7 +407,7 @@ describe('api: /forms/:id.svc', () => {
             });
           }))));
 
-    it('should return encrypted frames', testService((service) =>
+    it('should return encrypted frames (no formdata)', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.encrypted)
@@ -404,7 +438,7 @@ describe('api: /forms/:id.svc', () => {
                     // submissionDate is checked above!
                     submitterId: '5',
                     submitterName: 'Alice',
-                    encrypted: true
+                    status: 'MissingEncryptedFormData'
                   }
                 }, {
                   __id: 'uuid:dcf4a151-5088-453f-99e6-369d67828f7a',
@@ -412,7 +446,58 @@ describe('api: /forms/:id.svc', () => {
                     // submissionDate is checked above!
                     submitterId: '5',
                     submitterName: 'Alice',
-                    encrypted: true
+                    status: 'MissingEncryptedFormData'
+                  }
+                }]
+              })
+            })))));
+
+    it('should return encrypted frames (has formdata)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.encrypted)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions/uuid:dcf4a151-5088-453f-99e6-369d67828f7a/attachments/submission.xml.enc')
+            .send('encrypted data')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions/uuid:99b303d9-6494-477b-a30d-d8aae8867335/attachments/submission.xml.enc')
+            .send('encrypted data')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/encrypted.svc/Submissions')
+            .expect(200)
+            .then(({ body }) => {
+              // have to manually check and clear the date for exact match:
+              body.value[0].__system.submissionDate.should.be.an.isoDate();
+              delete body.value[0].__system.submissionDate;
+              body.value[1].__system.submissionDate.should.be.an.isoDate();
+              delete body.value[1].__system.submissionDate;
+
+              body.should.eql({
+                '@odata.context': 'http://localhost:8989/v1/projects/1/forms/encrypted.svc/$metadata#Submissions',
+                value: [{
+                  __id: 'uuid:99b303d9-6494-477b-a30d-d8aae8867335',
+                  __system: {
+                    // submissionDate is checked above!
+                    submitterId: '5',
+                    submitterName: 'Alice',
+                    status: 'NotDecrypted'
+                  }
+                }, {
+                  __id: 'uuid:dcf4a151-5088-453f-99e6-369d67828f7a',
+                  __system: {
+                    // submissionDate is checked above!
+                    submitterId: '5',
+                    submitterName: 'Alice',
+                    status: 'NotDecrypted'
                   }
                 }]
               })

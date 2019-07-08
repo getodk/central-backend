@@ -7,7 +7,7 @@ const __system = {
   submissionDate: '2017-09-20T17:10:43Z',
   submitterId: '5',
   submitterName: 'Alice',
-  encrypted: false
+  status: null
 };
 const mockSubmission = (instanceId, xml) => ({
   xml,

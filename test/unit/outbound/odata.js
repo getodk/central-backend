@@ -11,7 +11,7 @@ const __system = {
   submissionDate: '2017-09-20T17:10:43Z',
   submitterId: submitter.id.toString(),
   submitterName: submitter.displayName,
-  encrypted: false
+  status: null
 };
 const mockSubmission = (instanceId, xml) => ({
   xml,
@@ -73,8 +73,12 @@ describe('odata message composition', () => {
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
-        <Property Name="encrypted" Type="Edm.Boolean"/>
+        <Property Name="status" Type="Status"/>
       </ComplexType>
+      <EnumType Name="Status">
+        <Member Name="NotDecrypted"/>
+        <Member Name="MissingEncryptedFormData"/>
+      </EnumType>
     </Schema>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.simple">
       <EntityType Name="Submissions">
@@ -105,8 +109,12 @@ describe('odata message composition', () => {
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
-        <Property Name="encrypted" Type="Edm.Boolean"/>
+        <Property Name="status" Type="Status"/>
       </ComplexType>
+      <EnumType Name="Status">
+        <Member Name="NotDecrypted"/>
+        <Member Name="MissingEncryptedFormData"/>
+      </EnumType>
     </Schema>
       <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.withrepeat">
         <EntityType Name="Submissions">
@@ -155,8 +163,12 @@ describe('odata message composition', () => {
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
-        <Property Name="encrypted" Type="Edm.Boolean"/>
+        <Property Name="status" Type="Status"/>
       </ComplexType>
+      <EnumType Name="Status">
+        <Member Name="NotDecrypted"/>
+        <Member Name="MissingEncryptedFormData"/>
+      </EnumType>
     </Schema>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.withrepeat">
       <EntityType Name="Submissions">
