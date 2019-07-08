@@ -254,6 +254,68 @@ describe('managed encryption', () => {
               done();
             }))))));
 
+    it('should handle mixed [plaintext/undecrypted] attachments', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.binaryType)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions')
+            .send(testData.instances.binaryType.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions/one/attachments/my_file1.mp4')
+            .send('this is file one')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/key')
+            .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/binaryType.xml')
+            .expect(200)
+            .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
+            .then((send) => send(testData.instances.binaryType.two, { 'here_is_file2.jpg': 'file two you cant see' })))
+          .then(() => new Promise((done) =>
+            zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/binaryType/submissions.csv.zip`), (result) => {
+              result.filenames.length.should.equal(2);
+              result.filenames.should.containDeep([ 'binaryType.csv', 'media/my_file1.mp4' ]);
+
+              result['media/my_file1.mp4'].should.equal('this is file one');
+              done();
+            }))))));
+
+    it('should handle mixed [plaintext/encrypted] attachments', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.binaryType)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions')
+            .send(testData.instances.binaryType.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions/one/attachments/my_file1.mp4')
+            .send('this is file one')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/key')
+            .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/binaryType.xml')
+            .expect(200)
+            .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
+            .then((send) => send(testData.instances.binaryType.two, { 'here_is_file2.jpg': 'file two you can see' })))
+          .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/keys')
+            .expect(200)
+            .then(({ body }) => body[0].id))
+          .then((keyId) => new Promise((done) =>
+            zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/binaryType/submissions.csv.zip?${keyId}=supersecret`), (result) => {
+              result.filenames.length.should.equal(3);
+              result.filenames.should.containDeep([ 'binaryType.csv', 'media/my_file1.mp4', 'media/here_is_file2.jpg' ]);
+
+              result['media/my_file1.mp4'].should.equal('this is file one');
+              result['media/here_is_file2.jpg'].should.equal('file two you can see');
+              done();
+            }))))));
+
     it('should handle mixed[encrypted/plaintext] source records', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')

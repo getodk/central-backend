@@ -77,6 +77,9 @@ const padPkcs7 = (payload) => {
 
 
 const encryptInstance = (pubkey, version, instance, files = {}) => {
+  // get xmlFormId:
+  const xmlFormId = tap(/id="([^"]+)"/.exec(instance)[1]);
+
   // generate encryption information:
   const instanceId = /<instanceID>([a-z]+)<\/instanceID>/.exec(instance)[1];
 
@@ -102,7 +105,7 @@ const encryptInstance = (pubkey, version, instance, files = {}) => {
 
   // generate envelope:
   const envelope = `<?xml version="1.0"?>
-<data xmlns="http://opendatakit.org/submissions" id="simple" encrypted="yes", version="${version}">
+<data xmlns="http://opendatakit.org/submissions" id="${xmlFormId}" encrypted="yes", version="${version}">
 <base64EncryptedKey>${encAeskey.toString('base64')}</base64EncryptedKey>
 <encryptedXmlFile>submission.xml.enc</encryptedXmlFile>
 ${filesXml}
@@ -117,20 +120,20 @@ ${filesXml}
   const padded = padPkcs7(Buffer.from(instance, 'utf8'));
   const encInstance = Buffer.concat([ cipher.update(padded), cipher.final() ]);
 
-  return { instanceId, envelope, encInstance, encFiles, encAeskey };
+  return { xmlFormId, instanceId, envelope, encInstance, encFiles, encAeskey };
 };
 
 const sendEncrypted = (svc, version, pubkey) => async (instance, files = {}) => {
-  const { instanceId, envelope, encInstance, encFiles } = encryptInstance(pubkey, version, instance, files);
+  const { xmlFormId, instanceId, envelope, encInstance, encFiles } = encryptInstance(pubkey, version, instance, files);
 
-  await svc.post('/v1/projects/1/forms/simple/submissions')
+  await svc.post(`/v1/projects/1/forms/${xmlFormId}/submissions`)
     .send(envelope).set('Content-Type', 'text/xml').expect(200);
 
-  await svc.post(`/v1/projects/1/forms/simple/submissions/${instanceId}/attachments/submission.xml.enc`)
+  await svc.post(`/v1/projects/1/forms/${xmlFormId}/submissions/${instanceId}/attachments/submission.xml.enc`)
     .send(encInstance).expect(200);
 
   for (const filename of Object.keys(encFiles))
-    await svc.post(`/v1/projects/1/forms/simple/submissions/${instanceId}/attachments/${filename}`)
+    await svc.post(`/v1/projects/1/forms/${xmlFormId}/submissions/${instanceId}/attachments/${filename}`)
       .send(encFiles[filename]).expect(200);
 };
 
