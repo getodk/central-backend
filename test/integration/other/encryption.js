@@ -372,7 +372,7 @@ describe('managed encryption', () => {
               .expect(200)
               .then(({ body }) => body[0].id))
             .then((keyId) => new Promise((done) =>
-              zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?1=supersecret`), (result) => {
+              zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`), (result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
 
                 const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
