@@ -177,6 +177,33 @@ describe('/audits', () => {
                 body[0].action.should.equal('form.create');
               }))))));
 
+    // TODO: we don't test every single category. maybe we should but that's an
+    // awful lot of tests.
+    it('should filter by action category', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects')
+          .send({ name: 'audit project' })
+          .expect(200)
+          .then(({ body }) => body.id)
+          .then((projectId) => asAlice.post(`/v1/projects/${projectId}/forms`)
+            .send(testData.forms.simple)
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asAlice.post(`/v1/projects/${projectId}/forms`)
+              .send(testData.forms.withrepeat)
+              .set('Content-Type', 'text/xml')
+              .expect(200)))
+          .then(() => asAlice.post('/v1/users')
+            .send({ displayName: 'david', email: 'david@opendatakit.org' })
+            .expect(200))
+          .then(() => asAlice.get('/v1/audits?action=form')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(2);
+              body[0].action.should.equal('form.create');
+              body[1].action.should.equal('form.create');
+            })))));
+
     it('should filter extended data by action', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects')
