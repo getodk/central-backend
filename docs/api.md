@@ -698,7 +698,7 @@ _(introduced: version 0.6)_
 
 [Project Managed Encryption](/reference/encryption) can be enabled via the API. To do this, `POST` with the `passphrase` and optionally a reminder `hint` about the passphrase. If managed encryption is already enabled, a `409` error response will be returned.
 
-Enabling managed encryption will modify all unencrypted forms in the project, and as a result the `version` of all forms within the project will also be modified. It is therefore best to enable managed encryption before devices are in the field. Any forms in the project that already have manually provided encryption keys will be left alone.
+Enabling managed encryption will modify all unencrypted forms in the project, and as a result the `version` of all forms within the project will also be modified. It is therefore best to enable managed encryption before devices are in the field. Any forms in the project that already have self-supplied encryption keys will be left alone.
 
 + Parameters
     + id: `16` (number, required) - The numeric ID of the Project
@@ -1139,7 +1139,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 To export all the `Submission` data associated with a `Form`, just add `.csv.zip` to the end of the listing URL. The response will be a ZIP file containing one or more CSV files, as well as all multimedia attachments associated with the included Submissions.
 
-If [Project Managed Encryption](/reference/encryption) is being used, additional querystring parameters may be provided in the format `{keyId}={passphrase}` for any number of keys (eg `1=secret&4=password`). This will decrypt any records encrypted under those managed keys. Submissions encrypted under manually provided keys will not be decrypted. **Note**: if you are building a browser-based application, please consider the alternative `POST` endpoint, described in the following section.
+If [Project Managed Encryption](/reference/encryption) is being used, additional querystring parameters may be provided in the format `{keyId}={passphrase}` for any number of keys (eg `1=secret&4=password`). This will decrypt any records encrypted under those managed keys. Submissions encrypted under self-supplied keys will not be decrypted. **Note**: if you are building a browser-based application, please consider the alternative `POST` endpoint, described in the following section.
 
 If a passphrase is supplied but is incorrect, the entire request will fail. If a passphrase is not supplied but encrypted records exist, only the metadata for those records will be returned, and they will have a `status` of `not decrypted`.
 
@@ -1917,7 +1917,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 ODK Central supports two types of encryption:
 
-1. The [old methodology](https://docs.opendatakit.org/encrypted-forms/), where you generate an RSA keypair and use it with locally-downloaded encrypted data to decrypt submissions.
+1. The [old methodology](https://docs.opendatakit.org/encrypted-forms/), where you generate an RSA keypair and use it with locally-downloaded encrypted data to decrypt submissions. We refer to these sorts of keys in this documentation as "self-supplied keys."
 2. Managed Encryption, where Central will generate and store an RSA keypair for you, secured under a passphrase that Central does not save. The CSV export path can then decrypt all records on the fly given the passphrase.
 
 Given the self-supplied key case, Central does not understand how to decrypt records, and the CSV export will export only metadata fields (and no binary attachments) for encrypted records. You may retrieve each data resource over the REST API and decrypt them yourself, or use ODK Briefcase to do this.
