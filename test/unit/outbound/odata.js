@@ -73,7 +73,7 @@ describe('odata message composition', () => {
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
-        <Property Name="status" Type="Status"/>
+        <Property Name="status" Type="org.opendatakit.submission.Status"/>
       </ComplexType>
       <EnumType Name="Status">
         <Member Name="NotDecrypted"/>
@@ -109,7 +109,7 @@ describe('odata message composition', () => {
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
-        <Property Name="status" Type="Status"/>
+        <Property Name="status" Type="org.opendatakit.submission.Status"/>
       </ComplexType>
       <EnumType Name="Status">
         <Member Name="NotDecrypted"/>
@@ -163,7 +163,7 @@ describe('odata message composition', () => {
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
-        <Property Name="status" Type="Status"/>
+        <Property Name="status" Type="org.opendatakit.submission.Status"/>
       </ComplexType>
       <EnumType Name="Status">
         <Member Name="NotDecrypted"/>
