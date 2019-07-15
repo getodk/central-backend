@@ -139,7 +139,7 @@ describe('api: /forms/:id.svc', () => {
                     status: 'MissingEncryptedFormData'
                   }
                 }]
-              })
+              });
             })))));
 
     it('should return a single encrypted frame (has formdata)', testService((service) =>
@@ -173,7 +173,7 @@ describe('api: /forms/:id.svc', () => {
                     status: 'NotDecrypted'
                   }
                 }]
-              })
+              });
             })))));
 
     it('should return subtable results', testService((service) =>
@@ -238,7 +238,7 @@ describe('api: /forms/:id.svc', () => {
               body.should.eql({
                 '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
                 value: []
-              })
+              });
             })))));
   });
 
@@ -449,7 +449,7 @@ describe('api: /forms/:id.svc', () => {
                     status: 'MissingEncryptedFormData'
                   }
                 }]
-              })
+              });
             })))));
 
     it('should return encrypted frames (has formdata)', testService((service) =>
@@ -500,7 +500,7 @@ describe('api: /forms/:id.svc', () => {
                     status: 'NotDecrypted'
                   }
                 }]
-              })
+              });
             })))));
 
     it('should limit and offset subtable results', testService((service) =>
@@ -520,6 +520,7 @@ describe('api: /forms/:id.svc', () => {
             });
           }))));
 
+    // we cheat here. see mark1.
     it('should gracefully degrade on encrypted subtables', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
@@ -536,7 +537,7 @@ describe('api: /forms/:id.svc', () => {
             .then(({ body }) => {
               body.should.eql({
                 '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child'
-              })
+              });
             })))));
   });
 });

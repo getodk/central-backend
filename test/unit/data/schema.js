@@ -947,8 +947,6 @@ describe('form schema', () => {
   <h:head>
     <h:title>Simple</h:title>
     <model>
-      <instance>
-      </instance>
     </model>
   </h:head>
 </h:html>`, '-testtest').should.be.rejected().then((p) => p.problemCode.should.equal(400.1)));

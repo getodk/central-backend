@@ -73,10 +73,10 @@ describe('util/crypto', () => {
     });
   });
 
-  describe('generateKeypair', () => {
-    const { generateKeypair } = crypto;
+  describe('generateManagedKey', () => {
+    const { generateManagedKey } = crypto;
     it('should return reasonable values in a Promise @slow', (done) => {
-      generateKeypair('test').then((result) => {
+      generateManagedKey('test').then((result) => {
         result.pubkey.should.be.a.base64string();
         result.privkey.should.be.a.base64string();
         result.salt.should.be.a.base64string();
@@ -87,9 +87,9 @@ describe('util/crypto', () => {
   });
 
   describe('generateLocalCipherer', () => {
-    const { generateKeypair, generateLocalCipherer } = crypto;
+    const { generateManagedKey, generateLocalCipherer } = crypto;
     it('should return an encipherer with a local key @slow', (done) => {
-      generateKeypair('test').then((keys) => {
+      generateManagedKey('test').then((keys) => {
         const [ localkey, cipherer ] = generateLocalCipherer(keys);
         localkey.should.be.a.base64string();
         cipherer.should.be.a.Function();
@@ -98,7 +98,7 @@ describe('util/crypto', () => {
     });
 
     it('should return an (iv, cipher) tuple when the cipherer is given an iv @slow', (done) => {
-      generateKeypair('test').then((keys) => {
+      generateManagedKey('test').then((keys) => {
         const [ , cipherer ] = generateLocalCipherer(keys);
         const [ iv, cipher ] = cipherer();
         iv.should.be.a.base64string();
@@ -110,9 +110,9 @@ describe('util/crypto', () => {
   });
 
   describe('getLocalDecipherer', () => {
-    const { generateKeypair, generateLocalCipherer, getLocalDecipherer } = crypto;
+    const { generateManagedKey, generateLocalCipherer, getLocalDecipherer } = crypto;
     it('should successfully round-trip a piece of data @slow', () =>
-      generateKeypair('topsecret').then((initkeys) => {
+      generateManagedKey('topsecret').then((initkeys) => {
         // create local cipher; encrypt our plaintext.
         const [ localkey, cipherer ] = generateLocalCipherer(initkeys);
         const [ localiv, cipher ] = cipherer();
@@ -198,7 +198,8 @@ describe('util/crypto', () => {
       });
 
       // we do that test again with a slightly different chunking pattern to exercise
-      // all the possible branch paths.
+      // all the possible branch paths. we deliberately underfill the buffer at the
+      // right moment (320-332) to make sure the reserve does not flush in that case.
       it('should successfully decrypt data by stream (chunk pattern 2) @slow', (done) => {
         const aesKey = getSubmissionKey(priv, encAesKey);
         const ivs = getSubmissionIvs(instanceId, aesKey);

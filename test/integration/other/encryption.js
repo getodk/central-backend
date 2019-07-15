@@ -34,7 +34,7 @@ describe('managed encryption', () => {
         encReq = container.transacting(({ Project }) => Promise.all([
           Project.getById(1).then((o) => o.get())
             .then((project) => project.setManagedEncryption('supersecret', 'it is a secret')),
-          new Promise(resolve)
+          new Promise(resolve) // <- we want unblock to be the function that resolves this inner Promise.
         ]));
       });
 
@@ -70,10 +70,10 @@ describe('managed encryption', () => {
 
   describe('decryptor', () => {
     const { makePubkey, encryptInstance } = require(appRoot + '/test/util/crypto-odk');
-    const { generateKeypair, stripPemEnvelope } = require(appRoot + '/lib/util/crypto');
+    const { generateManagedKey, stripPemEnvelope } = require(appRoot + '/lib/util/crypto');
 
     it('should give a decryptor for the given passphrases', testService((service, { all, Key, SubmissionPartial, db }) =>
-      Promise.all([ 'alpha', 'beta' ].map(generateKeypair))
+      Promise.all([ 'alpha', 'beta' ].map(generateManagedKey))
         .then((pairs) =>
           all.mapSequential(
             pairs.map((private) => new Key({
@@ -254,7 +254,7 @@ describe('managed encryption', () => {
               done();
             }))))));
 
-    it('should handle mixed [plaintext/undecrypted] attachments', testService((service) =>
+    it('should handle mixed [plaintext/encrypted] attachments (not decrypting)', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.binaryType)
@@ -283,7 +283,7 @@ describe('managed encryption', () => {
               done();
             }))))));
 
-    it('should handle mixed [plaintext/encrypted] attachments', testService((service) =>
+    it('should handle mixed [plaintext/encrypted] attachments (decrypting)', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.binaryType)
@@ -316,7 +316,7 @@ describe('managed encryption', () => {
               done();
             }))))));
 
-    it('should handle mixed[encrypted/plaintext] source records', testService((service) =>
+    it('should handle mixed[plaintext/encrypted] formdata (decrypting)', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
@@ -340,7 +340,7 @@ describe('managed encryption', () => {
                 done();
               })))))));
 
-    it('should handle mixed[still-encrypted/plaintext] cases', testService((service, { Project, FormPartial }) =>
+    it('should handle mixed[plaintext/encrypted] formdata (not decrypting)', testService((service, { Project, FormPartial }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
@@ -372,7 +372,7 @@ describe('managed encryption', () => {
               })))))));
 
     // we have to sort of cheat at this to get two different managed keys in effect.
-    it('should handle mixed[managedA/managedB] source records', testService((service, { Project, FormPartial }) =>
+    it('should handle mixed[managedA/managedB] formdata (decrypting)', testService((service, { Project, FormPartial }) =>
       service.login('alice', (asAlice) =>
         // first enable managed encryption and submit submission one.
         asAlice.post('/v1/projects/1/key')
@@ -414,7 +414,7 @@ describe('managed encryption', () => {
               done();
             }))))));
 
-    it('should handle mixed [missing-xml/plaintext] cases (decrypting)', testService((service, { Project, FormPartial }) =>
+    it('should handle mixed [plaintext/missing-encrypted-xml] formdata (decrypting)', testService((service, { Project, FormPartial }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
@@ -448,7 +448,7 @@ describe('managed encryption', () => {
                 done();
               })))))));
 
-    it('should handle mixed [missing-xml/plaintext] cases (not decrypting)', testService((service, { Project, FormPartial }) =>
+    it('should handle mixed [plaintext/missing-encrypted-xml] formdata (not decrypting)', testService((service, { Project, FormPartial }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)

@@ -110,9 +110,8 @@ const testService = (test) => () => new Promise((resolve, reject) => {
 // requests, in which case the transaction butchering we do for testService will
 // not work. for these cases, we offer testContainer.
 const testContainer = (test) => () => new Promise((resolve, reject) => {
-  const container = baseContainer.with();
   const reinit = (f) => (x) => { initialize().then(() => f(x)); };
-  test(container).then(reinit(resolve), reinit(reject));
+  test(baseContainer).then(reinit(resolve), reinit(reject));
 });
 
 // called to get a container context per task. ditto all // from testService.

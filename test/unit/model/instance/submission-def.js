@@ -28,7 +28,7 @@ describe('submission', () => {
               [ 'zulu.file', 0 ],
               [ 'alpha.file', 1 ],
               [ 'bravo.file', 2 ],
-              [ 'submission.xml.enc', 3 ],
+              [ 'submission.xml.enc', 3 ]
             ]);
         });
     });
