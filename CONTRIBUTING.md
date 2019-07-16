@@ -29,6 +29,7 @@ If you're starting work on an issue ticket, please leave a comment saying so. If
     * As with any Node.js project, use Streams and Promises whenever dealing with I/O (reading client requests, loading things from the filesystem, database requests, etc).
     * We use [Ramda](http://ramdajs.com/) to help manipulate our data structures. In general, if you have algorithmic data structure work to do, look to see if Ramda has an answer that can help you.
     * We often use `for..of` loops rather than `array.forEach` because they are quite a bit faster. But we do still use either `array.map` or Ramda `map()` rather than build our own result arrays a lot of the time.
+    * If a function causes mutation to invisible state or to input data, we try not to return anything from that function.
 * We try to **test** (`make test`) as much of our code as possible:
     * If writing framework or utility functions that are easy to test in isolation, favor the use of **unit tests** to verify the code. If a function's input is very easy to directly construct or mock, for example, it is likely a good candidate for unit testing. You can find the existing unit tests in `/test/unit`, and you can run `make test-unit` to run only the unit tests.
     * When writing code that is more closely related to other code, **integration tests** are the best tool. If the inputs to a function require a lot of work to construct or mock, for example, you likely want to write an integration test. In addition, our integration tests are our ultimate verification that the external API works as expected: if you are making a change that affects the input or output of any HTTP API, please write an integration test for it. You can find the existing integration tests in `/test/integration`, and you can run `make test-integration` to run only the integration tests.
@@ -55,6 +56,7 @@ We have built a lot of custom framework to try to keep ODK Central Backend as fl
 
 * The business logic defining the functionality and behavior of the server for users is the outermost layer, and it is the easiest to understand and update.
 * The model and database logic defining the Things in the server (Users, Forms, etc) and how they are stored and retrieved from the database are the middle layer. They are still easy to understand and update, but you'll need to understand a little bit more about how other code uses these Things and how the underlying framework works in order to make changes.
+    * Whenever possible, we rely on the database to perform data validation rather than implement it in Javascript code. This way, we can be more certain that invalid data hasn't found its way into databases. When the database complains about data validation problems, we translate those problems into user-friendly errors and return them.
 * The innermost layer is the framework code, which provides for the other layers easy ways to define and glue together bits of work. It is internally the most intricate, but it should not need to be changed very often.
 
 ### Middleware and Preprocessors
@@ -78,6 +80,19 @@ Our general way of handling data element security (eg the user should be able to
 You will find all this management in the various `Instance` classes. The default implementation of methods `forApi` and `fromApi` will use the whitelist schema definitions `readable` and `writable` to determine what values should be allowed to be serialized to the user, and deserialized into a local data object in memory, respectively. Any data object in local memory is presumed to be completely safe to do with at will; there is not, for instance, a separate data security check at the database write level.
 
 If you override the default `forApi` and `fromApi`, it will be up to you to maintain this pattern.
+
+### Form Encryption
+
+We implement the [ODK XForms Encryption Specification](http://opendatakit.github.io/xforms-spec/encryption) to enable form encryption in transit from the device (in cases where HTTPS is not possible) and at rest on the Central server. In these cases, the XML stored in the `xml` column on the submission is actually the encryption manifest, which lists the files and keys that would be needed to decrypt the data in that submission successfully. The actual encrypted form data is stored as a separate attachment, typically named `submission.xml.enc` (but the name is up to the client).
+
+Within this specification, we also create our own Managed Encryption system, so that with the use of a passphrase the Central server can create and manage the encryption keypair on behalf of the user, rather than make users learn things like OpenSSL and how to store keys securely.
+
+In general, we try to follow these principles in dealing with encrypted and sensitive data:
+
+1. The passphrase and cleartext private key should be passed around as little as possible, and should never hit the disk (within our control; the OS pagefile we can't help). The passphrase is taken in and processed at the API service layer, and passed to `Key.getDecryptor`, which fetches the relevant data from the database, combining it with the passphrase data, and all of this goes into the `getDecryptor` function. This function decrypts the relevant private keys, but these never leave the local function scope context; instead, a second-order function is returned which is capable of decrypting data.
+2. Part of how we ensure this sandboxing is the sequestering of all cryptographic processing into the `lib/util/crypto.js` file. If you search the repository for `crypto` you should find very few references elsewhere in the codebase.
+3. We have to do a lot of processing of decrypted cleartext after decryption is done; we have to translate data XML into CSV format, for example. We don't allow this data to hit the disk, but we don't take nearly as many precautions with this data as we do with the passphrase and private key data, as the end goal is the pass the decrypted data back to the user over the API anyway.
+4. The encryption specification is quite open-ended, and we are not sure what direction the Central management experience for encryption is going to go in. So we work hard to be flexible in the face of any possible combination of encryption applications; using self-managed and Central-managed keys in tandem, using multiple managed keys, mixed plaintext/encrypted records, and so on. We also take care to test all these different mixed cases.
 
 ## Navigating the Code
 
