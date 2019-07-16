@@ -3,14 +3,15 @@ const streamTest = require('streamtest').v2;
 const { identity } = require('ramda');
 const { getFormSchema } = require(appRoot + '/lib/data/schema');
 const { serviceDocumentFor, edmxFor, rowStreamToOData, singleRowToOData } = require(appRoot + '/lib/outbound/odata');
-const testData = require(appRoot + '/test/integration/data');
+const testData = require(appRoot + '/test/data/xml');
 
 // Helpers to deal with repeated system metadata generation.
 const submitter = { id: 5, displayName: 'Alice' };
 const __system = {
   submissionDate: '2017-09-20T17:10:43Z',
   submitterId: submitter.id.toString(),
-  submitterName: submitter.displayName
+  submitterName: submitter.displayName,
+  status: null
 };
 const mockSubmission = (instanceId, xml) => ({
   xml,
@@ -67,20 +68,27 @@ describe('odata message composition', () => {
         edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
 <edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
   <edmx:DataServices>
+    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
+      <ComplexType Name="metadata">
+        <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
+        <Property Name="submitterId" Type="Edm.String"/>
+        <Property Name="submitterName" Type="Edm.String"/>
+        <Property Name="status" Type="org.opendatakit.submission.Status"/>
+      </ComplexType>
+      <EnumType Name="Status">
+        <Member Name="NotDecrypted"/>
+        <Member Name="MissingEncryptedFormData"/>
+      </EnumType>
+    </Schema>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.simple">
       <EntityType Name="Submissions">
         <Key><PropertyRef Name="__id"/></Key>
         <Property Name="__id" Type="Edm.String"/>
-        <Property Name="__system" Type="org.opendatakit.user.simple.__system"/>
+        <Property Name="__system" Type="org.opendatakit.submission.metadata"/>
         <Property Name="meta" Type="org.opendatakit.user.simple.meta"/>
         <Property Name="name" Type="Edm.String"/>
         <Property Name="age" Type="Edm.Int64"/>
       </EntityType>
-      <ComplexType Name="__system">
-        <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
-        <Property Name="submitterId" Type="Edm.String"/>
-        <Property Name="submitterName" Type="Edm.String"/>
-      </ComplexType>
       <ComplexType Name="meta">
         <Property Name="instanceID" Type="Edm.String"/>
       </ComplexType>
@@ -96,11 +104,23 @@ describe('odata message composition', () => {
         edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
   <edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
     <edmx:DataServices>
+    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
+      <ComplexType Name="metadata">
+        <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
+        <Property Name="submitterId" Type="Edm.String"/>
+        <Property Name="submitterName" Type="Edm.String"/>
+        <Property Name="status" Type="org.opendatakit.submission.Status"/>
+      </ComplexType>
+      <EnumType Name="Status">
+        <Member Name="NotDecrypted"/>
+        <Member Name="MissingEncryptedFormData"/>
+      </EnumType>
+    </Schema>
       <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.withrepeat">
         <EntityType Name="Submissions">
           <Key><PropertyRef Name="__id"/></Key>
           <Property Name="__id" Type="Edm.String"/>
-          <Property Name="__system" Type="org.opendatakit.user.withrepeat.__system"/>
+          <Property Name="__system" Type="org.opendatakit.submission.metadata"/>
           <Property Name="meta" Type="org.opendatakit.user.withrepeat.meta"/>
           <Property Name="name" Type="Edm.String"/>
           <Property Name="age" Type="Edm.Int64"/>
@@ -113,11 +133,6 @@ describe('odata message composition', () => {
           <Property Name="name" Type="Edm.String"/>
           <Property Name="age" Type="Edm.Int64"/>
         </EntityType>
-        <ComplexType Name="__system">
-          <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
-          <Property Name="submitterId" Type="Edm.String"/>
-          <Property Name="submitterName" Type="Edm.String"/>
-        </ComplexType>
         <ComplexType Name="meta">
           <Property Name="instanceID" Type="Edm.String"/>
         </ComplexType>
@@ -143,11 +158,23 @@ describe('odata message composition', () => {
         edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
 <edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
   <edmx:DataServices>
+    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
+      <ComplexType Name="metadata">
+        <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
+        <Property Name="submitterId" Type="Edm.String"/>
+        <Property Name="submitterName" Type="Edm.String"/>
+        <Property Name="status" Type="org.opendatakit.submission.Status"/>
+      </ComplexType>
+      <EnumType Name="Status">
+        <Member Name="NotDecrypted"/>
+        <Member Name="MissingEncryptedFormData"/>
+      </EnumType>
+    </Schema>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.withrepeat">
       <EntityType Name="Submissions">
         <Key><PropertyRef Name="__id"/></Key>
         <Property Name="__id" Type="Edm.String"/>
-        <Property Name="__system" Type="org.opendatakit.user.withrepeat.__system"/>
+        <Property Name="__system" Type="org.opendatakit.submission.metadata"/>
         <Property Name="meta" Type="org.opendatakit.user.withrepeat.meta"/>
         <Property Name="name" Type="Edm.String"/>
         <Property Name="age" Type="Edm.Int64"/>
@@ -160,11 +187,6 @@ describe('odata message composition', () => {
         <Property Name="name" Type="Edm.String"/>
         <Property Name="age" Type="Edm.Int64"/>
       </EntityType>
-      <ComplexType Name="__system">
-        <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
-        <Property Name="submitterId" Type="Edm.String"/>
-        <Property Name="submitterName" Type="Edm.String"/>
-      </ComplexType>
       <ComplexType Name="meta">
         <Property Name="instanceID" Type="Edm.String"/>
       </ComplexType>

@@ -86,6 +86,26 @@ describe('util/xml', () => {
         return traverseXml('<root><child id="test"/>sometext</root>', [ mtA, mtB ])
           .then((results) => { results.should.eql([ Option.of('root'), Option.none() ]); });
       });
+
+      it('should translate exceptions into rejections (static text)', () => {
+        const tf = (e, x, y) => { throw new Error('oops') };
+        return traverseXml('<root><child id="test"/>sometext</root>', [ tf ])
+          .should.be.rejected()
+          .then((err) => { err.message.should.equal('oops'); });
+      });
+
+      it('should translate exceptions into rejections (stream)', () => {
+        const tf = (e, x, y) => { throw new Error('oops') };
+        const stream = streamTest.fromChunks([ '<root/>' ]);
+        return traverseXml(stream, [ tf ])
+          .should.be.rejected()
+          .then((err) => { err.message.should.equal('oops'); });
+      });
+
+      it('should not hang given malformed non-closing xml', () => {
+        const tf = () => tf;
+        return traverseXml('<open></close>', [ tf ]); // not timing out is the assertion here.
+      });
     });
 
     describe('Traversal', () => {

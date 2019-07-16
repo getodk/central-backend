@@ -2,7 +2,7 @@ const should = require('should');
 const config = require('config');
 const { DateTime } = require('luxon');
 const { testService } = require('../setup');
-const testData = require('../data');
+const testData = require('../../data/xml');
 
 describe('api: /projects/:id/forms', () => {
   describe('GET', () => {
@@ -281,7 +281,7 @@ describe('api: /projects/:id/forms', () => {
           .set('Content-Type', 'application/xml')
           .expect(400)
           .then(({ body }) => {
-            body.code.should.equal(400.12);
+            body.code.should.equal(400.13);
           }))));
   });
 
@@ -474,6 +474,17 @@ describe('api: /projects/:id/forms', () => {
             body.xmlFormId.should.equal('simple');
             body.hash.should.equal('5c09c21d4c71f2f13f6aa26227b2d133');
           }))));
+
+    it('should return encrypted form keyId', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'encryptme' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple')
+            .expect(200)
+            .then(({ body }) => {
+              body.keyId.should.be.a.Number();
+            })))));
 
     it('should return extended form details', testService((service) =>
       service.login('alice', (asAlice) =>

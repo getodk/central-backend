@@ -1,8 +1,8 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { getFormSchema, flattenSchemaStructures, _findRepeats, getSchemaTables, schemaAsLookup, stripNamespacesFromSchema, sanitizeOdataIdentifiers, expectedFormAttachments } = require(appRoot + '/lib/data/schema');
+const { getFormSchema, flattenSchemaStructures, _findRepeats, getSchemaTables, schemaAsLookup, stripNamespacesFromSchema, sanitizeOdataIdentifiers, expectedFormAttachments, injectPublicKey, addVersionSuffix } = require(appRoot + '/lib/data/schema');
 const { toTraversable } = require(appRoot + '/lib/util/xml');
-const testData = require(appRoot + '/test/integration/data'); // TODO: probably misplaced.
+const testData = require(appRoot + '/test/data/xml');
 
 describe('form schema', () => {
   describe('parsing', () => {
@@ -696,6 +696,260 @@ describe('form schema', () => {
         ]);
       });
     });
+  });
+
+  describe('public key injection', () => {
+    it('it should successfully inject into self-closing tags', () => {
+      const xml = `
+<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <model>
+      <instance>
+        <data id="form">
+          <name/>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string"/>
+      <submission action="https://opendatakit.org/custom-action"/>
+    </model>
+  </h:head>
+</h:html>`;
+
+      return injectPublicKey(xml, 'mybase64key').then((result) => result.should.equal(`
+<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <model>
+      <instance>
+        <data id="form">
+          <name/>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string"/>
+      <submission action="https://opendatakit.org/custom-action" base64RsaPublicKey="mybase64key"/>
+    </model>
+  </h:head>
+</h:html>`));
+    });
+
+    it('it should successfully inject into whitespacey self-closing tags', () => {
+      const xml = `
+<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <model>
+      <instance>
+        <data id="form">
+          <name/>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string"/>
+      <submission action="https://opendatakit.org/custom-action" /  
+      >
+    </model>
+  </h:head>
+</h:html>`;
+
+      return injectPublicKey(xml, 'mybase64key').then((result) => result.should.equal(`
+<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <model>
+      <instance>
+        <data id="form">
+          <name/>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string"/>
+      <submission action="https://opendatakit.org/custom-action"  base64RsaPublicKey="mybase64key"/  
+      >
+    </model>
+  </h:head>
+</h:html>`));
+    });
+
+    it('it should successfully inject into model tags', () => {
+      const xml = `
+<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <model>
+      <instance>
+        <data id="form">
+          <name/>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string"/>
+    </model>
+  </h:head>
+</h:html>`;
+
+      return injectPublicKey(xml, 'mybase64key').then((result) => result.should.equal(`
+<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <model>
+      <instance>
+        <data id="form">
+          <name/>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string"/>
+    <submission base64RsaPublicKey="mybase64key"/></model>
+  </h:head>
+</h:html>`));
+    });
+
+    it('it should fail out on broken xforms', () => {
+      const xml = `
+<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+  </h:head>
+</h:html>`;
+
+      return injectPublicKey(xml, 'mybase64key')
+        .should.be.rejected()
+        .then((p) => { p.problemCode.should.equal(400.1); });
+    });
+  });
+
+  describe('addVersionSuffix', () => {
+    it('should add a version attribute', () =>
+      addVersionSuffix(testData.forms.simple, 'testtest').then((result) => result.should.equal(`<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Simple</h:title>
+    <model>
+      <instance>
+        <data id="simple" version="testtest">
+          <meta>
+            <instanceID/>
+          </meta>
+          <name/>
+          <age/>
+        </data>
+      </instance>
+
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+      <bind nodeset="/data/name" type="string"/>
+      <bind nodeset="/data/age" type="int"/>
+    </model>
+
+  </h:head>
+  <h:body>
+    <input ref="/data/name">
+      <label>What is your name?</label>
+    </input>
+    <input ref="/data/age">
+      <label>What is your age?</label>
+    </input>
+  </h:body>
+</h:html>`)));
+
+    it('should suffix an existing version attribute', () =>
+      addVersionSuffix(testData.forms.simple2, 'testtest').then((result) => result.should.equal(`<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Simple 2</h:title>
+    <model>
+      <instance>
+        <data id="simple2" version="2.1testtest">
+          <meta>
+            <instanceID/>
+          </meta>
+          <name/>
+          <age/>
+        </data>
+      </instance>
+
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+      <bind nodeset="/data/name" type="string"/>
+      <bind nodeset="/data/age" type="int"/>
+    </model>
+
+  </h:head>
+  <h:body>
+    <input ref="/data/name">
+      <label>What is your name?</label>
+    </input>
+    <input ref="/data/age">
+      <label>What is your age?</label>
+    </input>
+  </h:body>
+</h:html>`)));
+
+    it('should suffix an existing namespaced version attribute', () =>
+      addVersionSuffix(testData.forms.simple2.replace('version', 'orx:version'), 'testtest').then((result) => result.should.equal(`<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Simple 2</h:title>
+    <model>
+      <instance>
+        <data id="simple2" orx:version="2.1testtest">
+          <meta>
+            <instanceID/>
+          </meta>
+          <name/>
+          <age/>
+        </data>
+      </instance>
+
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+      <bind nodeset="/data/name" type="string"/>
+      <bind nodeset="/data/age" type="int"/>
+    </model>
+
+  </h:head>
+  <h:body>
+    <input ref="/data/name">
+      <label>What is your name?</label>
+    </input>
+    <input ref="/data/age">
+      <label>What is your age?</label>
+    </input>
+  </h:body>
+</h:html>`)));
+
+    it('should fail out unless the primary instance has an inner tag', () =>
+      addVersionSuffix(`<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Simple</h:title>
+    <model>
+      <instance>
+      </instance>
+      <instance>
+        <data id="notprimary">
+          <meta>
+            <instanceID/>
+          </meta>
+          <name/>
+          <age/>
+        </data>
+      </instance>
+
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+      <bind nodeset="/data/name" type="string"/>
+      <bind nodeset="/data/age" type="int"/>
+    </model>
+
+  </h:head>
+  <h:body>
+    <input ref="/data/name">
+      <label>What is your name?</label>
+    </input>
+    <input ref="/data/age">
+      <label>What is your age?</label>
+    </input>
+  </h:body>
+</h:html>`, '-testtest').should.be.rejected().then((p) => p.problemCode.should.equal(400.1)));
+
+    it('should fail out if there is no instance', () =>
+      addVersionSuffix(`<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Simple</h:title>
+    <model>
+    </model>
+  </h:head>
+</h:html>`, '-testtest').should.be.rejected().then((p) => p.problemCode.should.equal(400.1)));
   });
 });
 

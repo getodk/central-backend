@@ -57,11 +57,11 @@ const populate = (container, [ head, ...tail ] = fixtures) =>
 //
 // this hook won't run if `test-unit` is called, as this directory is skipped
 // in that case.
-before(() => db
-  .raw('drop owned by ??', [ owner ])
-  .catch(() => null) // if the drop owned by statement fails we're on circleci which has a blank db anyway
+const initialize = () => db
+  .raw('drop owned by current_user')
   .then(() => db.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
-  .then(() => injector.withDefaults({ db, crypto }).transacting(populate)));
+  .then(() => injector.withDefaults({ db, crypto }).transacting(populate));
+before(initialize);
 
 // augments a supertest object with a `.as(user, cb)` method, where user may be the
 // name of a fixture user or an object with email/password. the user will be logged
@@ -106,6 +106,14 @@ const testService = (test) => () => new Promise((resolve, reject) => {
   }).catch(Promise.resolve.bind(Promise));
 });
 
+// for some tests (see ./other/encryption.js) we explicitly need to make concurrent
+// requests, in which case the transaction butchering we do for testService will
+// not work. for these cases, we offer testContainer.
+const testContainer = (test) => () => new Promise((resolve, reject) => {
+  const reinit = (f) => (x) => { initialize().then(() => f(x)); };
+  test(baseContainer).then(reinit(resolve), reinit(reject));
+});
+
 // called to get a container context per task. ditto all // from testService.
 // here instead our weird hijack work involves injecting our own constructed
 // container into the task context so it just picks it up and uses it.
@@ -121,5 +129,5 @@ const testTask = (test) => () => new Promise((resolve, reject) => {
   }).catch(Promise.resolve.bind(Promise));
 });
 
-module.exports = { testService, testTask };
+module.exports = { testService, testContainer, testTask };
 

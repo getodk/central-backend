@@ -1,6 +1,6 @@
 const should = require('should');
 const { testService } = require('../setup');
-const testData = require('../data');
+const testData = require('../../data/xml');
 
 // NOTE: for the data output tests, we do not attempt to extensively determine if every
 // internal case is covered; there are already two layers of tests below these, at
@@ -101,7 +101,8 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above!
                   submitterId: '5',
-                  submitterName: 'Alice'
+                  submitterName: 'Alice',
+                  status: null
                 },
                 children: {},
                 meta: { instanceID: "double" },
@@ -109,6 +110,71 @@ describe('api: /forms/:id.svc', () => {
               }]
             });
           }))));
+
+    it('should return a single encrypted frame (no formdata)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.encrypted)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get("/v1/projects/1/forms/encrypted.svc/Submissions('uuid:dcf4a151-5088-453f-99e6-369d67828f7a')")
+            .expect(200)
+            .then(({ body }) => {
+              // have to manually check and clear the date for exact match:
+              body.value[0].__system.submissionDate.should.be.an.isoDate();
+              delete body.value[0].__system.submissionDate;
+
+              body.should.eql({
+                '@odata.context': 'http://localhost:8989/v1/projects/1/forms/encrypted.svc/$metadata#Submissions',
+                value: [{
+                  __id: 'uuid:dcf4a151-5088-453f-99e6-369d67828f7a',
+                  __system: {
+                    // submissionDate is checked above!
+                    submitterId: '5',
+                    submitterName: 'Alice',
+                    status: 'MissingEncryptedFormData'
+                  }
+                }]
+              });
+            })))));
+
+    it('should return a single encrypted frame (has formdata)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.encrypted)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions/uuid:dcf4a151-5088-453f-99e6-369d67828f7a/attachments/submission.xml.enc')
+            .send('encrypted data')
+            .expect(200))
+          .then(() => asAlice.get("/v1/projects/1/forms/encrypted.svc/Submissions('uuid:dcf4a151-5088-453f-99e6-369d67828f7a')")
+            .expect(200)
+            .then(({ body }) => {
+              // have to manually check and clear the date for exact match:
+              body.value[0].__system.submissionDate.should.be.an.isoDate();
+              delete body.value[0].__system.submissionDate;
+
+              body.should.eql({
+                '@odata.context': 'http://localhost:8989/v1/projects/1/forms/encrypted.svc/$metadata#Submissions',
+                value: [{
+                  __id: 'uuid:dcf4a151-5088-453f-99e6-369d67828f7a',
+                  __system: {
+                    // submissionDate is checked above!
+                    submitterId: '5',
+                    submitterName: 'Alice',
+                    status: 'NotDecrypted'
+                  }
+                }]
+              });
+            })))));
 
     it('should return subtable results', testService((service) =>
       withSubmission(service, (asAlice) =>
@@ -151,6 +217,29 @@ describe('api: /forms/:id.svc', () => {
               }]
             });
           }))));
+
+    // HACK: this test sort of relies on some trickery to make the backend
+    // thing the submission is encrypted even though it isn't (see the replace
+    // call). there is some chance this methodology is fragile. (mark1)
+    it('should gracefully degrade on encrypted subtables', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.doubleRepeat)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/doubleRepeat/submissions')
+            .send(testData.instances.doubleRepeat.double.replace('</data>',
+              '<encryptedXmlFile>x</encryptedXmlFile><base64EncryptedKey>y</base64EncryptedKey></data>'))
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')/children/child")
+            .expect(200)
+            .then(({ body }) => {
+              body.should.eql({
+                '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
+                value: []
+              });
+            })))));
   });
 
   describe('/Submissions.xyz.* GET', () => {
@@ -195,7 +284,8 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above,
                   submitterId: "5",
-                  submitterName: "Alice"
+                  submitterName: "Alice",
+                  status: null
                 },
                 meta: { instanceID: "three" },
                 name: "Chelsea",
@@ -206,7 +296,8 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above,
                   submitterId: "5",
-                  submitterName: "Alice"
+                  submitterName: "Alice",
+                  status: null
                 },
                 meta: { instanceID: "two" },
                 name: "Bob",
@@ -217,7 +308,8 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above,
                   submitterId: "5",
-                  submitterName: "Alice"
+                  submitterName: "Alice",
+                  status: null
                 },
                 meta: { instanceID: "one" },
                 name: "Alice",
@@ -276,7 +368,8 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above,
                   submitterId: "5",
-                  submitterName: "Alice"
+                  submitterName: "Alice",
+                  status: null
                 },
                 meta: { instanceID: "two" },
                 name: "Bob",
@@ -303,7 +396,8 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above,
                   submitterId: "5",
-                  submitterName: "Alice"
+                  submitterName: "Alice",
+                  status: null
                 },
                 meta: { instanceID: "three" },
                 name: "Chelsea",
@@ -312,6 +406,102 @@ describe('api: /forms/:id.svc', () => {
               }]
             });
           }))));
+
+    it('should return encrypted frames (no formdata)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.encrypted)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/encrypted.svc/Submissions')
+            .expect(200)
+            .then(({ body }) => {
+              // have to manually check and clear the date for exact match:
+              body.value[0].__system.submissionDate.should.be.an.isoDate();
+              delete body.value[0].__system.submissionDate;
+              body.value[1].__system.submissionDate.should.be.an.isoDate();
+              delete body.value[1].__system.submissionDate;
+
+              body.should.eql({
+                '@odata.context': 'http://localhost:8989/v1/projects/1/forms/encrypted.svc/$metadata#Submissions',
+                value: [{
+                  __id: 'uuid:99b303d9-6494-477b-a30d-d8aae8867335',
+                  __system: {
+                    // submissionDate is checked above!
+                    submitterId: '5',
+                    submitterName: 'Alice',
+                    status: 'MissingEncryptedFormData'
+                  }
+                }, {
+                  __id: 'uuid:dcf4a151-5088-453f-99e6-369d67828f7a',
+                  __system: {
+                    // submissionDate is checked above!
+                    submitterId: '5',
+                    submitterName: 'Alice',
+                    status: 'MissingEncryptedFormData'
+                  }
+                }]
+              });
+            })))));
+
+    it('should return encrypted frames (has formdata)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.encrypted)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions/uuid:dcf4a151-5088-453f-99e6-369d67828f7a/attachments/submission.xml.enc')
+            .send('encrypted data')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions/uuid:99b303d9-6494-477b-a30d-d8aae8867335/attachments/submission.xml.enc')
+            .send('encrypted data')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/encrypted.svc/Submissions')
+            .expect(200)
+            .then(({ body }) => {
+              // have to manually check and clear the date for exact match:
+              body.value[0].__system.submissionDate.should.be.an.isoDate();
+              delete body.value[0].__system.submissionDate;
+              body.value[1].__system.submissionDate.should.be.an.isoDate();
+              delete body.value[1].__system.submissionDate;
+
+              body.should.eql({
+                '@odata.context': 'http://localhost:8989/v1/projects/1/forms/encrypted.svc/$metadata#Submissions',
+                value: [{
+                  __id: 'uuid:99b303d9-6494-477b-a30d-d8aae8867335',
+                  __system: {
+                    // submissionDate is checked above!
+                    submitterId: '5',
+                    submitterName: 'Alice',
+                    status: 'NotDecrypted'
+                  }
+                }, {
+                  __id: 'uuid:dcf4a151-5088-453f-99e6-369d67828f7a',
+                  __system: {
+                    // submissionDate is checked above!
+                    submitterId: '5',
+                    submitterName: 'Alice',
+                    status: 'NotDecrypted'
+                  }
+                }]
+              });
+            })))));
 
     it('should limit and offset subtable results', testService((service) =>
       withSubmissions(service, (asAlice) =>
@@ -329,6 +519,26 @@ describe('api: /forms/:id.svc', () => {
               }]
             });
           }))));
+
+    // we cheat here. see mark1.
+    it('should gracefully degrade on encrypted subtables', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.doubleRepeat)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/doubleRepeat/submissions')
+            .send(testData.instances.doubleRepeat.double.replace('</data>',
+              '<encryptedXmlFile>x</encryptedXmlFile><base64EncryptedKey>y</base64EncryptedKey></data>'))
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions.children.child")
+            .expect(200)
+            .then(({ body }) => {
+              body.should.eql({
+                '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child'
+              });
+            })))));
   });
 });
 

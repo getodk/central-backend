@@ -37,13 +37,21 @@ Here major and breaking changes to the API are listed by version.
 **Added**:
 
 * `GET /audits` Server Audit Log retrieval resource.
-* Form resource data now includes `projectId`.
+* Project Managed Encryption:
+  * `POST /projects/…/key` to enable project managed encryption.
+  * Both submission intake methods (OpenRosa and REST) now support encrypted submissions.
+  * `GET /projects/…/forms/…/submissions/keys` to get a list of encryption keys needed to decrypt all submitted data.
+  * `?{keyId}={passphrase}` option on `GET /projects/…/forms/…/submissions.csv.zip` to get a decrypted archive given the `passphrase`.
+  * `POST /projects/…/forms/…/submissions.csv.zip` to provide a browser-secure (no querystring) method of accessing the above `GET .csv.zip` resource.
+  * OData and `.csv.zip` data responses now contain an additional `status` system column.
+* Form resource data now includes `projectId` and 'keyId'.
 * `?odata=true` option on `GET /projects/…/forms/….schema.json` to sanitize the field names to match the way they will be outputted for OData.
 
 **Changed**:
 
 * `GET /projects/…/forms/…/attachments` now always returns `updatedAt`. There is no longer a separate Extended Metadata response for this resource.
 * The Submission response format now provides the submitter ID at `submitterId` rather than `submitter`. This is so that the Extended responses for Submissions can use `submitter` to provide the full Actor subobject rather than replacing it. This brings the response format to be more similar to the other Extended formats.
+* OData resources now namespace the `__system` schema information under `org.opendatakit.submission` rather than alongside user metadata (`org.opendatakit.user.*`). The actual returned data has not changed; this is purely a metadata document change.
 
 **Removed**:
 
@@ -684,6 +692,38 @@ By default, `archived` is not set, which is equivalent to `false`. If `archived`
 + Response 403 (application/json)
     + Attributes (Error 403)
 
+## Enabling Project Managed Encryption [POST /v1/projects/{id}/key]
+
+_(introduced: version 0.6)_
+
+[Project Managed Encryption](/reference/encryption) can be enabled via the API. To do this, `POST` with the `passphrase` and optionally a reminder `hint` about the passphrase. If managed encryption is already enabled, a `409` error response will be returned.
+
+Enabling managed encryption will modify all unencrypted forms in the project, and as a result the `version` of all forms within the project will also be modified. It is therefore best to enable managed encryption before devices are in the field. Any forms in the project that already have self-supplied encryption keys will be left alone.
+
++ Parameters
+    + id: `16` (number, required) - The numeric ID of the Project
+
++ Request (application/json)
+    + Attributes
+        + passphrase: `super duper secret` (string, required) - The encryption passphrase. If this passphrase is lost, the data will be irrecoverable.
+        + hint: `it was a secret` (string, optional) - A reminder about the passphrase. This is primarily useful when multiple encryption keys and passphrases are being used, to tell them apart.
+
+    + Body
+
+            { "passphrase": "super duper secret", "hint": "it was a secret" }
+
++ Response 200 (application/json)
+    + Attributes (Project)
+
++ Response 400 (application/json)
+    + Attributes (Error 400)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
++ Response 409 (application/json)
+    + Attributes (Error 409)
+
 ### Deleting a Project [DELETE /v1/projects/{id}]
 
 Deleting a Project will remove it from the management interface and make it permanently inaccessible. Do not do this unless you are certain you will never need any of its data again.
@@ -1099,6 +1139,12 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 To export all the `Submission` data associated with a `Form`, just add `.csv.zip` to the end of the listing URL. The response will be a ZIP file containing one or more CSV files, as well as all multimedia attachments associated with the included Submissions.
 
+If [Project Managed Encryption](/reference/encryption) is being used, additional querystring parameters may be provided in the format `{keyId}={passphrase}` for any number of keys (eg `1=secret&4=password`). This will decrypt any records encrypted under those managed keys. Submissions encrypted under self-supplied keys will not be decrypted. **Note**: if you are building a browser-based application, please consider the alternative `POST` endpoint, described in the following section.
+
+If a passphrase is supplied but is incorrect, the entire request will fail. If a passphrase is not supplied but encrypted records exist, only the metadata for those records will be returned, and they will have a `status` of `not decrypted`.
+
+If you are running an unsecured (`HTTP` rather than `HTTPS`) Central server, it is not a good idea to export data this way as your passphrase and the decrypted data will be sent plaintext over the network.
+
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
 
@@ -1110,6 +1156,46 @@ To export all the `Submission` data associated with a `Form`, just add `.csv.zip
     + Body
 
             (binary data)
+
++ Response 400 (application/json)
+    + Attributes (Error 400)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Exporting Form Submissions to CSV via POST [POST /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip]
+
+This non-REST-compliant endpoint is provided for use with [Project Managed Encryption](/reference/encryption). In every respect, it behaves identically to the `GET` endpoint described in the previous section, except that it works over `POST`. This is necessary because for browser-based applications, it is a dangerous idea to simply link the user to `/submissions.csv.zip?2=supersecretpassphrase` because the browser will remember this route in its history and thus the passphrase will become exposed. This is especially dangerous as there are techniques for quickly learning browser-visited URLs of any arbitrary domain.
+
+And so, for this `POST` version of the Submission CSV export endpoint, the passphrases may be provided via `POST` body rather than querystring. Two formats are supported: form URL encoding (`application/x-www-form-urlencoded`) and JSON. In either case, the keys should be the `keyId`s and the values should be the `passphrase`s, as with the `GET` version above.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+
++ Response 200
+    + Headers
+
+            Content-Disposition: attachment; filename=simple.zip
+
+    + Body
+
+            (binary data)
+
++ Response 400 (application/json)
+    + Attributes (Error 400)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Listing Encryption Keys [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions/keys]
+
+This endpoint provides a listing of all known encryption keys needed to decrypt all Submissions for a given Form. It will return at least the `base64RsaPublicKey` property (as `public`) of all known versions of the form that have submissions against them. If managed keys are being used and a `hint` was provided, that will be returned as well.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+
++ Response 200
+    + Attributes (array[Key])
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -1776,6 +1862,8 @@ If these two things are present and correct, and Google can be reached to verify
 
 ## Server Audit Logs [/v1/audits]
 
+_(introduced: version 0.6)_
+
 As of version 0.6, Server Audit Logs entries are created for the following `action`s:
 
 * `user.create` when a new User is created.
@@ -1824,6 +1912,27 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 + Response 403 (application/json)
     + Attributes (Error 403)
+
+# Group Encryption
+
+ODK Central supports two types of encryption:
+
+1. The [old methodology](https://docs.opendatakit.org/encrypted-forms/), where you generate an RSA keypair and use it with locally-downloaded encrypted data to decrypt submissions. We refer to these sorts of keys in this documentation as "self-supplied keys."
+2. Managed Encryption, where Central will generate and store an RSA keypair for you, secured under a passphrase that Central does not save. The CSV export path can then decrypt all records on the fly given the passphrase.
+
+Given the self-supplied key case, Central does not understand how to decrypt records, and the CSV export will export only metadata fields (and no binary attachments) for encrypted records. You may retrieve each data resource over the REST API and decrypt them yourself, or use ODK Briefcase to do this.
+
+Managed Encryption is recommended for most people. The data is still encrypted "at rest" on the server, and the private key needed to decrypt the data is itself encrypted by the passphrase. Neither the passphrase nor the decrypted private key are ever stored; they are forgotten as soon as the server has finished the work at hand.
+
+The relevant API operations are documented inline above; here we guide you through what exists from a high level.
+
+To invoke Project Manage Encryption, you may use the web management interface, or [you may `POST /projects/…/key`](/reference/project-management/projects/enabling-project-managed-encryption).
+
+To list all the encryption keys associated with the submissions on a given form, [you can `GET /projects/…/forms/…/submissions/keys`](/reference/forms-and-submissions/submissions/listing-encryption-keys). This is particularly useful for obtaining the integer numeric ID associated with each key, which will be necessary to decrypt the records, as well as for obtaining reminder hints about each passphrase.
+
+To perform decryption, [you can `GET` or `POST /projects/…/forms/…/submissions.csv.zip`](/reference/forms-and-submissions/submissions/exporting-form-submissions-to-csv) with extra parameters to provide the necessary passphrases. If you are building a browser-based application, it is recommended that you `POST` rather than `GET`: please see the notes in the linked sections for additional details.
+
+Note that the OData JSON API does not (presently) decrypt data. Any encrypted submissions will be returned only with basic metadata, like submission date and user.
 
 # Data Structures
 
@@ -1899,6 +2008,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + name: `Simple` (string, optional) - The friendly name of this form. It is given by the `<title>` in the XForms XML definition.
 + version: `2.1` (string, optional) - The `version` of this form as given in its XForms XML definition. Empty string and `null` are treated equally as a single version.
 + hash: `51a93eab3a1974dbffc4c7913fa5a16a` (string, required) - An MD5 sum automatically computed based on the XForms XML definition. This is required for OpenRosa compliance.
++ keyId: `3` (number, optional) - If a public encryption key is present on the form, its numeric ID as tracked by Central is given here.
 + state (Form State, required) - The present lifecycle status of this form. Controls whether it is available for download on survey clients or accepts new submissions.
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format
@@ -1939,6 +2049,11 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + appUsers: `4` (number, required) - The number of App Users created within this Project.
 + forms: `7` (number, required) - The number of forms within this Project.
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission to any form in this project, if any.
+
+## Key (object)
++ id: `1` (number, required) - The numerical ID of the Key.
++ public: `bcFeKDF3Sg8W91Uf5uxaIlM2uK0cUN9tBSGoASbC4LeIPqx65+6zmjbgUnIyiLzIjrx4CAaf9Y9LG7TAu6wKPqfbH6ZAkJTFSfjLNovbKhpOQcmO5VZGGay6yvXrX1TFW6C6RLITy74erxfUAStdtpP4nraCYqQYqn5zD4/1OmgweJt5vzGXW2ch7lrROEQhXB9lK+bjEeWx8TFW/+6ha/oRLnl6a2RBRL6mhwy3PoByNTKndB2MP4TygCJ/Ini4ivk74iSqVnoeuNJR/xUcU+kaIpZEIjxpAS2VECJU9fZvS5Gt84e5wl/t7bUKu+dlh/cUgHfk6+6bwzqGQYOe5A==` (string, required) - The base64-encoded public key, with PEM envelope removed.
++ hint: `it was a secret` (string, optional) - The hint, if given, related to a managed encryption key.
 
 ## User (Actor)
 + email: `my.email.address@opendatakit.org` (string, required) - Only `User`s have email addresses associated with them

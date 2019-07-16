@@ -6,7 +6,7 @@ const should = require('should');
 const tmp = require('tmp');
 const archiver = require('archiver');
 const { testTask } = require('../setup');
-const { generateKeypair } = require(appRoot + '/lib/util/crypto');
+const { generateManagedKey } = require(appRoot + '/lib/util/crypto');
 const { tmpdir, tmpfile, encryptToArchive, decryptFromArchive } = require(appRoot + '/lib/task/fs');
 
 describe('task: fs', () => {
@@ -38,7 +38,7 @@ describe('task: fs', () => {
       const filepath = await promisify(tmp.file)();
       await promisify(writeFile)(join(dirpath, 'one'), 'test file one');
       await promisify(writeFile)(join(dirpath, 'two'), 'test file two');
-      const keys = await generateKeypair(passphrase);
+      const keys = await generateManagedKey(passphrase);
       await encryptToArchive(dirpath, filepath, keys);
       return filepath;
     };

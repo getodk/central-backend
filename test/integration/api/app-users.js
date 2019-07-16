@@ -2,7 +2,7 @@ const should = require('should');
 const { pipe } = require('ramda');
 const { DateTime } = require('luxon');
 const { testService } = require('../setup');
-const testData = require('../data');
+const testData = require('../../data/xml');
 
 describe('api: /projects/:id/app-users', () => {
   describe('POST', () => {

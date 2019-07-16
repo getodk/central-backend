@@ -1,12 +1,13 @@
 const appRoot = require('app-root-path');
 const { getFormSchema, schemaAsLookup, stripNamespacesFromSchema } = require(appRoot + '/lib/data/schema');
 const { submissionToOData } = require(appRoot + '/lib/data/json');
-const testData = require(appRoot + '/test/integration/data');
+const testData = require(appRoot + '/test/data/xml');
 
 const __system = {
   submissionDate: '2017-09-20T17:10:43Z',
   submitterId: '5',
-  submitterName: 'Alice'
+  submitterName: 'Alice',
+  status: null
 };
 const mockSubmission = (instanceId, xml) => ({
   xml,
@@ -36,6 +37,13 @@ describe('submissionToOData', () => {
       });
     });
   });
+
+  it('should not hang on incomplete markup', () =>
+    getFormSchema({ xml: testData.forms.simple }).then((schema) => {
+      const fields = schemaAsLookup(schema);
+      const submission = mockSubmission('one', '<data><meta><instanceID>');
+      return submissionToOData(fields, 'Submissions', submission);
+    }));
 
   // this is sort of repeatedly tested in all the other tests, but it's good to
   // have one for explicity this purpose in case things change.

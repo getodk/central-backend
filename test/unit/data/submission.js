@@ -4,13 +4,13 @@ const { always } = require('ramda');
 const { toObjects } = require('streamtest').v2;
 const { submissionXmlToFieldStream } = require(appRoot + '/lib/data/submission');
 const { getFormSchema } = require(appRoot + '/lib/data/schema');
-const testData = require(appRoot + '/test/integration/data');
+const testData = require(appRoot + '/test/data/xml');
 
 describe('submission field streamer', () => {
-  const mockForm = (xml) => ({ schema: always(getFormSchema({ xml })) });
+  const mockFormDef = (xml) => ({ schema: always(getFormSchema({ xml })) });
 
   it('should return a stream of records', (done) => {
-    submissionXmlToFieldStream(testData.instances.simple.one, mockForm(testData.forms.simple))
+    submissionXmlToFieldStream(mockFormDef(testData.forms.simple), testData.instances.simple.one)
       .then((fieldStream) => fieldStream.pipe(toObjects((error, result) => {
         result.should.eql([
           { field: { name: 'instanceID', type: 'string' }, text: 'one' },
@@ -22,7 +22,7 @@ describe('submission field streamer', () => {
   });
 
   it('should deal correctly with repeats', (done) => {
-    submissionXmlToFieldStream(testData.instances.doubleRepeat.double, mockForm(testData.forms.doubleRepeat))
+    submissionXmlToFieldStream(mockFormDef(testData.forms.doubleRepeat), testData.instances.doubleRepeat.double)
       .then((fieldStream) => fieldStream.pipe(toObjects((error, result) => {
         result.should.eql([
           { field: { name: 'instanceID', type: 'string' }, text: 'double' },
@@ -41,6 +41,22 @@ describe('submission field streamer', () => {
         ]);
         done();
       })));
+  });
+
+  it('should not hang given malformed non-closing xml', (done) => {
+    submissionXmlToFieldStream(mockFormDef(testData.forms.simple), '<data><meta><instanceID>')
+      .then((stream) => {
+        stream.on('data', () => {});
+        stream.on('end', done); // not hanging/timing out is the assertion here
+      })
+  });
+
+  it('should not crash given malformed over-closing xml', (done) => {
+    submissionXmlToFieldStream(mockFormDef(testData.forms.simple), '<data></goodbye></goodbye></goodbye>')
+      .then((stream) => {
+        stream.on('data', () => {});
+        stream.on('end', done); // not hanging/timing out is the assertion here
+      })
   });
 });
 

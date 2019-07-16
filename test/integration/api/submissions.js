@@ -1,6 +1,6 @@
 const should = require('should');
 const { testService } = require('../setup');
-const testData = require('../data');
+const testData = require('../../data/xml');
 const { zipStreamToFiles } = require('../../util/zip');
 
 describe('api: /submission', () => {
@@ -291,6 +291,37 @@ describe('api: /submission', () => {
                   headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"');
                   body.toString('utf8').should.equal('this is test file two');
                 })))))));
+
+    it('should accept encrypted submissions, with attachments', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.encrypted)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('submission.xml.enc', Buffer.from('this is test file one'), { filename: 'submission.xml.enc' })
+            .attach('1561432508817.jpg.enc', Buffer.from('this is test file two'), { filename: '1561432508817.jpg.enc' })
+            // also attach a file that the manifest does not expect.
+            .attach('extraneous.enc', Buffer.from('this is test file three'), { filename: 'extraneous.enc' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.encrypted.one), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/encrypted/submissions/uuid:dcf4a151-5088-453f-99e6-369d67828f7a.xml')
+              .expect(200)
+              .then(({ text }) => { text.should.equal(testData.instances.encrypted.one); }),
+            asAlice.get('/v1/projects/1/forms/encrypted/submissions/uuid:dcf4a151-5088-453f-99e6-369d67828f7a/attachments')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.eql([
+                  { exists: true, name: '1561432508817.jpg.enc' },
+                  { exists: true, name: 'submission.xml.enc' }
+                ]);
+              }),
+            asAlice.get('/v1/projects/1/forms/encrypted/submissions/uuid:dcf4a151-5088-453f-99e6-369d67828f7a/attachments/submission.xml.enc')
+              .expect(200)
+              .then(({ body }) => { body.toString('utf8').should.equal('this is test file one'); })
+          ])))));
   });
 });
 
@@ -416,9 +447,35 @@ describe('api: /forms/:id/submissions', () => {
                 def.xml.should.equal(testData.forms.simple);
               });
           }))));
+
+    it('should accept encrypted submissions, with attachments', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.encrypted)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/encrypted/submissions/uuid:dcf4a151-5088-453f-99e6-369d67828f7a.xml')
+              .expect(200)
+              .then(({ text }) => { text.should.equal(testData.instances.encrypted.one); }),
+            asAlice.get('/v1/projects/1/forms/encrypted/submissions/uuid:dcf4a151-5088-453f-99e6-369d67828f7a/attachments')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.eql([
+                  { exists: false, name: '1561432508817.jpg.enc' },
+                  { exists: false, name: 'submission.xml.enc' }
+                ]);
+              })
+          ])))));
   });
 
   describe('.csv.zip GET', () => {
+    // NOTE: tests related to decryption of .csv.zip export are located in test/integration/other/encryption.js
+
     it('should return a zipfile with the relevant headers', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip')
@@ -445,16 +502,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => new Promise((done) =>
             zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
-              const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
-              csv.length.should.equal(5); // header + 3 data rows + newline
-              csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName' ]);
-              csv[1].shift().should.be.an.recentIsoDate();
-              csv[1].should.eql([ 'three','Chelsea','38','three', '5', 'Alice' ]);
-              csv[2].shift().should.be.an.recentIsoDate();
-              csv[2].should.eql([ 'two','Bob','34','two', '5', 'Alice' ]);
-              csv[3].shift().should.be.an.recentIsoDate();
-              csv[3].should.eql([ 'one','Alice','30','one', '5', 'Alice' ]);
-              csv[4].should.eql([ '' ]);
+              result['simple.csv'].should.be.a.SimpleCsv();
               done();
             }))))));
 
@@ -482,11 +530,11 @@ describe('api: /forms/:id/submissions', () => {
             result.filenames.should.eql([ 'simple.csv' ]);
             const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
             csv.length.should.equal(4); // header + 2 data rows + newline
-            csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName' ]);
+            csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'Status' ]);
             csv[1].shift().should.be.an.recentIsoDate();
-            csv[1].should.eql([ 'two','Bob','34','two', '5', 'Alice' ]);
+            csv[1].should.eql([ 'two','Bob','34','two','5','Alice' ]);
             csv[2].shift().should.be.an.recentIsoDate();
-            csv[2].should.eql([ 'one','Alice','30','one', '5', 'Alice' ]);
+            csv[2].should.eql([ 'one','Alice','30','one','5','Alice' ]);
             csv[3].should.eql([ '' ]);
             done();
           }))))));
@@ -570,6 +618,156 @@ describe('api: /forms/:id/submissions', () => {
               body[0].should.be.an.ExtendedSubmission();
               body[0].submitter.displayName.should.equal('Alice');
             })))));
+  });
+
+  describe('/keys GET', () => {
+    it('should return notfound if the form does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/nonexistent/submissions/keys').expect(404))));
+
+    it('should reject if the user cannot read', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/projects/1/forms/nonexistent/submissions/keys').expect(403))));
+
+    it('should return an empty array if encryption is not being used', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.eql([]);
+            })))));
+
+    // a bit of a compound test, since there is no way as of time of writing to verify
+    // that the form def key parsing and storage works. so this test catches form /and/
+    // submission key handling.
+    it('should return a self-managed key if it is used', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.encrypted)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/encrypted/submissions/keys')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].should.be.a.Key();
+              body[0].public.should.equal('MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYh7bSui/0xppQ+J3i5xghfao+559Rqg9X0xNbdMEsW35CzYUfmC8sOzeeUiE4pG7HIEUmiJal+mo70UMDUlywXj9z053n0g6MmtLlUyBw0ZGhEZWHsfBxPQixdzY/c5i7sh0dFzWVBZ7UrqBc2qjRFUYxeXqHsAxSPClTH1nW47Mr2h4juBLC7tBNZA3biZA/XTPt//hAuzv1d6MGiF3vQJXvFTNdfsh6Ckq4KXUsAv+07cLtON4KjrKhqsVNNGbFssTUHVL4A9N3gsuRGt329LHOKBxQUGEnhMM2MEtvk4kaVQrgCqpk1pMU/4HlFtRjOoKdAIuzzxIl56gNdRUQIDAQAB');
+            })))));
+
+    it('should return multiple self-managed keys if they are used', testService((service, { db, Project, FormDef, FormPartial }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.encrypted)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => Promise.all([
+            Project.getById(1).then((o) => o.get())
+              .then((project) => project.getFormByXmlFormId('encrypted')).then((o) => o.get()),
+            FormPartial.fromXml(testData.forms.encrypted
+              .replace(/PublicKey="[a-z0-9+\/]+"/i, 'PublicKey="keytwo"')
+              .replace('working3', 'working4'))
+          ]))
+          .then(([ form, partial ]) => partial.createVersion(form))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.two
+              .replace(/EncryptedKey.*EncryptedKey/, 'EncryptedKey>keytwo</base64EncryptedKey')
+              .replace('working3', 'working4'))
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/encrypted/submissions/keys')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(2);
+              body[0].should.be.a.Key();
+              body[0].public.should.equal('keytwo');
+              body[1].should.be.a.Key();
+              body[1].public.should.equal('MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYh7bSui/0xppQ+J3i5xghfao+559Rqg9X0xNbdMEsW35CzYUfmC8sOzeeUiE4pG7HIEUmiJal+mo70UMDUlywXj9z053n0g6MmtLlUyBw0ZGhEZWHsfBxPQixdzY/c5i7sh0dFzWVBZ7UrqBc2qjRFUYxeXqHsAxSPClTH1nW47Mr2h4juBLC7tBNZA3biZA/XTPt//hAuzv1d6MGiF3vQJXvFTNdfsh6Ckq4KXUsAv+07cLtON4KjrKhqsVNNGbFssTUHVL4A9N3gsuRGt329LHOKBxQUGEnhMM2MEtvk4kaVQrgCqpk1pMU/4HlFtRjOoKdAIuzzxIl56gNdRUQIDAQAB');
+            })))));
+
+    it('should not return unused keys', testService((service, { Project, FormDef, FormPartial }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.encrypted)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => Promise.all([
+            Project.getById(1).then((o) => o.get())
+              .then((project) => project.getFormByXmlFormId('encrypted')).then((o) => o.get()),
+            FormPartial.fromXml(testData.forms.encrypted
+              .replace(/PublicKey="[a-z0-9+\/]+"/i, 'PublicKey="keytwo"')
+              .replace('working3', 'working4'))
+          ]))
+          .then(([ form, partial ]) => partial.createVersion(form))
+          .then(() => asAlice.get('/v1/projects/1/forms/encrypted/submissions/keys')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].should.be.a.Key();
+              body[0].public.should.equal('MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYh7bSui/0xppQ+J3i5xghfao+559Rqg9X0xNbdMEsW35CzYUfmC8sOzeeUiE4pG7HIEUmiJal+mo70UMDUlywXj9z053n0g6MmtLlUyBw0ZGhEZWHsfBxPQixdzY/c5i7sh0dFzWVBZ7UrqBc2qjRFUYxeXqHsAxSPClTH1nW47Mr2h4juBLC7tBNZA3biZA/XTPt//hAuzv1d6MGiF3vQJXvFTNdfsh6Ckq4KXUsAv+07cLtON4KjrKhqsVNNGbFssTUHVL4A9N3gsuRGt329LHOKBxQUGEnhMM2MEtvk4kaVQrgCqpk1pMU/4HlFtRjOoKdAIuzzxIl56gNdRUQIDAQAB');
+            })))));
+
+    it('should return managed keys, with hint', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple')
+            .expect(200)
+            .then(({ body }) => body.version))
+          .then((version) => asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.encrypted.one
+              .replace('id="encrypted" version="working3"', `id="simple" version="${version}"`))
+            .set('Content-Type', 'application/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].should.be.a.Key();
+              body[0].managed.should.equal(true);
+              body[0].hint.should.equal('it is a secret');
+            })))));
+
+    it('should not return a key more than once', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.encrypted)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
+            .send(testData.instances.encrypted.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/encrypted/submissions/keys')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].should.be.a.Key();
+              body[0].public.should.equal('MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYh7bSui/0xppQ+J3i5xghfao+559Rqg9X0xNbdMEsW35CzYUfmC8sOzeeUiE4pG7HIEUmiJal+mo70UMDUlywXj9z053n0g6MmtLlUyBw0ZGhEZWHsfBxPQixdzY/c5i7sh0dFzWVBZ7UrqBc2qjRFUYxeXqHsAxSPClTH1nW47Mr2h4juBLC7tBNZA3biZA/XTPt//hAuzv1d6MGiF3vQJXvFTNdfsh6Ckq4KXUsAv+07cLtON4KjrKhqsVNNGbFssTUHVL4A9N3gsuRGt329LHOKBxQUGEnhMM2MEtvk4kaVQrgCqpk1pMU/4HlFtRjOoKdAIuzzxIl56gNdRUQIDAQAB');
+            })))));
+
+    // TODO: when submission versioning exists, this needs to be tested.
+    //it('should not return a key attached to an outdated submission', testService((service) =>
   });
 
   describe('/:instanceId.xml GET', () => {
