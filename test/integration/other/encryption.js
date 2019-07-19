@@ -185,7 +185,7 @@ describe('managed encryption', () => {
               done();
             }))))));
 
-    it('should decrypt with passphrases provide via url-encoded POST body', testService((service) =>
+    it('should decrypt with passphrases provided via url-encoded POST body', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
           .send({ passphrase: 'supersecret', hint: 'it is a secret' })
@@ -202,6 +202,37 @@ describe('managed encryption', () => {
           .then((keyId) => new Promise((done) =>
             zipStreamToFiles(asAlice.post(`/v1/projects/1/forms/simple/submissions.csv.zip`)
               .send(`${keyId}=supersecret`)
+              .set('Content-Type', 'application/x-www-form-urlencoded'), (result) => {
+              result.filenames.should.eql([ 'simple.csv' ]);
+              result['simple.csv'].should.be.a.SimpleCsv();
+              done();
+            }))))));
+
+    it('should decrypt over cookie auth with passphrases provided via url-encoded POST body', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple.xml')
+            .expect(200)
+            .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
+            .then((send) => send(testData.instances.simple.one)
+              .then(() => send(testData.instances.simple.two))
+              .then(() => send(testData.instances.simple.three))))
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
+              .expect(200)
+              .then(({ body }) => body[0].id),
+            service.post('/v1/sessions')
+              .send({ email: 'alice@opendatakit.org', password: 'alice' })
+              .expect(200)
+              .then(({ body }) => body)
+          ]))
+          .then(([ keyId, session ]) => new Promise((done) =>
+            zipStreamToFiles(service.post(`/v1/projects/1/forms/simple/submissions.csv.zip`)
+              .send(`${keyId}=supersecret&__csrf=${session.csrf}`)
+              .set('Cookie', `__Host-session=${session.token}`)
+              .set('X-Forwarded-Proto', 'https')
               .set('Content-Type', 'application/x-www-form-urlencoded'), (result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
               result['simple.csv'].should.be.a.SimpleCsv();

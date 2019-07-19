@@ -11,7 +11,10 @@ const { hashPassword } = crypto;
 
 describe('preprocessors', () => {
   // some mock helpers to simplify testing this module in isolation:
-  class Auth { constructor(data) { Object.assign(this, data); } }
+  class Auth {
+    constructor(data) { Object.assign(this, data); }
+    session() { return Option.of(this._session); }
+  }
   const mockSession = (expectedToken) => ({
     getByBearerToken: (token) => Promise.resolve((token === expectedToken)
       ? Option.of('session')
@@ -163,18 +166,6 @@ describe('preprocessors', () => {
           should.not.exist(context);
         }));
 
-      it('should never try cookie auth for non-GET requests', () =>
-        Promise.resolve(sessionHandler(
-          { Auth, Session: mockSession('alohomora') },
-          new Context(createRequest({ method: 'POST', headers: {
-            'X-Forwarded-Proto': 'https',
-            Cookie: '__Host-session=alohomora'
-          } }))
-        )).then((context) => {
-          // preprocessors return nothing if they have no changes to make to the context.
-          should.not.exist(context);
-        }));
-
       it('should do nothing if Cookie auth is attempted with a successful auth present', () =>
         Promise.resolve(sessionHandler(
           { Auth, Session: mockSession('alohomora') },
@@ -200,6 +191,64 @@ describe('preprocessors', () => {
         )).then((context) => {
           context.auth._session.should.eql(Option.of('session'));
         }));
+
+      describe('CSRF protection', () => {
+        const mockSessionWithCsrf = (expectedToken, csrf) => ({
+          getByBearerToken: (token) => Promise.resolve((token === expectedToken)
+            ? Option.of({ csrf })
+            : Option.none())
+        });
+
+        it('should reject cookie auth without CSRF token for non-GET requests', () =>
+          Promise.resolve(sessionHandler(
+            { Auth, Session: mockSession('alohomora') },
+            new Context(createRequest({ method: 'POST', headers: {
+              'X-Forwarded-Proto': 'https',
+              Cookie: '__Host-session=alohomora'
+            } }))
+          )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
+
+        it('should reject cookie auth with incorrect CSRF token for non-GET requests', () =>
+          Promise.resolve(sessionHandler(
+            { Auth, Session: mockSessionWithCsrf('alohomora', 'secretcsrf') },
+            new Context(createRequest({ method: 'POST', headers: {
+              'X-Forwarded-Proto': 'https',
+              Cookie: '__Host-session=alohomora'
+            }, body: { __csrf: 'notsecretcsrf' } }))
+          )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
+
+        it('should do nothing on cookie auth with incorrect session token for non-GET requests', () =>
+          Promise.resolve(sessionHandler(
+            { Auth, Session: mockSessionWithCsrf('alohomora', 'secretcsrf') },
+            new Context(createRequest({ method: 'POST', headers: {
+              'X-Forwarded-Proto': 'https',
+              Cookie: '__Host-session=notalohomora'
+            }, body: { __csrf: 'secretcsrf' } }))
+          )).then((context) => {
+            // preprocessors return nothing if they have no changes to make to the context.
+            should.not.exist(context);
+          }));
+
+        it('should accept cookie auth with correct CSRF token for non-GET requests', () =>
+          Promise.resolve(sessionHandler(
+            { Auth, Session: mockSessionWithCsrf('alohomora', 'secretcsrf') },
+            new Context(createRequest({ method: 'POST', headers: {
+              'X-Forwarded-Proto': 'https',
+              Cookie: '__Host-session=alohomora'
+            }, body: { __csrf: 'secretcsrf' } }))
+          )).should.be.fulfilled());
+
+        it('should remove CSRF token from data payload on success', () =>
+          Promise.resolve(sessionHandler(
+            { Auth, Session: mockSessionWithCsrf('alohomora', 'secretcsrf') },
+            new Context(createRequest({ method: 'POST', headers: {
+              'X-Forwarded-Proto': 'https',
+              Cookie: '__Host-session=alohomora'
+            }, body: { __csrf: 'secretcsrf', other: 'data' } }))
+          )).then((context) => {
+            context.body.should.eql({ other: 'data' });
+          }));
+      });
     });
   });
 
