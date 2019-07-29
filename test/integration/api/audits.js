@@ -177,9 +177,60 @@ describe('/audits', () => {
                 body[0].action.should.equal('form.create');
               }))))));
 
-    // TODO: we don't test every single category. maybe we should but that's an
-    // awful lot of tests.
-    it('should filter by action category', testService((service) =>
+    // we don't test every single action. but we do exercise every category.
+    it('should filter by action category (user)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects')
+          .send({ name: 'audit project' })
+          .expect(200)
+          .then(() => asAlice.post('/v1/users')
+            .send({ displayName: 'david', email: 'david@opendatakit.org' })
+            .expect(200)
+            .then(({ body }) => body.id)
+            .then((davidId) => asAlice.patch(`/v1/users/${davidId}`)
+              .send({ displayName: 'David' })
+              .expect(200)
+              .then(() => asAlice.post(`/v1/assignments/admin/${davidId}`)
+                .expect(200))
+              .then(() => asAlice.delete(`/v1/assignments/admin/${davidId}`)
+                .expect(200))
+              .then(() => asAlice.delete(`/v1/users/${davidId}`)
+                .expect(200))))
+          .then(() => asAlice.get('/v1/audits?action=user')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(5);
+              body[0].action.should.equal('user.delete');
+              body[1].action.should.equal('assignment.delete');
+              body[2].action.should.equal('assignment.create');
+              body[3].action.should.equal('user.update');
+              body[4].action.should.equal('user.create');
+            })))));
+
+    it('should filter by action category (project)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects')
+          .send({ name: 'audit project' })
+          .expect(200)
+          .then(({ body }) => body.id)
+          .then((projectId) => asAlice.patch(`/v1/projects/${projectId}`)
+            .send({ name: 'Audit Project' })
+            .expect(200)
+            .then(() => asAlice.delete(`/v1/projects/${projectId}`)
+              .expect(200)))
+          .then(() => asAlice.post('/v1/users')
+            .send({ displayName: 'david', email: 'david@opendatakit.org' })
+            .expect(200))
+          .then(() => asAlice.get('/v1/audits?action=project')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(3);
+              body[0].action.should.equal('project.delete');
+              body[1].action.should.equal('project.update');
+              body[2].action.should.equal('project.create');
+            })))));
+
+    it('should filter by action category (form)', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects')
           .send({ name: 'audit project' })
@@ -189,9 +240,10 @@ describe('/audits', () => {
             .send(testData.forms.simple)
             .set('Content-Type', 'text/xml')
             .expect(200)
-            .then(() => asAlice.post(`/v1/projects/${projectId}/forms`)
-              .send(testData.forms.withrepeat)
-              .set('Content-Type', 'text/xml')
+            .then(() => asAlice.patch(`/v1/projects/${projectId}/forms/simple`)
+              .send({ state: 'closing' })
+              .expect(200))
+            .then(() => asAlice.delete(`/v1/projects/${projectId}/forms/simple`)
               .expect(200)))
           .then(() => asAlice.post('/v1/users')
             .send({ displayName: 'david', email: 'david@opendatakit.org' })
@@ -199,9 +251,31 @@ describe('/audits', () => {
           .then(() => asAlice.get('/v1/audits?action=form')
             .expect(200)
             .then(({ body }) => {
-              body.length.should.equal(2);
-              body[0].action.should.equal('form.create');
-              body[1].action.should.equal('form.create');
+              body.length.should.equal(3);
+              body[0].action.should.equal('form.delete');
+              body[1].action.should.equal('form.update');
+              body[2].action.should.equal('form.create');
+            })))));
+
+    it('should filter by action category (submission)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects')
+          .send({ name: 'audit project' })
+          .expect(200)
+          .then(({ body }) => body.id)
+          .then((projectId) => asAlice.post(`/v1/projects/${projectId}/forms`)
+            .send(testData.forms.simple)
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asAlice.post(`/v1/projects/${projectId}/forms/simple/submissions`)
+              .send(testData.instances.simple.one)
+              .set('Content-Type', 'text/xml')
+              .expect(200)))
+          .then(() => asAlice.get('/v1/audits?action=submission')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].action.should.equal('submission.create');
             })))));
 
     it('should filter extended data by action', testService((service) =>
