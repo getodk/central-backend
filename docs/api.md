@@ -2033,8 +2033,8 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 
 ## Form State (enum)
 + open (string) - _(Default)_ This form is available for download and accepts submissions.
-+ closing (string) - This form is _not_ available for download but still accepts submissions.
-+ closed (string) - This form is _not_ available for download, and it does _not_ accept submissions.
++ closing (string) - This form is _not_ available for download but still accepts submissions. This state will remove the form from the [OpenRosa FormList](/reference/openrosa-endpoints/openrosa-form-listing-api) that mobile clients use to determine which forms are available to download. The `closing` state does not affect the REST API at all: a `closing` form will still be available over all REST APIs.
++ closed (string) - This form is _not_ available for download, and it does _not_ accept submissions. This state is the same as the `closing` state, but additionally new submissions will not be accepted over either the [OpenRosa](/reference/openrosa-endpoints/openrosa-form-submission-api) or the [REST](/reference/forms-and-submissions/submissions/creating-a-submission) submission creation APIs.
 
 ## Extended App User (App User)
 + createdBy (Actor, required) - The full details about the `Actor` that created this `App User`.
