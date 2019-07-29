@@ -108,6 +108,21 @@ describe('api: /projects/:id/forms', () => {
   </xforms>`);
               }))))));
 
+    it('should escape illegal characters in url', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments.replace('withAttachments', 'with attachments'))
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/formList')
+            .set('X-OpenRosa-Version', '1.0')
+            .expect(200)
+            .then(({ text }) => {
+              const domain = config.get('default.env.domain');
+              text.should.containEql(`<downloadUrl>${domain}/v1/projects/1/forms/with%20attachments.xml</downloadUrl>`);
+              text.should.containEql(`<manifestUrl>${domain}/v1/projects/1/forms/with%20attachments/manifest</manifestUrl>`);
+            })))));
+
     it('should include a manifest node for forms with attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
