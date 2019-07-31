@@ -696,6 +696,51 @@ describe('form schema', () => {
         ]);
       });
     });
+
+    it('should detect primitive search() appearances', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model/>
+          </h:head>
+          <h:body>
+            <select1 appearance="search('fileone')"/>
+            <select appearance="search('filetwo.csv')"/>
+            <select appearance="search('filethree', 1)"/>
+            <select1 appearance="search( 'filefour' , 2)"/>
+            <select1 appearance="search(&quot;filefive&quot;, 3, 4)"/>
+          </h:body>
+        </h:html>`;
+      return expectedFormAttachments(xml).then((attachments) => {
+        attachments.should.eql([
+          { type: 'file', name: 'fileone.csv' },
+          { type: 'file', name: 'filetwo.csv' },
+          { type: 'file', name: 'filethree.csv' },
+          { type: 'file', name: 'filefour.csv' },
+          { type: 'file', name: 'filefive.csv' }
+        ]);
+      });
+    });
+
+    it('should ignore goofy or advanced search() appearances', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model/>
+          </h:head>
+          <h:body>
+            <select1 appearance="search('fileone   ')"/>
+            <select appearance="search(/data/path/to/dynamic)"/>
+            <select appearance="search(' filethree')"/>
+            <select1 appearance="search(' filefour.csv ' , 2)"/>
+          </h:body>
+        </h:html>`;
+      return expectedFormAttachments(xml).then((attachments) => {
+        attachments.should.eql([]);
+      });
+    });
   });
 
   describe('public key injection', () => {
