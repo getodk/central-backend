@@ -109,12 +109,12 @@ describe('util/xml', () => {
     });
 
     describe('Traversal', () => {
-      it('should be real and valid given no im component', () => {
+      it('should be real and valid given realspace', () => {
         (new Traversal(3, 0)).hasMisses.should.equal(false);
         (new Traversal(3, 0)).useless.should.equal(false);
 
         (new Traversal(0, 0)).hasMisses.should.equal(false);
-        (new Traversal(0, 0)).useless.should.equal(false);
+        (new Traversal(1, 0)).useless.should.equal(false);
       });
 
       it('should be nonreal given an im component', () => {
@@ -124,6 +124,7 @@ describe('util/xml', () => {
       it('should be useless if we are in negative realspace or on the im origin axis', () => {
         (new Traversal(-1, 0)).useless.should.equal(true);
         (new Traversal(0, 1)).useless.should.equal(true);
+        (new Traversal(0, 0)).useless.should.equal(true);
       });
 
       it('should increment real if entering a node', () => {
@@ -246,12 +247,11 @@ describe('util/xml', () => {
           forever,
           [ new Traversal(3, 0, forever), new Traversal(1, 0), new Traversal(2, 3) ],
           false, 'close');
+        result.length.should.equal(2);
         result[0].re.should.equal(2);
         result[0].im.should.equal(0);
-        result[1].re.should.equal(0);
-        result[1].im.should.equal(0);
-        result[2].re.should.equal(2);
-        result[2].im.should.equal(2);
+        result[1].re.should.equal(2);
+        result[1].im.should.equal(2);
       });
 
       it('should filter out invalid traversals', () => {
