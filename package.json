@@ -32,7 +32,7 @@
     "prompt": "~1",
     "ramda": "~0",
     "sanitize-filename": "~1",
-    "@sentry/node": "~4",
+    "@sentry/node": "~5",
     "tmp": "~0",
     "uuid": "~3",
     "yauzl": "~2.9"
