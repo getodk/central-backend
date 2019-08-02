@@ -27,7 +27,7 @@ test-unit: node_modules
 	node node_modules/mocha/bin/mocha --recursive test/unit
 
 test-coverage: node_modules
-	node node_modules/.bin/nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --recursive test
+	node node_modules/.bin/nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --exit --recursive test
 
 lint:
 	node node_modules/.bin/eslint lib

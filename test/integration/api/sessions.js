@@ -20,6 +20,14 @@ describe('api: /sessions', () => {
           body.should.be.a.Session();
         })));
 
+    it('should provide a csrf token when the session returns', testService((service) =>
+      service.post('/v1/sessions')
+        .send({ email: 'chelsea@opendatakit.org', password: 'chelsea' })
+        .expect(200)
+        .then(({ body }) => {
+          body.csrf.should.be.a.token();
+        })));
+
     it('should set cookie information when the session returns', testService((service) =>
       service.post('/v1/sessions')
         .send({ email: 'chelsea@opendatakit.org', password: 'chelsea' })
@@ -115,6 +123,40 @@ describe('api: /sessions', () => {
               cookie.should.match(/__Host-session=null/);
             });
         })));
+  });
+
+  // this isn't exactly the right place for this but i just want to check the
+  // whole stack in addition to the unit tests.
+  describe('cookie CSRF auth', () => {
+    it('should reject if the CSRF token is missing', testService((service) =>
+      service.post('/v1/sessions')
+        .send({ email: 'alice@opendatakit.org', password: 'alice' })
+        .expect(200)
+        .then(({ body }) => service.post('/v1/projects')
+          .send({ name: 'my project' })
+          .set('X-Forwarded-Proto', 'https')
+          .set('Cookie', '__Host-session=' + body.token)
+          .expect(401))));
+
+    it('should reject if the CSRF token is wrong', testService((service) =>
+      service.post('/v1/sessions')
+        .send({ email: 'alice@opendatakit.org', password: 'alice' })
+        .expect(200)
+        .then(({ body }) => service.post('/v1/projects')
+          .send({ name: 'my project', __csrf: 'nope' })
+          .set('X-Forwarded-Proto', 'https')
+          .set('Cookie', '__Host-session=' + body.token)
+          .expect(401))));
+
+    it('should succeed if the CSRF token is correct', testService((service) =>
+      service.post('/v1/sessions')
+        .send({ email: 'alice@opendatakit.org', password: 'alice' })
+        .expect(200)
+        .then(({ body }) => service.post('/v1/projects')
+          .send({ name: 'my project', __csrf: body.csrf })
+          .set('X-Forwarded-Proto', 'https')
+          .set('Cookie', '__Host-session=' + body.token)
+          .expect(200))));
   });
 });
 

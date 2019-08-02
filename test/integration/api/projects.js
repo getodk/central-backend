@@ -404,6 +404,21 @@ describe('api: /projects', () => {
             .send({ passphrase: 'supersecret', hint: 'it is a secret' })
             .expect(409)))));
 
+    it('should return a keyId if managed encryption is active', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+          .expect(200)
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1')
+              .expect(200)
+              .then(({ body }) => { body.keyId.should.be.a.Number(); }),
+            asAlice.get('/v1/projects/1')
+              .set('X-Extended-Metadata', true)
+              .expect(200)
+              .then(({ body }) => { body.keyId.should.be.a.Number(); })
+          ])))));
+
     it('should modify extant forms', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
