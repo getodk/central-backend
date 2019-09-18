@@ -1,6 +1,14 @@
 const should = require('should');
 const { testService } = require('../setup');
 
+// because we use the same code to generically define most of our assignments APIs,
+// we follow a three-tier testing strategy here:
+// 1. fully test all the functionality on the root API since it is sort of a strange case
+// 2. fully test all the functionality on the Projects assignments API to be sure
+//    the individual instance case works as expected
+// 3. cursorily test each of the other resource-specific APIs to be sure they're
+//    plumbed in correctly
+
 describe('api: /assignments', () => {
   describe('GET', () => {
     it('should prohibit anonymous users from listing assignments', testService((service) =>
@@ -206,10 +214,6 @@ describe('api: /assignments', () => {
   });
 });
 
-////////////////////////////////////////////////////////////////////////////////
-// PROJECTS ASSIGNMENTS TESTS
-// since the resource code is mixed in with assignments.js, so too are the tests.
-
 describe('/projects/:id/assignments', () => {
   describe('GET', () => {
     it('should prohibit unprivileged users from listing assignments', testService((service) =>
@@ -221,7 +225,7 @@ describe('/projects/:id/assignments', () => {
 
     it('should list all assignments', testService((service) =>
       service.login('bob', (asBob) => Promise.all([
-        asBob.get('/v1/roles/manager').expect(200).then(({ body }) => body.id ),
+        asBob.get('/v1/roles/manager').expect(200).then(({ body }) => body.id),
         asBob.get('/v1/users/current').expect(200).then(({ body }) => body.id)
       ])
         .then(([ roleId, bobId ]) => asBob.get('/v1/projects/1/assignments')
@@ -394,5 +398,56 @@ describe('/projects/:id/assignments', () => {
                   audit.get().details.should.eql({ roleId: managerRoleId, revokedActeeId: project.acteeId });
                 }))))));
   });
+});
+
+describe('api: /projects/:projectId/forms/:xmlFormId/assignments', () => {
+  it('should return all form assignments', testService((service) =>
+    service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'david' })
+        .expect(200)
+        .then(({ body }) => body)
+        .then((fk) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app_user/${fk.id}`)
+          .expect(200)
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/simple/assignments').then(({ body }) => body),
+            asAlice.get('/v1/roles/app_user').then(({ body }) => body.id)
+          ]))
+          .then(([ result, appUserRoleId ]) => {
+            result.should.eql([{ actorId: fk.id, roleId: appUserRoleId }]);
+          })))));
+
+  it('should return all form assignments for a role', testService((service) =>
+    service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'david' })
+        .expect(200)
+        .then(({ body }) => body)
+        .then((fk) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app_user/${fk.id}`)
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/assignments/app_user')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].should.be.an.Actor();
+              body[0].displayName.should.equal('david');
+            }))))));
+
+  // we don't bother testing POST since none of the other tests here work without it.
+
+  it('should delete assignments', testService((service) =>
+    service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'david' })
+        .expect(200)
+        .then(({ body }) => body)
+        .then((fk) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app_user/${fk.id}`)
+          .expect(200)
+          .then(() => asAlice.delete(`/v1/projects/1/forms/simple/assignments/app_user/${fk.id}`)
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/assignments/app_user')
+            .expect(200)
+            .then(({ body }) => { body.length.should.equal(0); }))))));
+
 });
 

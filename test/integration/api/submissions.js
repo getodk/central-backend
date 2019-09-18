@@ -627,7 +627,7 @@ describe('api: /forms/:id/submissions', () => {
 
     it('should reject if the user cannot read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.get('/v1/projects/1/forms/nonexistent/submissions/keys').expect(403))));
+        asChelsea.get('/v1/projects/1/forms/simple/submissions/keys').expect(403))));
 
     it('should return an empty array if encryption is not being used', testService((service) =>
       service.login('alice', (asAlice) =>
