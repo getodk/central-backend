@@ -407,11 +407,11 @@ describe('api: /projects/:projectId/forms/:xmlFormId/assignments', () => {
         .send({ displayName: 'david' })
         .expect(200)
         .then(({ body }) => body)
-        .then((fk) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app_user/${fk.id}`)
+        .then((fk) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${fk.id}`)
           .expect(200)
           .then(() => Promise.all([
             asAlice.get('/v1/projects/1/forms/simple/assignments').then(({ body }) => body),
-            asAlice.get('/v1/roles/app_user').then(({ body }) => body.id)
+            asAlice.get('/v1/roles/app-user').then(({ body }) => body.id)
           ]))
           .then(([ result, appUserRoleId ]) => {
             result.should.eql([{ actorId: fk.id, roleId: appUserRoleId }]);
@@ -423,9 +423,9 @@ describe('api: /projects/:projectId/forms/:xmlFormId/assignments', () => {
         .send({ displayName: 'david' })
         .expect(200)
         .then(({ body }) => body)
-        .then((fk) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app_user/${fk.id}`)
+        .then((fk) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${fk.id}`)
           .expect(200)
-          .then(() => asAlice.get('/v1/projects/1/forms/simple/assignments/app_user')
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/assignments/app-user')
             .expect(200)
             .then(({ body }) => {
               body.length.should.equal(1);
@@ -441,11 +441,11 @@ describe('api: /projects/:projectId/forms/:xmlFormId/assignments', () => {
         .send({ displayName: 'david' })
         .expect(200)
         .then(({ body }) => body)
-        .then((fk) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app_user/${fk.id}`)
+        .then((fk) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${fk.id}`)
           .expect(200)
-          .then(() => asAlice.delete(`/v1/projects/1/forms/simple/assignments/app_user/${fk.id}`)
+          .then(() => asAlice.delete(`/v1/projects/1/forms/simple/assignments/app-user/${fk.id}`)
             .expect(200))
-          .then(() => asAlice.get('/v1/projects/1/forms/simple/assignments/app_user')
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/assignments/app-user')
             .expect(200)
             .then(({ body }) => { body.length.should.equal(0); }))))));
 

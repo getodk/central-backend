@@ -86,7 +86,7 @@ describe('api: /projects/:id/forms', () => {
           .send({ displayName: 'test' })
           .expect(200)
           .then(({ body }) => body)
-          .then((fk) => asAlice.post(`/v1/projects/1/forms/withrepeat/assignments/app_user/${fk.id}`)
+          .then((fk) => asAlice.post(`/v1/projects/1/forms/withrepeat/assignments/app-user/${fk.id}`)
             .expect(200)
             .then(() => service.get(`/v1/key/${fk.token}/projects/1/formList`)
               .set('X-OpenRosa-Version', '1.0')
