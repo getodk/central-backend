@@ -1,6 +1,126 @@
 const should = require('should');
 const { testService } = require('../setup');
 
+describe('api: /projects/:id/assignments/forms', () => {
+  // do a bunch of assignments that we will use to test these apis.
+  const doAssigns = (service, path, extended) =>
+    service.login('alice', (asAlice) => Promise.all([
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/users/current')
+          .expect(200)
+          .then(({ body }) => body)
+          .then((chelsea) => asAlice.post(`/v1/projects/1/forms/simple/assignments/manager/${chelsea.id}`)
+            .expect(200)
+            .then(() => chelsea))),
+      asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'david' })
+        .expect(200)
+        .then(({ body }) => body)
+        .then((david) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${david.id}`)
+          .expect(200)
+          .then(() => david)),
+      asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'eleanor' })
+        .expect(200)
+        .then(({ body }) => body)
+        .then((eleanor) => asAlice.post(`/v1/projects/1/forms/withrepeat/assignments/app-user/${eleanor.id}`)
+          .expect(200)
+          .then(() => eleanor))
+    ])
+      .then(([ chelsea, david, eleanor ]) => Promise.all([
+        asAlice.get(path)
+          .set('X-Extended-Metadata', extended)
+          .expect(200)
+          .then(({ body }) => body),
+        asAlice.get('/v1/roles/app-user').expect(200).then(({ body }) => body.id),
+        asAlice.get('/v1/roles/manager').expect(200).then(({ body }) => body.id)
+      ])
+        .then(([ result, appUserRoleId, managerRoleId ]) =>
+          ({ chelsea, david, eleanor, appUserRoleId, managerRoleId, result }))));
+
+  describe('GET', () => {
+    it('should reject if the project does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/2/assignments/forms')
+          .expect(404))));
+
+    it('should reject if the user cannot list', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/projects/1/assignments/forms')
+          .expect(403))));
+
+    it('should return all assignments on forms', testService((service) =>
+      doAssigns(service, '/v1/projects/1/assignments/forms', '')
+        .then(({ chelsea, david, eleanor, appUserRoleId, managerRoleId, result }) => {
+          result.length.should.equal(3);
+
+          const verify = (actorId, xmlFormId, roleId) => {
+            result.some((assignment) => (assignment.actorId === actorId) && (assignment.xmlFormId === xmlFormId) &&
+              (assignment.roleId == roleId)).should.equal(true);
+          };
+          verify(chelsea.id, 'simple', managerRoleId);
+          verify(david.id, 'simple', appUserRoleId);
+          verify(eleanor.id, 'withrepeat', appUserRoleId);
+        })));
+
+    it('should return extended assignments on forms', testService((service) =>
+      doAssigns(service, '/v1/projects/1/assignments/forms', true)
+        .then(({ chelsea, david, eleanor, appUserRoleId, managerRoleId, result }) => {
+          result.length.should.equal(3);
+
+          for (const assignment of result) assignment.actor.should.be.an.Actor();
+
+          const verify = (actorId, xmlFormId, roleId) => {
+            result.some((assignment) => (assignment.actor.id === actorId) && (assignment.xmlFormId === xmlFormId) &&
+              (assignment.roleId == roleId)).should.equal(true);
+          };
+          verify(chelsea.id, 'simple', managerRoleId);
+          verify(david.id, 'simple', appUserRoleId);
+          verify(eleanor.id, 'withrepeat', appUserRoleId);
+        })));
+  });
+
+  describe('/:roleId GET', () => {
+    it('should reject if the project does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/2/assignments/forms/app-user')
+          .expect(404))));
+
+    it('should reject if the user cannot list', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/projects/1/assignments/forms/app-user')
+          .expect(403))));
+
+    it('should return filtered assignments on forms', testService((service) =>
+      doAssigns(service, '/v1/projects/1/assignments/forms/app-user', '')
+        .then(({ chelsea, david, eleanor, appUserRoleId, managerRoleId, result }) => {
+          result.length.should.equal(2);
+
+          const verify = (actorId, xmlFormId, roleId) => {
+            result.some((assignment) => (assignment.actorId === actorId) && (assignment.xmlFormId === xmlFormId) &&
+              (assignment.roleId == roleId)).should.equal(true);
+          };
+          verify(david.id, 'simple', appUserRoleId);
+          verify(eleanor.id, 'withrepeat', appUserRoleId);
+        })));
+
+    it('should return filtered extended assignments on forms', testService((service) =>
+      doAssigns(service, '/v1/projects/1/assignments/forms/app-user', true)
+        .then(({ chelsea, david, eleanor, appUserRoleId, managerRoleId, result }) => {
+          result.length.should.equal(2);
+
+          for (const assignment of result) assignment.actor.should.be.an.Actor();
+
+          const verify = (actorId, xmlFormId, roleId) => {
+            result.some((assignment) => (assignment.actor.id === actorId) && (assignment.xmlFormId === xmlFormId) &&
+              (assignment.roleId == roleId)).should.equal(true);
+          };
+          verify(david.id, 'simple', appUserRoleId);
+          verify(eleanor.id, 'withrepeat', appUserRoleId);
+        })));
+  });
+});
+
 // because we use the same code to generically define most of our assignments APIs,
 // we follow a three-tier testing strategy here:
 // 1. fully test all the functionality on the root API since it is sort of a strange case
