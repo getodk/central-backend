@@ -55,7 +55,7 @@ describe('(libs/FP) Option type', () => {
       it("orElseGet(provider) returns its value", () => {
         o.orElseGet(() => 44).should.equal(33);
       });
-      it("orThrow(msg) returns its value and won't throw", () => {
+      it("orThrow(err) returns its value and won't throw", () => {
         o.orThrow("you shouldn't see this error").should.equal(33);
       });
     });
@@ -95,8 +95,8 @@ describe('(libs/FP) Option type', () => {
       it("orElseGet(provider) returns the value returned by the provider fn", () => {
         o.orElseGet(() => 44).should.equal(44);
       });
-      it("orThrow(msg) throws", () => {
-        (() => o.orThrow("you shouldn't see this error")).should.throw("you shouldn't see this error");
+      it("orThrow(err) throws", () => {
+        (() => o.orThrow(new Error("you shouldn't see this error"))).should.throw("you shouldn't see this error");
       });
     });
     it("Does nothing ifDefined", () => {
