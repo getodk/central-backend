@@ -32,6 +32,19 @@ Finally, **system information and configuration** is available via a set of spec
 
 Here major and breaking changes to the API are listed by version.
 
+### ODK Central v0.7
+
+**Added**:
+
+* Form-specific [Assignments resource](/reference/forms-and-submissions/'-form-assignments) at `projects/…/forms/…/assignments`, allowing granular role assignments on a per-Form basis.
+  * Relatedly, the [OpenRosa Form Listing API](/reference/openrosa-endpoints/openrosa-form-listing-api) no longer rejects requests outright based on authentication. Rather, it will only return Forms that the authenticated user is allowed to view.
+  * A [new summary API](TODO) `GET /projects/…/assignments/forms` which returns all assignments onall Forms within a Project, so you don't have to request this information separately for each Form.
+* `PUT /projects/:id`, which while complex allows you to update many Forms' states and assignments with a single transactional request.
+
+**Changed**:
+
+* Newly created App Users are no longer automatically granted download and submission access to all Forms within their Project. You will want to use the [Form Assignments resource](/reference/forms-and-submissions/'-form-assignments) to explicitly grant `app-user` role access to the Forms they should be allowed to see.
+
 ### ODK Central v0.6
 
 **Added**:
@@ -245,11 +258,11 @@ Note, however, that a App User cannot revoke itself; a `User` must perform this 
 
 # Group Accounts and Users
 
-Today, there are two types of accounts: `Users`, which are the administrative accounts held by staff members managing the data collection process, and `App Users`, which are restricted access keys granted per Project to data collection clients in the field. Although both of these entities are backed by `Actor`s as we explain in the [Authentication section](/reference/authentication) above, there is not yet any way to directly create or manipulate an Actor. Today, you can only create, manage, and delete Users and App Users.
+Today, there are two types of accounts: `Users`, which are the administrative accounts held by staff members managing the data collection process, and `App Users`, which are restricted access keys granted per Form within a Project to data collection clients in the field. Although both of these entities are backed by `Actor`s as we explain in the [Authentication section](/reference/authentication) above, there is not yet any way to directly create or manipulate an Actor. Today, you can only create, manage, and delete Users and App Users.
 
 Actors (and thus Users) may be granted rights via Roles. The `/roles` Roles API is open for all to access, which describes all defined roles on the server. Getting information for an individual role from that same API will reveal which verbs are associated with each role: some role might allow only `submission.create` and `submission.update`, for example.
 
-Right now, there are two predefined system roles: Administrator (`admin`) and Project Manager (`manager`). Administrators are allowed to perform any action upon the server, while Project Managers are allowed to perform any action upon the projects they are assigned to manage.
+Right now, there are three predefined system roles: Administrator (`admin`), Project Manager (`manager`), and App User (`app-user`). Administrators are allowed to perform any action upon the server, while Project Managers are allowed to perform any action upon the projects they are assigned to manage. App Users are granted minimal rights: they can read Form data and create new Submissions on those Forms.
 
 The Roles API alone does not, however, tell you which Actors have been assigned with Roles upon which system objects. For that, you will need to consult the various Assignments resources. There are two, one under the API root (`/v1/assignments`), which manages assignments to the entire system, and another nested under each Project (`/v1/projects/…/assignments`) which manage assignments to that Project.
 
@@ -466,6 +479,8 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 The only information required to create a new `App User` is its `displayName` (this is called "Nickname" in the administrative panel).
 
+When an App User is created, they are assigned no rights. They will be able to authenticate and list forms on a mobile client, but the form list will be empty, as the list only includes Forms that the App User has read access to. Once an App User is created, you'll likely wish to use the [Form Assignments resource](/reference/forms-and-submissions/'-form-assignments) to actually assign the `app-user` role to them for the Forms you wish.
+
 + Request (application/json)
     + Attributes
         + displayName: `My Display Name` (string, required) - The friendly nickname of the `App User` to be created.
@@ -531,7 +546,9 @@ As with Role listing, there are no authorization restrictions upon this endpoint
 
 _(introduced: version 0.5)_
 
-There are _two_ Assignments resources. This one, upon the API root (`/v1/assignments`), manages Role assignment to the entire system (e.g. if you are assigned a Role that gives you `form.create`, you may create a form anywhere on the entire server). The [other one](/reference/project-management/project-assignments), nested under Projects, manages Role assignment to that Project in particular.
+There are multiple Assignments resources. This one, upon the API root (`/v1/assignments`), manages Role assignment to the entire system (e.g. if you are assigned a Role that gives you `form.create`, you may create a form anywhere on the entire server).
+
+The [Project Assignments resource](/reference/project-management/project-assignments), nested under Projects, manages Role assignment to that Project in particular, and all objects within it. And the [Form Assignments resource](/reference/forms-and-submissions/'-form-assignments) allows even more granular assignments, to specific Forms within a Project. All of these resources have the same structure and take and return the same data types.
 
 Assignments may be created (`POST`) and deleted (`DELETE`) like any other resource in the system. Here, creating an Assignment grants the referenced Actor the verbs associated with the referenced Role upon all system objects. The pathing for creation and deletion is not quite REST-standard: we represent the relationship between Role and Actor directly in the URL rather than as body data: `assignments/{role}/{actor}` represents the assignment of the given Role to the given Actor.
 
@@ -692,6 +709,67 @@ By default, `archived` is not set, which is equivalent to `false`. If `archived`
 + Response 403 (application/json)
     + Attributes (Error 403)
 
+### Deep Updating Project and Form Details [PUT /v1/projects/{id}]
+
+_(introduced: version 0.7)_
+
+When managing a large deployment, it can be necessary to make sweeping changes to all Form States and Assignments within it at once&mdash;when rolling out a new Form, for example, or replacing a deprecated version with a new revision.
+
+For this purpose, we offer this `PUT` resource, which allows a deep update of Project metadata, Form metadata, and Form Assignment metadata at once and transactionally using a nested data format.
+
+One important mechanic to note immediately here is that we follow true `PUT` semantics, meaning that the data you provide is not merged with existing data to form an update. With our usual `PATCH` endpoints, we do this kind of merging and so data that you don't explicitly pass us is left alone. Because we allow the deletion of Form Assignments by way of omission with this API, we treat _all_ omissions as an explicit specification to null the omitted field. This means that, for example, you must always re-specify the Project name (and archival flag) with every `PUT`.
+
+This adherence to `PUT` semantics would normally imply that Forms could be created or deleted by way of this request, but such an operation could become incredibly complex, we currently return a `501 Not Implemented` error if you supply nested Form information but you do not give us exactly the entire set of extant Forms.
+
+You can inspect the Request format for this endpoint to see the exact nested data structure this endpoint accepts. Each level of increased granularity is optional: you may `PUT` just Project metadata, with no `forms` array, and you may `PUT` Project and Form metadata but omit `assignments` from any Form, in which case the omitted detail will be left as-is.
+
++ Parameters
+    + id: `16` (number, required) - The numeric ID of the Project
+
++ Request (application/json)
+    + Attributes
+        + name: `New Project Name` (string, required) - The desired name of the Project.
+        + archived: `true` (boolean, optional) - Archives the Project.
+        + forms: (array, optional) - If given, the Form metadata to update.
+            + (object)
+                + xmlFormId: `simple` (string, required) - The `id` of this form as given in its XForms XML definition.
+                + name: `Simple Form` (string, optional) - The name to display for this form
+                + state: (Form State, required) - The present lifecycle status of this form.
+                + assignments: (array, optional) - If given, the Assignments to apply to this Form. And if given, any existing Assignments that are not specified here will be revoked.
+                    + (object)
+                        + roleId: `2` (number, required) - The role `id` to assign
+                        + actorId: `14` (number, required) - The `id` of the Actor being assigned the given role on this Form
+
+    + Body
+
+            {
+              "name": "New Project Name",
+              "archived": false,
+              "forms": [{
+                "xmlFormId": "simple",
+                "state": "open",
+                "assignments": [{
+                  "roleId": 2,
+                  "actorId": 14
+                }, {
+                  "roleId": 2,
+                  "actorId": 21
+                }]
+              }, {
+                "xmlFormId": "test",
+                "state": "closed"
+              }]
+            }
+
++ Response 200 (application/json)
+    + Attributes (Project)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
++ Response 501 (application/json)
+    + Attributes (Error 501)
+
 ## Enabling Project Managed Encryption [POST /v1/projects/{id}/key]
 
 _(introduced: version 0.6)_
@@ -737,15 +815,15 @@ Deleting a Project will remove it from the management interface and make it perm
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-## Project Assignments [/v1//projects/{projectId}/assignments]
+## Project Assignments [/v1/projects/{projectId}/assignments]
 
 _(introduced: version 0.5)_
 
-There are _two_ Assignments resources. This one, specific to the Project it is nested within, only governs Role assignments to objects within that Project. Assigning an Actor a Role that grants, for example, a verb `submission.create`, allows that Actor to create a submission anywhere within this Project.
+There are multiple Assignments resources. This one, specific to the Project it is nested within, only governs Role assignments to that Project. Assigning an Actor a Role that grants, for example, a verb `submission.create`, allows that Actor to create a submission anywhere within this Project. It is also possible to assign rights only to specific forms for actions related only to that form and its submissions: see the [Form Assignments resource](/reference/forms-and-submissions/'-form-assignments) for information about this.
 
-The [other Assignments resource](/reference/accounts-and-users/assignments), at the API root, manages Role assignments for all objects across the server. Apart from this difference in scope, the introduction to that section contains information useful for understanding the following endpoints.
+The [sitewide Assignments resource](/reference/accounts-and-users/assignments), at the API root, manages Role assignments for all objects across the server. Apart from this difference in scope, the introduction to that section contains information useful for understanding the following endpoints.
 
-There are only one set of Roles, applicable to either scenario. There are not a separate set of Roles used only upon Projects.
+There are only one set of Roles, applicable to either scenario. There are not a separate set of Roles used only upon Projects or Forms.
 
 + Parameters
     + projectId: `2` (number, required) - The numeric ID of the Project
@@ -798,7 +876,7 @@ No `POST` body data is required, and if provided it will be ignored.
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Stripping an Project Role Assignment from an Actor [DELETE /v1/projects/{projectId}/assignments/{roleId}/{actorId}]
+### Revoking a Project Role Assignment from an Actor [DELETE /v1/projects/{projectId}/assignments/{roleId}/{actorId}]
 
 Given a `roleId`, which may be a numeric ID or a string role `system` name, and a numeric `actorId`, unassigns that Role from that Actor for this particular Project.
 
@@ -808,6 +886,44 @@ Given a `roleId`, which may be a numeric ID or a string role `system` name, and 
 
 + Response 200 (application/json)
     + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Seeing all Form Assignments within a Project [GET /v1/projects/{projectId}/assignments/forms]
+
+Returns a summary of all _Form-specific_ Assignments within this Project. This endpoint is meant to simplify the task of summarizing all Form permissions within a Project at a glance and in one transactional request. Because it is necessary to specify which Form each Assignment is attached to, returned results form this endpoint include an `xmlFormId` field.
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to expand the `actorId` into a full `actor` objects. The Role reference remains a numeric ID and the Form reference remains a string ID.
+
++ Response 200 (application/json)
+    This is the standard response, if Extended Metadata is not requested:
+
+    + Attributes (array[Form Summary Assignment])
+
++ Response 200 (application/json; extended)
+    This is the Extended Metadata response, if requested via the appropriate header:
+
+    + Attributes (array[Extended Form Summary Assignment])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Seeing Role-specific Form Assignments within a Project [GET /v1/projects/{projectId}/assignments/forms/:roleId]
+
+Like the [Form Assignments summary API](TODO), but filtered by some `roleId`.
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to expand the `actorId` into a full `actor` objects. The Role reference remains a numeric ID and the Form reference remains a string ID.
+
++ Response 200 (application/json)
+    This is the standard response, if Extended Metadata is not requested:
+
+    + Attributes (array[Form Summary Assignment])
+
++ Response 200 (application/json; extended)
+    This is the Extended Metadata response, if requested via the appropriate header:
+
+    + Attributes (array[Extended Form Summary Assignment])
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -1099,6 +1215,82 @@ Because Form Attachments are completely determined by the XForms definition of t
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## › Form Assignments [/v1/projects/{projectId}/forms/{xmlFormId}/assignments]
+
+_(introduced: version 0.7)_
+
+There are multiple Assignments resources. This one, specific to the Form it is nested within, only governs Role assignments to that Form. Assigning an Actor a Role that grants, for example, a verb `submission.create`, allows that Actor to create a submission to this Form alone. It is also possible to assign umbrella rights to a whole Project and therefore all Forms within it: see the [Project Assignments resource](/reference/project-management/project-assignments) for information about this.
+
+The [sitewide Assignments resource](/reference/accounts-and-users/assignments), at the API root, manages Role assignments for all objects across the server. Apart from this difference in scope, the introduction to that section contains information useful for understanding the following endpoints.
+
+There are only one set of Roles, applicable to either scenario. There are not a separate set of Roles used only upon Projects or Forms.
+
++ Parameters
+    + projectId: `2` (number, required) - The numeric ID of the Project
+    + xmlFormId: `simple` (string, required) - The friendly name of this form. It is given by the `<title>` in the XForms XML definition.
+
+### Listing all Form Assignments [GET]
+
+This will list every assignment upon this Form, in the form of `actorId`/`roleId` pairs.
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to expand the `actorId` into a full `actor` objects. The Role reference remains a numeric ID.
+
++ Response 200 (application/json)
+    This is the standard response, if Extended Metadata is not requested:
+
+    + Attributes (array[Assignment])
+
++ Response 200 (application/json; extended)
+    This is the Extended Metadata response, if requested via the appropriate header:
+
+    + Attributes (array[Extended Assignment])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Listing all Actors assigned some Form Role [GET /v1/projects/{projectId}/forms/{xmlFormId}/assignments/{roleId}]
+
+Given a `roleId`, which may be a numeric ID or a string role `system` name, this endpoint lists all `Actors` that have been assigned that Role upon this particular Form.
+
++ Parameters
+    + roleId: `manager` (string, required) - Typically the integer ID of the `Role`. You may also supply the Role `system` name if it has one.
+
++ Response 200 (application/json)
+    + Attributes (array[Actor])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Assigning an Actor to a Form Role [POST /v1/projects/{projectId}/forms/{xmlFormId}/assignments/{roleId}/{actorId}]
+
+Given a `roleId`, which may be a numeric ID or a string role `system` name, and a numeric `actorId`, assigns that Role to that Actor for this particular Form.
+
+No `POST` body data is required, and if provided it will be ignored.
+
++ Parameters
+    + roleId: `manager` (string, required) - Typically the integer ID of the `Role`. You may also supply the Role `system` name if it has one.
+    + actorId: `14` (number, required) - The integer ID of the `Actor`.
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Revoking a Form Role Assignment from an Actor [DELETE /v1/projects/{projectId}/forms/{xmlFormId}/assignments/{roleId}/{actorId}]
+
+Given a `roleId`, which may be a numeric ID or a string role `system` name, and a numeric `actorId`, unassigns that Role from that Actor for this particular Form.
+
++ Parameters
+    + roleId: `manager` (string, required) - Typically the integer ID of the `Role`. You may also supply the Role `system` name if it has one.
+    + actorId: `14` (number, required) - The integer ID of the `Actor`.
 
 + Response 200 (application/json)
     + Attributes (Success)
@@ -1402,6 +1594,8 @@ By default, the given `<name/>` in the Form Listing response is the friendly nam
 
 A `<manifestUrl/>` property will be given per `<xform>` if and only if that form is expected to have media or data file attachments associated with it, based on its XForms definition. It will appear even if no attachments have actually been uploaded to the server to fulfill those expectations.
 
+This resource will always return a successful valid result for a Project that exists. The results will be filtered by the Forms that the requesting user is allowed to see.
+
 If you haven't already, please take a look at the **HTTP Request API** notes above on the required OpenRosa headers.
 
 + Parameters
@@ -1437,17 +1631,6 @@ If you haven't already, please take a look at the **HTTP Request API** notes abo
                 <downloadUrl>https://your.odk.server/v1/projects/7/forms/simple.xml</downloadUrl>
               </xform>
             </xforms>
-
-+ Response 403 (text/xml)
-    + Headers
-
-            X-OpenRosa-Version: 1.0
-
-    + Body
-
-            <OpenRosaResponse xmlns="http://openrosa.org/http/response" items="0">
-              <message nature="error">The authenticated actor does not have rights to perform that action.</message>
-            </OpenRosaResponse>
 
 ## OpenRosa Form Submission API [POST /v1/projects/{projectId}/submission]
 
@@ -1956,6 +2139,16 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 
 ## Extended Assignment (object)
 + actor: (Actor, required) - The full Actor data for this assignment.
++ roleId: `4` (number, required) - The numeric Role ID being assigned.
+
+## Form Summary Assignment (object)
++ actorId: `42` (number, required) - The numeric Actor ID being assigned.
++ xmlFormId: `simple` (string, required) - The `id` of the assigned form as given in its XForms XML definition
++ roleId: `4` (number, required) - The numeric Role ID being assigned.
+
+## Extended Form Summary Assignment (object)
++ actor: (Actor, required) - The full Actor data for this assignment.
++ xmlFormId: `simple` (string, required) - The `id` of the assigned form as given in its XForms XML definition
 + roleId: `4` (number, required) - The numeric Role ID being assigned.
 
 ## Audit (object)
