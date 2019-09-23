@@ -45,6 +45,10 @@ Here major and breaking changes to the API are listed by version.
 
 * Newly created App Users are no longer automatically granted download and submission access to all Forms within their Project. You will want to use the [Form Assignments resource](/reference/forms-and-submissions/'-form-assignments) to explicitly grant `app-user` role access to the Forms they should be allowed to see.
 
+**Fixed**:
+
+* Correctly documented `keyId` property on Projects.
+
 ### ODK Central v0.6
 
 **Added**:
@@ -2236,6 +2240,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Project (object)
 + id: `1` (number) - The numerical ID of the Project.
 + name: `Default Project` (string, required) - The name of the Project.
++ keyId: `3` (number, optional) - If managed encryption is enabled on the project, the numeric ID of the encryption key as tracked by Central is given here.
 + archived: false (boolean, optional) - Whether the Project is archived or not. `null` is equivalent to `false`. All this does is sort the Project to the bottom of the list and disable management features in the web management application.
 
 ## Extended Project (Project)
