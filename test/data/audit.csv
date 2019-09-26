@@ -1,0 +1,7 @@
+event,node,start,end,latitude,longitude,unknown-column,accuracy,old-value,new-value
+a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,v,3,aa,bb
+b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,w,6,cc,dd
+c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,x,9,ee,ff
+d,/data/d,2000-01-01T00:10,,10,11,,12,gg,
+e,/data/e,2000-01-01T00:11,,,,,,hh,ii
+

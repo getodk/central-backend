@@ -261,6 +261,38 @@ module.exports = {
       <label>Give me an image.</label>
     </upload>
   </h:body>
+</h:html>`,
+
+    clientAudits: `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Client Audits</h:title>
+    <model>
+      <instance>
+        <data id="audits">
+          <meta>
+            <instanceID/>
+            <audit/>
+          </meta>
+          <name/>
+          <age/>
+        </data>
+      </instance>
+
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+      <bind nodeset="/data/meta/audit" type="binary"/>
+      <bind nodeset="/data/name" type="string"/>
+      <bind nodeset="/data/age" type="int"/>
+    </model>
+
+  </h:head>
+  <h:body>
+    <input ref="/data/name">
+      <label>What is your name?</label>
+    </input>
+    <input ref="/data/age">
+      <label>What is your age?</label>
+    </input>
+  </h:body>
 </h:html>`
   },
   instances: {
@@ -330,6 +362,10 @@ module.exports = {
   <encryptedXmlFile>submission.xml.enc</encryptedXmlFile>
   <base64EncryptedElementSignature>a5A29xMc/7Aas1q1EpxJ/+D8dXsK3I6s9SVyzZRl6+2bILpHvPzG6LuFgTf6SM06Tnr13VNioNJLiTxvxna/nPHak015VSg4TWNvXcDpIbkDNS/2v6BZYv86zrao2DpG2lM9h8oPKy1vbHFcponu1/WVtEgZA/TzNMleJCMKCKQqDxt+n6og1QmWF4LBtsPaGB23ucvziQ57Yp8p+sVvqxs2OrJFYHGJReetqmbIUbyS4xvn3BJQa6BSiNMP35mFSvbLL+sCDSx/PiTTgtJ/oMUP+tqsR376l1TWXQhRHHFsCpwQQeS8GkhjEE6GD1XYscy5ATFv8W0cy2Y6GfN1jA==</base64EncryptedElementSignature>
 </data>`
+    },
+    clientAudits: {
+      one: `<data id="audits"><meta><instanceID>one</instanceID><audit>audit.csv</audit></meta><name>Alice</name><age>30</age></data>`,
+      two: `<data id="audits"><meta><instanceID>two</instanceID><audit>log.csv</audit></meta><name>Bob</name><age>34</age></data>`
     }
   }
 };
