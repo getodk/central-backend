@@ -276,39 +276,19 @@ describe('submissionToOData', () => {
     });
   });
 
-  /* TODO: commented out pending issue #82.
   it('should provide navigation links for repeats', () => {
     return getFormSchema({ xml: testData.forms.withrepeat }).then((schema) => {
       const fields = schemaAsLookup(schema);
-      const submission = { instanceId: 'two', xml: testData.instances.withrepeat.two };
-      return submissionToOData(fields, 'Submissions', submission).then((result) => {
-        result.should.eql([{
-          __id: 'two',
-          __system,
-          meta: { instanceID: 'two' },
-          name: 'Bob',
-          age: 34,
-          children: {
-            'child@odata.navigationLink': "Submissions('two')/children/child"
-          }
-        }]);
-      });
-    });
-  });*/
-
-  // TODO: remove this test once #82 is resolved.
-  it('should ignore repeats in data output', () => {
-    return getFormSchema({ xml: testData.forms.withrepeat }).then((schema) => {
-      const fields = schemaAsLookup(stripNamespacesFromSchema(schema));
       const submission = mockSubmission('two', testData.instances.withrepeat.two);
       return submissionToOData(fields, 'Submissions', submission).then((result) => {
         result.should.eql([{
           __id: 'two',
           __system,
-          meta: { instanceID: 'two' },
           name: 'Bob',
           age: 34,
-          children: {}
+          children: {
+            'child@odata.navigationLink': "Submissions('two')/children/child"
+          }
         }]);
       });
     });
@@ -334,7 +314,6 @@ describe('submissionToOData', () => {
     });
   });
 
-  /* TODO: commented out pending issue #82.
   it('should return navigation links to repeats within a subtable result set', () => {
     return getFormSchema({ xml: testData.forms.doubleRepeat }).then((schema) => {
       const fields = schemaAsLookup(schema);
@@ -361,7 +340,7 @@ describe('submissionToOData', () => {
         }]);
       });
     });
-  });*/
+  });
 
   it('should return second-order subtable results', () => {
     return getFormSchema({ xml: testData.forms.doubleRepeat }).then((schema) => {

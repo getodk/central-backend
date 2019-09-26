@@ -97,62 +97,7 @@ describe('odata message composition', () => {
       });
     });
 
-    /* TODO: commented out pending resolution of issue ticket #82:
     it('should express repeats as entity types behind navigation properties', () => {
-      const form = { xmlFormId: 'withrepeat', schema: () => getFormSchema({ xml: testData.forms.withrepeat }) };
-      return edmxFor(form).then((edmx) => {
-        edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
-  <edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
-    <edmx:DataServices>
-    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
-      <ComplexType Name="metadata">
-        <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
-        <Property Name="submitterId" Type="Edm.String"/>
-        <Property Name="submitterName" Type="Edm.String"/>
-        <Property Name="status" Type="org.opendatakit.submission.Status"/>
-      </ComplexType>
-      <EnumType Name="Status">
-        <Member Name="NotDecrypted"/>
-        <Member Name="MissingEncryptedFormData"/>
-      </EnumType>
-    </Schema>
-      <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.withrepeat">
-        <EntityType Name="Submissions">
-          <Key><PropertyRef Name="__id"/></Key>
-          <Property Name="__id" Type="Edm.String"/>
-          <Property Name="__system" Type="org.opendatakit.submission.metadata"/>
-          <Property Name="meta" Type="org.opendatakit.user.withrepeat.meta"/>
-          <Property Name="name" Type="Edm.String"/>
-          <Property Name="age" Type="Edm.Int64"/>
-          <Property Name="children" Type="org.opendatakit.user.withrepeat.children"/>
-        </EntityType>
-        <EntityType Name="Submissions.children.child">
-          <Key><PropertyRef Name="__id"/></Key>
-          <Property Name="__id" Type="Edm.String"/>
-          <Property Name="__Submissions-id" Type="Edm.String"/>
-          <Property Name="name" Type="Edm.String"/>
-          <Property Name="age" Type="Edm.Int64"/>
-        </EntityType>
-        <ComplexType Name="meta">
-          <Property Name="instanceID" Type="Edm.String"/>
-        </ComplexType>
-        <ComplexType Name="children">
-          <NavigationProperty Name="child" Type="Collection(org.opendatakit.user.withrepeat.Submissions.children.child)"/>
-        </ComplexType>
-        <EntityContainer Name="withrepeat">
-          <EntitySet Name="Submissions" EntityType="org.opendatakit.user.withrepeat.Submissions">`);
-
-        edmx.should.endWith(`<EntitySet Name="Submissions.children.child" EntityType="org.opendatakit.user.withrepeat.Submissions.children.child">
-          </EntitySet>
-        </EntityContainer>
-      </Schema>
-    </edmx:DataServices>
-  </edmx:Edmx>`);
-      });
-    });*/
-
-    // TODO: remove the following test following resolution of issue ticket #82:
-    it('should ignore repeats in schema output', () => {
       const form = { xmlFormId: 'withrepeat', def: { schema: () => getFormSchema({ xml: testData.forms.withrepeat }) } };
       return edmxFor(form).then((edmx) => {
         edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
@@ -191,9 +136,17 @@ describe('odata message composition', () => {
         <Property Name="instanceID" Type="Edm.String"/>
       </ComplexType>
       <ComplexType Name="children">
+        <NavigationProperty Name="child" Type="Collection(org.opendatakit.user.withrepeat.Submissions.children.child)"/>
       </ComplexType>
       <EntityContainer Name="withrepeat">
         <EntitySet Name="Submissions" EntityType="org.opendatakit.user.withrepeat.Submissions">`);
+
+        edmx.should.endWith(`<EntitySet Name="Submissions.children.child" EntityType="org.opendatakit.user.withrepeat.Submissions.children.child">
+        </EntitySet>
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>`);
       });
     });
 
@@ -700,7 +653,9 @@ describe('odata message composition', () => {
                 __system,
                 meta: { instanceID: 'double' },
                 name: 'Vick',
-                children: {}
+                children: {
+                  'child@odata.navigationLink': "Submissions('double')/children/child"
+                }
               }]
             });
           });
