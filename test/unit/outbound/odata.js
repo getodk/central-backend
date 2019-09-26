@@ -347,6 +347,7 @@ describe('odata message composition', () => {
         rowStreamToOData(form, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions', {}, inRows)
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             JSON.parse(result).should.eql({
+              value: [],
               '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
             });
             done();

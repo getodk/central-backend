@@ -552,6 +552,7 @@ describe('api: /forms/:id.svc', () => {
             .expect(200)
             .then(({ body }) => {
               body.should.eql({
+                value: [],
                 '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child'
               });
             })))));
