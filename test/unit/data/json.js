@@ -7,6 +7,8 @@ const __system = {
   submissionDate: '2017-09-20T17:10:43Z',
   submitterId: '5',
   submitterName: 'Alice',
+  attachmentsPresent: 0,
+  attachmentsExpected: 0,
   status: null
 };
 const mockSubmission = (instanceId, xml) => ({
@@ -18,6 +20,10 @@ const mockSubmission = (instanceId, xml) => ({
   submitter: {
     id: 5,
     displayName: 'Alice'
+  },
+  attachments: {
+    present: 0,
+    expected: 0
   }
 });
 

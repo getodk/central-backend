@@ -7,10 +7,13 @@ const testData = require(appRoot + '/test/data/xml');
 
 // Helpers to deal with repeated system metadata generation.
 const submitter = { id: 5, displayName: 'Alice' };
+const attachments = { present: 1, expected: 2 };
 const __system = {
   submissionDate: '2017-09-20T17:10:43Z',
   submitterId: submitter.id.toString(),
   submitterName: submitter.displayName,
+  attachmentsPresent: 1,
+  attachmentsExpected: 2,
   status: null
 };
 const mockSubmission = (instanceId, xml) => ({
@@ -19,7 +22,8 @@ const mockSubmission = (instanceId, xml) => ({
     instanceId,
     createdAt: __system.submissionDate
   },
-  submitter
+  submitter,
+  attachments
 });
 
 describe('odata message composition', () => {
@@ -73,6 +77,8 @@ describe('odata message composition', () => {
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
+        <Property Name="attachmentsPresent" Type="Edm.Int64"/>
+        <Property Name="attachmentsExpected" Type="Edm.Int64"/>
         <Property Name="status" Type="org.opendatakit.submission.Status"/>
       </ComplexType>
       <EnumType Name="Status">
@@ -108,6 +114,8 @@ describe('odata message composition', () => {
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
+        <Property Name="attachmentsPresent" Type="Edm.Int64"/>
+        <Property Name="attachmentsExpected" Type="Edm.Int64"/>
         <Property Name="status" Type="org.opendatakit.submission.Status"/>
       </ComplexType>
       <EnumType Name="Status">
@@ -276,7 +284,7 @@ describe('odata message composition', () => {
           })));
       });
 
-      const instances = (count) => (new Array(count)).fill({ xml: '<data/>', submission: {}, submitter });
+      const instances = (count) => (new Array(count)).fill({ xml: '<data/>', submission: {}, submitter, attachments });
       it('should provide no nextUrl if the final row is accounted for', (done) => {
         const form = { xmlFormId: 'simple', def: { schema: () => getFormSchema({ xml: testData.forms.simple }) } };
         const query = { $top: '3', $skip: '7' };

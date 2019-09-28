@@ -102,6 +102,8 @@ describe('api: /forms/:id.svc', () => {
                   // submissionDate is checked above!
                   submitterId: '5',
                   submitterName: 'Alice',
+                  attachmentsPresent: 0,
+                  attachmentsExpected: 0,
                   status: null
                 },
                 children: {
@@ -138,6 +140,8 @@ describe('api: /forms/:id.svc', () => {
                     // submissionDate is checked above!
                     submitterId: '5',
                     submitterName: 'Alice',
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 2,
                     status: 'MissingEncryptedFormData'
                   }
                 }]
@@ -172,6 +176,8 @@ describe('api: /forms/:id.svc', () => {
                     // submissionDate is checked above!
                     submitterId: '5',
                     submitterName: 'Alice',
+                    attachmentsPresent: 1,
+                    attachmentsExpected: 2,
                     status: 'NotDecrypted'
                   }
                 }]
@@ -293,6 +299,8 @@ describe('api: /forms/:id.svc', () => {
                   // submissionDate is checked above,
                   submitterId: "5",
                   submitterName: "Alice",
+                  attachmentsPresent: 0,
+                  attachmentsExpected: 0,
                   status: null
                 },
                 meta: { instanceID: "three" },
@@ -307,6 +315,8 @@ describe('api: /forms/:id.svc', () => {
                   // submissionDate is checked above,
                   submitterId: "5",
                   submitterName: "Alice",
+                  attachmentsPresent: 0,
+                  attachmentsExpected: 0,
                   status: null
                 },
                 meta: { instanceID: "two" },
@@ -321,6 +331,8 @@ describe('api: /forms/:id.svc', () => {
                   // submissionDate is checked above,
                   submitterId: "5",
                   submitterName: "Alice",
+                  attachmentsPresent: 0,
+                  attachmentsExpected: 0,
                   status: null
                 },
                 meta: { instanceID: "one" },
@@ -381,6 +393,8 @@ describe('api: /forms/:id.svc', () => {
                   // submissionDate is checked above,
                   submitterId: "5",
                   submitterName: "Alice",
+                  attachmentsPresent: 0,
+                  attachmentsExpected: 0,
                   status: null
                 },
                 meta: { instanceID: "two" },
@@ -411,6 +425,8 @@ describe('api: /forms/:id.svc', () => {
                   // submissionDate is checked above,
                   submitterId: "5",
                   submitterName: "Alice",
+                  attachmentsPresent: 0,
+                  attachmentsExpected: 0,
                   status: null
                 },
                 meta: { instanceID: "three" },
@@ -454,6 +470,8 @@ describe('api: /forms/:id.svc', () => {
                     // submissionDate is checked above!
                     submitterId: '5',
                     submitterName: 'Alice',
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 2,
                     status: 'MissingEncryptedFormData'
                   }
                 }, {
@@ -462,6 +480,8 @@ describe('api: /forms/:id.svc', () => {
                     // submissionDate is checked above!
                     submitterId: '5',
                     submitterName: 'Alice',
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 2,
                     status: 'MissingEncryptedFormData'
                   }
                 }]
@@ -505,6 +525,8 @@ describe('api: /forms/:id.svc', () => {
                     // submissionDate is checked above!
                     submitterId: '5',
                     submitterName: 'Alice',
+                    attachmentsPresent: 1,
+                    attachmentsExpected: 2,
                     status: 'NotDecrypted'
                   }
                 }, {
@@ -513,6 +535,8 @@ describe('api: /forms/:id.svc', () => {
                     // submissionDate is checked above!
                     submitterId: '5',
                     submitterName: 'Alice',
+                    attachmentsPresent: 1,
+                    attachmentsExpected: 2,
                     status: 'NotDecrypted'
                   }
                 }]
