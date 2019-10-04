@@ -13,9 +13,9 @@ describe('submission field streamer', () => {
     submissionXmlToFieldStream(mockFormDef(testData.forms.simple), testData.instances.simple.one)
       .then((fieldStream) => fieldStream.pipe(toObjects((error, result) => {
         result.should.eql([
-          { field: { name: 'instanceID', type: 'string' }, text: 'one' },
-          { field: { name: 'name', type: 'string' }, text: 'Alice' },
-          { field: { name: 'age', type: 'int' }, text: '30' }
+          { field: { name: 'instanceID', type: 'string' }, text: 'one', path: [ 'meta' ] },
+          { field: { name: 'name', type: 'string' }, text: 'Alice', path: [] },
+          { field: { name: 'age', type: 'int' }, text: '30', path: [] }
         ]);
         done();
       })));
@@ -25,19 +25,27 @@ describe('submission field streamer', () => {
     submissionXmlToFieldStream(mockFormDef(testData.forms.doubleRepeat), testData.instances.doubleRepeat.double)
       .then((fieldStream) => fieldStream.pipe(toObjects((error, result) => {
         result.should.eql([
-          { field: { name: 'instanceID', type: 'string' }, text: 'double' },
-          { field: { name: 'name', type: 'string' }, text: 'Vick' },
-          { field: { name: 'name', type: 'string' }, text: 'Alice' },
-          { field: { name: 'name', type: 'string' }, text: 'Bob' },
-          { field: { name: 'name', type: 'string' }, text: 'Twilight Sparkle' },
-          { field: { name: 'name', type: 'string' }, text: 'Pinkie Pie' },
-          { field: { name: 'name', type: 'string' }, text: 'Applejack' },
-          { field: { name: 'name', type: 'string' }, text: 'Spike' },
-          { field: { name: 'name', type: 'string' }, text: 'Chelsea' },
-          { field: { name: 'name', type: 'string' }, text: 'Rainbow Dash' },
-          { field: { name: 'name', type: 'string' }, text: 'Rarity' },
-          { field: { name: 'name', type: 'string' }, text: 'Fluttershy' },
-          { field: { name: 'name', type: 'string' }, text: 'Princess Luna' }
+          { field: { name: 'instanceID', type: 'string' }, text: 'double', path: [ 'meta' ] },
+          { field: { name: 'name', type: 'string' }, text: 'Vick', path: [] },
+          { field: { name: 'name', type: 'string' }, text: 'Alice', path: [ 'children', 'child' ] },
+          { field: { name: 'name', type: 'string' }, text: 'Bob', path: [ 'children', 'child' ] },
+          { field: { name: 'name', type: 'string' }, text: 'Twilight Sparkle',
+            path: [ 'children', 'child', 'toys', 'toy' ] },
+          { field: { name: 'name', type: 'string' }, text: 'Pinkie Pie',
+            path: [ 'children', 'child', 'toys', 'toy' ] },
+          { field: { name: 'name', type: 'string' }, text: 'Applejack',
+            path: [ 'children', 'child', 'toys', 'toy' ] },
+          { field: { name: 'name', type: 'string' }, text: 'Spike',
+            path: [ 'children', 'child', 'toys', 'toy' ] },
+          { field: { name: 'name', type: 'string' }, text: 'Chelsea', path: [ 'children', 'child' ] },
+          { field: { name: 'name', type: 'string' }, text: 'Rainbow Dash',
+            path: [ 'children', 'child', 'toys', 'toy' ] },
+          { field: { name: 'name', type: 'string' }, text: 'Rarity',
+            path: [ 'children', 'child', 'toys', 'toy' ] },
+          { field: { name: 'name', type: 'string' }, text: 'Fluttershy',
+            path: [ 'children', 'child', 'toys', 'toy' ] },
+          { field: { name: 'name', type: 'string' }, text: 'Princess Luna',
+            path: [ 'children', 'child', 'toys', 'toy' ] }
         ]);
         done();
       })));
