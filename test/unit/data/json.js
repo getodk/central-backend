@@ -23,7 +23,7 @@ const mockSubmission = (instanceId, xml) => ({
 
 describe('submissionToOData', () => {
   it('should parse and transform a basic submission', () => {
-    return getFormSchema({ xml: testData.forms.simple }).then((schema) => {
+    return getFormSchema(testData.forms.simple).then((schema) => {
       const fields = schemaAsLookup(schema);
       const submission = mockSubmission('one', testData.instances.simple.one);
       return submissionToOData(fields, 'Submissions', submission).then((result) => {
@@ -39,7 +39,7 @@ describe('submissionToOData', () => {
   });
 
   it('should not hang on incomplete markup', () =>
-    getFormSchema({ xml: testData.forms.simple }).then((schema) => {
+    getFormSchema(testData.forms.simple).then((schema) => {
       const fields = schemaAsLookup(schema);
       const submission = mockSubmission('one', '<data><meta><instanceID>');
       return submissionToOData(fields, 'Submissions', submission);
@@ -278,7 +278,7 @@ describe('submissionToOData', () => {
 
   /* TODO: commented out pending issue #82.
   it('should provide navigation links for repeats', () => {
-    return getFormSchema({ xml: testData.forms.withrepeat }).then((schema) => {
+    return getFormSchema(testData.forms.withrepeat).then((schema) => {
       const fields = schemaAsLookup(schema);
       const submission = { instanceId: 'two', xml: testData.instances.withrepeat.two };
       return submissionToOData(fields, 'Submissions', submission).then((result) => {
@@ -298,7 +298,7 @@ describe('submissionToOData', () => {
 
   // TODO: remove this test once #82 is resolved.
   it('should ignore repeats in data output', () => {
-    return getFormSchema({ xml: testData.forms.withrepeat }).then((schema) => {
+    return getFormSchema(testData.forms.withrepeat).then((schema) => {
       const fields = schemaAsLookup(stripNamespacesFromSchema(schema));
       const submission = mockSubmission('two', testData.instances.withrepeat.two);
       return submissionToOData(fields, 'Submissions', submission).then((result) => {
@@ -315,7 +315,7 @@ describe('submissionToOData', () => {
   });
 
   it('should extract subtable rows within repeats', () => {
-    return getFormSchema({ xml: testData.forms.withrepeat }).then((schema) => {
+    return getFormSchema(testData.forms.withrepeat).then((schema) => {
       const fields = schemaAsLookup(schema);
       const row = { submission: { instanceId: 'two' }, xml: testData.instances.withrepeat.two };
       return submissionToOData(fields, 'Submissions.children.child', row).then((result) => {
@@ -336,7 +336,7 @@ describe('submissionToOData', () => {
 
   /* TODO: commented out pending issue #82.
   it('should return navigation links to repeats within a subtable result set', () => {
-    return getFormSchema({ xml: testData.forms.doubleRepeat }).then((schema) => {
+    return getFormSchema(testData.forms.doubleRepeat).then((schema) => {
       const fields = schemaAsLookup(schema);
       const row = { submission: { instanceId: 'double' }, xml: testData.instances.doubleRepeat.double };
       return submissionToOData(fields, 'Submissions.children.child', row).then((result) => {
@@ -364,7 +364,7 @@ describe('submissionToOData', () => {
   });*/
 
   it('should return second-order subtable results', () => {
-    return getFormSchema({ xml: testData.forms.doubleRepeat }).then((schema) => {
+    return getFormSchema(testData.forms.doubleRepeat).then((schema) => {
       const fields = schemaAsLookup(schema);
       const row = { submission: { instanceId: 'double' }, xml: testData.instances.doubleRepeat.double };
       return submissionToOData(fields, 'Submissions.children.child.toys.toy', row).then((result) => {

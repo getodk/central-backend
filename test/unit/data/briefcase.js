@@ -29,7 +29,7 @@ const callAndParse = (form, inStream, callback) =>
 const mockForm = ({ xmlFormId, xml }) => {
   return {
     xmlFormId,
-    def: { xml, schema() { return getFormSchema(this); } }
+    def: { xml, schema() { return getFormSchema(this.xml); } }
   };
 };
 

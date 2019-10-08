@@ -7,7 +7,7 @@ const { getFormSchema } = require(appRoot + '/lib/data/schema');
 const testData = require(appRoot + '/test/data/xml');
 
 describe('submission field streamer', () => {
-  const mockFormDef = (xml) => ({ schema: always(getFormSchema({ xml })) });
+  const mockFormDef = (xml) => ({ schema: always(getFormSchema(xml)) });
 
   it('should return a stream of records', (done) => {
     submissionXmlToFieldStream(mockFormDef(testData.forms.simple), testData.instances.simple.one)

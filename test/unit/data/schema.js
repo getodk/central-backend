@@ -25,7 +25,7 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-      return getFormSchema({ xml }).then((schema) => {
+      return getFormSchema(xml).then((schema) => {
         schema.should.eql([
           { name: 'name', type: 'string' },
           { name: 'age', type: 'int' },
@@ -53,7 +53,7 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-      return getFormSchema({ xml }).then((schema) => {
+      return getFormSchema(xml).then((schema) => {
         schema.should.eql([
           { name: 'name', type: 'string' },
           { name: 'age', type: 'int' },
@@ -83,7 +83,7 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-      return getFormSchema({ xml }).then((schema) => {
+      return getFormSchema(xml).then((schema) => {
         schema.should.eql([
           { name: 'orx:meta', type: 'structure', children: [
             { name: 'orx:instanceID', type: 'string' }
@@ -121,7 +121,7 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-      return getFormSchema({ xml }).then((schema) => {
+      return getFormSchema(xml).then((schema) => {
         schema.should.eql([
           { name: 'name', type: 'string' },
           { name: 'occupation', type: 'structure', children: [
@@ -165,7 +165,7 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-      return getFormSchema({ xml }).then((schema) => {
+      return getFormSchema(xml).then((schema) => {
         schema.should.eql([
           { name: 'name', type: 'string' },
           { name: 'occupation', type: 'structure', children: [
@@ -226,7 +226,7 @@ describe('form schema', () => {
             </group>
           </h:body>
         </h:html>`;
-      return getFormSchema({ xml }).then((schema) => {
+      return getFormSchema(xml).then((schema) => {
         schema.should.eql([
           { name: 'name', type: 'string' },
           { name: 'children', type: 'structure', children: [
@@ -271,7 +271,7 @@ describe('form schema', () => {
               </model>
             </h:head>
           </h:html>`;
-        return getFormSchema({ xml }).then((schema) => {
+        return getFormSchema(xml).then((schema) => {
           flattenSchemaStructures(schema).should.eql([
             { path: [ 'name' ], type: 'string' },
             { path: [ 'occupation', 'title' ], type: 'string' },
@@ -335,7 +335,7 @@ describe('form schema', () => {
               </group>
             </h:body>
           </h:html>`;
-        return getFormSchema({ xml }).then((schema) => {
+        return getFormSchema(xml).then((schema) => {
           flattenSchemaStructures(schema).should.eql([
             { path: [ 'name' ], type: 'string' },
             { path: [ 'occupation', 'title' ], type: 'string' },
@@ -351,12 +351,12 @@ describe('form schema', () => {
 
     describe('table listing', () => {
       it('should return nothing for a schema without repeats', () =>
-        getFormSchema({ xml: testData.forms.simple }).then((schema) => {
+        getFormSchema(testData.forms.simple).then((schema) => {
           getSchemaTables(schema).should.eql([]);
         }));
 
       it('should return relevant tables', () =>
-        getFormSchema({ xml: testData.forms.doubleRepeat }).then((schema) => {
+        getFormSchema(testData.forms.doubleRepeat).then((schema) => {
           getSchemaTables(schema).should.eql([
             'children.child',
             'children.child.toys.toy'
@@ -366,7 +366,7 @@ describe('form schema', () => {
 
     describe('lookup', () => {
       it('should flatten basic and group bindings into lookups', () =>
-        getFormSchema({ xml: testData.forms.simple }).then((schema) => {
+        getFormSchema(testData.forms.simple).then((schema) => {
           schemaAsLookup(schema).should.eql({
             meta: { name: 'meta', type: 'structure', children: {
               instanceID: { name: 'instanceID', type: 'string' } }
@@ -377,7 +377,7 @@ describe('form schema', () => {
         }));
 
       it('should flatten repeat bindings into lookups', () =>
-        getFormSchema({ xml: testData.forms.withrepeat }).then((schema) => {
+        getFormSchema(testData.forms.withrepeat).then((schema) => {
           schemaAsLookup(schema).should.eql({
             'orx:meta': { name: 'orx:meta', type: 'structure', children: {
               'orx:instanceID': { name: 'orx:instanceID', type: 'string' }
