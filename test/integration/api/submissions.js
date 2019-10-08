@@ -213,6 +213,22 @@ describe('api: /submission', () => {
                 body.should.eql([{ name: 'audit.csv', exists: true }]);
               }))))));
 
+    it('should create empty client audit log slots', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+            .expect(201)
+            .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions/one/attachments')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.eql([{ name: 'audit.csv', exists: false }]);
+              }))))));
+
     it('should detect which attachments are expected', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
