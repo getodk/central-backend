@@ -2,7 +2,12 @@ const should = require('should');
 const { testService } = require('../setup');
 
 describe('api: /projects/:id/assignments/forms', () => {
-  // do a bunch of assignments that we will use to test these apis.
+  // helper that does a bunch of assignments that we will use to test these apis:
+  // * make chelsea a manager on simple form
+  // * create app user david and assign app user on simple form
+  // * create app user eleanor and assign app user on withrepeat form
+  // then, it GETs the given path with the given extended flag and returns that
+  // result.
   const doAssigns = (service, path, extended) =>
     service.login('alice', (asAlice) => Promise.all([
       service.login('chelsea', (asChelsea) =>
@@ -38,6 +43,16 @@ describe('api: /projects/:id/assignments/forms', () => {
         .then(([ result, appUserRoleId, managerRoleId ]) =>
           ({ chelsea, david, eleanor, appUserRoleId, managerRoleId, result }))));
 
+  // helper that verifies that some particular assignment exists as expected.
+  const verify = (result, actorId, xmlFormId, roleId) => {
+    result.some((assignment) => (assignment.actorId === actorId) && (assignment.xmlFormId === xmlFormId) &&
+      (assignment.roleId == roleId)).should.equal(true);
+  };
+  const verifyExtended = (result, actorId, xmlFormId, roleId) => {
+    result.some((assignment) => (assignment.actor.id === actorId) && (assignment.xmlFormId === xmlFormId) &&
+      (assignment.roleId == roleId)).should.equal(true);
+  };
+
   describe('GET', () => {
     it('should reject if the project does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -54,13 +69,9 @@ describe('api: /projects/:id/assignments/forms', () => {
         .then(({ chelsea, david, eleanor, appUserRoleId, managerRoleId, result }) => {
           result.length.should.equal(3);
 
-          const verify = (actorId, xmlFormId, roleId) => {
-            result.some((assignment) => (assignment.actorId === actorId) && (assignment.xmlFormId === xmlFormId) &&
-              (assignment.roleId == roleId)).should.equal(true);
-          };
-          verify(chelsea.id, 'simple', managerRoleId);
-          verify(david.id, 'simple', appUserRoleId);
-          verify(eleanor.id, 'withrepeat', appUserRoleId);
+          verify(result, chelsea.id, 'simple', managerRoleId);
+          verify(result, david.id, 'simple', appUserRoleId);
+          verify(result, eleanor.id, 'withrepeat', appUserRoleId);
         })));
 
     it('should return extended assignments on forms', testService((service) =>
@@ -70,13 +81,9 @@ describe('api: /projects/:id/assignments/forms', () => {
 
           for (const assignment of result) assignment.actor.should.be.an.Actor();
 
-          const verify = (actorId, xmlFormId, roleId) => {
-            result.some((assignment) => (assignment.actor.id === actorId) && (assignment.xmlFormId === xmlFormId) &&
-              (assignment.roleId == roleId)).should.equal(true);
-          };
-          verify(chelsea.id, 'simple', managerRoleId);
-          verify(david.id, 'simple', appUserRoleId);
-          verify(eleanor.id, 'withrepeat', appUserRoleId);
+          verifyExtended(result, chelsea.id, 'simple', managerRoleId);
+          verifyExtended(result, david.id, 'simple', appUserRoleId);
+          verifyExtended(result, eleanor.id, 'withrepeat', appUserRoleId);
         })));
   });
 
@@ -96,12 +103,8 @@ describe('api: /projects/:id/assignments/forms', () => {
         .then(({ chelsea, david, eleanor, appUserRoleId, managerRoleId, result }) => {
           result.length.should.equal(2);
 
-          const verify = (actorId, xmlFormId, roleId) => {
-            result.some((assignment) => (assignment.actorId === actorId) && (assignment.xmlFormId === xmlFormId) &&
-              (assignment.roleId == roleId)).should.equal(true);
-          };
-          verify(david.id, 'simple', appUserRoleId);
-          verify(eleanor.id, 'withrepeat', appUserRoleId);
+          verify(result, david.id, 'simple', appUserRoleId);
+          verify(result, eleanor.id, 'withrepeat', appUserRoleId);
         })));
 
     it('should return filtered extended assignments on forms', testService((service) =>
@@ -111,12 +114,8 @@ describe('api: /projects/:id/assignments/forms', () => {
 
           for (const assignment of result) assignment.actor.should.be.an.Actor();
 
-          const verify = (actorId, xmlFormId, roleId) => {
-            result.some((assignment) => (assignment.actor.id === actorId) && (assignment.xmlFormId === xmlFormId) &&
-              (assignment.roleId == roleId)).should.equal(true);
-          };
-          verify(david.id, 'simple', appUserRoleId);
-          verify(eleanor.id, 'withrepeat', appUserRoleId);
+          verifyExtended(result, david.id, 'simple', appUserRoleId);
+          verifyExtended(result, eleanor.id, 'withrepeat', appUserRoleId);
         })));
   });
 });

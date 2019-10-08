@@ -38,7 +38,7 @@ Here major and breaking changes to the API are listed by version.
 
 * Form-specific [Assignments resource](/reference/forms-and-submissions/'-form-assignments) at `projects/…/forms/…/assignments`, allowing granular role assignments on a per-Form basis.
   * Relatedly, the [OpenRosa Form Listing API](/reference/openrosa-endpoints/openrosa-form-listing-api) no longer rejects requests outright based on authentication. Rather, it will only return Forms that the authenticated user is allowed to view.
-  * A [new summary API](TODO) `GET /projects/…/assignments/forms` which returns all assignments onall Forms within a Project, so you don't have to request this information separately for each Form.
+  * A [new summary API](/reference/project-management/project-assignments/seeing-all-form-assignments-within-a-project) `GET /projects/…/assignments/forms` which returns all assignments on all Forms within a Project, so you don't have to request this information separately for each Form.
 * `PUT /projects/:id`, which while complex allows you to update many Forms' states and assignments with a single transactional request.
 
 **Changed**:

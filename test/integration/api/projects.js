@@ -802,7 +802,7 @@ describe('api: /projects', () => {
                 .then(({ body }) => { body.should.eql([{ roleId: managerRoleId, actorId: fk.id }]); })
             ]))))));
 
-    it('should log the creation action in the audit log', testService((service, { Actor, Audit, Project }) =>
+    it('should log the creation action in the audit log', testService((service, { Actor, Audit, Form }) =>
       service.login('bob', (asBob) =>
         Promise.all([
           asBob.post('/v1/projects/1/app-users')
@@ -831,8 +831,7 @@ describe('api: /projects', () => {
             .then(() => Promise.all([
               asBob.get('/v1/users/current').expect(200).then(({ body }) => body),
               Actor.getById(fk.id).then((o) => o.get()),
-              Project.getById(1).then((o) => o.get())
-                .then((project) => project.getFormByXmlFormId('simple')).then((o) => o.get()),
+              Form.getByProjectAndXmlFormId(1, 'simple').then((o) => o.get()),
               Audit.getLatestByAction('assignment.create').then((o) => o.get())
             ]))
             .then(([ bob, fullfk, form, audit ]) => {
