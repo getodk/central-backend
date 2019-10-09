@@ -98,7 +98,7 @@ describe('api: /users', () => {
           .send({ email: 'david@opendatakit.org' })
           .expect(200)
           .then(() => {
-            const token = /token=([^<]+)<\/p>/.exec(global.inbox.pop().html)[1];
+            const token = /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html)[1];
             return service.post('/v1/users/reset/verify')
               .send({ new: 'testreset' })
               .set('Authorization', 'Bearer ' + token)
@@ -177,7 +177,7 @@ describe('api: /users', () => {
           global.inbox.length.should.equal(0);
           email.to.should.eql([{ address: 'alice@opendatakit.org', name: '' }]);
           email.subject.should.equal('ODK Central account password reset');
-          const token = /token=([^<]+)<\/p>/.exec(email.html)[1];
+          const token = /token=([a-z0-9!$]+)/i.exec(email.html)[1];
 
           return service.post('/v1/users/reset/verify')
             .send({ new: 'reset!' })
@@ -191,7 +191,7 @@ describe('api: /users', () => {
       service.post('/v1/users/reset/initiate')
         .send({ email: 'alice@opendatakit.org' })
         .expect(200)
-        .then(() => /token=([^<]+)<\/p>/.exec(global.inbox.pop().html)[1])
+        .then(() => /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html)[1])
         .then((token) => service.post('/v1/users/reset/verify')
           .send({ new: 'reset!' })
           .set('Authorization', 'Bearer ' + token)
