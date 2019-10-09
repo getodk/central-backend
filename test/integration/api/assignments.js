@@ -408,6 +408,13 @@ describe('/projects/:id/assignments', () => {
       service.post('/v1/projects/1/assignments/manager/999')
         .expect(404)));
 
+    it('should not permit granting rights one does not have', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+        .then((chelseaId) => service.login('bob', (asBob) =>
+          asBob.post(`/v1/projects/1/assignments/admin/${chelseaId}`)
+            .expect(403))))));
+
     it('should assign the actor by role system name', testService((service) =>
       service.login('bob', (asBob) => service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/users/current').expect(200).then(({ body }) => body.id)
