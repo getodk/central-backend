@@ -760,6 +760,33 @@ describe('api: /projects', () => {
             .expect(400)
             .then(({ body }) => { body.code.should.equal(400.14); })))));
 
+    it('should reject if the user lacks the verbs to be granted', testService((service) =>
+      service.login('bob', (asBob) =>
+        Promise.all([
+          asBob.get('/v1/roles/admin')
+            .expect(200)
+            .then(({ body }) => body.id),
+          asBob.post('/v1/projects/1/app-users')
+            .send({ displayName: 'david' })
+            .expect(200)
+            .then(({ body }) => body)
+        ])
+          .then(([ adminRoleId, david ]) => asBob.put('/v1/projects/1')
+            .set('Content-Type', 'application/json')
+            .send({
+              name: 'Default Project',
+              forms: [{
+                xmlFormId: 'simple', name: 'New Simple', state: 'closed',
+                assignments: [{
+                  roleId: adminRoleId,
+                  actorId: david.id
+                }]
+              }, {
+                xmlFormId: 'withrepeat', name: 'New Repeat', state: 'closing'
+              }]
+            })
+            .expect(403)))));
+
     it('should create the requested assignments', testService((service) =>
       service.login('bob', (asBob) =>
         Promise.all([
