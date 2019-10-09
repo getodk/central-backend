@@ -163,5 +163,20 @@ describe('Instance', () => {
       a.should.eql(new SimpleInstance({ w: 1, x: 2, y: 3, z: 4 }));
     });
   });
+
+  describe('ad hoc instance', () => {
+    it('should provide table and field information', () => {
+      const Widget = builder.adHoc('widgets', [ 'name', 'whatsits' ]);
+      Widget.table.should.equal('widgets');
+      Widget.fields.should.eql({ all: [ 'name', 'whatsits' ] });
+    });
+
+    it('should accept data into itself via constructor', () => {
+      const Widget = builder.adHoc('widgets', [ 'name', 'whatsits' ]);
+      const instance = new Widget({ x: 2, y: 3 });
+      instance.x.should.equal(2);
+      instance.y.should.equal(3);
+    });
+  });
 });
 

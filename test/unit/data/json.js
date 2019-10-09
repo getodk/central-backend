@@ -7,6 +7,8 @@ const __system = {
   submissionDate: '2017-09-20T17:10:43Z',
   submitterId: '5',
   submitterName: 'Alice',
+  attachmentsPresent: 0,
+  attachmentsExpected: 0,
   status: null
 };
 const mockSubmission = (instanceId, xml) => ({
@@ -18,6 +20,10 @@ const mockSubmission = (instanceId, xml) => ({
   submitter: {
     id: 5,
     displayName: 'Alice'
+  },
+  attachments: {
+    present: 0,
+    expected: 0
   }
 });
 
@@ -216,7 +222,7 @@ describe('submissionToOData', () => {
     });
   });
 
-  it('should format geospatial values as WKT if requested', () => {
+  it('should format geopoint values as WKT if requested', () => {
     const fields = {
       geopoint: { name: 'geopoint', type: 'geopoint' },
       geopointNoAlt: { name: 'geopointNoAlt', type: 'geopoint' }
@@ -231,6 +237,100 @@ describe('submissionToOData', () => {
         __system,
         geopoint: 'POINT (15.16 4.8 23.42)',
         geopointNoAlt: 'POINT (-11.38 11.38)'
+      }]);
+    });
+  });
+
+  it('should output geojson geotrace values', () => {
+    const fields = {
+      geotrace: { name: 'geotrace', type: 'geotrace' },
+      geotraceNoAlt: { name: 'geotraceNoAlt', type: 'geotrace' }
+    };
+    const submission = mockSubmission('geojson', `<data>
+        <geotrace>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8</geotrace>
+        <geotraceNoAlt>11.1 22.2;33.3 44.4;55.5 66.6</geotraceNoAlt>
+      </data>`);
+    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+      result.should.eql([{
+        __id: 'geojson',
+        __system,
+        geotrace: {
+          type: 'LineString',
+          coordinates: [ [ 2.2, 1.1, 3.3 ], [ 6.6, 5.5, 7.7 ] ],
+          properties: {
+            accuracies: [ 4.4, 8.8 ]
+          }
+        },
+        geotraceNoAlt: {
+          type: 'LineString',
+          coordinates: [ [ 22.2, 11.1 ], [ 44.4, 33.3 ], [ 66.6, 55.5 ] ]
+        }
+      }]);
+    });
+  });
+
+  it('should format geotrace values as WKT if requested', () => {
+    const fields = {
+      geotrace: { name: 'geotrace', type: 'geotrace' },
+      geotraceNoAlt: { name: 'geotraceNoAlt', type: 'geotrace' }
+    };
+    const submission = mockSubmission('wkt', `<data>
+        <geotrace>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8</geotrace>
+        <geotraceNoAlt>11.1 22.2;33.3 44.4;55.5 66.6</geotraceNoAlt>
+      </data>`);
+    return submissionToOData(fields, 'Submissions', submission, { wkt: true }).then((result) => {
+      result.should.eql([{
+        __id: 'wkt',
+        __system,
+        geotrace: 'LINESTRING (2.2 1.1 3.3,6.6 5.5 7.7)',
+        geotraceNoAlt: 'LINESTRING (22.2 11.1,44.4 33.3,66.6 55.5)'
+      }]);
+    });
+  });
+
+  it('should output geojson geoshape values', () => {
+    const fields = {
+      polygon: { name: 'polygon', type: 'geoshape' },
+      polygonNoAlt: { name: 'polygonNoAlt', type: 'geoshape' }
+    };
+    const submission = mockSubmission('geojson', `<data>
+        <polygon>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8;10.0 20.0 30.0 40.0;1.1 2.2 3.3 4.4</polygon>
+        <polygonNoAlt>11.1 22.2;33.3 44.4;55.5 66.6;11.1 22.2</polygonNoAlt>
+      </data>`);
+    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+      result.should.eql([{
+        __id: 'geojson',
+        __system,
+        polygon: {
+          type: 'Polygon',
+          coordinates: [ [ 2.2, 1.1, 3.3 ], [ 6.6, 5.5, 7.7 ], [ 20.0, 10.0, 30.0 ], [ 2.2, 1.1, 3.3 ] ],
+          properties: {
+            accuracies: [ 4.4, 8.8, 40.0, 4.4 ]
+          }
+        },
+        polygonNoAlt: {
+          type: 'Polygon',
+          coordinates: [ [ 22.2, 11.1 ], [ 44.4, 33.3 ], [ 66.6, 55.5 ], [ 22.2, 11.1 ] ]
+        }
+      }]);
+    });
+  });
+
+  it('should format polygon values as WKT if requested', () => {
+    const fields = {
+      polygon: { name: 'polygon', type: 'geoshape' },
+      polygonNoAlt: { name: 'polygonNoAlt', type: 'geoshape' }
+    };
+    const submission = mockSubmission('wkt', `<data>
+        <polygon>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8;10.0 20.0 30.0 40.0;1.1 2.2 3.3 4.4</polygon>
+        <polygonNoAlt>11.1 22.2;33.3 44.4;55.5 66.6;11.1 22.2</polygonNoAlt>
+      </data>`);
+    return submissionToOData(fields, 'Submissions', submission, { wkt: true }).then((result) => {
+      result.should.eql([{
+        __id: 'wkt',
+        __system,
+        polygon: 'POLYGON ((2.2 1.1 3.3,6.6 5.5 7.7,20 10 30,2.2 1.1 3.3))',
+        polygonNoAlt: 'POLYGON ((22.2 11.1,44.4 33.3,66.6 55.5,22.2 11.1))'
       }]);
     });
   });
@@ -276,39 +376,19 @@ describe('submissionToOData', () => {
     });
   });
 
-  /* TODO: commented out pending issue #82.
   it('should provide navigation links for repeats', () => {
     return getFormSchema({ xml: testData.forms.withrepeat }).then((schema) => {
       const fields = schemaAsLookup(schema);
-      const submission = { instanceId: 'two', xml: testData.instances.withrepeat.two };
-      return submissionToOData(fields, 'Submissions', submission).then((result) => {
-        result.should.eql([{
-          __id: 'two',
-          __system,
-          meta: { instanceID: 'two' },
-          name: 'Bob',
-          age: 34,
-          children: {
-            'child@odata.navigationLink': "Submissions('two')/children/child"
-          }
-        }]);
-      });
-    });
-  });*/
-
-  // TODO: remove this test once #82 is resolved.
-  it('should ignore repeats in data output', () => {
-    return getFormSchema({ xml: testData.forms.withrepeat }).then((schema) => {
-      const fields = schemaAsLookup(stripNamespacesFromSchema(schema));
       const submission = mockSubmission('two', testData.instances.withrepeat.two);
       return submissionToOData(fields, 'Submissions', submission).then((result) => {
         result.should.eql([{
           __id: 'two',
           __system,
-          meta: { instanceID: 'two' },
           name: 'Bob',
           age: 34,
-          children: {}
+          children: {
+            'child@odata.navigationLink': "Submissions('two')/children/child"
+          }
         }]);
       });
     });
@@ -334,7 +414,6 @@ describe('submissionToOData', () => {
     });
   });
 
-  /* TODO: commented out pending issue #82.
   it('should return navigation links to repeats within a subtable result set', () => {
     return getFormSchema({ xml: testData.forms.doubleRepeat }).then((schema) => {
       const fields = schemaAsLookup(schema);
@@ -361,7 +440,7 @@ describe('submissionToOData', () => {
         }]);
       });
     });
-  });*/
+  });
 
   it('should return second-order subtable results', () => {
     return getFormSchema({ xml: testData.forms.doubleRepeat }).then((schema) => {

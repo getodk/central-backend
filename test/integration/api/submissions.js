@@ -530,11 +530,11 @@ describe('api: /forms/:id/submissions', () => {
             result.filenames.should.eql([ 'simple.csv' ]);
             const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
             csv.length.should.equal(4); // header + 2 data rows + newline
-            csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'Status' ]);
+            csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status' ]);
             csv[1].shift().should.be.an.recentIsoDate();
-            csv[1].should.eql([ 'two','Bob','34','two','5','Alice' ]);
+            csv[1].should.eql([ 'two','Bob','34','two','5','Alice','0','0' ]);
             csv[2].shift().should.be.an.recentIsoDate();
-            csv[2].should.eql([ 'one','Alice','30','one','5','Alice' ]);
+            csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0' ]);
             csv[3].should.eql([ '' ]);
             done();
           }))))));
@@ -565,6 +565,39 @@ describe('api: /forms/:id/submissions', () => {
 
                 result['media/my_file1.mp4'].should.equal('this is test file one');
                 result['media/here_is_file2.jpg'].should.equal('this is test file two');
+
+                // we also check the csv for the sake of verifying the attachments counts.
+                const csv = result['binaryType.csv'].split('\n');
+                csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status');
+                csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,2,2');
+                csv.length.should.equal(3); // newline at end
+
+                done();
+              })))))));
+
+    it('should properly count present attachments', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+            .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+            .expect(201)
+            .then(() => new Promise((done) =>
+              zipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'), (result) => {
+                result.filenames.should.containDeep([
+                  'binaryType.csv',
+                  'media/my_file1.mp4'
+                ]);
+
+                // we also check the csv for the sake of verifying the attachments counts.
+                const csv = result['binaryType.csv'].split('\n');
+                csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status');
+                csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,1,2');
+                csv.length.should.equal(3); // newline at end
 
                 done();
               })))))));
