@@ -25,6 +25,9 @@ const mail = mailer(merge(mailConfig, env));
 if (mailConfig.transport !== 'json')
   console.error('WARNING: some tests will not work except with a JSON email transport configuration.');
 
+// set up our xlsform-api mock.
+const xlsform = require(appRoot + '/test/util/xlsform');
+
 // set up our google mock.
 const googler = require(appRoot + '/lib/outbound/google');
 const realGoogle = googler(config.get('default.external.google'));
@@ -93,7 +96,7 @@ const augment = (service) => {
 ////////////////////////////////////////////////////////////////////////////////
 // FINAL TEST WRAPPERS
 
-const baseContainer = injector.withDefaults({ db, mail, env, google, crypto, Sentry });
+const baseContainer = injector.withDefaults({ db, mail, env, xlsform, google, crypto, Sentry });
 
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
