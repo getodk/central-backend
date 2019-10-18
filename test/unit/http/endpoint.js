@@ -482,7 +482,28 @@ describe('endpoints', () => {
         } })
       );
 
-      defaultResultWriter(resourceResult, requestTest, responseTest);
+      defaultResultWriter(resourceResult, requestTest, responseTest, () => {});
+    });
+
+    // so that Sentry catches the error.
+    it('should call next on PartialPipe stream error', (done) => {
+      const requestTest = streamTest.fromChunks();
+      const responseTest = streamTest.toText(() => {});
+      responseTest.addTrailers = function(t) { trailers = t; };
+      responseTest.hasHeader = function() { return true; };
+
+      const resourceResult = PartialPipe.of(
+        streamTest.fromChunks([ 'a', 'test', 'stream' ]),
+        new Transform({ transform(s, _, done) {
+          if (s.length > 4) done(new Error('nope'));
+          else done(null, s + '!');
+        } })
+      );
+
+      defaultResultWriter(resourceResult, requestTest, responseTest, (err) => {
+        err.message.should.equal('nope');
+        done();
+      });
     });
 
     it('should immediately abort the database query if the request is aborted', (done) => {
