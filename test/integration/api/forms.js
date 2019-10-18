@@ -40,11 +40,16 @@ describe('api: /projects/:id/forms', () => {
   });
 
   describe('../formList GET', () => {
-    it('should reject unless the user can list', testService((service) =>
+    it('should return no results if the user cannot read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/projects/1/formList')
           .set('X-OpenRosa-Version', '1.0')
-          .expect(403))));
+          .expect(200)
+          .then(({ text }) => {
+            text.should.eql(`<?xml version="1.0" encoding="UTF-8"?>
+  <xforms xmlns="http://openrosa.org/xforms/xformsList">
+  </xforms>`);
+          }))));
 
     it('should return form details as xml', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -74,6 +79,34 @@ describe('api: /projects/:id/forms', () => {
     </xform>
   </xforms>`);
           }))));
+
+    it('should return auth-filtered results for app users', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'test' })
+          .expect(200)
+          .then(({ body }) => body)
+          .then((fk) => asAlice.post(`/v1/projects/1/forms/withrepeat/assignments/app-user/${fk.id}`)
+            .expect(200)
+            .then(() => service.get(`/v1/key/${fk.token}/projects/1/formList`)
+              .set('X-OpenRosa-Version', '1.0')
+              .expect(200)
+              .then(({ text, headers }) => {
+                // Collect is particular about this:
+                headers['content-type'].should.equal('text/xml; charset=utf-8');
+
+                const domain = config.get('default.env.domain');
+                text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+  <xforms xmlns="http://openrosa.org/xforms/xformsList">
+    <xform>
+      <formID>withrepeat</formID>
+      <name>withrepeat</name>
+      <version>1.0</version>
+      <hash>md5:e7e9e6b3f11fca713ff09742f4312029</hash>
+      <downloadUrl>${domain}/v1/key/${fk.token}/projects/1/forms/withrepeat.xml</downloadUrl>
+    </xform>
+  </xforms>`);
+              }))))));
 
     it('should not include closing/closed forms', testService((service) =>
       service.login('alice', (asAlice) =>

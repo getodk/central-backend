@@ -19,6 +19,15 @@ describe('ExtendedInstance/HasExtended', () => {
     extended.should.be.an.instanceOf(SimpleBase);
   });
 
+  it('should take the specified property name', () => {
+    const ExtendedBase = ExtendedInstance({});
+    const SimpleBase = complete(Instance.with(HasExtended(ExtendedBase, 'SpecialExtended'))()(() => class {}));
+
+    const extended = new SimpleBase.SpecialExtended();
+    extended.should.be.an.instanceOf(SimpleBase.SpecialExtended);
+    extended.should.be.an.instanceOf(SimpleBase);
+  });
+
   it('should leave all methods alone except forApi', () => {
     const ExtendedBase = ExtendedInstance({
       forApi() { return 42; }
