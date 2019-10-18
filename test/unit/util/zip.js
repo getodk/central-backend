@@ -29,6 +29,19 @@ describe('zipPart streamer', () => {
     part.finalize();
   });
 
+  it('should error out the archive if a part pushes an error', (done) => {
+    const part1 = zipPart();
+    const part2 = zipPart();
+    const archive = zipStreamFromParts(part1, part2);
+    archive.on('error', (err) => {
+      err.message.should.equal('whoops');
+      done();
+    });
+
+    part1.append('test 1', { name: 'x/test1.file' });
+    part2.error(new Error('whoops'));
+  });
+
   it('should create files from all parts', (done) => {
     const part1 = zipPart();
     const part2 = zipPart();
