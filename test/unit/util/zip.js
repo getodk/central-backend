@@ -1,6 +1,7 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { Transform } = require('stream');
+const { createWriteStream } = require('fs');
+const { Transform, Readable } = require('stream');
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
 const { streamAttachments } = require(appRoot + '/lib/data/attachments');
 const { PartialPipe } = require(appRoot + '/lib/util/stream');
@@ -40,6 +41,49 @@ describe('zipPart streamer', () => {
 
     part1.append('test 1', { name: 'x/test1.file' });
     part2.error(new Error('whoops'));
+  });
+
+  it('should call the given callback only when the file has been added', (done) => {
+    const part = zipPart();
+    const file = new Readable({ read() {} });
+    const archive = zipStreamFromParts(part);
+
+    let pushedAll = false;
+    part.append(file, { name: 'file' }, () => {
+      pushedAll.should.equal(true);
+      done();
+    });
+    pushedAll.should.equal(false);
+    file.push('aoeuaoeu');
+    file.push('aoeuaoeu');
+    pushedAll.should.equal(false);
+    file.push(null);
+    pushedAll = true;
+  });
+
+  it('should manage multiple callbacks appropriately', (done) => {
+    const part = zipPart();
+    const file1 = new Readable({ read() {} });
+    const file2 = new Readable({ read() {} });
+    const archive = zipStreamFromParts(part);
+    archive.pipe(createWriteStream('/dev/null'));
+
+    archive.on('end', () => {
+      calls.should.eql([ 1, 2 ]);
+      done();
+    });
+
+    const calls = [];
+    part.append(file1, { name: 'file' }, () => { calls.push(1); });
+    file1.push('aoeuaoeu');
+    part.append(file2, { name: 'file' }, () => { calls.push(2); });
+    file1.push('aoeuaoeu');
+    part.finalize();
+    file2.push('aoeuaoeu');
+    file2.push('aoeuaoeu');
+    file2.push(null);
+    file1.push('aoeuaoeu');
+    file1.push(null);
   });
 
   it('should create files from all parts', (done) => {
