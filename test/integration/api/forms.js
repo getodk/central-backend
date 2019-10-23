@@ -340,17 +340,43 @@ describe('api: /projects/:id/forms', () => {
         asAlice.post('/v1/projects/1/forms')
           .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
           .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .set('X-XlsForm-FormId-Fallback', 'testformid')
           .expect(200)
           .then(({ body }) => {
             // this checks that the conversion service received the correct xlsx bits:
             global.xlsformHash.should.equal('9ebd53024b8560ffd0b84763481ed24159ca600f');
+            global.xlsformFallback.should.equal('testformid');
 
             // these check appropriate plumbing of the mock conversion service response:
             body.sha.should.equal('466b8cf532c22aea7b1791ea2e6712ab31ce90a4');
             body.xmlFormId.should.equal('simple2');
           }))));
 
-    // TODO: do we do xls files?
+    it('should fail on warnings even for valid xlsx files', testService((service) => {
+      global.xlsformTest = 'warning'; // set up the mock service to warn.
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.16);
+            body.details.should.eql({ warnings: [ 'warning 1', 'warning 2' ] });
+          }));
+    }));
+
+    it('should create the form for xlsx files with warnings given ignoreWarnings', testService((service) => {
+      global.xlsformTest = 'warning'; // set up the mock service to warn.
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .expect(200)
+          .then(({ body }) => {
+            body.sha.should.equal('466b8cf532c22aea7b1791ea2e6712ab31ce90a4');
+            body.xmlFormId.should.equal('simple2');
+          }));
+    }));
 
     it('should return an appropriate response upon conversion error', testService((service) => {
       global.xlsformTest = 'error'; // set up the mock service to fail.
@@ -369,9 +395,27 @@ describe('api: /projects/:id/forms', () => {
               }
             });
           }));
-
-      // TODO: what to do with warnings on success-but-warning?
     }));
+
+    // we cheat here. because we don't even actually send the file to a real xls
+    // convertor, we just send the xlsx form anyway, but signal an xls file via
+    // the mime type.
+    it('should accept xls forms and return them over that endpoint', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.ms-excel')
+          .set('X-XlsForm-FormId-Fallback', 'testformid')
+          .expect(200)
+          .then(({ body }) => {
+            // this checks that the conversion service received the correct xlsx bits:
+            global.xlsformHash.should.equal('9ebd53024b8560ffd0b84763481ed24159ca600f');
+            global.xlsformFallback.should.equal('testformid');
+
+            // these check appropriate plumbing of the mock conversion service response:
+            body.sha.should.equal('466b8cf532c22aea7b1791ea2e6712ab31ce90a4');
+            body.xmlFormId.should.equal('simple2');
+          }))));
   });
 
   describe('/:id.xlsx GET', () => {
@@ -419,7 +463,21 @@ describe('api: /projects/:id/forms', () => {
             })));
     }));
   });
-  // TODO: do we do xls files?
+
+  describe('/:id.xls GET', () => {
+    // we don't bother with running all the 404/403/etc tests since it's the same
+    // code as above. so just test the delta. we also cheat, as with POST .xls, and
+    // just submit the .xlsx to the mock test service.
+    it('should allow xls file download only', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.ms-excel')
+          .set('X-XlsForm-FormId-Fallback', 'testformid')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple2.xls').expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple2.xlsx').expect(404)))));
+  });
 
   describe('/:id.xml GET', () => {
     it('should reject unless the user can read', testService((service) =>
