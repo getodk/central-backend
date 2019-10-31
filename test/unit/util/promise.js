@@ -1,7 +1,7 @@
 const should = require('should');
 const { identity } = require('ramda');
 const appRoot = require('app-root-path');
-const { resolve, getOrElse, getOrReject, getOrNotFound } = require(appRoot + '/lib/util/promise');
+const { resolve, getOrElse, getOrReject, getOrNotFound, timebound } = require(appRoot + '/lib/util/promise');
 const Option = require(appRoot + '/lib/util/option');
 const Problem = require(appRoot + '/lib/util/problem');
 
@@ -36,6 +36,59 @@ describe('getOr', () => {
         problem.problemCode.should.equal(404.1);
         done();
       });
+  });
+});
+
+describe('timebound @slow', () => {
+  it('should not reject if the promise resolves', (done) => {
+    let pass, fail, passed = false, failed = false;
+    const promise = new Promise((resolve, reject) => { pass = resolve; fail = reject; });
+    timebound(promise, 0.2)
+      .then(() => { passed = true; }, () => { failed = true; });
+
+    pass(42);
+    setTimeout(() => {
+      passed.should.equal(true);
+      failed.should.equal(false);
+      done();
+    }, 250);
+  });
+
+  it('should resolve with the correct value', (done) => {
+    let pass, fail, passedWith;
+    const promise = new Promise((resolve, reject) => { pass = resolve; fail = reject; });
+    timebound(promise, 0.2).then((x) => { passedWith = x; });
+
+    pass(42);
+    setTimeout(() => {
+      passedWith.should.equal(42);
+      done();
+    }, 10);
+  });
+
+  it('should reject upon timebound', (done) => {
+    timebound(new Promise(() => {}), 0.1)
+      .catch((err) => {
+        err.problemCode.should.equal(502.1);
+        done();
+      });
+  });
+
+  it('should not resolve if the timebound passes', (done) => {
+    let pass, fail, passed = false, failed = false;
+    const promise = new Promise((resolve, reject) => { pass = resolve; fail = reject; });
+    timebound(promise, 0.1)
+      .then(() => { passed = true; }, () => { failed = true; });
+
+    setTimeout(() => {
+      passed.should.equal(false);
+      failed.should.equal(true);
+      setTimeout(() => {
+        passed.should.equal(false);
+        failed.should.equal(true);
+        done();
+      }, 10);
+    }, 150);
   });
 });
 

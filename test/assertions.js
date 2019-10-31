@@ -17,6 +17,11 @@ should.Assertion.add('recentIsoDate', function() {
   DateTime.fromISO(this.obj).plus({ minutes: 2 }).should.be.greaterThan(DateTime.local());
 });
 
+should.Assertion.add('recentDate', function() {
+  this.params = { operator: 'to be a recent date instance' };
+  DateTime.local().minus({ minutes: 1 }).toJSDate().should.be.lessThan(this.obj);
+});
+
 should.Assertion.add('token', function(length = 64) {
   this.params = { operator: 'to be a token string' };
   this.obj.should.match(new RegExp(`^[a-z0-9!$]{${length}}$`, 'i'));
