@@ -3,12 +3,8 @@ const should = require('should');
 describe('submission', () => {
   describe('encrypted attachment management', () => {
     it('should correctly record attachment file ordering', () => {
-      const result = [];
-      const queries = { submissionAttachments: {
-        create: (attachment) => () => { result.push(attachment); return Promise.resolve(); }
-      } };
       const { SubmissionPartial, SubmissionDef } = require('../../../../lib/model/package')
-        .withDefaults(null, { queries });
+        .withDefaults();
 
       const xml = `<submission id="form">
   <meta><instanceID>uuid:ad4e5c2a-9637-4bdf-80f5-0157243f8fac</instanceId></meta>
@@ -21,9 +17,9 @@ describe('submission', () => {
 
       return SubmissionPartial.fromXml(xml)
         .then((partial) => SubmissionDef.fromData(partial))
-        .then((def) => def.createExpectedAttachments()) // normally wants a formdef but not for this path
-        .then(() => {
-          result.map((att) => [ att.name, att.index ])
+        .then((def) => def.generateExpectedAttachments()) // normally wants a formdef but not for this path
+        .then((attachments) => {
+          attachments.map((att) => [ att.name, att.index ])
             .should.eql([
               [ 'zulu.file', 0 ],
               [ 'alpha.file', 1 ],
