@@ -102,9 +102,13 @@ describe('api: /forms/:id.svc', () => {
                   // submissionDate is checked above!
                   submitterId: '5',
                   submitterName: 'Alice',
+                  attachmentsPresent: 0,
+                  attachmentsExpected: 0,
                   status: null
                 },
-                children: {},
+                children: {
+                  'child@odata.navigationLink': "Submissions('double')/children/child"
+                },
                 meta: { instanceID: "double" },
                 name: "Vick"
               }]
@@ -136,6 +140,8 @@ describe('api: /forms/:id.svc', () => {
                     // submissionDate is checked above!
                     submitterId: '5',
                     submitterName: 'Alice',
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 2,
                     status: 'MissingEncryptedFormData'
                   }
                 }]
@@ -170,6 +176,8 @@ describe('api: /forms/:id.svc', () => {
                     // submissionDate is checked above!
                     submitterId: '5',
                     submitterName: 'Alice',
+                    attachmentsPresent: 1,
+                    attachmentsExpected: 2,
                     status: 'NotDecrypted'
                   }
                 }]
@@ -191,12 +199,16 @@ describe('api: /forms/:id.svc', () => {
                 __id: 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
                 '__Submissions-id': 'double',
                 name: 'Bob',
-                toys: {}
+                toys: {
+                  'toy@odata.navigationLink': "Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy"
+                }
               }, {
                 __id: '8954b393f82c1833abb19be08a3d6cb382171f54',
                 '__Submissions-id': 'double',
                 name: 'Chelsea',
-                toys: {}
+                toys: {
+                  'toy@odata.navigationLink': "Submissions('double')/children/child('8954b393f82c1833abb19be08a3d6cb382171f54')/toys/toy"
+                }
               }]
             });
           }))));
@@ -213,7 +225,9 @@ describe('api: /forms/:id.svc', () => {
                 __id: 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
                 '__Submissions-id': 'double',
                 name: 'Bob',
-                toys: {}
+                toys: {
+                  'toy@odata.navigationLink': "Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy"
+                }
               }]
             });
           }))));
@@ -285,30 +299,40 @@ describe('api: /forms/:id.svc', () => {
                   // submissionDate is checked above,
                   submitterId: "5",
                   submitterName: "Alice",
+                  attachmentsPresent: 0,
+                  attachmentsExpected: 0,
                   status: null
                 },
                 meta: { instanceID: "three" },
                 name: "Chelsea",
                 age: 38,
-                children: {}
+                children: {
+                  'child@odata.navigationLink': "Submissions('three')/children/child"
+                }
               }, {
                 __id: "two",
                 __system: {
                   // submissionDate is checked above,
                   submitterId: "5",
                   submitterName: "Alice",
+                  attachmentsPresent: 0,
+                  attachmentsExpected: 0,
                   status: null
                 },
                 meta: { instanceID: "two" },
                 name: "Bob",
                 age: 34,
-                children: {}
+                children: {
+                  'child@odata.navigationLink': "Submissions('two')/children/child"
+                }
               }, {
                 __id: "one",
                 __system: {
                   // submissionDate is checked above,
                   submitterId: "5",
                   submitterName: "Alice",
+                  attachmentsPresent: 0,
+                  attachmentsExpected: 0,
                   status: null
                 },
                 meta: { instanceID: "one" },
@@ -369,12 +393,16 @@ describe('api: /forms/:id.svc', () => {
                   // submissionDate is checked above,
                   submitterId: "5",
                   submitterName: "Alice",
+                  attachmentsPresent: 0,
+                  attachmentsExpected: 0,
                   status: null
                 },
                 meta: { instanceID: "two" },
                 name: "Bob",
                 age: 34,
-                children: {}
+                children: {
+                  'child@odata.navigationLink': "Submissions('two')/children/child"
+                }
               }]
             });
           }))));
@@ -397,12 +425,16 @@ describe('api: /forms/:id.svc', () => {
                   // submissionDate is checked above,
                   submitterId: "5",
                   submitterName: "Alice",
+                  attachmentsPresent: 0,
+                  attachmentsExpected: 0,
                   status: null
                 },
                 meta: { instanceID: "three" },
                 name: "Chelsea",
                 age: 38,
-                children: {}
+                children: {
+                  'child@odata.navigationLink': "Submissions('three')/children/child"
+                }
               }]
             });
           }))));
@@ -438,6 +470,8 @@ describe('api: /forms/:id.svc', () => {
                     // submissionDate is checked above!
                     submitterId: '5',
                     submitterName: 'Alice',
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 2,
                     status: 'MissingEncryptedFormData'
                   }
                 }, {
@@ -446,6 +480,8 @@ describe('api: /forms/:id.svc', () => {
                     // submissionDate is checked above!
                     submitterId: '5',
                     submitterName: 'Alice',
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 2,
                     status: 'MissingEncryptedFormData'
                   }
                 }]
@@ -489,6 +525,8 @@ describe('api: /forms/:id.svc', () => {
                     // submissionDate is checked above!
                     submitterId: '5',
                     submitterName: 'Alice',
+                    attachmentsPresent: 1,
+                    attachmentsExpected: 2,
                     status: 'NotDecrypted'
                   }
                 }, {
@@ -497,6 +535,8 @@ describe('api: /forms/:id.svc', () => {
                     // submissionDate is checked above!
                     submitterId: '5',
                     submitterName: 'Alice',
+                    attachmentsPresent: 1,
+                    attachmentsExpected: 2,
                     status: 'NotDecrypted'
                   }
                 }]
@@ -536,6 +576,7 @@ describe('api: /forms/:id.svc', () => {
             .expect(200)
             .then(({ body }) => {
               body.should.eql({
+                value: [],
                 '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child'
               });
             })))));

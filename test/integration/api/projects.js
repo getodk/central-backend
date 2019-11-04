@@ -1,6 +1,7 @@
 const should = require('should');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
+const { QueryOptions } = require('../../../lib/util/db');
 
 describe('api: /projects', () => {
   describe('GET', () => {
@@ -488,6 +489,480 @@ describe('api: /projects', () => {
             log.acteeId.should.equal(project.acteeId);
             log.details.should.eql({ encrypted: true });
           }))));
+  });
+
+  describe('/:id PUT', () => {
+    it('should return notfound if the project does not exist', testService((service) =>
+      service.put('/v1/projects/99')
+        .set('Content-Type', 'application/json')
+        .send({ name: 'New Test Name' })
+        .expect(404)));
+
+    it('should reject unless the user can update', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.put('/v1/projects/1')
+          .set('Content-Type', 'application/json')
+          .send({ name: 'New Test Name' })
+          .expect(403))));
+
+    it('should fail if a required project field is not provided', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.put('/v1/projects/1')
+          .send({ archived: true })
+          .expect(400)
+          .then(({ body }) => { body.code.should.equal(400.2); }))));
+
+    it('should update project information', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.put('/v1/projects/1')
+          .send({ name: 'New Test Name', archived: true })
+          .expect(200)
+          .then(() => asBob.get('/v1/projects/1')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.a.Project();
+              body.name.should.equal('New Test Name');
+              body.archived.should.equal(true);
+              body.updatedAt.should.be.a.recentIsoDate();
+            }))
+          .then(() => asBob.put('/v1/projects/1')
+            .send({ name: 'Newer Name' })
+            .expect(200))
+          .then(() => asBob.get('/v1/projects/1')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.a.Project();
+              body.name.should.equal('Newer Name');
+              should.not.exist(body.archived);
+              body.updatedAt.should.be.a.recentIsoDate();
+            })))));
+
+    it('should return updated data with the PUT', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.put('/v1/projects/1')
+          .send({ name: 'New Test Name', archived: true })
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.a.Project();
+            body.name.should.equal('New Test Name');
+            body.archived.should.equal(true);
+            body.updatedAt.should.be.a.recentIsoDate();
+          }))));
+
+    it('should log the action in the audit log', testService((service, { Audit, Project }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.put('/v1/projects/1')
+          .set('Content-Type', 'application/json')
+          .send({ name: 'New Test Name' })
+          .expect(200)
+          .then(() => Promise.all([
+            asAlice.get('/v1/users/current').expect(200),
+            Project.getById(1),
+            Audit.getLatestWhere({ action: 'project.update' })
+          ]))
+          .then(([ user, project, audit ]) => {
+            project.isDefined().should.equal(true);
+            audit.isDefined().should.equal(true);
+
+            audit.get().actorId.should.equal(user.body.id);
+            audit.get().acteeId.should.equal(project.get().acteeId);
+            audit.get().details.should.eql({ data: { name: 'New Test Name', archived: null } });
+          }))));
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // updates with forms:
+
+    it('should fail if the wrong number of forms is provided', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.put('/v1/projects/1')
+          .send({ name: 'Default Project', forms: [] })
+          .expect(501))));
+
+    it('should fail if an unknown form is provided', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.put('/v1/projects/1')
+          .send({
+            name: 'Default Project',
+            forms: [
+              { xmlFormId: 'simple', name: 'Simple', state: 'open' },
+              { xmlFormId: 'unknown', name: 'Unknown Form', state: 'closing' }
+            ]
+          })
+          .expect(501))));
+
+    it('should fail if the same form is provided twice', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.put('/v1/projects/1')
+          .send({
+            name: 'Default Project',
+            forms: [
+              { xmlFormId: 'simple', name: 'Simple', state: 'open' },
+              { xmlFormId: 'simple', name: 'Unknown Form', state: 'closing' }
+            ]
+          })
+          .expect(400)
+          .then(({ body }) => { body.code.should.equal(400.8); }))));
+
+    it('should fail if an invalid form state is given', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.put('/v1/projects/1')
+          .send({
+            name: 'Default Project',
+            forms: [
+              { xmlFormId: 'simple' },
+              { xmlFormId: 'withrepeat' }
+            ]
+          })
+          .expect(400)
+          .then(({ body }) => { body.code.should.equal(400.8); }))));
+
+    it('should update form details', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.put('/v1/projects/1')
+          .send({
+            name: 'Default Project',
+            forms: [
+              { xmlFormId: 'simple', name: 'New Simple', state: 'closed' },
+              { xmlFormId: 'withrepeat', name: 'New Repeat', state: 'closing' }
+            ]
+          })
+          .expect(200)
+          .then(() => asBob.get('/v1/projects/1/forms')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(2);
+              body[0].should.be.a.Form();
+              body[0].xmlFormId.should.equal('withrepeat');
+              body[0].name.should.equal('New Repeat');
+              body[0].state.should.equal('closing');
+              body[1].should.be.a.Form();
+              body[1].xmlFormId.should.equal('simple');
+              body[1].name.should.equal('New Simple');
+              body[1].state.should.equal('closed');
+            })))));
+
+    it('should log the action in the audit log', testService((service, { Audit, Project }) =>
+      service.login('bob', (asBob) =>
+        asBob.put('/v1/projects/1')
+          .set('Content-Type', 'application/json')
+          .send({
+            name: 'Default Project',
+            forms: [
+              { xmlFormId: 'simple', name: 'New Simple', state: 'closed' },
+              { xmlFormId: 'withrepeat', name: 'New Repeat', state: 'closing' }
+            ]
+          })
+          .expect(200)
+          .then(() => Promise.all([
+            asBob.get('/v1/users/current').expect(200).then(({ body }) => body),
+            Project.getById(1).then((o) => o.get())
+              .then((project) => project.getAllForms()),
+            Audit.get(new QueryOptions({ args: { action: 'form.update' } }))
+          ]))
+          .then(([ bob, forms, audits ]) => {
+            audits.length.should.equal(2);
+
+            const repeatAudit = audits.find((a) => a.acteeId === forms[0].acteeId);
+            should.exist(repeatAudit);
+            repeatAudit.actorId.should.equal(bob.id);
+            repeatAudit.details.should.eql({ data: { name: 'New Repeat', state: 'closing' } });
+
+            const simpleAudit = audits.find((a) => a.acteeId === forms[1].acteeId);
+            should.exist(simpleAudit);
+            simpleAudit.actorId.should.equal(bob.id);
+            simpleAudit.details.should.eql({ data: { name: 'New Simple', state: 'closed' } });
+          }))));
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // updates with assignments:
+
+    it('should reject if the roleId is not given', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.post('/v1/projects/1/app-users')
+          .send({ displayName: 'test app user' })
+          .expect(200)
+          .then(({ body }) => body)
+          .then((fk) => asBob.put('/v1/projects/1')
+            .set('Content-Type', 'application/json')
+            .send({
+              name: 'Default Project',
+              forms: [{
+                xmlFormId: 'simple', name: 'New Simple', state: 'closed',
+                assignments: [{ actorId: fk.id }]
+              }, {
+                xmlFormId: 'withrepeat', name: 'New Repeat', state: 'closing'
+              }]
+            })
+            .expect(400)
+            .then(({ body }) => { body.code.should.equal(400.2); })))));
+
+    it('should reject if the roleId is not recognized', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.post('/v1/projects/1/app-users')
+          .send({ displayName: 'test app user' })
+          .expect(200)
+          .then(({ body }) => body)
+          .then((fk) => asBob.put('/v1/projects/1')
+            .set('Content-Type', 'application/json')
+            .send({
+              name: 'Default Project',
+              forms: [{
+                xmlFormId: 'simple', name: 'New Simple', state: 'closed',
+                assignments: [{
+                  roleId: 99,
+                  actorId: fk.id
+                }]
+              }, {
+                xmlFormId: 'withrepeat', name: 'New Repeat', state: 'closing'
+              }]
+            })
+            .expect(400)
+            .then(({ body }) => { body.code.should.equal(400.14); })))));
+
+    it('should reject if the actorId is not given', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.get('/v1/roles/app-user')
+          .expect(200)
+          .then(({ body }) => body.id)
+          .then((appUserRoleId) => asBob.put('/v1/projects/1')
+            .set('Content-Type', 'application/json')
+            .send({
+              name: 'Default Project',
+              forms: [{
+                xmlFormId: 'simple', name: 'New Simple', state: 'closed',
+                assignments: [{ roleId: appUserRoleId, }]
+              }, {
+                xmlFormId: 'withrepeat', name: 'New Repeat', state: 'closing'
+              }]
+            })
+            .expect(400)
+            .then(({ body }) => { body.code.should.equal(400.2); })))));
+
+    it('should reject if the actorId is not recognized', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.get('/v1/roles/app-user')
+          .expect(200)
+          .then(({ body }) => body.id)
+          .then((appUserRoleId) => asBob.put('/v1/projects/1')
+            .set('Content-Type', 'application/json')
+            .send({
+              name: 'Default Project',
+              forms: [{
+                xmlFormId: 'simple', name: 'New Simple', state: 'closed',
+                assignments: [{
+                  roleId: appUserRoleId,
+                  actorId: 99
+                }]
+              }, {
+                xmlFormId: 'withrepeat', name: 'New Repeat', state: 'closing'
+              }]
+            })
+            .expect(400)
+            .then(({ body }) => { body.code.should.equal(400.14); })))));
+
+    it('should create the requested assignments', testService((service) =>
+      service.login('bob', (asBob) =>
+        Promise.all([
+          asBob.post('/v1/projects/1/app-users')
+            .send({ displayName: 'test app user' })
+            .expect(200)
+            .then(({ body }) => body),
+          asBob.get('/v1/roles/app-user')
+            .expect(200)
+            .then(({ body }) => body.id),
+          asBob.get('/v1/roles/manager')
+            .expect(200)
+            .then(({ body }) => body.id)
+        ])
+          .then(([ fk, appUserRoleId, managerRoleId ]) => asBob.put('/v1/projects/1')
+            .set('Content-Type', 'application/json')
+            .send({
+              name: 'Default Project',
+              forms: [{
+                xmlFormId: 'simple', name: 'New Simple', state: 'closed',
+                assignments: [{
+                  roleId: appUserRoleId,
+                  actorId: fk.id
+                }]
+              }, {
+                xmlFormId: 'withrepeat', name: 'New Repeat', state: 'closing',
+                assignments: [{
+                  roleId: managerRoleId,
+                  actorId: fk.id
+                }]
+              }]
+            })
+            .expect(200)
+            .then(() => Promise.all([
+              asBob.get('/v1/projects/1/forms/simple/assignments')
+                .expect(200)
+                .then(({ body }) => { body.should.eql([{ roleId: appUserRoleId, actorId: fk.id }]); }),
+              asBob.get('/v1/projects/1/forms/withrepeat/assignments')
+                .expect(200)
+                .then(({ body }) => { body.should.eql([{ roleId: managerRoleId, actorId: fk.id }]); })
+            ]))))));
+
+    it('should log the creation action in the audit log', testService((service, { Actor, Audit, Form }) =>
+      service.login('bob', (asBob) =>
+        Promise.all([
+          asBob.post('/v1/projects/1/app-users')
+            .send({ displayName: 'test app user' })
+            .expect(200)
+            .then(({ body }) => body),
+          asBob.get('/v1/roles/app-user')
+            .expect(200)
+            .then(({ body }) => body.id)
+        ])
+          .then(([ fk, appUserRoleId ]) => asBob.put('/v1/projects/1')
+            .set('Content-Type', 'application/json')
+            .send({
+              name: 'Default Project',
+              forms: [{
+                xmlFormId: 'simple', name: 'New Simple', state: 'closed',
+                assignments: [{
+                  roleId: appUserRoleId,
+                  actorId: fk.id
+                }]
+              }, {
+                xmlFormId: 'withrepeat', name: 'New Repeat', state: 'closing'
+              }]
+            })
+            .expect(200)
+            .then(() => Promise.all([
+              asBob.get('/v1/users/current').expect(200).then(({ body }) => body),
+              Actor.getById(fk.id).then((o) => o.get()),
+              Form.getByProjectAndXmlFormId(1, 'simple').then((o) => o.get()),
+              Audit.getLatestByAction('assignment.create').then((o) => o.get())
+            ]))
+            .then(([ bob, fullfk, form, audit ]) => {
+              audit.actorId.should.equal(bob.id);
+              audit.acteeId.should.equal(fullfk.acteeId);
+              audit.details.should.eql({ roleId: appUserRoleId, grantedActeeId: form.acteeId });
+            })))));
+
+    it('should delete the requested assignments', testService((service) =>
+      service.login('bob', (asBob) => asBob.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test app user' })
+        .expect(200)
+        .then(({ body }) => body)
+        .then((fk) => Promise.all([
+          asBob.post(`/v1/projects/1/forms/simple/assignments/app-user/${fk.id}`)
+            .expect(200),
+          asBob.post(`/v1/projects/1/forms/withrepeat/assignments/manager/${fk.id}`)
+            .expect(200)
+        ])
+          .then(() => asBob.put('/v1/projects/1')
+            .set('Content-Type', 'application/json')
+            .send({
+              name: 'Default Project',
+              forms: [{
+                xmlFormId: 'simple', name: 'New Simple', state: 'closed',
+                assignments: []
+              }, {
+                xmlFormId: 'withrepeat', name: 'New Repeat', state: 'closing',
+                assignments: []
+              }]
+            })
+            .expect(200)
+            .then(() => Promise.all([
+              asBob.get('/v1/projects/1/forms/simple/assignments')
+                .expect(200)
+                .then(({ body }) => { body.should.eql([]); }),
+              asBob.get('/v1/projects/1/forms/withrepeat/assignments')
+                .expect(200)
+                .then(({ body }) => { body.should.eql([]); })
+            ])))))));
+
+    it('should log the deletion action in the audit log', testService((service, { Actor, Audit, Project }) =>
+      service.login('bob', (asBob) => asBob.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test app user' })
+        .expect(200)
+        .then(({ body }) => body)
+        .then((fk) => asBob.post(`/v1/projects/1/forms/simple/assignments/app-user/${fk.id}`)
+          .expect(200)
+          .then(() => asBob.put('/v1/projects/1')
+            .set('Content-Type', 'application/json')
+            .send({
+              name: 'Default Project',
+              forms: [{
+                xmlFormId: 'simple', name: 'New Simple', state: 'closed',
+                assignments: []
+              }, {
+                xmlFormId: 'withrepeat', name: 'New Repeat', state: 'closing'
+              }]
+            })
+            .expect(200)
+            .then(() => Promise.all([
+              asBob.get('/v1/users/current').expect(200).then(({ body }) => body),
+              asBob.get('/v1/roles/app-user').expect(200).then(({ body }) => body.id),
+              Actor.getById(fk.id).then((o) => o.get()),
+              Project.getById(1).then((o) => o.get())
+                .then((project) => project.getFormByXmlFormId('simple')).then((o) => o.get()),
+              Audit.getLatestByAction('assignment.delete').then((o) => o.get())
+            ]))
+            .then(([ bob, appUserRoleId, fullfk, form, audit ]) => {
+              audit.actorId.should.equal(bob.id);
+              audit.acteeId.should.equal(fullfk.acteeId);
+              audit.details.should.eql({ roleId: appUserRoleId, revokedActeeId: form.acteeId });
+            }))))));
+
+    it('should leave assignments alone if no array is given', testService((service) =>
+      service.login('bob', (asBob) => asBob.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test app user' })
+        .expect(200)
+        .then(({ body }) => body)
+        .then((fk) => asBob.post(`/v1/projects/1/forms/simple/assignments/app-user/${fk.id}`)
+          .expect(200)
+          .then(() => asBob.put('/v1/projects/1')
+            .set('Content-Type', 'application/json')
+            .send({
+              name: 'Default Project',
+              forms: [{
+                xmlFormId: 'simple', name: 'New Simple', state: 'closed'
+              }, {
+                xmlFormId: 'withrepeat', name: 'New Repeat', state: 'closing'
+              }]
+            })
+            .expect(200)
+            .then(() => asBob.get('/v1/projects/1/forms/simple/assignments')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(1);
+                body[0].actorId.should.equal(fk.id);
+              })))))));
+
+    it('should leave assignments alone if there is no change', testService((service, { Audit }) =>
+      service.login('bob', (asBob) => Promise.all([
+        asBob.post('/v1/projects/1/app-users')
+          .send({ displayName: 'test app user' })
+          .expect(200)
+          .then(({ body }) => body),
+        asBob.get('/v1/roles/app-user').expect(200).then(({ body }) => body.id)
+      ])
+        .then(([ fk, appUserRoleId ]) => asBob.post(`/v1/projects/1/forms/simple/assignments/app-user/${fk.id}`)
+          .expect(200)
+          .then(() => asBob.put('/v1/projects/1')
+            .set('Content-Type', 'application/json')
+            .send({
+              name: 'Default Project',
+              forms: [{
+                xmlFormId: 'simple', name: 'New Simple', state: 'closed',
+                assignments: [{ actorId: fk.id, roleId: appUserRoleId }]
+              }, {
+                xmlFormId: 'withrepeat', name: 'New Repeat', state: 'closing'
+              }]
+            })
+            .expect(200)
+            .then(() => Promise.all([
+              asBob.get('/v1/projects/1/forms/simple/assignments')
+                .expect(200)
+                .then(({ body }) => {
+                  body.length.should.equal(1);
+                  body[0].actorId.should.equal(fk.id);
+                }),
+              Audit.getLatestByAction('assignment.delete')
+                .then((o) => { o.isDefined().should.equal(false); })
+            ])))))));
   });
 });
 

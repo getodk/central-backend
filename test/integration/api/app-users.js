@@ -21,6 +21,17 @@ describe('api: /projects/:id/app-users', () => {
             body.displayName.should.equal('test1');
             body.createdBy.should.equal(5);
           }))));
+
+    it('should not allow the created user any form access', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'test1' })
+          .expect(200)
+          .then(({ body }) => body.token)
+          .then((key) => service.post(`/v1/key/${key}/projects/1/forms/simple/submissions`)
+            .set('Content-Type', 'text/xml')
+            .send(testData.instances.simple.one)
+            .expect(403)))));
   });
 
   describe('GET', () => {
@@ -100,18 +111,21 @@ describe('api: /projects/:id/app-users', () => {
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/app-users').send({ displayName: 'test 1' }).expect(200)
           .then(() => asAlice.post('/v1/projects/1/app-users').send({ displayName: 'test 2' })
-            .then(({ body }) => service.post(`/v1/key/${body.token}/projects/1/forms/simple/submissions`)
-              .send(testData.instances.simple.one)
-              .set('Content-Type', 'application/xml')
+            .then(({ body }) => body)
+            .then((fk) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${fk.id}`)
               .expect(200)
-              .then(() => asAlice.get('/v1/projects/1/app-users')
-                .set('X-Extended-Metadata', 'true')
+              .then(() => service.post(`/v1/key/${fk.token}/projects/1/forms/simple/submissions`)
+                .send(testData.instances.simple.one)
+                .set('Content-Type', 'application/xml')
                 .expect(200)
-                .then(({ body }) => {
-                  body.forEach((fk) => fk.should.be.an.ExtendedFieldKey());
-                  body[0].lastUsed.should.be.a.recentIsoDate();
-                  should(body[1].lastUsed).equal(null);
-                })))))));
+                .then(() => asAlice.get('/v1/projects/1/app-users')
+                  .set('X-Extended-Metadata', 'true')
+                  .expect(200)
+                  .then(({ body }) => {
+                    body.forEach((fk) => fk.should.be.an.ExtendedFieldKey());
+                    body[0].lastUsed.should.be.a.recentIsoDate();
+                    should(body[1].lastUsed).equal(null);
+                  }))))))));
 
     it('should sort revoked field keys to the bottom in extended metadata', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -159,7 +173,6 @@ describe('api: /projects/:id/app-users', () => {
 
 
 // Test the actual use of field keys.
-// TODO: perhaps these deserve their own file.
 describe('api: /key/:key', () => {
   it('should return 401 if an invalid key is provided', testService((service) =>
     service.get('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/current')
@@ -176,26 +189,15 @@ describe('api: /key/:key', () => {
         .expect(401))));
 
   it('should passthrough to the appropriate route with successful auth', testService((service) =>
-    service.login('alice', (asAlice) => asAlice.post('/v1/projects/1/app-users').send({ displayName: 'fktest' })
-      .then(({ body }) => service.post(`/v1/key/${body.token}/projects/1/forms/simple/submissions`)
-        .send(testData.instances.simple.one)
-        .set('Content-Type', 'application/xml')
-        .expect(200)))));
-
-  it('should only work on the expected project', testService((service) =>
     service.login('alice', (asAlice) =>
-      asAlice.post('/v1/projects')
-        .send({ name: 'project 2' })
-        .expect(200)
-        .then((project) => asAlice.post('/v1/projects/1/app-users')
-          .send({ displayName: 'fktest' })
+      asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'fktest' })
+        .then(({ body }) => body)
+        .then((fk) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${fk.id}`)
           .expect(200)
-          .then((fk) =>
-            service.get(`/v1/key/${fk.body.token}/projects/1/formList`)
-              .set('X-OpenRosa-Version', '1.0')
-              .expect(200)
-              .then(() => service.get(`/v1/key/${fk.body.token}/projects/${project.body.id}/formList`)
-                .set('X-OpenRosa-Version', '1.0')
-                .expect(403)))))));
+          .then(() => service.post(`/v1/key/${fk.token}/projects/1/forms/simple/submissions`)
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200))))));
 });
 
