@@ -510,6 +510,22 @@ describe('api: /users', () => {
               .then(() => asAlice.get('/v1/users/' + chelseaId)
                 .expect(404)))))));
 
+    it('should delete any assignments the user had', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current')
+            .expect(200)
+            .then(({ body }) => body.id)
+            .then((chelseaId) => asAlice.post('/v1/assignments/admin/' + chelseaId)
+              .expect(200)
+              .then(() => asAlice.delete('/v1/users/' + chelseaId)
+                .expect(200))
+              .then(() => asAlice.get('/v1/assignments/admin')
+                .expect(200)
+                .then(({ body }) => {
+                  body.map((actor) => actor.id).includes(chelseaId).should.equal(false);
+                })))))));
+
     it('should log an audit upon delete', testService((service, { Audit, User }) =>
       service.login('alice', (asAlice) =>
         User.getByEmail('chelsea@opendatakit.org')
