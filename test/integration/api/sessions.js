@@ -109,6 +109,20 @@ describe('api: /sessions', () => {
               .expect(401));
         })));
 
+    it('should allow non-admins to delete their own sessions', testService((service) =>
+      service.post('/v1/sessions')
+        .send({ email: 'chelsea@opendatakit.org', password: 'chelsea' })
+        .expect(200)
+        .then(({ body }) => {
+          const token = body.token;
+          return service.delete('/v1/sessions/' + token)
+            .set('Authorization', 'Bearer ' + token)
+            .expect(200)
+            .then(() => service.get('/v1/users/current') // actually doesn't matter which route; we get 401 due to broken auth.
+              .set('Authorization', 'Bearer ' + token)
+              .expect(401));
+        })));
+
     it('should clear the cookie if successful', testService((service) =>
       service.post('/v1/sessions')
         .send({ email: 'alice@opendatakit.org', password: 'alice' })
