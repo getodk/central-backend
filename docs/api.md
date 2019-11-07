@@ -40,10 +40,12 @@ Here major and breaking changes to the API are listed by version.
   * Relatedly, the [OpenRosa Form Listing API](/reference/openrosa-endpoints/openrosa-form-listing-api) no longer rejects requests outright based on authentication. Rather, it will only return Forms that the authenticated user is allowed to view.
   * A [new summary API](/reference/project-management/project-assignments/seeing-all-form-assignments-within-a-project) `GET /projects/…/assignments/forms` which returns all assignments on all Forms within a Project, so you don't have to request this information separately for each Form.
 * `PUT /projects/:id`, which while complex allows you to update many Forms' states and assignments with a single transactional request.
+* `GET /users/?q` will now always return user details given an exact match for an email, even for users who cannot `user.list`. This allows non-Administrators to choose a user for an action (eg grant rights) without allowing full search.
 
 **Changed**:
 
 * Newly created App Users are no longer automatically granted download and submission access to all Forms within their Project. You will want to use the [Form Assignments resource](/reference/forms-and-submissions/'-form-assignments) to explicitly grant `app-user` role access to the Forms they should be allowed to see.
+* Unauthorized access to `GET /users` now results in an `200 OK` empty `[]` response rather than `403`.
 
 **Fixed**:
 
@@ -280,14 +282,15 @@ Currently, there are no paging or filtering options, so listing `User`s will get
 
 Optionally, a `q` querystring parameter may be provided to filter the returned users by any given string. The search is performed via a [trigram similarity index](https://www.postgresql.org/docs/9.6/pgtrgm.html) over both the Email and Display Name fields, and results are ordered by match score, best matches first.
 
+If a `q` parameter is given, and it exactly matches an email address that exists in the system, that user's details will always be returned, even for actors who cannot `user.list`. This allows non-Administrators to choose a user for an action (eg grant rights) without allowing full search.
+
+Actors who cannot `user.list` will always receive `[]` with a `200 OK` response.
+
 + Parameters
     + q: `alice` (string, optional) - An optional search parameter.
 
 + Response 200 (application/json)
     + Attributes (array[User])
-
-+ Response 403 (application/json)
-    + Attributes (Error 403)
 
 ### Creating a new User [POST]
 
