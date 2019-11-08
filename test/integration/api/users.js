@@ -3,10 +3,14 @@ const { testService } = require('../setup');
 
 describe('api: /users', () => {
   describe('GET', () => {
-    it('should give anonymous users nothing', testService((service) =>
-      service.get('/v1/users')
-        .expect(200)
-        .then(({ body }) => { body.should.eql([]); })));
+    it('should reject for anonymous users', testService((service) =>
+      service.get('/v1/users').expect(403)));
+
+    it('should return nothing for authed users who cannot user.list', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/users')
+          .expect(200)
+          .then(({ body }) => { body.should.eql([]); }))));
 
     it('should return a list of sorted users', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -58,14 +62,18 @@ describe('api: /users', () => {
             body.map((user) => user.displayName).should.eql([ 'Chelsea', 'Bob', 'Alice' ]);
           }))));
 
-    it('should always return an exact email match', testService((service) =>
-      service.get('/v1/users/?q=alice@opendatakit.org')
-        .expect(200)
-        .then(({ body }) => {
-          body.length.should.equal(1);
-          body[0].email.should.equal('alice@opendatakit.org');
-          body[0].displayName.should.equal('Alice');
-        })));
+    it('should reject unauthed users even if they exactly match an email', testService((service) =>
+      service.get('/v1/users/?q=alice@opendatakit.org').expect(403)));
+
+    it('should return an exact email match to any authed user', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/users/?q=alice@opendatakit.org')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].email.should.equal('alice@opendatakit.org');
+            body[0].displayName.should.equal('Alice');
+          }))));
   });
 
   describe('POST', () => {
