@@ -114,6 +114,16 @@ const testContainer = (test) => () => new Promise((resolve, reject) => {
   test(baseContainer).then(reinit(resolve), reinit(reject));
 });
 
+// also gives a simple container, but uses a transaction rollback model rather
+// than reinitializing the entire database.
+const testTrxContainer = (test) => () => new Promise((resolve, reject) => {
+  baseContainer.transacting((container) => {
+    const rollback = (f) => (x) => container.db.rollback().then(() => f(x));
+    test(container).then(rollback(resolve), rollback(reject));
+    // we return nothing to prevent knex from auto-committing the transaction.
+  }).catch(Promise.resolve.bind(Promise));
+});
+
 // called to get a container context per task. ditto all // from testService.
 // here instead our weird hijack work involves injecting our own constructed
 // container into the task context so it just picks it up and uses it.
@@ -129,5 +139,5 @@ const testTask = (test) => () => new Promise((resolve, reject) => {
   }).catch(Promise.resolve.bind(Promise));
 });
 
-module.exports = { testService, testContainer, testTask };
+module.exports = { testService, testContainer, testTrxContainer, testTask };
 
