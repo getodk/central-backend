@@ -83,6 +83,7 @@ describe('timebound @slow', () => {
     setTimeout(() => {
       passed.should.equal(false);
       failed.should.equal(true);
+      pass(42);
       setTimeout(() => {
         passed.should.equal(false);
         failed.should.equal(true);

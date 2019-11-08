@@ -65,11 +65,11 @@ describe('worker', () => {
     it('should mark the event as processed after on job completion', testContainer(async (container) => {
       const { Audit, User } = container;
       const alice = (await User.getByEmail('alice@opendatakit.org')).get();
-      const event = await Audit.log(alice.actor, 'test.event', alice.actor);
+      const event = await Audit.log(alice.actor, 'submission.attachment.create', alice.actor);
 
-      const jobMap = { 'test.event': [ () => Promise.resolve() ] };
+      const jobMap = { 'submission.attachment.create': [ () => Promise.resolve() ] };
       await promisify(runner(container, jobMap))(event);
-      const after = (await Audit.getLatestByAction('test.event')).get();
+      const after = (await Audit.getLatestByAction('submission.attachment.create')).get();
       after.processed.should.be.a.recentDate();
     }));
 
@@ -181,10 +181,10 @@ describe('worker', () => {
       await Audit.of(alice.actor, 'submission.attachment.update', alice.actor)
         .with({
           failures: 4,
-          lastFailure: DateTime.local().minus(Duration.fromObject({ minutes: 10 })).toJSDate()
+          lastFailure: DateTime.local().minus(Duration.fromObject({ minutes: 11 })).toJSDate()
         })
         .create();
-      should.not.exist(await check());
+      should.exist(await check());
     }));
 
     it('should not return a repeatedly failed event', testTrxContainer(async (container) => {
