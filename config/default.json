@@ -13,6 +13,10 @@
       "serviceAccount": "no-reply@opendatakit.org",
       "transport": "json"
     },
+    "xlsform": {
+      "host": "localhost",
+      "port": 5000
+    },
     "env": {
       "domain": "http://localhost:8989"
     },
