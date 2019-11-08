@@ -69,6 +69,9 @@ describe('zipPart streamer', () => {
     archive.pipe(createWriteStream('/dev/null'));
 
     archive.on('end', () => {
+      // despite the fact that 2 gets closed before 1 below, we still expect 1 to
+      // be called back first because it was appended to the archive first, and
+      // the archive works serially.
       calls.should.eql([ 1, 2 ]);
       done();
     });
@@ -143,9 +146,12 @@ describe('zipPart streamer', () => {
     const part2 = zipPart();
 
     const archive = zipStreamFromParts(part1, part2);
+    let errCount = 0;
     archive.on('error', (err) => {
+      errCount += 1;
+      errCount.should.equal(1);
       err.message.should.equal('whoops');
-      done();
+      setTimeout(done, 0);
     });
 
     part1.append('test static', { name: 'test1.file' });
