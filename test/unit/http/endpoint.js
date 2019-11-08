@@ -1,11 +1,13 @@
 const should = require('should');
 const { EventEmitter } = require('events');
+const { Transform } = require('stream');
 const { createRequest, createResponse } = require('node-mocks-http');
 const streamTest = require('streamtest').v2;
 const { always, identity } = require('ramda');
 
 const appRoot = require('app-root-path');
 const { endpointBase, defaultErrorWriter, Context, defaultResultWriter, openRosaPreprocessor, openRosaBefore, openRosaResultWriter, openRosaErrorWriter, odataPreprocessor, odataBefore } = require(appRoot + '/lib/http/endpoint');
+const { PartialPipe } = require(appRoot + '/lib/util/stream');
 const { noop } = require(appRoot + '/lib/util/util');
 const Problem = require(appRoot + '/lib/util/problem');
 const Option = require(appRoot + '/lib/util/option');
@@ -434,7 +436,7 @@ describe('endpoints', () => {
     });
 
     it('should pipe through stream results', (done) => {
-      let result, writeResult = (x) => { result = x };
+      let result;
       const requestTest = streamTest.fromChunks();
       const responseTest = streamTest.toText((_, result) => {
         result.should.equal('ateststream');
@@ -442,6 +444,66 @@ describe('endpoints', () => {
       });
       responseTest.hasHeader = function() { return true; };
       defaultResultWriter(streamTest.fromChunks([ 'a', 'test', 'stream' ]), requestTest, responseTest);
+    });
+
+    it('should pipeline PartialPipe results', (done) => {
+      let result;
+      const requestTest = streamTest.fromChunks();
+      const responseTest = streamTest.toText((_, result) => {
+        result.should.equal('a!test!stream!');
+        done();
+      });
+      responseTest.hasHeader = function() { return true; };
+
+      const resourceResult = PartialPipe.of(
+        streamTest.fromChunks([ 'a', 'test', 'stream' ]),
+        new Transform({ transform(s, _, done) { done(null, s + '!'); } })
+      );
+
+      defaultResultWriter(resourceResult, requestTest, responseTest);
+    });
+
+    it('should fail semigracefully on PartialPipe stream error', (done) => {
+      let result, trailers;
+      const requestTest = streamTest.fromChunks();
+      const responseTest = streamTest.toText((_, result) => {
+        trailers.should.eql({ Status: 'Error' });
+        result.should.equal('a!test!');
+        done();
+      });
+      responseTest.addTrailers = function(t) { trailers = t; };
+      responseTest.hasHeader = function() { return true; };
+
+      const resourceResult = PartialPipe.of(
+        streamTest.fromChunks([ 'a', 'test', 'stream' ]),
+        new Transform({ transform(s, _, done) {
+          if (s.length > 4) done(new Error('nope'));
+          else done(null, s + '!');
+        } })
+      );
+
+      defaultResultWriter(resourceResult, requestTest, responseTest, () => {});
+    });
+
+    // so that Sentry catches the error.
+    it('should call next on PartialPipe stream error', (done) => {
+      const requestTest = streamTest.fromChunks();
+      const responseTest = streamTest.toText(() => {});
+      responseTest.addTrailers = function(t) { trailers = t; };
+      responseTest.hasHeader = function() { return true; };
+
+      const resourceResult = PartialPipe.of(
+        streamTest.fromChunks([ 'a', 'test', 'stream' ]),
+        new Transform({ transform(s, _, done) {
+          if (s.length > 4) done(new Error('nope'));
+          else done(null, s + '!');
+        } })
+      );
+
+      defaultResultWriter(resourceResult, requestTest, responseTest, (err) => {
+        err.message.should.equal('nope');
+        done();
+      });
     });
 
     it('should immediately abort the database query if the request is aborted', (done) => {
