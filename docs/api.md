@@ -41,6 +41,7 @@ Here major and breaking changes to the API are listed by version.
   * A [new summary API](/reference/project-management/project-assignments/seeing-all-form-assignments-within-a-project) `GET /projects/…/assignments/forms` which returns all assignments on all Forms within a Project, so you don't have to request this information separately for each Form.
 * `PUT /projects/:id`, which while complex allows you to update many Forms' states and assignments with a single transactional request.
 * `POST /projects/…/forms` now allows upload of `.xls` and `.xlsx` XLSForm files. The correct MIME type must be given.
+* `GET /users/?q` will now always return user details given an exact match for an email, even for users who cannot `user.list`. The request must still be authenticate as a valid Actor. This allows non-Administrators to choose a user for an action (eg grant rights) without allowing full search.
 
 **Changed**:
 
@@ -280,6 +281,10 @@ Presently, it is possible to create and list `User`s in the system, as well as t
 Currently, there are no paging or filtering options, so listing `User`s will get you every User in the system, every time.
 
 Optionally, a `q` querystring parameter may be provided to filter the returned users by any given string. The search is performed via a [trigram similarity index](https://www.postgresql.org/docs/9.6/pgtrgm.html) over both the Email and Display Name fields, and results are ordered by match score, best matches first.
+
+If a `q` parameter is given, and it exactly matches an email address that exists in the system, that user's details will always be returned, even for actors who cannot `user.list`. The request must still authenticate as a valid Actor. This allows non-Administrators to choose a user for an action (eg grant rights) without allowing full search.
+
+Actors who cannot `user.list` will always receive `[]` with a `200 OK` response.
 
 + Parameters
     + q: `alice` (string, optional) - An optional search parameter.

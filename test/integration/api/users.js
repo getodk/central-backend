@@ -3,8 +3,14 @@ const { testService } = require('../setup');
 
 describe('api: /users', () => {
   describe('GET', () => {
-    it('should prohibit anonymous users from listing users', testService((service) =>
+    it('should reject for anonymous users', testService((service) =>
       service.get('/v1/users').expect(403)));
+
+    it('should return nothing for authed users who cannot user.list', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/users')
+          .expect(200)
+          .then(({ body }) => { body.should.eql([]); }))));
 
     it('should return a list of sorted users', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -54,6 +60,19 @@ describe('api: /users', () => {
             // bob always comes ahead of alice, since the email is shorter and so it's
             // technically more of a match.
             body.map((user) => user.displayName).should.eql([ 'Chelsea', 'Bob', 'Alice' ]);
+          }))));
+
+    it('should reject unauthed users even if they exactly match an email', testService((service) =>
+      service.get('/v1/users/?q=alice@opendatakit.org').expect(403)));
+
+    it('should return an exact email match to any authed user', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/users/?q=alice@opendatakit.org')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].email.should.equal('alice@opendatakit.org');
+            body[0].displayName.should.equal('Alice');
           }))));
   });
 
@@ -509,6 +528,22 @@ describe('api: /users', () => {
               .expect(200)
               .then(() => asAlice.get('/v1/users/' + chelseaId)
                 .expect(404)))))));
+
+    it('should delete any assignments the user had', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current')
+            .expect(200)
+            .then(({ body }) => body.id)
+            .then((chelseaId) => asAlice.post('/v1/assignments/admin/' + chelseaId)
+              .expect(200)
+              .then(() => asAlice.delete('/v1/users/' + chelseaId)
+                .expect(200))
+              .then(() => asAlice.get('/v1/assignments/admin')
+                .expect(200)
+                .then(({ body }) => {
+                  body.map((actor) => actor.id).includes(chelseaId).should.equal(false);
+                })))))));
 
     it('should log an audit upon delete', testService((service, { Audit, User }) =>
       service.login('alice', (asAlice) =>

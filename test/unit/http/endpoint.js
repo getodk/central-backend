@@ -71,21 +71,6 @@ describe('endpoints', () => {
       defaultErrorWriter(error, null, response);
     });
 
-    it('should translate 403 replies to Tableau into 401 Basic auth directives', (done) => {
-      const response = createModernResponse();
-      const request = createRequest({
-        headers: {
-          'User-Agent': 'Tableau Desktop 10500.18.0305.1200; public; libcurl-client; 64-bit; en_US; Mac OS X 10.13.3;'
-        }
-      });
-      response.on('end', () => {
-        response.statusCode.should.equal(401);
-        response.header('WWW-Authenticate').should.equal('Basic charset="UTF-8"');
-        done();
-      });
-      defaultErrorWriter(Problem.user.insufficientRights(), request, response);
-    });
-
     it('should not translate 403 to 401 if user agent header is not present', (done) => {
       const response = createModernResponse();
       const request = createRequest();

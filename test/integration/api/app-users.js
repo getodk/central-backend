@@ -22,6 +22,12 @@ describe('api: /projects/:id/app-users', () => {
             body.createdBy.should.equal(5);
           }))));
 
+    it('should allow project managers to create', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.post('/v1/projects/1/app-users')
+          .send({ displayName: 'test1' })
+          .expect(200))));
+
     it('should not allow the created user any form access', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/app-users')
@@ -157,6 +163,11 @@ describe('api: /projects/:id/app-users', () => {
           .then(() => asAlice.get('/v1/projects/1/app-users')
             .expect(200)
             .then(({ body }) => body.should.eql([]))))));
+
+    it('should allow project managers to delete', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.post('/v1/projects/1/app-users').send({ displayName: 'condemned' }).expect(200)
+          .then(({ body }) => asBob.delete('/v1/projects/1/app-users/' + body.id).expect(200)))));
 
     it('should only delete the token if it is part of the project', testService((service) =>
       service.login('alice', (asAlice) =>
