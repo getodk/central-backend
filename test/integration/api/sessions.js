@@ -123,6 +123,15 @@ describe('api: /sessions', () => {
               .expect(401));
         })));
 
+    it('should not allow app users to delete their own sessions', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.post('/v1/projects/1/app-users')
+          .send({ displayName: 'test app user' })
+          .expect(200)
+          .then(({ body }) => body.token)
+          .then((token) => service.delete(`/v1/key/${token}/sessions/${token}`)
+            .expect(403)))));
+
     it('should clear the cookie if successful', testService((service) =>
       service.post('/v1/sessions')
         .send({ email: 'alice@opendatakit.org', password: 'alice' })
