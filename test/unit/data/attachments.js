@@ -43,5 +43,25 @@ describe('.zip attachments streaming', () => {
       done();
     });
   });
+
+  it('should not strip .enc unless decryption is happening', (done) => {
+    const inStream = streamTest.fromObjects([
+      { instanceId: 'subone', name: 'firstfile.ext.enc', content: 'this is my first file' }
+    ]);
+    zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream)), (result) => {
+      result.filenames.should.eql([ 'media/firstfile.ext.enc' ]);
+      done();
+    });
+  });
 });
+
+  it('should strip .enc if decryption is happening', (done) => {
+    const inStream = streamTest.fromObjects([
+      { instanceId: 'subone', name: 'firstfile.ext.enc', content: 'this is my first file' }
+    ]);
+    zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream, () => {})), (result) => {
+      result.filenames.should.eql([ 'media/firstfile.ext' ]);
+      done();
+    });
+  });
 

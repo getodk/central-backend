@@ -285,6 +285,27 @@ describe('managed encryption', () => {
               done();
             }))))));
 
+    it('should strip .enc suffix from decrypted attachments', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple.xml')
+            .expect(200)
+            .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
+            .then((send) => send(testData.instances.simple.one, { 'testfile.jpg.enc': 'hello this is a suffixed file' }))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
+            .expect(200)
+            .then(({ body }) => body[0].id))
+          .then((keyId) => new Promise((done) =>
+            zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`), (result) => {
+              result.filenames.length.should.equal(2);
+              result.filenames.should.containDeep([ 'simple.csv', 'media/testfile.jpg' ]);
+
+              result['media/testfile.jpg'].should.equal('hello this is a suffixed file');
+              done();
+            })))))));
+
     it('should handle mixed [plaintext/encrypted] attachments (not decrypting)', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
