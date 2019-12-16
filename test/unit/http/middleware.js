@@ -73,6 +73,15 @@ describe('middleware', () => {
         done();
       });
     });
+
+    it('should decode percent-encoded keys', (done) => {
+      const request = createRequest({ url: '/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%24aa!aaaaaaaaaaaaaaaaaa/users/23' });
+      fieldKeyParser(request, null, () => {
+        request.fieldKey.should.eql(Option.of('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aa!aaaaaaaaaaaaaaaaaa'));
+        request.url.should.equal('/users/23');
+        done();
+      });
+    });
   });
 });
 
