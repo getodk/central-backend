@@ -731,6 +731,31 @@ describe('api: /projects/:id/forms', () => {
               })))));
     });
 
+    describe('/preview POST', () => {
+      it('should reject unless the user can read', testService((service) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.post('/v1/projects/1/forms/simple/preview').expect(403))));
+
+      it('should return json with preview url and code', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/preview')
+            .expect(201)
+            .then(({ body }) =>
+              body.should.eql({ preview_url: 'http://enke.to/preview/::abcdefgh', code: 201 })
+            ))));
+
+      it('should fail if Enketo returns an unexpected response', testService((service) => {
+        global.enketoPreviewTest = 'error'; // set up the mock service to fail.
+        return service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/preview')
+            .expect(500)
+            .then(({ body }) => {
+              body.code.should.equal(500.4);
+              body.message.should.equal('The Enketo service returned an unexpected response.');
+            }))
+      }));
+    });
+
     ////////////////////////////////////////
     // SUBRESOURCES
 
