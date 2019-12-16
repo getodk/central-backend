@@ -15,6 +15,9 @@ describe('preprocessors', () => {
     constructor(data) { Object.assign(this, data); }
     session() { return Option.of(this._session); }
   }
+  class Actor {
+    static types() { return { fieldKey: 'field_key', previewKey: 'preview_key' }; }
+  }
   const mockSession = (expectedToken) => ({
     getByBearerToken: (token) => Promise.resolve((token === expectedToken)
       ? Option.of('session')
@@ -285,18 +288,26 @@ describe('preprocessors', () => {
         new Context(createRequest(), { fieldKey: Option.of('abracadabra'), })
       )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
-    it('should fail the request if the session does not belong to a field key', () =>
+    it('should fail the request if the session does not belong to a field or preview key', () =>
       Promise.resolve(fieldKeyHandler(
-        { Auth, Session: mockFkSession('alohomora', 'user') },
+        { Auth, Session: mockFkSession('alohomora', 'user'), Actor },
         new Context(createRequest(), { fieldKey: Option.of('alohomora'), })
       )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
-    it('should attach the correct auth if everything is correct', () =>
+    it('should attach the correct auth if everything is correct for a field key', () =>
       Promise.resolve(fieldKeyHandler(
-        { Auth, Session: mockFkSession('alohomora', 'field_key') },
+        { Auth, Session: mockFkSession('alohomora', 'field_key'), Actor },
         new Context(createRequest(), { fieldKey: Option.of('alohomora'), })
       )).then((context) => {
         context.auth._session.should.eql({ actor: { type: 'field_key' }, token: 'alohomora' });
+      }));
+
+    it('should attach the correct auth if everything is correct for a preview key', () =>
+      Promise.resolve(fieldKeyHandler(
+        { Auth, Session: mockFkSession('alohomora', 'preview_key'), Actor },
+        new Context(createRequest(), { fieldKey: Option.of('alohomora'), })
+      )).then((context) => {
+        context.auth._session.should.eql({ actor: { type: 'preview_key' }, token: 'alohomora' });
       }));
   });
 
