@@ -1107,6 +1107,23 @@ To get only the XML of the `Form` rather than all of the details with the XML as
 + Response 403 (application/json)
     + Attributes (Error 403)
 
+#### Generating a Form Preview [POST /v1/projects/{projectId}/forms/{xmlFormId}/preview]
+
+When ODK Central is configured to use an Enketo service, add `/preview` to the end of the `Form` URL and `POST` without parameters to create a preview of the `Form`. The URL of the new preview is returned as `preview_url` in the response; see https://apidocs.enketo.org/v2/#/post-survey-preview.
+
+Creating a preview grants Enketo temporary, read-only access to the individual `Form` and its [Form Attachments](/reference/forms-and-submissions/'-form-attachments) for 15 minutes. After that period elapes, the preview may no longer load correctly.
+
++ Response 201 (application/json)
+    + Body
+
+            {
+              preview_url: 'https://enke.to/preview/::abcd1234',
+              code: 201
+            }
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
 #### Retrieving Form Schema JSON [GET /v1/projects/{projectId}/forms/{xmlFormId}.schema.json{?flatten,odata}]
 
 _(introduced: version 0.2)_

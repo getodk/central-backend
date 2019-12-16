@@ -41,6 +41,9 @@ const crypto = (process.env.BCRYPT === 'no')
   ? require('../util/crypto-mock')
   : require(appRoot + '/lib/util/crypto');
 
+// set up our enketo mock.
+const enketo = require(appRoot + '/test/util/enketo');
+
 // application things.
 const injector = require(appRoot + '/lib/model/package');
 const service = require(appRoot + '/lib/http/service');
@@ -96,7 +99,7 @@ const augment = (service) => {
 ////////////////////////////////////////////////////////////////////////////////
 // FINAL TEST WRAPPERS
 
-const baseContainer = injector.withDefaults({ db, mail, env, xlsform, google, crypto, Sentry });
+const baseContainer = injector.withDefaults({ db, mail, env, xlsform, google, crypto, enketo, Sentry });
 
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
