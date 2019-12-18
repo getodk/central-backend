@@ -40,6 +40,8 @@ Here major and breaking changes to the API are listed by version.
   * Relatedly, the [OpenRosa Form Listing API](/reference/openrosa-endpoints/openrosa-form-listing-api) no longer rejects requests outright based on authentication. Rather, it will only return Forms that the authenticated user is allowed to view.
   * A [new summary API](/reference/project-management/project-assignments/seeing-all-form-assignments-within-a-project) `GET /projects/…/assignments/forms` which returns all assignments on all Forms within a Project, so you don't have to request this information separately for each Form.
 * `PUT /projects/:id`, which while complex allows you to update many Forms' states and assignments with a single transactional request.
+* `POST /projects/…/forms` now allows upload of `.xls` and `.xlsx` XLSForm files. The correct MIME type must be given.
+* `GET /users/?q` will now always return user details given an exact match for an email, even for users who cannot `user.list`. The request must still be authenticate as a valid Actor. This allows non-Administrators to choose a user for an action (eg grant rights) without allowing full search.
 
 **Changed**:
 
@@ -279,6 +281,10 @@ Presently, it is possible to create and list `User`s in the system, as well as t
 Currently, there are no paging or filtering options, so listing `User`s will get you every User in the system, every time.
 
 Optionally, a `q` querystring parameter may be provided to filter the returned users by any given string. The search is performed via a [trigram similarity index](https://www.postgresql.org/docs/9.6/pgtrgm.html) over both the Email and Display Name fields, and results are ordered by match score, best matches first.
+
+If a `q` parameter is given, and it exactly matches an email address that exists in the system, that user's details will always be returned, even for actors who cannot `user.list`. The request must still authenticate as a valid Actor. This allows non-Administrators to choose a user for an action (eg grant rights) without allowing full search.
+
+Actors who cannot `user.list` will always receive `[]` with a `200 OK` response.
 
 + Parameters
     + q: `alice` (string, optional) - An optional search parameter.
@@ -972,11 +978,18 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 ### Creating a new Form [POST]
 
-When creating a `Form`, the only required data is the actual XForms XML itself. Use it as the `POST` body with a `Content-Type` header of `application/xml` (`text/xml` works too), and the Form will be created.
+When creating a `Form`, the only required data is the actual XForms XML or XLSForm itself. Use it as the `POST` body with a `Content-Type` header of `application/xml` (`text/xml` works too), and the Form will be created.
+
+For XLSForm upload, either `.xls` or `.xlsx` are accepted. You must provide the `Content-Type` request header corresponding to the file type: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` for `.xlsx` files, and `application/vnd.ms-excel` for `.xls` files. You must also provide an `X-XlsForm-FormId-Fallback` request header with the `formId` you want the resulting form to have, if the spreadsheet does not already specify.
+
+By default, any XLSForm conversion Warnings will fail this request and return the warnings rather than use the converted XML to create a form. To override this behaviour, provide a querystring flag `?ignoreWarnings=true`. Conversion Errors will always fail this request.
 
 If the combination of (`xmlFormId`, `version`) conflict with any existing Form, current or deleted, the request will be rejected with error code `409`. We consider even deleted forms when enforcing this restriction to prevent confusion in case a survey client already has the other version of that Form downloaded.
 
 The API will currently check the XML's structure in order to extract the information we need about it, but ODK Central does _not_ run comprehensive validation on the full contents of the XML to ensure compliance with the ODK specification. Future versions will likely do this, but in the meantime you will have to use a tool like [ODK Validate](https://opendatakit.org/use/validate/) to be sure your Forms are correct.
+
++ Parameters
+    + ignoreWarnings: `false` (boolean, optional) - Defaults to `false`. Set to `true` if you want the form to be created even if the XLSForm conversion results in warnings.
 
 + Request (application/xml)
     + Body
@@ -1010,6 +1023,15 @@ The API will currently check the XML's structure in order to extract the informa
                 </input>
               </h:body>
             </h:html>
+
++ Request (application/vnd.openxmlformats-officedocument.spreadsheetml.sheet)
+    + Headers
+
+            X-XlsForm-FormId-Fallback: filename.xlsx
+
+    + Body
+
+            (.xlsx binary contents)
 
 + Response 200 (application/json)
     + Attributes (Form)

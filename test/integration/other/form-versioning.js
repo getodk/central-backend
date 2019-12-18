@@ -86,7 +86,7 @@ describe('form forward versioning', () => {
     Promise.all([
       Project.getById(1).then(force),
       FormPartial.fromXml(testData.forms.withAttachments),
-      Blob.fromFile(__filename).then((blob) => blob.create())
+      Blob.fromFile(__filename).then((blob) => blob.ensure())
     ])
       .then(([ project, partial, blob ]) => partial.with({ projectId: project.id }).createNew()
         .then((savedForm) => Promise.all([ 'goodone.csv', 'goodtwo.mp3' ]
@@ -118,7 +118,7 @@ describe('form forward versioning', () => {
     Promise.all([
       Project.getById(1).then(force),
       FormPartial.fromXml(testData.forms.withAttachments),
-      Blob.fromFile(__filename).then((blob) => blob.create())
+      Blob.fromFile(__filename).then((blob) => blob.ensure())
     ])
       .then(([ project, partial, blob ]) => partial.with({ projectId: project.id }).createNew()
         .then((savedForm) => Promise.all([ 'goodone.csv', 'goodtwo.mp3' ]

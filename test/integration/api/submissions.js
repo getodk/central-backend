@@ -1,7 +1,10 @@
+const appRoot = require('app-root-path');
 const should = require('should');
+const { createReadStream, readFileSync } = require('fs');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { zipStreamToFiles } = require('../../util/zip');
+const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /submission', () => {
   describe('HEAD', () => {
@@ -171,6 +174,42 @@ describe('api: /submission', () => {
                 ]);
               }))))));
 
+    it('should return an appropriate error given conflicting attachments', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('file1', Buffer.from('this is test file three'), { filename: 'file1' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.conflict), { filename: 'data.xml' })
+            .attach('file1', Buffer.from('this is test file four'), { filename: 'file1' })
+            .expect(409)))));
+
+    it('should create audit log entries for saved attachments', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+            .expect(201)
+            .then(() => Promise.all([
+              asAlice.get('/v1/audits?action=submission.attachment.update').then(({ body }) => body),
+              asAlice.get('/v1/users/current').then(({ body }) => body)
+            ]))
+            .then(([ audits, alice ]) => {
+              audits.length.should.equal(1);
+              audits[0].should.be.an.Audit();
+              audits[0].actorId.should.equal(alice.id);
+              audits[0].details.name.should.equal('my_file1.mp4');
+              audits[0].details.instanceId.should.equal('both');
+            })))));
+
     it('should ignore unknown attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
@@ -190,6 +229,41 @@ describe('api: /submission', () => {
                   { name: 'here_is_file2.jpg', exists: false },
                   { name: 'my_file1.mp4', exists: false }
                 ]);
+              }))))));
+
+    // this just ensures that we correctly pick up the attachment and save it. we verify
+    // that it's been correctly processed and exports right in the .csv.zip tests below.
+    it('should save client audit log attachments', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+            .expect(201)
+            .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions/one/attachments')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.eql([{ name: 'audit.csv', exists: true }]);
+              }))))));
+
+    it('should create empty client audit log slots', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+            .expect(201)
+            .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions/one/attachments')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.eql([{ name: 'audit.csv', exists: false }]);
               }))))));
 
     it('should detect which attachments are expected', testService((service) =>
@@ -598,6 +672,156 @@ describe('api: /forms/:id/submissions', () => {
                 csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status');
                 csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,1,2');
                 csv.length.should.equal(3); // newline at end
+
+                done();
+              })))))));
+
+    it('should return worker-processed consolidated client audit log attachments', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => exhaust(container))
+          .then(() => new Promise((done) =>
+            zipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'), (result) => {
+              result.filenames.should.containDeep([
+                'audits.csv',
+                'media/audit.csv',
+                'media/log.csv',
+                'audits - audit.csv'
+              ]);
+
+              result['audits - audit.csv'].should.equal(`event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
+b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
+c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
+d,/data/d,2000-01-01T00:10,,10,11,12,gg,
+e,/data/e,2000-01-01T00:11,,,,,hh,ii
+f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
+g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
+h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+`);
+
+              done();
+            })))
+          .then(() => container.simply.countWhere('client_audits')
+            .then((count) => { count.should.equal(8); })))));
+
+    it('should return adhoc-processed consolidated client audit log attachments', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => new Promise((done) =>
+            zipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'), (result) => {
+              result.filenames.should.containDeep([
+                'audits.csv',
+                'media/audit.csv',
+                'media/log.csv',
+                'audits - audit.csv'
+              ]);
+
+              result['audits - audit.csv'].should.equal(`event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
+b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
+c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
+d,/data/d,2000-01-01T00:10,,10,11,12,gg,
+e,/data/e,2000-01-01T00:11,,,,,hh,ii
+f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
+g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
+h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+`);
+
+              done();
+            }))))));
+
+    it('should return the latest attached audit log after openrosa replace', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('audit.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'audit.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip')
+            .expect(200)
+            .then(() => new Promise((done) =>
+              zipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'), (result) => {
+                result.filenames.should.containDeep([
+                  'audits.csv',
+                  'media/audit.csv',
+                  'audits - audit.csv'
+                ]);
+
+                result['audits - audit.csv'].should.equal(`event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
+g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
+h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+`);
+
+                done();
+              })))))));
+
+    it('should return the latest attached audit log after REST replace', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.post('/v1/projects/1/forms/audits/submissions/one/attachments/audit.csv')
+            .set('Content-Type', 'text/csv')
+            .send(readFileSync(appRoot + '/test/data/audit2.csv'))
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip')
+            .expect(200)
+            .then(() => new Promise((done) =>
+              zipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'), (result) => {
+                result.filenames.should.containDeep([
+                  'audits.csv',
+                  'media/audit.csv',
+                  'audits - audit.csv'
+                ]);
+
+                result['audits - audit.csv'].should.equal(`event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
+g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
+h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+`);
 
                 done();
               })))))));

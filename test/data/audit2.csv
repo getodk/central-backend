@@ -1,0 +1,5 @@
+event,node,start,end,latitude,longitude,unknown-column,old-value,new-value
+f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,y,aa,bb
+g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,z,cc,dd
+h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+
