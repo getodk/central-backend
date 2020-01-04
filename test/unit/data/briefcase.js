@@ -1,9 +1,10 @@
 const appRoot = require('app-root-path');
 const should = require('should');
+const { construct } = require('ramda');
 const streamTest = require('streamtest').v2;
 const testData = require(appRoot + '/test/data/xml');
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
-const { getFormSchema } = require(appRoot + '/lib/data/schema');
+const { getFormSchema, stripNamespacesFromSchema, schemaToFields } = require(appRoot + '/lib/data/schema');
 const { streamBriefcaseCsvs } = require(appRoot + '/lib/data/briefcase');
 const { zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 
@@ -24,87 +25,49 @@ const instance = (id, data) => ({
 const withSubmitter = (id, displayName, row) => ({ submitter: { id, displayName }, ...row });
 const withAttachments = (present, expected, row) => ({ ...row, attachments: { expected, present } });
 
-const callAndParse = (form, inStream, callback) =>
-  streamBriefcaseCsvs(inStream, form).then((csvStream) =>
-    zipStreamToFiles(zipStreamFromParts(csvStream), callback));
 
-const mockForm = ({ xmlFormId, xml }) => {
-  return {
-    xmlFormId,
-    def: { xml, schema() { return getFormSchema(this.xml); } }
-  };
+class MockField {
+  //constructor(...data) { Object.assign(this, ...data); } // TODO: why doesn't this work?
+  //with(data) { return new MockField(this, data); }
+  constructor(data) { Object.assign(this, data); }
+  with(other) { return new MockField(Object.assign({}, this, other)); }
+}
+const callAndParse = (inStream, formXml, xmlFormId, callback) => {
+  getFormSchema(formXml).then(stripNamespacesFromSchema).then(schemaToFields).then((inFields) => {
+    const fields = inFields.map(construct(MockField));
+    zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, xmlFormId)), callback);
+  });
 };
+
 
 describe('.csv.zip briefcase output @slow', () => {
   it('should output a simple flat table within a zip', (done) => {
-    const form = mockForm({
-      xmlFormId: 'mytestform',
-      xml: `
-        <?xml version="1.0"?>
-        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
-          <h:head>
-            <model>
-              <instance>
-                <data id="mytestform">
-                  <name/>
-                  <age/>
-                  <hometown/>
-                </data>
-              </instance>
-              <bind nodeset="/data/name" type="string"/>
-              <bind type="integer" nodeset="/data/age"/>
-              <bind nodeset="/data/hometown" type="select1"/>
-            </model>
-          </h:head>
-        </h:html>`
-    });
+    const formXml = `
+      <?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+        <h:head>
+          <model>
+            <instance>
+              <data id="mytestform">
+                <name/>
+                <age/>
+                <hometown/>
+              </data>
+            </instance>
+            <bind nodeset="/data/name" type="string"/>
+            <bind type="integer" nodeset="/data/age"/>
+            <bind nodeset="/data/hometown" type="select1"/>
+          </model>
+        </h:head>
+      </h:html>`
+
     const inStream = streamTest.fromObjects([
       instance('one', '<name>Alice</name><age>30</age><hometown>Seattle, WA</hometown>'),
       instance('two', '<name>Bob</name><age>34</age><hometown>Portland, OR</hometown>'),
       instance('three', '<name>Chelsea</name><age>38</age><hometown>San Francisco, CA</hometown>')
     ]);
 
-    callAndParse(form, inStream, (result) => {
-      result.filenames.should.eql([ 'mytestform.csv' ]);
-      result['mytestform.csv'].should.equal(
-`SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status
-2018-01-01T00:00:00.000Z,Alice,30,"Seattle, WA",one,,,0,0
-2018-01-01T00:00:00.000Z,Bob,34,"Portland, OR",two,,,0,0
-2018-01-01T00:00:00.000Z,Chelsea,38,"San Francisco, CA",three,,,0,0
-`);
-      done();
-    });
-  });
-
-  it('should work with an xml stream', (done) => {
-    const form = mockForm({
-      xmlFormId: 'mytestform',
-      xml: streamTest.fromChunks([`
-        <?xml version="1.0"?>
-        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
-          <h:head>
-            <model>
-              <instance>
-                <data id="mytestform">
-                  <name/>
-                  <age/>
-                  <hometown/>
-                </data>
-              </instance>
-              <bind nodeset="/data/name" type="string"/>
-              <bind type="integer" nodeset="/data/age"/>
-              <bind nodeset="/data/hometown" type="select1"/>
-            </model>
-          </h:head>
-        </h:html>`])
-    });
-    const inStream = streamTest.fromObjects([
-      instance('one', '<name>Alice</name><age>30</age><hometown>Seattle, WA</hometown>'),
-      instance('two', '<name>Bob</name><age>34</age><hometown>Portland, OR</hometown>'),
-      instance('three', '<name>Chelsea</name><age>38</age><hometown>San Francisco, CA</hometown>')
-    ]);
-
-    callAndParse(form, inStream, (result) => {
+    callAndParse(inStream, formXml, 'mytestform', (result) => {
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status
@@ -117,45 +80,43 @@ describe('.csv.zip briefcase output @slow', () => {
   });
 
   it('should not hang given incomplete markup', (done) => {
-    const form = mockForm({ xmlFormId: 'simple', xml: testData.forms.simple });
     const inStream = streamTest.fromObjects([{
       submission: { instanceId: 'one', createdAt: new Date('2018-01-01T00:00:00Z') },
       xml: '<data id="data">',
       attachments: { present: 0, expected: 0 }
     }]);
 
-    callAndParse(form, inStream, () => { done(); }); // not hanging is the assertion here.
+    // not hanging is the assertion here:
+    callAndParse(inStream, testData.forms.simple, 'simple', () => { done(); });
   });
 
   it('should attach submitter information if present', (done) => {
-    const form = mockForm({
-      xmlFormId: 'mytestform',
-      xml: `
-        <?xml version="1.0"?>
-        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
-          <h:head>
-            <model>
-              <instance>
-                <data id="mytestform">
-                  <name/>
-                  <age/>
-                  <hometown/>
-                </data>
-              </instance>
-              <bind nodeset="/data/name" type="string"/>
-              <bind type="integer" nodeset="/data/age"/>
-              <bind nodeset="/data/hometown" type="select1"/>
-            </model>
-          </h:head>
-        </h:html>`
-    });
+    const formXml = `
+      <?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+        <h:head>
+          <model>
+            <instance>
+              <data id="mytestform">
+                <name/>
+                <age/>
+                <hometown/>
+              </data>
+            </instance>
+            <bind nodeset="/data/name" type="string"/>
+            <bind type="integer" nodeset="/data/age"/>
+            <bind nodeset="/data/hometown" type="select1"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
     const inStream = streamTest.fromObjects([
       withSubmitter(4, 'daniela', instance('one', '<name>Alice</name><age>30</age><hometown>Seattle, WA</hometown>')),
       withSubmitter(8, 'hernando', instance('two', '<name>Bob</name><age>34</age><hometown>Portland, OR</hometown>')),
       withSubmitter(15, 'lito', instance('three', '<name>Chelsea</name><age>38</age><hometown>San Francisco, CA</hometown>'))
     ]);
 
-    callAndParse(form, inStream, (result) => {
+    callAndParse(inStream, formXml, 'mytestform', (result) => {
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status
@@ -168,34 +129,32 @@ describe('.csv.zip briefcase output @slow', () => {
   });
 
   it('should attach attachments information if present', (done) => {
-    const form = mockForm({
-      xmlFormId: 'mytestform',
-      xml: `
-        <?xml version="1.0"?>
-        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
-          <h:head>
-            <model>
-              <instance>
-                <data id="mytestform">
-                  <name/>
-                  <age/>
-                  <hometown/>
-                </data>
-              </instance>
-              <bind nodeset="/data/name" type="string"/>
-              <bind type="integer" nodeset="/data/age"/>
-              <bind nodeset="/data/hometown" type="select1"/>
-            </model>
-          </h:head>
-        </h:html>`
-    });
+    const formXml = `
+      <?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+        <h:head>
+          <model>
+            <instance>
+              <data id="mytestform">
+                <name/>
+                <age/>
+                <hometown/>
+              </data>
+            </instance>
+            <bind nodeset="/data/name" type="string"/>
+            <bind type="integer" nodeset="/data/age"/>
+            <bind nodeset="/data/hometown" type="select1"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
     const inStream = streamTest.fromObjects([
       withAttachments(2, 4, instance('one', '<name>Alice</name><age>30</age><hometown>Seattle, WA</hometown>')),
       withAttachments(1, 4, instance('two', '<name>Bob</name><age>34</age><hometown>Portland, OR</hometown>')),
       withAttachments(3, 3, instance('three', '<name>Chelsea</name><age>38</age><hometown>San Francisco, CA</hometown>'))
     ]);
 
-    callAndParse(form, inStream, (result) => {
+    callAndParse(inStream, formXml, 'mytestform', (result) => {
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status
@@ -208,32 +167,30 @@ describe('.csv.zip briefcase output @slow', () => {
   });
 
   it('should decode xml entities for output', (done) => {
-    const form = mockForm({
-      xmlFormId: 'mytestform',
-      xml: `
-        <?xml version="1.0"?>
-        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
-          <h:head>
-            <model>
-              <instance>
-                <data id="mytestform">
-                  <name/>
-                  <age/>
-                  <hometown/>
-                </data>
-              </instance>
-              <bind nodeset="/data/name" type="string"/>
-              <bind type="integer" nodeset="/data/age"/>
-              <bind nodeset="/data/hometown" type="select1"/>
-            </model>
-          </h:head>
-        </h:html>`
-    });
+    const formXml = `
+      <?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+        <h:head>
+          <model>
+            <instance>
+              <data id="mytestform">
+                <name/>
+                <age/>
+                <hometown/>
+              </data>
+            </instance>
+            <bind nodeset="/data/name" type="string"/>
+            <bind type="integer" nodeset="/data/age"/>
+            <bind nodeset="/data/hometown" type="select1"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
     const inStream = streamTest.fromObjects([
       instance('one', '<name>&#171;Alice&#187;</name><age>30</age><hometown>Seattle, WA</hometown>'),
     ]);
 
-    callAndParse(form, inStream, (result) => {
+    callAndParse(inStream, formXml, 'mytestform', (result) => {
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status
@@ -244,34 +201,32 @@ describe('.csv.zip briefcase output @slow', () => {
   });
 
   it('should split geopoint columns into four components', (done) => {
-    const form = mockForm({
-      xmlFormId: 'mytestform',
-      xml: `
-        <?xml version="1.0"?>
-        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
-          <h:head>
-            <model>
-              <instance>
-                <data id="mytestform">
-                  <name/>
-                  <age/>
-                  <location/>
-                </data>
-              </instance>
-              <bind nodeset="/data/name" type="string"/>
-              <bind type="integer" nodeset="/data/age"/>
-              <bind nodeset="/data/location" type="geopoint"/>
-            </model>
-          </h:head>
-        </h:html>`
-    });
+    const formXml = `   
+      <?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+        <h:head>
+          <model>
+            <instance>
+              <data id="mytestform">
+                <name/>
+                <age/>
+                <location/>
+              </data>
+            </instance>
+            <bind nodeset="/data/name" type="string"/>
+            <bind type="integer" nodeset="/data/age"/>
+            <bind nodeset="/data/location" type="geopoint"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
     const inStream = streamTest.fromObjects([
       instance('one', '<name>Alice</name><age>30</age><location>47.649434 -122.347737 26.8 3.14</location>'),
       instance('two', '<name>Bob</name><age>34</age><location>47.599115 -122.331753 10</location>'),
       instance('three', '<name>Chelsea</name><age>38</age><location></location>')
     ]);
 
-    callAndParse(form, inStream, (result) => {
+    callAndParse(inStream, formXml, 'mytestform', (result) => {
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
 `SubmissionDate,name,age,location-Latitude,location-Longitude,location-Altitude,location-Accuracy,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status
@@ -284,44 +239,42 @@ describe('.csv.zip briefcase output @slow', () => {
   });
 
   it('should flatten structures within a table', (done) => {
-    const form = mockForm({
-      xmlFormId: 'structuredform',
-      xml: `
-        <?xml version="1.0"?>
-        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
-          <h:head>
-            <model>
-              <instance>
-                <data id="structuredform">
-                  <orx:meta>
-                    <orx:instanceID/>
-                  </orx:meta>
-                  <name/>
-                  <home>
-                    <type/>
-                    <address>
-                      <street/>
-                      <city/>
-                    </address>
-                  </home>
-                </data>
-              </instance>
-              <bind nodeset="/data/orx:meta/orx:instanceID" preload="uid" type="string"/>
-              <bind nodeset="/data/name" type="string"/>
-              <bind nodeset="/data/home/type" type="select1"/>
-              <bind nodeset="/data/home/address/street" type="string"/>
-              <bind nodeset="/data/home/address/city" type="string"/>
-            </model>
-          </h:head>
-        </h:html>`
-    });
+    const formXml = `
+      <?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+        <h:head>
+          <model>
+            <instance>
+              <data id="structuredform">
+                <orx:meta>
+                  <orx:instanceID/>
+                </orx:meta>
+                <name/>
+                <home>
+                  <type/>
+                  <address>
+                    <street/>
+                    <city/>
+                  </address>
+                </home>
+              </data>
+            </instance>
+            <bind nodeset="/data/orx:meta/orx:instanceID" preload="uid" type="string"/>
+            <bind nodeset="/data/name" type="string"/>
+            <bind nodeset="/data/home/type" type="select1"/>
+            <bind nodeset="/data/home/address/street" type="string"/>
+            <bind nodeset="/data/home/address/city" type="string"/>
+          </model>
+        </h:head>
+      </h:html>`
+
     const inStream = streamTest.fromObjects([
       instance('one', '<orx:meta><orx:instanceID>one</orx:instanceID></orx:meta><name>Alice</name><home><type>Apartment</type><address><street>101 Pike St</street><city>Seattle, WA</city></address></home>'),
       instance('two', '<orx:meta><orx:instanceID>two</orx:instanceID></orx:meta><name>Bob</name><home><address><street>20 Broadway</street><city>Portland, OR</city></address><type>Condo</type></home>'),
       instance('three', '<orx:meta><orx:instanceID>three</orx:instanceID></orx:meta><name>Chelsea</name><home><type>House</type><address><city>San Francisco, CA</city><street>99 Mission Ave</street></address></home>'),
     ]);
 
-    callAndParse(form, inStream, (result) => {
+    callAndParse(inStream, formXml, 'structuredform', (result) => {
       result.filenames.should.eql([ 'structuredform.csv' ]);
       result['structuredform.csv'].should.equal(
 `SubmissionDate,meta-instanceID,name,home-type,home-address-street,home-address-city,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status
@@ -334,63 +287,61 @@ describe('.csv.zip briefcase output @slow', () => {
   });
 
   it('should handle single-level repeats, with KEY/PARENT_KEY', (done) => {
-    const form = mockForm({
-      xmlFormId: 'singlerepeat',
-      xml: `
-        <?xml version="1.0"?>
-        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
-          <h:head>
-            <model>
-              <instance>
-                <data id="singlerepeat">
-                  <orx:meta>
-                    <orx:instanceID/>
-                  </orx:meta>
-                  <name/>
-                  <age/>
-                  <children>
-                    <child>
-                      <name/>
-                      <age/>
-                    </child>
-                  </children>
-                </data>
-              </instance>
-              <bind nodeset="/data/orx:meta/orx:instanceID" preload="uid" type="string"/>
-              <bind nodeset="/data/name" type="string"/>
-              <bind nodeset="/data/age" type="integer"/>
-              <bind nodeset="/data/children/child/name" type="string"/>
-              <bind nodeset="/data/children/child/age" type="integer"/>
-            </model>
-          </h:head>
-          <h:body>
-            <input ref="/data/name">
-              <label>What is your name?</label>
-            </input>
-            <input ref="/data/age">
-              <label>What is your age?</label>
-            </input>
-            <group ref="/data/children">
-              <label>Child</label>
-              <repeat nodeset="/data/children/child">
-                <input ref="/data/children/child/name">
-                  <label>What is the child's name?</label>
-                </input>
-                <input ref="/data/children/child/age">
-                  <label>What is the child's age?</label>
-                </input>
-              </repeat>
-            </group>
-          </h:body>
-        </h:html>`
-    });
+    const formXml = `
+      <?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+        <h:head>
+          <model>
+            <instance>
+              <data id="singlerepeat">
+                <orx:meta>
+                  <orx:instanceID/>
+                </orx:meta>
+                <name/>
+                <age/>
+                <children>
+                  <child>
+                    <name/>
+                    <age/>
+                  </child>
+                </children>
+              </data>
+            </instance>
+            <bind nodeset="/data/orx:meta/orx:instanceID" preload="uid" type="string"/>
+            <bind nodeset="/data/name" type="string"/>
+            <bind nodeset="/data/age" type="integer"/>
+            <bind nodeset="/data/children/child/name" type="string"/>
+            <bind nodeset="/data/children/child/age" type="integer"/>
+          </model>
+        </h:head>
+        <h:body>
+          <input ref="/data/name">
+            <label>What is your name?</label>
+          </input>
+          <input ref="/data/age">
+            <label>What is your age?</label>
+          </input>
+          <group ref="/data/children">
+            <label>Child</label>
+            <repeat nodeset="/data/children/child">
+              <input ref="/data/children/child/name">
+                <label>What is the child's name?</label>
+              </input>
+              <input ref="/data/children/child/age">
+                <label>What is the child's age?</label>
+              </input>
+            </repeat>
+          </group>
+        </h:body>
+      </h:html>`;
+
     const inStream = streamTest.fromObjects([
       instance('one', '<orx:meta><orx:instanceID>one</orx:instanceID></orx:meta><name>Alice</name><age>30</age>'),
       instance('two', '<orx:meta><orx:instanceID>two</orx:instanceID></orx:meta><name>Bob</name><age>34</age><children><child><name>Billy</name><age>4</age></child></children><children><child><name>Blaine</name><age>6</age></child></children>'),
       instance('three', '<orx:meta><orx:instanceID>three</orx:instanceID></orx:meta><name>Chelsea</name><age>38</age><children><child><name>Candace</name><age>2</age></child></children>'),
     ]);
 
-    callAndParse(form, inStream, (result) => {
+    callAndParse(inStream, formXml, 'singlerepeat', (result) => {
       result.filenames.should.containDeep([ 'singlerepeat.csv', 'singlerepeat-child.csv' ]);
       result['singlerepeat.csv'].should.equal(
 `SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status
@@ -409,75 +360,73 @@ Candace,2,three,three/children/child[1]
   });
 
   it('should handle nested repeats, with PARENT_KEY/KEY', (done) => {
-    const form = mockForm({
-      xmlFormId: 'multirepeat',
-      xml: `
-        <?xml version="1.0"?>
-        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
-          <h:head>
-            <model>
-              <instance>
-                <data id="multirepeat">
-                  <orx:meta>
-                    <orx:instanceID/>
-                  </orx:meta>
-                  <name/>
-                  <age/>
-                  <children>
-                    <child>
+    const formXml = `
+      <?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+        <h:head>
+          <model>
+            <instance>
+              <data id="multirepeat">
+                <orx:meta>
+                  <orx:instanceID/>
+                </orx:meta>
+                <name/>
+                <age/>
+                <children>
+                  <child>
+                    <name/>
+                    <age/>
+                    <toy>
                       <name/>
-                      <age/>
-                      <toy>
-                        <name/>
-                      </toy>
-                    </child>
-                  </children>
-                </data>
-              </instance>
-              <bind nodeset="/data/meta/instanceID" preload="uid" type="string"/>
-              <bind nodeset="/data/name" type="string"/>
-              <bind nodeset="/data/age" type="integer"/>
-              <bind nodeset="/data/children/child/name" type="string"/>
-              <bind nodeset="/data/children/child/age" type="integer"/>
-              <bind nodeset="/data/children/child/toy/name" type="string"/>
-            </model>
-          </h:head>
-          <h:body>
-            <input ref="/data/name">
-              <label>What is your name?</label>
-            </input>
-            <input ref="/data/age">
-              <label>What is your age?</label>
-            </input>
-            <group ref="/data/children/child">
-              <label>Child</label>
-              <repeat nodeset="/data/children/child">
-                <input ref="/data/children/child/name">
-                  <label>What is the child's name?</label>
-                </input>
-                <input ref="/data/children/child/age">
-                  <label>What is the child's age?</label>
-                </input>
-                <group ref="/data/children/child/toy">
-                  <label>Child</label>
-                  <repeat nodeset="/data/children/child/toy">
-                    <input ref="/data/children/child/toy/name">
-                      <label>What is the toy's name?</label>
-                    </input>
-                  </repeat>
-                </group>
-              </repeat>
-            </group>
-          </h:body>
-        </h:html>`
-    });
+                    </toy>
+                  </child>
+                </children>
+              </data>
+            </instance>
+            <bind nodeset="/data/meta/instanceID" preload="uid" type="string"/>
+            <bind nodeset="/data/name" type="string"/>
+            <bind nodeset="/data/age" type="integer"/>
+            <bind nodeset="/data/children/child/name" type="string"/>
+            <bind nodeset="/data/children/child/age" type="integer"/>
+            <bind nodeset="/data/children/child/toy/name" type="string"/>
+          </model>
+        </h:head>
+        <h:body>
+          <input ref="/data/name">
+            <label>What is your name?</label>
+          </input>
+          <input ref="/data/age">
+            <label>What is your age?</label>
+          </input>
+          <group ref="/data/children/child">
+            <label>Child</label>
+            <repeat nodeset="/data/children/child">
+              <input ref="/data/children/child/name">
+                <label>What is the child's name?</label>
+              </input>
+              <input ref="/data/children/child/age">
+                <label>What is the child's age?</label>
+              </input>
+              <group ref="/data/children/child/toy">
+                <label>Child</label>
+                <repeat nodeset="/data/children/child/toy">
+                  <input ref="/data/children/child/toy/name">
+                    <label>What is the toy's name?</label>
+                  </input>
+                </repeat>
+              </group>
+            </repeat>
+          </group>
+        </h:body>
+      </h:html>`;
+
     const inStream = streamTest.fromObjects([
       instance('one', '<orx:meta><orx:instanceID>one</orx:instanceID></orx:meta><name>Alice</name><age>30</age>'),
       instance('two', '<orx:meta><orx:instanceID>two</orx:instanceID></orx:meta><name>Bob</name><age>34</age><children><child><name>Billy</name><age>4</age><toy><name>R2-D2</name></toy></child><child><name>Blaine</name><age>6</age><toy><name>BB-8</name></toy><toy><name>Porg plushie</name></toy></child><child><name>Baker</name><age>7</age></child></children>'),
       instance('three', '<orx:meta><orx:instanceID>three</orx:instanceID></orx:meta><name>Chelsea</name><age>38</age><children><child><name>Candace</name><toy><name>Millennium Falcon</name></toy><toy><name>X-Wing</name></toy><toy><name>Pod racer</name></toy><age>2</age></child></children>'),
     ]);
 
-    callAndParse(form, inStream, (result) => {
+    callAndParse(inStream, formXml, 'multirepeat', (result) => {
       result.filenames.should.containDeep([ 'multirepeat.csv', 'multirepeat-child.csv', 'multirepeat-toy.csv' ]);
       result['multirepeat.csv'].should.equal(
 `SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status
@@ -506,9 +455,7 @@ Pod racer,three/children/child[1],three/children/child[1]/toy[3]
   });
 
   it('briefcase replicated test: all-data-types', (done) => {
-    const form = mockForm({
-      xmlFormId: 'all-data-types',
-      xml: `
+    const formXml = `
 <?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml">
   <h:head>
@@ -556,8 +503,8 @@ Pod racer,three/children/child[1],three/children/child[1]/toy[3]
     <input ref="some_geoshape"/>
     <input ref="some_barcode"/>
   </h:body>
-</h:html>`
-    });
+</h:html>`;
+
     const inStream = streamTest.fromObjects([{
       submission: {
         instanceId: 'uuid:39f3dd36-161e-45cb-a1a4-395831d253a7',
@@ -582,7 +529,7 @@ Pod racer,three/children/child[1],three/children/child[1]/toy[3]
       attachments: { present: 0, expected: 0 }
     }]);
 
-    callAndParse(form, inStream, (result) => {
+    callAndParse(inStream, formXml, 'all-data-types', (result) => {
       result.filenames.should.containDeep([ 'all-data-types.csv' ]);
       result['all-data-types.csv'].should.equal(
 `SubmissionDate,some_string,some_int,some_decimal,some_date,some_time,some_date_time,some_geopoint-Latitude,some_geopoint-Longitude,some_geopoint-Altitude,some_geopoint-Accuracy,some_geotrace,some_geoshape,some_barcode,meta-instanceID,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status
@@ -593,9 +540,7 @@ Pod racer,three/children/child[1],three/children/child[1]/toy[3]
   });
 
   it('briefcase replicated test: nested-repeats', (done) => {
-    const form = mockForm({
-      xmlFormId: 'nested-repeats',
-      xml: `
+    const formXml = `
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
   <h:head>
     <h:title>Nested repeats</h:title>
@@ -658,8 +603,8 @@ Pod racer,three/children/child[1],three/children/child[1]/toy[3]
       </repeat>
     </group>
   </h:body>
-</h:html>`
-    });
+</h:html>`;
+
     const inStream = streamTest.fromObjects([{
       submission: {
         instanceId: 'uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b',
@@ -712,7 +657,7 @@ Pod racer,three/children/child[1],three/children/child[1]/toy[3]
       attachments: { present: 0, expected: 0 }
     }]);
 
-    callAndParse(form, inStream, (result) => {
+    callAndParse(inStream, formXml, 'nested-repeats', (result) => {
       result.filenames.should.containDeep([ 'nested-repeats.csv', 'nested-repeats-g1.csv', 'nested-repeats-g2.csv', 'nested-repeats-g3.csv' ]);
       result['nested-repeats.csv'].should.equal(
 `SubmissionDate,meta-instanceID,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status
@@ -744,63 +689,61 @@ some text 3.1.4,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]/g2[1],uuid:0a1b8
   });
 
   it('should disambiguate conflictingly named repeat groups', (done) => {
-    const form = mockForm({
-      xmlFormId: 'ambiguous',
-      xml: `
-        <?xml version="1.0"?>
-        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
-          <h:head>
-            <model>
-              <instance>
-                <data id="ambiguous">
-                  <orx:meta>
-                    <orx:instanceID/>
-                  </orx:meta>
-                  <name/>
-                  <jobs>
-                    <entry><name/></entry>
-                  </jobs>
-                  <friends>
-                    <entry><name/></entry>
-                  </friends>
-                </data>
-              </instance>
-              <bind nodeset="/data/meta/instanceID" preload="uid" type="string"/>
-              <bind nodeset="/data/name" type="string"/>
-              <bind nodeset="/data/jobs/entry/name" type="string"/>
-              <bind nodeset="/data/friends/entry/name" type="string"/>
-            </model>
-          </h:head>
-          <h:body>
-            <input ref="/data/name">
-              <label>What is your name?</label>
-            </input>
-            <group ref="/data/jobs/entry">
-              <label>Job</label>
-              <repeat nodeset="/data/jobs/entry">
-                <input ref="/data/jobs/entry/name">
-                  <label>What is the employer name?</label>
-                </input>
-              </repeat>
-            </group>
-            <group ref="/data/friends/entry">
-              <label>Friend</label>
-              <repeat nodeset="/data/friends/entry">
-                <input ref="/data/friends/entry/name">
-                  <label>What is the person's name?</label>
-                </input>
-              </repeat>
-            </group>
-          </h:body>
-        </h:html>`
-    });
+    const formXml = `
+      <?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+        <h:head>
+          <model>
+            <instance>
+              <data id="ambiguous">
+                <orx:meta>
+                  <orx:instanceID/>
+                </orx:meta>
+                <name/>
+                <jobs>
+                  <entry><name/></entry>
+                </jobs>
+                <friends>
+                  <entry><name/></entry>
+                </friends>
+              </data>
+            </instance>
+            <bind nodeset="/data/meta/instanceID" preload="uid" type="string"/>
+            <bind nodeset="/data/name" type="string"/>
+            <bind nodeset="/data/jobs/entry/name" type="string"/>
+            <bind nodeset="/data/friends/entry/name" type="string"/>
+          </model>
+        </h:head>
+        <h:body>
+          <input ref="/data/name">
+            <label>What is your name?</label>
+          </input>
+          <group ref="/data/jobs/entry">
+            <label>Job</label>
+            <repeat nodeset="/data/jobs/entry">
+              <input ref="/data/jobs/entry/name">
+                <label>What is the employer name?</label>
+              </input>
+            </repeat>
+          </group>
+          <group ref="/data/friends/entry">
+            <label>Friend</label>
+            <repeat nodeset="/data/friends/entry">
+              <input ref="/data/friends/entry/name">
+                <label>What is the person's name?</label>
+              </input>
+            </repeat>
+          </group>
+        </h:body>
+      </h:html>`;
+
     const inStream = streamTest.fromObjects([
       instance('one', '<orx:meta><orx:instanceID>one</orx:instanceID></orx:meta><name>Alice</name>'),
       instance('two', '<orx:meta><orx:instanceID>two</orx:instanceID></orx:meta><name>Bob</name><jobs><entry><name>Bobs Hardware</name></entry><entry><name>Local Coffee</name></entry></jobs><friends><entry><name>Nasrin</name></entry></friends>'),
       instance('three', '<orx:meta><orx:instanceID>three</orx:instanceID></orx:meta><name>Chelsea</name><jobs><entry><name>Instantaneous Food</name></entry></jobs><friends><entry><name>Ferrence</name></entry><entry><name>Mick</name></entry></friends>'),
     ]);
 
-    callAndParse(form, inStream, (result) => {
+    callAndParse(inStream, formXml, 'ambiguous', (result) => {
       result.filenames.should.containDeep([ 'ambiguous.csv', 'ambiguous-entry~1.csv', 'ambiguous-entry~2.csv' ]);
       result['ambiguous.csv'].should.equal(
 `SubmissionDate,meta-instanceID,name,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status
