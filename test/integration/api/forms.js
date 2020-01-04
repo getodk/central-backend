@@ -556,7 +556,7 @@ describe('api: /projects/:id/forms', () => {
               }))))));
   });
 
-  describe('/:id.schema.json GET', () => {
+  describe.skip('/:id.schema.json GET', () => {
     // we do not deeply test the JSON itself; that is done in test/unit/data/schema.js
     // here we just check all the plumbing.
 

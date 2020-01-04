@@ -243,7 +243,7 @@ describe('form schema', () => {
   });
 
   describe('transformation', () => {
-    describe('flatten', () => {
+    describe.skip('flatten', () => {
       it('should flatten direct structures', () => {
         const xml = `
           <?xml version="1.0"?>
