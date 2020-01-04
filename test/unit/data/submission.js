@@ -20,9 +20,9 @@ describe('submission field streamer', () => {
     getFields(testData.forms.simple).then((fields) =>
       submissionXmlToFieldStream(fields, testData.instances.simple.one).pipe(toObjects((error, result) => {
         result.should.eql([
-          { field: new MockField({ path: '/meta/instanceID', type: 'string', binary: false }), text: 'one' },
-          { field: new MockField({ path: '/name', type: 'string', binary: false }), text: 'Alice' },
-          { field: new MockField({ path: '/age', type: 'int', binary: false }), text: '30' }
+          { field: new MockField({ order: 1, name: 'instanceID', path: '/meta/instanceID', type: 'string', binary: false }), text: 'one' },
+          { field: new MockField({ order: 2, name: 'name', path: '/name', type: 'string', binary: false }), text: 'Alice' },
+          { field: new MockField({ order: 3, name: 'age', path: '/age', type: 'int', binary: false }), text: '30' }
         ]);
         done();
       })));
@@ -32,19 +32,19 @@ describe('submission field streamer', () => {
     getFields(testData.forms.doubleRepeat).then((fields) =>
       submissionXmlToFieldStream(fields, testData.instances.doubleRepeat.double).pipe(toObjects((error, result) => {
         result.should.eql([
-          { field: new MockField({ path: '/meta/instanceID', type: 'string', binary: false }), text: 'double' },
-          { field: new MockField({ path: '/name', type: 'string', binary: false }), text: 'Vick' },
-          { field: new MockField({ path: '/children/child/name', type: 'string', binary: false }), text: 'Alice' },
-          { field: new MockField({ path: '/children/child/name', type: 'string', binary: false }), text: 'Bob' },
-          { field: new MockField({ path: '/children/child/toys/toy/name', type: 'string', binary: false }), text: 'Twilight Sparkle' },
-          { field: new MockField({ path: '/children/child/toys/toy/name', type: 'string', binary: false }), text: 'Pinkie Pie' },
-          { field: new MockField({ path: '/children/child/toys/toy/name', type: 'string', binary: false }), text: 'Applejack' },
-          { field: new MockField({ path: '/children/child/toys/toy/name', type: 'string', binary: false }), text: 'Spike' },
-          { field: new MockField({ path: '/children/child/name', type: 'string', binary: false }), text: 'Chelsea' },
-          { field: new MockField({ path: '/children/child/toys/toy/name', type: 'string', binary: false }), text: 'Rainbow Dash' },
-          { field: new MockField({ path: '/children/child/toys/toy/name', type: 'string', binary: false }), text: 'Rarity' },
-          { field: new MockField({ path: '/children/child/toys/toy/name', type: 'string', binary: false }), text: 'Fluttershy' },
-          { field: new MockField({ path: '/children/child/toys/toy/name', type: 'string', binary: false }), text: 'Princess Luna' }
+          { field: new MockField({ order: 1, name: 'instanceID', path: '/meta/instanceID', type: 'string', binary: false }), text: 'double' },
+          { field: new MockField({ order: 2, name: 'name', path: '/name', type: 'string', binary: false }), text: 'Vick' },
+          { field: new MockField({ order: 5, name: 'name', path: '/children/child/name', type: 'string', binary: false }), text: 'Alice' },
+          { field: new MockField({ order: 5, name: 'name', path: '/children/child/name', type: 'string', binary: false }), text: 'Bob' },
+          { field: new MockField({ order: 8, name: 'name', path: '/children/child/toys/toy/name', type: 'string', binary: false }), text: 'Twilight Sparkle' },
+          { field: new MockField({ order: 8, name: 'name', path: '/children/child/toys/toy/name', type: 'string', binary: false }), text: 'Pinkie Pie' },
+          { field: new MockField({ order: 8, name: 'name', path: '/children/child/toys/toy/name', type: 'string', binary: false }), text: 'Applejack' },
+          { field: new MockField({ order: 8, name: 'name', path: '/children/child/toys/toy/name', type: 'string', binary: false }), text: 'Spike' },
+          { field: new MockField({ order: 5, name: 'name', path: '/children/child/name', type: 'string', binary: false }), text: 'Chelsea' },
+          { field: new MockField({ order: 8, name: 'name', path: '/children/child/toys/toy/name', type: 'string', binary: false }), text: 'Rainbow Dash' },
+          { field: new MockField({ order: 8, name: 'name', path: '/children/child/toys/toy/name', type: 'string', binary: false }), text: 'Rarity' },
+          { field: new MockField({ order: 8, name: 'name', path: '/children/child/toys/toy/name', type: 'string', binary: false }), text: 'Fluttershy' },
+          { field: new MockField({ order: 8, name: 'name', path: '/children/child/toys/toy/name', type: 'string', binary: false }), text: 'Princess Luna' }
         ]);
         done();
       })));
