@@ -348,51 +348,6 @@ describe('form schema', () => {
         });
       });
     });
-
-    describe('table listing', () => {
-      it('should return nothing for a schema without repeats', () =>
-        getFormSchema(testData.forms.simple).then((schema) => {
-          getSchemaTables(schema).should.eql([]);
-        }));
-
-      it('should return relevant tables', () =>
-        getFormSchema(testData.forms.doubleRepeat).then((schema) => {
-          getSchemaTables(schema).should.eql([
-            'children.child',
-            'children.child.toys.toy'
-          ]);
-        }));
-    });
-
-    describe('lookup', () => {
-      it('should flatten basic and group bindings into lookups', () =>
-        getFormSchema(testData.forms.simple).then((schema) => {
-          schemaAsLookup(schema).should.eql({
-            meta: { name: 'meta', type: 'structure', children: {
-              instanceID: { name: 'instanceID', type: 'string' } }
-            },
-            name: { name: 'name', type: 'string' },
-            age: { name: 'age', type: 'int' }
-          });
-        }));
-
-      it('should flatten repeat bindings into lookups', () =>
-        getFormSchema(testData.forms.withrepeat).then((schema) => {
-          schemaAsLookup(schema).should.eql({
-            'orx:meta': { name: 'orx:meta', type: 'structure', children: {
-              'orx:instanceID': { name: 'orx:instanceID', type: 'string' }
-            } },
-            name: { name: 'name', type: 'string' },
-            age: { name: 'age', type: 'int' },
-            children: { name: 'children', type: 'structure', children: {
-              child: { name: 'child', type: 'repeat', children: {
-                name: { name: 'name', type: 'string' },
-                age: { name: 'age', type: 'int' }
-              } }
-            } }
-          });
-        }));
-    });
   });
 
   describe('stripNamespacesFromSchema', () => {

@@ -30,36 +30,30 @@ const mockSubmission = (instanceId, xml) => ({
 describe('odata message composition', () => {
   describe('service document', () => {
     it('should return the correct metadata context', () => {
-      return serviceDocumentFor({ tables: () => Promise.resolve([]) }, 'http://localhost:8989', '/forms/testform.svc')
-        .then((doc) => {
-          doc['@odata.context'].should.equal('http://localhost:8989/forms/testform.svc/$metadata');
-        });
+      const doc = serviceDocumentFor([], 'http://localhost:8989', '/forms/testform.svc');
+      doc['@odata.context'].should.equal('http://localhost:8989/forms/testform.svc/$metadata');
     });
 
     it('should return the root table in all cases', () => {
-      return serviceDocumentFor({ tables: () => Promise.resolve([]) }, 'http://localhost:8989', '/forms/simple.svc')
-        .then((doc) => {
-          doc.should.eql({
-            '@odata.context': 'http://localhost:8989/forms/simple.svc/$metadata',
-            value: [{ name: 'Submissions', kind: 'EntitySet', url: 'Submissions' }]
-          });
-        });
+      const doc = serviceDocumentFor([], 'http://localhost:8989', '/forms/simple.svc')
+      doc.should.eql({
+        '@odata.context': 'http://localhost:8989/forms/simple.svc/$metadata',
+        value: [{ name: 'Submissions', kind: 'EntitySet', url: 'Submissions' }]
+      });
     });
 
-    it('should return all nested tables in addition to the root table', () => {
-      const tables = [ 'children.child', 'children.child.toys.toy' ];
-      return serviceDocumentFor({ tables: () => Promise.resolve(tables) }, 'http://localhost:8989', '/forms/doubleRepeat.svc')
-        .then((doc) => {
-          doc.should.eql({
-            '@odata.context': 'http://localhost:8989/forms/doubleRepeat.svc/$metadata',
-            value: [
-              { name: 'Submissions', kind: 'EntitySet', url: 'Submissions' },
-              { name: 'Submissions.children.child', kind: 'EntitySet', url: 'Submissions.children.child' },
-              { name: 'Submissions.children.child.toys.toy', kind: 'EntitySet', url: 'Submissions.children.child.toys.toy' }
-            ]
-          });
+    it('should return all nested tables in addition to the root table', () =>
+      fieldsFor(testData.forms.doubleRepeat).then((fields) => {
+        const doc = serviceDocumentFor(fields, 'http://localhost:8989', '/forms/doubleRepeat.svc');
+        doc.should.eql({
+          '@odata.context': 'http://localhost:8989/forms/doubleRepeat.svc/$metadata',
+          value: [
+            { name: 'Submissions', kind: 'EntitySet', url: 'Submissions' },
+            { name: 'Submissions.children.child', kind: 'EntitySet', url: 'Submissions.children.child' },
+            { name: 'Submissions.children.child.toys.toy', kind: 'EntitySet', url: 'Submissions.children.child.toys.toy' }
+          ]
         });
-    });
+      }));
   });
 
   describe('metadata document', () => {
