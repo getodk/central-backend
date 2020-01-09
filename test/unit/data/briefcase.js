@@ -4,7 +4,7 @@ const { construct } = require('ramda');
 const streamTest = require('streamtest').v2;
 const testData = require(appRoot + '/test/data/xml');
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
-const { getFormSchema, stripNamespacesFromSchema, schemaToFields } = require(appRoot + '/lib/data/schema');
+const { fieldsFor } = require(appRoot + '/test/util/schema');
 const { streamBriefcaseCsvs } = require(appRoot + '/lib/data/briefcase');
 const { zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 
@@ -26,15 +26,8 @@ const withSubmitter = (id, displayName, row) => ({ submitter: { id, displayName 
 const withAttachments = (present, expected, row) => ({ ...row, attachments: { expected, present } });
 
 
-class MockField {
-  //constructor(...data) { Object.assign(this, ...data); } // TODO: why doesn't this work?
-  //with(data) { return new MockField(this, data); }
-  constructor(data) { Object.assign(this, data); }
-  with(other) { return new MockField(Object.assign({}, this, other)); }
-}
 const callAndParse = (inStream, formXml, xmlFormId, callback) => {
-  getFormSchema(formXml).then(stripNamespacesFromSchema).then(schemaToFields).then((inFields) => {
-    const fields = inFields.map(construct(MockField));
+  fieldsFor(formXml).then((fields) => {
     zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, xmlFormId)), callback);
   });
 };

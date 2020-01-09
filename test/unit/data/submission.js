@@ -3,21 +3,13 @@ const appRoot = require('app-root-path');
 const { always, construct } = require('ramda');
 const { toObjects } = require('streamtest').v2;
 const { submissionXmlToFieldStream } = require(appRoot + '/lib/data/submission');
-const { getFormSchema, stripNamespacesFromSchema, schemaToFields } = require(appRoot + '/lib/data/schema');
+const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
 describe('submission field streamer', () => {
-  class MockField {
-    constructor(data) { Object.assign(this, data); }
-    isStructural() { return (this.type === 'repeat') || (this.type === 'structure'); }
-  }
-  const getFields = (xml) => getFormSchema(xml)
-    .then(stripNamespacesFromSchema)
-    .then(schemaToFields)
-    .then((fields) => fields.map(construct(MockField)));
 
   it('should return a stream of records', (done) => {
-    getFields(testData.forms.simple).then((fields) =>
+    fieldsFor(testData.forms.simple).then((fields) =>
       submissionXmlToFieldStream(fields, testData.instances.simple.one).pipe(toObjects((error, result) => {
         result.should.eql([
           { field: new MockField({ order: 1, name: 'instanceID', path: '/meta/instanceID', type: 'string', binary: false }), text: 'one' },
@@ -29,7 +21,7 @@ describe('submission field streamer', () => {
   });
 
   it('should deal correctly with repeats', (done) => {
-    getFields(testData.forms.doubleRepeat).then((fields) =>
+    fieldsFor(testData.forms.doubleRepeat).then((fields) =>
       submissionXmlToFieldStream(fields, testData.instances.doubleRepeat.double).pipe(toObjects((error, result) => {
         result.should.eql([
           { field: new MockField({ order: 1, name: 'instanceID', path: '/meta/instanceID', type: 'string', binary: false }), text: 'double' },
@@ -51,7 +43,7 @@ describe('submission field streamer', () => {
   });
 
   it('should not hang given malformed non-closing xml', (done) => {
-    getFields(testData.forms.simple).then((fields) => {
+    fieldsFor(testData.forms.simple).then((fields) => {
       const stream = submissionXmlToFieldStream(fields, '<data><meta><instanceID>');
       stream.on('data', () => {});
       stream.on('end', done); // not hanging/timing out is the assertion here
@@ -59,7 +51,7 @@ describe('submission field streamer', () => {
   });
 
   it('should not crash given malformed over-closing xml', (done) => {
-    getFields(testData.forms.simple).then((fields) => {
+    fieldsFor(testData.forms.simple).then((fields) => {
       const stream = submissionXmlToFieldStream(fields, '<data></goodbye></goodbye></goodbye>');
       stream.on('data', () => {});
       stream.on('end', done); // not hanging/timing out is the assertion here
