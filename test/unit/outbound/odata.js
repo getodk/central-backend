@@ -67,10 +67,8 @@ describe('odata message composition', () => {
     // we don't try to test all of that comprehensively, we focus mostly on basic correctness
     // and the few branch cases there are.
 
-    it('should return a basic metadata document', () => {
-      const form = { xmlFormId: 'simple', def: { schema: () => getFormSchema(testData.forms.simple) } };
-      return edmxFor(form).then((edmx) => {
-        edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
+    it('should return a basic metadata document', () => fieldsFor(testData.forms.simple).then((fields) => {
+      edmxFor('simple', fields).should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
 <edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
   <edmx:DataServices>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
@@ -100,13 +98,12 @@ describe('odata message composition', () => {
         <Property Name="instanceID" Type="Edm.String"/>
       </ComplexType>
       <EntityContainer Name="simple">
-        <EntitySet Name="Submissions" EntityType="org.opendatakit.user.simple.Submissions">`)
-      });
-    });
+        <EntitySet Name="Submissions" EntityType="org.opendatakit.user.simple.Submissions">`);
+    }));
 
-    it('should express repeats as entity types behind navigation properties', () => {
-      const form = { xmlFormId: 'withrepeat', def: { schema: () => getFormSchema(testData.forms.withrepeat) } };
-      return edmxFor(form).then((edmx) => {
+    it('should express repeats as entity types behind navigation properties', () =>
+      fieldsFor(testData.forms.withrepeat).then((fields) => {
+        const edmx = edmxFor('withrepeat', fields);
         edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
 <edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
   <edmx:DataServices>
@@ -156,33 +153,25 @@ describe('odata message composition', () => {
     </Schema>
   </edmx:DataServices>
 </edmx:Edmx>`);
-      });
-    });
+      }));
 
-    it('should express repeats as entitysets', () => {
-      const form = { xmlFormId: 'withrepeat', def: { schema: () => getFormSchema(testData.forms.withrepeat) } };
-      return edmxFor(form).then((edmx) => {
-        edmx.should.endWith(`<EntitySet Name="Submissions.children.child" EntityType="org.opendatakit.user.withrepeat.Submissions.children.child">
+    it('should express repeats as entitysets', () => fieldsFor(testData.forms.withrepeat).then((fields) => {
+      edmxFor('withrepeat', fields).should.endWith(`<EntitySet Name="Submissions.children.child" EntityType="org.opendatakit.user.withrepeat.Submissions.children.child">
         </EntitySet>
       </EntityContainer>
     </Schema>
   </edmx:DataServices>
 </edmx:Edmx>`);
-      });
-    });
+      }));
 
-    it('should appropriately name repeat-parent join ids', () => {
-      const form = { xmlFormId: 'double', def: { schema: () => getFormSchema(testData.forms.doubleRepeat) } };
-      return edmxFor(form).then((edmx) => {
-        edmx.includes(`<EntityType Name="Submissions.children.child.toys.toy">
+    it('should appropriately name repeat-parent join ids', () => fieldsFor(testData.forms.doubleRepeat).then((fields) => {
+      edmxFor('double', fields).includes(`<EntityType Name="Submissions.children.child.toys.toy">
         <Key><PropertyRef Name="__id"/></Key>
         <Property Name="__id" Type="Edm.String"/>
         <Property Name="__Submissions-children-child-id" Type="Edm.String"/>`).should.equal(true);
-      });
-    });
+    }));
 
-    it('should appropriately sanitize identifiers', () => {
-      const form = { xmlFormId: 'sanitize', def: { schema: () => getFormSchema(`<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+    it('should appropriately sanitize identifiers', () => fieldsFor(`<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
   <h:head>
     <h:title>Illegal OData Chars</h:title>
     <model>
@@ -220,15 +209,14 @@ describe('odata message composition', () => {
       </repeat>
     </group>
   </h:body>
-</h:html>`) } };
-      return edmxFor(form).then((edmx) => {
-        edmx.includes('<Property Name="q1_8" Type="Edm.String"/>').should.equal(true);
-        edmx.includes('<Property Name="_42" Type="Edm.Int64"/>').should.equal(true);
-        edmx.includes('<Property Name="_2_4" Type="org.opendatakit.user.sanitize._2_4"/>').should.equal(true);
-        edmx.includes('<ComplexType Name="_2_4">').should.equal(true);
-        edmx.includes('<EntityType Name="Submissions._2_4.q3_6">').should.equal(true);
-      });
-    });
+</h:html>`).then((fields) => {
+      const edmx = edmxFor('sanitize', fields);
+      edmx.includes('<Property Name="q1_8" Type="Edm.String"/>').should.equal(true);
+      edmx.includes('<Property Name="_42" Type="Edm.Int64"/>').should.equal(true);
+      edmx.includes('<Property Name="_2_4" Type="org.opendatakit.user.sanitize._2_4"/>').should.equal(true);
+      edmx.includes('<ComplexType Name="_2_4">').should.equal(true);
+      edmx.includes('<EntityType Name="Submissions._2_4.q3_6">').should.equal(true);
+    }));
   });
 
   describe('rowstream conversion', () => {
