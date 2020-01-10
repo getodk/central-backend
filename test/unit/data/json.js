@@ -29,7 +29,7 @@ const mockSubmission = (instanceId, xml) => ({
 });
 
 const callAndParse = (inStream, formXml, xmlFormId, callback) => {
-  getFormSchema(formXml).then(stripNamespacesFromSchema).then(schemaToFields).then((inFields) => {
+  fieldsFor(formXml).then((inFields) => {
     const fields = inFields.map(construct(MockField));
     zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, xmlFormId)), callback);
   });

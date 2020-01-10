@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { getFormSchema, flattenSchemaStructures, _findRepeats, getSchemaTables, schemaAsLookup, stripNamespacesFromSchema, sanitizeOdataIdentifiers, expectedFormAttachments, injectPublicKey, addVersionSuffix } = require(appRoot + '/lib/data/schema');
+const { getFormFields, sanitizeOdataIdentifiers, expectedFormAttachments, injectPublicKey, addVersionSuffix } = require(appRoot + '/lib/data/schema');
 const { toTraversable } = require(appRoot + '/lib/util/xml');
 const testData = require(appRoot + '/test/data/xml');
 
@@ -25,11 +25,11 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-      return getFormSchema(xml).then((schema) => {
+      return getFormFields(xml).then((schema) => {
         schema.should.eql([
-          { name: 'name', type: 'string' },
-          { name: 'age', type: 'int' },
-          { name: 'hometown', type: 'select1' }
+          { name: 'name', path: '/name', type: 'string', order: 0 },
+          { name: 'age', path: '/age', type: 'int', order: 1 },
+          { name: 'hometown', path: '/hometown', type: 'select1', order: 2 }
         ]);
       });
     });
@@ -53,16 +53,16 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-      return getFormSchema(xml).then((schema) => {
+      return getFormFields(xml).then((schema) => {
         schema.should.eql([
-          { name: 'name', type: 'string' },
-          { name: 'age', type: 'int' },
-          { name: 'hometown', type: 'select1' }
+          { name: 'name', path: '/name', type: 'string', order: 0 },
+          { name: 'age', path: '/age', type: 'int', order: 1 },
+          { name: 'hometown', path: '/hometown', type: 'select1', order: 2 }
         ]);
       });
     });
 
-    it('should handle namespaced bindings correctly', () => {
+    it('should handle (and then strip) namespaced bindings correctly', () => {
       const xml = `
         <?xml version="1.0"?>
         <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
@@ -83,13 +83,12 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-      return getFormSchema(xml).then((schema) => {
+      return getFormFields(xml).then((schema) => {
         schema.should.eql([
-          { name: 'orx:meta', type: 'structure', children: [
-            { name: 'orx:instanceID', type: 'string' }
-          ] },
-          { name: 'name', type: 'string' },
-          { name: 'age', type: 'int' }
+          { name: 'meta', path: '/meta', type: 'structure', order: 0 },
+          { name: 'instanceID', path: '/meta/instanceID', type: 'string', order: 1 },
+          { name: 'name', path: '/name', type: 'string', order: 2 },
+          { name: 'age', path: '/age', type: 'int', order: 3 }
         ]);
       });
     });
@@ -121,17 +120,15 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-      return getFormSchema(xml).then((schema) => {
+      return getFormFields(xml).then((schema) => {
         schema.should.eql([
-          { name: 'name', type: 'string' },
-          { name: 'occupation', type: 'structure', children: [
-            { name: 'title', type: 'string' },
-            { name: 'salary', type: 'decimal' },
-            { name: 'dates', type: 'structure', children: [
-              { name: 'joined', type: 'date' },
-              { name: 'departed', type: 'date' }
-            ] }
-          ] }
+          { name: 'name', path: '/name', type: 'string', order: 0 },
+          { name: 'occupation', path: '/occupation', type: 'structure', order: 1 },
+          { name: 'title', path: '/occupation/title', type: 'string', order: 2 },
+          { name: 'salary', path: '/occupation/salary', type: 'decimal', order: 3 },
+          { name: 'dates', path: '/occupation/dates', type: 'structure', order: 4 },
+          { name: 'joined', path: '/occupation/dates/joined', type: 'date', order: 5 },
+          { name: 'departed', path: '/occupation/dates/departed', type: 'date', order: 6 }
         ]);
       });
     });
@@ -147,35 +144,33 @@ describe('form schema', () => {
                   <name/>
                   <occupation>
                     <title/>
-                    <salary/>
                     <dates>
                       <joined/>
                       <departed/>
                     </dates>
+                    <salary/>
                   </occupation>
                 </data>
               </instance>
               <bind nodeset="/data/name" type="string"/>
               <bind nodeset="/data/occupation" relevant="/data/name='liz'"/>
               <bind nodeset="/data/occupation/title" type="string"/>
-              <bind nodeset="/data/occupation/salary" type="decimal"/>
               <bind nodeset="/data/occupation/dates" relevant="true()"/>
               <bind nodeset="/data/occupation/dates/joined" type="date"/>
               <bind nodeset="/data/occupation/dates/departed" type="date"/>
+              <bind nodeset="/data/occupation/salary" type="decimal"/>
             </model>
           </h:head>
         </h:html>`;
-      return getFormSchema(xml).then((schema) => {
+      return getFormFields(xml).then((schema) => {
         schema.should.eql([
-          { name: 'name', type: 'string' },
-          { name: 'occupation', type: 'structure', children: [
-            { name: 'title', type: 'string' },
-            { name: 'salary', type: 'decimal' },
-            { name: 'dates', type: 'structure', children: [
-              { name: 'joined', type: 'date' },
-              { name: 'departed', type: 'date' }
-            ] }
-          ] }
+          { name: 'name', path: '/name', type: 'string', order: 0 },
+          { name: 'occupation', path: '/occupation', type: 'structure', order: 1 },
+          { name: 'title', path: '/occupation/title', type: 'string', order: 2 },
+          { name: 'dates', path: '/occupation/dates', type: 'structure', order: 3 },
+          { name: 'joined', path: '/occupation/dates/joined', type: 'date', order: 4 },
+          { name: 'departed', path: '/occupation/dates/departed', type: 'date', order: 5 },
+          { name: 'salary', path: '/occupation/salary', type: 'decimal', order: 6 }
         ]);
       });
     });
@@ -226,179 +221,47 @@ describe('form schema', () => {
             </group>
           </h:body>
         </h:html>`;
-      return getFormSchema(xml).then((schema) => {
+      return getFormFields(xml).then((schema) => {
         schema.should.eql([
-          { name: 'name', type: 'string' },
-          { name: 'children', type: 'structure', children: [
-            { name: 'child', type: 'repeat', children: [
-              { name: 'name', type: 'string' },
-              { name: 'toy', type: 'repeat', children: [
-                { name: 'name', type: 'string' }
-              ] }
-            ] }
-          ] }
+          { name: 'name', path: '/name', type: 'string', order: 0 },
+          { name: 'children', path: '/children', type: 'structure', order: 1 },
+          { name: 'child', path: '/children/child', type: 'repeat', order: 2 },
+          { name: 'name', path: '/children/child/name', type: 'string', order: 3 },
+          { name: 'toy', path: '/children/child/toy', type: 'repeat', order: 4 },
+          { name: 'name', path: '/children/child/toy/name', type: 'string', order: 5 }
         ]);
       });
     });
-  });
 
-  describe('transformation', () => {
-    describe.skip('flatten', () => {
-      it('should flatten direct structures', () => {
-        const xml = `
-          <?xml version="1.0"?>
-          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
-            <h:head>
-              <model>
-                <instance>
-                  <data id="form">
-                    <name/>
-                    <occupation>
-                      <title/>
-                      <salary/>
-                      <dates>
-                        <joined/>
-                        <departed/>
-                      </dates>
-                    </occupation>
-                  </data>
-                </instance>
-                <bind nodeset="/data/name" type="string"/>
-                <bind nodeset="/data/occupation/title" type="string"/>
-                <bind nodeset="/data/occupation/salary" type="decimal"/>
-                <bind nodeset="/data/occupation/dates/joined" type="date"/>
-                <bind nodeset="/data/occupation/dates/departed" type="date"/>
-              </model>
-            </h:head>
-          </h:html>`;
-        return getFormSchema(xml).then((schema) => {
-          flattenSchemaStructures(schema).should.eql([
-            { path: [ 'name' ], type: 'string' },
-            { path: [ 'occupation', 'title' ], type: 'string' },
-            { path: [ 'occupation', 'salary' ], type: 'decimal' },
-            { path: [ 'occupation', 'dates', 'joined' ], type: 'date' },
-            { path: [ 'occupation', 'dates', 'departed' ], type: 'date' }
-          ]);
-        });
+    it('should mark binary fields as such', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <orx:meta>
+                    <orx:audit/>
+                  </orx:meta>
+                  <name/>
+                  <photo/>
+                </data>
+              </instance>
+              <bind nodeset="/meta/audit"/>
+              <bind nodeset="/data/name" type="string"/>
+              <bind nodeset="/data/photo" type="binary"/>
+            </model>
+          </h:head>
+        </h:html>`;
+      return getFormFields(xml).then((schema) => {
+        schema.should.eql([
+          { name: 'meta', path: '/meta', type: 'structure', order: 0 },
+          { name: 'audit', path: '/meta/audit', type: 'unknown', binary: true, order: 1 },
+          { name: 'name', path: '/name', type: 'string', order: 2 },
+          { name: 'photo', path: '/photo', type: 'binary', binary: true, order: 3 }
+        ]);
       });
-
-      it('should flatten repeat-nested structures', () => {
-        const xml = `
-          <?xml version="1.0"?>
-          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
-            <h:head>
-              <model>
-                <instance>
-                  <data id="form">
-                    <name/>
-                    <occupation>
-                      <title/>
-                      <reports>
-                        <report jr:template="">
-                          <name/>
-                          <project>
-                            <name/>
-                            <due/>
-                          </project>
-                        </report>
-                      </reports>
-                    </occupation>
-                  </data>
-                </instance>
-                <bind nodeset="/data/name" type="string"/>
-                <bind nodeset="/data/occupation/title" type="string"/>
-                <bind nodeset="/data/occupation/reports/report/name" type="string"/>
-                <bind nodeset="/data/occupation/reports/report/project/name" type="string"/>
-                <bind nodeset="/data/occupation/reports/report/project/due" type="date"/>
-              </model>
-            </h:head>
-            <h:body>
-              <input ref="/data/name">
-                <label>What is your name?</label>
-              </input>
-              <input ref="/data/occupation/title">
-                <label>What is your job title?</label>
-              </input>
-              <group ref="/data/occupation/reports">
-                <label>Report</label>
-                <repeat nodeset="/data/occupation/reports/report">
-                  <input ref="/data/occupation/reports/report/name">
-                    <label>What is the report's name?</label>
-                  </input>
-                  <input ref="/data/occupation/reports/report/project/name">
-                    <label>What is the report's current project?</label>
-                  </input>
-                  <input ref="/data/occupation/reports/report/project/due">
-                    <label>When is the report's current project due?</label>
-                  </input>
-                </repeat>
-              </group>
-            </h:body>
-          </h:html>`;
-        return getFormSchema(xml).then((schema) => {
-          flattenSchemaStructures(schema).should.eql([
-            { path: [ 'name' ], type: 'string' },
-            { path: [ 'occupation', 'title' ], type: 'string' },
-            { path: [ 'occupation', 'reports', 'report' ], type: 'repeat', children: [
-              { path: [ 'name' ], type: 'string' },
-              { path: [ 'project', 'name' ], type: 'string' },
-              { path: [ 'project', 'due' ], type: 'date' }
-            ] }
-          ]);
-        });
-      });
-    });
-  });
-
-  describe('stripNamespacesFromSchema', () => {
-    it('should strip namespaces from multiple depths and leave normal tags alone', () => {
-      stripNamespacesFromSchema([{
-        name: 'orx:meta',
-        type: 'structure',
-        children: [{
-          name: 'orx:instanceID',
-          type: 'string'
-        }]
-      }, {
-        name: 'age',
-        type: 'int'
-      }]).should.eql([{
-        name: 'meta',
-        type: 'structure',
-        children: [{
-          name: 'instanceID',
-          type: 'string'
-        }]
-      }, {
-        name: 'age',
-        type: 'int'
-      }]);
-    });
-  });
-
-  describe('sanitizeOdataIdentifiers', () => {
-    it('should sanitize all identifiers', () => {
-      sanitizeOdataIdentifiers([{
-        name: 'q1.8',
-        type: 'structure',
-        children: [{
-          name: '17',
-          type: 'string'
-        }]
-      }, {
-        name: '4.2',
-        type: 'int'
-      }]).should.eql([{
-        name: 'q1_8',
-        type: 'structure',
-        children: [{
-          name: '_17',
-          type: 'string'
-        }]
-      }, {
-        name: '_4_2',
-        type: 'int'
-      }]);
     });
   });
 

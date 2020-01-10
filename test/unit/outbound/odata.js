@@ -1,7 +1,6 @@
 const appRoot = require('app-root-path');
 const streamTest = require('streamtest').v2;
 const { identity } = require('ramda');
-const { getFormSchema } = require(appRoot + '/lib/data/schema');
 const { serviceDocumentFor, edmxFor, rowStreamToOData, singleRowToOData } = require(appRoot + '/lib/outbound/odata');
 const { fieldsFor } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');

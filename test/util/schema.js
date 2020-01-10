@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const { construct } = require('ramda');
-const { getFormSchema, stripNamespacesFromSchema, schemaToFields } = require(appRoot + '/lib/data/schema');
+const { getFormFields } = require(appRoot + '/lib/data/schema');
 
 // provies a mock FormField instance with its data processing methods, and a boilerplate
 // invocation to transform xml to Array[MockField].
@@ -11,9 +11,7 @@ class MockField {
   isStructural() { return (this.type === 'structure') || (this.type === 'repeat'); }
 }
 
-const fieldsFor = (xml) => getFormSchema(xml)
-  .then(stripNamespacesFromSchema).then(schemaToFields)
-  .then((fields) => fields.map(construct(MockField)));
+const fieldsFor = (xml) => getFormFields(xml).then((fields) => fields.map(construct(MockField)));
 
 
 module.exports = { MockField, fieldsFor };
