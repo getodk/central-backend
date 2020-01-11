@@ -1,6 +1,7 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { getFormFields, sanitizeOdataIdentifiers, expectedFormAttachments, injectPublicKey, addVersionSuffix } = require(appRoot + '/lib/data/schema');
+const { getFormFields, sanitizeOdataIdentifiers, SchemaStack, expectedFormAttachments, injectPublicKey, addVersionSuffix } = require(appRoot + '/lib/data/schema');
+const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const { toTraversable } = require(appRoot + '/lib/util/xml');
 const testData = require(appRoot + '/test/data/xml');
 
@@ -262,6 +263,201 @@ describe('form schema', () => {
           { name: 'photo', path: '/photo', type: 'binary', binary: true, order: 3 }
         ]);
       });
+    });
+  });
+
+  describe('SchemaStack', () => {
+    describe('navigation', () => {
+      it('should drop the envelope wrapper before proceeding', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data').should.equal(SchemaStack.Wrapper);
+          should.not.exist(stack.head());
+        }));
+
+      it('should navigate into root fields', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data').should.equal(SchemaStack.Wrapper);
+          stack.push('name').should.eql(new MockField({ name: 'name', path: '/name', type: 'string', order: 2 }));
+        }));
+
+      it('should navigate out of root fields', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('name');
+          stack.pop().should.eql(new MockField({ name: 'name', path: '/name', type: 'string', order: 2 }));
+          should.not.exist(stack.head());
+        }));
+
+      it('should navigate into structures', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('meta').should.eql(new MockField({ name: 'meta', path: '/meta', type: 'structure', order: 0 }));
+          stack.push('instanceID').should.eql(new MockField({ name: 'instanceID', path: '/meta/instanceID', type: 'string', order: 1 }));
+        }));
+
+      it('should ignore namespaces', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('orx:meta').should.eql(new MockField({ name: 'meta', path: '/meta', type: 'structure', order: 0 }));
+          stack.push('orx:instanceID').should.eql(new MockField({ name: 'instanceID', path: '/meta/instanceID', type: 'string', order: 1 }));
+        }));
+
+      it('should navigate out of structures', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('meta');
+          stack.push('instanceID');
+          stack.pop().should.eql(new MockField({ name: 'instanceID', path: '/meta/instanceID', type: 'string', order: 1 }));
+          stack.pop().should.eql(new MockField({ name: 'meta', path: '/meta', type: 'structure', order: 0 }));
+        }));
+
+      it('should navigate in/out of unknown fields', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          should.not.exist(stack.push('something'));
+          should.not.exist(stack.pop());
+          should.not.exist(stack.head());
+          stack.push('name').should.eql(new MockField({ name: 'name', path: '/name', type: 'string', order: 2 }));
+        }));
+
+      it('should not indicate exit upon return to root', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('children');
+          stack.push('child');
+          stack.pop();
+          stack.pop();
+          stack.hasExited().should.equal(false);
+        }));
+
+      it('should indicate exit upon pop past root', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('children');
+          stack.push('child');
+          stack.pop();
+          stack.pop();
+          stack.pop();
+          stack.hasExited().should.equal(true);
+        }));
+    });
+
+    describe('children', () => {
+      it('should give root children', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.children().should.eql([
+            new MockField({ name: 'meta', path: '/meta', type: 'structure', order: 0 }),
+            new MockField({ name: 'name', path: '/name', type: 'string', order: 2 }),
+            new MockField({ name: 'children', path: '/children', type: 'structure', order: 3 })
+          ]);
+        }));
+
+      it('should give structure children', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('meta');
+          stack.children().should.eql([
+            new MockField({ name: 'instanceID', path: '/meta/instanceID', type: 'string', order: 1 })
+          ]);
+        }));
+
+      it('should give repeat children', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('children');
+          stack.push('child');
+          stack.children().should.eql([
+            new MockField({ name: 'name', path: '/children/child/name', type: 'string', order: 5 }),
+            new MockField({ name: 'toys', path: '/children/child/toys', type: 'structure', order: 6 })
+          ]);
+        }));
+    });
+
+    describe('context slicer', () => {
+      it('should give empty context pre-wrapper', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.repeatContextSlicer()([ 0, 1, 2, 3, 4, 5 ]).should.eql([]);
+        }));
+
+      it('should give empty context on root', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.repeatContextSlicer()([ 0, 1, 2, 3, 4, 5 ]).should.eql([]);
+        }));
+
+      it('should give empty context on root fields', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('name');
+          stack.repeatContextSlicer()([ 0, 1, 2, 3, 4, 5 ]).should.eql([]);
+        }));
+
+      it('should give empty context on root structures', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('children');
+          stack.repeatContextSlicer()([ 0, 1, 2, 3, 4, 5 ]).should.eql([]);
+        }));
+
+      it('should give repeat context on repeat fields', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('children');
+          stack.push('child');
+          stack.push('name');
+          stack.repeatContextSlicer()([ 0, 1, 2, 3, 4, 5 ]).should.eql([ 0, 1 ]);
+        }));
+
+      it('should give repeat context on repeat structures', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('children');
+          stack.push('child');
+          stack.push('toys');
+          stack.repeatContextSlicer()([ 0, 1, 2, 3, 4, 5 ]).should.eql([ 0, 1 ]);
+        }));
+
+      it('should give parent context on repeat repeats', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('children');
+          stack.push('child');
+          stack.push('toys');
+          stack.push('toy');
+          stack.repeatContextSlicer()([ 0, 1, 2, 3, 4, 5 ]).should.eql([ 0, 1 ]);
+        }));
+
+      it('should give repeat context on repeat repeat fields', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('children');
+          stack.push('child');
+          stack.push('toys');
+          stack.push('toy');
+          stack.push('name');
+          stack.repeatContextSlicer()([ 0, 1, 2, 3, 4, 5 ]).should.eql([ 0, 1, 2, 3 ]);
+        }));
     });
   });
 
