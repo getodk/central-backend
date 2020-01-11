@@ -38,6 +38,17 @@ describe('util/db', () => {
       });
     });
 
+    it('should use select fields rather than all if present', () => {
+      withJoin('', {
+        prop1: { table: 'prop1table', fields: { all: [ 'a', 'b' ], select: [ 'a' ] } },
+        prop2: { table: 'prop2table', fields: { all: [ 'c', 'd' ] } }
+      }, getFields).should.eql({
+        'prop1!a': 'prop1table.a',
+        'prop2!c': 'prop2table.c',
+        'prop2!d': 'prop2table.d'
+      });
+    });
+
     it('should return a set of flattened fields given of/table declarations', () => {
       withJoin('', {
         prop1: { Instance: { table: 'prop1table', fields: { all: [ 'a', 'b' ] } }, table: 'override1table' },

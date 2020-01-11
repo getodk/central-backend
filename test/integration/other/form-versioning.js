@@ -15,7 +15,7 @@ describe('form forward versioning', () => {
     ])
       .then(([ partial, oldForm ]) => partial.createVersion(oldForm))
       .then(() => Project.getById(1)).then(force)
-      .then((project) => project.getFormByXmlFormId('simple')).then(force)
+      .then((project) => Form.getWithXmlByProjectAndXmlFormId(project.id, 'simple')).then(force)
       .then((newForm) => {
         newForm.currentDefId.should.equal(newForm.def.id);
         /version="two"/.test(newForm.def.xml).should.equal(true);
