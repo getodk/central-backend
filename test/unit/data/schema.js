@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { getFormFields, sanitizeOdataIdentifiers, SchemaStack, expectedFormAttachments, injectPublicKey, addVersionSuffix } = require(appRoot + '/lib/data/schema');
+const { getFormFields, sanitizeFieldsForOdata, SchemaStack, expectedFormAttachments, injectPublicKey, addVersionSuffix } = require(appRoot + '/lib/data/schema');
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const { toTraversable } = require(appRoot + '/lib/util/xml');
 const testData = require(appRoot + '/test/data/xml');
@@ -459,6 +459,45 @@ describe('form schema', () => {
           stack.repeatContextSlicer()([ 0, 1, 2, 3, 4, 5 ]).should.eql([ 0, 1, 2, 3 ]);
         }));
     });
+  });
+
+  describe('sanitizeFieldsForOdata', () => {
+    const sanitizeXml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Sanitize</h:title>
+    <model>
+      <instance>
+        <data id="sanitize">
+          <q1.8>
+            <17/>
+          </q1.8>
+          <4.2/>
+        </data>
+      </instance>
+
+      <bind nodeset="/data/q1.8/17" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+      <bind nodeset="/data/4.2" type="number"/>
+    </model>
+
+  </h:head>
+  <h:body>
+    <input ref="/data/4.2">
+      <label>What is your age?</label>
+    </input>
+  </h:body>
+</h:html>`;
+
+    it('should sanitize names', () => fieldsFor(sanitizeXml)
+      .then((fields) => {
+        sanitizeFieldsForOdata(fields).map((field) => field.name)
+          .should.eql([ 'q1_8', '_17', '_4_2' ]);
+      }));
+
+    it('should sanitize paths', () => fieldsFor(sanitizeXml)
+      .then((fields) => {
+        sanitizeFieldsForOdata(fields).map((field) => field.path)
+          .should.eql([ '/q1_8', '/q1_8/_17', '/_4_2' ]);
+      }));
   });
 
   describe('expectedFormAttachments', () => {
