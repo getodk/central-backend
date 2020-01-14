@@ -155,7 +155,7 @@ describe('api: /submission', () => {
     // no point in replicating it.
     it('should save given attachments', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.binaryType)
           .expect(200)
@@ -176,7 +176,7 @@ describe('api: /submission', () => {
 
     it('should return an appropriate error given conflicting attachments', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.binaryType)
           .expect(200)
@@ -189,7 +189,7 @@ describe('api: /submission', () => {
 
     it('should create audit log entries for saved attachments', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.binaryType)
           .expect(200)
@@ -212,7 +212,7 @@ describe('api: /submission', () => {
 
     it('should ignore unknown attachments', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.binaryType)
           .expect(200)
@@ -235,7 +235,7 @@ describe('api: /submission', () => {
     // that it's been correctly processed and exports right in the .csv.zip tests below.
     it('should save client audit log attachments', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.clientAudits)
           .expect(200)
@@ -252,7 +252,7 @@ describe('api: /submission', () => {
 
     it('should create empty client audit log slots', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.clientAudits)
           .expect(200)
@@ -268,7 +268,7 @@ describe('api: /submission', () => {
 
     it('should detect which attachments are expected', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.binaryType)
           .expect(200)
@@ -298,7 +298,7 @@ describe('api: /submission', () => {
 
     it('should take in additional attachments via additional POSTs', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.binaryType)
           .expect(200)
@@ -325,7 +325,7 @@ describe('api: /submission', () => {
     // no point in replicating it.
     it('should successfully save attachment binary data', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.binaryType)
           .expect(200)
@@ -344,7 +344,7 @@ describe('api: /submission', () => {
 
     it('should successfully save additionally POSTed attachment binary data', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.binaryType)
           .expect(200)
@@ -368,7 +368,7 @@ describe('api: /submission', () => {
 
     it('should accept encrypted submissions, with attachments', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.encrypted)
           .expect(200)
@@ -486,7 +486,7 @@ describe('api: /forms/:id/submissions', () => {
 
     it('should create expected attachments', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.binaryType)
           .expect(200)
@@ -524,7 +524,7 @@ describe('api: /forms/:id/submissions', () => {
 
     it('should accept encrypted submissions, with attachments', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.encrypted)
           .expect(200)
@@ -615,7 +615,7 @@ describe('api: /forms/:id/submissions', () => {
 
     it('should return a zipfile with the relevant attachments', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.binaryType)
           .expect(200)
@@ -651,7 +651,7 @@ describe('api: /forms/:id/submissions', () => {
 
     it('should properly count present attachments', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.binaryType)
           .expect(200)
@@ -678,7 +678,7 @@ describe('api: /forms/:id/submissions', () => {
 
     it('should return worker-processed consolidated client audit log attachments', testService((service, container) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.clientAudits)
           .expect(200)
@@ -720,7 +720,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     it('should return adhoc-processed consolidated client audit log attachments', testService((service, container) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.clientAudits)
           .expect(200)
@@ -759,7 +759,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     it('should return the latest attached audit log after openrosa replace', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.clientAudits)
           .expect(200)
@@ -794,7 +794,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     it('should return the latest attached audit log after REST replace', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.clientAudits)
           .expect(200)
@@ -903,7 +903,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
     // submission key handling.
     it('should return a self-managed key if it is used', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.encrypted)
           .set('Content-Type', 'text/xml')
           .expect(200)
@@ -921,7 +921,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     it('should return multiple self-managed keys if they are used', testService((service, { db, Project, FormDef, FormPartial }) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.encrypted)
           .set('Content-Type', 'text/xml')
           .expect(200)
@@ -936,7 +936,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .replace(/PublicKey="[a-z0-9+\/]+"/i, 'PublicKey="keytwo"')
               .replace('working3', 'working4'))
           ]))
-          .then(([ form, partial ]) => partial.createVersion(form))
+          .then(([ form, partial ]) => partial.createVersion(form, true))
           .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
             .send(testData.instances.encrypted.two
               .replace(/EncryptedKey.*EncryptedKey/, 'EncryptedKey>keytwo</base64EncryptedKey')
@@ -955,7 +955,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     it('should not return unused keys', testService((service, { Project, FormDef, FormPartial }) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.encrypted)
           .set('Content-Type', 'text/xml')
           .expect(200)
@@ -1003,7 +1003,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     it('should not return a key more than once', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.encrypted)
           .set('Content-Type', 'text/xml')
           .expect(200)
@@ -1175,7 +1175,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     it('should reject if the attachment does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.binaryType)
           .expect(200)
@@ -1190,7 +1190,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     it('should attach the given file', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.binaryType)
           .expect(200)
@@ -1211,7 +1211,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     it('should log an audit entry about initial attachment', testService((service, { Audit, Project, Submission, SubmissionAttachment, SubmissionDef }) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.binaryType)
           .expect(200)
@@ -1253,7 +1253,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     it('should log an audit entry about reattachment', testService((service, { Audit, Project, Submission, SubmissionAttachment, SubmissionDef }) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.binaryType)
           .expect(200)
@@ -1320,7 +1320,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     it('should clear the given attachment', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.binaryType)
           .expect(200)
@@ -1347,7 +1347,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     it('should log an audit entry about the deletion', testService((service, { Audit, Project, Submission, SubmissionAttachment, SubmissionDef }) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.binaryType)
           .expect(200)

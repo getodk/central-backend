@@ -442,7 +442,7 @@ describe('api: /projects', () => {
 
     it('should not modify already-encrypted forms', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.encrypted)
           .set('Content-Type', 'text/xml')
           .expect(200)
@@ -461,7 +461,7 @@ describe('api: /projects', () => {
         asAlice.post('/v1/projects/1/key')
           .send({ passphrase: 'supersecret', hint: 'it is a secret' })
           .expect(200)
-          .then(() => asAlice.post('/v1/projects/1/forms')
+          .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.simple2)
             .set('Content-Type', 'text/xml')
             .expect(200)

@@ -308,7 +308,7 @@ describe('managed encryption', () => {
 
     it('should handle mixed [plaintext/encrypted] attachments (not decrypting)', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.binaryType)
           .set('Content-Type', 'text/xml')
           .expect(200)
@@ -337,7 +337,7 @@ describe('managed encryption', () => {
 
     it('should handle mixed [plaintext/encrypted] attachments (decrypting)', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.binaryType)
           .set('Content-Type', 'text/xml')
           .expect(200)
@@ -454,7 +454,7 @@ describe('managed encryption', () => {
               project.getFormByXmlFormId('simple').then((o) => o.get()),
               FormPartial.fromXml(testData.forms.simple.replace('id="simple"', 'id="simple" version="two"'))
             ])
-              .then(([ form, partial ]) => partial.createVersion(form))
+              .then(([ form, partial ]) => partial.createVersion(form, true))
           ]))
 
           // now we can set managed encryption again and submit our last two submissions.

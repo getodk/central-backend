@@ -146,7 +146,7 @@ describe('api: /projects/:id/forms', () => {
 
     it('should escape illegal characters in url', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.withAttachments.replace('withAttachments', 'with attachments'))
           .set('Content-Type', 'application/xml')
           .expect(200)
@@ -161,7 +161,7 @@ describe('api: /projects/:id/forms', () => {
 
     it('should include a manifest node for forms with attachments', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.withAttachments)
           .set('Content-Type', 'application/xml')
           .expect(200)
@@ -203,7 +203,7 @@ describe('api: /projects/:id/forms', () => {
           .send({ name: 'Project Two' })
           .expect(200)
           .then(({ body }) => body.id)
-          .then((projectTwoId) => asAlice.post(`/v1/projects/${projectTwoId}/forms`)
+          .then((projectTwoId) => asAlice.post(`/v1/projects/${projectTwoId}/forms?publish=true`)
             .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="two"'))
             .set('Content-Type', 'application/xml')
             .expect(200)
@@ -449,7 +449,7 @@ describe('api: /projects/:id/forms', () => {
     it('should return the xlsx file originally provided', testService((service) => {
       const input = readFileSync(appRoot + '/test/data/simple.xlsx');
       return service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(input)
           .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
           .expect(200)
@@ -470,7 +470,7 @@ describe('api: /projects/:id/forms', () => {
     // just submit the .xlsx to the mock test service.
     it('should allow xls file download only', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
           .set('Content-Type', 'application/vnd.ms-excel')
           .set('X-XlsForm-FormId-Fallback', 'testformid')
@@ -498,7 +498,7 @@ describe('api: /projects/:id/forms', () => {
           .send({ name: 'Project Two' })
           .expect(200)
           .then(({ body }) => body.id)
-          .then((projectTwoId) => asAlice.post(`/v1/projects/${projectTwoId}/forms`)
+          .then((projectTwoId) => asAlice.post(`/v1/projects/${projectTwoId}/forms?publish=true`)
             .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="two"'))
             .set('Content-Type', 'application/xml')
             .expect(200)
@@ -532,7 +532,7 @@ describe('api: /projects/:id/forms', () => {
 
     it('should include attachments that have been uploaded', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.withAttachments)
           .set('Content-Type', 'application/xml')
           .expect(200)
@@ -584,7 +584,7 @@ describe('api: /projects/:id/forms', () => {
 
     it('should return extended form details', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simple2)
           .set('Content-Type', 'application/xml')
           .expect(200)
@@ -746,7 +746,7 @@ describe('api: /projects/:id/forms', () => {
 
     it('should return a sanitized JSON schema structure', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(sanitizeXml)
           .set('Content-Type', 'text/xml')
           .expect(200)
@@ -788,7 +788,7 @@ describe('api: /projects/:id/forms', () => {
 
       it('should return a list of files', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
+          asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
@@ -804,7 +804,7 @@ describe('api: /projects/:id/forms', () => {
       // this test overlaps with/depends on POST /:name
       it('should flag exists: true for extant files', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
+          asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
@@ -827,7 +827,7 @@ describe('api: /projects/:id/forms', () => {
       // this test overlaps with/depends on POST /:name
       it('should return upload updatedAt for extended metadata', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
+          asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
@@ -847,7 +847,7 @@ describe('api: /projects/:id/forms', () => {
       // this test overlaps with/depends on POST /:name and DELETE /:name
       it('should return deletion exists and updatedAt for extended metadata', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
+          asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
@@ -895,7 +895,7 @@ describe('api: /projects/:id/forms', () => {
 
       it('should accept the file with a success result', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
+          asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
@@ -909,7 +909,7 @@ describe('api: /projects/:id/forms', () => {
 
       it('should replace an extant file with another', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
+          asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
@@ -929,7 +929,7 @@ describe('api: /projects/:id/forms', () => {
 
       it('should allow the same file in different slots', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
+          asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
@@ -944,7 +944,7 @@ describe('api: /projects/:id/forms', () => {
 
       it('should log the action in the audit log', testService((service, { Project, Form, FormAttachment, User, Audit }) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
+          asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
@@ -1001,7 +1001,7 @@ describe('api: /projects/:id/forms', () => {
 
       it('should reject unless the user may read the form', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
+          asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
@@ -1024,7 +1024,7 @@ describe('api: /projects/:id/forms', () => {
 
       it('should return file contents with appropriate headers', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
+          asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
@@ -1050,7 +1050,7 @@ describe('api: /projects/:id/forms', () => {
 
       it('should reject unless the user may update the form', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
+          asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
@@ -1073,7 +1073,7 @@ describe('api: /projects/:id/forms', () => {
 
       it('should delete the attachment contents', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
+          asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
@@ -1088,7 +1088,7 @@ describe('api: /projects/:id/forms', () => {
 
       it('should log the action in the audit log', testService((service, { Project, Form, FormAttachment, User, Audit }) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
+          asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
