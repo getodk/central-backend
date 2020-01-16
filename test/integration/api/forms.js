@@ -556,104 +556,6 @@ describe('api: /projects/:id/forms', () => {
               }))))));
   });
 
-  describe('/:id.schema.json GET', () => {
-    // we do not deeply test the JSON itself; that is done in test/unit/data/schema.js
-    // here we just check all the plumbing.
-
-    it('should reject unless the user can read', testService((service) =>
-      service.login('chelsea', (asChelsea) =>
-        asChelsea.get('/v1/projects/1/forms/simple.schema.json').expect(403))));
-
-    it('should return a JSON schema structure', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.get('/v1/projects/1/forms/simple.schema.json')
-          .expect(200)
-          .then(({ body }) => {
-            body.should.eql([{
-              name: 'meta', type: 'structure',
-              children: [{ name: 'instanceID', type: 'string' }]
-            }, {
-              name: 'name', type: 'string',
-            }, {
-              name: 'age', type: 'int',
-            }])
-          }))));
-
-    it('should return a flattened JSON schema structure', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.get('/v1/projects/1/forms/simple.schema.json?flatten=true')
-          .expect(200)
-          .then(({ body }) => {
-            body.should.eql([
-              { path: [ 'meta', 'instanceID' ], type: 'string' },
-              { path: [ 'name' ], type: 'string' },
-              { path: [ 'age' ], type: 'int' }
-            ]);
-          }))));
-
-    const sanitizeXml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
-  <h:head>
-    <h:title>Sanitize</h:title>
-    <model>
-      <instance>
-        <data id="sanitize">
-          <q1.8>
-            <17/>
-          </q1.8>
-          <4.2/>
-        </data>
-      </instance>
-
-      <bind nodeset="/data/q1.8/17" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
-      <bind nodeset="/data/4.2" type="number"/>
-    </model>
-
-  </h:head>
-  <h:body>
-    <input ref="/data/4.2">
-      <label>What is your age?</label>
-    </input>
-  </h:body>
-</h:html>`;
-
-    it('should return a sanitized JSON schema structure', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
-          .send(sanitizeXml)
-          .set('Content-Type', 'text/xml')
-          .expect(200)
-          .then(() => asAlice.get('/v1/projects/1/forms/sanitize.schema.json?odata=true')
-            .expect(200)
-            .then(({ body }) => {
-              body.should.eql([{
-                name: 'q1_8',
-                type: 'structure',
-                children: [{
-                  name: '_17',
-                  type: 'string'
-                }]
-              }, {
-                name: '_4_2',
-                type: 'number'
-              }]);
-            })))));
-
-    it('should return a sanitized flattened JSON schema structure', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
-          .send(sanitizeXml)
-          .set('Content-Type', 'text/xml')
-          .expect(200)
-          .then(() => asAlice.get('/v1/projects/1/forms/sanitize.schema.json?odata=true&flatten=true')
-            .expect(200)
-            .then(({ body }) => {
-              body.should.eql([
-                { path: [ 'q1_8', '_17' ], type: 'string' },
-                { path: [ '_4_2' ], type: 'number' }
-              ]);
-            })))));
-  });
-
   describe('/:id GET', () => {
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -794,6 +696,69 @@ describe('api: /projects/:id/forms', () => {
               log.actorId.should.equal(alice.actor.id);
               log.acteeId.should.equal(form.acteeId);
             }))))));
+  });
+
+  describe('/:id/fields GET', () => {
+    // we do not deeply test the fields themselves; that is done in test/unit/data/schema.js
+    // here we just check all the plumbing.
+
+    it('should reject unless the user can read', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/projects/1/forms/simple/fields').expect(403))));
+
+    it('should return a list of fields', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/simple/fields')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.eql([
+              { name: 'meta', path: '/meta', type: 'structure', binary: null },
+              { name: 'instanceID', path: '/meta/instanceID', type: 'string', binary: null },
+              { name: 'name', path: '/name', type: 'string', binary: null },
+              { name: 'age', path: '/age', type: 'int', binary: null }
+            ]);
+          }))));
+
+    const sanitizeXml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Sanitize</h:title>
+    <model>
+      <instance>
+        <data id="sanitize">
+          <q1.8>
+            <17/>
+          </q1.8>
+          <4.2/>
+        </data>
+      </instance>
+
+      <bind nodeset="/data/q1.8/17" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+      <bind nodeset="/data/4.2" type="number"/>
+    </model>
+
+  </h:head>
+  <h:body>
+    <input ref="/data/4.2">
+      <label>What is your age?</label>
+    </input>
+  </h:body>
+</h:html>`;
+
+    it('should return a sanitized JSON schema structure', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(sanitizeXml)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/sanitize/fields?odata=true')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.eql([
+                { name: 'q1_8', path: '/q1_8', type: 'structure', binary: null },
+                { name: '_17', path: '/q1_8/_17', type: 'string', binary: null },
+                { name: '_4_2', path: '/_4_2', type: 'number', binary: null }
+              ]);
+            })))));
   });
 
   // Form attachments tests:

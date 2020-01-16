@@ -1,6 +1,7 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { getFormSchema, flattenSchemaStructures, _findRepeats, getSchemaTables, schemaAsLookup, stripNamespacesFromSchema, sanitizeOdataIdentifiers, expectedFormAttachments, injectPublicKey, addVersionSuffix } = require(appRoot + '/lib/data/schema');
+const { getFormFields, sanitizeFieldsForOdata, SchemaStack, expectedFormAttachments, injectPublicKey, addVersionSuffix } = require(appRoot + '/lib/data/schema');
+const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const { toTraversable } = require(appRoot + '/lib/util/xml');
 const testData = require(appRoot + '/test/data/xml');
 
@@ -25,11 +26,11 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-      return getFormSchema(xml).then((schema) => {
+      return getFormFields(xml).then((schema) => {
         schema.should.eql([
-          { name: 'name', type: 'string' },
-          { name: 'age', type: 'int' },
-          { name: 'hometown', type: 'select1' }
+          { name: 'name', path: '/name', type: 'string', order: 0 },
+          { name: 'age', path: '/age', type: 'int', order: 1 },
+          { name: 'hometown', path: '/hometown', type: 'select1', order: 2 }
         ]);
       });
     });
@@ -53,16 +54,16 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-      return getFormSchema(xml).then((schema) => {
+      return getFormFields(xml).then((schema) => {
         schema.should.eql([
-          { name: 'name', type: 'string' },
-          { name: 'age', type: 'int' },
-          { name: 'hometown', type: 'select1' }
+          { name: 'name', path: '/name', type: 'string', order: 0 },
+          { name: 'age', path: '/age', type: 'int', order: 1 },
+          { name: 'hometown', path: '/hometown', type: 'select1', order: 2 }
         ]);
       });
     });
 
-    it('should handle namespaced bindings correctly', () => {
+    it('should handle (and then strip) namespaced bindings correctly', () => {
       const xml = `
         <?xml version="1.0"?>
         <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
@@ -83,13 +84,12 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-      return getFormSchema(xml).then((schema) => {
+      return getFormFields(xml).then((schema) => {
         schema.should.eql([
-          { name: 'orx:meta', type: 'structure', children: [
-            { name: 'orx:instanceID', type: 'string' }
-          ] },
-          { name: 'name', type: 'string' },
-          { name: 'age', type: 'int' }
+          { name: 'meta', path: '/meta', type: 'structure', order: 0 },
+          { name: 'instanceID', path: '/meta/instanceID', type: 'string', order: 1 },
+          { name: 'name', path: '/name', type: 'string', order: 2 },
+          { name: 'age', path: '/age', type: 'int', order: 3 }
         ]);
       });
     });
@@ -121,17 +121,15 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-      return getFormSchema(xml).then((schema) => {
+      return getFormFields(xml).then((schema) => {
         schema.should.eql([
-          { name: 'name', type: 'string' },
-          { name: 'occupation', type: 'structure', children: [
-            { name: 'title', type: 'string' },
-            { name: 'salary', type: 'decimal' },
-            { name: 'dates', type: 'structure', children: [
-              { name: 'joined', type: 'date' },
-              { name: 'departed', type: 'date' }
-            ] }
-          ] }
+          { name: 'name', path: '/name', type: 'string', order: 0 },
+          { name: 'occupation', path: '/occupation', type: 'structure', order: 1 },
+          { name: 'title', path: '/occupation/title', type: 'string', order: 2 },
+          { name: 'salary', path: '/occupation/salary', type: 'decimal', order: 3 },
+          { name: 'dates', path: '/occupation/dates', type: 'structure', order: 4 },
+          { name: 'joined', path: '/occupation/dates/joined', type: 'date', order: 5 },
+          { name: 'departed', path: '/occupation/dates/departed', type: 'date', order: 6 }
         ]);
       });
     });
@@ -147,35 +145,33 @@ describe('form schema', () => {
                   <name/>
                   <occupation>
                     <title/>
-                    <salary/>
                     <dates>
                       <joined/>
                       <departed/>
                     </dates>
+                    <salary/>
                   </occupation>
                 </data>
               </instance>
               <bind nodeset="/data/name" type="string"/>
               <bind nodeset="/data/occupation" relevant="/data/name='liz'"/>
               <bind nodeset="/data/occupation/title" type="string"/>
-              <bind nodeset="/data/occupation/salary" type="decimal"/>
               <bind nodeset="/data/occupation/dates" relevant="true()"/>
               <bind nodeset="/data/occupation/dates/joined" type="date"/>
               <bind nodeset="/data/occupation/dates/departed" type="date"/>
+              <bind nodeset="/data/occupation/salary" type="decimal"/>
             </model>
           </h:head>
         </h:html>`;
-      return getFormSchema(xml).then((schema) => {
+      return getFormFields(xml).then((schema) => {
         schema.should.eql([
-          { name: 'name', type: 'string' },
-          { name: 'occupation', type: 'structure', children: [
-            { name: 'title', type: 'string' },
-            { name: 'salary', type: 'decimal' },
-            { name: 'dates', type: 'structure', children: [
-              { name: 'joined', type: 'date' },
-              { name: 'departed', type: 'date' }
-            ] }
-          ] }
+          { name: 'name', path: '/name', type: 'string', order: 0 },
+          { name: 'occupation', path: '/occupation', type: 'structure', order: 1 },
+          { name: 'title', path: '/occupation/title', type: 'string', order: 2 },
+          { name: 'dates', path: '/occupation/dates', type: 'structure', order: 3 },
+          { name: 'joined', path: '/occupation/dates/joined', type: 'date', order: 4 },
+          { name: 'departed', path: '/occupation/dates/departed', type: 'date', order: 5 },
+          { name: 'salary', path: '/occupation/salary', type: 'decimal', order: 6 }
         ]);
       });
     });
@@ -226,225 +222,317 @@ describe('form schema', () => {
             </group>
           </h:body>
         </h:html>`;
-      return getFormSchema(xml).then((schema) => {
+      return getFormFields(xml).then((schema) => {
         schema.should.eql([
-          { name: 'name', type: 'string' },
-          { name: 'children', type: 'structure', children: [
-            { name: 'child', type: 'repeat', children: [
-              { name: 'name', type: 'string' },
-              { name: 'toy', type: 'repeat', children: [
-                { name: 'name', type: 'string' }
-              ] }
-            ] }
-          ] }
+          { name: 'name', path: '/name', type: 'string', order: 0 },
+          { name: 'children', path: '/children', type: 'structure', order: 1 },
+          { name: 'child', path: '/children/child', type: 'repeat', order: 2 },
+          { name: 'name', path: '/children/child/name', type: 'string', order: 3 },
+          { name: 'toy', path: '/children/child/toy', type: 'repeat', order: 4 },
+          { name: 'name', path: '/children/child/toy/name', type: 'string', order: 5 }
+        ]);
+      });
+    });
+
+    it('should mark binary fields as such', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <orx:meta>
+                    <orx:audit/>
+                  </orx:meta>
+                  <name/>
+                  <photo/>
+                </data>
+              </instance>
+              <bind nodeset="/meta/audit"/>
+              <bind nodeset="/data/name" type="string"/>
+              <bind nodeset="/data/photo" type="binary"/>
+            </model>
+          </h:head>
+        </h:html>`;
+      return getFormFields(xml).then((schema) => {
+        schema.should.eql([
+          { name: 'meta', path: '/meta', type: 'structure', order: 0 },
+          { name: 'audit', path: '/meta/audit', type: 'unknown', binary: true, order: 1 },
+          { name: 'name', path: '/name', type: 'string', order: 2 },
+          { name: 'photo', path: '/photo', type: 'binary', binary: true, order: 3 }
         ]);
       });
     });
   });
 
-  describe('transformation', () => {
-    describe('flatten', () => {
-      it('should flatten direct structures', () => {
-        const xml = `
-          <?xml version="1.0"?>
-          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
-            <h:head>
-              <model>
-                <instance>
-                  <data id="form">
-                    <name/>
-                    <occupation>
-                      <title/>
-                      <salary/>
-                      <dates>
-                        <joined/>
-                        <departed/>
-                      </dates>
-                    </occupation>
-                  </data>
-                </instance>
-                <bind nodeset="/data/name" type="string"/>
-                <bind nodeset="/data/occupation/title" type="string"/>
-                <bind nodeset="/data/occupation/salary" type="decimal"/>
-                <bind nodeset="/data/occupation/dates/joined" type="date"/>
-                <bind nodeset="/data/occupation/dates/departed" type="date"/>
-              </model>
-            </h:head>
-          </h:html>`;
-        return getFormSchema(xml).then((schema) => {
-          flattenSchemaStructures(schema).should.eql([
-            { path: [ 'name' ], type: 'string' },
-            { path: [ 'occupation', 'title' ], type: 'string' },
-            { path: [ 'occupation', 'salary' ], type: 'decimal' },
-            { path: [ 'occupation', 'dates', 'joined' ], type: 'date' },
-            { path: [ 'occupation', 'dates', 'departed' ], type: 'date' }
-          ]);
-        });
-      });
-
-      it('should flatten repeat-nested structures', () => {
-        const xml = `
-          <?xml version="1.0"?>
-          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
-            <h:head>
-              <model>
-                <instance>
-                  <data id="form">
-                    <name/>
-                    <occupation>
-                      <title/>
-                      <reports>
-                        <report jr:template="">
-                          <name/>
-                          <project>
-                            <name/>
-                            <due/>
-                          </project>
-                        </report>
-                      </reports>
-                    </occupation>
-                  </data>
-                </instance>
-                <bind nodeset="/data/name" type="string"/>
-                <bind nodeset="/data/occupation/title" type="string"/>
-                <bind nodeset="/data/occupation/reports/report/name" type="string"/>
-                <bind nodeset="/data/occupation/reports/report/project/name" type="string"/>
-                <bind nodeset="/data/occupation/reports/report/project/due" type="date"/>
-              </model>
-            </h:head>
-            <h:body>
-              <input ref="/data/name">
-                <label>What is your name?</label>
-              </input>
-              <input ref="/data/occupation/title">
-                <label>What is your job title?</label>
-              </input>
-              <group ref="/data/occupation/reports">
-                <label>Report</label>
-                <repeat nodeset="/data/occupation/reports/report">
-                  <input ref="/data/occupation/reports/report/name">
-                    <label>What is the report's name?</label>
-                  </input>
-                  <input ref="/data/occupation/reports/report/project/name">
-                    <label>What is the report's current project?</label>
-                  </input>
-                  <input ref="/data/occupation/reports/report/project/due">
-                    <label>When is the report's current project due?</label>
-                  </input>
-                </repeat>
-              </group>
-            </h:body>
-          </h:html>`;
-        return getFormSchema(xml).then((schema) => {
-          flattenSchemaStructures(schema).should.eql([
-            { path: [ 'name' ], type: 'string' },
-            { path: [ 'occupation', 'title' ], type: 'string' },
-            { path: [ 'occupation', 'reports', 'report' ], type: 'repeat', children: [
-              { path: [ 'name' ], type: 'string' },
-              { path: [ 'project', 'name' ], type: 'string' },
-              { path: [ 'project', 'due' ], type: 'date' }
-            ] }
-          ]);
-        });
-      });
-    });
-
-    describe('table listing', () => {
-      it('should return nothing for a schema without repeats', () =>
-        getFormSchema(testData.forms.simple).then((schema) => {
-          getSchemaTables(schema).should.eql([]);
+  describe('SchemaStack', () => {
+    describe('navigation', () => {
+      it('should drop the envelope wrapper before proceeding', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data').should.equal(SchemaStack.Wrapper);
+          should.not.exist(stack.head());
         }));
 
-      it('should return relevant tables', () =>
-        getFormSchema(testData.forms.doubleRepeat).then((schema) => {
-          getSchemaTables(schema).should.eql([
-            'children.child',
-            'children.child.toys.toy'
-          ]);
+      it('should navigate into root fields', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data').should.equal(SchemaStack.Wrapper);
+          stack.push('name').should.eql(new MockField({ name: 'name', path: '/name', type: 'string', order: 2 }));
+        }));
+
+      it('should navigate out of root fields', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('name');
+          stack.pop().should.eql(new MockField({ name: 'name', path: '/name', type: 'string', order: 2 }));
+          should.not.exist(stack.head());
+        }));
+
+      it('should navigate into structures', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('meta').should.eql(new MockField({ name: 'meta', path: '/meta', type: 'structure', order: 0 }));
+          stack.push('instanceID').should.eql(new MockField({ name: 'instanceID', path: '/meta/instanceID', type: 'string', order: 1 }));
+        }));
+
+      it('should ignore namespaces', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('orx:meta').should.eql(new MockField({ name: 'meta', path: '/meta', type: 'structure', order: 0 }));
+          stack.push('orx:instanceID').should.eql(new MockField({ name: 'instanceID', path: '/meta/instanceID', type: 'string', order: 1 }));
+        }));
+
+      it('should navigate out of structures', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('meta');
+          stack.push('instanceID');
+          stack.pop().should.eql(new MockField({ name: 'instanceID', path: '/meta/instanceID', type: 'string', order: 1 }));
+          stack.pop().should.eql(new MockField({ name: 'meta', path: '/meta', type: 'structure', order: 0 }));
+        }));
+
+      it('should navigate in/out of unknown fields', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          should.not.exist(stack.push('something'));
+          should.not.exist(stack.pop());
+          should.not.exist(stack.head());
+          stack.push('name').should.eql(new MockField({ name: 'name', path: '/name', type: 'string', order: 2 }));
+        }));
+
+      it('should not indicate exit upon return to root', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('children');
+          stack.push('child');
+          stack.pop();
+          stack.pop();
+          stack.hasExited().should.equal(false);
+        }));
+
+      it('should indicate exit upon pop past root', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('children');
+          stack.push('child');
+          stack.pop();
+          stack.pop();
+          stack.pop();
+          stack.hasExited().should.equal(true);
         }));
     });
 
-    describe('lookup', () => {
-      it('should flatten basic and group bindings into lookups', () =>
-        getFormSchema(testData.forms.simple).then((schema) => {
-          schemaAsLookup(schema).should.eql({
-            meta: { name: 'meta', type: 'structure', children: {
-              instanceID: { name: 'instanceID', type: 'string' } }
-            },
-            name: { name: 'name', type: 'string' },
-            age: { name: 'age', type: 'int' }
-          });
+    describe('children', () => {
+      it('should give root children', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.children().should.eql([
+            new MockField({ name: 'meta', path: '/meta', type: 'structure', order: 0 }),
+            new MockField({ name: 'name', path: '/name', type: 'string', order: 2 }),
+            new MockField({ name: 'children', path: '/children', type: 'structure', order: 3 })
+          ]);
         }));
 
-      it('should flatten repeat bindings into lookups', () =>
-        getFormSchema(testData.forms.withrepeat).then((schema) => {
-          schemaAsLookup(schema).should.eql({
-            'orx:meta': { name: 'orx:meta', type: 'structure', children: {
-              'orx:instanceID': { name: 'orx:instanceID', type: 'string' }
-            } },
-            name: { name: 'name', type: 'string' },
-            age: { name: 'age', type: 'int' },
-            children: { name: 'children', type: 'structure', children: {
-              child: { name: 'child', type: 'repeat', children: {
-                name: { name: 'name', type: 'string' },
-                age: { name: 'age', type: 'int' }
-              } }
-            } }
-          });
+      it('should give structure children', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('meta');
+          stack.children().should.eql([
+            new MockField({ name: 'instanceID', path: '/meta/instanceID', type: 'string', order: 1 })
+          ]);
+        }));
+
+      it('should give repeat children', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('children');
+          stack.push('child');
+          stack.children().should.eql([
+            new MockField({ name: 'name', path: '/children/child/name', type: 'string', order: 5 }),
+            new MockField({ name: 'toys', path: '/children/child/toys', type: 'structure', order: 6 })
+          ]);
+        }));
+
+      it('should not be fooled by path prefix extensions', () => fieldsFor(`<?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <children jr:template="">
+                    <name/>
+                  </children>
+                  <children-status/>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind nodeset="/data/children/name" type="string"/>
+              <bind nodeset="/data/children-status" type="select1"/>
+            </model>
+          </h:head>
+          <h:body>
+            <repeat nodeset="/data/children">
+              <input ref="/data/children/name">
+                <label>What is the child's name?</label>
+              </input>
+            </repeat>
+          </h:body>
+        </h:html>`)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('children');
+          stack.children().should.eql([
+            new MockField({ name: 'name', path: '/children/name', type: 'string', order: 2 }),
+          ]);
+        }));
+    });
+
+    describe('context slicer', () => {
+      it('should give empty context pre-wrapper', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.repeatContextSlicer()([ 0, 1, 2, 3, 4, 5 ]).should.eql([]);
+        }));
+
+      it('should give empty context on root', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.repeatContextSlicer()([ 0, 1, 2, 3, 4, 5 ]).should.eql([]);
+        }));
+
+      it('should give empty context on root fields', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('name');
+          stack.repeatContextSlicer()([ 0, 1, 2, 3, 4, 5 ]).should.eql([]);
+        }));
+
+      it('should give empty context on root structures', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('children');
+          stack.repeatContextSlicer()([ 0, 1, 2, 3, 4, 5 ]).should.eql([]);
+        }));
+
+      it('should give repeat context on repeat fields', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('children');
+          stack.push('child');
+          stack.push('name');
+          stack.repeatContextSlicer()([ 0, 1, 2, 3, 4, 5 ]).should.eql([ 0, 1 ]);
+        }));
+
+      it('should give repeat context on repeat structures', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('children');
+          stack.push('child');
+          stack.push('toys');
+          stack.repeatContextSlicer()([ 0, 1, 2, 3, 4, 5 ]).should.eql([ 0, 1 ]);
+        }));
+
+      it('should give parent context on repeat repeats', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('children');
+          stack.push('child');
+          stack.push('toys');
+          stack.push('toy');
+          stack.repeatContextSlicer()([ 0, 1, 2, 3, 4, 5 ]).should.eql([ 0, 1 ]);
+        }));
+
+      it('should give repeat context on repeat repeat fields', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('children');
+          stack.push('child');
+          stack.push('toys');
+          stack.push('toy');
+          stack.push('name');
+          stack.repeatContextSlicer()([ 0, 1, 2, 3, 4, 5 ]).should.eql([ 0, 1, 2, 3 ]);
         }));
     });
   });
 
-  describe('stripNamespacesFromSchema', () => {
-    it('should strip namespaces from multiple depths and leave normal tags alone', () => {
-      stripNamespacesFromSchema([{
-        name: 'orx:meta',
-        type: 'structure',
-        children: [{
-          name: 'orx:instanceID',
-          type: 'string'
-        }]
-      }, {
-        name: 'age',
-        type: 'int'
-      }]).should.eql([{
-        name: 'meta',
-        type: 'structure',
-        children: [{
-          name: 'instanceID',
-          type: 'string'
-        }]
-      }, {
-        name: 'age',
-        type: 'int'
-      }]);
-    });
-  });
+  describe('sanitizeFieldsForOdata', () => {
+    const sanitizeXml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Sanitize</h:title>
+    <model>
+      <instance>
+        <data id="sanitize">
+          <q1.8>
+            <17/>
+          </q1.8>
+          <4.2/>
+        </data>
+      </instance>
 
-  describe('sanitizeOdataIdentifiers', () => {
-    it('should sanitize all identifiers', () => {
-      sanitizeOdataIdentifiers([{
-        name: 'q1.8',
-        type: 'structure',
-        children: [{
-          name: '17',
-          type: 'string'
-        }]
-      }, {
-        name: '4.2',
-        type: 'int'
-      }]).should.eql([{
-        name: 'q1_8',
-        type: 'structure',
-        children: [{
-          name: '_17',
-          type: 'string'
-        }]
-      }, {
-        name: '_4_2',
-        type: 'int'
-      }]);
-    });
+      <bind nodeset="/data/q1.8/17" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+      <bind nodeset="/data/4.2" type="number"/>
+    </model>
+
+  </h:head>
+  <h:body>
+    <input ref="/data/4.2">
+      <label>What is your age?</label>
+    </input>
+  </h:body>
+</h:html>`;
+
+    it('should sanitize names', () => fieldsFor(sanitizeXml)
+      .then((fields) => {
+        sanitizeFieldsForOdata(fields).map((field) => field.name)
+          .should.eql([ 'q1_8', '_17', '_4_2' ]);
+      }));
+
+    it('should sanitize paths', () => fieldsFor(sanitizeXml)
+      .then((fields) => {
+        sanitizeFieldsForOdata(fields).map((field) => field.path)
+          .should.eql([ '/q1_8', '/q1_8/_17', '/_4_2' ]);
+      }));
   });
 
   describe('expectedFormAttachments', () => {

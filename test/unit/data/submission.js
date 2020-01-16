@@ -1,70 +1,61 @@
 require('should');
 const appRoot = require('app-root-path');
-const { always } = require('ramda');
+const { always, construct } = require('ramda');
 const { toObjects } = require('streamtest').v2;
 const { submissionXmlToFieldStream } = require(appRoot + '/lib/data/submission');
-const { getFormSchema } = require(appRoot + '/lib/data/schema');
+const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
 describe('submission field streamer', () => {
-  const mockFormDef = (xml) => ({ schema: always(getFormSchema(xml)) });
 
   it('should return a stream of records', (done) => {
-    submissionXmlToFieldStream(mockFormDef(testData.forms.simple), testData.instances.simple.one)
-      .then((fieldStream) => fieldStream.pipe(toObjects((error, result) => {
+    fieldsFor(testData.forms.simple).then((fields) =>
+      submissionXmlToFieldStream(fields, testData.instances.simple.one).pipe(toObjects((error, result) => {
         result.should.eql([
-          { field: { name: 'instanceID', type: 'string' }, text: 'one', path: [ 'meta' ] },
-          { field: { name: 'name', type: 'string' }, text: 'Alice', path: [] },
-          { field: { name: 'age', type: 'int' }, text: '30', path: [] }
+          { field: new MockField({ order: 1, name: 'instanceID', path: '/meta/instanceID', type: 'string' }), text: 'one' },
+          { field: new MockField({ order: 2, name: 'name', path: '/name', type: 'string' }), text: 'Alice' },
+          { field: new MockField({ order: 3, name: 'age', path: '/age', type: 'int' }), text: '30' }
         ]);
         done();
       })));
   });
 
   it('should deal correctly with repeats', (done) => {
-    submissionXmlToFieldStream(mockFormDef(testData.forms.doubleRepeat), testData.instances.doubleRepeat.double)
-      .then((fieldStream) => fieldStream.pipe(toObjects((error, result) => {
+    fieldsFor(testData.forms.doubleRepeat).then((fields) =>
+      submissionXmlToFieldStream(fields, testData.instances.doubleRepeat.double).pipe(toObjects((error, result) => {
         result.should.eql([
-          { field: { name: 'instanceID', type: 'string' }, text: 'double', path: [ 'meta' ] },
-          { field: { name: 'name', type: 'string' }, text: 'Vick', path: [] },
-          { field: { name: 'name', type: 'string' }, text: 'Alice', path: [ 'children', 'child' ] },
-          { field: { name: 'name', type: 'string' }, text: 'Bob', path: [ 'children', 'child' ] },
-          { field: { name: 'name', type: 'string' }, text: 'Twilight Sparkle',
-            path: [ 'children', 'child', 'toys', 'toy' ] },
-          { field: { name: 'name', type: 'string' }, text: 'Pinkie Pie',
-            path: [ 'children', 'child', 'toys', 'toy' ] },
-          { field: { name: 'name', type: 'string' }, text: 'Applejack',
-            path: [ 'children', 'child', 'toys', 'toy' ] },
-          { field: { name: 'name', type: 'string' }, text: 'Spike',
-            path: [ 'children', 'child', 'toys', 'toy' ] },
-          { field: { name: 'name', type: 'string' }, text: 'Chelsea', path: [ 'children', 'child' ] },
-          { field: { name: 'name', type: 'string' }, text: 'Rainbow Dash',
-            path: [ 'children', 'child', 'toys', 'toy' ] },
-          { field: { name: 'name', type: 'string' }, text: 'Rarity',
-            path: [ 'children', 'child', 'toys', 'toy' ] },
-          { field: { name: 'name', type: 'string' }, text: 'Fluttershy',
-            path: [ 'children', 'child', 'toys', 'toy' ] },
-          { field: { name: 'name', type: 'string' }, text: 'Princess Luna',
-            path: [ 'children', 'child', 'toys', 'toy' ] }
+          { field: new MockField({ order: 1, name: 'instanceID', path: '/meta/instanceID', type: 'string' }), text: 'double' },
+          { field: new MockField({ order: 2, name: 'name', path: '/name', type: 'string' }), text: 'Vick' },
+          { field: new MockField({ order: 5, name: 'name', path: '/children/child/name', type: 'string' }), text: 'Alice' },
+          { field: new MockField({ order: 5, name: 'name', path: '/children/child/name', type: 'string' }), text: 'Bob' },
+          { field: new MockField({ order: 8, name: 'name', path: '/children/child/toys/toy/name', type: 'string' }), text: 'Twilight Sparkle' },
+          { field: new MockField({ order: 8, name: 'name', path: '/children/child/toys/toy/name', type: 'string' }), text: 'Pinkie Pie' },
+          { field: new MockField({ order: 8, name: 'name', path: '/children/child/toys/toy/name', type: 'string' }), text: 'Applejack' },
+          { field: new MockField({ order: 8, name: 'name', path: '/children/child/toys/toy/name', type: 'string' }), text: 'Spike' },
+          { field: new MockField({ order: 5, name: 'name', path: '/children/child/name', type: 'string' }), text: 'Chelsea' },
+          { field: new MockField({ order: 8, name: 'name', path: '/children/child/toys/toy/name', type: 'string' }), text: 'Rainbow Dash' },
+          { field: new MockField({ order: 8, name: 'name', path: '/children/child/toys/toy/name', type: 'string' }), text: 'Rarity' },
+          { field: new MockField({ order: 8, name: 'name', path: '/children/child/toys/toy/name', type: 'string' }), text: 'Fluttershy' },
+          { field: new MockField({ order: 8, name: 'name', path: '/children/child/toys/toy/name', type: 'string' }), text: 'Princess Luna' }
         ]);
         done();
       })));
   });
 
   it('should not hang given malformed non-closing xml', (done) => {
-    submissionXmlToFieldStream(mockFormDef(testData.forms.simple), '<data><meta><instanceID>')
-      .then((stream) => {
-        stream.on('data', () => {});
-        stream.on('end', done); // not hanging/timing out is the assertion here
-      })
+    fieldsFor(testData.forms.simple).then((fields) => {
+      const stream = submissionXmlToFieldStream(fields, '<data><meta><instanceID>');
+      stream.on('data', () => {});
+      stream.on('end', done); // not hanging/timing out is the assertion here
+    });
   });
 
   it('should not crash given malformed over-closing xml', (done) => {
-    submissionXmlToFieldStream(mockFormDef(testData.forms.simple), '<data></goodbye></goodbye></goodbye>')
-      .then((stream) => {
-        stream.on('data', () => {});
-        stream.on('end', done); // not hanging/timing out is the assertion here
-      })
+    fieldsFor(testData.forms.simple).then((fields) => {
+      const stream = submissionXmlToFieldStream(fields, '<data></goodbye></goodbye></goodbye>');
+      stream.on('data', () => {});
+      stream.on('end', done); // not hanging/timing out is the assertion here
+    });
   });
 });
 

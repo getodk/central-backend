@@ -1,6 +1,7 @@
 const appRoot = require('app-root-path');
-const { getFormSchema, schemaAsLookup, stripNamespacesFromSchema } = require(appRoot + '/lib/data/schema');
+const { construct } = require('ramda');
 const { submissionToOData } = require(appRoot + '/lib/data/json');
+const { MockField, fieldsFor } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
 const __system = {
@@ -28,9 +29,8 @@ const mockSubmission = (instanceId, xml) => ({
 });
 
 describe('submissionToOData', () => {
-  it('should parse and transform a basic submission', () => {
-    return getFormSchema(testData.forms.simple).then((schema) => {
-      const fields = schemaAsLookup(schema);
+  it('should parse and transform a basic submission', () =>
+    fieldsFor(testData.forms.simple).then((fields) => {
       const submission = mockSubmission('one', testData.instances.simple.one);
       return submissionToOData(fields, 'Submissions', submission).then((result) => {
         result.should.eql([{
@@ -41,12 +41,10 @@ describe('submissionToOData', () => {
           age: 30
         }]);
       });
-    });
-  });
+    }));
 
   it('should not hang on incomplete markup', () =>
-    getFormSchema(testData.forms.simple).then((schema) => {
-      const fields = schemaAsLookup(schema);
+    fieldsFor(testData.forms.simple).then((fields) => {
       const submission = mockSubmission('one', '<data><meta><instanceID>');
       return submissionToOData(fields, 'Submissions', submission);
     }));
@@ -55,23 +53,23 @@ describe('submissionToOData', () => {
   // have one for explicity this purpose in case things change.
   it('should include submission metadata on the root output', () => {
     const submission = mockSubmission('test', testData.instances.simple.one);
-    return submissionToOData({}, 'Submissions', submission).then((result) => {
+    return submissionToOData([], 'Submissions', submission).then((result) => {
       result.should.eql([{ __id: 'test', __system }]);
     });
   });
 
   it('should handle all primitive output types correctly', () => {
-    const fields = {
-      int: { name: 'int', type: 'int' },
-      decimal: { name: 'decimal', type: 'decimal' },
-      geopoint: { name: 'geopoint', type: 'geopoint' },
-      geopointNoAlt: { name: 'geopointNoAlt', type: 'geopoint' },
-      dateTime: { name: 'dateTime', type: 'dateTime' },
-      dateTimeWhitespace: { name: 'dateTimeWhitespace', type: 'dateTime' },
-      dateTimeCorrect: { name: 'dateTimeCorrect', type: 'dateTime' },
-      text: { name: 'text', type: 'text' },
-      other: { name: 'other', type: 'other' }
-    };
+    const fields = [
+      new MockField({ path: '/int', name: 'int', type: 'int' }),
+      new MockField({ path: '/decimal', name: 'decimal', type: 'decimal' }),
+      new MockField({ path: '/geopoint', name: 'geopoint', type: 'geopoint' }),
+      new MockField({ path: '/geopointNoAlt', name: 'geopointNoAlt', type: 'geopoint' }),
+      new MockField({ path: '/dateTime', name: 'dateTime', type: 'dateTime' }),
+      new MockField({ path: '/dateTimeWhitespace', name: 'dateTimeWhitespace', type: 'dateTime' }),
+      new MockField({ path: '/dateTimeCorrect', name: 'dateTimeCorrect', type: 'dateTime' }),
+      new MockField({ path: '/text', name: 'text', type: 'text' }),
+      new MockField({ path: '/other', name: 'other', type: 'other' })
+    ];
     const submission = mockSubmission('types', `<data>
         <int>42</int>
         <decimal>3.14</decimal>
@@ -103,13 +101,13 @@ describe('submissionToOData', () => {
   });
 
   it('should output null field records for missing root atomic values', () => {
-    const fields = {
-      earth: { name: 'earth', type: 'int' },
-      mars: { name: 'mars', type: 'decimal' },
-      jupiter: { name: 'jupiter', type: 'geopoint' },
-      saturn: { name: 'saturn', type: 'structure', children: [] },
-      uranus: { name: 'uranus', type: 'repeat', children: [] }
-    };
+    const fields = [
+      new MockField({ path: '/earth', name: 'earth', type: 'int' }),
+      new MockField({ path: '/mars', name: 'mars', type: 'decimal' }),
+      new MockField({ path: '/jupiter', name: 'jupiter', type: 'geopoint' }),
+      new MockField({ path: '/saturn', name: 'saturn', type: 'structure', children: [] }),
+      new MockField({ path: '/uranus', name: 'uranus', type: 'repeat', children: [] })
+    ];
     const submission = mockSubmission('nulls', '<data><earth>42</earth></data>');
     return submissionToOData(fields, 'Submissions', submission).then((result) => {
       result.should.eql([{
@@ -123,17 +121,14 @@ describe('submissionToOData', () => {
   });
 
   it('should output null field records for missing nested atomic values', () => {
-    const fields = {
-      sun: { name: 'sun', type: 'structure',
-        children: {
-          earth: { name: 'earth', type: 'int' },
-          mars: { name: 'mars', type: 'decimal' },
-          jupiter: { name: 'jupiter', type: 'geopoint' },
-          saturn: { name: 'saturn', type: 'structure', children: [] },
-          uranus: { name: 'uranus', type: 'repeat', children: [] }
-        }
-      }
-    };
+    const fields = [
+      new MockField({ path: '/sun', name: 'sun', type: 'structure', order: 0 }),
+      new MockField({ path: '/sun/earth', name: 'earth', type: 'int', order: 1 }),
+      new MockField({ path: '/sun/mars', name: 'mars', type: 'decimal', order: 2 }),
+      new MockField({ path: '/sun/jupiter', name: 'jupiter', type: 'geopoint', order: 3 }),
+      new MockField({ path: '/sun/saturn', name: 'saturn', type: 'structure', order: 4 }),
+      new MockField({ path: '/sun/uranus', name: 'uranus', type: 'repeat', order: 5 })
+    ];
     const submission = mockSubmission('nulls', '<data><sun><earth>42</earth></sun></data>');
     return submissionToOData(fields, 'Submissions', submission).then((result) => {
       result.should.eql([{
@@ -149,10 +144,10 @@ describe('submissionToOData', () => {
   });
 
   it('should sanitize fieldnames', () => {
-    const fields = {
-      'q1.8': { name: 'q1.8', type: 'string' },
-      '42': { name: '42', type: 'int' }
-    };
+    const fields = [
+      new MockField({ path: '/q1.8', name: 'q1.8', type: 'string' }),
+      new MockField({ path: '/42', name: '42', type: 'int' })
+    ];
     const submission = mockSubmission('sanitize', `<data>
         <q1.8>hello</q1.8>
         <42>108</42>
@@ -168,12 +163,11 @@ describe('submissionToOData', () => {
   });
 
   it('should sanitize group names', () => {
-    const fields = {
-      'q1.8': { name: 'q1.8', type: 'structure', children: {
-        one: { name: 'one', type: 'string' },
-        two: { name: 'two', type: 'string' }
-      } }
-    };
+    const fields = [
+      new MockField({ path: '/q1.8', name: 'q1.8', type: 'structure' }),
+      new MockField({ path: '/q1.8/one', name: 'one', type: 'string' }),
+      new MockField({ path: '/q1.8/two', name: 'two', type: 'string' })
+    ];
     const submission = mockSubmission('sanitize2', `<data>
         <q1.8>
           <one>uno</one>
@@ -190,7 +184,7 @@ describe('submissionToOData', () => {
   });
 
   it('should decode xml entities for output', () => {
-    const fields = { text: { name: 'text', type: 'text' } };
+    const fields = [ new MockField({ path: '/text', name: 'text', type: 'text' }) ];
     const submission = mockSubmission('entities', `<data>
         <text>&#171;hello&#187;</text>
       </data>`);
@@ -204,10 +198,10 @@ describe('submissionToOData', () => {
   });
 
   it('should not attempt to provide broken geospatial values', () => {
-    const fields = {
-      geopointNoLon: { name: 'geopointNoLon', type: 'geopoint' },
-      geopointNonsense: { name: 'geopointNonsense', type: 'geopoint' }
-    };
+    const fields = [
+      new MockField({ path: '/geopointNoLon', name: 'geopointNoLon', type: 'geopoint' }),
+      new MockField({ path: '/geopointNonsense', name: 'geopointNonsense', type: 'geopoint' })
+    ];
     const submission = mockSubmission('geo', `<data>
         <geopointNoLon>100</geopointNoLon>
         <geopointNonsense>this is nonsensical</geopointNonsense>
@@ -223,10 +217,10 @@ describe('submissionToOData', () => {
   });
 
   it('should format geopoint values as WKT if requested', () => {
-    const fields = {
-      geopoint: { name: 'geopoint', type: 'geopoint' },
-      geopointNoAlt: { name: 'geopointNoAlt', type: 'geopoint' }
-    };
+    const fields = [
+      new MockField({ path: '/geopoint', name: 'geopoint', type: 'geopoint' }),
+      new MockField({ path: '/geopointNoAlt', name: 'geopointNoAlt', type: 'geopoint' })
+    ];
     const submission = mockSubmission('wkt', `<data>
         <geopoint>4.8 15.16 23.42</geopoint>
         <geopointNoAlt>11.38 -11.38</geopointNoAlt>
@@ -242,10 +236,10 @@ describe('submissionToOData', () => {
   });
 
   it('should output geojson geotrace values', () => {
-    const fields = {
-      geotrace: { name: 'geotrace', type: 'geotrace' },
-      geotraceNoAlt: { name: 'geotraceNoAlt', type: 'geotrace' }
-    };
+    const fields = [
+      new MockField({ path: '/geotrace', name: 'geotrace', type: 'geotrace' }),
+      new MockField({ path: '/geotraceNoAlt', name: 'geotraceNoAlt', type: 'geotrace' })
+    ];
     const submission = mockSubmission('geojson', `<data>
         <geotrace>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8</geotrace>
         <geotraceNoAlt>11.1 22.2;33.3 44.4;55.5 66.6</geotraceNoAlt>
@@ -270,10 +264,10 @@ describe('submissionToOData', () => {
   });
 
   it('should format geotrace values as WKT if requested', () => {
-    const fields = {
-      geotrace: { name: 'geotrace', type: 'geotrace' },
-      geotraceNoAlt: { name: 'geotraceNoAlt', type: 'geotrace' }
-    };
+    const fields = [
+      new MockField({ path: '/geotrace', name: 'geotrace', type: 'geotrace' }),
+      new MockField({ path: '/geotraceNoAlt', name: 'geotraceNoAlt', type: 'geotrace' })
+    ];
     const submission = mockSubmission('wkt', `<data>
         <geotrace>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8</geotrace>
         <geotraceNoAlt>11.1 22.2;33.3 44.4;55.5 66.6</geotraceNoAlt>
@@ -289,10 +283,10 @@ describe('submissionToOData', () => {
   });
 
   it('should output geojson geoshape values', () => {
-    const fields = {
-      polygon: { name: 'polygon', type: 'geoshape' },
-      polygonNoAlt: { name: 'polygonNoAlt', type: 'geoshape' }
-    };
+    const fields = [
+      new MockField({ path: '/polygon', name: 'polygon', type: 'geoshape' }),
+      new MockField({ path: '/polygonNoAlt', name: 'polygonNoAlt', type: 'geoshape' })
+    ];
     const submission = mockSubmission('geojson', `<data>
         <polygon>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8;10.0 20.0 30.0 40.0;1.1 2.2 3.3 4.4</polygon>
         <polygonNoAlt>11.1 22.2;33.3 44.4;55.5 66.6;11.1 22.2</polygonNoAlt>
@@ -317,10 +311,10 @@ describe('submissionToOData', () => {
   });
 
   it('should format polygon values as WKT if requested', () => {
-    const fields = {
-      polygon: { name: 'polygon', type: 'geoshape' },
-      polygonNoAlt: { name: 'polygonNoAlt', type: 'geoshape' }
-    };
+    const fields = [
+      new MockField({ path: '/polygon', name: 'polygon', type: 'geoshape' }),
+      new MockField({ path: '/polygonNoAlt', name: 'polygonNoAlt', type: 'geoshape' })
+    ];
     const submission = mockSubmission('wkt', `<data>
         <polygon>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8;10.0 20.0 30.0 40.0;1.1 2.2 3.3 4.4</polygon>
         <polygonNoAlt>11.1 22.2;33.3 44.4;55.5 66.6;11.1 22.2</polygonNoAlt>
@@ -338,7 +332,10 @@ describe('submissionToOData', () => {
   // we omit meta here to exercise the fact that it is a structure containing a field,
   // all of which should be skipped successfully over.
   it('should ignore xml structures not in the schema', () => {
-    const fields = { name: { name: 'name', type: 'string' }, age: { name: 'age', type: 'int' } };
+    const fields = [
+      new MockField({ path: '/name', name: 'name', type: 'string' }),
+      new MockField({ path: '/age', name: 'age', type: 'int' })
+    ];
     const submission = mockSubmission('one', testData.instances.simple.one);
     return submissionToOData(fields, 'Submissions', submission).then((result) => {
       result.should.eql([{
@@ -351,13 +348,12 @@ describe('submissionToOData', () => {
   });
 
   it('should apply nested values to the appropriate structure', () => {
-    const fields = {
-      group: { name: 'group', type: 'structure', children: {
-        one: { name: 'one', type: 'string' },
-        two: { name: 'two', type: 'string' },
-        three: { name: 'three', type: 'string' }
-      } }
-    };
+    const fields = [
+      new MockField({ path: '/group', name: 'group', type: 'structure' }),
+      new MockField({ path: '/group/one', name: 'one', type: 'string' }),
+      new MockField({ path: '/group/two', name: 'two', type: 'string' }),
+      new MockField({ path: '/group/three', name: 'three', type: 'string' })
+    ];
     const submission = mockSubmission('nesting', `<data>
         <group>
           <one>uno</one>
@@ -376,14 +372,14 @@ describe('submissionToOData', () => {
     });
   });
 
-  it('should provide navigation links for repeats', () => {
-    return getFormSchema(testData.forms.withrepeat).then((schema) => {
-      const fields = schemaAsLookup(schema);
+  it('should provide navigation links for repeats', () =>
+    fieldsFor(testData.forms.withrepeat).then((fields) => {
       const submission = mockSubmission('two', testData.instances.withrepeat.two);
       return submissionToOData(fields, 'Submissions', submission).then((result) => {
         result.should.eql([{
           __id: 'two',
           __system,
+          meta: { instanceID: 'two' },
           name: 'Bob',
           age: 34,
           children: {
@@ -391,12 +387,10 @@ describe('submissionToOData', () => {
           }
         }]);
       });
-    });
-  });
+    }));
 
-  it('should extract subtable rows within repeats', () => {
-    return getFormSchema(testData.forms.withrepeat).then((schema) => {
-      const fields = schemaAsLookup(schema);
+  it('should extract subtable rows within repeats', () =>
+    fieldsFor(testData.forms.withrepeat).then((fields) => {
       const row = { submission: { instanceId: 'two' }, xml: testData.instances.withrepeat.two };
       return submissionToOData(fields, 'Submissions.children.child', row).then((result) => {
         result.should.eql([{
@@ -411,12 +405,10 @@ describe('submissionToOData', () => {
           name: 'Blaine'
         }]);
       });
-    });
-  });
+    }));
 
-  it('should return navigation links to repeats within a subtable result set', () => {
-    return getFormSchema(testData.forms.doubleRepeat).then((schema) => {
-      const fields = schemaAsLookup(schema);
+  it('should return navigation links to repeats within a subtable result set', () =>
+    fieldsFor(testData.forms.doubleRepeat).then((fields) => {
       const row = { submission: { instanceId: 'double' }, xml: testData.instances.doubleRepeat.double };
       return submissionToOData(fields, 'Submissions.children.child', row).then((result) => {
         result.should.eql([{
@@ -439,12 +431,10 @@ describe('submissionToOData', () => {
           }
         }]);
       });
-    });
-  });
+    }));
 
-  it('should return second-order subtable results', () => {
-    return getFormSchema(testData.forms.doubleRepeat).then((schema) => {
-      const fields = schemaAsLookup(schema);
+  it('should return second-order subtable results', () =>
+    fieldsFor(testData.forms.doubleRepeat).then((fields) => {
       const row = { submission: { instanceId: 'double' }, xml: testData.instances.doubleRepeat.double };
       return submissionToOData(fields, 'Submissions.children.child.toys.toy', row).then((result) => {
         result.should.eql([{
@@ -481,7 +471,6 @@ describe('submissionToOData', () => {
           name: 'Princess Luna'
         }]);
       });
-    });
-  });
+    }));
 });
 

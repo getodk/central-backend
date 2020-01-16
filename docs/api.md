@@ -32,6 +32,16 @@ Finally, **system information and configuration** is available via a set of spec
 
 Here major and breaking changes to the API are listed by version.
 
+### ODK Central v0.8
+
+**Added**:
+
+* `GET /projects/…/forms/…/fields`, which replaces `GET /projects/…/forms/….schema.json`.
+
+**Removed**:
+
+* `GET /projects/…/forms/….schema.json` has been removed in favor of `GET /projects/…/forms/…/fields`.
+
 ### ODK Central v0.7
 
 **Added**:
@@ -976,7 +986,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Creating a new Form [POST]
+### Creating a new Form [POST /v1/projects/{projectId}/forms{?ignoreWarnings}]
 
 When creating a `Form`, the only required data is the actual XForms XML or XLSForm itself. Use it as the `POST` body with a `Content-Type` header of `application/xml` (`text/xml` works too), and the Form will be created.
 
@@ -1107,49 +1117,6 @@ To get only the XML of the `Form` rather than all of the details with the XML as
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-#### Retrieving Form Schema JSON [GET /v1/projects/{projectId}/forms/{xmlFormId}.schema.json{?flatten,odata}]
-
-_(introduced: version 0.2)_
-
-For applications that do not rely on JavaRosa, it can be challenging to parse XForms XML into a simple schema structure. Because Central Backend already implements and performs such an operation for its own internal purposes, we also expose this utility for any downstream consumers which wish to make use of it.
-
-While this may eventually overlap with the new OData JSON CSDL specification, we are likely to maintain this API as it more closely mirrors the original XForms data types and structure.
-
-By default, XForms groups are represented as tree structures with children, just like repeats. However, for many purposes (such as outputting a table), this is extra homework. Once again, Central Backend already has a utility to make this easier; add the querystring parameter `?flatten=true` to flatten groups. This will give you a `path`-based field accessor scheme instead of a `name`-based one (see the sample output for details).
-
-You may additionally add the querystring parameter `?odata=true` to sanitize the field names to match the way they will be outputted for OData. While the original field names as given in the XForms definition may be used as-is for CSV output, OData has some restrictions related to the domain-qualified identifier syntax it uses.
-
-The `?flatten` and `?odata` flags may be used together.
-
-+ Parameters
-    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
-    + flatten: `false` (boolean, optional) - If set to `true`, will flatten groups.
-    + odata: `false` (boolean, optional) - If set to `true`, will sanitize field names.
-
-+ Response 200 (application/json)
-    + Body
-
-            [{
-              name: 'meta', type: 'structure',
-              children: [{ name: 'instanceID', type: 'string' }]
-            }, {
-              name: 'name', type: 'string',
-            }, {
-              name: 'age', type: 'int',
-            }]
-
-+ Response 200 (application/json; ?flatten=true)
-    + Body
-
-            [
-              { path: [ 'meta', 'instanceID' ], type: 'string' },
-              { path: [ 'name' ], type: 'string' },
-              { path: [ 'age' ], type: 'int' }
-            ]
-
-+ Response 403 (application/json)
-    + Attributes (Error 403)
-
 #### Modifying a Form [PATCH]
 
 It is currently possible to modify two things about a `Form`: its `name`, which is its friendly display name, and its `state`, which governs whether it is available for download onto survey clients and whether it accepts new `Submission`s. See the `state` Attribute in the Request documentation to the right to see the possible values and their meanings.
@@ -1176,6 +1143,36 @@ Only `DELETE` a `Form` if you are sure you will never need it again. If your goa
 
 + Response 200 (application/json)
     + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Retrieving Form Schema Fields [GET /v1/projects/{projectId}/forms/{xmlFormId}/fields{?odata}]
+
+_(introduced: version 0.8)_
+
+For applications that do not rely on JavaRosa, it can be challenging to parse XForms XML into a simple schema structure. Because Central Backend already implements and performs such an operation for its own internal purposes, we also expose this utility for any downstream consumers which wish to make use of it.
+
+While this may eventually overlap with the new OData JSON CSDL specification, we are likely to maintain this API as it more closely mirrors the original XForms data types and structure.
+
+Central internally processes the XForms schema tree into a flat list of fields, and this is how the data is returned over this endpoint as well. It will always return fields in a _depth-first traversal order_ of the original `<instance>` XML block in the XForm.
+
+You may optionally add the querystring parameter `?odata=true` to sanitize the field names and paths to match the way they will be outputted for OData. While the original field names as given in the XForms definition may be used as-is for CSV output, OData has some restrictions related to the domain-qualified identifier syntax it uses.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + odata: `false` (boolean, optional) - If set to `true`, will sanitize field names.
+
++ Response 200 (application/json)
+    + Body
+
+            [
+              { "name": "meta", "path": "/meta", "type": "structure" },
+              { "name": "instanceID", "path": "/meta/instanceID", "type": "string" },
+              { "name": "name", "path": "/name", "type": "string" },
+              { "name": "age", "path": "/age", "type": "int" },
+              { "name": "photo", "path": "/photo", "type": "binary", "binary": true }
+            ]
 
 + Response 403 (application/json)
     + Attributes (Error 403)

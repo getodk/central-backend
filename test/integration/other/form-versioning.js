@@ -15,7 +15,7 @@ describe('form forward versioning', () => {
     ])
       .then(([ partial, oldForm ]) => partial.createVersion(oldForm))
       .then(() => Project.getById(1)).then(force)
-      .then((project) => project.getFormByXmlFormId('simple')).then(force)
+      .then((project) => Form.getWithXmlByProjectAndXmlFormId(project.id, 'simple')).then(force)
       .then((newForm) => {
         newForm.currentDefId.should.equal(newForm.def.id);
         /version="two"/.test(newForm.def.xml).should.equal(true);
@@ -36,22 +36,6 @@ describe('form forward versioning', () => {
           /version="two"/.test(newForm.def.xml).should.equal(false);
           newForm.def.sha.should.equal('6f3b4ee76e0ac9a1e2007ef987be40e02c24d75e');
         })))); // TODO: actually assert that the new def actually exists.
-
-  it('should set an identity transformation', testService((_, { db, Project, Form, FormDef, FormPartial }) =>
-    Promise.all([
-      FormPartial.fromXml(newXml),
-      Project.getById(1).then(force)
-        .then((project) => project.getFormByXmlFormId('simple')).then(force)
-    ])
-      .then(([ partial, oldForm ]) => partial.createVersion(oldForm))
-      .then(() => Promise.all([
-        Project.getById(1).then(force)
-          .then((project) => project.getFormByXmlFormId('simple')).then(force),
-        db.select('*').from('transformations').where({ system: 'identity' }).then(([ row ]) => row)
-      ])
-      .then(([ newForm, identityTransformation ]) => {
-        newForm.def.transformationId.should.equal(identityTransformation.id);
-      }))));
 
   it('should preserve submissions', testService((service, { Project, Blob, Form, FormDef, FormAttachment, FormPartial }) =>
     service.login('alice', (asAlice) =>
