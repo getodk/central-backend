@@ -384,6 +384,41 @@ describe('form schema', () => {
             new MockField({ name: 'toys', path: '/children/child/toys', type: 'structure', order: 6 })
           ]);
         }));
+
+      it('should not be fooled by path prefix extensions', () => fieldsFor(`<?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <children jr:template="">
+                    <name/>
+                  </children>
+                  <children-status/>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind nodeset="/data/children/name" type="string"/>
+              <bind nodeset="/data/children-status" type="select1"/>
+            </model>
+          </h:head>
+          <h:body>
+            <repeat nodeset="/data/children">
+              <input ref="/data/children/name">
+                <label>What is the child's name?</label>
+              </input>
+            </repeat>
+          </h:body>
+        </h:html>`)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          stack.push('children');
+          stack.children().should.eql([
+            new MockField({ name: 'name', path: '/children/name', type: 'string', order: 2 }),
+          ]);
+        }));
     });
 
     describe('context slicer', () => {

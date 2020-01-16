@@ -34,7 +34,7 @@ Here major and breaking changes to the API are listed by version.
 
 ### ODK Central v0.8
 
-**Removed**:
+**Added**:
 
 * `GET /projects/…/forms/…/fields`, which replaces `GET /projects/…/forms/….schema.json`.
 

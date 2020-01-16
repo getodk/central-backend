@@ -94,6 +94,27 @@ describe('odata message composition', () => {
         <EntitySet Name="Submissions" EntityType="org.opendatakit.user.simple.Submissions">`);
     }));
 
+    it('should sanitize nasty xmlFormIds', () => fieldsFor(testData.forms.withrepeat).then((fields) => {
+      edmxFor('my!awesome!form!!', fields).should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
+<edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
+  <edmx:DataServices>
+    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
+      <ComplexType Name="metadata">
+        <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
+        <Property Name="submitterId" Type="Edm.String"/>
+        <Property Name="submitterName" Type="Edm.String"/>
+        <Property Name="attachmentsPresent" Type="Edm.Int64"/>
+        <Property Name="attachmentsExpected" Type="Edm.Int64"/>
+        <Property Name="status" Type="org.opendatakit.submission.Status"/>
+      </ComplexType>
+      <EnumType Name="Status">
+        <Member Name="NotDecrypted"/>
+        <Member Name="MissingEncryptedFormData"/>
+      </EnumType>
+    </Schema>
+    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.my_awesome_form_">`);
+      }));
+
     it('should express repeats as entity types behind navigation properties', () =>
       fieldsFor(testData.forms.withrepeat).then((fields) => {
         const edmx = edmxFor('withrepeat', fields);
@@ -210,6 +231,68 @@ describe('odata message composition', () => {
       edmx.includes('<ComplexType Name="_2_4">').should.equal(true);
       edmx.includes('<EntityType Name="Submissions._2_4.q3_6">').should.equal(true);
     }));
+
+    it('should not be fooled by path prefix extensions', () => fieldsFor(`<?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <children jr:template="">
+                    <name/>
+                  </children>
+                  <children-status/>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind nodeset="/data/children/name" type="string"/>
+              <bind nodeset="/data/children-status" type="select1"/>
+            </model>
+          </h:head>
+          <h:body>
+            <repeat nodeset="/data/children">
+              <input ref="/data/children/name">
+                <label>What is the child's name?</label>
+              </input>
+            </repeat>
+          </h:body>
+        </h:html>`).then((fields) => {
+          const edmx = edmxFor('pathprefix', fields);
+          edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
+<edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
+  <edmx:DataServices>
+    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
+      <ComplexType Name="metadata">
+        <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
+        <Property Name="submitterId" Type="Edm.String"/>
+        <Property Name="submitterName" Type="Edm.String"/>
+        <Property Name="attachmentsPresent" Type="Edm.Int64"/>
+        <Property Name="attachmentsExpected" Type="Edm.Int64"/>
+        <Property Name="status" Type="org.opendatakit.submission.Status"/>
+      </ComplexType>
+      <EnumType Name="Status">
+        <Member Name="NotDecrypted"/>
+        <Member Name="MissingEncryptedFormData"/>
+      </EnumType>
+    </Schema>
+    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.pathprefix">
+      <EntityType Name="Submissions">
+        <Key><PropertyRef Name="__id"/></Key>
+        <Property Name="__id" Type="Edm.String"/>
+        <Property Name="__system" Type="org.opendatakit.submission.metadata"/>
+        <Property Name="name" Type="Edm.String"/>
+        <NavigationProperty Name="children" Type="Collection(org.opendatakit.user.pathprefix.Submissions.children)"/>
+        <Property Name="children_status" Type="Edm.String"/>
+      </EntityType>
+      <EntityType Name="Submissions.children">
+        <Key><PropertyRef Name="__id"/></Key>
+        <Property Name="__id" Type="Edm.String"/>
+        <Property Name="__Submissions-id" Type="Edm.String"/>
+        <Property Name="name" Type="Edm.String"/>
+      </EntityType>
+      <EntityContainer Name="pathprefix">`);
+        }));
   });
 
   describe('rowstream conversion', () => {
