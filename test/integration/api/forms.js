@@ -1631,7 +1631,61 @@ describe('api: /projects/:id/forms', () => {
     // for operations that replicate others above we will not exhaustively test every
     // case here. we mostly check plumbing and differences.
 
-    // TODO: listing
+    describe('GET', () => {
+      it('should return notfound if the form does not exist', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.get('/v1/projects/1/forms/nonexistent/versions')
+            .expect(404))));
+
+      it('should reject if the user cannot read', testService((service) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/projects/1/forms/simple/versions')
+            .expect(403))));
+
+      it('should list all versions', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="2"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+              .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="3"'))
+              .set('Content-Type', 'application/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/versions')
+              .expect(200)
+              .then(({ body }) => {
+                body.map((form) => form.version).should.eql([ '', '2', '3' ]);
+                body.map((form) => form.sha256).should.eql([
+                  '93fdcefabfe5b6ea49f207e0c6fc8ba72ceb34828bff9c7929ef56eafd2d84cc',
+                  'c01ab93518276534e72307afed190efe15974db8a9d9ffe2ba8ddf663c932271',
+                  'fdfcb6484a2086c8ef64edd578168734866babb4743dcee127277990e7c5e04f'
+                ]);
+                body.map((form) => form.xmlFormId).should.eql([ 'simple', 'simple', 'simple' ]);
+              })))));
+
+      it('should not list draft or orphan versions', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="2"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+              .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="3"'))
+              .set('Content-Type', 'application/xml')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/versions')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(1);
+                body[0].version.should.equal('');
+                body[0].sha256.should.equal('93fdcefabfe5b6ea49f207e0c6fc8ba72ceb34828bff9c7929ef56eafd2d84cc');
+              })))));
+    });
 
     describe('/:version', () => {
       describe('GET', () => {
