@@ -1097,6 +1097,35 @@ describe('api: /projects/:id/forms', () => {
                 body.version.should.equal('drafty2');
               })))));
 
+      it('should copy the published form definition if not given one', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+              .expect(200)
+              .then(({ body }) => {
+                body.version.should.equal('');
+                body.sha256.should.equal('93fdcefabfe5b6ea49f207e0c6fc8ba72ceb34828bff9c7929ef56eafd2d84cc');
+              }))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft.xml')
+              .expect(200)
+              .then(({ text }) => {
+                text.includes('<h:title>Simple</h:title>').should.equal(true);
+              })))));
+
+      it('should do nothing given no POST body and no published form', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simple2)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+              .expect(400)
+              .then(({ body }) => {
+                body.code.should.equal(400.2);
+                body.details.should.eql({ field: 'xml' });
+              })))));
+
       it('should accept xlsx drafts', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
@@ -1151,7 +1180,7 @@ describe('api: /projects/:id/forms', () => {
                 body.details.should.eql({ path: '/age', type: 'string' });
               })))));
 
-      it('should not complain about draft field conflicts', testService((service) =>
+      it('should not complain about discarded draft field conflicts', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .send(testData.forms.simple.replace(/age/g, 'number'))
