@@ -56,6 +56,7 @@ describe('api: /projects/:id/app-users', () => {
               body.forEach((fk) => {
                 fk.should.be.a.FieldKey()
                 fk.createdBy.should.equal(5);
+                fk.projectId.should.equal(1);
               });
             })))));
 
@@ -111,6 +112,7 @@ describe('api: /projects/:id/app-users', () => {
             .then(({ body }) => body.forEach((obj) => {
               obj.should.be.an.ExtendedFieldKey();
               obj.createdBy.displayName.should.equal('Alice');
+              obj.projectId.should.equal(1);
             }))))));
 
     it('should correctly report last used in extended metadata', testService((service) =>

@@ -96,7 +96,8 @@ should.Assertion.add('FieldKey', function() {
   this.params = { operator: 'to be a Field Key' };
 
   should(this.obj).be.an.Actor();
-  Object.keys(this.obj).should.containDeep([ 'createdBy', 'token' ]);
+  Object.keys(this.obj).should.containDeep([ 'createdBy', 'token', 'projectId' ]);
+  this.obj.projectId.should.be.a.Number();
   if (this.obj.token != null) this.obj.token.should.be.a.token();
 });
 
