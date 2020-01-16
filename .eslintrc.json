@@ -28,6 +28,7 @@
     "object-property-newline": "off",
     "operator-linebreak": "off",
     "padded-blocks": "off",
+    "prefer-template": "off",
     "spaced-comment": "off"
   }
 }

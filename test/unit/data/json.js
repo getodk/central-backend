@@ -28,13 +28,6 @@ const mockSubmission = (instanceId, xml) => ({
   }
 });
 
-const callAndParse = (inStream, formXml, xmlFormId, callback) => {
-  fieldsFor(formXml).then((inFields) => {
-    const fields = inFields.map(construct(MockField));
-    zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, xmlFormId)), callback);
-  });
-};
-
 describe('submissionToOData', () => {
   it('should parse and transform a basic submission', () =>
     fieldsFor(testData.forms.simple).then((fields) => {

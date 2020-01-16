@@ -447,6 +447,53 @@ Pod racer,three/children/child[1],three/children/child[1]/toy[3]
     });
   });
 
+  it('should not be fooled by path prefix extensions', (done) => {
+    const formXml = `<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+        <h:head>
+          <model>
+            <instance>
+              <data id="form">
+                <name/>
+                <children jr:template="">
+                  <name/>
+                </children>
+                <children-status/>
+              </data>
+            </instance>
+            <bind nodeset="/data/name" type="string"/>
+            <bind nodeset="/data/children/name" type="string"/>
+            <bind nodeset="/data/children-status" type="select1"/>
+          </model>
+        </h:head>
+        <h:body>
+          <repeat nodeset="/data/children">
+            <input ref="/data/children/name">
+              <label>What is the child's name?</label>
+            </input>
+          </repeat>
+        </h:body>
+      </h:html>`;
+
+    const inStream = streamTest.fromObjects([
+      instance('one', '<name>Alice</name><children><name>Bob</name></children><children><name>Chelsea</name></children><children-status>Living at home</children-status>')
+    ]);
+
+    callAndParse(inStream, formXml, 'pathprefix', (result) => {
+      result.filenames.should.containDeep([ 'pathprefix.csv', 'pathprefix-children.csv' ]);
+      result['pathprefix.csv'].should.equal(
+`SubmissionDate,name,children-status,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status
+2018-01-01T00:00:00.000Z,Alice,Living at home,one,,,0,0
+`);
+      result['pathprefix-children.csv'].should.equal(
+`name,PARENT_KEY,KEY
+Bob,one,one/children[1]
+Chelsea,one,one/children[2]
+`);
+      done();
+    });
+  });
+
   it('briefcase replicated test: all-data-types', (done) => {
     const formXml = `
 <?xml version="1.0"?>
