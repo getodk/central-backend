@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { getFormFields, sanitizeFieldsForOdata, SchemaStack, expectedFormAttachments, injectPublicKey, addVersionSuffix } = require(appRoot + '/lib/data/schema');
+const { getFormFields, sanitizeFieldsForOdata, SchemaStack, expectedFormAttachments, injectPublicKey, addVersionSuffix, setVersion } = require(appRoot + '/lib/data/schema');
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const { toTraversable } = require(appRoot + '/lib/util/xml');
 const testData = require(appRoot + '/test/data/xml');
@@ -1083,6 +1083,70 @@ describe('form schema', () => {
     </model>
   </h:head>
 </h:html>`, '-testtest').should.be.rejected().then((p) => p.problemCode.should.equal(400.1)));
+  });
+
+  describe('setVersion', () => {
+    it('should add a version attribute', () =>
+      setVersion(testData.forms.simple, 'testtest').then((result) => result.should.equal(`<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Simple</h:title>
+    <model>
+      <instance>
+        <data id="simple" version="testtest">
+          <meta>
+            <instanceID/>
+          </meta>
+          <name/>
+          <age/>
+        </data>
+      </instance>
+
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+      <bind nodeset="/data/name" type="string"/>
+      <bind nodeset="/data/age" type="int"/>
+    </model>
+
+  </h:head>
+  <h:body>
+    <input ref="/data/name">
+      <label>What is your name?</label>
+    </input>
+    <input ref="/data/age">
+      <label>What is your age?</label>
+    </input>
+  </h:body>
+</h:html>`)));
+
+    it('should replace an existing version attribute', () =>
+      setVersion(testData.forms.simple2, 'testtest').then((result) => result.should.equal(`<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Simple 2</h:title>
+    <model>
+      <instance>
+        <data id="simple2" version="testtest">
+          <meta>
+            <instanceID/>
+          </meta>
+          <name/>
+          <age/>
+        </data>
+      </instance>
+
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+      <bind nodeset="/data/name" type="string"/>
+      <bind nodeset="/data/age" type="int"/>
+    </model>
+
+  </h:head>
+  <h:body>
+    <input ref="/data/name">
+      <label>What is your name?</label>
+    </input>
+    <input ref="/data/age">
+      <label>What is your age?</label>
+    </input>
+  </h:body>
+</h:html>`)));
   });
 });
 

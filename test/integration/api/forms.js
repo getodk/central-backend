@@ -1347,6 +1347,21 @@ describe('api: /projects/:id/forms', () => {
                 body.details.should.eql({ xmlFormId: 'simple', version: '' });
               })))));
 
+      it('should set version on the fly if requested', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=new')
+              .expect(200)
+              .then(() => asAlice.get('/v1/projects/1/forms/simple')
+                .expect(200)
+                .then(({ body }) => {
+                  body.version.should.equal('new');
+                  body.sha256.should.equal('f073fe9062e0ca4d6337b96b93e0100164a40e16df5f477d065b33470acabc44');
+                }))))));
+
       it('should succeed and set the publish date', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
