@@ -491,6 +491,19 @@ describe('api: /projects/:id/forms', () => {
             .then(({ body }) => {
               body.publishedAt.should.be.a.recentIsoDate();
             })))));
+
+    it('should log the action in the audit log', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/audits?action/form')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].action.should.equal('form.create');
+            })))));
   });
 
 
@@ -1265,6 +1278,19 @@ describe('api: /projects/:id/forms', () => {
                   { name: 'greattwo.mp3', type: 'audio', exists: false }
                 ]);
               })))));
+
+      it('should log the action in the audit log', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.get('/v1/audits?action=form')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(1);
+                body[0].actorId.should.equal(5);
+                body[0].action.should.equal('form.update.draft.set');
+                body[0].details.newDraftDefId.should.be.a.Number();
+              })))));
     });
 
     describe('DELETE', () => {
@@ -1315,6 +1341,22 @@ describe('api: /projects/:id/forms', () => {
               .then(({ body }) => {
                 body.xmlFormId.should.equal('simple2');
                 should.not.exist(body.version);
+              })))));
+
+      it('should log the action in the audit log', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.delete('/v1/projects/1/forms/simple/draft')
+              .expect(200))
+            .then(() => asAlice.get('/v1/audits?action=form')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(2);
+                body.map((audit) => audit.actorId).should.eql([ 5, 5 ]);
+                body.map((audit) => audit.action).should.eql([ 'form.update.draft.delete', 'form.update.draft.set' ]);
+                body[0].details.oldDraftDefId.should.equal(body[1].details.newDraftDefId);
+                body[0].details.oldDraftDefId.should.be.a.Number();
               })))));
     });
 
@@ -1423,6 +1465,26 @@ describe('api: /projects/:id/forms', () => {
                   { name: 'goodone.csv', type: 'file', exists: true },
                   { name: 'goodtwo.mp3', type: 'audio', exists: false }
                 ]);
+              })))));
+
+      it('should log the action in the audit log', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=new')
+              .expect(200))
+            .then(() => asAlice.get('/v1/audits?action=form')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(3);
+                body.map((audit) => audit.actorId).should.eql([ 5, 5, 5 ]);
+                body.map((audit) => audit.action).should.eql([ 'form.update.publish', 'form.update.draft.set', 'form.update.draft.set' ]);
+                body[0].details.newDefId.should.be.a.Number();
+                body[0].details.oldDefId.should.be.a.Number();
+                body[0].details.newDefId.should.not.equal(body[0].details.oldDefId);
+                body[1].details.automated.should.equal(true);
+
+                body[0].details.newDefId.should.equal(body[1].details.newDraftDefId);
               })))));
     });
 
