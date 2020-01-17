@@ -1156,6 +1156,28 @@ describe('api: /projects/:id/forms', () => {
                   body.sha256.should.equal('d438bdfb5c0b9bb800420363ca8900d26c3e664945d4ffc41406cbc599e43cae');
                 }))))));
 
+      // no strong reason to think we need to test the warnings failure case, but we
+      // should verify the plumbing of ignoreWarnings just in case.
+      it('should ignore xlsx warnings if asked', testService((service) => {
+        global.xlsformTest = 'warning'; // set up the mock service to warn.
+        return service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simple2)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft?ignoreWarnings=true')
+              .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+              .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+              .set('X-XlsForm-FormId-Fallback', 'simple')
+              .expect(200)
+              .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft')
+                .expect(200)
+                .then(({ body }) => {
+                  body.version.should.equal('2.1');
+                  body.sha256.should.equal('d438bdfb5c0b9bb800420363ca8900d26c3e664945d4ffc41406cbc599e43cae');
+                }))));
+      }));
+
       it('should allow version conflicts in draft state', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
