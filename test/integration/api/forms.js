@@ -1193,7 +1193,7 @@ describe('api: /projects/:id/forms', () => {
             .expect(400)
             .then(({ body }) => {
               body.code.should.equal(400.17);
-              body.details.should.eql({ path: '/age', type: 'string' });
+              body.details.should.eql({ path: '/age', type: 'int' });
             }))));
 
       it('should complain about field conflicts (older)', testService((service) =>
@@ -1212,7 +1212,7 @@ describe('api: /projects/:id/forms', () => {
               .expect(400)
               .then(({ body }) => {
                 body.code.should.equal(400.17);
-                body.details.should.eql({ path: '/age', type: 'string' });
+                body.details.should.eql({ path: '/age', type: 'int' });
               })))));
 
       it('should not complain about discarded draft field conflicts', testService((service) =>
@@ -1301,7 +1301,7 @@ describe('api: /projects/:id/forms', () => {
                 ]);
               })))));
 
-      it('should log the action in the audit log', testService((service) =>
+      it('should log the action in the audit log', testService((service, { Form }) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .expect(200)
@@ -1312,6 +1312,12 @@ describe('api: /projects/:id/forms', () => {
                 body[0].actorId.should.equal(5);
                 body[0].action.should.equal('form.update.draft.set');
                 body[0].details.newDraftDefId.should.be.a.Number();
+
+                return Form.getByProjectAndXmlFormId(1, 'simple')
+                  .then((o) => o.get())
+                  .then((form) => {
+                    form.draftDefId.should.equal(body[0].details.newDraftDefId);
+                  });
               })))));
     });
 
@@ -1489,7 +1495,7 @@ describe('api: /projects/:id/forms', () => {
                 ]);
               })))));
 
-      it('should log the action in the audit log', testService((service) =>
+      it('should log the action in the audit log', testService((service, { Form }) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .expect(200)
@@ -1507,6 +1513,12 @@ describe('api: /projects/:id/forms', () => {
                 body[1].details.automated.should.equal(true);
 
                 body[0].details.newDefId.should.equal(body[1].details.newDraftDefId);
+
+                return Form.getByProjectAndXmlFormId(1, 'simple')
+                  .then((o) => o.get())
+                  .then((form) => {
+                    body[1].details.newDraftDefId.should.equal(form.currentDefId);
+                  });
               })))));
     });
 
