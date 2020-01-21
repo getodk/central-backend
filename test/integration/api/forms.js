@@ -1458,7 +1458,7 @@ describe('api: /projects/:id/forms', () => {
             .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
               .expect(404)))));
 
-      it('should rotate the previous version to /versions', testService((service) =>
+      it('should show the published versions at /versions', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="2"'))
@@ -1471,6 +1471,12 @@ describe('api: /projects/:id/forms', () => {
               .then(({ body }) => {
                 body.version.should.equal('');
                 body.sha256.should.equal('93fdcefabfe5b6ea49f207e0c6fc8ba72ceb34828bff9c7929ef56eafd2d84cc');
+              }))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/versions/2')
+              .expect(200)
+              .then(({ body }) => {
+                body.version.should.equal('2');
+                body.sha256.should.equal('c01ab93518276534e72307afed190efe15974db8a9d9ffe2ba8ddf663c932271');
               })))));
 
       it('should provide attachments as expected', testService((service) =>
@@ -1504,6 +1510,7 @@ describe('api: /projects/:id/forms', () => {
             .then(() => asAlice.get('/v1/audits?action=form')
               .expect(200)
               .then(({ body }) => {
+                console.log(body);
                 body.length.should.equal(3);
                 body.map((audit) => audit.actorId).should.eql([ 5, 5, 5 ]);
                 body.map((audit) => audit.action).should.eql([ 'form.update.publish', 'form.update.draft.set', 'form.update.draft.set' ]);
@@ -1564,7 +1571,7 @@ describe('api: /projects/:id/forms', () => {
       // bother with testing them separately.
 
       describe('/:name POST', () => {
-        it('should reject notfound if the form does not exist', testService((service) =>
+        it('should reject notfound if the draft does not exist', testService((service) =>
           service.login('alice', (asAlice) =>
             asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
               .send('test,csv\n1,2')
@@ -1684,7 +1691,7 @@ describe('api: /projects/:id/forms', () => {
 
       // these tests mostly necessarily depend on /:name POST:
       describe('/:name DELETE', () => {
-        it('should reject notfound if the form does not exist', testService((service) =>
+        it('should reject notfound if the draft does not exist', testService((service) =>
           service.login('alice', (asAlice) =>
             asAlice.delete('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
               .expect(404))));
