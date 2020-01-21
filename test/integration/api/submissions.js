@@ -559,6 +559,14 @@ describe('api: /forms/:id/submissions', () => {
             headers['content-type'].should.equal('application/zip');
           }))));
 
+    it('should return the csv header even if there is no data', testService((service) =>
+      service.login('alice', (asAlice) => new Promise((done) =>
+        zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
+          result.filenames.should.eql([ 'simple.csv' ]);
+          result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status\n');
+          done();
+        })))));
+
     it('should return a zipfile with the relevant data', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
