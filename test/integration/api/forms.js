@@ -461,6 +461,7 @@ describe('api: /projects/:id/forms', () => {
               body.hash.should.equal('07ed8a51cc3f6472b7dfdc14c2005861');
               body.sha.should.equal('466b8cf532c22aea7b1791ea2e6712ab31ce90a4');
               body.sha256.should.equal('d438bdfb5c0b9bb800420363ca8900d26c3e664945d4ffc41406cbc599e43cae');
+              body.draftToken.should.be.a.token();
             })))));
 
     it('should if flagged save the given definition as published', testService((service) =>
@@ -476,6 +477,7 @@ describe('api: /projects/:id/forms', () => {
               body.hash.should.equal('07ed8a51cc3f6472b7dfdc14c2005861');
               body.sha.should.equal('466b8cf532c22aea7b1791ea2e6712ab31ce90a4');
               body.sha256.should.equal('d438bdfb5c0b9bb800420363ca8900d26c3e664945d4ffc41406cbc599e43cae');
+              should.not.exist(body.draftToken);
             }))
           .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft')
             .expect(404)))));
@@ -652,6 +654,18 @@ describe('api: /projects/:id/forms', () => {
                 body.submissions.should.equal(0);
                 body.createdBy.should.be.an.Actor();
                 body.createdBy.displayName.should.equal('Alice');
+              })))));
+
+      it('should not return a draftToken', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple')
+              .expect(200)
+              .then(({ body }) => {
+                should.not.exist(body.draftToken);
               })))));
     });
 
@@ -1094,6 +1108,27 @@ describe('api: /projects/:id/forms', () => {
                 body.version.should.equal('drafty');
               })))));
 
+      it('should create a new draft token setting a new draft version', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+              .expect(200)
+              .then(({ body }) => {
+                const { draftToken } = body;
+                draftToken.should.be.a.token();
+
+                return asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+                  .expect(200)
+                  .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+                    .expect(200))
+                  .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+                    .then(({ body }) => {
+                      body.draftToken.should.be.a.token();
+                      body.draftToken.should.not.equal(draftToken);
+                    }));
+              })))));
+
       it('should replace the draft version', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
@@ -1108,6 +1143,28 @@ describe('api: /projects/:id/forms', () => {
               .expect(200)
               .then(({ body }) => {
                 body.version.should.equal('drafty2');
+              })))));
+
+      it('should keep the draft token while replacing the draft version', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+              .expect(200)
+              .then(({ body }) => {
+                const { draftToken } = body;
+                draftToken.should.be.a.token();
+                return asAlice.post('/v1/projects/1/forms/simple/draft')
+                  .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
+                  .set('Content-Type', 'application/xml')
+                  .expect(200)
+                  .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+                    .expect(200)
+                    .then(({ body }) => {
+                      body.draftToken.should.equal(draftToken);
+                    }));
               })))));
 
       it('should copy the published form definition if not given one', testService((service) =>
@@ -1369,6 +1426,27 @@ describe('api: /projects/:id/forms', () => {
               .then(({ body }) => {
                 body.xmlFormId.should.equal('simple2');
                 should.not.exist(body.version);
+              })))));
+
+      it('should create a new draft token after delete', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+              .expect(200)
+              .then(({ body }) => {
+                const { draftToken } = body;
+                draftToken.should.be.a.token();
+
+                return asAlice.delete('/v1/projects/1/forms/simple/draft')
+                  .expect(200)
+                  .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+                    .expect(200))
+                  .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+                    .then(({ body }) => {
+                      body.draftToken.should.be.a.token();
+                      body.draftToken.should.not.equal(draftToken);
+                    }));
               })))));
 
       it('should log the action in the audit log', testService((service) =>
@@ -2021,6 +2099,315 @@ describe('api: /projects/:id/forms', () => {
                   text.should.equal('this is goodone.csv');
                 })))));
       });
+    });
+  });
+
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // DRAFT FORM TESTING
+  ////////////////////////////////////////////////////////////////////////////////
+
+  describe('/test/:key/…/:id/draft', () => {
+    describe('/formList GET', () => {
+      it('should reject if the draft does not exist', testService((service) =>
+        service.get('/v1/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/forms/simple/draft/formList')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(404)));
+
+      it('should reject if the draft has been published', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+              .expect(200)
+              .then(({ body }) => body.draftToken)
+              .then((token) => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+                .expect(200)
+                .then(() => service.get(`/v1/test/${token}/projects/1/forms/simple/draft/formList`)
+                  .set('X-OpenRosa-Version', '1.0')
+                  .expect(404)))))));
+
+      it('should reject if the draft has been deleted', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+              .expect(200)
+              .then(({ body }) => body.draftToken)
+              .then((token) => asAlice.delete('/v1/projects/1/forms/simple/draft')
+                .expect(200)
+                .then(() => service.get(`/v1/test/${token}/projects/1/forms/simple/draft/formList`)
+                  .set('X-OpenRosa-Version', '1.0')
+                  .expect(404)))))));
+
+      it('should reject if the key is wrong', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => service.get('/v1/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/forms/simple/draft/formList')
+              .set('X-OpenRosa-Version', '1.0')
+              .expect(404)))));
+
+      it('should give an appropriate formList', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+              .expect(200)
+              .then(({ body }) => body.draftToken)
+              .then((token) => service.get(`/v1/test/${token}/projects/1/forms/simple/draft/formList`)
+                .set('X-OpenRosa-Version', '1.0')
+                .expect(200)
+                .then(({ text }) => {
+                  const domain = config.get('default.env.domain');
+                  text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+  <xforms xmlns="http://openrosa.org/xforms/xformsList">
+    <xform>
+      <formID>simple</formID>
+      <name>Simple</name>
+      <version></version>
+      <hash>md5:5c09c21d4c71f2f13f6aa26227b2d133</hash>
+      <downloadUrl>${domain}/v1/test/${token}/projects/1/forms/simple/draft.xml</downloadUrl>
+    </xform>
+  </xforms>`);
+                }))))));
+    });
+
+    describe('/manifest GET', () => {
+      it('should reject if the draft does not exist', testService((service) =>
+        service.get('/v1/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/forms/simple/draft/manifest')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(404)));
+
+      it('should reject if the draft has been published', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+              .send('test,csv\n1,2')
+              .set('Content-Type', 'text/csv')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft')
+              .expect(200)
+              .then(({ body }) => body.draftToken)
+              .then((token) => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
+                .expect(200)
+                .then(() => service.get(`/v1/test/${token}/projects/1/forms/withAttachments/draft/manifest`)
+                  .set('X-OpenRosa-Version', '1.0')
+                  .expect(404)))))));
+
+      it('should reject if the draft has been deleted', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+              .send('test,csv\n1,2')
+              .set('Content-Type', 'text/csv')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft')
+              .expect(200)
+              .then(({ body }) => body.draftToken)
+              .then((token) => asAlice.delete('/v1/projects/1/forms/withAttachments/draft')
+                .expect(200)
+                .then(() => service.get(`/v1/test/${token}/projects/1/forms/withAttachments/draft/manifest`)
+                  .set('X-OpenRosa-Version', '1.0')
+                  .expect(404)))))));
+
+      it('should reject if the key is wrong', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+              .send('test,csv\n1,2')
+              .set('Content-Type', 'text/csv')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft')
+              .expect(200)
+              .then(({ body }) => body.draftToken)
+              .then((token) => service.get('/v1/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/forms/withAttachments/draft/manifest')
+                .set('X-OpenRosa-Version', '1.0')
+                .expect(404))))));
+
+      it('should return an empty manifest if the draft has no attachments', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+              .expect(200)
+              .then(({ body }) => body.draftToken)
+              .then((token) => service.get(`/v1/test/${token}/projects/1/forms/simple/draft/manifest`)
+                .set('X-OpenRosa-Version', '1.0')
+                .expect(200)
+                .then(({ text }) => {
+                  text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+  <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
+  </manifest>`);
+                }))))));
+
+      it('should return a manifest with present attachments', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+              .send('test,csv\n1,2')
+              .set('Content-Type', 'text/csv')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft')
+              .expect(200)
+              .then(({ body }) => body.draftToken)
+              .then((token) => service.get(`/v1/test/${token}/projects/1/forms/withAttachments/draft/manifest`)
+                .set('X-OpenRosa-Version', '1.0')
+                .expect(200)
+                .then(({ text }) => {
+                  const domain = config.get('default.env.domain');
+                  text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+  <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
+    <mediaFile>
+      <filename>goodone.csv</filename>
+      <hash>md5:2241de57bbec8144c8ad387e69b3a3ba</hash>
+      <downloadUrl>${domain}/v1/test/${token}/projects/1/forms/withAttachments/draft/attachments/goodone.csv</downloadUrl>
+    </mediaFile>
+  </manifest>`);
+                }))))));
+    });
+
+    describe('.xml GET', () => {
+      it('should reject if the draft does not exist', testService((service) =>
+        service.get('/v1/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/forms/simple/draft.xml')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(404)));
+
+      it('should reject if the draft has been published', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+              .expect(200)
+              .then(({ body }) => body.draftToken)
+              .then((token) => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+                .expect(200)
+                .then(() => service.get(`/v1/test/${token}/projects/1/forms/simple/draft.xml`)
+                  .expect(404)))))));
+
+      it('should reject if the draft has been deleted', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+              .expect(200)
+              .then(({ body }) => body.draftToken)
+              .then((token) => asAlice.delete('/v1/projects/1/forms/simple/draft')
+                .expect(200)
+                .then(() => service.get(`/v1/test/${token}/projects/1/forms/simple/draft.xml`)
+                  .expect(404)))))));
+
+      it('should reject if the key is wrong', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => service.get('/v1/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/forms/simple/draft.xml')
+              .set('X-OpenRosa-Version', '1.0')
+              .expect(404)))));
+
+      it('should reject if the key is wrong', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+              .expect(200)
+              .then(({ body }) => body.draftToken)
+              .then((token) => service.get('/v1/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/forms/simple/draft.xml')
+                .expect(404))))));
+
+      it('should give the xml', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+              .expect(200)
+              .then(({ body }) => body.draftToken)
+              .then((token) => service.get(`/v1/test/${token}/projects/1/forms/simple/draft.xml`)
+                .expect(200)
+                .then(({ text }) => { text.should.equal(testData.forms.simple); }))))));
+    });
+
+    describe('/attachments/:name GET', () => {
+      it('should reject if the draft has been published', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+              .send('test,csv\n1,2')
+              .set('Content-Type', 'text/csv')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft')
+              .expect(200)
+              .then(({ body }) => body.draftToken)
+              .then((token) => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
+                .expect(200)
+                .then(() => service.get(`/v1/test/${token}/projects/1/forms/withAttachments/draft/attachments/goodone.csv`)
+                  .expect(404)))))));
+
+      it('should reject if the draft has been deleted', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+              .send('test,csv\n1,2')
+              .set('Content-Type', 'text/csv')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft')
+              .expect(200)
+              .then(({ body }) => body.draftToken)
+              .then((token) => asAlice.delete('/v1/projects/1/forms/withAttachments/draft')
+                .expect(200)
+                .then(() => service.get(`/v1/test/${token}/projects/1/forms/withAttachments/draft/attachments/goodone.csv`)
+                  .expect(404)))))));
+
+      it('should reject if the key is wrong', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+              .send('test,csv\n1,2')
+              .set('Content-Type', 'text/csv')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft')
+              .expect(200)
+              .then(({ body }) => body.draftToken)
+              .then((token) => service.get('/v1/test/${token}/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+                .expect(404))))));
+
+      it('should return the attachment', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+              .send('test,csv\n1,2')
+              .set('Content-Type', 'text/csv')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft')
+              .expect(200)
+              .then(({ body }) => body.draftToken)
+              .then((token) => service.get(`/v1/test/${token}/projects/1/forms/withAttachments/draft/attachments/goodone.csv`)
+                .expect(200)
+                .then(({ text }) => { text.should.equal('test,csv\n1,2'); }))))));
     });
   });
 });

@@ -451,6 +451,83 @@ describe('api: /submission', () => {
                 body.should.eql([{ name: 'audit.csv', exists: true }]);
               }))))));
   });
+
+  describe('[draft] /test POST', () => {
+    // the above tests check extensively the different cases; here we just verify plumbing
+    // and correct-sorting of draft submissions.
+
+    it('should reject notfound if there is no draft', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+          .expect(404))));
+
+    it('should reject if the draft has been published', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(({ body }) => body.draftToken))
+          .then((token) => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+            .expect(200)
+            .then(() => asAlice.post(`/v1/test/${token}/projects/1/forms/simple/draft/submission`)
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+              .expect(404))))));
+
+    it('should reject if the draft has been deleted', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(({ body }) => body.draftToken))
+          .then((token) => asAlice.delete('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.post(`/v1/test/${token}/projects/1/forms/simple/draft/submission`)
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+              .expect(404))))));
+
+    it('should reject if the key is wrong', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/forms/simple/draft/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+            .expect(404)))));
+
+    it('should save the submission into the form draft', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(({ body }) => body.draftToken)
+            .then((token) => asAlice.post(`/v1/test/${token}/projects/1/forms/simple/draft/submission`)
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+              .expect(201)
+              .then(({ text }) => {
+                text.should.match(/upload was successful/);
+              })
+              .then(() => Promise.all([
+                asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one')
+                  .expect(200)
+                  .then(({ body }) => {
+                    body.createdAt.should.be.a.recentIsoDate();
+                    should.not.exist(body.deviceId);
+                  }),
+                asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one.xml')
+                  .expect(200)
+                  .then(({ text }) => { text.should.equal(testData.instances.simple.one); }),
+                asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+                  .expect(404)
+              ])))))));
+  });
 });
 
 describe('api: /forms/:id/submissions', () => {
