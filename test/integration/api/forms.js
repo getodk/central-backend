@@ -1910,6 +1910,31 @@ describe('api: /projects/:id/forms', () => {
                 body[0].version.should.equal('');
                 body[0].sha256.should.equal('93fdcefabfe5b6ea49f207e0c6fc8ba72ceb34828bff9c7929ef56eafd2d84cc');
               })))));
+
+      it('should return publishedBy if extended is requested', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="2"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+              .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="3"'))
+              .set('Content-Type', 'application/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/versions')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                should.not.exist(body[0].publishedBy);
+                body[1].publishedBy.should.be.an.Actor();
+                body[1].publishedBy.displayName.should.equal('Alice');
+                body[2].publishedBy.should.be.an.Actor();
+                body[2].publishedBy.displayName.should.equal('Alice');
+              })))));
     });
 
     describe('/:version', () => {

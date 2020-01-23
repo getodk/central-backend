@@ -1494,9 +1494,22 @@ Once a Form Draft is deleted, its definition and any Form Attachments associated
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### › Old Form Versions [/v1/projects/{projectId}/forms/{xmlFormId}/versions]
+### › Published Form Versions [/v1/projects/{projectId}/forms/{xmlFormId}/versions]
 
 All published versions of a Form are available read-only at the `/versions` subresource for reference, including the currently published version. You may read that version and its details, retrieve the Form definition, and any attachments associated with each version.
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `Actor` that each version was `publishedBy`.
+
++ Response 200
+    + Attributes (array[Form])
+
++ Response 200 (application/json; extended)
+    This is the Extended Metadata response, if requested via the appropriate header:
+
+    + Attributes (array[Extended Form Version])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
 
 #### Listing Published Form Versions [GET]
 
@@ -2627,6 +2640,9 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission, if any.
 + createdBy: (Actor, optional) - The full information of the Actor who created this Form.
 + xml: `…` (string, required) - The XForms XML that defines this form.
+
+## Extended Form Version (Form)
++ publishedBy: (Actor, optional) - The full information of the Actor who published this version of the Form.
 
 ## Form Attachment (object)
 + name: `myfile.mp3` (string, required) - The name of the file as specified in the XForm.
