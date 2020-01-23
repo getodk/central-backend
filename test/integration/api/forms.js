@@ -968,19 +968,19 @@ describe('api: /projects/:id/forms', () => {
     it('should update allowed fields', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple')
-          .send({ name: 'a fancy name', state: 'draft' })
+          .send({ name: 'a fancy name', state: 'closing' })
           .expect(200)
           .then(({ body }) => {
             body.should.be.a.Form();
             body.name.should.equal('a fancy name');
-            body.state.should.equal('draft');
+            body.state.should.equal('closing');
           })
           .then(() => asAlice.get('/v1/projects/1/forms/simple')
             .expect(200)
             .then(({ body }) => {
               body.should.be.a.Form();
               body.name.should.equal('a fancy name');
-              body.state.should.equal('draft');
+              body.state.should.equal('closing');
             })))));
 
     it('should reject if state is invalid', testService((service) =>
@@ -1012,7 +1012,7 @@ describe('api: /projects/:id/forms', () => {
     it('should log the action in the audit log', testService((service, { Project, Form, User, Audit }) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple')
-          .send({ name: 'a fancy name', state: 'draft' })
+          .send({ name: 'a fancy name', state: 'closing' })
           .expect(200)
           .then(() => Promise.all([
             User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
@@ -1023,7 +1023,7 @@ describe('api: /projects/:id/forms', () => {
           .then(([ alice, form, log ]) => {
             log.actorId.should.equal(alice.actor.id);
             log.acteeId.should.equal(form.acteeId);
-            log.details.should.eql({ data: { name: 'a fancy name', state: 'draft', def: {} } });
+            log.details.should.eql({ data: { name: 'a fancy name', state: 'closing', def: {} } });
           })))));
   });
 
