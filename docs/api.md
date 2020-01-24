@@ -1016,8 +1016,8 @@ If the combination of (`xmlFormId`, `version`) conflict with any existing Form, 
 The API will currently check the XML's structure in order to extract the information we need about it, but ODK Central does _not_ run comprehensive validation on the full contents of the XML to ensure compliance with the ODK specification. Future versions will likely do this, but in the meantime you will have to use a tool like [ODK Validate](https://opendatakit.org/use/validate/) to be sure your Forms are correct.
 
 + Parameters
-    + ignoreWarnings: `false` (boolean, optional) - Defaults to `false`. Set to `true` if you want the form to be created even if the XLSForm conversion results in warnings.
-    + publish: `false` (boolean, optional) - Defaults to `false`. Set to `true` if you want the form to skip the Draft state to Published.
+    + ignoreWarnings: `false` (boolean, optional) - Defaults to `false`. Set to `true` if you want the Form to be created even if the XLSForm conversion results in warnings.
+    + publish: `false` (boolean, optional) - Defaults to `false`. Set to `true` if you want the Form to skip the Draft state to Published.
 
 + Request (application/xml)
     + Body
@@ -1122,7 +1122,7 @@ To get the XML of the `Form`, add `.xml` to the end of the request URL.
                 </model>
 
               </h:head>
-              
+              </h:body>
                 <input ref="/data/name">
                   <label>What is your name?</label>
                 </input>
@@ -1139,7 +1139,7 @@ To get the XML of the `Form`, add `.xml` to the end of the request URL.
 
 If a Form was created with an Excel file (`.xls` or `.xlsx`), you can get that file back by adding `.xls` or `.xlsx` as appropriate to the Form resource path.
 
-+ Response 200 (application/xml)
++ Response 200 (application/vnd.openxmlformats-officedocument.spreadsheetml.sheet)
     + Body
 
             (binary data)
@@ -1248,8 +1248,8 @@ You can create or replace the current Draft Form at any time by `POST`ing to the
 When a Draft Form is created, a Draft Token is also created for it, which can be found in Draft Form responses at `draftToken`. This token allows you to [submit test Submissions to the Draft Form](TODO) through clients like Collect. If the Draft is published or deleted, the token will be deactivated. But if you replace the Draft without first deleting it, the existing Draft Token will be carried forward, so that you do not have to reconfigure your device.
 
 + Parameters
-    + projectId: `1` (number, required) - The `id` of the project this form belongs to.
-    + xmlFormId: `simple` (string, required) - The `id` of this form as given in its XForms XML definition
+    + projectId: `1` (number, required) - The `id` of the Project this Form belongs to.
+    + xmlFormId: `simple` (string, required) - The `id` of this Form as given in its XForms XML definition
 
 #### Creating a Draft Form [POST /v1/projects/{projectId}/forms/{xmlFormId}/draft{?ignoreWarnings}]
 
@@ -1323,7 +1323,7 @@ The `xmlFormId`, however, must exactly match that of the Form overall, or the re
 
 #### Getting Draft Form Details [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft]
 
-Since the XForms specification allows blank strings as `version`s (and Central treats the lack of a `version` as a blank string), you may run into trouble using this resource if you have such a Form. In this case, pass the special value `___` (three underscores) as the `version` to retrieve the blank `version` version.
+The response here will include standard overall Form metadata, like `xmlFormId`, in addition to the Draft-specific information.
 
 + Response 200
     + Attributes(Draft Form)
@@ -1358,7 +1358,7 @@ To get the XML of the Draft Form, add `.xml` to the end of the request URL.
                 </model>
 
               </h:head>
-
+              <h:body>
                 <input ref="/data/name">
                   <label>What is your name?</label>
                 </input>
@@ -1385,7 +1385,7 @@ If a Draft Form was created with an Excel file (`.xls` or `.xlsx`), you can get 
 
 #### Listing expected Form Attachments [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments]
 
-As mentioned above, the list of expected form attachments is determined at form creation time, from the XForms definition. This endpoint allows you to fetch that list of expected files, and will tell you whether the server is in possession of each file or not.
+Form Attachments for each form are automatically determined when the form is first created, by scanning the XForms definition for references to media or data files. Because of this, it is not possible to directly modify the list of form attachments; that list is fully determined by the given XForm. Instead, the focus of this API subresource is around communicating that expected list of files, and uploading binaries into those file slots.
 
 + Response 200 (application/json)
     + Attributes (array[Form Attachment])
@@ -1446,7 +1446,7 @@ Because Form Attachments are completely determined by the XForms definition of t
 
 #### Getting Draft Form Schema Fields [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/fields{?odata}]
 
-Identical to the [same request](/reference/forms-and-submissions/'-individual-form/retrieving-form-schema-fields) for the root Form, but will return the fields related to the current Draft version.
+Identical to the [same request](/reference/forms-and-submissions/'-individual-form/retrieving-form-schema-fields) for the published Form, but will return the fields related to the current Draft version.
 
 + Parameters
     + odata: `false` (boolean, optional) - If set to `true`, will sanitize field names.
@@ -1624,7 +1624,7 @@ To download a single file, use this endpoint. The appropriate `Content-Dispositi
 
 #### Getting Form Version Schema Fields [GET /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}/fields{?odata}]
 
-Identical to the [same request](/reference/forms-and-submissions/'-individual-form/retrieving-form-schema-fields) for the root Form, but will return the fields related to the specified version.
+Identical to the [same request](/reference/forms-and-submissions/'-individual-form/retrieving-form-schema-fields) for the published Form, but will return the fields related to the specified version.
 
 + Parameters
     + version: `one` (string, required) - The `version` of the Form version being referenced. Pass `___` to indicate a blank `version`.
@@ -3181,7 +3181,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + projectId: `1` (number, required) - The `id` of the project this form belongs to.
 + xmlFormId: `simple` (string, required) - The `id` of this form as given in its XForms XML definition
 + name: `Simple` (string, optional) - The friendly name of this form. It is given by the `<title>` in the XForms XML definition.
-+ version: `2.1` (string, optional) - The `version` of this form as given in its XForms XML definition. Empty string and `null` are treated equally as a single version.
++ version: `2.1` (string, optional) - The `version` of this form as given in its XForms XML definition. If no `version` was specified in the Form, a blank string will be given. If there is no associated Form, `null` will be returned.
 + hash: `51a93eab3a1974dbffc4c7913fa5a16a` (string, required) - An MD5 sum automatically computed based on the XForms XML definition. This is required for OpenRosa compliance.
 + keyId: `3` (number, optional) - If a public encryption key is present on the form, its numeric ID as tracked by Central is given here.
 + state (Form State, required) - The present lifecycle status of this form. Controls whether it is available for download on survey clients or accepts new submissions.
