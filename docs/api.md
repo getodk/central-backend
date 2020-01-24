@@ -34,13 +34,27 @@ Here major and breaking changes to the API are listed by version.
 
 ### ODK Central v0.8
 
+ODK Central v0.8 introduces Draft Forms, publishing, and archived Form versions, which has a significant breaking impact on the existing API. The changes should be straightforward to adapt to, however. If you are currently creating Forms with `POST /projects/…/forms`, you may wish to add `?publish=true` to skip the Draft state and mimic the old behaviour. If you are using the API to push Form Attachments onto Forms, you'll only be able to do so now in draft state, at `/projects/…/forms/…/draft/attachments`.
+
 **Added**:
 
+* Draft Forms and publishing, and archived Form versions.
+  * This includes a subresource at `/projects/…/forms/…/draft`,
+  * and another at `/projects/…/forms/…/versions`.
 * `GET /projects/…/forms/…/fields`, which replaces `GET /projects/…/forms/….schema.json`.
+* App User responses now include the `projectId` they are bound to.
+
+**Changed**:
+
+* As part of the Draft Forms change, the read/write endpoints for Form Attachments have been moved to the Draft Form state and subresource, at `/projects/…/forms/…/draft/attachments`.
 
 **Removed**:
 
 * `GET /projects/…/forms/….schema.json` has been removed in favor of `GET /projects/…/forms/…/fields`.
+
+**Fixed**:
+
+* Documented `GET /projects/…/forms/….xls(x)`, which was added in 0.7.
 
 ### ODK Central v0.7
 
@@ -931,7 +945,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 ### Seeing Role-specific Form Assignments within a Project [GET /v1/projects/{projectId}/assignments/forms/:roleId]
 
-Like the [Form Assignments summary API](TODO), but filtered by some `roleId`.
+Like the [Form Assignments summary API](/reference/forms-and-submissions/'-form-assignments/listing-all-form-assignments), but filtered by some `roleId`.
 
 This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to expand the `actorId` into a full `actor` objects. The Role reference remains a numeric ID and the Form reference remains a string ID.
 
@@ -986,9 +1000,11 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Creating a new Form [POST /v1/projects/{projectId}/forms{?ignoreWarnings}]
+### Creating a new Form [POST /v1/projects/{projectId}/forms{?ignoreWarnings}{?publish}]
 
 When creating a `Form`, the only required data is the actual XForms XML or XLSForm itself. Use it as the `POST` body with a `Content-Type` header of `application/xml` (`text/xml` works too), and the Form will be created.
+
+As of Version 0.8, Forms will by default be created in Draft state, accessible under `/projects/…/forms/…/draft`. The Form itself will not have a public XML definition, and will not appear for download onto mobile devices. You will need to [publish the form](/reference/forms-and-submissions/'-form-draft/publishing-a-form-draft) to finalize it for data collection. To disable this behaviour, and force the new Form to be immediately ready, you can pass the querystring option `?publish=true`.
 
 For XLSForm upload, either `.xls` or `.xlsx` are accepted. You must provide the `Content-Type` request header corresponding to the file type: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` for `.xlsx` files, and `application/vnd.ms-excel` for `.xls` files. You must also provide an `X-XlsForm-FormId-Fallback` request header with the `formId` you want the resulting form to have, if the spreadsheet does not already specify.
 
@@ -1000,6 +1016,7 @@ The API will currently check the XML's structure in order to extract the informa
 
 + Parameters
     + ignoreWarnings: `false` (boolean, optional) - Defaults to `false`. Set to `true` if you want the form to be created even if the XLSForm conversion results in warnings.
+    + publish: `false` (boolean, optional) - Defaults to `false`. Set to `true` if you want the form to skip the Draft state to Published.
 
 + Request (application/xml)
     + Body
@@ -1079,7 +1096,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 #### Retrieving Form XML [GET /v1/projects/{projectId}/forms/{xmlFormId}.xml]
 
-To get only the XML of the `Form` rather than all of the details with the XML as one of many properties, just add `.xml` to the end of the request URL.
+To get the XML of the `Form`, add `.xml` to the end of the request URL.
 
 + Response 200 (application/xml)
     + Body
@@ -1104,7 +1121,7 @@ To get only the XML of the `Form` rather than all of the details with the XML as
                 </model>
 
               </h:head>
-              <h:body>
+              
                 <input ref="/data/name">
                   <label>What is your name?</label>
                 </input>
@@ -1113,6 +1130,78 @@ To get only the XML of the `Form` rather than all of the details with the XML as
                 </input>
               </h:body>
             </h:html>
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Retrieving Form XLS(X) [GET /v1/projects/{projectId}/forms/{xmlFormId}.xlsx]
+
+If a Form was created with an Excel file (`.xls` or `.xlsx`), you can get that file back by adding `.xls` or `.xlsx` as appropriate to the Form resource path.
+
++ Response 200 (application/xml)
+    + Body
+
+            (binary data)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Listing Form Attachments [GET /v1/projects/{projectId}/forms/{xmlFormId}/attachments]
+
+This endpoint allows you to fetch the list of expected attachment files, and will tell you whether the server is in possession of each file or not. To modify an attachment, you'll need to create a Draft.
+
++ Response 200 (application/json)
+    + Attributes (array[Form Attachment])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Downloading a Form Attachment [GET /v1/projects/{projectId}/forms/{xmlFormId}/attachments/{filename}]
+
+To download a single file, use this endpoint. The appropriate `Content-Disposition` (attachment with a filename) and `Content-Type` (based on the type supplied at upload time) will be given.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+
++ Response 200
+    + Headers
+
+            Content-Type: {the MIME type of the attachment file itself}
+            Content-Disposition: attachment; filename={the file's name}
+
+    + Body
+
+            (binary data)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Getting Form Schema Fields [GET /v1/projects/{projectId}/forms/{xmlFormId}/fields{?odata}]
+
+_(introduced: version 0.8)_
+
+For applications that do not rely on JavaRosa, it can be challenging to parse XForms XML into a simple schema structure. Because Central Backend already implements and performs such an operation for its own internal purposes, we also expose this utility for any downstream consumers which wish to make use of it.
+
+While this may eventually overlap with the new OData JSON CSDL specification, we are likely to maintain this API as it more closely mirrors the original XForms data types and structure.
+
+Central internally processes the XForms schema tree into a flat list of fields, and this is how the data is returned over this endpoint as well. It will always return fields in a _depth-first traversal order_ of the original `<instance>` XML block in the XForm.
+
+You may optionally add the querystring parameter `?odata=true` to sanitize the field names and paths to match the way they will be outputted for OData. While the original field names as given in the XForms definition may be used as-is for CSV output, OData has some restrictions related to the domain-qualified identifier syntax it uses.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + odata: `false` (boolean, optional) - If set to `true`, will sanitize field names.
+
++ Response 200 (application/json)
+    + Body
+
+            [
+              { "name": "meta", "path": "/meta", "type": "structure" },
+              { "name": "instanceID", "path": "/meta/instanceID", "type": "string" },
+              { "name": "name", "path": "/name", "type": "string" },
+              { "name": "age", "path": "/age", "type": "int" },
+              { "name": "photo", "path": "/photo", "type": "binary", "binary": true }
+            ]
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -1147,44 +1236,151 @@ Only `DELETE` a `Form` if you are sure you will never need it again. If your goa
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-#### Retrieving Form Schema Fields [GET /v1/projects/{projectId}/forms/{xmlFormId}/fields{?odata}]
+### › Form Draft [/v1/projects/{projectId}/forms/{xmlFormId}/draft]
 
 _(introduced: version 0.8)_
 
-For applications that do not rely on JavaRosa, it can be challenging to parse XForms XML into a simple schema structure. Because Central Backend already implements and performs such an operation for its own internal purposes, we also expose this utility for any downstream consumers which wish to make use of it.
+Form Drafts allow you to test and fix issues with Forms before they are finalized and presented to data collectors. They make this process easier, as Form Drafts can be created and discarded without consequence: your Drafts will not count against the overall Form schema, nor against the set of unique `version` strings for the Form.
 
-While this may eventually overlap with the new OData JSON CSDL specification, we are likely to maintain this API as it more closely mirrors the original XForms data types and structure.
-
-Central internally processes the XForms schema tree into a flat list of fields, and this is how the data is returned over this endpoint as well. It will always return fields in a _depth-first traversal order_ of the original `<instance>` XML block in the XForm.
-
-You may optionally add the querystring parameter `?odata=true` to sanitize the field names and paths to match the way they will be outputted for OData. While the original field names as given in the XForms definition may be used as-is for CSV output, OData has some restrictions related to the domain-qualified identifier syntax it uses.
+You can create or replace the current Form Draft at any time by `POST`ing to the `/draft` subresource on the Form, and you can publish the current Draft by `POST`ing to `/draft/publish`.
 
 + Parameters
-    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
-    + odata: `false` (boolean, optional) - If set to `true`, will sanitize field names.
+    + projectId: `1` (number, required) - The `id` of the project this form belongs to.
+    + xmlFormId: `simple` (string, required) - The `id` of this form as given in its XForms XML definition
 
-+ Response 200 (application/json)
+#### Creating a Form Draft [POST /v1/projects/{projectId}/forms/{xmlFormId}/draft{?ignoreWarnings}]
+
+`POST`ing here will create a new Form Draft on the given Form. For the most part, it takes the same parameters as the [Create Form request](/reference/forms-and-submissions/forms/creating-a-new-form): you can submit XML or Excel files, you can provide `ignoreWarnings` if you'd like.
+
+Additionally, however, you may `POST` with no `Content-Type` and an empty body to create a Form Draft with a copy of the definition (XML, XLS, etc) that is already published, if there is one. This can be useful if you don't wish to update the Form definition itself, but rather one or more Form Attachments.
+
+If your Draft form schema contains any field path which overlaps with a field path of a previous version of the Form, but with a different data type, your request will be rejected. You can rename the conflicting field, or correct it to have the same data type as it did previously.
+
+When a Draft is created, the expected Form Attachments are computed and slots are created, as with a new Form. Any attachments that match existing ones on the published Form, if it exists, will be copied over to the new Draft.
+
+Even if a Draft exists, you can always replace it by `POST`ing here again. In that case, the attachments that exist on the Draft will similarly be copied over to the new Draft. If you wish to copy from the published version instead, you can do so by first `DELETE`ing the extant Draft.
+
+Draft `version` conflicts are allowed with prior versions of a Form while in Draft state. If you attempt to [publish the Form](/reference/forms-and-submissions/'-form-draft/publishing-a-form-draft) without correcting the conflict, the publish operation will fail. You can request that Central update the version string on your behalf as part of the publish operation to avoid this: see that endpoint for more information.
+
+The `xmlFormId`, however, must exactly match that of the Form overall, or the request will be rejected.
+
++ Parameters
+    + ignoreWarnings: `false` (boolean, optional) - Defaults to `false`. Set to `true` if you want the form to be created even if the XLSForm conversion results in warnings.
+
++ Request (application/xml)
     + Body
 
-            [
-              { "name": "meta", "path": "/meta", "type": "structure" },
-              { "name": "instanceID", "path": "/meta/instanceID", "type": "string" },
-              { "name": "name", "path": "/name", "type": "string" },
-              { "name": "age", "path": "/age", "type": "int" },
-              { "name": "photo", "path": "/photo", "type": "binary", "binary": true }
-            ]
+            <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+              <h:head>
+                <h:title>Simple</h:title>
+                <model>
+                  <instance>
+                    <data id="simple" version="2.1">
+                      <meta>
+                        <instanceID/>
+                      </meta>
+                      <name/>
+                      <age/>
+                    </data>
+                  </instance>
+
+                  <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+                  <bind nodeset="/data/name" type="string"/>
+                  <bind nodeset="/data/age" type="int"/>
+                </model>
+
+              </h:head>
+              <h:body>
+                <input ref="/data/name">
+                  <label>What is your name?</label>
+                </input>
+                <input ref="/data/age">
+                  <label>What is your age?</label>
+                </input>
+              </h:body>
+            </h:html>
+
++ Request (application/vnd.openxmlformats-officedocument.spreadsheetml.sheet)
+    + Headers
+
+            X-XlsForm-FormId-Fallback: filename.xlsx
+
+    + Body
+
+            (.xlsx binary contents)
+
++ Response 200 (application/json)
+    + Attributes (Form)
+
++ Response 400 (application/json)
+    + Attributes (Error 400)
 
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### › Form Attachments [/v1/projects/{projectId}/forms/{xmlFormId}/attachments]
+#### Getting Draft Form Details [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft]
 
-Form Attachments for each form are automatically determined when the form is first created, by scanning the XForms definition for references to media or data files. Because of this, it is not possible to directly modify the list of form attachments; that list is fully determined by the given XForm. Instead, the focus of this API subresource is around communicating that expected list of files, and uploading binaries into those file slots.
+Since the XForms specification allows blank strings as `version`s (and Central treats the lack of a `version` as a blank string), you may run into trouble using this resource if you have such a Form. In this case, pass the special value `___` (three underscores) as the `version` to retrieve the blank `version` version.
 
-+ Parameters
-    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
++ Response 200
+    + Attributes(Form)
 
-#### Listing expected Form Attachments [GET]
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Retrieving Draft Form XML [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft.xml]
+
+To get the XML of the Draft Form, add `.xml` to the end of the request URL.
+
++ Response 200 (application/xml)
+    + Body
+
+            <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+              <h:head>
+                <h:title>Simple</h:title>
+                <model>
+                  <instance>
+                    <data id="simple" version="2.1">
+                      <meta>
+                        <instanceID/>
+                      </meta>
+                      <name/>
+                      <age/>
+                    </data>
+                  </instance>
+
+                  <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+                  <bind nodeset="/data/name" type="string"/>
+                  <bind nodeset="/data/age" type="int"/>
+                </model>
+
+              </h:head>
+
+                <input ref="/data/name">
+                  <label>What is your name?</label>
+                </input>
+                <input ref="/data/age">
+                  <label>What is your age?</label>
+                </input>
+              </h:body>
+            </h:html>
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Retrieving Draft Form XLS(X) [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft.xlsx]
+
+If a Draft Form was created with an Excel file (`.xls` or `.xlsx`), you can get that file back by adding `.xls` or `.xlsx` as appropriate to the Draft Form resource path.
+
++ Response 200 (application/xml)
+    + Body
+
+            (binary data)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Listing expected Form Attachments [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments]
 
 As mentioned above, the list of expected form attachments is determined at form creation time, from the XForms definition. This endpoint allows you to fetch that list of expected files, and will tell you whether the server is in possession of each file or not.
 
@@ -1194,7 +1390,25 @@ As mentioned above, the list of expected form attachments is determined at form 
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-#### Downloading a Form Attachment [GET /v1/projects/{projectId}/forms/{xmlFormId}/attachments/{filename}]
+#### Uploading a Form Attachment [POST /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}]
+
+To upload a binary to an expected file slot, `POST` the binary to its endpoint. Supply a `Content-Type` MIME-type header if you have one.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+
++ Request (*/*)
+    + Body
+
+            (binary data)
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Downloading a Form Attachment [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}]
 
 To download a single file, use this endpoint. The appropriate `Content-Disposition` (attachment with a filename) and `Content-Type` (based on the type supplied at upload time) will be given.
 
@@ -1214,25 +1428,7 @@ To download a single file, use this endpoint. The appropriate `Content-Dispositi
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-#### Uploading a Form Attachment [POST /v1/projects/{projectId}/forms/{xmlFormId}/attachments/{filename}]
-
-To upload a binary to an expected file slot, `POST` the binary to its endpoint. Supply a `Content-Type` MIME-type header if you have one.
-
-+ Parameters
-    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
-
-+ Request (*/*)
-    + Body
-
-            (binary data)
-
-+ Response 200 (application/json)
-    + Attributes (Success)
-
-+ Response 403 (application/json)
-    + Attributes (Error 403)
-
-#### Clearing a Form Attachment [DELETE /v1/projects/{projectId}/forms/{xmlFormId}/attachments/{filename}]
+#### Clearing a Form Attachment [DELETE /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}]
 
 Because Form Attachments are completely determined by the XForms definition of the form itself, there is no direct way to entirely remove a Form Attachment entry from the list, only to clear its uploaded content. Thus, when you issue a `DELETE` to the attachment's endpoint, that is what happens.
 
@@ -1241,6 +1437,199 @@ Because Form Attachments are completely determined by the XForms definition of t
 
 + Response 200 (application/json)
     + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Getting Draft Form Schema Fields [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/fields{?odata}]
+
+Identical to the [same request](/reference/forms-and-submissions/'-individual-form/retrieving-form-schema-fields) for the root Form, but will return the fields related to the current Draft version.
+
++ Parameters
+    + odata: `false` (boolean, optional) - If set to `true`, will sanitize field names.
+
++ Response 200 (application/json)
+    + Body
+
+            [
+              { "name": "meta", "path": "/meta", "type": "structure" },
+              { "name": "instanceID", "path": "/meta/instanceID", "type": "string" },
+              { "name": "name", "path": "/name", "type": "string" },
+              { "name": "age", "path": "/age", "type": "int" },
+              { "name": "photo", "path": "/photo", "type": "binary", "binary": true }
+            ]
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Publishing a Form Draft [POST /v1/projects/{projectId}/forms/{xmlFormId}/draft/publish{?version}]
+
+This will publish your current Form Draft and make it the active Form definition (and attachments).
+
+If your Draft `version` conflicts with an older version of the Form, you will get an error.
+
+If you wish for the `version` to be set on your behalf as part of the publish operation, you can provide the new version string as a querystring parameter `?version`.
+
+Once the Draft is published, there will no longer be a Draft version of the form.
+
++ Parameters
+    + version: `newVersion` (string, optional) - The `version` to be associated with the Draft once it's published.
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
++ Response 409 (application/json)
+    + Attributes (Error 409)
+
+#### Deleting a Form Draft [DELETE /v1/projects/{projectId}/forms/{xmlFormId}/draft]
+
+Once a Form Draft is deleted, its definition and any Form Attachments associated with it will be removed.
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### › Old Form Versions [/v1/projects/{projectId}/forms/{xmlFormId}/versions]
+
+All published versions of a Form are available read-only at the `/versions` subresource for reference, including the currently published version. You may read that version and its details, retrieve the Form definition, and any attachments associated with each version.
+
+#### Listing Published Form Versions [GET]
+
+Each entry of the version listing will contain some of the same duplicate keys with basic information about the Form: `xmlFormId` and `createdAt`, for example. This is done to match the data you'd receive if you'd requested each version separately.
+
++ Response 200
+    + Attributes (array[Form])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Getting Form Version Details [GET /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}]
+
+Since the XForms specification allows blank strings as `version`s (and Central treats the lack of a `version` as a blank string), you may run into trouble using this resource if you have such a Form. In this case, pass the special value `___` (three underscores) as the `version` to retrieve the blank `version` version.
+
++ Parameters
+    + version: `one` (string, required) - The `version` of the Form version being referenced. Pass `___` to indicate a blank `version`.
+
++ Response 200
+    + Attributes(Form)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Retrieving Form Version XML [GET /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}.xml]
+
+To get the XML of the Form Version, add `.xml` to the end of the request URL.
+
++ Parameters
+    + version: `one` (string, required) - The `version` of the Form version being referenced. Pass `___` to indicate a blank `version`.
+
++ Response 200 (application/xml)
+    + Body
+
+            <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+              <h:head>
+                <h:title>Simple</h:title>
+                <model>
+                  <instance>
+                    <data id="simple" version="2.1">
+                      <meta>
+                        <instanceID/>
+                      </meta>
+                      <name/>
+                      <age/>
+                    </data>
+                  </instance>
+
+                  <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+                  <bind nodeset="/data/name" type="string"/>
+                  <bind nodeset="/data/age" type="int"/>
+                </model>
+
+              </h:head>
+
+                <input ref="/data/name">
+                  <label>What is your name?</label>
+                </input>
+                <input ref="/data/age">
+                  <label>What is your age?</label>
+                </input>
+              </h:body>
+            </h:html>
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Retrieving Form Version XLS(X) [GET /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}.xlsx]
+
+If a Form Version was created with an Excel file (`.xls` or `.xlsx`), you can get that file back by adding `.xls` or `.xlsx` as appropriate to the Form Version resource path.
+
++ Parameters
+    + version: `one` (string, required) - The `version` of the Form version being referenced. Pass `___` to indicate a blank `version`.
+
++ Response 200 (application/xml)
+    + Body
+
+            (binary data)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Listing Form Version Attachments [GET /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}/attachments]
+
+Attachments are specific to each version of a Form. You can retrieve the attachments associated with a given version here.
+
++ Parameters
+    + version: `one` (string, required) - The `version` of the Form version being referenced. Pass `___` to indicate a blank `version`.
+
++ Response 200 (application/json)
+    + Attributes (array[Form Attachment])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Downloading a Form Attachment [GET /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}/attachments/{filename}]
+
+To download a single file, use this endpoint. The appropriate `Content-Disposition` (attachment with a filename) and `Content-Type` (based on the type supplied at upload time) will be given.
+
++ Parameters
+    + version: `one` (string, required) - The `version` of the Form version being referenced. Pass `___` to indicate a blank `version`.
+
++ Response 200
+    + Headers
+
+            Content-Type: {the MIME type of the attachment file itself}
+            Content-Disposition: attachment; filename={the file's name}
+
+    + Body
+
+            (binary data)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Getting Form Version Schema Fields [GET /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}/fields{?odata}]
+
+Identical to the [same request](/reference/forms-and-submissions/'-individual-form/retrieving-form-schema-fields) for the root Form, but will return the fields related to the specified version.
+
++ Parameters
+    + version: `one` (string, required) - The `version` of the Form version being referenced. Pass `___` to indicate a blank `version`.
+    + odata: `false` (boolean, optional) - If set to `true`, will sanitize field names.
+
++ Response 200 (application/json)
+    + Body
+
+            [
+              { "name": "meta", "path": "/meta", "type": "structure" },
+              { "name": "instanceID", "path": "/meta/instanceID", "type": "string" },
+              { "name": "name", "path": "/name", "type": "string" },
+              { "name": "age", "path": "/age", "type": "int" },
+              { "name": "photo", "path": "/photo", "type": "binary", "binary": true }
+            ]
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -2070,7 +2459,7 @@ If these two things are present and correct, and Google can be reached to verify
 
 _(introduced: version 0.6)_
 
-As of version 0.6, Server Audit Logs entries are created for the following `action`s:
+Server Audit Logs entries are created for the following `action`s:
 
 * `user.create` when a new User is created.
 * `user.update` when User information is updated, like email or password.
@@ -2082,6 +2471,9 @@ As of version 0.6, Server Audit Logs entries are created for the following `acti
 * `project.delete` when a Project is deleted.
 * `form.create` when a new Form is created.
 * `form.update` when top-level Form information is updated, like its name or state.
+* `form.update.draft.set` when a Draft Form definition is set.
+* `form.update.draft.delete` when a Draft Form definition is deleted.
+* `form.update.publish` when a Draft Form is published to the Form.
 * `form.delete` when a Form is deleted.
 * `form.attachment.update` when a Form Attachment binary is set or cleared.
 * `submission.create` when a new Submission is created.
@@ -2174,6 +2566,11 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + xmlFormId: `simple` (string, required) - The `id` of the assigned form as given in its XForms XML definition
 + roleId: `4` (number, required) - The numeric Role ID being assigned.
 
+## App User (Actor)
++ createdBy: `42` (number, required) - The ID of the `Actor` that created this `App User`.
++ token: `d1!E2GVHgpr4h9bpxxtqUJ7EVJ1Q$Dusm2RBXg8XyVJMCBCbvyE8cGacxUx3bcUT` (string, optional) - If present, this is the Token that can be used to authenticate a request as this `App User`. If not present, this `App User`'s access has been revoked.
++ projectId: `1` (number, required) - The ID of the `Project` that this `App User` is bound to.
+
 ## Audit (object)
 + actorId: `42` (number, optional) - The ID of the actor, if any, that initiated the action.
 + action: `form.create` (string, required) - The action that was taken.
@@ -2213,10 +2610,6 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Error 501 (object)
 + code: `501.1` (string, required)
 + message: `The requested feature $unsupported is not supported by this server.` (string)
-
-## App User (Actor)
-+ createdBy: `42` (number, required) - The ID of the `Actor` that created this `App User`.
-+ token: `d1!E2GVHgpr4h9bpxxtqUJ7EVJ1Q$Dusm2RBXg8XyVJMCBCbvyE8cGacxUx3bcUT` (string, optional) - If present, this is the Token that can be used to authenticate a request as this `App User`. If not present, this `App User`'s access has been revoked.
 
 ## Form (object)
 + projectId: `1` (number, required) - The `id` of the project this form belongs to.

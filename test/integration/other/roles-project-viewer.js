@@ -22,7 +22,7 @@ const withSubmissions = (f) => (service) =>
         .send(testData.instances.simple.two)
         .set('Content-Type', 'application/xml')
         .expect(200))
-      .then(() => asAlice.post('/v1/projects/1/forms')
+      .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
         .send(testData.forms.binaryType)
         .set('Content-Type', 'application/xml')
         .expect(200))
@@ -61,7 +61,7 @@ describe('project viewer role', () => {
       .expect(403))));
 
   it('should be able to list all forms in a project', testService(viewer((asViewer) =>
-    asViewer.get('/v1/projects/1/forms')
+    asViewer.get('/v1/projects/1/forms?publish=true')
       .expect(200)
       .then(({ body }) => {
         body.length.should.equal(2);

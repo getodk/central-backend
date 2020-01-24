@@ -71,7 +71,7 @@ describe('api: /forms/:id.svc', () => {
 
     const withSubmission = (service, callback) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.doubleRepeat)
           .set('Content-Type', 'text/xml')
           .expect(200)
@@ -117,7 +117,7 @@ describe('api: /forms/:id.svc', () => {
 
     it('should return a single encrypted frame (no formdata)', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.encrypted)
           .set('Content-Type', 'text/xml')
           .expect(200)
@@ -150,7 +150,7 @@ describe('api: /forms/:id.svc', () => {
 
     it('should return a single encrypted frame (has formdata)', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.encrypted)
           .set('Content-Type', 'text/xml')
           .expect(200)
@@ -237,7 +237,7 @@ describe('api: /forms/:id.svc', () => {
     // call). there is some chance this methodology is fragile. (mark1)
     it('should gracefully degrade on encrypted subtables', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.doubleRepeat)
           .set('Content-Type', 'text/xml')
           .expect(200)
@@ -441,7 +441,7 @@ describe('api: /forms/:id.svc', () => {
 
     it('should return encrypted frames (no formdata)', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.encrypted)
           .set('Content-Type', 'text/xml')
           .expect(200)
@@ -490,7 +490,7 @@ describe('api: /forms/:id.svc', () => {
 
     it('should return encrypted frames (has formdata)', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.encrypted)
           .set('Content-Type', 'text/xml')
           .expect(200)
@@ -563,7 +563,7 @@ describe('api: /forms/:id.svc', () => {
     // we cheat here. see mark1.
     it('should gracefully degrade on encrypted subtables', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.doubleRepeat)
           .set('Content-Type', 'text/xml')
           .expect(200)

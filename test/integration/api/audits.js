@@ -263,7 +263,7 @@ describe('/audits', () => {
           .send({ name: 'audit project' })
           .expect(200)
           .then(({ body }) => body.id)
-          .then((projectId) => asAlice.post(`/v1/projects/${projectId}/forms`)
+          .then((projectId) => asAlice.post(`/v1/projects/${projectId}/forms?publish=true`)
             .send(testData.forms.simple)
             .set('Content-Type', 'text/xml')
             .expect(200)
@@ -429,7 +429,7 @@ describe('/audits', () => {
       service.login('alice', (asAlice) =>
         Promise.all([
           (new Audit({ action: 'backup', details: '{"success":true}' })).create(),
-          asAlice.post('/v1/projects/1/forms')
+          asAlice.post('/v1/projects/1/forms?publish=true')
             .set('Content-Type', 'application/xml')
             .send(testData.forms.binaryType)
             .expect(200)

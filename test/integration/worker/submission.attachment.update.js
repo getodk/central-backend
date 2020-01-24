@@ -8,7 +8,7 @@ const worker = require(appRoot + '/lib/worker/submission.attachment.update');
 describe('worker: submission.attachment.update', () => {
   it('should do nothing if the attachment is not a client audit', testService((service, container) =>
     service.login('alice', (asAlice) =>
-      asAlice.post('/v1/projects/1/forms')
+      asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
         .send(testData.forms.binaryType)
         .expect(200)
@@ -27,7 +27,7 @@ describe('worker: submission.attachment.update', () => {
 
   it('should process the given logs', testService((service, container) =>
     service.login('alice', (asAlice) =>
-      asAlice.post('/v1/projects/1/forms')
+      asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
         .send(testData.forms.clientAudits)
         .expect(200)
@@ -48,7 +48,7 @@ describe('worker: submission.attachment.update', () => {
 
   it('should not reprocess already-processed logs', testService((service, container) =>
     service.login('alice', (asAlice) =>
-      asAlice.post('/v1/projects/1/forms')
+      asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
         .send(testData.forms.clientAudits)
         .expect(200)

@@ -13,7 +13,7 @@ describe('form forward versioning', () => {
       Project.getById(1).then(force)
         .then((project) => project.getFormByXmlFormId('simple')).then(force)
     ])
-      .then(([ partial, oldForm ]) => partial.createVersion(oldForm))
+      .then(([ partial, oldForm ]) => partial.createVersion(oldForm, true))
       .then(() => Project.getById(1)).then(force)
       .then((project) => Form.getWithXmlByProjectAndXmlFormId(project.id, 'simple')).then(force)
       .then((newForm) => {
@@ -22,7 +22,7 @@ describe('form forward versioning', () => {
         newForm.def.sha.should.equal('5a31610cb649ccd2482709664e2a6268df66112f');
       })));
 
-  it('should create a new def and not update the version', testService((_, { Project, Form, FormDef, FormPartial }) =>
+  it('should create a new draft def and not update the current version', testService((_, { Project, Form, FormDef, FormPartial }) =>
     Promise.all([
       FormPartial.fromXml(newXml),
       Project.getById(1).then(force)
@@ -35,7 +35,10 @@ describe('form forward versioning', () => {
           newForm.currentDefId.should.equal(oldForm.def.id);
           /version="two"/.test(newForm.def.xml).should.equal(false);
           newForm.def.sha.should.equal('6f3b4ee76e0ac9a1e2007ef987be40e02c24d75e');
-        })))); // TODO: actually assert that the new def actually exists.
+
+          should.exist(newForm.draftDefId);
+          newForm.draftDefId.should.not.equal(newForm.def.id);
+        }))));
 
   it('should preserve submissions', testService((service, { Project, Blob, Form, FormDef, FormAttachment, FormPartial }) =>
     service.login('alice', (asAlice) =>
@@ -56,7 +59,7 @@ describe('form forward versioning', () => {
           Project.getById(1).then(force)
             .then((project) => project.getFormByXmlFormId('simple')).then(force)
         ])
-        .then(([ partial, form ]) => partial.createVersion(form))
+        .then(([ partial, form ]) => partial.createVersion(form, true))
         .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions')
           .expect(200)
           .then(({ body }) => {
@@ -72,14 +75,14 @@ describe('form forward versioning', () => {
       FormPartial.fromXml(testData.forms.withAttachments),
       Blob.fromFile(__filename).then((blob) => blob.ensure())
     ])
-      .then(([ project, partial, blob ]) => partial.with({ projectId: project.id }).createNew()
+      .then(([ project, partial, blob ]) => partial.with({ projectId: project.id }).createNew(true)
         .then((savedForm) => Promise.all([ 'goodone.csv', 'goodtwo.mp3' ]
           .map((name) => FormAttachment.getByFormDefIdAndName(savedForm.def.id, name)
             .then(force)
             .then((attachment) => attachment.with({ blobId: blob.id }).update()))
         )
           .then(() => FormPartial.fromXml(withAttachmentsMatching))
-          .then((partial) => partial.createVersion(savedForm))
+          .then((partial) => partial.createVersion(savedForm, true))
           .then(() => project.getFormByXmlFormId('withAttachments')).then(force)
           .then((finalForm) => FormAttachment.getAllByFormDefId(finalForm.currentDefId)
             .then((attachments) => {
@@ -111,7 +114,7 @@ describe('form forward versioning', () => {
             .then((attachment) => attachment.with({ blobId: blob.id }).update()))
         )
           .then(() => FormPartial.fromXml(withAttachmentsNonmatching))
-          .then((partial2) => partial2.createVersion(savedForm))
+          .then((partial2) => partial2.createVersion(savedForm, true))
           .then(() => project.getFormByXmlFormId('withAttachments')).then(force)
           .then((finalForm) => FormAttachment.getAllByFormDefId(finalForm.currentDefId)
             .then((attachments) => {

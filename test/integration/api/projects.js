@@ -442,7 +442,7 @@ describe('api: /projects', () => {
 
     it('should not modify already-encrypted forms', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.encrypted)
           .set('Content-Type', 'text/xml')
           .expect(200)
@@ -456,12 +456,50 @@ describe('api: /projects', () => {
               text.indexOf('<submission base64RsaPublicKey="MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYh7bSui/0xppQ+J3i5xghfao+559Rqg9X0xNbdMEsW35CzYUfmC8sOzeeUiE4pG7HIEUmiJal+mo70UMDUlywXj9z053n0g6MmtLlUyBw0ZGhEZWHsfBxPQixdzY/c5i7sh0dFzWVBZ7UrqBc2qjRFUYxeXqHsAxSPClTH1nW47Mr2h4juBLC7tBNZA3biZA/XTPt//hAuzv1d6MGiF3vQJXvFTNdfsh6Ckq4KXUsAv+07cLtON4KjrKhqsVNNGbFssTUHVL4A9N3gsuRGt329LHOKBxQUGEnhMM2MEtvk4kaVQrgCqpk1pMU/4HlFtRjOoKdAIuzzxIl56gNdRUQIDAQAB"/>').should.be.greaterThan(-1);
             })))));
 
+    it('should modify extant drafts', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/key')
+            .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+            .expect(200))
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/simple.xml')
+              .expect(200)
+              .then(({ text }) => {
+                text.should.match(/<data id="simple" version="\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
+                text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
+              }),
+            asAlice.get('/v1/projects/1/forms/simple/draft.xml')
+              .expect(200)
+              .then(({ text }) => {
+                text.should.match(/<data id="simple" version="\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
+                text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
+              })
+          ])))));
+
+    it('should modify only the draft if there is no published version', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/key')
+            .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xml')
+            .expect(200)
+            .then(({ text }) => {
+              text.should.match(/<data id="simple2" version="2\.1\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
+              text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
+            })))));
+
     it('should automatically enable subsequently created forms for encryption', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
           .send({ passphrase: 'supersecret', hint: 'it is a secret' })
           .expect(200)
-          .then(() => asAlice.post('/v1/projects/1/forms')
+          .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.simple2)
             .set('Content-Type', 'text/xml')
             .expect(200)
