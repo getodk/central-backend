@@ -2355,16 +2355,6 @@ describe('api: /projects/:id/forms', () => {
               .set('X-OpenRosa-Version', '1.0')
               .expect(404)))));
 
-      it('should reject if the key is wrong', testService((service) =>
-        service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms/simple/draft')
-            .expect(200)
-            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
-              .expect(200)
-              .then(({ body }) => body.draftToken)
-              .then((token) => service.get('/v1/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/forms/simple/draft.xml')
-                .expect(404))))));
-
       it('should give the xml', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
@@ -2424,11 +2414,8 @@ describe('api: /projects/:id/forms', () => {
               .send('test,csv\n1,2')
               .set('Content-Type', 'text/csv')
               .expect(200))
-            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft')
-              .expect(200)
-              .then(({ body }) => body.draftToken)
-              .then((token) => service.get('/v1/test/${token}/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
-                .expect(404))))));
+            .then(() => service.get('/v1/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+              .expect(404)))));
 
       it('should return the attachment', testService((service) =>
         service.login('alice', (asAlice) =>
