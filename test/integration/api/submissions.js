@@ -397,6 +397,137 @@ describe('api: /submission', () => {
               .then(({ body }) => { body.toString('utf8').should.equal('this is test file one'); })
           ])))));
   });
+
+  describe('[draft] POST', () => {
+    // the above tests check extensively the different cases; here we just verify plumbing
+    // and correct-sorting of draft submissions.
+
+    it('should reject notfound if there is no draft', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+          .expect(404))));
+
+    it('should save the submission into the form draft', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+            .expect(201)
+            .then(({ text }) => {
+              text.should.match(/upload was successful/);
+            })
+            .then(() => Promise.all([
+              asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one')
+                .expect(200)
+                .then(({ body }) => {
+                  body.createdAt.should.be.a.recentIsoDate();
+                  should.not.exist(body.deviceId);
+                }),
+              asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one.xml')
+                .expect(200)
+                .then(({ text }) => { text.should.equal(testData.instances.simple.one); }),
+              asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+                .expect(404)
+            ]))))));
+
+    it('should save client audit log attachments', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/audits/draft/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+            .expect(201)
+            .then(() => asAlice.get('/v1/projects/1/forms/audits/draft/submissions/one/attachments')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.eql([{ name: 'audit.csv', exists: true }]);
+              }))))));
+  });
+
+  describe('[draft] /test POST', () => {
+    // the above tests check extensively the different cases; here we just verify plumbing
+    // and correct-sorting of draft submissions.
+
+    it('should reject notfound if there is no draft', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+          .expect(404))));
+
+    it('should reject if the draft has been published', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(({ body }) => body.draftToken))
+          .then((token) => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+            .expect(200)
+            .then(() => asAlice.post(`/v1/test/${token}/projects/1/forms/simple/draft/submission`)
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+              .expect(404))))));
+
+    it('should reject if the draft has been deleted', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(({ body }) => body.draftToken))
+          .then((token) => asAlice.delete('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.post(`/v1/test/${token}/projects/1/forms/simple/draft/submission`)
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+              .expect(404))))));
+
+    it('should reject if the key is wrong', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/forms/simple/draft/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+            .expect(404)))));
+
+    it('should save the submission into the form draft', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(({ body }) => body.draftToken)
+            .then((token) => asAlice.post(`/v1/test/${token}/projects/1/forms/simple/draft/submission`)
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+              .expect(201)
+              .then(({ text }) => {
+                text.should.match(/upload was successful/);
+              })
+              .then(() => Promise.all([
+                asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one')
+                  .expect(200)
+                  .then(({ body }) => {
+                    body.createdAt.should.be.a.recentIsoDate();
+                    should.not.exist(body.deviceId);
+                  }),
+                asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one.xml')
+                  .expect(200)
+                  .then(({ text }) => { text.should.equal(testData.instances.simple.one); }),
+                asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+                  .expect(404)
+              ])))))));
+  });
 });
 
 describe('api: /forms/:id/submissions', () => {
@@ -547,6 +678,50 @@ describe('api: /forms/:id/submissions', () => {
           ])))));
   });
 
+  describe('[draft] POST', () => {
+    it('should return notfound if there is no draft', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(404))));
+
+    it('should accept submissions', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.a.Submission();
+              body.createdAt.should.be.a.recentIsoDate();
+              body.submitterId.should.equal(5);
+            })))));
+
+    it('should accept even if the form is not taking submissions', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple')
+          .send({ state: 'closed' })
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.a.Submission();
+              body.createdAt.should.be.a.recentIsoDate();
+              body.submitterId.should.equal(5);
+            }))
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one').expect(404),
+            asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one').expect(200)
+          ])))));
+  });
+
   describe('.csv.zip GET', () => {
     // NOTE: tests related to decryption of .csv.zip export are located in test/integration/other/encryption.js
 
@@ -558,6 +733,14 @@ describe('api: /forms/:id/submissions', () => {
             headers['content-disposition'].should.equal('attachment; filename="simple.zip"');
             headers['content-type'].should.equal('application/zip');
           }))));
+
+    it('should return the csv header even if there is no data', testService((service) =>
+      service.login('alice', (asAlice) => new Promise((done) =>
+        zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
+          result.filenames.should.eql([ 'simple.csv' ]);
+          result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status\n');
+          done();
+        })))));
 
     it('should return a zipfile with the relevant data', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -827,6 +1010,116 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               })))))));
   });
 
+  describe('[draft] .csv.zip', () => {
+    it('should return notfound if there is no draft', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip')
+          .expect(404))));
+
+    it('should return draft submissions', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip')
+            .expect(200)
+            .then(() => new Promise((done) =>
+              zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip'), (result) => {
+                result.filenames.should.containDeep([ 'simple.csv' ]);
+
+                const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+                csv.length.should.equal(3); // header + data row + newline
+                csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status' ]);
+                csv[1].shift().should.be.an.recentIsoDate();
+                csv[1].should.eql([ 'one','Alice','30','one','5','Alice','0','0' ]);
+
+                done();
+              })))))));
+
+    it('should not include draft submissions in nondraft csvzip', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip')
+            .expect(200)
+            .then(() => new Promise((done) =>
+              zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
+                result.filenames.should.containDeep([ 'simple.csv' ]);
+
+                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status\n');
+                done();
+              })))))));
+
+    it('should not carry draft submissions forward to the published version upon publish', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip')
+            .expect(200)
+            .then(() => new Promise((done) =>
+              zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
+                result.filenames.should.containDeep([ 'simple.csv' ]);
+
+                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status\n');
+                done();
+              })))))));
+
+    it('should not carry over drafts when a draft is replaced', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip')
+            .expect(200)
+            .then(() => new Promise((done) =>
+              zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
+                result.filenames.should.containDeep([ 'simple.csv' ]);
+
+                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status\n');
+                done();
+              })))))));
+
+    it('should not resurface drafts when a draft is recreated', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip')
+            .expect(200)
+            .then(() => new Promise((done) =>
+              zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
+                result.filenames.should.containDeep([ 'simple.csv' ]);
+
+                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status\n');
+                done();
+              })))))));
+  });
+
   describe('GET', () => {
     it('should return notfound if the form does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -875,6 +1168,91 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               body[0].should.be.an.ExtendedSubmission();
               body[0].submitter.displayName.should.equal('Alice');
             })))));
+  });
+
+  describe('[draft] GET', () => {
+    it('should return notfound if the draft does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/simple/draft/submissions').expect(404))));
+
+    it('should return a list of submissions', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions')
+            .expect(200)
+            .then(({ body }) => {
+              body.forEach((submission) => submission.should.be.a.Submission());
+              body.map((submission) => submission.instanceId).should.eql([ 'two', 'one' ]);
+            })))));
+
+    it('should not include draft submissions non-draft', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions')
+            .expect(200)
+            .then(({ body }) => { body.should.eql([]); })))));
+
+    it('should not carry draft submissions forward to the published version upon publish', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions')
+            .expect(200)
+            .then(({ body }) => { body.should.eql([]); })))));
+
+    it('should not carry over drafts when a draft is replaced', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions')
+            .expect(200)
+            .then(({ body }) => { body.should.eql([]); })))));
+
+    it('should not resurface drafts when a draft is recreated', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions')
+            .expect(200)
+            .then(({ body }) => { body.should.eql([]); })))));
   });
 
   describe('/keys GET', () => {
@@ -1027,6 +1405,102 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
     //it('should not return a key attached to an outdated submission', testService((service) =>
   });
 
+  describe('[draft] /keys GET', () => {
+    it('should return notfound if the draft does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/simple/submissions/draft/keys').expect(404))));
+
+    it('should return draft-used keys', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.encrypted)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/draft/submissions')
+            .send(testData.instances.encrypted.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/encrypted/draft/submissions/keys')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].should.be.a.Key();
+              body[0].public.should.equal('MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYh7bSui/0xppQ+J3i5xghfao+559Rqg9X0xNbdMEsW35CzYUfmC8sOzeeUiE4pG7HIEUmiJal+mo70UMDUlywXj9z053n0g6MmtLlUyBw0ZGhEZWHsfBxPQixdzY/c5i7sh0dFzWVBZ7UrqBc2qjRFUYxeXqHsAxSPClTH1nW47Mr2h4juBLC7tBNZA3biZA/XTPt//hAuzv1d6MGiF3vQJXvFTNdfsh6Ckq4KXUsAv+07cLtON4KjrKhqsVNNGbFssTUHVL4A9N3gsuRGt329LHOKBxQUGEnhMM2MEtvk4kaVQrgCqpk1pMU/4HlFtRjOoKdAIuzzxIl56gNdRUQIDAQAB');
+            })))));
+
+    it('should not include draft keys nondraft', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.encrypted)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/draft')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/draft/submissions')
+            .send(testData.instances.encrypted.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/encrypted/submissions/keys')
+            .expect(200)
+            .then(({ body }) => { body.should.eql([]); })))));
+
+    it('should not carry draft keys forward to the published version upon publish', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.encrypted)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/draft')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/draft/submissions')
+            .send(testData.instances.encrypted.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/draft/publish?version=two')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/encrypted/submissions/keys')
+            .expect(200)
+            .then(({ body }) => { body.should.eql([]); })))));
+
+    it('should not carry over draft keys when a draft is replaced', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.encrypted)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/draft')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/draft/submissions')
+            .send(testData.instances.encrypted.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/draft')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/encrypted/draft/submissions/keys')
+            .expect(200)
+            .then(({ body }) => { body.should.eql([]); })))));
+
+    it('should not resurface draft keys when a draft is recreated', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.encrypted)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/draft')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/draft/submissions')
+            .send(testData.instances.encrypted.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/draft/publish?version=two')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/encrypted/draft')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/encrypted/draft/submissions/keys')
+            .expect(200)
+            .then(({ body }) => { body.should.eql([]); })))));
+  });
+
   describe('/:instanceId.xml GET', () => {
     it('should return submission details', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -1040,6 +1514,75 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               header['content-type'].should.equal('application/xml; charset=utf-8');
               text.should.equal(testData.instances.simple.one);
             })))));
+  });
+
+  describe('[draft] /:instanceId.xml GET', () => {
+    it('should return draft submissions', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one.xml')
+            .expect(200)
+            .then(({ header, text }) => {
+              header['content-type'].should.equal('application/xml; charset=utf-8');
+              text.should.equal(testData.instances.simple.one);
+            })))));
+
+    it('should not return draft submissions nondraft', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one.xml')
+            .expect(404)))));
+
+    it('should not carry draft submissions forward to the published version upon publish', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one.xml')
+            .expect(404)))));
+
+    it('should not carry over draft submissions when a draft is replaced', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one.xml')
+            .expect(404)))));
+
+    it('should not resurface draft submissions when a draft is recreated', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one.xml')
+            .expect(404)))));
   });
 
   describe('/:instanceId GET', () => {
@@ -1088,6 +1631,75 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             })))));
   });
 
+  describe('[draft] /:instanceId GET', () => {
+    it('should return submission details', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.be.a.Submission();
+                body.createdAt.should.be.a.recentIsoDate();
+              }))))));
+
+    it('should not return draft submissions nondraft', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+              .expect(404))))));
+
+    it('should not carry draft submissions forward to the published version upon publish', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+            .expect(404)))));
+
+    it('should not carry over draft submissions when a draft is replaced', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one')
+            .expect(404)))));
+
+    it('should not resurface draft submissions when a draft is recreated', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one')
+            .expect(404)))));
+  });
+
   // NOTE: the happy path here is already well-tested above (search mark1).
   // so we only test unhappy paths.
   describe('/:instanceId/attachments GET', () => {
@@ -1121,6 +1733,42 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             })))));
   });
 
+  describe('[draft] /:instanceId/attachments GET', () => {
+    it('should return draft attachments', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/draft/submissions')
+            .send(testData.instances.binaryType.both)
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/binaryType/draft/submissions/both/attachments')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.eql([
+                  { name: 'here_is_file2.jpg', exists: false },
+                  { name: 'my_file1.mp4', exists: false }
+                ]);
+              }))))));
+
+    it('should not return draft attachments nondraft', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/draft')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/draft/submissions')
+            .send(testData.instances.binaryType.both)
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments')
+              .expect(404))))));
+  });
+
   // NOTE: the happy path here is already well-tested above (search mark2).
   // so we only test unhappy paths.
   describe('/:instanceId/attachments/:name GET', () => {
@@ -1149,6 +1797,41 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .expect(201)
           .then(() => service.login('chelsea', (asChelsea) =>
             asChelsea.get('/v1/projects/1/forms/simple/submissions/one/attachments/file.txt').expect(403))))));
+  });
+
+  describe('[draft] /:instanceId/attachments/:name GET', () => {
+    it('should return a draft attachment', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/draft/submissions')
+            .send(testData.instances.binaryType.both)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/draft/submissions/both/attachments/my_file1.mp4')
+            .send('this is file 1')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/binaryType/draft/submissions/both/attachments/my_file1.mp4')
+            .expect(200)
+            .then(({ text }) => { text.should.equal('this is file 1'); })))));
+
+    it('should not return a draft attachment nondraft', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/draft/submissions')
+            .send(testData.instances.binaryType.both)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/draft/submissions/both/attachments/my_file1.mp4')
+            .send('this is file 1')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+            .expect(404)))));
   });
 
   describe('/:instanceId/attachments/:name POST', () => {
@@ -1226,7 +1909,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then(() => Project.getById(1))
           .then((project) => project.get().getFormByXmlFormId('binaryType'))
           .then((o) => o.get())
-          .then((form) => Submission.getById(form.id, 'both')
+          .then((form) => Submission.getById(form.id, 'both', false)
             .then((o) => o.get())
             .then((submission) => submission.getCurrentVersion()
               .then((o) => o.get())
@@ -1268,7 +1951,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then(() => Project.getById(1))
           .then((project) => project.get().getFormByXmlFormId('binaryType'))
           .then((o) => o.get())
-          .then((form) => Submission.getById(form.id, 'both').then((o) => o.get())
+          .then((form) => Submission.getById(form.id, 'both', false).then((o) => o.get())
             .then((submission) => submission.getCurrentVersion().then((o) => o.get())
               .then((def) => SubmissionAttachment.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4').then((o) => o.get())
                 .then((oldAttachment) => asAlice.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
@@ -1295,6 +1978,8 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                       });
                     })))))))));
   });
+
+  // the draft version of this is already tested above with :name GET
 
   describe('/:instanceId/attachments/:name DELETE', () => {
     it('should return notfound if the form does not exist', testService((service) =>
@@ -1362,7 +2047,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then(() => Project.getById(1))
           .then((project) => project.get().getFormByXmlFormId('binaryType'))
           .then((o) => o.get())
-          .then((form) => Submission.getById(form.id, 'both')
+          .then((form) => Submission.getById(form.id, 'both', false)
             .then((o) => o.get())
             .then((submission) => submission.getCurrentVersion()
               .then((o) => o.get())
@@ -1387,6 +2072,42 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                         oldBlobId: attachment.blobId
                       });
                     })))))))));
+  });
+
+  describe('[draft] /:instanceId/attachments/:name DELETE', () => {
+    it('should delete a draft attachment', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/draft/submissions')
+            .send(testData.instances.binaryType.both)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/draft/submissions/both/attachments/my_file1.mp4')
+            .send('this is file 1')
+            .expect(200))
+          .then(() => asAlice.delete('/v1/projects/1/forms/binaryType/draft/submissions/both/attachments/my_file1.mp4')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/binaryType/draft/submissions/both/attachments/my_file1.mp4')
+            .expect(404)))));
+
+    it('should not delete a draft attachment nondraft', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/draft/submissions')
+            .send(testData.instances.binaryType.both)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/draft/submissions/both/attachments/my_file1.mp4')
+            .send('this is file 1')
+            .expect(200))
+          .then(() => asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+            .expect(404)))));
   });
 });
 
