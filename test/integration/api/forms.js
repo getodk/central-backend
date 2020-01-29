@@ -667,6 +667,23 @@ describe('api: /projects/:id/forms', () => {
               .then(({ body }) => {
                 should.not.exist(body.draftToken);
               })))));
+
+      it('should not count draft submissions in its count', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+              .send(testData.instances.simple.two)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.submissions.should.equal(0);
+              })))));
     });
 
     ////////////////////////////////////////
@@ -1375,6 +1392,73 @@ describe('api: /projects/:id/forms', () => {
                   .then((form) => {
                     form.draftDefId.should.equal(body[0].details.newDraftDefId);
                   });
+              })))));
+    });
+
+    describe('GET', () => {
+      it('should return notfound if there is no draft', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.get('/v1/projects/1/forms/simple/draft')
+            .expect(404))));
+
+      it('should reject if the user cannot modify', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => service.login('chelsea', (asChelsea) =>
+              asChelsea.get('/v1/projects/1/forms/simple/draft')
+                .expect(403))))));
+
+      it('should give basic draft details', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+              .expect(200)
+              .then(({ body }) => {
+                body.version.should.equal('');
+                body.sha256.should.equal('93fdcefabfe5b6ea49f207e0c6fc8ba72ceb34828bff9c7929ef56eafd2d84cc');
+                body.draftToken.should.be.a.token();
+              })))));
+
+      it('should give extended draft details', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+              .send(testData.instances.simple.two)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.be.an.ExtendedForm();
+                body.submissions.should.equal(1);
+                body.lastSubmission.should.be.a.recentIsoDate();
+              })))));
+
+      it('should not count nondraft submissions in its count', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+              .send(testData.instances.simple.two)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.submissions.should.equal(0);
               })))));
     });
 
