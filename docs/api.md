@@ -1313,7 +1313,7 @@ The `xmlFormId`, however, must exactly match that of the Form overall, or the re
             (.xlsx binary contents)
 
 + Response 200 (application/json)
-    + Attributes (Draft Form)
+    + Attributes (Success)
 
 + Response 400 (application/json)
     + Attributes (Error 400)
@@ -3192,7 +3192,6 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + submissions: `10` (number, required) - The number of `Submission`s that have been submitted to this `Form`.
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission, if any.
 + createdBy: (Actor, optional) - The full information of the Actor who created this Form.
-+ xml: `…` (string, required) - The XForms XML that defines this form.
 
 ## Draft Form (Form)
 + draftToken: `lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7` (string, required) - The test token to use to submit to this draft form. See [Draft Testing Endpoints](TODO).
@@ -3262,7 +3261,6 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 
 ## Extended Submission (Submission)
 + submitter (Actor, required) - The full details of the `Actor` that submitted this `Submission`.
-+ xml: `…` (string, required) - The actual `Submission` XML.
 
 ## Submission Attachment (object)
 + name: `myfile.mp3` (string, required) - The name of the file as specified in the Submission XML.
