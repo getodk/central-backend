@@ -171,6 +171,11 @@ should.Assertion.add('Audit', function() {
   this.obj.action.should.be.a.String();
   this.obj.acteeId.should.be.a.uuid();
   this.obj.loggedAt.should.be.an.isoDate();
+
+  should.not.exist(this.obj.claimed);
+  should.not.exist(this.obj.processed);
+  should.not.exist(this.obj.lastFailure);
+  should.not.exist(this.obj.failures);
 });
 
 should.Assertion.add('Key', function() {
