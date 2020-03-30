@@ -470,11 +470,15 @@ describe('util/xml', () => {
 
       describe('text', () => {
         it('should return the text if the event matches', () => {
-          text()('text', 'hello').should.eql(Option.of('hello'));
+          text()('text', 'hello')('close').should.eql(Option.of('hello'));
+        });
+
+        it('should concat sibling text nodes', () => {
+          text()('text', 'hello')('text', 'hi')('close').should.eql(Option.of('hellohi'));
         });
 
         it('should spin until it gets the right event', () => {
-          text()('close')('open')('text', 'success').should.eql(Option.of('success'));
+          text()('something')('open')('text', 'success')('close').should.eql(Option.of('success'));
         });
       });
 

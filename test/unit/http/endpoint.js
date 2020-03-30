@@ -341,6 +341,21 @@ describe('endpoints', () => {
             .then(() => { transacted.should.equal(false); });
         })));
 
+      it('should not initiate a transaction given a nonwrite POST', () => {
+        let transacted = false;
+        const container = { transacting(cb) {
+          transacted = true;
+          return cb();
+        } };
+
+        const request = {
+          method: 'POST',
+          path: '/projects/1/forms/encrypted/submissions.csv.zip'
+        };
+        return endpointBase({ resultWriter: noop })(container)(always(true))(request)
+          .then(() => { transacted.should.equal(false); });
+      });
+
       it('should reject on the transacting promise on preprocessor failure', () => {
         // we still check the transacted flag just to be sure the rejectedWith assertion runs.
         let transacted = false;
