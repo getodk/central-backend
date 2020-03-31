@@ -1,7 +1,7 @@
 require('should');
 const appPath = require('app-root-path');
 const { Transform } = require('stream');
-const { mapStreamToPromises, splitStream, PartialPipe } = require(appPath + '/lib/util/stream');
+const { mapStreamToPromises, consumeAndBuffer, pipethrough, pipethroughAndBuffer, splitStream, PartialPipe } = require(appPath + '/lib/util/stream');
 const Option = require(appPath + '/lib/util/option');
 const { fromObjects, toObjects } = require('streamtest').v2;
 
@@ -22,6 +22,86 @@ describe('stream utils', () => {
       ).then((results) => {
         results.should.eql([ 4, 8, 16, 42 ]);
       }));
+  });
+
+  describe('consumeAndBuffer', () => {
+    const consumer = (stop) => (stream) => new Promise((resolve, reject) => {
+      let result = '';
+      stream.on('data', (x) => {
+        if (x === stop) resolve(result);
+        else result += x;
+      });
+      stream.on('end', () => resolve(result));
+    });
+
+    it('should feed results to all output streams', () =>
+      consumeAndBuffer(fromObjects([ 'one', 'two', 'three' ]), consumer(), consumer())
+        .then(([ x, y, buffer ]) => {
+          x.should.equal('onetwothree');
+          y.should.equal('onetwothree');
+          buffer.toString('utf8').should.equal('onetwothree');
+        }));
+
+    it('should complete the stream even if one bails early', () =>
+      consumeAndBuffer(fromObjects([ 'one', 'two', 'three' ]), consumer('two'), consumer())
+        .then(([ x, y, buffer ]) => {
+          x.should.equal('one');
+          y.should.equal('onetwothree');
+          buffer.toString('utf8').should.equal('onetwothree');
+        }));
+
+    it('should reject if any stream rejects', () => {
+      const fail = (stream) => new Promise((_, reject) => {
+        stream.on('data', (x) => { if (x === 'three') reject(false); });
+      });
+      return consumeAndBuffer(fromObjects([ 'one', 'two', 'three' ]), consumer('two'), fail)
+        .should.be.rejected();
+    });
+  });
+
+  describe('pipethrough', () => {
+    const doubler = (resolve, reject) => {
+      let result = '';
+      return new Transform({
+        objectMode: true,
+        transform(x, _, done) {
+          result += x;
+          done(null, x + x);
+        },
+        flush(done) {
+          resolve(result);
+          done();
+        }
+      });
+    };
+
+    it('should feed results through all passthrough streams', () =>
+      pipethrough(fromObjects([ 'one', 'two', 'three' ]), doubler, doubler)
+        .then(([ x, y ]) => {
+          x.should.equal('onetwothree');
+          y.should.equal('oneonetwotwothreethree');
+        }));
+
+    it('should buffer the final result if _AndBuffer is called', () =>
+      pipethroughAndBuffer(fromObjects([ 'one', 'two', 'three' ]), doubler, doubler)
+        .then(([ x, y, buffer ]) => {
+          x.should.equal('onetwothree');
+          y.should.equal('oneonetwotwothreethree');
+          buffer.toString('utf8').should.equal('oneoneoneonetwotwotwotwothreethreethreethree');
+        }));
+
+    it('should reject if any stream rejects', () => {
+      const failer = (_, reject) => new Transform({
+        objectMode: true,
+        transform(x, _, done) {
+          if (x === 'twotwo') reject(false);
+          else done(null, x);
+        }
+      });
+
+      return pipethrough(fromObjects([ 'one', 'two', 'three' ]), doubler, failer)
+        .should.be.rejected();
+    });
   });
 
   describe('splitStream', () => {

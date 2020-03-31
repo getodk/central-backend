@@ -1779,6 +1779,20 @@ describe('api: /projects/:id/forms', () => {
                   body.should.eql({ success: true });
                 })))));
 
+        it('should accept xml type files', testService((service) =>
+          service.login('alice', (asAlice) =>
+            asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.withAttachments)
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+              .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+                .send('test,csv\n1,2')
+                .set('Content-Type', 'text/xml')
+                .expect(200)
+                .then(({ body }) => {
+                  body.should.eql({ success: true });
+                })))));
+
         it('should replace an extant file with another', testService((service) =>
           service.login('alice', (asAlice) =>
             asAlice.post('/v1/projects/1/forms')
