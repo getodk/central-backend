@@ -31,7 +31,7 @@ describe('task harness', () => {
           return resolve(true);
         })())());
 
-    it('should teardown containers after completion', () => {
+    it.skip('should teardown containers after completion', () => {
       let torndown = false;
       const outer = task.withContainer((container) => () => {
         // hijack the destroy func:
