@@ -3192,12 +3192,14 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + submissions: `10` (number, required) - The number of `Submission`s that have been submitted to this `Form`.
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission, if any.
 + createdBy: (Actor, optional) - The full information of the Actor who created this Form.
++ xlsContentType: (string, optional) - If the Form was created by uploading an Excel file, this field contains the MIME type of that file.
 
 ## Draft Form (Form)
 + draftToken: `lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7` (string, required) - The test token to use to submit to this draft form. See [Draft Testing Endpoints](TODO).
 
 ## Extended Form Version (Form)
 + publishedBy: (Actor, optional) - The full information of the Actor who published this version of the Form.
++ xlsContentType: (string, optional) - If the Form was created by uploading an Excel file, this field contains the MIME type of that file.
 
 ## Form Attachment (object)
 + name: `myfile.mp3` (string, required) - The name of the file as specified in the XForm.

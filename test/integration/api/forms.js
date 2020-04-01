@@ -656,6 +656,21 @@ describe('api: /projects/:id/forms', () => {
                 body.createdBy.displayName.should.equal('Alice');
               })))));
 
+      it('should return xls content type with extended form details', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+            .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            .set('X-XlsForm-FormId-Fallback', 'testformid')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.be.an.ExtendedForm();
+                body.xlsContentType.should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+              })))));
+
       it('should not return a draftToken', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
@@ -2059,6 +2074,29 @@ describe('api: /projects/:id/forms', () => {
                 body[1].publishedBy.displayName.should.equal('Alice');
                 body[2].publishedBy.should.be.an.Actor();
                 body[2].publishedBy.displayName.should.equal('Alice');
+              })))));
+
+      it('should return xls content type with extended form details', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+            .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            .set('X-XlsForm-FormId-Fallback', 'testformid')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+              .send(testData.forms.simple2.replace('id="simple2"', 'id="simple2" version="3"'))
+              .set('Content-Type', 'application/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2/versions')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.map((form) => form.xlsContentType).should.eql([
+                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                  null
+                ]);
               })))));
 
       it('should sort results by publishedAt', testService((service) =>
