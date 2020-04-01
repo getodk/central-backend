@@ -1588,7 +1588,11 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
   describe('/:instanceId GET', () => {
     it('should return notfound if the form does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/projects/1/forms/nonexistent/submissions/one').expect(404))));
+        asAlice.get('/v1/projects/1/forms/nonexistent/submissions/one')
+          .expect(404)
+          .then(({ body }) => {
+            should.not.exist(body.details);
+          }))));
 
     it('should return notfound if the submission does not exist', testService((service) =>
       service.login('alice', (asAlice) =>

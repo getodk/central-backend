@@ -1414,7 +1414,10 @@ describe('api: /projects/:id/forms', () => {
       it('should return notfound if there is no draft', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.get('/v1/projects/1/forms/simple/draft')
-            .expect(404))));
+            .expect(404)
+            .then(({ body }) => {
+              should.not.exist(body.details);
+            }))));
 
       it('should reject if the user cannot modify', testService((service) =>
         service.login('alice', (asAlice) =>
