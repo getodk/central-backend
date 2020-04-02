@@ -698,7 +698,7 @@ describe('api: /projects/:id/forms', () => {
               .expect(200)
               .then(({ body }) => {
                 body.should.be.an.ExtendedForm();
-                body.xlsContentType.should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                body.excelContentType.should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
               })))));
 
       it('should not return a draftToken', testService((service) =>
@@ -2188,7 +2188,7 @@ describe('api: /projects/:id/forms', () => {
               .set('X-Extended-Metadata', 'true')
               .expect(200)
               .then(({ body }) => {
-                body.map((form) => form.xlsContentType).should.eql([
+                body.map((form) => form.excelContentType).should.eql([
                   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                   null
                 ]);
