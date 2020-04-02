@@ -401,6 +401,36 @@ describe('api: /projects/:id/forms', () => {
           }));
     }));
 
+    it('should apply itemsets.csv if it is returned and expected', testService((service) => {
+      global.xlsformForm = 'itemsets';
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .set('X-XlsForm-FormId-Fallback', 'itemsets')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/itemsets/draft/attachments/itemsets.csv')
+            .expect(200)
+            .then(({ text }) => {
+              text.should.equal('a,b,c\n1,2,3\n4,5,6');
+            })));
+    }));
+
+    it('should ignore itemsets.csv if it is returned but not expected', testService((service) => {
+      global.xlsformForm = 'extra-itemsets';
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .set('X-XlsForm-FormId-Fallback', 'simple2')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft/attachments')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.eql([]);
+            })));
+    }));
+
     it('should return an appropriate response upon conversion error', testService((service) => {
       global.xlsformTest = 'error'; // set up the mock service to fail.
       return service.login('alice', (asAlice) =>
@@ -1265,6 +1295,64 @@ describe('api: /projects/:id/forms', () => {
                   body.version.should.equal('2.1');
                   body.sha256.should.equal('d438bdfb5c0b9bb800420363ca8900d26c3e664945d4ffc41406cbc599e43cae');
                 }))));
+      }));
+
+      it('should deal with xlsx itemsets', testService((service) => {
+        global.xlsformForm = 'itemsets';
+        return service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.itemsets)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/itemsets/draft')
+              .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+              .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+              .set('X-XlsForm-FormId-Fallback', 'itemsets'))
+            .then(() => asAlice.get('/v1/projects/1/forms/itemsets/draft/attachments/itemsets.csv')
+              .expect(200)
+              .then(({ text }) => {
+                text.should.equal('a,b,c\n1,2,3\n4,5,6');
+              })));
+      }));
+
+      it('should pick up xlsx itemsets when newly required', testService((service) => {
+        global.xlsformForm = 'itemsets';
+        return service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simple.replace(/simple/g, 'itemsets'))
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/itemsets/draft')
+              .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+              .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+              .set('X-XlsForm-FormId-Fallback', 'itemsets'))
+            .then(() => asAlice.get('/v1/projects/1/forms/itemsets/draft/attachments/itemsets.csv')
+              .expect(200)
+              .then(({ text }) => {
+                text.should.equal('a,b,c\n1,2,3\n4,5,6');
+              })));
+      }));
+
+      it('should pick up new xlsx itemsets replacing the old one', testService((service) => {
+        global.xlsformForm = 'itemsets';
+        return service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.itemsets)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/itemsets/draft/attachments/itemsets.csv')
+              .send('x,y,z\n9,8,7\n6,5,4')
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/itemsets/draft')
+              .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+              .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+              .set('X-XlsForm-FormId-Fallback', 'itemsets'))
+            .then(() => asAlice.get('/v1/projects/1/forms/itemsets/draft/attachments/itemsets.csv')
+              .expect(200)
+              .then(({ text }) => {
+                text.should.equal('a,b,c\n1,2,3\n4,5,6');
+              })));
       }));
 
       it('should allow version conflicts in draft state', testService((service) =>
