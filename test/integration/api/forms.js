@@ -401,6 +401,36 @@ describe('api: /projects/:id/forms', () => {
           }));
     }));
 
+    it('should apply itemsets.csv if it is returned and expected', testService((service) => {
+      global.xlsformForm = 'itemsets';
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .set('X-XlsForm-FormId-Fallback', 'itemsets')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/itemsets/draft/attachments/itemsets.csv')
+            .expect(200)
+            .then(({ text }) => {
+              text.should.equal('a,b,c\n1,2,3\n4,5,6');
+            })));
+    }));
+
+    it('should ignore itemsets.csv if it is returned but not expected', testService((service) => {
+      global.xlsformForm = 'extra-itemsets';
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .set('X-XlsForm-FormId-Fallback', 'simple2')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft/attachments')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.eql([]);
+            })));
+    }));
+
     it('should return an appropriate response upon conversion error', testService((service) => {
       global.xlsformTest = 'error'; // set up the mock service to fail.
       return service.login('alice', (asAlice) =>
@@ -654,6 +684,21 @@ describe('api: /projects/:id/forms', () => {
                 body.submissions.should.equal(0);
                 body.createdBy.should.be.an.Actor();
                 body.createdBy.displayName.should.equal('Alice');
+              })))));
+
+      it('should return xls content type with extended form details', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+            .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            .set('X-XlsForm-FormId-Fallback', 'testformid')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.be.an.ExtendedForm();
+                body.excelContentType.should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
               })))));
 
       it('should not return a draftToken', testService((service) =>
@@ -1070,6 +1115,27 @@ describe('api: /projects/:id/forms', () => {
               log.actorId.should.equal(alice.actor.id);
               log.acteeId.should.equal(form.acteeId);
             }))))));
+
+    it('should delete all associated assignments', testService((service) =>
+      service.login('alice', (asAlice) =>
+        Promise.all([
+          asAlice.post('/v1/projects/1/app-users')
+            .send({ displayName: 'test app user' })
+            .expect(200)
+            .then(({ body }) => body.id),
+          asAlice.get('/v1/roles/app-user')
+            .expect(200)
+            .then(({ body }) => body.id)
+        ])
+          .then(([ fkId, roleId ]) => asAlice.post(`/v1/projects/1/forms/simple/assignments/${roleId}/${fkId}`)
+            .expect(200)
+            .then(() => asAlice.delete('/v1/projects/1/forms/simple')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/assignments/forms/')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.eql([]);
+              }))))));
   });
 
 
@@ -1252,6 +1318,64 @@ describe('api: /projects/:id/forms', () => {
                 }))));
       }));
 
+      it('should deal with xlsx itemsets', testService((service) => {
+        global.xlsformForm = 'itemsets';
+        return service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.itemsets)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/itemsets/draft')
+              .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+              .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+              .set('X-XlsForm-FormId-Fallback', 'itemsets'))
+            .then(() => asAlice.get('/v1/projects/1/forms/itemsets/draft/attachments/itemsets.csv')
+              .expect(200)
+              .then(({ text }) => {
+                text.should.equal('a,b,c\n1,2,3\n4,5,6');
+              })));
+      }));
+
+      it('should pick up xlsx itemsets when newly required', testService((service) => {
+        global.xlsformForm = 'itemsets';
+        return service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simple.replace(/simple/g, 'itemsets'))
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/itemsets/draft')
+              .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+              .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+              .set('X-XlsForm-FormId-Fallback', 'itemsets'))
+            .then(() => asAlice.get('/v1/projects/1/forms/itemsets/draft/attachments/itemsets.csv')
+              .expect(200)
+              .then(({ text }) => {
+                text.should.equal('a,b,c\n1,2,3\n4,5,6');
+              })));
+      }));
+
+      it('should pick up new xlsx itemsets replacing the old one', testService((service) => {
+        global.xlsformForm = 'itemsets';
+        return service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.itemsets)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/itemsets/draft/attachments/itemsets.csv')
+              .send('x,y,z\n9,8,7\n6,5,4')
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/itemsets/draft')
+              .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+              .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+              .set('X-XlsForm-FormId-Fallback', 'itemsets'))
+            .then(() => asAlice.get('/v1/projects/1/forms/itemsets/draft/attachments/itemsets.csv')
+              .expect(200)
+              .then(({ text }) => {
+                text.should.equal('a,b,c\n1,2,3\n4,5,6');
+              })));
+      }));
+
       it('should allow version conflicts in draft state', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
@@ -1340,6 +1464,8 @@ describe('api: /projects/:id/forms', () => {
             .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments')
               .expect(200)
               .then(({ body }) => {
+                body[0].updatedAt.should.be.a.recentIsoDate();
+                delete body[0].updatedAt;
                 body.should.eql([
                   { name: 'goodone.csv', type: 'file', exists: true },
                   { name: 'greattwo.mp3', type: 'audio', exists: false }
@@ -1369,6 +1495,8 @@ describe('api: /projects/:id/forms', () => {
             .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments')
               .expect(200)
               .then(({ body }) => {
+                body[0].updatedAt.should.be.a.recentIsoDate();
+                delete body[0].updatedAt;
                 body.should.eql([
                   { name: 'goodone.csv', type: 'file', exists: true },
                   { name: 'greattwo.mp3', type: 'audio', exists: false }
@@ -1399,7 +1527,10 @@ describe('api: /projects/:id/forms', () => {
       it('should return notfound if there is no draft', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.get('/v1/projects/1/forms/simple/draft')
-            .expect(404))));
+            .expect(404)
+            .then(({ body }) => {
+              should.not.exist(body.details);
+            }))));
 
       it('should reject if the user cannot modify', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -1779,6 +1910,26 @@ describe('api: /projects/:id/forms', () => {
                   body.should.eql({ success: true });
                 })))));
 
+        it('should accept xml type files', testService((service) =>
+          service.login('alice', (asAlice) =>
+            asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.withAttachments)
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+              .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+                .send('test,csv\n1,2')
+                .set('Content-Type', 'text/xml')
+                .expect(200)
+                .then(({ body }) => {
+                  body.should.eql({ success: true });
+                }))
+              .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+                .expect(200)
+                .then(({ headers, text }) => {
+                  headers['content-type'].should.startWith('text/xml');
+                  text.should.equal('test,csv\n1,2');
+                })))));
+
         it('should replace an extant file with another', testService((service) =>
           service.login('alice', (asAlice) =>
             asAlice.post('/v1/projects/1/forms')
@@ -1981,11 +2132,11 @@ describe('api: /projects/:id/forms', () => {
             .then(() => asAlice.get('/v1/projects/1/forms/simple/versions')
               .expect(200)
               .then(({ body }) => {
-                body.map((form) => form.version).should.eql([ '', '2', '3' ]);
+                body.map((form) => form.version).should.eql([ '3', '2', '' ]);
                 body.map((form) => form.sha256).should.eql([
-                  '93fdcefabfe5b6ea49f207e0c6fc8ba72ceb34828bff9c7929ef56eafd2d84cc',
+                  'fdfcb6484a2086c8ef64edd578168734866babb4743dcee127277990e7c5e04f',
                   'c01ab93518276534e72307afed190efe15974db8a9d9ffe2ba8ddf663c932271',
-                  'fdfcb6484a2086c8ef64edd578168734866babb4743dcee127277990e7c5e04f'
+                  '93fdcefabfe5b6ea49f207e0c6fc8ba72ceb34828bff9c7929ef56eafd2d84cc'
                 ]);
                 body.map((form) => form.xmlFormId).should.eql([ 'simple', 'simple', 'simple' ]);
               })))));
@@ -2008,6 +2159,20 @@ describe('api: /projects/:id/forms', () => {
                 body[0].sha256.should.equal('93fdcefabfe5b6ea49f207e0c6fc8ba72ceb34828bff9c7929ef56eafd2d84cc');
               })))));
 
+      it('should not list any versions if none are published', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simple2)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2/versions')
+              .expect(200)
+              .then(({ body }) => { body.should.eql([]); }))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2/versions')
+              .set('X-Extended-Metadata', true)
+              .expect(200)
+              .then(({ body }) => { body.should.eql([]); })))));
+
       it('should return publishedBy if extended is requested', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
@@ -2026,11 +2191,55 @@ describe('api: /projects/:id/forms', () => {
               .set('X-Extended-Metadata', 'true')
               .expect(200)
               .then(({ body }) => {
-                should.not.exist(body[0].publishedBy);
+                body[0].publishedBy.should.be.an.Actor();
+                body[0].publishedBy.displayName.should.equal('Alice');
                 body[1].publishedBy.should.be.an.Actor();
                 body[1].publishedBy.displayName.should.equal('Alice');
-                body[2].publishedBy.should.be.an.Actor();
-                body[2].publishedBy.displayName.should.equal('Alice');
+                should.not.exist(body[2].publishedBy);
+              })))));
+
+      it('should return xls content type with extended form details', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+            .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            .set('X-XlsForm-FormId-Fallback', 'testformid')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+              .send(testData.forms.simple2.replace('id="simple2"', 'id="simple2" version="3"'))
+              .set('Content-Type', 'application/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2/versions')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.map((form) => form.excelContentType).should.eql([
+                  null,
+                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                ]);
+              })))));
+
+      it('should sort results desc by publishedAt', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="3"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+              .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="2"'))
+              .set('Content-Type', 'application/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/versions')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.map((version) => version.version).should.eql([ '2', '3', '' ]);
               })))));
     });
 

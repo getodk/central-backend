@@ -59,15 +59,12 @@ describe('api: /submission', () => {
             .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
             .expect(409)))));
 
-    it('should reject if the form and submission versions mismatch', testService((service) =>
+    it('should reject if the submission version does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
           .attach('xml_submission_file', Buffer.from('<data id="simple" version="-1"><orx:meta><orx:instanceID>one</orx:instanceID></orx:meta></data>'), { filename: 'data.xml' })
-          .expect(400)
-          .then(({ text }) => {
-            text.should.match(/outdated version/);
-          }))));
+          .expect(404))));
 
     it('should save the submission to the appropriate form without device id', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -131,6 +128,32 @@ describe('api: /submission', () => {
               .expect(200)
               .then(({ text }) => { text.should.equal(testData.instances.simple.one); })
           ])))));
+
+    it('should accept a submission for an old form version', testService((service, { simply, SubmissionDef, FormDef }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=three')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from('<data id="simple" version="two"><orx:meta><orx:instanceID>one</orx:instanceID></orx:meta></data>'), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+            .expect(200))
+          // the submission worked, that's good. the rest of this checks that it went
+          // to the correct place.
+          .then(() => SubmissionDef.getCurrentByIds(1, 'simple', 'one', false))
+          .then((o) => o.get())
+          .then(({ formDefId }) => simply.getOneWhere('form_defs', { id: formDefId }, FormDef))
+          .then((o) => o.get())
+          .then((formDef) => {
+            formDef.version.should.equal('two');
+          }))));
 
     it('should store the correct formdef and actor ids', testService((service, { db }) =>
       service.login('alice', (asAlice) =>
@@ -570,7 +593,7 @@ describe('api: /forms/:id/submissions', () => {
     it('should reject if the form ids do not match', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
-          .send(testData.instances.withrepeat.one)
+          .send('<data id="simple3"><meta><instanceID>three</instanceID></meta></data>')
           .set('Content-Type', 'text/xml')
           .expect(400)
           .then(({ body }) => {
@@ -592,16 +615,12 @@ describe('api: /forms/:id/submissions', () => {
               body.message.should.match(/not currently accepting submissions/);
             })))));
 
-    it('should reject if the form and submission versions do not match', testService((service) =>
+    it('should reject if the submission version does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(Buffer.from('<data id="simple" version="-1"><meta><instanceID>one</instanceID></meta></data>'))
           .set('Content-Type', 'text/xml')
-          .expect(400)
-          .then(({ body }) => {
-            body.code.should.equal(400.8);
-            body.details.reason.should.match(/outdated version/);
-          }))));
+          .expect(404))));
 
     it('should submit if all details are provided', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -613,6 +632,32 @@ describe('api: /forms/:id/submissions', () => {
             body.should.be.a.Submission();
             body.createdAt.should.be.a.recentIsoDate();
             body.submitterId.should.equal(5);
+          }))));
+
+    it('should accept a submission for an old form version', testService((service, { simply, SubmissionDef, FormDef }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=three')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send('<data id="simple" version="two"><orx:meta><orx:instanceID>one</orx:instanceID></orx:meta></data>')
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+            .expect(200))
+          // the submission worked, that's good. the rest of this checks that it went
+          // to the correct place.
+          .then(() => SubmissionDef.getCurrentByIds(1, 'simple', 'one', false))
+          .then((o) => o.get())
+          .then(({ formDefId }) => simply.getOneWhere('form_defs', { id: formDefId }, FormDef))
+          .then((o) => o.get())
+          .then((formDef) => {
+            formDef.version.should.equal('two');
           }))));
 
     it('should create expected attachments', testService((service) =>
@@ -1588,7 +1633,11 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
   describe('/:instanceId GET', () => {
     it('should return notfound if the form does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/projects/1/forms/nonexistent/submissions/one').expect(404))));
+        asAlice.get('/v1/projects/1/forms/nonexistent/submissions/one')
+          .expect(404)
+          .then(({ body }) => {
+            should.not.exist(body.details);
+          }))));
 
     it('should return notfound if the submission does not exist', testService((service) =>
       service.login('alice', (asAlice) =>

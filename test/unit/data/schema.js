@@ -675,6 +675,35 @@ describe('form schema', () => {
       });
     });
 
+    it('should find media default values from the instance', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <picture>jr://images/default.jpg</picture>
+                  <photo>jr://images/default2.jpg</photo>
+                  <age>18</age>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind type="binary" nodeset="/data/picture"/>
+              <bind type="binary" nodeset="/data/photo"/>
+              <bind nodeset="/data/age" type="number"/>
+            </model>
+          </h:head>
+        </h:html>`;
+      return expectedFormAttachments(xml).then((attachments) => {
+        attachments.should.eql([
+          { type: 'image', name: 'default.jpg' },
+          { type: 'image', name: 'default2.jpg' }
+        ]);
+      });
+    });
+
     it('should detect the need for itemsets.csv', () => {
       const xml = `
         <?xml version="1.0"?>

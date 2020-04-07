@@ -24,14 +24,13 @@ describe('query module builder', () => {
       });
   });
 
-  it('should automatically catch postgres exceptions', (done) => {
+  it('should automatically catch postgres exceptions', () =>
     builder({ f: () => () => Promise.reject(new Error('Key (id)=(42) already exists.')) })
       .f()
-      .catch((result) => {
-        result.isProblem.should.equal(true);
-        done();
-      });
-  });
+      .should.be.rejected()
+      .then((result) => {
+        result.message.should.equal('Key (id)=(42) already exists.');
+      }));
 
   it('should wrap returned streams with promises', (done) => {
     builder({ f: () => () => streamTest.fromObjects([ {} ]) })

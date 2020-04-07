@@ -300,28 +300,28 @@ describe('odata message composition', () => {
       it('should reject with not found if the toplevel table is wrong', () => {
         const inRows = streamTest.fromObjects([]);
         return fieldsFor(testData.forms.simple).then((fields) =>
-          rowStreamToOData('simple', fields, 'Dummy', 'http://localhost:8989', '/simple.svc', {}, inRows, 0))
+          rowStreamToOData(fields, 'Dummy', 'http://localhost:8989', '/simple.svc/Submissions', {}, inRows, 0))
           .should.be.rejected();
       });
 
       it('should reject with not found if a subtable is wrong', () => {
         const inRows = streamTest.fromObjects([]);
         return fieldsFor(testData.forms.withrepeat).then((fields) =>
-          rowStreamToOData('withrepeat', fields, 'Submissions.nonexistent', 'http://localhost:8989', '/withrepeat.svc', {}, inRows, 0))
+          rowStreamToOData(fields, 'Submissions.nonexistent', 'http://localhost:8989', '/withrepeat.svc/Submissions.nonexistent', {}, inRows, 0))
           .should.be.rejected();
       });
 
       it('should pass if the toplevel table is correct', () => {
         const inRows = streamTest.fromObjects([]);
         return fieldsFor(testData.forms.withrepeat).then((fields) =>
-          rowStreamToOData('withrepeat', fields, 'Submissions', 'http://localhost:8989', '/withrepeat.svc', {}, inRows, 0))
+          rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/withrepeat.svc/Submissions', {}, inRows, 0))
           .should.not.be.rejected();
       });
 
       it('should pass if the subtable is correct', () => {
         const inRows = streamTest.fromObjects([]);
         return fieldsFor(testData.forms.withrepeat).then((fields) =>
-          rowStreamToOData('withrepeat', fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc', {}, inRows, 0))
+          rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child', {}, inRows, 0))
           .should.not.be.rejected();
       });
     });
@@ -330,7 +330,7 @@ describe('odata message composition', () => {
       it('should provide the correct context url for the toplevel table', (done) => {
         const inRows = streamTest.fromObjects([]);
         fieldsFor(testData.forms.simple)
-          .then((fields) => rowStreamToOData('simple', fields, 'Submissions', 'http://localhost:8989', '/simple.svc', {}, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions', {}, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             const resultObj = JSON.parse(result);
             resultObj['@odata.context'].should.equal('http://localhost:8989/simple.svc/$metadata#Submissions');
@@ -341,7 +341,7 @@ describe('odata message composition', () => {
       it('should provide the correct context url for a subtable', (done) => {
         const inRows = streamTest.fromObjects([]);
         fieldsFor(testData.forms.withrepeat)
-          .then((fields) => rowStreamToOData('withrepeat', fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc', {}, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions', {}, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             const resultObj = JSON.parse(result);
             resultObj['@odata.context'].should.equal('http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child');
@@ -354,7 +354,7 @@ describe('odata message composition', () => {
         const query = { $top: '3', $skip: '7' };
         const inRows = streamTest.fromObjects(instances(10));
         fieldsFor(testData.forms.simple)
-          .then((fields) => rowStreamToOData('simple', fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=7', query, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=7', query, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             const resultObj = JSON.parse(result);
             should.not.exist(resultObj['@odata.nextLink']);
@@ -366,7 +366,7 @@ describe('odata message composition', () => {
         const query = { $top: '3', $skip: '2' };
         const inRows = streamTest.fromObjects(instances(6)); // make it close to check the off-by-one.
         fieldsFor(testData.forms.simple)
-          .then((fields) => rowStreamToOData('simple', fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=2', query, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=2', query, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             const resultObj = JSON.parse(result);
             resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24skip=5');
@@ -378,7 +378,7 @@ describe('odata message composition', () => {
         const query = { $top: '3', $skip: '2', $wkt: 'true', $count: 'true' };
         const inRows = streamTest.fromObjects(instances(6)); // make it close to check the off-by-one.
         fieldsFor(testData.forms.simple)
-          .then((fields) => rowStreamToOData('simple', fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=2&$wkt=true&$count=true', query, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=2&$wkt=true&$count=true', query, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             const resultObj = JSON.parse(result);
             resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24skip=5&%24wkt=true&%24count=true');
@@ -390,7 +390,7 @@ describe('odata message composition', () => {
         const query = { $count: 'true' };
         const inRows = streamTest.fromObjects(instances(8)); // make it close to check the off-by-one.
         fieldsFor(testData.forms.simple)
-          .then((fields) => rowStreamToOData('simple', fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$count=true', query, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$count=true', query, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             const resultObj = JSON.parse(result);
             resultObj['@odata.count'].should.equal(8);
@@ -402,7 +402,7 @@ describe('odata message composition', () => {
         const query = { $top: '1', $skip: '1', $count: 'true' };
         const inRows = streamTest.fromObjects(instances(8)); // make it close to check the off-by-one.
         fieldsFor(testData.forms.simple)
-          .then((fields) => rowStreamToOData('simple', fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=1&$skip=1&$count=true', query, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=1&$skip=1&$count=true', query, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             const resultObj = JSON.parse(result);
             resultObj['@odata.count'].should.equal(8);
@@ -417,7 +417,7 @@ describe('odata message composition', () => {
       it('should output empty row data', (done) => {
         const inRows = streamTest.fromObjects([]);
         fieldsFor(testData.forms.simple)
-          .then((fields) => rowStreamToOData('simple', fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions', {}, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions', {}, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             JSON.parse(result).should.eql({
               value: [],
@@ -433,7 +433,7 @@ describe('odata message composition', () => {
           mockSubmission('two', testData.instances.simple.two)
         ]);
         fieldsFor(testData.forms.simple)
-          .then((fields) => rowStreamToOData('simple', fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions', {}, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions', {}, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             JSON.parse(result).should.eql({
               '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
@@ -454,7 +454,7 @@ describe('odata message composition', () => {
           mockSubmission('three', testData.instances.simple.three)
         ]);
         fieldsFor(testData.forms.simple)
-          .then((fields) => rowStreamToOData('simple', fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=2', query, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=2', query, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             JSON.parse(result).should.eql({
               '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
@@ -477,7 +477,7 @@ describe('odata message composition', () => {
           mockSubmission('three', testData.instances.simple.three)
         ]);
         fieldsFor(testData.forms.simple)
-          .then((fields) => rowStreamToOData('simple', fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$skip=2', query, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$skip=2', query, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             JSON.parse(result).should.eql({
               '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
@@ -498,7 +498,7 @@ describe('odata message composition', () => {
           mockSubmission('three', testData.instances.withrepeat.three)
         ]);
         fieldsFor(testData.forms.withrepeat)
-          .then((fields) => rowStreamToOData('withrepeat', fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions', {}, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions', {}, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             JSON.parse(result).should.eql({
               '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
@@ -531,7 +531,7 @@ describe('odata message composition', () => {
           mockSubmission('three', testData.instances.withrepeat.three)
         ]);
         fieldsFor(testData.forms.withrepeat)
-          .then((fields) => rowStreamToOData('withrepeat', fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$top=2', query, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$top=2', query, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             JSON.parse(result).should.eql({
               '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
@@ -560,7 +560,7 @@ describe('odata message composition', () => {
           mockSubmission('three', testData.instances.withrepeat.three)
         ]);
         fieldsFor(testData.forms.withrepeat)
-          .then((fields) => rowStreamToOData('withrepeat', fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=2', query, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=2', query, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             JSON.parse(result).should.eql({
               '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
@@ -588,7 +588,7 @@ describe('odata message composition', () => {
           mockSubmission('three', testData.instances.withrepeat.three)
         ]);
         fieldsFor(testData.forms.withrepeat)
-          .then((fields) => rowStreamToOData('withrepeat', fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             JSON.parse(result).should.eql({
               '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
@@ -611,14 +611,14 @@ describe('odata message composition', () => {
       it('should reject with not found if the toplevel table is wrong', () => {
         return fieldsFor(testData.forms.simple).then((fields) => {
           const submission = mockSubmission('one', testData.instances.simple.one);
-          return singleRowToOData('simple', fields, submission, 'http://localhost:8989', "/simple.svc/Nonexistent('one')", {});
+          return singleRowToOData(fields, submission, 'http://localhost:8989', "/simple.svc/Nonexistent('one')", {});
         }).should.be.rejected();
       });
 
       it('should reject with not found if a subtable is wrong', () => {
         return fieldsFor(testData.forms.withrepeat).then((fields) => {
           const submission = mockSubmission('one', testData.instances.withrepeat.one);
-          return singleRowToOData('withrepeat', fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('one')/children/child/nonexistent", {});
+          return singleRowToOData(fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('one')/children/child/nonexistent", {});
             
         }).should.be.rejected();
       });
@@ -626,7 +626,7 @@ describe('odata message composition', () => {
       it('should pass if the toplevel table is correct', () => {
         return fieldsFor(testData.forms.simple).then((fields) => {
           const submission = mockSubmission('one', testData.instances.simple.one);
-          return singleRowToOData('simple', fields, submission, 'http://localhost:8989', "/simple.svc/Submissions('one')", {})
+          return singleRowToOData(fields, submission, 'http://localhost:8989', "/simple.svc/Submissions('one')", {})
             .should.not.be.rejected();
         });
       });
@@ -634,7 +634,7 @@ describe('odata message composition', () => {
       it('should pass if the subtable is correct', () => {
         return fieldsFor(testData.forms.withrepeat).then((fields) => {
           const submission = mockSubmission('one', testData.instances.withrepeat.one);
-          return singleRowToOData('withrepeat', fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('one')/children/child", {})
+          return singleRowToOData(fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('one')/children/child", {})
             .should.not.be.rejected();
         });
       });
@@ -644,7 +644,7 @@ describe('odata message composition', () => {
       it('should provide the correct context url for the toplevel table', () => {
         return fieldsFor(testData.forms.simple).then((fields) => {
           const submission = mockSubmission('one', testData.instances.simple.one);
-          return singleRowToOData('simple', fields, submission, 'http://localhost:8989', "/simple.svc/Submissions('one')", {})
+          return singleRowToOData(fields, submission, 'http://localhost:8989', "/simple.svc/Submissions('one')", {})
             .then(JSON.parse)
             .then((result) => {
               result['@odata.context'].should.equal('http://localhost:8989/simple.svc/$metadata#Submissions')
@@ -655,7 +655,7 @@ describe('odata message composition', () => {
       it('should provide the correct context url for a subtable', () => {
         return fieldsFor(testData.forms.withrepeat).then((fields) => {
           const submission = mockSubmission('one', testData.instances.withrepeat.one);
-          return singleRowToOData('withrepeat', fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('one')/children/child", {})
+          return singleRowToOData(fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('one')/children/child", {})
             .then(JSON.parse)
             .then((result) => {
               result['@odata.context'].should.equal('http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child')
@@ -666,7 +666,7 @@ describe('odata message composition', () => {
       it('should provide no nextUrl if the final row is accounted for', () => {
         return fieldsFor(testData.forms.withrepeat).then((fields) => {
           const submission = mockSubmission('two', testData.instances.withrepeat.two);
-          return singleRowToOData('withrepeat', fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child", {})
+          return singleRowToOData(fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child", {})
             .then(JSON.parse)
             .then((result) => {
               should.not.exist(result['@odata.nextLink']);
@@ -678,7 +678,7 @@ describe('odata message composition', () => {
         return fieldsFor(testData.forms.withrepeat).then((fields) => {
           const submission = mockSubmission('two', testData.instances.withrepeat.two);
           const query = { $top: 1 };
-          return singleRowToOData('withrepeat', fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child?$top=1", query)
+          return singleRowToOData(fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child?$top=1", query)
             .then(JSON.parse)
             .then((result) => {
               result['@odata.nextLink'].should.equal("http://localhost:8989/withrepeat.svc/Submissions('two')/children/child?%24skip=1");
@@ -690,7 +690,7 @@ describe('odata message composition', () => {
         return fieldsFor(testData.forms.withrepeat).then((fields) => {
           const submission = mockSubmission('two', testData.instances.withrepeat.two);
           const query = { $top: 1, $wkt: 'true' };
-          return singleRowToOData('withrepeat', fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child?$top=1&$wkt=true", query)
+          return singleRowToOData(fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child?$top=1&$wkt=true", query)
             .then(JSON.parse)
             .then((result) => {
               result['@odata.nextLink'].should.equal("http://localhost:8989/withrepeat.svc/Submissions('two')/children/child?%24wkt=true&%24skip=1");
@@ -702,7 +702,7 @@ describe('odata message composition', () => {
         return fieldsFor(testData.forms.withrepeat).then((fields) => {
           const submission = mockSubmission('two', testData.instances.withrepeat.two);
           const query = { $count: 'true' };
-          return singleRowToOData('withrepeat', fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child?$count=true", query)
+          return singleRowToOData(fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child?$count=true", query)
             .then(JSON.parse)
             .then((result) => {
               result['@odata.count'].should.equal(2);
@@ -714,7 +714,7 @@ describe('odata message composition', () => {
         return fieldsFor(testData.forms.withrepeat).then((fields) => {
           const submission = mockSubmission('two', testData.instances.withrepeat.two);
           const query = { $top: '1', $count: 'true' };
-          return singleRowToOData('withrepeat', fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child?$top=1$count=true", query)
+          return singleRowToOData(fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child?$top=1$count=true", query)
             .then(JSON.parse)
             .then((result) => {
               result['@odata.count'].should.equal(2);
@@ -727,7 +727,7 @@ describe('odata message composition', () => {
       it('should output single instance data', () => {
         return fieldsFor(testData.forms.doubleRepeat).then((fields) => {
           const submission = mockSubmission('double', testData.instances.doubleRepeat.double);
-          return singleRowToOData('doubleRepeat', fields, submission, 'http://localhost:8989', "/doubleRepeat.svc/Submissions('double')", {})
+          return singleRowToOData(fields, submission, 'http://localhost:8989', "/doubleRepeat.svc/Submissions('double')", {})
             .then(JSON.parse)
             .then((result) => {
               result.should.eql({
@@ -749,7 +749,7 @@ describe('odata message composition', () => {
       it('should filter to a single subinstance', () => {
         return fieldsFor(testData.forms.doubleRepeat).then((fields) => {
           const submission = mockSubmission('double', testData.instances.doubleRepeat.double);
-          return singleRowToOData('doubleRepeat', fields, submission, 'http://localhost:8989', "/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy", {})
+          return singleRowToOData(fields, submission, 'http://localhost:8989', "/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy", {})
             .then(JSON.parse)
             .then((result) => {
               result.should.eql({
@@ -780,7 +780,7 @@ describe('odata message composition', () => {
         return fieldsFor(testData.forms.doubleRepeat).then((fields) => {
           const submission = mockSubmission('double', testData.instances.doubleRepeat.double);
           const query = { $top: '2' };
-          return singleRowToOData('doubleRepeat', fields, submission, 'http://localhost:8989', "/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?$top=2", query)
+          return singleRowToOData(fields, submission, 'http://localhost:8989', "/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?$top=2", query)
             .then(JSON.parse)
             .then((result) => {
               result.should.eql({
@@ -804,7 +804,7 @@ describe('odata message composition', () => {
         return fieldsFor(testData.forms.doubleRepeat).then((fields) => {
           const submission = mockSubmission('double', testData.instances.doubleRepeat.double);
           const query = { $skip: '1' };
-          return singleRowToOData('doubleRepeat', fields, submission, 'http://localhost:8989', "/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?$skip=1", query)
+          return singleRowToOData(fields, submission, 'http://localhost:8989', "/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?$skip=1", query)
             .then(JSON.parse)
             .then((result) => {
               result.should.eql({
@@ -831,7 +831,7 @@ describe('odata message composition', () => {
         return fieldsFor(testData.forms.doubleRepeat).then((fields) => {
           const submission = mockSubmission('double', testData.instances.doubleRepeat.double);
           const query = { $skip: '1', $top: '2' };
-          return singleRowToOData('doubleRepeat', fields, submission, 'http://localhost:8989', "/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?$skip=1&$top=2", query)
+          return singleRowToOData(fields, submission, 'http://localhost:8989', "/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?$skip=1&$top=2", query)
             .then(JSON.parse)
             .then((result) => {
               result.should.eql({

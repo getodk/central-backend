@@ -14,6 +14,15 @@ describe('api: /forms/:id.svc', () => {
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/projects/1/forms/nonexistent.svc').expect(404))));
 
+    it('should reject unless the form is published', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple2.svc')
+            .expect(404)))));
+
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/projects/1/forms/simple.svc').expect(403))));
@@ -46,6 +55,15 @@ describe('api: /forms/:id.svc', () => {
     it('should reject unless the form exists', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/projects/1/forms/nonexistent.svc/$metadata').expect(404))));
+
+    it('should reject unless the form is published', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple2.svc/$metadata')
+            .expect(404)))));
 
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -260,6 +278,15 @@ describe('api: /forms/:id.svc', () => {
     it('should reject unless the form exists', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get("/v1/projects/1/forms/nonexistent.svc/Submissions").expect(404))));
+
+    it('should reject unless the form is published', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple2.svc/Submissions')
+            .expect(404)))));
 
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -580,6 +607,271 @@ describe('api: /forms/:id.svc', () => {
                 '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child'
               });
             })))));
+  });
+
+  describe('/draft.svc', () => {
+    // as usual, we do not exahustively test all possibilities for this draft version
+    // of the endpoint; we just ensure everything seems to be plumbed correctly.
+    describe('GET', () => {
+      it('should return not found if there is no draft', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.get('/v1/projects/1/forms/simple/draft.svc').expect(404))));
+
+      it('should reject unless the user can read', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => service.login('chelsea', (asChelsea) =>
+              asChelsea.get('/v1/projects/1/forms/simple/draft.svc').expect(403))))));
+
+      it('should return an OData service document', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft.svc')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.eql({
+                  '@odata.context': 'http://localhost:8989/v1/projects/1/forms/simple/draft.svc/$metadata',
+                  value: [
+                    { name: 'Submissions', kind: 'EntitySet', url: 'Submissions' }
+                  ]
+                });
+              })))));
+
+      it('should return the appropriate document for the draft', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.withrepeat.replace(/withrepeat/g, 'simple'))
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft.svc')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.eql({
+                  '@odata.context': 'http://localhost:8989/v1/projects/1/forms/simple/draft.svc/$metadata',
+                  value: [
+                    { name: 'Submissions', kind: 'EntitySet', url: 'Submissions' },
+                    { name: 'Submissions.children.child', kind: 'EntitySet', url: 'Submissions.children.child' }
+                  ]
+                });
+              })))));
+    });
+
+    describe('/$metadata GET', () => {
+      it('should reject unless the draft exists', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.get('/v1/projects/1/forms/simple/draft.svc/$metadata').expect(404))));
+
+      it('should reject unless the user can read', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => service.login('chelsea', (asChelsea) =>
+              asChelsea.get('/v1/projects/1/forms/simple/draft.svc/$metadata').expect(403))))));
+
+      it('should return an EDMX metadata document', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple.svc/$metadata')
+              .expect(200)
+              .then(({ text, headers }) => {
+                text.should.startWith('<?xml version="1.0" encoding="UTF-8"?>\n<edmx:Edmx');
+              })))));
+
+      it('should return the appropriate document for the draft', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.withrepeat.replace(/withrepeat/g, 'simple'))
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft.svc/$metadata')
+              .expect(200)
+              .then(({ text }) => {
+                text.includes('<EntityType Name="Submissions.children.child">').should.equal(true);
+              })))));
+    });
+
+    describe("/Submissions('xyz')", () => {
+      it('should reject unless the draft exists', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.get("/v1/projects/1/forms/nonexistent/draft.svc/Submissions('xyz')").expect(404))));
+
+      it('should reject unless the user can read', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => service.login('chelsea', (asChelsea) =>
+              asChelsea.get("/v1/projects/1/forms/simple/draft.svc/Submissions('xyz')").expect(403))))));
+
+      it('should return a single row result', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.doubleRepeat)
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/doubleRepeat/draft/submissions')
+              .send(testData.instances.doubleRepeat.double)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.get("/v1/projects/1/forms/doubleRepeat/draft.svc/Submissions('double')")
+              .expect(200)
+              .then(({ body }) => {
+                // have to manually check and clear the date for exact match:
+                body.value[0].__system.submissionDate.should.be.an.isoDate();
+                delete body.value[0].__system.submissionDate;
+
+                body.should.eql({
+                  '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat/draft.svc/$metadata#Submissions',
+                  value: [{
+                    __id: "double",
+                    __system: {
+                      // submissionDate is checked above!
+                      submitterId: '5',
+                      submitterName: 'Alice',
+                      attachmentsPresent: 0,
+                      attachmentsExpected: 0,
+                      status: null
+                    },
+                    children: {
+                      'child@odata.navigationLink': "Submissions('double')/children/child"
+                    },
+                    meta: { instanceID: "double" },
+                    name: "Vick"
+                  }]
+                });
+              })))));
+
+      it('should not return results from the published form', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.doubleRepeat)
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/doubleRepeat/draft/submissions')
+              .send(testData.instances.doubleRepeat.double)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/doubleRepeat/draft/publish')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/doubleRepeat/draft')
+              .expect(200))
+            .then(() => asAlice.get("/v1/projects/1/forms/doubleRepeat/draft.svc/Submissions('double')")
+              .expect(404)))));
+    });
+
+
+    describe('/Submissions.xyz', () => {
+      it('should reject unless the draft exists', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.get("/v1/projects/1/forms/simple/draft.svc/Submissions").expect(404))));
+
+      it('should reject unless the user can read', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => service.login('chelsea', (asChelsea) =>
+              asChelsea.get("/v1/projects/1/forms/simple/draft.svc/Submissions").expect(403))))));
+
+      it('should return toplevel rows', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/withrepeat/draft')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/draft/submissions')
+              .send(testData.instances.withrepeat.one)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/draft/submissions')
+              .send(testData.instances.withrepeat.two)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/draft/submissions')
+              .send(testData.instances.withrepeat.three)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/withrepeat/draft.svc/Submissions')
+              .expect(200)
+              .then(({ body }) => {
+                for (const idx of [ 0, 1, 2 ]) {
+                  body.value[idx].__system.submissionDate.should.be.an.isoDate();
+                  delete body.value[idx].__system.submissionDate;
+                }
+
+                body.should.eql({
+                  '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat/draft.svc/$metadata#Submissions',
+                  value: [{
+                    __id: "three",
+                    __system: {
+                      // submissionDate is checked above,
+                      submitterId: "5",
+                      submitterName: "Alice",
+                      attachmentsPresent: 0,
+                      attachmentsExpected: 0,
+                      status: null
+                    },
+                    meta: { instanceID: "three" },
+                    name: "Chelsea",
+                    age: 38,
+                    children: {
+                      'child@odata.navigationLink': "Submissions('three')/children/child"
+                    }
+                  }, {
+                    __id: "two",
+                    __system: {
+                      // submissionDate is checked above,
+                      submitterId: "5",
+                      submitterName: "Alice",
+                      attachmentsPresent: 0,
+                      attachmentsExpected: 0,
+                      status: null
+                    },
+                    meta: { instanceID: "two" },
+                    name: "Bob",
+                    age: 34,
+                    children: {
+                      'child@odata.navigationLink': "Submissions('two')/children/child"
+                    }
+                  }, {
+                    __id: "one",
+                    __system: {
+                      // submissionDate is checked above,
+                      submitterId: "5",
+                      submitterName: "Alice",
+                      attachmentsPresent: 0,
+                      attachmentsExpected: 0,
+                      status: null
+                    },
+                    meta: { instanceID: "one" },
+                    name: "Alice",
+                    age: 30
+                  }]
+                });
+              })))));
+
+      it('should not return results from the published form', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.doubleRepeat)
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/doubleRepeat/draft/submissions')
+              .send(testData.instances.doubleRepeat.double)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/doubleRepeat/draft/publish')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/doubleRepeat/draft')
+              .expect(200))
+            .then(() => asAlice.get("/v1/projects/1/forms/doubleRepeat/draft.svc/Submissions")
+              .expect(200)
+              .then(({ body }) => {
+                body.should.eql({
+                  '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat/draft.svc/$metadata#Submissions',
+                  value: []
+                });
+              })))));
+    });
   });
 });
 

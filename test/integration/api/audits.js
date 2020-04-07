@@ -72,7 +72,7 @@ describe('/audits', () => {
           .send({ name: 'audit project' })
           .expect(200)
           .then(({ body }) => body.id)
-          .then((projectId) => asAlice.post(`/v1/projects/${projectId}/forms`)
+          .then((projectId) => asAlice.post(`/v1/projects/${projectId}/forms?publish=true`)
             .send(testData.forms.simple)
             .set('Content-Type', 'text/xml')
             .expect(200)
@@ -110,7 +110,7 @@ describe('/audits', () => {
               audits[1].actor.should.eql(plain(alice.actor.forApi()));
               audits[1].action.should.equal('form.create');
               audits[1].acteeId.should.equal(form.acteeId);
-              audits[1].actee.should.eql(plain(form.without('def').forApi()));
+              audits[1].actee.should.eql(plain(form.forApi()));
               should.not.exist(audits[1].details);
               audits[1].loggedAt.should.be.a.recentIsoDate();
 
