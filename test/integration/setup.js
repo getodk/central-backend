@@ -16,6 +16,7 @@ const { connect, migrate } = require(appRoot + '/lib/model/database');
 // so the performance overhead is irrelevant.
 const db = connect(config.get('test.database'));
 const owner = config.get('test.database.user');
+after(() => { db.destroy(); });
 
 // set up our mailer.
 const env = config.get('default.env');

@@ -1,6 +1,6 @@
 const should = require('should');
 const { EventEmitter } = require('events');
-const { Transform } = require('stream');
+const { Transform, Readable } = require('stream');
 const { createRequest, createResponse } = require('node-mocks-http');
 const streamTest = require('streamtest').v2;
 const { always, identity } = require('ramda');
@@ -509,22 +509,25 @@ describe('endpoints', () => {
     it('should immediately abort the database query if the request is aborted', (done) => {
       const requestTest = new EventEmitter();
       const responseTest = streamTest.toText((_, result) => {
-        result.should.not.equal('ateststream');
+        result.should.equal('a');
+        done();
       });
+
+      const source = new Readable({ read() {} });
+      source.end = () => { source.push(null); };
+      source.push('a');
+      setTimeout(() => { source.push('test'); }, 10);
+
       responseTest.hasHeader = function() { return true; };
-      const source = streamTest.fromChunks([ 'a', 'test', 'stream' ], 1000);
-      source.end = done;
       defaultResultWriter(source, requestTest, responseTest);
       requestTest.emit('close');
     });
 
     it('should not crash if the request is aborted but the stream is not endable', () => {
       const requestTest = new EventEmitter();
-      const responseTest = streamTest.toText((_, result) => {
-        result.should.not.equal('ateststream');
-      });
+      const responseTest = streamTest.toText(() => {});
       responseTest.hasHeader = function() { return true; };
-      const source = streamTest.fromChunks([ 'a', 'test', 'stream' ], 1000);
+      const source = streamTest.fromChunks([ 'a', 'test', 'stream' ], 20);
       defaultResultWriter(source, requestTest, responseTest);
       requestTest.emit('close');
     });

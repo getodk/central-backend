@@ -16,15 +16,15 @@ debug: base
 	node --debug --inspect lib/bin/run-server.js
 
 test: node_modules
-	env BCRYPT=no node node_modules/mocha/bin/mocha --recursive
+	env BCRYPT=no node node_modules/mocha/bin/mocha --recursive --exit
 test-full: node_modules
-	node node_modules/mocha/bin/mocha --recursive
+	node node_modules/mocha/bin/mocha --recursive --exit
 
 test-integration: node_modules
-	node node_modules/mocha/bin/mocha --recursive test/integration
+	node node_modules/mocha/bin/mocha --recursive test/integration --exit
 
 test-unit: node_modules
-	node node_modules/mocha/bin/mocha --recursive test/unit
+	node node_modules/mocha/bin/mocha --recursive test/unit --exit
 
 test-coverage: node_modules
 	node node_modules/.bin/nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --exit --recursive test
