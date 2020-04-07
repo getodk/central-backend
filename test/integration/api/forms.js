@@ -2126,11 +2126,11 @@ describe('api: /projects/:id/forms', () => {
             .then(() => asAlice.get('/v1/projects/1/forms/simple/versions')
               .expect(200)
               .then(({ body }) => {
-                body.map((form) => form.version).should.eql([ '', '2', '3' ]);
+                body.map((form) => form.version).should.eql([ '3', '2', '' ]);
                 body.map((form) => form.sha256).should.eql([
-                  '93fdcefabfe5b6ea49f207e0c6fc8ba72ceb34828bff9c7929ef56eafd2d84cc',
+                  'fdfcb6484a2086c8ef64edd578168734866babb4743dcee127277990e7c5e04f',
                   'c01ab93518276534e72307afed190efe15974db8a9d9ffe2ba8ddf663c932271',
-                  'fdfcb6484a2086c8ef64edd578168734866babb4743dcee127277990e7c5e04f'
+                  '93fdcefabfe5b6ea49f207e0c6fc8ba72ceb34828bff9c7929ef56eafd2d84cc'
                 ]);
                 body.map((form) => form.xmlFormId).should.eql([ 'simple', 'simple', 'simple' ]);
               })))));
@@ -2185,11 +2185,11 @@ describe('api: /projects/:id/forms', () => {
               .set('X-Extended-Metadata', 'true')
               .expect(200)
               .then(({ body }) => {
-                should.not.exist(body[0].publishedBy);
+                body[0].publishedBy.should.be.an.Actor();
+                body[0].publishedBy.displayName.should.equal('Alice');
                 body[1].publishedBy.should.be.an.Actor();
                 body[1].publishedBy.displayName.should.equal('Alice');
-                body[2].publishedBy.should.be.an.Actor();
-                body[2].publishedBy.displayName.should.equal('Alice');
+                should.not.exist(body[2].publishedBy);
               })))));
 
       it('should return xls content type with extended form details', testService((service) =>
@@ -2210,12 +2210,12 @@ describe('api: /projects/:id/forms', () => {
               .expect(200)
               .then(({ body }) => {
                 body.map((form) => form.excelContentType).should.eql([
-                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                  null
+                  null,
+                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 ]);
               })))));
 
-      it('should sort results by publishedAt', testService((service) =>
+      it('should sort results desc by publishedAt', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="3"'))
@@ -2233,7 +2233,7 @@ describe('api: /projects/:id/forms', () => {
               .set('X-Extended-Metadata', 'true')
               .expect(200)
               .then(({ body }) => {
-                body.map((version) => version.version).should.eql([ '', '3', '2' ]);
+                body.map((version) => version.version).should.eql([ '2', '3', '' ]);
               })))));
     });
 
