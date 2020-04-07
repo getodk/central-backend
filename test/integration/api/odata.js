@@ -14,6 +14,15 @@ describe('api: /forms/:id.svc', () => {
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/projects/1/forms/nonexistent.svc').expect(404))));
 
+    it('should reject unless the form is published', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple2.svc')
+            .expect(404)))));
+
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/projects/1/forms/simple.svc').expect(403))));
@@ -46,6 +55,15 @@ describe('api: /forms/:id.svc', () => {
     it('should reject unless the form exists', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/projects/1/forms/nonexistent.svc/$metadata').expect(404))));
+
+    it('should reject unless the form is published', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple2.svc/$metadata')
+            .expect(404)))));
 
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -260,6 +278,15 @@ describe('api: /forms/:id.svc', () => {
     it('should reject unless the form exists', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get("/v1/projects/1/forms/nonexistent.svc/Submissions").expect(404))));
+
+    it('should reject unless the form is published', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple2.svc/Submissions')
+            .expect(404)))));
 
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -625,14 +652,14 @@ describe('api: /forms/:id.svc', () => {
                   '@odata.context': 'http://localhost:8989/v1/projects/1/forms/simple/draft.svc/$metadata',
                   value: [
                     { name: 'Submissions', kind: 'EntitySet', url: 'Submissions' },
-                  { name: 'Submissions.children.child', kind: 'EntitySet', url: 'Submissions.children.child' }
+                    { name: 'Submissions.children.child', kind: 'EntitySet', url: 'Submissions.children.child' }
                   ]
                 });
               })))));
     });
 
     describe('/$metadata GET', () => {
-      it('should reject unless the form exists', testService((service) =>
+      it('should reject unless the draft exists', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.get('/v1/projects/1/forms/simple/draft.svc/$metadata').expect(404))));
 

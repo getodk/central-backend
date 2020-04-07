@@ -1922,6 +1922,12 @@ describe('api: /projects/:id/forms', () => {
                 .expect(200)
                 .then(({ body }) => {
                   body.should.eql({ success: true });
+                }))
+              .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+                .expect(200)
+                .then(({ headers, text }) => {
+                  headers['content-type'].should.startWith('text/xml');
+                  text.should.equal('test,csv\n1,2');
                 })))));
 
         it('should replace an extant file with another', testService((service) =>

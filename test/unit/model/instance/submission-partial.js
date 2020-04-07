@@ -42,7 +42,7 @@ describe('SubmissionPartial', () => {
       }));
 
     it('should reject if encryption is given but no instanceID', () => {
-      const xml = '<data id="build_basic_1582152194" version="[encrypted:AXBggUDR]" encrypted="yes" xmlns="http://www.opendatakit.org/xforms/encrypted"><base64EncryptedKey>abc4A==</base64EncryptedElementSignature></data>';
+      const xml = '<data id="build_basic_1582152194" version="[encrypted:AXBggUDR]" encrypted="yes" xmlns="http://www.opendatakit.org/xforms/encrypted"><base64EncryptedKey>abc4A==</base64EncryptedKey></data>';
       return SubmissionPartial.fromXml(xml).should.be.rejected();
     });
 

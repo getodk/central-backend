@@ -143,11 +143,11 @@ describe('api: /submission', () => {
             .set('X-OpenRosa-Version', '1.0')
             .attach('xml_submission_file', Buffer.from('<data id="simple" version="two"><orx:meta><orx:instanceID>one</orx:instanceID></orx:meta></data>'), { filename: 'data.xml' })
             .expect(201))
-          // the submission worked, that's good. the rest of this checks that it went
-          // to the correct place.
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
             .expect(200))
-          .then((form) => SubmissionDef.getCurrentByIds(1, 'simple', 'one', false))
+          // the submission worked, that's good. the rest of this checks that it went
+          // to the correct place.
+          .then(() => SubmissionDef.getCurrentByIds(1, 'simple', 'one', false))
           .then((o) => o.get())
           .then(({ formDefId }) => simply.getOneWhere('form_defs', { id: formDefId }, FormDef))
           .then((o) => o.get())
@@ -648,11 +648,11 @@ describe('api: /forms/:id/submissions', () => {
             .send('<data id="simple" version="two"><orx:meta><orx:instanceID>one</orx:instanceID></orx:meta></data>')
             .set('Content-Type', 'text/xml')
             .expect(200))
-          // the submission worked, that's good. the rest of this checks that it went
-          // to the correct place.
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
             .expect(200))
-          .then((form) => SubmissionDef.getCurrentByIds(1, 'simple', 'one', false))
+          // the submission worked, that's good. the rest of this checks that it went
+          // to the correct place.
+          .then(() => SubmissionDef.getCurrentByIds(1, 'simple', 'one', false))
           .then((o) => o.get())
           .then(({ formDefId }) => simply.getOneWhere('form_defs', { id: formDefId }, FormDef))
           .then((o) => o.get())
