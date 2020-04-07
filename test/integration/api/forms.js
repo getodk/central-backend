@@ -1115,6 +1115,27 @@ describe('api: /projects/:id/forms', () => {
               log.actorId.should.equal(alice.actor.id);
               log.acteeId.should.equal(form.acteeId);
             }))))));
+
+    it('should delete all associated assignments', testService((service) =>
+      service.login('alice', (asAlice) =>
+        Promise.all([
+          asAlice.post('/v1/projects/1/app-users')
+            .send({ displayName: 'test app user' })
+            .expect(200)
+            .then(({ body }) => body.id),
+          asAlice.get('/v1/roles/app-user')
+            .expect(200)
+            .then(({ body }) => body.id)
+        ])
+          .then(([ fkId, roleId ]) => asAlice.post(`/v1/projects/1/forms/simple/assignments/${roleId}/${fkId}`)
+            .expect(200)
+            .then(() => asAlice.delete('/v1/projects/1/forms/simple')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/assignments/forms/')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.eql([]);
+              }))))));
   });
 
 
