@@ -58,6 +58,24 @@ describe('submissionToOData', () => {
     });
   });
 
+  it('should not crash if no submitter exists', () => {
+    const submission = mockSubmission('test', testData.instances.simple.one);
+    submission.submitter = {}; // wipe it back out.
+    return submissionToOData([], 'Submissions', submission).then((result) => {
+      result.should.eql([{
+        __id: 'test',
+        __system: {
+          submissionDate: '2017-09-20T17:10:43Z',
+          submitterId: null,
+          submitterName: null,
+          attachmentsPresent: 0,
+          attachmentsExpected: 0,
+          status: null
+        }
+      }]);
+    });
+  });
+
   it('should handle all primitive output types correctly', () => {
     const fields = [
       new MockField({ path: '/int', name: 'int', type: 'int' }),
