@@ -495,7 +495,7 @@ describe('api: /submission', () => {
             .then(({ body }) => body.draftToken))
           .then((token) => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
             .expect(200)
-            .then(() => asAlice.post(`/v1/test/${token}/projects/1/forms/simple/draft/submission`)
+            .then(() => service.post(`/v1/test/${token}/projects/1/forms/simple/draft/submission`)
               .set('X-OpenRosa-Version', '1.0')
               .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
               .expect(404))))));
@@ -509,7 +509,7 @@ describe('api: /submission', () => {
             .then(({ body }) => body.draftToken))
           .then((token) => asAlice.delete('/v1/projects/1/forms/simple/draft')
             .expect(200)
-            .then(() => asAlice.post(`/v1/test/${token}/projects/1/forms/simple/draft/submission`)
+            .then(() => service.post(`/v1/test/${token}/projects/1/forms/simple/draft/submission`)
               .set('X-OpenRosa-Version', '1.0')
               .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
               .expect(404))))));
@@ -518,7 +518,7 @@ describe('api: /submission', () => {
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/draft')
           .expect(200)
-          .then(() => asAlice.post('/v1/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/forms/simple/draft/submission')
+          .then(() => service.post('/v1/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/forms/simple/draft/submission')
             .set('X-OpenRosa-Version', '1.0')
             .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
             .expect(404)))));
@@ -530,7 +530,7 @@ describe('api: /submission', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
             .expect(200)
             .then(({ body }) => body.draftToken)
-            .then((token) => asAlice.post(`/v1/test/${token}/projects/1/forms/simple/draft/submission`)
+            .then((token) => service.post(`/v1/test/${token}/projects/1/forms/simple/draft/submission`)
               .set('X-OpenRosa-Version', '1.0')
               .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
               .expect(201)
