@@ -234,6 +234,211 @@ describe('form schema', () => {
       });
     });
 
+    it('should ignore further repeat instances', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <children>
+                    <child>
+                      <name/>
+                      <toy>
+                        <name/>
+                      </toy>
+                    </child>
+                    <child>
+                      <name/>
+                      <toy>
+                        <name/>
+                      </toy>
+                    </child>
+                  </children>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind nodeset="/data/children/child/name" type="string"/>
+              <bind nodeset="/data/children/child/toy/name" type="string"/>
+            </model>
+          </h:head>
+          <h:body>
+            <input ref="/data/name">
+              <label>What is your name?</label>
+            </input>
+            <group ref="/data/children/child">
+              <label>Child</label>
+              <repeat nodeset="/data/children/child">
+                <input ref="/data/children/child/name">
+                  <label>What is the child's name?</label>
+                </input>
+                <group ref="/data/children/child/toy">
+                  <label>Child</label>
+                  <repeat nodeset="/data/children/child/toy">
+                    <input ref="/data/children/child/toy/name">
+                      <label>What is the toy's name?</label>
+                    </input>
+                  </repeat>
+                </group>
+              </repeat>
+            </group>
+          </h:body>
+        </h:html>`;
+      return getFormFields(xml).then((schema) => {
+        schema.should.eql([
+          { name: 'name', path: '/name', type: 'string', order: 0 },
+          { name: 'children', path: '/children', type: 'structure', order: 1 },
+          { name: 'child', path: '/children/child', type: 'repeat', order: 2 },
+          { name: 'name', path: '/children/child/name', type: 'string', order: 3 },
+          { name: 'toy', path: '/children/child/toy', type: 'repeat', order: 4 },
+          { name: 'name', path: '/children/child/toy/name', type: 'string', order: 5 }
+        ]);
+      });
+    });
+
+    it('should count correctly after ignoring repeated repeat instances', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <children>
+                    <child>
+                      <name/>
+                      <toy>
+                        <name/>
+                      </toy>
+                    </child>
+                    <child>
+                      <name/>
+                      <toy>
+                        <name/>
+                      </toy>
+                    </child>
+                  </children>
+                  <age/>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind nodeset="/data/children/child/name" type="string"/>
+              <bind nodeset="/data/children/child/toy/name" type="string"/>
+              <bind nodeset="/data/age" type="int"/>
+            </model>
+          </h:head>
+          <h:body>
+            <input ref="/data/name">
+              <label>What is your name?</label>
+            </input>
+            <group ref="/data/children/child">
+              <label>Child</label>
+              <repeat nodeset="/data/children/child">
+                <input ref="/data/children/child/name">
+                  <label>What is the child's name?</label>
+                </input>
+                <group ref="/data/children/child/toy">
+                  <label>Child</label>
+                  <repeat nodeset="/data/children/child/toy">
+                    <input ref="/data/children/child/toy/name">
+                      <label>What is the toy's name?</label>
+                    </input>
+                  </repeat>
+                </group>
+              </repeat>
+            </group>
+            <input ref="/data/age">
+              <label>What is your age?</label>
+            </input>
+          </h:body>
+        </h:html>`;
+      return getFormFields(xml).then((schema) => {
+        schema.should.eql([
+          { name: 'name', path: '/name', type: 'string', order: 0 },
+          { name: 'children', path: '/children', type: 'structure', order: 1 },
+          { name: 'child', path: '/children/child', type: 'repeat', order: 2 },
+          { name: 'name', path: '/children/child/name', type: 'string', order: 3 },
+          { name: 'toy', path: '/children/child/toy', type: 'repeat', order: 4 },
+          { name: 'name', path: '/children/child/toy/name', type: 'string', order: 5 },
+          { name: 'age', path: '/age', type: 'int', order: 6 }
+        ]);
+      });
+    });
+
+    it('should fail on nonlocal extraneous repeat instances', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <children>
+                    <child>
+                      <name/>
+                      <toy>
+                        <name/>
+                      </toy>
+                    </child>
+                  </children>
+                  <children>
+                    <child>
+                      <name/>
+                      <toy>
+                        <name/>
+                      </toy>
+                    </child>
+                  </children>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind nodeset="/data/children/child/name" type="string"/>
+              <bind nodeset="/data/children/child/toy/name" type="string"/>
+            </model>
+          </h:head>
+          <h:body>
+            <input ref="/data/name">
+              <label>What is your name?</label>
+            </input>
+            <group ref="/data/children/child">
+              <label>Child</label>
+              <repeat nodeset="/data/children/child">
+                <input ref="/data/children/child/name">
+                  <label>What is the child's name?</label>
+                </input>
+                <group ref="/data/children/child/toy">
+                  <label>Child</label>
+                  <repeat nodeset="/data/children/child/toy">
+                    <input ref="/data/children/child/toy/name">
+                      <label>What is the toy's name?</label>
+                    </input>
+                  </repeat>
+                </group>
+              </repeat>
+            </group>
+          </h:body>
+        </h:html>`;
+      return getFormFields(xml).then((schema) => {
+        schema.should.eql([
+          { name: 'name', path: '/name', type: 'string', order: 0 },
+          { name: 'children', path: '/children', type: 'structure', order: 1 },
+          { name: 'child', path: '/children/child', type: 'repeat', order: 2 },
+          { name: 'name', path: '/children/child/name', type: 'string', order: 3 },
+          { name: 'toy', path: '/children/child/toy', type: 'repeat', order: 4 },
+          { name: 'name', path: '/children/child/toy/name', type: 'string', order: 5 },
+          { name: 'children', path: '/children', type: 'structure', order: 6 },
+          { name: 'child', path: '/children/child', type: 'repeat', order: 7 },
+          { name: 'name', path: '/children/child/name', type: 'string', order: 8 },
+          { name: 'toy', path: '/children/child/toy', type: 'repeat', order: 9 },
+          { name: 'name', path: '/children/child/toy/name', type: 'string', order: 10 }
+        ]);
+      });
+    });
+
     it('should mark binary fields as such', () => {
       const xml = `
         <?xml version="1.0"?>
