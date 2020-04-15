@@ -2458,6 +2458,22 @@ describe('api: /projects/:id/forms', () => {
                   .set('X-OpenRosa-Version', '1.0')
                   .expect(404)))))));
 
+      it('should reject after publish with a custom error message', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+              .expect(200)
+              .then(({ body }) => body.draftToken)
+              .then((token) => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+                .expect(200)
+                .then(() => service.get(`/v1/test/${token}/projects/1/forms/simple/draft/formList`)
+                  .set('X-OpenRosa-Version', '1.0')
+                  .expect(404)
+                  .then(({ text }) => {
+                    text.should.match(/You tried to access a draft testing endpoint, but it does not exist anymore or your access is no longer valid\./);
+                  })))))));
+
       it('should reject if the draft has been deleted', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
@@ -2472,6 +2488,17 @@ describe('api: /projects/:id/forms', () => {
                   .expect(404)))))));
 
       it('should reject if the key is wrong', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => service.get('/v1/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/forms/simple/draft/formList')
+              .set('X-OpenRosa-Version', '1.0')
+              .expect(404)
+              .then(({ text }) => {
+                text.should.match(/You tried to access a draft testing endpoint, but it does not exist anymore or your access is no longer valid\./);
+              })))));
+
+      it('should reject on incorrect key with a custom error message', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .expect(200)
@@ -2502,6 +2529,33 @@ describe('api: /projects/:id/forms', () => {
     </xform>
   </xforms>`);
                 }))))));
+
+      it('should include a manifest node for forms with attachments', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft')
+              .expect(200)
+              .then(({ body }) => body.draftToken)
+              .then((token) => service.get(`/v1/test/${token}/projects/1/forms/withAttachments/draft/formList`)
+                .set('X-OpenRosa-Version', '1.0')
+                .expect(200)
+                .then(({ text }) => {
+                  const domain = config.get('default.env.domain');
+                  text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+  <xforms xmlns="http://openrosa.org/xforms/xformsList">
+    <xform>
+      <formID>withAttachments</formID>
+      <name>withAttachments</name>
+      <version></version>
+      <hash>md5:7eb21b5b123b0badcf2b8f50bcf1cbd0</hash>
+      <downloadUrl>${domain}/v1/test/${token}/projects/1/forms/withAttachments/draft.xml</downloadUrl>
+      <manifestUrl>${domain}/v1/test/${token}/projects/1/forms/withAttachments/draft/manifest</manifestUrl>
+    </xform>
+  </xforms>`);
+              }))))));
     });
 
     describe('/manifest GET', () => {
