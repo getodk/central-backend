@@ -293,6 +293,71 @@ describe('odata message composition', () => {
       </EntityType>
       <EntityContainer Name="pathprefix">`);
         }));
+
+    it('should not be fooled by nested groups closing one after the other', () => fieldsFor(`<?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <outer>
+                    <inner>
+                      <q1/>
+                    </inner>
+                  </outer>
+                  <outside/>
+                </data>
+              </instance>
+              <bind nodeset="/data/outer/inner/q1" type="string"/>
+              <bind nodeset="/data/outside" type="string"/>
+            </model>
+          </h:head>
+          <h:body>
+            <group nodeset="/data/outer">
+              <group nodeset="/data/outer/inner">
+                <input ref="/data/outer/inner/q1">
+                  <label>Foo</label>
+                </input>
+              </group>
+            </group>
+            <input ref="/data/outside">
+              <label>Foo</label>
+            </input>
+          </h:body>
+        </h:html>`).then((fields) => {
+          const edmx = edmxFor('form', fields);
+          edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
+<edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
+  <edmx:DataServices>
+    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
+      <ComplexType Name="metadata">
+        <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
+        <Property Name="submitterId" Type="Edm.String"/>
+        <Property Name="submitterName" Type="Edm.String"/>
+        <Property Name="attachmentsPresent" Type="Edm.Int64"/>
+        <Property Name="attachmentsExpected" Type="Edm.Int64"/>
+        <Property Name="status" Type="org.opendatakit.submission.Status"/>
+      </ComplexType>
+      <EnumType Name="Status">
+        <Member Name="NotDecrypted"/>
+        <Member Name="MissingEncryptedFormData"/>
+      </EnumType>
+    </Schema>
+    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.form">
+      <EntityType Name="Submissions">
+        <Key><PropertyRef Name="__id"/></Key>
+        <Property Name="__id" Type="Edm.String"/>
+        <Property Name="__system" Type="org.opendatakit.submission.metadata"/>
+        <Property Name="outer" Type="org.opendatakit.user.form.outer"/>
+        <Property Name="outside" Type="Edm.String"/>
+      </EntityType>
+      <ComplexType Name="outer">
+        <Property Name="inner" Type="org.opendatakit.user.form.outer.inner"/>
+      </ComplexType>
+      <ComplexType Name="outer.inner">
+        <Property Name="q1" Type="Edm.String"/>
+      </ComplexType>`);
+        }));
   });
 
   describe('rowstream conversion', () => {
