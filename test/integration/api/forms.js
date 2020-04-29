@@ -1386,7 +1386,7 @@ describe('api: /projects/:id/forms', () => {
       it('should complain about field conflicts', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
-            .send(testData.forms.simple.replace('type="int"', 'type="string"'))
+            .send(testData.forms.simple.replace('type="int"', 'type="date"'))
             .set('Content-Type', 'application/xml')
             .expect(400)
             .then(({ body }) => {
@@ -1405,12 +1405,58 @@ describe('api: /projects/:id/forms', () => {
             .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish')
               .expect(200))
             .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
-              .send(testData.forms.simple.replace('type="int"', 'type="string"'))
+              .send(testData.forms.simple.replace('type="int"', 'type="date"'))
               .set('Content-Type', 'application/xml')
               .expect(400)
               .then(({ body }) => {
                 body.code.should.equal(400.17);
                 body.details.should.eql({ path: '/age', type: 'int' });
+              })))));
+
+      it('should not complain on downcast to string', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('type="int"', 'type="string"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200))));
+
+      it('should complain on upcast from string', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('name" type="string"', 'name" type="int"'))
+            .set('Content-Type', 'application/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.equal(400.17);
+              body.details.should.eql({ path: '/name', type: 'string' });
+            }))));
+
+      it('should not complain on double-downcast to string', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('type="int"', 'type="string"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+              .expect(200)))));
+
+      it('should complain on upcast once downcasted', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('type="int"', 'type="string"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple)
+              .set('Content-Type', 'application/xml')
+              .expect(400)
+              .then(({ body }) => {
+                body.code.should.equal(400.17);
+                body.details.should.eql({ path: '/age', type: 'string' });
               })))));
 
       it('should not complain about discarded draft field conflicts', testService((service) =>
