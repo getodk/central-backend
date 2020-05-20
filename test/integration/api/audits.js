@@ -90,7 +90,7 @@ describe('/audits', () => {
               User.getByEmail('david@opendatakit.org').then((o) => o.get())
             ]))
             .then(([ audits, [ project, form ], alice, david ]) => {
-              audits.length.should.equal(3);
+              audits.length.should.equal(4);
               audits.forEach((audit) => { audit.should.be.an.Audit(); });
 
               const plain = (x) => JSON.parse(JSON.stringify(x));
@@ -108,19 +108,27 @@ describe('/audits', () => {
 
               audits[1].actorId.should.equal(alice.actor.id);
               audits[1].actor.should.eql(plain(alice.actor.forApi()));
-              audits[1].action.should.equal('form.create');
+              audits[1].action.should.equal('form.update.publish');
               audits[1].acteeId.should.equal(form.acteeId);
               audits[1].actee.should.eql(plain(form.forApi()));
-              should.not.exist(audits[1].details);
+              audits[1].details.should.eql({ newDefId: form.currentDefId });
               audits[1].loggedAt.should.be.a.recentIsoDate();
 
               audits[2].actorId.should.equal(alice.actor.id);
               audits[2].actor.should.eql(plain(alice.actor.forApi()));
-              audits[2].action.should.equal('project.create');
-              audits[2].acteeId.should.equal(project.acteeId);
-              audits[2].actee.should.eql(plain(project.forApi()));
-              audits[2].details.should.eql({ data: { name: 'audit project' } });
+              audits[2].action.should.equal('form.create');
+              audits[2].acteeId.should.equal(form.acteeId);
+              audits[2].actee.should.eql(plain(form.forApi()));
+              should.not.exist(audits[2].details);
               audits[2].loggedAt.should.be.a.recentIsoDate();
+
+              audits[3].actorId.should.equal(alice.actor.id);
+              audits[3].actor.should.eql(plain(alice.actor.forApi()));
+              audits[3].action.should.equal('project.create');
+              audits[3].acteeId.should.equal(project.acteeId);
+              audits[3].actee.should.eql(plain(project.forApi()));
+              audits[3].details.should.eql({ data: { name: 'audit project' } });
+              audits[3].loggedAt.should.be.a.recentIsoDate();
             })))));
 
     it('should not expand actor if there is no actor', testService((service, { Audit }) =>
@@ -444,8 +452,9 @@ describe('/audits', () => {
           .then(() => asAlice.get('/v1/audits?action=nonverbose')
             .expect(200)
             .then(({ body }) => {
-              body.length.should.equal(1);
-              body[0].action.should.equal('form.create');
+              body.length.should.equal(2);
+              body[0].action.should.equal('form.update.publish');
+              body[1].action.should.equal('form.create');
             })))));
   });
 });

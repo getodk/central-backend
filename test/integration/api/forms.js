@@ -526,15 +526,29 @@ describe('api: /projects/:id/forms', () => {
 
     it('should log the action in the audit log', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms?publish=true')
+        asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.simple2)
           .set('Content-Type', 'application/xml')
           .expect(200)
-          .then(() => asAlice.get('/v1/audits?action/form')
+          .then(() => asAlice.get('/v1/audits?action=form')
             .expect(200)
             .then(({ body }) => {
               body.length.should.equal(1);
               body[0].action.should.equal('form.create');
+            })))));
+
+    it('should log both actions in the audit log on publish=true', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/audits?action=form')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(2);
+              body[0].action.should.equal('form.update.publish');
+              body[1].action.should.equal('form.create');
             })))));
   });
 
