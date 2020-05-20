@@ -18,45 +18,52 @@ describe('util/enketo', () => {
   describe('preview', () => {
     it('should send a properly constructed request to Enketo', () => {
       enketoNock
-        .post('/enketoPath/api/v2/survey/preview')
+        .post('/enketoPath/api/v2/survey')
         .reply(201, function(uri, requestBody) {
           const base64Auth = Buffer.from('enketoApiKey:').toString('base64');
           const expectedQueryString = querystring.stringify({ server_url: openRosaUrl, form_id: xmlFormId });
           this.req.headers.authorization.should.equal(`Basic ${base64Auth}`);
           this.req.headers.cookie.should.equal('__Host-session=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
           requestBody.should.equal(expectedQueryString);
-          return JSON.stringify({ preview_url: 'http://enke.to/preview/::stuvwxyz', code: 201 });
+          return JSON.stringify({ url: 'http://enke.to/::stuvwxyz', code: 201 });
         });
       const response = {};
-      console.log(openRosaUrl);
-      return enketo.preview(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', response);
+      return enketo.create(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', response);
     });
 
     it('should pass through the intact Enketo response', () => {
       enketoNock
-        .post('/enketoPath/api/v2/survey/preview')
-        .reply(201, { preview_url: 'http://enke.to/preview/::stuvwxyz', code: 201 });
+        .post('/enketoPath/api/v2/survey')
+        .reply(201, { url: 'http://enke.to/::stuvwxyz', code: 201 });
       const response = {};
-      return enketo.preview(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', response)
-        .then((result) => result.should.eql({ preview_url: 'http://enke.to/preview/::stuvwxyz', code: 201 }))
-        .then(() => response.statusCode.should.equal(201));
+      return enketo.create(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', response)
+        .then((result) => result.should.equal('::stuvwxyz'));
     });
 
     it('should throw a Problem if the Enketo response is not valid json', () => {
       enketoNock
-        .post('/enketoPath/api/v2/survey/preview')
+        .post('/enketoPath/api/v2/survey')
         .reply(201, 'no json for you!');
       const response = {};
-      return enketo.preview(openRosaUrl, xmlFormId, null, response)
+      return enketo.create(openRosaUrl, xmlFormId, null, response)
         .should.be.rejectedWith(Problem.internal.enketoUnexpectedResponse('invalid JSON'));
+    });
+
+    it('should throw a Problem if the Enketo response url is unparseable', () => {
+      enketoNock
+        .post('/enketoPath/api/v2/survey')
+        .reply(201, { url: 'http://enke.to/$$', code: 201 });
+      const response = {};
+      return enketo.create(openRosaUrl, xmlFormId, null, response)
+        .should.be.rejectedWith(Problem.internal.enketoUnexpectedResponse('Could not parse token from enketo response url: http://enke.to/$$'));
     });
 
     it('should throw a Problem if the Enketo response code is unexpected', () => {
       enketoNock
-        .post('/enketoPath/api/v2/survey/preview')
+        .post('/enketoPath/api/v2/survey')
         .reply(204, {});
       const response = {};
-      return enketo.preview(openRosaUrl, xmlFormId, null, response)
+      return enketo.create(openRosaUrl, xmlFormId, null, response)
         .should.be.rejectedWith(Problem.internal.enketoUnexpectedResponse('wrong status code'));
     });
   });

@@ -6,6 +6,7 @@ const superagent = require('superagent');
 const { DateTime } = require('luxon');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
+const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects/:id/forms', () => {
 
@@ -494,6 +495,32 @@ describe('api: /projects/:id/forms', () => {
               body.draftToken.should.be.a.token();
             })))));
 
+    it('should worker-process the form draft over to enketo', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200)
+          .then(() => exhaust(container))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft')
+            .expect(200)
+            .then(({ body }) => {
+              body.enketoId.should.equal('::abcdefgh');
+            })))));
+
+    it('should worker-process the published form over to enketo', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200)
+          .then(() => exhaust(container))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+            .expect(200)
+            .then(({ body }) => {
+              body.enketoId.should.equal('::abcdefgh');
+            })))));
+
     it('should if flagged save the given definition as published', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
@@ -743,31 +770,24 @@ describe('api: /projects/:id/forms', () => {
               .then(({ body }) => {
                 body.submissions.should.equal(0);
               })))));
-    });
 
-    describe('/preview POST', () => {
-      it('should reject unless the user can read', testService((service) =>
-        service.login('chelsea', (asChelsea) =>
-          asChelsea.post('/v1/projects/1/forms/simple/preview').expect(403))));
-
-      it('should return json with preview url and code', testService((service) =>
-        service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms/simple/preview')
-            .expect(201)
-            .then(({ body }) =>
-              body.should.eql({ preview_url: 'http://enke.to/preview/::abcdefgh', code: 201 })
-            ))));
-
-      it('should fail if Enketo returns an unexpected response', testService((service) => {
-        global.enketoPreviewTest = 'error'; // set up the mock service to fail.
-        return service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms/simple/preview')
-            .expect(500)
-            .then(({ body }) => {
-              body.code.should.equal(500.4);
-              body.message.should.equal('The Enketo service returned an unexpected response.');
-            }))
-      }));
+    it('should return the correct enketoId with extended draft', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200)
+          .then(() => exhaust(container))
+          .then(() => {
+            global.enketoToken = '::ijklmnop';
+            return asAlice.post('/v1/projects/1/forms/simple2/draft')
+              .expect(200)
+              .then(() => exhaust(container))
+              .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+                .set('X-Extended-Metadata', true)
+                .expect(200)
+                .then(({ body }) => { body.enketoId.should.equal('::abcdefgh'); }));
+          }))));
     });
 
     ////////////////////////////////////////
@@ -1251,6 +1271,44 @@ describe('api: /projects/:id/forms', () => {
                     }));
               })))));
 
+    it('should worker-process the draft form over to enketo', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(({ body }) => {
+            should.not.exist(body.enketoId);
+          })
+          .then(() => exhaust(container))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(({ body }) => {
+              body.enketoId.should.equal('::abcdefgh');
+              global.enketoReceivedUrl.startsWith(container.env.domain).should.equal(true);
+              global.enketoReceivedUrl.should.match(/\/v1\/test\/[a-z0-9$!]{64}\/projects\/1\/forms\/simple\/draft/i);
+            })))));
+
+    it('should manage draft/published enketo tokens separately', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200)
+          .then(() => exhaust(container))
+          .then(() => {
+            global.enketoToken = '::ijklmnop';
+            return asAlice.post('/v1/projects/1/forms/simple2/draft')
+              .expect(200)
+              .then(() => exhaust(container))
+              .then(() => Promise.all([
+                asAlice.get('/v1/projects/1/forms/simple2')
+                  .expect(200)
+                  .then(({ body }) => { body.enketoId.should.equal('::abcdefgh'); }),
+                asAlice.get('/v1/projects/1/forms/simple2/draft')
+                  .expect(200)
+                  .then(({ body }) => { body.enketoId.should.equal('::ijklmnop'); })
+              ]));
+          }))));
+
       it('should replace the draft version', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
@@ -1659,6 +1717,24 @@ describe('api: /projects/:id/forms', () => {
                 body.submissions.should.equal(1);
                 body.lastSubmission.should.be.a.recentIsoDate();
               })))));
+
+    it('should return the correct enketoId with extended draft', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200)
+          .then(() => exhaust(container))
+          .then(() => {
+            global.enketoToken = '::ijklmnop';
+            return asAlice.post('/v1/projects/1/forms/simple2/draft')
+              .expect(200)
+              .then(() => exhaust(container))
+              .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft')
+                .set('X-Extended-Metadata', true)
+                .expect(200)
+                .then(({ body }) => { body.enketoId.should.equal('::ijklmnop'); }));
+          }))));
 
       it('should not count nondraft submissions in its count', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -2258,6 +2334,24 @@ describe('api: /projects/:id/forms', () => {
               .expect(200)
               .then(({ body }) => { body.should.eql([]); })))));
 
+      it('should not give an enketoId', testService((service, container) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.simple2)
+            .expect(200)
+            .then(() => exhaust(container))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft/publish?version=3')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2/versions')
+              .expect(200)
+              .then(({ body }) => {
+                body.map((f) => f.version).should.eql([ '3', '2.1' ]);
+                body.map((f) => f.enketoId).should.eql([ '::abcdefgh', undefined ]);
+              })))));
+
       it('should return publishedBy if extended is requested', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
@@ -2304,6 +2398,25 @@ describe('api: /projects/:id/forms', () => {
                   null,
                   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 ]);
+              })))));
+
+      it('should not give an enketoId with extended details', testService((service, container) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.simple2)
+            .expect(200)
+            .then(() => exhaust(container))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft/publish?version=3')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2/versions')
+              .set('X-Extended-Metadata', true)
+              .expect(200)
+              .then(({ body }) => {
+                body.map((f) => f.version).should.eql([ '3', '2.1' ]);
+                body.map((f) => f.enketoId).should.eql([ '::abcdefgh', undefined ]);
               })))));
 
       it('should sort results desc by publishedAt', testService((service) =>
