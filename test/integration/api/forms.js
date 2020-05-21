@@ -89,6 +89,43 @@ describe('api: /projects/:id/forms', () => {
   </xforms>`);
           }))));
 
+    it('should return only return matching form given formID=', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/formList?formID=withrepeat')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(({ text, headers }) => {
+            // Collect is particular about this:
+            headers['content-type'].should.equal('text/xml; charset=utf-8');
+
+            const domain = config.get('default.env.domain');
+            text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+  <xforms xmlns="http://openrosa.org/xforms/xformsList">
+    <xform>
+      <formID>withrepeat</formID>
+      <name>withrepeat</name>
+      <version>1.0</version>
+      <hash>md5:e7e9e6b3f11fca713ff09742f4312029</hash>
+      <downloadUrl>${domain}/v1/projects/1/forms/withrepeat.xml</downloadUrl>
+    </xform>
+  </xforms>`);
+          }))));
+
+    it('should return nothing given a nonmatching formID=', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/formList?formID=xyz')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(({ text, headers }) => {
+            // Collect is particular about this:
+            headers['content-type'].should.equal('text/xml; charset=utf-8');
+
+            const domain = config.get('default.env.domain');
+            text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+  <xforms xmlns="http://openrosa.org/xforms/xformsList">
+  </xforms>`);
+          }))));
+
     it('should return auth-filtered results for app users', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/app-users')
