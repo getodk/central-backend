@@ -31,7 +31,7 @@ describe('util/enketo', () => {
       return enketo.create(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', response);
     });
 
-    it('should pass through the intact Enketo response', () => {
+    it('should return the Enketo survey ID', () => {
       enketoNock
         .post('/enketoPath/api/v2/survey')
         .reply(201, { url: 'http://enke.to/::stuvwxyz', code: 201 });

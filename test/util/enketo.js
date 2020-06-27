@@ -7,6 +7,7 @@ module.exports = {
     global.enketoPreviewTest = null;
     const token = global.enketoToken || '::abcdefgh';
     global.enketoToken = null;
+    global.enketoReceivedUrl = null;
 
     if (state === 'error') {
       // pretend that Enketo has misbehaved

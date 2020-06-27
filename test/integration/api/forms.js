@@ -808,7 +808,7 @@ describe('api: /projects/:id/forms', () => {
                 body.submissions.should.equal(0);
               })))));
 
-    it('should return the correct enketoId with extended draft', testService((service, container) =>
+    it('should return the correct enketoId', testService((service, container) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')

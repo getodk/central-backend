@@ -1147,23 +1147,6 @@ If a Form was created with an Excel file (`.xls` or `.xlsx`), you can get that f
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-<!---#### Generating a Form Preview [POST /v1/projects/{projectId}/forms/{xmlFormId}/preview]
-
-When ODK Central is configured to use an Enketo service, add `/preview` to the end of the `Form` URL and `POST` without parameters to create a preview of the `Form`. The URL of the new preview is returned as `preview_url` in the response; see https://apidocs.enketo.org/v2/#/post-survey-preview.
-
-Creating a preview grants Enketo temporary, read-only access to the individual `Form` and its [Form Attachments](/reference/forms-and-submissions/'-form-attachments) for 15 minutes. After that period elapes, the preview may no longer load correctly.
-
-+ Response 201 (application/json)
-    + Body
-
-            {
-              preview_url: 'https://enke.to/preview/::abcd1234',
-              code: 201
-            }
-
-+ Response 403 (application/json)
-    + Attributes (Error 403)-->
-
 #### Listing Form Attachments [GET /v1/projects/{projectId}/forms/{xmlFormId}/attachments]
 
 This endpoint allows you to fetch the list of expected attachment files, and will tell you whether the server is in possession of each file or not. To modify an attachment, you'll need to create a Draft.
@@ -3199,6 +3182,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + xmlFormId: `simple` (string, required) - The `id` of this form as given in its XForms XML definition
 + name: `Simple` (string, optional) - The friendly name of this form. It is given by the `<title>` in the XForms XML definition.
 + version: `2.1` (string, optional) - The `version` of this form as given in its XForms XML definition. If no `version` was specified in the Form, a blank string will be given. If there is no associated Form, `null` will be returned.
++ enketoId: `abcdef` (string, optional) - If it exists, this is the survey ID of this published Form on Enketo at `/enketo`. Only a cookie-authenticated user may access the preview through Enketo.
 + hash: `51a93eab3a1974dbffc4c7913fa5a16a` (string, required) - An MD5 sum automatically computed based on the XForms XML definition. This is required for OpenRosa compliance.
 + keyId: `3` (number, optional) - If a public encryption key is present on the form, its numeric ID as tracked by Central is given here.
 + state (Form State, required) - The present lifecycle status of this form. Controls whether it is available for download on survey clients or accepts new submissions.
@@ -3213,6 +3197,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 
 ## Draft Form (Form)
 + draftToken: `lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7` (string, required) - The test token to use to submit to this draft form. See [Draft Testing Endpoints](TODO).
++ enketoId: `abcdef` (string, optional) - If it exists, this is the survey ID of this draft Form on Enketo at `/enketo`. Authentication is not needed to access the draft form through Enketo.
 
 ## Extended Form Version (Form)
 + publishedBy: (Actor, optional) - The full information of the Actor who published this version of the Form.
