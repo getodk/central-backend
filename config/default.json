@@ -17,6 +17,7 @@
       "host": "localhost",
       "port": 5000
     },
+    "enketo": {},
     "env": {
       "domain": "http://localhost:8989"
     },

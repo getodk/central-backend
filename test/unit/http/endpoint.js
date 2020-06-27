@@ -506,23 +506,6 @@ describe('endpoints', () => {
       });
     });
 
-    it('should immediately abort the database query if the request is aborted', (done) => {
-      const requestTest = new EventEmitter();
-      const responseTest = streamTest.toText((_, result) => {
-        result.should.equal('a');
-        done();
-      });
-
-      const source = new Readable({ read() {} });
-      source.end = () => { source.push(null); };
-      source.push('a');
-      setTimeout(() => { source.push('test'); }, 10);
-
-      responseTest.hasHeader = function() { return true; };
-      defaultResultWriter(source, requestTest, responseTest);
-      requestTest.emit('close');
-    });
-
     it('should not crash if the request is aborted but the stream is not endable', () => {
       const requestTest = new EventEmitter();
       const responseTest = streamTest.toText(() => {});

@@ -192,6 +192,17 @@ describe('preprocessors', () => {
           context.auth._session.should.eql(Option.of('session'));
         }));
 
+      it('should work for HTTPS HEAD requests', () =>
+        Promise.resolve(sessionHandler(
+          { Auth, Session: mockSession('alohomora') },
+          new Context(createRequest({ method: 'HEAD', headers: {
+            'X-Forwarded-Proto': 'https',
+            Cookie: '__Host-session=alohomora'
+          } }))
+        )).then((context) => {
+          context.auth._session.should.eql(Option.of('session'));
+        }));
+
       describe('CSRF protection', () => {
         const mockSessionWithCsrf = (expectedToken, csrf) => ({
           getByBearerToken: (token) => Promise.resolve((token === expectedToken)
