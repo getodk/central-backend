@@ -1,7 +1,9 @@
+const appRoot = require('app-root-path');
 const should = require('should');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { QueryOptions } = require('../../../lib/util/db');
+const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects', () => {
   describe('GET', () => {
@@ -933,6 +935,53 @@ describe('api: /projects', () => {
               asBob.get('/v1/projects/1/forms/simple/assignments')
                 .expect(200)
                 .then(({ body }) => { body.should.eql([]); }),
+              asBob.get('/v1/projects/1/forms/withrepeat/assignments')
+                .expect(200)
+                .then(({ body }) => { body.should.eql([]); })
+            ])))))));
+
+    it('should not delete enketo formviewer assignments', testService((service, container) =>
+      service.login('bob', (asBob) => asBob.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test app user' })
+        .expect(200)
+        .then(({ body }) => body)
+        .then((fk) => Promise.all([
+          asBob.post(`/v1/projects/1/forms/simple/assignments/app-user/${fk.id}`)
+            .expect(200),
+          asBob.post(`/v1/projects/1/forms/withrepeat/assignments/manager/${fk.id}`)
+            .expect(200),
+          asBob.post(`/v1/projects/1/forms?publish=true`)
+            .send(testData.forms.simple2)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+        ])
+          .then(() => exhaust(container))
+          .then(() => asBob.put('/v1/projects/1')
+            .set('Content-Type', 'application/json')
+            .send({
+              name: 'Default Project',
+              forms: [{
+                xmlFormId: 'simple', name: 'New Simple', state: 'closed',
+                assignments: []
+              }, {
+                xmlFormId: 'simple2', name: 'New New Simple', state: 'open',
+                assignments: []
+              }, {
+                xmlFormId: 'withrepeat', name: 'New Repeat', state: 'closing',
+                assignments: []
+              }]
+            })
+            .expect(200)
+            .then(() => Promise.all([
+              asBob.get('/v1/projects/1/forms/simple/assignments')
+                .expect(200)
+                .then(({ body }) => { body.should.eql([]); }),
+              container.Form.getByProjectAndXmlFormId(1, 'simple2')
+                .then((o) => o.get())
+                .then(({ acteeId }) => container.Assignment.getByActeeId(acteeId))
+                .then((result) => {
+                  result.length.should.equal(1);
+                }),
               asBob.get('/v1/projects/1/forms/withrepeat/assignments')
                 .expect(200)
                 .then(({ body }) => { body.should.eql([]); })
