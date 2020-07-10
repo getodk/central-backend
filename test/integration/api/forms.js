@@ -49,6 +49,11 @@ describe('api: /projects/:id/forms', () => {
   });
 
   describe('../formList GET', () => {
+    it('should reject if there is no authentication', testService((service) =>
+      service.get('/v1/projects/1/formList')
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(401)));
+
     it('should return no results if the user cannot read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/projects/1/formList')

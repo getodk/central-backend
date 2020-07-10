@@ -32,6 +32,14 @@ Finally, **system information and configuration** is available via a set of spec
 
 Here major and breaking changes to the API are listed by version.
 
+### ODK Central v0.9
+
+ODK Central v0.9 does not change the API except for one minor breaking change.
+
+**Changed**:
+
+* The [OpenRosa Form Listing API](/reference/openrosa-endpoints/openrosa-form-listing-api) has been modified to always require authentication. If a valid Actor is authenticated at all, a form list will always be returned, filtered by what that Actor is allowed to access.
+
 ### ODK Central v0.8
 
 ODK Central v0.8 introduces Draft Forms, publishing, and archived Form versions, which has a significant breaking impact on the existing API. The changes should be straightforward to adapt to, however. If you are currently creating Forms with `POST /projects/…/forms`, you may wish to add `?publish=true` to skip the Draft state and mimic the old behaviour. If you are using the API to push Form Attachments onto Forms, you'll only be able to do so now in draft state, at `/projects/…/forms/…/draft/attachments`.
@@ -2248,7 +2256,7 @@ By default, the given `<name/>` in the Form Listing response is the friendly nam
 
 A `<manifestUrl/>` property will be given per `<xform>` if and only if that form is expected to have media or data file attachments associated with it, based on its XForms definition. It will appear even if no attachments have actually been uploaded to the server to fulfill those expectations.
 
-This resource will always return a successful valid result for a Project that exists. The results will be filtered by the Forms that the requesting user is allowed to see.
+This resource always requires authentication. If a valid Actor is authenticated at all, a form list will always be returned, filtered by what that Actor is allowed to access.
 
 If you haven't already, please take a look at the **HTTP Request API** notes above on the required OpenRosa headers.
 
