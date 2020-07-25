@@ -110,6 +110,22 @@ should.Assertion.add('ExtendedFieldKey', function() {
   if (this.obj.lastUsed != null) this.obj.lastUsed.should.be.an.isoDate();
 });
 
+should.Assertion.add('PublicLink', function() {
+  this.params = { operator: 'to be a Public Link' };
+
+  should(this.obj).be.an.Actor();
+  Object.keys(this.obj).should.containDeep([ 'createdBy', 'token', 'formId' ]);
+  this.obj.formId.should.be.a.Number();
+  if (this.obj.token != null) this.obj.token.should.be.a.token();
+});
+
+should.Assertion.add('ExtendedPublicLink', function() {
+  this.params = { operator: 'to be an Extended Public Link' };
+
+  should(this.obj).be.a.PublicLink();
+  this.obj.createdBy.should.be.an.Actor();
+});
+
 should.Assertion.add('Form', function() {
   this.params = { operator: 'to be a Form' };
 
