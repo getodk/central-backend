@@ -84,7 +84,7 @@ describe('middleware', () => {
     });
 
     it('should set None and leave the URL if the query key is invalid', (done) => {
-      const request = createRequest({ url: '/users/23?authorization=inva|id' });
+      const request = createRequest({ url: '/users/23?st=inva|id' });
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.equal(Option.none());
         done();
@@ -92,7 +92,7 @@ describe('middleware', () => {
     });
 
     it('should set Some(fk) and rewrite URL if a query key is found', (done) => {
-      const request = createRequest({ url: '/users/23?authorization=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' });
+      const request = createRequest({ url: '/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' });
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'));
         done();
@@ -100,7 +100,7 @@ describe('middleware', () => {
     });
 
     it('should decode percent-encoded query keys', (done) => {
-      const request = createRequest({ url: '/users/23?authorization=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%24aa!aaaaaaaaaaaaaaaaaa' });
+      const request = createRequest({ url: '/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%24aa!aaaaaaaaaaaaaaaaaa' });
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aa!aaaaaaaaaaaaaaaaaa'));
         done();
