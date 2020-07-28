@@ -33,12 +33,18 @@ describe('api: /sessions', () => {
         .send({ email: 'chelsea@opendatakit.org', password: 'chelsea' })
         .expect(200)
         .then(({ body, headers }) => {
-          // i don't know why this becomes an array but i think superagent does it.
-          const cookie = headers['set-cookie'][0];
-          const matches = /__Host-session=([^;]+); Path=\/; Expires=([^;]+); SameSite=Strict; HttpOnly; Secure/.exec(cookie);
-          should.exist(matches);
-          matches[1].should.equal(body.token);
-          matches[2].should.equal(DateTime.fromISO(body.expiresAt).toHTTP());
+          // i don't know how this becomes an array but i think superagent does it.
+          const cookie = headers['set-cookie'];
+
+          const session = /__Host-session=([^;]+); Path=\/; Expires=([^;]+); HttpOnly; Secure; SameSite=Strict/.exec(cookie[0]);
+          should.exist(session);
+          decodeURIComponent(session[1]).should.equal(body.token);
+          session[2].should.equal(DateTime.fromISO(body.expiresAt).toHTTP());
+
+          const csrf = /__csrf=([^;]+); Path=\/; Expires=([^;]+); Secure; SameSite=Strict/.exec(cookie[1]);
+          should.exist(csrf);
+          decodeURIComponent(csrf[1]).should.equal(body.csrf);
+          csrf[2].should.equal(DateTime.fromISO(body.expiresAt).toHTTP());
         })));
 
     it('should return a 401 if the password is wrong', testService((service) =>
