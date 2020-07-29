@@ -548,6 +548,7 @@ describe('api: /projects/:id/forms', () => {
             .expect(200)
             .then(({ body }) => {
               body.enketoId.should.equal('::abcdefgh');
+              should.not.exist(body.enketoSingleId);
             })))));
 
     it('should worker-process the published form over to enketo', testService((service, container) =>
@@ -561,6 +562,7 @@ describe('api: /projects/:id/forms', () => {
             .expect(200)
             .then(({ body }) => {
               body.enketoId.should.equal('::abcdefgh');
+              body.enketoSingleId.should.equal('::::abcdefgh');
             })))));
 
     it('should if flagged save the given definition as published', testService((service) =>
@@ -828,7 +830,10 @@ describe('api: /projects/:id/forms', () => {
               .then(() => asAlice.get('/v1/projects/1/forms/simple2')
                 .set('X-Extended-Metadata', true)
                 .expect(200)
-                .then(({ body }) => { body.enketoId.should.equal('::abcdefgh'); }));
+                .then(({ body }) => {
+                  body.enketoId.should.equal('::abcdefgh');
+                  body.enketoSingleId.should.equal('::::abcdefgh');
+                }));
           }))));
     });
 
@@ -1325,6 +1330,7 @@ describe('api: /projects/:id/forms', () => {
             .expect(200)
             .then(({ body }) => {
               body.enketoId.should.equal('::abcdefgh');
+              should.not.exist(body.enketoSingleId);
               global.enketoReceivedUrl.startsWith(container.env.domain).should.equal(true);
               global.enketoReceivedUrl.should.match(/\/v1\/test\/[a-z0-9$!]{64}\/projects\/1\/forms\/simple\/draft/i);
             })))));
@@ -2392,6 +2398,7 @@ describe('api: /projects/:id/forms', () => {
               .then(({ body }) => {
                 body.map((f) => f.version).should.eql([ '3', '2.1' ]);
                 body.map((f) => f.enketoId).should.eql([ '::abcdefgh', undefined ]);
+                body.map((f) => f.enketoSingleId).should.eql([ null, null ]);
               })))));
 
       it('should return publishedBy if extended is requested', testService((service) =>
