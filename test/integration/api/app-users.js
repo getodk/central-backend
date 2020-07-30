@@ -38,6 +38,19 @@ describe('api: /projects/:id/app-users', () => {
             .set('Content-Type', 'text/xml')
             .send(testData.instances.simple.one)
             .expect(403)))));
+
+    it('should log the action in the audit log', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'test1' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/audits?action=field_key.create')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].actorId.should.equal(5);
+              body[0].acteeId.should.be.a.uuid();
+            })))));
   });
 
   describe('GET', () => {

@@ -115,6 +115,20 @@ describe('api: /sessions', () => {
               .expect(401));
         })));
 
+    it('should log the action in the audit log if it is a field key', testService((service) =>
+      service.post('/v1/sessions')
+        .send({ email: 'alice@opendatakit.org', password: 'alice' })
+        .expect(200)
+        .then(({ body }) => {
+          const token = body.token;
+          return service.delete('/v1/sessions/' + token)
+            .set('Authorization', 'Bearer ' + token)
+            .expect(200)
+            .then(() => service.get('/v1/users/current') // actually doesn't matter which route; we get 401 due to broken auth.
+              .set('Authorization', 'Bearer ' + token)
+              .expect(401));
+        })));
+
     it('should allow non-admins to delete their own sessions', testService((service) =>
       service.post('/v1/sessions')
         .send({ email: 'chelsea@opendatakit.org', password: 'chelsea' })
@@ -138,7 +152,7 @@ describe('api: /sessions', () => {
           .then((token) => service.delete(`/v1/key/${token}/sessions/${token}`)
             .expect(403)))));
 
-    it('should clear the cookie if successful', testService((service) =>
+    it('should clear the cookie if successful for the current session', testService((service) =>
       service.post('/v1/sessions')
         .send({ email: 'alice@opendatakit.org', password: 'alice' })
         .expect(200)
@@ -152,6 +166,49 @@ describe('api: /sessions', () => {
               cookie.should.match(/__Host-session=null/);
             });
         })));
+
+    it('should not log the action in the audit log for users', testService((service) =>
+      service.post('/v1/sessions')
+        .send({ email: 'alice@opendatakit.org', password: 'alice' })
+        .expect(200)
+        .then(({ body }) => body.token)
+        .then((token) => service.delete('/v1/sessions/' + token)
+          .set('Authorization', 'Bearer ' + token)
+          .expect(200)
+          .then(() => service.login('alice', (asAlice) =>
+            asAlice.get('/v1/audits?action=session.end')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(0);
+              }))))));
+
+    it('should log the action in the audit log for public links', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'test1' })
+          .expect(200)
+          .then(({ body }) => asAlice.delete('/v1/sessions/' + body.token)
+            .expect(200))
+          .then(() => asAlice.get('/v1/audits?action=session.end')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].actorId.should.equal(5);
+            })))));
+
+    it('should log the action in the audit log for app users', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'test1' })
+          .expect(200)
+          .then(({ body }) => asAlice.delete('/v1/sessions/' + body.token)
+            .expect(200))
+          .then(() => asAlice.get('/v1/audits?action=session.end')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].actorId.should.equal(5);
+            })))));
   });
 
   // this isn't exactly the right place for this but i just want to check the
