@@ -42,7 +42,7 @@ describe('util/enketo', () => {
 
     it('should return an Enketo single-survey ID', () => {
       enketoNock
-        .post('/enketoPath/api/v2/single')
+        .post('/enketoPath/api/v2/single/once')
         .reply(201, { single_url: 'http://enke.to/::stuvwxyz', code: 201 });
       const response = {};
       return enketo.createSingle(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', response)
