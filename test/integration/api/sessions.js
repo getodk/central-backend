@@ -167,6 +167,18 @@ describe('api: /sessions', () => {
             });
         })));
 
+    it('should not clear the cookie if using some other session', testService((service) =>
+      service.post('/v1/sessions')
+        .send({ email: 'alice@opendatakit.org', password: 'alice' })
+        .expect(200)
+        .then(({ body }) => body.token)
+        .then((token) => service.login('alice', (asAlice) =>
+          asAlice.delete('/v1/sessions/' + token)
+            .expect(200)
+            .then(({ headers }) => {
+              should.not.exist(headers['set-cookie']);
+            })))));
+
     it('should not log the action in the audit log for users', testService((service) =>
       service.post('/v1/sessions')
         .send({ email: 'alice@opendatakit.org', password: 'alice' })
