@@ -2398,7 +2398,7 @@ describe('api: /projects/:id/forms', () => {
               .then(({ body }) => {
                 body.map((f) => f.version).should.eql([ '3', '2.1' ]);
                 body.map((f) => f.enketoId).should.eql([ '::abcdefgh', undefined ]);
-                body.map((f) => f.enketoSingleId).should.eql([ null, null ]);
+                body.map((f) => f.enketoSingleId).should.eql([ '::::abcdefgh', undefined ]);
               })))));
 
       it('should return publishedBy if extended is requested', testService((service) =>
