@@ -19,7 +19,18 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
           .then(({ body }) => {
             body.should.be.a.PublicLink();
             body.displayName.should.equal('test1');
+            should.not.exist(body.once);
             body.createdBy.should.equal(5);
+          }))));
+
+    it('should return the once attribute if given', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'test2', once: true })
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.a.PublicLink();
+            body.once.should.equal(true);
           }))));
 
     it('should allow project managers to create', testService((service) =>
@@ -60,7 +71,7 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
     it('should return a list of links in order with merged data', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/public-links').send({ displayName: 'test 1' }).expect(200)
-          .then(() => asAlice.post('/v1/projects/1/forms/simple/public-links').send({ displayName: 'test 2' }).expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/public-links').send({ displayName: 'test 2', once: true }).expect(200))
           .then(() => asAlice.post('/v1/projects/1/forms/simple/public-links').send({ displayName: 'test 3' }).expect(200))
           .then(() => asAlice.get('/v1/projects/1/forms/simple/public-links')
             .expect(200)
@@ -71,6 +82,7 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
                 link.createdBy.should.equal(5);
                 link.formId.should.equal(1);
               });
+              body[1].once.should.equal(true);
             })))));
 
     it('should only return tokens from the requested form', testService((service) =>
