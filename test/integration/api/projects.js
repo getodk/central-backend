@@ -297,7 +297,7 @@ describe('api: /projects', () => {
           .expect(200)
           .then(({ body }) => {
             body.verbs.should.be.an.Array();
-            body.verbs.length.should.be.lessThan(24);
+            body.verbs.length.should.be.lessThan(25);
             body.verbs.should.containDeep([ 'assignment.create', 'project.delete' ]);
             body.verbs.should.not.containDeep([ 'project.create' ]);
           }))));

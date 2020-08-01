@@ -143,6 +143,28 @@ describe('api: /sessions', () => {
               .expect(401));
         })));
 
+    it('should allow managers to delete project app user sessions', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.post('/v1/projects/1/app-users')
+          .send({ displayName: 'test app user' })
+          .expect(200)
+          .then(({ body }) => body.token)
+          .then((token) => asBob.delete('/v1/sessions/' + token)
+            .expect(200)
+            .then(() => service.get(`/v1/key/${token}/users/current`)
+              .expect(401))))));
+
+    it('should allow managers to delete project public link sessions', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'test app user' })
+          .expect(200)
+          .then(({ body }) => body.token)
+          .then((token) => asBob.delete('/v1/sessions/' + token)
+            .expect(200)
+            .then(() => service.get(`/v1/key/${token}/users/current`)
+              .expect(401))))));
+
     it('should not allow app users to delete their own sessions', testService((service) =>
       service.login('bob', (asBob) =>
         asBob.post('/v1/projects/1/app-users')
