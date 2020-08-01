@@ -192,6 +192,21 @@ describe('api: /key/:key', () => {
       .then(({ body }) => asAlice.get(`/v1/key/${body.token}/users/current`)
         .expect(401)))));
 
+  it('should allow cookie+public-link', testService((service) =>
+    service.post('/v1/sessions')
+      .send({ email: 'alice@opendatakit.org', password: 'alice' })
+      .expect(200)
+      .then(({ body }) => body.token)
+      .then((aliceToken) => service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'linktest' })
+          .then(({ body }) => body.token)
+          .then((linkToken) => service.post(`/v1/key/${linkToken}/projects/1/forms/simple/submissions`)
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .set('Cookie', `__Host-session=${aliceToken}`)
+            .expect(200))))));
+
   it('should passthrough to the appropriate route with successful auth', testService((service) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms/simple/public-links')
