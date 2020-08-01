@@ -32,6 +32,14 @@ Finally, **system information and configuration** is available via a set of spec
 
 Here major and breaking changes to the API are listed by version.
 
+### ODK Central v1.0
+
+ODK Central v1.0 adds Public Links to the API, and makes one minor breaking change.
+
+**Changed**:
+
+* The non-extended App User response no longer includes a `createdBy` numeric ID. To retrieve the creator of an App User, request the extended response.
+
 ### ODK Central v0.9
 
 ODK Central v0.9 does not change the API except for one minor breaking change.
@@ -503,7 +511,7 @@ For more information about the `/projects` containing resource, please see the f
 
 Currently, there are no paging or filtering options, so listing `App User`s will get you every App User in the system, every time.
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `lastUsed` timestamp of each App User, as well as to inflate the `createdBy` from an `Actor` ID reference to an actual Actor metadata object.
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `lastUsed` timestamp of each App User, as well as to retrieve the details of the `Actor` the App User was `createdBy`.
 
 + Response 200 (application/json)
     This is the standard response, if Extended Metadata is not requested:
@@ -3141,7 +3149,6 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + roleId: `4` (number, required) - The numeric Role ID being assigned.
 
 ## App User (Actor)
-+ createdBy: `42` (number, required) - The ID of the `Actor` that created this `App User`.
 + token: `d1!E2GVHgpr4h9bpxxtqUJ7EVJ1Q$Dusm2RBXg8XyVJMCBCbvyE8cGacxUx3bcUT` (string, optional) - If present, this is the Token that can be used to authenticate a request as this `App User`. If not present, this `App User`'s access has been revoked.
 + projectId: `1` (number, required) - The ID of the `Project` that this `App User` is bound to.
 

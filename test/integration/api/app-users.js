@@ -19,7 +19,6 @@ describe('api: /projects/:id/app-users', () => {
           .then(({ body }) => {
             body.should.be.a.FieldKey();
             body.displayName.should.equal('test1');
-            body.createdBy.should.equal(5);
           }))));
 
     it('should allow project managers to create', testService((service) =>
@@ -68,7 +67,6 @@ describe('api: /projects/:id/app-users', () => {
               body.map((fk) => fk.displayName).should.eql([ 'test 3', 'test 2', 'test 1' ]);
               body.forEach((fk) => {
                 fk.should.be.a.FieldKey()
-                fk.createdBy.should.equal(5);
                 fk.projectId.should.equal(1);
               });
             })))));

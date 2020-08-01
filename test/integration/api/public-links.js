@@ -20,7 +20,6 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
             body.should.be.a.PublicLink();
             body.displayName.should.equal('test1');
             should.not.exist(body.once);
-            body.createdBy.should.equal(5);
           }))));
 
     it('should return the once attribute if given', testService((service) =>
@@ -77,11 +76,7 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
             .expect(200)
             .then(({ body }) => {
               body.map((link) => link.displayName).should.eql([ 'test 3', 'test 2', 'test 1' ]);
-              body.forEach((link) => {
-                link.should.be.a.PublicLink()
-                link.createdBy.should.equal(5);
-                link.formId.should.equal(1);
-              });
+              body.forEach((link) => { link.should.be.a.PublicLink() });
               body[1].once.should.equal(true);
             })))));
 
@@ -136,7 +131,6 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
             .then(({ body }) => body.forEach((obj) => {
               obj.should.be.an.ExtendedPublicLink();
               obj.createdBy.displayName.should.equal('Alice');
-              obj.formId.should.equal(1);
             }))))));
 
     it('should sort revoked field keys to the bottom in extended metadata', testService((service) =>
@@ -150,7 +144,7 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
             .expect(200)
             .then(({ body }) => {
               body.length.should.equal(3);
-              body.forEach((key) => key.should.be.a.PublicLink());
+              body.forEach((key) => key.should.be.an.ExtendedPublicLink());
               body.map((key) => key.displayName).should.eql([ 'test 3', 'test 1', 'test 2' ]);
             })))));
   });

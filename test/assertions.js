@@ -96,7 +96,8 @@ should.Assertion.add('FieldKey', function() {
   this.params = { operator: 'to be a Field Key' };
 
   should(this.obj).be.an.Actor();
-  Object.keys(this.obj).should.containDeep([ 'createdBy', 'token', 'projectId' ]);
+  Object.keys(this.obj).should.containDeep([ 'token', 'projectId' ]);
+  should.not.exist(this.obj.createdBy);
   this.obj.projectId.should.be.a.Number();
   if (this.obj.token != null) this.obj.token.should.be.a.token();
 });
@@ -104,26 +105,31 @@ should.Assertion.add('FieldKey', function() {
 should.Assertion.add('ExtendedFieldKey', function() {
   this.params = { operator: 'to be an Extended Field Key' };
 
-  should(this.obj).be.a.FieldKey();
+  should(this.obj).be.an.Actor();
+  Object.keys(this.obj).should.containDeep([ 'createdBy', 'token', 'projectId' ]);
   this.obj.createdBy.should.be.an.Actor();
   this.obj.should.have.property('lastUsed');
+  this.obj.projectId.should.be.a.Number();
   if (this.obj.lastUsed != null) this.obj.lastUsed.should.be.an.isoDate();
+  if (this.obj.token != null) this.obj.token.should.be.a.token();
 });
 
 should.Assertion.add('PublicLink', function() {
   this.params = { operator: 'to be a Public Link' };
 
   should(this.obj).be.an.Actor();
-  Object.keys(this.obj).should.containDeep([ 'createdBy', 'token', 'formId' ]);
-  this.obj.formId.should.be.a.Number();
+  Object.keys(this.obj).should.containDeep([ 'token' ]);
+  should.not.exist(this.obj.createdBy);
   if (this.obj.token != null) this.obj.token.should.be.a.token();
 });
 
 should.Assertion.add('ExtendedPublicLink', function() {
   this.params = { operator: 'to be an Extended Public Link' };
 
-  should(this.obj).be.a.PublicLink();
+  should(this.obj).be.an.Actor();
+  Object.keys(this.obj).should.containDeep([ 'createdBy', 'token' ]);
   this.obj.createdBy.should.be.an.Actor();
+  if (this.obj.token != null) this.obj.token.should.be.a.token();
 });
 
 should.Assertion.add('Form', function() {
