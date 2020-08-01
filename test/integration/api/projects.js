@@ -987,6 +987,34 @@ describe('api: /projects', () => {
                 .then(({ body }) => { body.should.eql([]); })
             ])))))));
 
+    it('should not delete public link assignments', testService((service, container) =>
+      service.login('bob', (asBob) => asBob.post('/v1/projects/1/forms/simple/public-links')
+        .send({ displayName: 'test link' })
+        .expect(200)
+        .then(() => asBob.put('/v1/projects/1')
+          .set('Content-Type', 'application/json')
+          .send({
+            name: 'Default Project',
+            forms: [{
+              xmlFormId: 'simple', name: 'New Simple', state: 'closed',
+              assignments: []
+            }, {
+              xmlFormId: 'withrepeat', name: 'New Repeat', state: 'closing',
+              assignments: []
+            }]
+          })
+          .expect(200)
+          .then(() => Promise.all([
+            asBob.get('/v1/projects/1/forms/simple/assignments')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(1);
+              }),
+            asBob.get('/v1/projects/1/forms/withrepeat/assignments')
+              .expect(200)
+              .then(({ body }) => { body.should.eql([]); })
+          ]))))));
+
     it('should log the deletion action in the audit log', testService((service, { Actor, Audit, Project }) =>
       service.login('bob', (asBob) => asBob.post('/v1/projects/1/app-users')
         .send({ displayName: 'test app user' })
