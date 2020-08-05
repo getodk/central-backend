@@ -17,5 +17,5 @@ const _create = (prefix) => (openRosaUrl, xmlFormId, token) => new Promise((reso
   }
 });
 
-module.exports = { create: _create('::'), createSingle: _create('::::') };
+module.exports = { create: _create('::'), createOnceToken: _create('::::') };
 

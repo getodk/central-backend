@@ -43,9 +43,9 @@ describe('util/enketo', () => {
     it('should return an Enketo single-survey ID', () => {
       enketoNock
         .post('/enketoPath/api/v2/single/once')
-        .reply(201, { single_url: 'http://enke.to/::stuvwxyz', code: 201 });
+        .reply(201, { single_url: 'http://enke.to/single/::stuvwxyz', code: 201 });
       const response = {};
-      return enketo.createSingle(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', response)
+      return enketo.createOnceToken(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', response)
         .then((result) => result.should.equal('::stuvwxyz'));
     });
 

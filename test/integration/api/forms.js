@@ -548,7 +548,7 @@ describe('api: /projects/:id/forms', () => {
             .expect(200)
             .then(({ body }) => {
               body.enketoId.should.equal('::abcdefgh');
-              should.not.exist(body.enketoSingleId);
+              should.not.exist(body.enketoOnceId);
             })))));
 
     it('should worker-process the published form over to enketo', testService((service, container) =>
@@ -562,7 +562,7 @@ describe('api: /projects/:id/forms', () => {
             .expect(200)
             .then(({ body }) => {
               body.enketoId.should.equal('::abcdefgh');
-              body.enketoSingleId.should.equal('::::abcdefgh');
+              body.enketoOnceId.should.equal('::::abcdefgh');
             })))));
 
     it('should if flagged save the given definition as published', testService((service) =>
@@ -832,7 +832,7 @@ describe('api: /projects/:id/forms', () => {
                 .expect(200)
                 .then(({ body }) => {
                   body.enketoId.should.equal('::abcdefgh');
-                  body.enketoSingleId.should.equal('::::abcdefgh');
+                  body.enketoOnceId.should.equal('::::abcdefgh');
                 }));
           }))));
     });
@@ -1330,7 +1330,7 @@ describe('api: /projects/:id/forms', () => {
             .expect(200)
             .then(({ body }) => {
               body.enketoId.should.equal('::abcdefgh');
-              should.not.exist(body.enketoSingleId);
+              should.not.exist(body.enketoOnceId);
               global.enketoReceivedUrl.startsWith(container.env.domain).should.equal(true);
               global.enketoReceivedUrl.should.match(/\/v1\/test\/[a-z0-9$!]{64}\/projects\/1\/forms\/simple\/draft/i);
             })))));
@@ -2398,7 +2398,7 @@ describe('api: /projects/:id/forms', () => {
               .then(({ body }) => {
                 body.map((f) => f.version).should.eql([ '3', '2.1' ]);
                 body.map((f) => f.enketoId).should.eql([ '::abcdefgh', undefined ]);
-                body.map((f) => f.enketoSingleId).should.eql([ '::::abcdefgh', undefined ]);
+                body.map((f) => f.enketoOnceId).should.eql([ '::::abcdefgh', undefined ]);
               })))));
 
       it('should return publishedBy if extended is requested', testService((service) =>
