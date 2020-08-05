@@ -186,12 +186,6 @@ describe('api: /key/:key', () => {
     service.get('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/current')
       .expect(401)));
 
-  it('should return 401 if two credentials are presented', testService((service) =>
-    service.login('alice', (asAlice) => asAlice.post('/v1/projects/1/forms/simple/public-links')
-      .send({ displayName: 'linktest' })
-      .then(({ body }) => asAlice.get(`/v1/key/${body.token}/users/current`)
-        .expect(401)))));
-
   it('should allow cookie+public-link', testService((service) =>
     service.post('/v1/sessions')
       .send({ email: 'alice@opendatakit.org', password: 'alice' })
@@ -201,10 +195,9 @@ describe('api: /key/:key', () => {
         asAlice.post('/v1/projects/1/forms/simple/public-links')
           .send({ displayName: 'linktest' })
           .then(({ body }) => body.token)
-          .then((linkToken) => service.post(`/v1/key/${linkToken}/projects/1/forms/simple/submissions`)
-            .send(testData.instances.simple.one)
-            .set('Content-Type', 'application/xml')
+          .then((linkToken) => service.get(`/v1/key/${linkToken}/projects/1/forms/simple.xml`)
             .set('Cookie', `__Host-session=${aliceToken}`)
+            .set('X-Forwarded-Proto', 'https')
             .expect(200))))));
 
   it('should passthrough to the appropriate route with successful auth', testService((service) =>

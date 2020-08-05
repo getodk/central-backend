@@ -32,7 +32,7 @@ describe('preprocessors', () => {
     it('should do nothing if no Authorization header is provided', () =>
       Promise.resolve(sessionHandler(
         { Auth, Session: mockSession() },
-        new Context(createRequest())
+        new Context(createRequest({ fieldKey: Option.none() }))
       )).then((context) => {
         // preprocessors return nothing if they have no changes to make to the context.
         should.not.exist(context);
@@ -41,7 +41,7 @@ describe('preprocessors', () => {
     it('should do nothing if Authorization mode is not Bearer or Basic', () =>
       Promise.resolve(sessionHandler(
         { Auth, Session: mockSession() },
-        new Context(createRequest({ headers: { Authorization: 'Digest aabbccddeeff123' } }))
+        new Context(createRequest({ headers: { Authorization: 'Digest aabbccddeeff123' }, fieldKey: Option.none() }))
       )).then((context) => {
         // preprocessors return nothing if they have no changes to make to the context.
         should.not.exist(context);
@@ -87,19 +87,6 @@ describe('preprocessors', () => {
             'X-Forwarded-Proto': 'https'
           } }))
         )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
-
-      it('should fail the request if Basic auth is attempted with a successful auth present @slow', () =>
-        hashPassword('alice').then((hashed) =>
-          Promise.resolve(sessionHandler(
-            { Auth, User: mockUser('alice@opendatakit.org', hashed) },
-            new Context(
-              createRequest({ headers: {
-                Authorization: `Basic ${Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64')}`,
-                'X-Forwarded-Proto': 'https'
-              } }),
-              { auth: { isAuthenticated() { return true; } } }
-            )
-          )).should.be.rejectedWith(Problem, { problemCode: 401.2 })));
 
       it('should fail the request if the Basic auth user cannot be found', () =>
         Promise.resolve(sessionHandler(
@@ -166,20 +153,25 @@ describe('preprocessors', () => {
           should.not.exist(context);
         }));
 
-      it('should do nothing if Cookie auth is attempted with a successful auth present', () =>
+      it('should do nothing if Cookie auth is attempted with primary auth present', () => {
+        let caught = false;
         Promise.resolve(sessionHandler(
           { Auth, Session: mockSession('alohomora') },
           new Context(
             createRequest({ method: 'GET', headers: {
+              'Authorization': 'Bearer abc',
               'X-Forwarded-Proto': 'https',
               Cookie: '__Host-session=alohomora'
             } }),
-            { auth: { isAuthenticated() { return true; } } }
+            { auth: { isAuthenticated() { return false; } } }
           )
-        )).then((context) => {
-          // preprocessors return nothing if they have no changes to make to the context.
-          should.not.exist(context);
-        }));
+        )).catch((err) => {
+          err.problemCode.should.equal(401.2);
+          caught = true;
+        }).then((context) => {
+          caught.should.equal(true);
+        });
+      });
 
       it('should work for HTTPS GET requests', () =>
         Promise.resolve(sessionHandler(
@@ -261,10 +253,6 @@ describe('preprocessors', () => {
           }));
       });
     });
-  });
-
-  describe('fieldKeyHandler', () => {
-    const { fieldKeyHandler } = preprocessors;
 
     const mockFkSession = (expectedToken, actorType) => ({
       getByBearerToken: (token) => Promise.resolve((token === expectedToken)
@@ -273,7 +261,7 @@ describe('preprocessors', () => {
     });
 
     it('should do nothing if no fieldKey is present in context', () =>
-      Promise.resolve(fieldKeyHandler(
+      Promise.resolve(sessionHandler(
         { Auth, Session: mockFkSession('alohomora') },
         new Context(createRequest(), { fieldKey: Option.none() })
       )).then((context) => {
@@ -282,7 +270,7 @@ describe('preprocessors', () => {
       }));
 
     it('should fail the request if multiple auths are attempted', () =>
-      Promise.resolve(fieldKeyHandler(
+      Promise.resolve(sessionHandler(
         { Auth, Session: mockFkSession('alohomora') },
         new Context(createRequest(), {
           fieldKey: Option.of('alohomora'),
@@ -291,19 +279,19 @@ describe('preprocessors', () => {
       )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
     it('should fail the request if the session does not exist', () =>
-      Promise.resolve(fieldKeyHandler(
+      Promise.resolve(sessionHandler(
         { Auth, Session: mockFkSession('alohomora') },
         new Context(createRequest(), { fieldKey: Option.of('abracadabra'), })
       )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
     it('should fail the request if the session does not belong to a field key', () =>
-      Promise.resolve(fieldKeyHandler(
+      Promise.resolve(sessionHandler(
         { Auth, Session: mockFkSession('alohomora', 'user') },
         new Context(createRequest(), { fieldKey: Option.of('alohomora'), })
       )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
     it('should attach the correct auth if everything is correct', () =>
-      Promise.resolve(fieldKeyHandler(
+      Promise.resolve(sessionHandler(
         { Auth, Session: mockFkSession('alohomora', 'field_key') },
         new Context(createRequest(), { fieldKey: Option.of('alohomora'), })
       )).then((context) => {

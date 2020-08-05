@@ -116,18 +116,18 @@ describe('api: /sessions', () => {
         })));
 
     it('should log the action in the audit log if it is a field key', testService((service) =>
-      service.post('/v1/sessions')
-        .send({ email: 'alice@opendatakit.org', password: 'alice' })
-        .expect(200)
-        .then(({ body }) => {
-          const token = body.token;
-          return service.delete('/v1/sessions/' + token)
-            .set('Authorization', 'Bearer ' + token)
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'test1' })
+          .expect(200)
+          .then(({ body }) => asAlice.delete('/v1/sessions/' + body.token)
+            .expect(200))
+          .then(() => asAlice.get('/v1/audits?action=session.end')
             .expect(200)
-            .then(() => service.get('/v1/users/current') // actually doesn't matter which route; we get 401 due to broken auth.
-              .set('Authorization', 'Bearer ' + token)
-              .expect(401));
-        })));
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].actorId.should.equal(5);
+            })))));
 
     it('should allow non-admins to delete their own sessions', testService((service) =>
       service.post('/v1/sessions')

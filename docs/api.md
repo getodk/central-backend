@@ -39,6 +39,7 @@ ODK Central v1.0 adds Public Links to the API, and makes one minor breaking chan
 **Changed**:
 
 * The non-extended App User response no longer includes a `createdBy` numeric ID. To retrieve the creator of an App User, request the extended response.
+* We no longer reject the request if multiple authentication schemes are presented, and instead document the priority order of the different schemes [here](TODO).
 
 ### ODK Central v0.9
 
@@ -169,7 +170,7 @@ In practice, there are two types of Actors available in the system today:
 
 In a future version of the API, programmatic consumers will be more directly supported as their own Actor type, which can be granted limited permissions and can authenticate over **OAuth 2.0**.
 
-Next, you will find documentation on each of the three authentication methods described above.
+Next, you will find documentation on each of the three authentication methods described above. It is best not to present multiple credentials. If you do, the first _presented_ scheme out of Bearer, Basic, Cookie, then `/key` token will be used for the request.
 
 ## Session Authentication [/v1/sessions]
 

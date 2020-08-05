@@ -202,11 +202,6 @@ describe('api: /key/:key', () => {
     service.get('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/current')
       .expect(401)));
 
-  it('should return 401 if two credentials are presented', testService((service) =>
-    service.login('alice', (asAlice) => asAlice.post('/v1/projects/1/app-users').send({ displayName: 'fktest' })
-      .then(({ body }) => asAlice.get(`/v1/key/${body.token}/users/current`)
-        .expect(401)))));
-
   it('should reject non-field tokens', testService((service) =>
     service.post('/v1/sessions').send({ email: 'alice@opendatakit.org', password: 'alice' })
       .then(({ body }) => service.get(`/v1/key/${body.token}/users/current`)
