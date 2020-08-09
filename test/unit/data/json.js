@@ -259,8 +259,8 @@ describe('submissionToOData', () => {
       new MockField({ path: '/geotraceNoAlt', name: 'geotraceNoAlt', type: 'geotrace' })
     ];
     const submission = mockSubmission('geojson', `<data>
-        <geotrace>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8</geotrace>
-        <geotraceNoAlt>11.1 22.2;33.3 44.4;55.5 66.6</geotraceNoAlt>
+        <geotrace>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8;</geotrace>
+        <geotraceNoAlt>11.1 22.2;33.3 44.4;55.5 66.6;</geotraceNoAlt>
       </data>`);
     return submissionToOData(fields, 'Submissions', submission).then((result) => {
       result.should.eql([{
@@ -287,8 +287,8 @@ describe('submissionToOData', () => {
       new MockField({ path: '/geotraceNoAlt', name: 'geotraceNoAlt', type: 'geotrace' })
     ];
     const submission = mockSubmission('wkt', `<data>
-        <geotrace>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8</geotrace>
-        <geotraceNoAlt>11.1 22.2;33.3 44.4;55.5 66.6</geotraceNoAlt>
+        <geotrace>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8;</geotrace>
+        <geotraceNoAlt>11.1 22.2;33.3 44.4;55.5 66.6;</geotraceNoAlt>
       </data>`);
     return submissionToOData(fields, 'Submissions', submission, { wkt: true }).then((result) => {
       result.should.eql([{
@@ -306,8 +306,8 @@ describe('submissionToOData', () => {
       new MockField({ path: '/polygonNoAlt', name: 'polygonNoAlt', type: 'geoshape' })
     ];
     const submission = mockSubmission('geojson', `<data>
-        <polygon>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8;10.0 20.0 30.0 40.0;1.1 2.2 3.3 4.4</polygon>
-        <polygonNoAlt>11.1 22.2;33.3 44.4;55.5 66.6;11.1 22.2</polygonNoAlt>
+        <polygon>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8;10.0 20.0 30.0 40.0;1.1 2.2 3.3 4.4;</polygon>
+        <polygonNoAlt>11.1 22.2;33.3 44.4;55.5 66.6;11.1 22.2;</polygonNoAlt>
       </data>`);
     return submissionToOData(fields, 'Submissions', submission).then((result) => {
       result.should.eql([{
@@ -334,8 +334,8 @@ describe('submissionToOData', () => {
       new MockField({ path: '/polygonNoAlt', name: 'polygonNoAlt', type: 'geoshape' })
     ];
     const submission = mockSubmission('wkt', `<data>
-        <polygon>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8;10.0 20.0 30.0 40.0;1.1 2.2 3.3 4.4</polygon>
-        <polygonNoAlt>11.1 22.2;33.3 44.4;55.5 66.6;11.1 22.2</polygonNoAlt>
+        <polygon>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8;10.0 20.0 30.0 40.0;1.1 2.2 3.3 4.4;</polygon>
+        <polygonNoAlt>11.1 22.2;33.3 44.4;55.5 66.6;11.1 22.2;</polygonNoAlt>
       </data>`);
     return submissionToOData(fields, 'Submissions', submission, { wkt: true }).then((result) => {
       result.should.eql([{
