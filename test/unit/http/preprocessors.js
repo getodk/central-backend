@@ -330,6 +330,18 @@ describe('preprocessors', () => {
             )
           )).should.be.fulfilled());
 
+        it('should url-decode the CSRF token', () =>
+          Promise.resolve(sessionHandler(
+            { Auth, Session: mockSessionWithCsrf('alohomora', 'secret$csrf') },
+            new Context(
+              createRequest({ method: 'POST', headers: {
+                'X-Forwarded-Proto': 'https',
+                Cookie: '__Host-session=alohomora'
+              }, body: { __csrf: 'secret%24csrf' } }),
+              { fieldKey: Option.none() }
+            )
+          )).should.be.fulfilled());
+
         it('should remove CSRF token from data payload on success', () =>
           Promise.resolve(sessionHandler(
             { Auth, Session: mockSessionWithCsrf('alohomora', 'secretcsrf') },
