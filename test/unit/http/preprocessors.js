@@ -206,6 +206,30 @@ describe('preprocessors', () => {
         });
       });
 
+      it('should do nothing if Cookie auth is attempted with fk auth present', () => {
+        let caught = false;
+        Promise.resolve(sessionHandler(
+          { Auth, Session: mockSession('alohomora') },
+          new Context(
+            createRequest({
+              method: 'GET',
+              headers: {
+                'Authorization': 'Bearer abc',
+                'X-Forwarded-Proto': 'https',
+                Cookie: '__Host-session=alohomora'
+              },
+              url: '/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+            }),
+            { auth: { isAuthenticated() { return false; } } }
+          )
+        )).catch((err) => {
+          err.problemCode.should.equal(401.2);
+          caught = true;
+        }).then((context) => {
+          caught.should.equal(true);
+        });
+      });
+
       it('should work for HTTPS GET requests', () =>
         Promise.resolve(sessionHandler(
           { Auth, Session: mockSession('alohomora') },
