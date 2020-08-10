@@ -258,6 +258,20 @@ describe('preprocessors', () => {
           context.auth._session.should.eql(Option.of('session'));
         }));
 
+      it('should decode encoded cookies', () =>
+        Promise.resolve(sessionHandler(
+          { Auth, Session: mockSession('aloho$mora') },
+          new Context(
+            createRequest({ method: 'GET', headers: {
+              'X-Forwarded-Proto': 'https',
+              Cookie: '__Host-session=aloho%24mora'
+            } }),
+            { fieldKey: Option.none() }
+          )
+        )).then((context) => {
+          context.auth._session.should.eql(Option.of('session'));
+        }));
+
       describe('CSRF protection', () => {
         const mockSessionWithCsrf = (expectedToken, csrf) => ({
           getByBearerToken: (token) => Promise.resolve((token === expectedToken)
