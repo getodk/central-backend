@@ -47,7 +47,7 @@ describe('api: /submission', () => {
       service.post('/v1/projects/1/submission')
         .set('X-OpenRosa-Version', '1.0')
         .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
-        .expect(403)));
+        .expect(401)));
 
     it('should reject if the form is not taking submissions', testService((service) =>
       service.login('alice', (asAlice) =>
