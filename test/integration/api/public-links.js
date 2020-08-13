@@ -182,9 +182,9 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
 
 // Test the actual use of public links.
 describe('api: /key/:key', () => {
-  it('should return 401 if an invalid key is provided', testService((service) =>
+  it('should return 403 if an invalid key is provided', testService((service) =>
     service.get('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/current')
-      .expect(401)));
+      .expect(403)));
 
   it('should allow cookie+public-link', testService((service) =>
     service.post('/v1/sessions')

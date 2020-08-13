@@ -56,11 +56,11 @@ describe('middleware', () => {
       });
     });
 
-    it('should set None and leave the URL if the prefix key is invalid', (done) => {
-      const request = createRequest({ url: '/key/12345/users/23' });
+    it('should pass through any field key content', (done) => {
+      const request = createRequest({ url: '/key/12|45/users/23' });
       fieldKeyParser(request, null, () => {
-        request.fieldKey.should.equal(Option.none());
-        request.url.should.equal('/key/12345/users/23');
+        request.fieldKey.should.eql(Option.of('12|45'));
+        request.url.should.equal('/users/23');
         done();
       });
     });
@@ -83,10 +83,20 @@ describe('middleware', () => {
       });
     });
 
-    it('should set None and leave the URL if the query key is invalid', (done) => {
+    it('should pass through any query key content', (done) => {
       const request = createRequest({ url: '/v1/users/23?st=inva|id' });
       fieldKeyParser(request, null, () => {
-        request.fieldKey.should.equal(Option.none());
+        request.fieldKey.should.eql(Option.of('inva|id'));
+        request.originalUrl.should.equal('/v1/key/inva|id/users/23?st=inva|id');
+        done();
+      });
+    });
+
+    it('should escape slashes in the rewritten path prefix', (done) => {
+      const request = createRequest({ url: '/v1/users/23?st=in$va/id' });
+      fieldKeyParser(request, null, () => {
+        request.fieldKey.should.eql(Option.of('in$va/id'));
+        request.originalUrl.should.equal('/v1/key/in$va%2Fid/users/23?st=in$va/id');
         done();
       });
     });

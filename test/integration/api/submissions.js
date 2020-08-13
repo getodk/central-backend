@@ -13,7 +13,7 @@ describe('api: /submission', () => {
 
     it('should fail on authentication given broken credentials', testService((service) =>
       service.head('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/submission')
-        .expect(401)));
+        .expect(403)));
   });
 
   describe('POST', () => {

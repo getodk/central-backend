@@ -48,25 +48,36 @@ describe('preprocessors', () => {
       }));
 
     describe('Bearer auth', () => {
-      it('should fail the request if Bearer auth is attempted with a successful auth present', () =>
+      it('should ignore bearer auth if a field key is present', () =>
         Promise.resolve(sessionHandler(
-          { Auth, Session: mockSession() },
+          { Auth, Session: {
+            getByBearerToken: (token) => {
+              token.should.not.equal('aabbccddeeff123');
+              return Promise.resolve(Option.none());
+            }
+          } },
           new Context(
             createRequest({ headers: { Authorization: 'Bearer aabbccddeeff123' } }),
-            { auth: { isAuthenticated() { return true; } } }
+            { auth: { isAuthenticated() { return true; } }, fieldKey: Option.of('a') }
           )
-        )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
+        )).should.be.rejectedWith(Problem, { problemCode: 403.1 }));
 
       it('should fail the request if an invalid Bearer token is given', () =>
         Promise.resolve(sessionHandler(
           { Auth, Session: mockSession('alohomora') },
-          new Context(createRequest({ headers: { Authorization: 'Bearer abracadabra' } }))
+          new Context(
+            createRequest({ headers: { Authorization: 'Bearer abracadabra' } }),
+            { fieldKey: Option.none() }
+          )
         )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should set the appropriate session if a valid Bearer token is given', () =>
         Promise.resolve(sessionHandler(
           { Auth, Session: mockSession('alohomora') },
-          new Context(createRequest({ headers: { Authorization: 'Bearer alohomora' } }))
+          new Context(
+            createRequest({ headers: { Authorization: 'Bearer alohomora' } }),
+            { fieldKey: Option.none() }
+          )
         )).then((context) => {
           context.auth._session.should.eql(Option.of('session'));
         }));
@@ -76,44 +87,59 @@ describe('preprocessors', () => {
       it('should reject non-https Basic auth requests', () =>
         Promise.resolve(sessionHandler(
           { Auth, User: mockUser('alice@opendatakit.org') },
-          new Context(createRequest({ headers: { Authorization: 'Basic abracadabra' } }))
+          new Context(
+            createRequest({ headers: { Authorization: 'Basic abracadabra' } }),
+            { fieldKey: Option.none() }
+          )
         )).should.be.rejectedWith(Problem, { problemCode: 401.3 }));
 
       it('should fail the request if an improperly-formatted Basic auth is given', () =>
         Promise.resolve(sessionHandler(
           { Auth, User: mockUser('alice@opendatakit.org') },
-          new Context(createRequest({ headers: {
-            Authorization: `Basic ${Buffer.from('alice@opendatakit.org:', 'utf8').toString('base64')}`,
-            'X-Forwarded-Proto': 'https'
-          } }))
+          new Context(
+            createRequest({ headers: {
+              Authorization: `Basic ${Buffer.from('alice@opendatakit.org:', 'utf8').toString('base64')}`,
+              'X-Forwarded-Proto': 'https'
+            } }),
+            { fieldKey: Option.none() }
+          )
         )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should fail the request if the Basic auth user cannot be found', () =>
         Promise.resolve(sessionHandler(
           { Auth, User: mockUser('alice@opendatakit.org') },
-          new Context(createRequest({ headers: {
-            Authorization: `Basic ${Buffer.from('bob@opendatakit.org:bob', 'utf8').toString('base64')}`,
-            'X-Forwarded-Proto': 'https'
-          } }))
+          new Context(
+            createRequest({ headers: {
+              Authorization: `Basic ${Buffer.from('bob@opendatakit.org:bob', 'utf8').toString('base64')}`,
+              'X-Forwarded-Proto': 'https'
+            } }),
+            { fieldKey: Option.none() }
+          )
         )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should fail the request if the Basic auth credentials are not right', () =>
         Promise.resolve(sessionHandler(
           { Auth, User: mockUser('alice@opendatakit.org', 'willnevermatch'), crypto },
-          new Context(createRequest({ headers: {
-            Authorization: `Basic ${Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64')}`,
-            'X-Forwarded-Proto': 'https'
-          } }))
+          new Context(
+            createRequest({ headers: {
+              Authorization: `Basic ${Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64')}`,
+              'X-Forwarded-Proto': 'https'
+            } }),
+            { fieldKey: Option.none() }
+          )
         )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should set the appropriate session if valid Basic auth credentials are given @slow', () =>
         hashPassword('alice').then((hashed) =>
           Promise.resolve(sessionHandler(
             { Auth, User: mockUser('alice@opendatakit.org', hashed), crypto },
-            new Context(createRequest({ headers: {
-              Authorization: `Basic ${Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64')}`,
-              'X-Forwarded-Proto': 'https'
-            } }))
+            new Context(
+              createRequest({ headers: {
+                Authorization: `Basic ${Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64')}`,
+                'X-Forwarded-Proto': 'https'
+              } }),
+              { fieldKey: Option.none() }
+            )
           )).then((context) => {
             context.auth._actor.should.equal('actor');
           })));
@@ -197,30 +223,6 @@ describe('preprocessors', () => {
               url: '/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
             }),
             { auth: { isAuthenticated() { return false; } }, fieldKey: Option.none() }
-          )
-        )).catch((err) => {
-          err.problemCode.should.equal(401.2);
-          caught = true;
-        }).then((context) => {
-          caught.should.equal(true);
-        });
-      });
-
-      it('should do nothing if Cookie auth is attempted with fk auth present', () => {
-        let caught = false;
-        Promise.resolve(sessionHandler(
-          { Auth, Session: mockSession('alohomora') },
-          new Context(
-            createRequest({
-              method: 'GET',
-              headers: {
-                'Authorization': 'Bearer abc',
-                'X-Forwarded-Proto': 'https',
-                Cookie: '__Host-session=alohomora'
-              },
-              url: '/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-            }),
-            { auth: { isAuthenticated() { return false; } } }
           )
         )).catch((err) => {
           err.problemCode.should.equal(401.2);
@@ -373,33 +375,30 @@ describe('preprocessors', () => {
         should.not.exist(context);
       }));
 
-    it('should fail the request if multiple auths are attempted', () =>
+    it('should fail the request with 403 if the token is the wrong length', () =>
       Promise.resolve(sessionHandler(
-        { Auth, Session: mockFkSession('alohomora') },
-        new Context(createRequest(), {
-          fieldKey: Option.of('alohomora'),
-          auth: { isAuthenticated() { return true; } }
-        })
-      )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
-
-    it('should fail the request if the session does not exist', () =>
-      Promise.resolve(sessionHandler(
-        { Auth, Session: mockFkSession('alohomora') },
-        new Context(createRequest(), { fieldKey: Option.of('abracadabra'), })
-      )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
-
-    it('should fail the request if the session does not belong to a field key', () =>
-      Promise.resolve(sessionHandler(
-        { Auth, Session: mockFkSession('alohomora', 'user') },
+        { Auth, Session: mockFkSession('alohomor') },
         new Context(createRequest(), { fieldKey: Option.of('alohomora'), })
-      )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
+      )).should.be.rejectedWith(Problem, { problemCode: 403.1 }));
+
+    it('should fail the request with 403 if the session does not exist', () =>
+      Promise.resolve(sessionHandler(
+        { Auth, Session: mockFkSession('alohomoraalohomoraalohomoraalohomoraalohomoraalohomoraalohomoraa') },
+        new Context(createRequest(), { fieldKey: Option.of('abracadabraabracadabraabracadabraabracadabraabracadabraabracadab'), })
+      )).should.be.rejectedWith(Problem, { problemCode: 403.1 }));
+
+    it('should fail the request with 403 if the session does not belong to a field key', () =>
+      Promise.resolve(sessionHandler(
+        { Auth, Session: mockFkSession('alohomoraalohomoraalohomoraalohomoraalohomoraalohomoraalohomoraa', 'user') },
+        new Context(createRequest(), { fieldKey: Option.of('alohomoraalohomoraalohomoraalohomoraalohomoraalohomoraalohomoraa'), })
+      )).should.be.rejectedWith(Problem, { problemCode: 403.1 }));
 
     it('should attach the correct auth if everything is correct', () =>
       Promise.resolve(sessionHandler(
-        { Auth, Session: mockFkSession('alohomora', 'field_key') },
-        new Context(createRequest(), { fieldKey: Option.of('alohomora'), })
+        { Auth, Session: mockFkSession('alohomoraalohomoraalohomoraalohomoraalohomoraalohomoraalohomoraa', 'field_key') },
+        new Context(createRequest(), { fieldKey: Option.of('alohomoraalohomoraalohomoraalohomoraalohomoraalohomoraalohomoraa'), })
       )).then((context) => {
-        context.auth._session.should.eql({ actor: { type: 'field_key' }, token: 'alohomora' });
+        context.auth._session.should.eql({ actor: { type: 'field_key' }, token: 'alohomoraalohomoraalohomoraalohomoraalohomoraalohomoraalohomoraa' });
       }));
   });
 
