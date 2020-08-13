@@ -159,6 +159,34 @@ describe('api: /projects/:id/forms', () => {
   </xforms>`);
               }))))));
 
+    it('should prefix returned routes for app users', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'test' })
+          .expect(200)
+          .then(({ body }) => body)
+          .then((fk) => asAlice.post(`/v1/projects/1/forms/withrepeat/assignments/app-user/${fk.id}`)
+            .expect(200)
+            .then(() => service.get(`/v1/projects/1/formList?st=${fk.token}`)
+              .set('X-OpenRosa-Version', '1.0')
+              .expect(200)
+              .then(({ text, headers }) => {
+                // Collect is particular about this:
+                headers['content-type'].should.equal('text/xml; charset=utf-8');
+
+                const domain = config.get('default.env.domain');
+                text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+  <xforms xmlns="http://openrosa.org/xforms/xformsList">
+    <xform>
+      <formID>withrepeat</formID>
+      <name>withrepeat</name>
+      <version>1.0</version>
+      <hash>md5:e7e9e6b3f11fca713ff09742f4312029</hash>
+      <downloadUrl>${domain}/v1/key/${fk.token}/projects/1/forms/withrepeat.xml</downloadUrl>
+    </xform>
+  </xforms>`);
+              }))))));
+
     it('should not include closing/closed forms', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/withrepeat')
@@ -548,6 +576,7 @@ describe('api: /projects/:id/forms', () => {
             .expect(200)
             .then(({ body }) => {
               body.enketoId.should.equal('::abcdefgh');
+              should.not.exist(body.enketoOnceId);
             })))));
 
     it('should worker-process the published form over to enketo', testService((service, container) =>
@@ -561,6 +590,7 @@ describe('api: /projects/:id/forms', () => {
             .expect(200)
             .then(({ body }) => {
               body.enketoId.should.equal('::abcdefgh');
+              body.enketoOnceId.should.equal('::::abcdefgh');
             })))));
 
     it('should if flagged save the given definition as published', testService((service) =>
@@ -828,7 +858,10 @@ describe('api: /projects/:id/forms', () => {
               .then(() => asAlice.get('/v1/projects/1/forms/simple2')
                 .set('X-Extended-Metadata', true)
                 .expect(200)
-                .then(({ body }) => { body.enketoId.should.equal('::abcdefgh'); }));
+                .then(({ body }) => {
+                  body.enketoId.should.equal('::abcdefgh');
+                  body.enketoOnceId.should.equal('::::abcdefgh');
+                }));
           }))));
     });
 
@@ -1325,6 +1358,7 @@ describe('api: /projects/:id/forms', () => {
             .expect(200)
             .then(({ body }) => {
               body.enketoId.should.equal('::abcdefgh');
+              should.not.exist(body.enketoOnceId);
               global.enketoReceivedUrl.startsWith(container.env.domain).should.equal(true);
               global.enketoReceivedUrl.should.match(/\/v1\/test\/[a-z0-9$!]{64}\/projects\/1\/forms\/simple\/draft/i);
             })))));
@@ -2392,6 +2426,7 @@ describe('api: /projects/:id/forms', () => {
               .then(({ body }) => {
                 body.map((f) => f.version).should.eql([ '3', '2.1' ]);
                 body.map((f) => f.enketoId).should.eql([ '::abcdefgh', undefined ]);
+                body.map((f) => f.enketoOnceId).should.eql([ '::::abcdefgh', undefined ]);
               })))));
 
       it('should return publishedBy if extended is requested', testService((service) =>

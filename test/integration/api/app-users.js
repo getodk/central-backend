@@ -19,7 +19,6 @@ describe('api: /projects/:id/app-users', () => {
           .then(({ body }) => {
             body.should.be.a.FieldKey();
             body.displayName.should.equal('test1');
-            body.createdBy.should.equal(5);
           }))));
 
     it('should allow project managers to create', testService((service) =>
@@ -38,6 +37,19 @@ describe('api: /projects/:id/app-users', () => {
             .set('Content-Type', 'text/xml')
             .send(testData.instances.simple.one)
             .expect(403)))));
+
+    it('should log the action in the audit log', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'test1' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/audits?action=field_key.create')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].actorId.should.equal(5);
+              body[0].acteeId.should.be.a.uuid();
+            })))));
   });
 
   describe('GET', () => {
@@ -55,7 +67,6 @@ describe('api: /projects/:id/app-users', () => {
               body.map((fk) => fk.displayName).should.eql([ 'test 3', 'test 2', 'test 1' ]);
               body.forEach((fk) => {
                 fk.should.be.a.FieldKey()
-                fk.createdBy.should.equal(5);
                 fk.projectId.should.equal(1);
               });
             })))));
@@ -190,11 +201,6 @@ describe('api: /key/:key', () => {
   it('should return 401 if an invalid key is provided', testService((service) =>
     service.get('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/current')
       .expect(401)));
-
-  it('should return 401 if two credentials are presented', testService((service) =>
-    service.login('alice', (asAlice) => asAlice.post('/v1/projects/1/app-users').send({ displayName: 'fktest' })
-      .then(({ body }) => asAlice.get(`/v1/key/${body.token}/users/current`)
-        .expect(401)))));
 
   it('should reject non-field tokens', testService((service) =>
     service.post('/v1/sessions').send({ email: 'alice@opendatakit.org', password: 'alice' })

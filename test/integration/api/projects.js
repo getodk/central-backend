@@ -286,7 +286,7 @@ describe('api: /projects', () => {
           .expect(200)
           .then(({ body }) => {
             body.verbs.should.be.an.Array();
-            body.verbs.length.should.be.greaterThan(30);
+            body.verbs.length.should.be.greaterThan(34);
             body.verbs.should.containDeep([ 'user.password.invalidate', 'project.delete' ]);
           }))));
 
@@ -297,7 +297,7 @@ describe('api: /projects', () => {
           .expect(200)
           .then(({ body }) => {
             body.verbs.should.be.an.Array();
-            body.verbs.length.should.be.lessThan(20);
+            body.verbs.length.should.be.lessThan(25);
             body.verbs.should.containDeep([ 'assignment.create', 'project.delete' ]);
             body.verbs.should.not.containDeep([ 'project.create' ]);
           }))));
@@ -986,6 +986,34 @@ describe('api: /projects', () => {
                 .expect(200)
                 .then(({ body }) => { body.should.eql([]); })
             ])))))));
+
+    it('should not delete public link assignments', testService((service, container) =>
+      service.login('bob', (asBob) => asBob.post('/v1/projects/1/forms/simple/public-links')
+        .send({ displayName: 'test link' })
+        .expect(200)
+        .then(() => asBob.put('/v1/projects/1')
+          .set('Content-Type', 'application/json')
+          .send({
+            name: 'Default Project',
+            forms: [{
+              xmlFormId: 'simple', name: 'New Simple', state: 'closed',
+              assignments: []
+            }, {
+              xmlFormId: 'withrepeat', name: 'New Repeat', state: 'closing',
+              assignments: []
+            }]
+          })
+          .expect(200)
+          .then(() => Promise.all([
+            asBob.get('/v1/projects/1/forms/simple/assignments')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(1);
+              }),
+            asBob.get('/v1/projects/1/forms/withrepeat/assignments')
+              .expect(200)
+              .then(({ body }) => { body.should.eql([]); })
+          ]))))));
 
     it('should log the deletion action in the audit log', testService((service, { Actor, Audit, Project }) =>
       service.login('bob', (asBob) => asBob.post('/v1/projects/1/app-users')

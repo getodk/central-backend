@@ -40,6 +40,15 @@ describe('util/enketo', () => {
         .then((result) => result.should.equal('::stuvwxyz'));
     });
 
+    it('should return an Enketo single-survey ID', () => {
+      enketoNock
+        .post('/enketoPath/api/v2/survey/single/once')
+        .reply(201, { single_once_url: 'http://enke.to/single/::stuvwxyz', code: 201 });
+      const response = {};
+      return enketo.createOnceToken(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', response)
+        .then((result) => result.should.equal('::stuvwxyz'));
+    });
+
     it('should throw a Problem if the Enketo response is not valid json', () => {
       enketoNock
         .post('/enketoPath/api/v2/survey')
