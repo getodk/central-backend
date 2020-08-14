@@ -36,10 +36,14 @@ Here major and breaking changes to the API are listed by version.
 
 ODK Central v1.0 adds Public Links to the API, and makes one minor breaking change.
 
+**Added**:
+
+* The new [Public Link](/reference/forms-and-submissions/'-public-access-links) resource lets you create Public Access Links, granting anonymous browser-based access to submit to your Forms using Enketo.
+
 **Changed**:
 
 * The non-extended App User response no longer includes a `createdBy` numeric ID. To retrieve the creator of an App User, request the extended response.
-* We no longer reject the request if multiple authentication schemes are presented, and instead document the priority order of the different schemes [here](TODO).
+* We no longer reject the request if multiple authentication schemes are presented, and instead document the priority order of the different schemes [here](/reference/authentication).
 
 ### ODK Central v0.9
 
@@ -170,7 +174,7 @@ In practice, there are two types of Actors available in the system today:
 
 In a future version of the API, programmatic consumers will be more directly supported as their own Actor type, which can be granted limited permissions and can authenticate over **OAuth 2.0**.
 
-Next, you will find documentation on each of the three authentication methods described above. It is best not to present multiple credentials. If you do, the first _presented_ scheme out of Bearer, Basic, Cookie, then `/key` token will be used for the request.
+Next, you will find documentation on each of the three authentication methods described above. It is best not to present multiple credentials. If you do, the first _presented_ scheme out of `/key` token, Bearer, Basic, then Cookie will be used for the request. If the multiple schemes are sent at once, and the first matching scheme fails, the request will be immediately rejected.
 
 ## Session Authentication [/v1/sessions]
 
@@ -224,7 +228,7 @@ _(There is not really anything at `/v1/example`; this section only demonstrates 
 
 #### Logging out [DELETE /v1/sessions/{token}]
 
-Logging out is not strictly necessary; all sessions expire 24 hours after they are created. But it can be a good idea, in case someone else manages to steal your token. To do so, issue a `DELETE` request to that token resource.
+Logging out is not strictly necessary for Web Users; all sessions expire 24 hours after they are created. But it can be a good idea, in case someone else manages to steal your token. It is also the way Public Link and App User access are revoked. To do so, issue a `DELETE` request to that token resource.
 
 + Parameters
     + token: `lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7` (string, required) - The session bearer token, obtained at login time.
@@ -310,7 +314,9 @@ Today, there are two types of accounts: `Users`, which are the administrative ac
 
 Actors (and thus Users) may be granted rights via Roles. The `/roles` Roles API is open for all to access, which describes all defined roles on the server. Getting information for an individual role from that same API will reveal which verbs are associated with each role: some role might allow only `submission.create` and `submission.update`, for example.
 
-Right now, there are three predefined system roles: Administrator (`admin`), Project Manager (`manager`), and App User (`app-user`). Administrators are allowed to perform any action upon the server, while Project Managers are allowed to perform any action upon the projects they are assigned to manage. App Users are granted minimal rights: they can read Form data and create new Submissions on those Forms.
+Right now, there are four predefined system roles: Administrator (`admin`), Project Manager (`manager`), Data Collector (`formfill`), and App User (`app-user`). Administrators are allowed to perform any action upon the server, while Project Managers are allowed to perform any action upon the projects they are assigned to manage.
+
+Data Collectors can see all Forms in a Project and submit to them, but cannot see Submissions and cannot edit Form settings. Similarly, App Users are granted minimal rights: they can read Form data and create new Submissions on those Forms. While Data Collectors can perform these actions directly on the Central administration website by logging in, App Users can only do these things through Collect or a similar data collection client device.
 
 The Roles API alone does not, however, tell you which Actors have been assigned with Roles upon which system objects. For that, you will need to consult the various Assignments resources. There are two, one under the API root (`/v1/assignments`), which manages assignments to the entire system, and another nested under each Project (`/v1/projects/…/assignments`) which manage assignments to that Project.
 
@@ -1262,7 +1268,7 @@ Draft Forms allow you to test and fix issues with Forms before they are finalize
 
 You can create or replace the current Draft Form at any time by `POST`ing to the `/draft` subresource on the Form, and you can publish the current Draft by `POST`ing to `/draft/publish`.
 
-When a Draft Form is created, a Draft Token is also created for it, which can be found in Draft Form responses at `draftToken`. This token allows you to [submit test Submissions to the Draft Form](TODO) through clients like Collect. If the Draft is published or deleted, the token will be deactivated. But if you replace the Draft without first deleting it, the existing Draft Token will be carried forward, so that you do not have to reconfigure your device.
+When a Draft Form is created, a Draft Token is also created for it, which can be found in Draft Form responses at `draftToken`. This token allows you to [submit test Submissions to the Draft Form](/reference/forms-and-submissions/'-draft-submissions/creating-a-submission) through clients like Collect. If the Draft is published or deleted, the token will be deactivated. But if you replace the Draft without first deleting it, the existing Draft Token will be carried forward, so that you do not have to reconfigure your device.
 
 + Parameters
     + projectId: `1` (number, required) - The `id` of the Project this Form belongs to.
@@ -1721,7 +1727,7 @@ No `POST` body data is required, and if provided it will be ignored.
     + Attributes (Success)
 
 + Response 403 (application/json)
-    + Attributes (Error 403)
+    
 
 ### Revoking a Form Role Assignment from an Actor [DELETE /v1/projects/{projectId}/forms/{xmlFormId}/assignments/{roleId}/{actorId}]
 
@@ -1730,6 +1736,68 @@ Given a `roleId`, which may be a numeric ID or a string role `system` name, and 
 + Parameters
     + roleId: `manager` (string, required) - Typically the integer ID of the `Role`. You may also supply the Role `system` name if it has one.
     + actorId: `14` (number, required) - The integer ID of the `Actor`.
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## › Public Access Links [/v1/projects/{projectId}/forms/{xmlFormId}/public-links]
+
+_(introduced: version 1.0)_
+
+Anybody in possession of a Public Access Link for a Form can use that link to submit data to that Form. Public Links are useful for collecting direct responses from a broad set of respondents, and can be revoked using the administration website or the API at any time.
+
+The API for Public Links is particularly useful, as it can be used to, for example, programmatically create and send individually customized and controlled links for direct distribution.
+
+To revoke the access of any Link, terminate its session `token` by issuing [`DELETE /sessions/:token`](/reference/authentication/session-authentication/logging-out).
+
++ Parameters
+    + projectId: `2` (number, required) - The numeric ID of the Project
+    + xmlFormId: `simple` (string, required) - The friendly name of this form. It is given by the `<title>` in the XForms XML definition.
+
+### Listing all Links [GET]
+
+This will list every Public Access Link upon this Form.
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to retrieve the Actor the Link was `createdBy`.
+
++ Response 200 (application/json)
+    This is the standard response, if Extended Metadata is not requested:
+
+    + Attributes (array[Public Link])
+
++ Response 200 (application/json; extended)
+    This is the Extended Metadata response, if requested via the appropriate header:
+
+    + Attributes (array[Extended Public Link])
+
+### Creating a Link [POST]
+
+To create a new Public Access Link to this Form, you must send at least a `displayName` for the resulting Actor. You may also provide `once: true` if you want to create a link that [can only be filled by each respondent once](https://blog.enketo.org/single-submission-surveys/). This setting is enforced by Enketo using local device tracking; the link is still distributable to multiple recipients, and the enforcement can be defeated by using multiple browsers or devices.
+
++ Request (application/json)
+    + Attributes
+        + displayName: `my public link` (string, required) - The name of the Link, for keeping track of. This name is displayed on the Central administration website but not to survey respondents.
+        + once: `false` (boolean, optional) - If set to `true`, an Enketo [single submission survey](https://blog.enketo.org/single-submission-surveys/) will be created instead of a standard one, limiting respondents to a single submission each.
+
+    + Body
+
+            { "displayName": "my public link", "once": false }
+
++ Response 200 (application/json)
+    + Attributes (Public Link)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Deleting a Link [DELETE /v1/projects/{projectId}/forms/{xmlFormId}/public-links/{linkId}]
+
+You can fully delete a link by issuing `DELETE` to its resource. This will remove the Link from the system entirely. If instead you wish to revoke the Link's access to prevent future submission without removing its record entirely, you can issue [`DELETE /sessions/:token`](/reference/authentication/session-authentication/logging-out).
+
++ Parameters
+    + linkId: `42` (integer, required) - The numeric ID of the Link
 
 + Response 200 (application/json)
     + Attributes (Success)
@@ -3212,7 +3280,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + excelContentType: (string, optional) - If the Form was created by uploading an Excel file, this field contains the MIME type of that file.
 
 ## Draft Form (Form)
-+ draftToken: `lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7` (string, required) - The test token to use to submit to this draft form. See [Draft Testing Endpoints](TODO).
++ draftToken: `lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7` (string, required) - The test token to use to submit to this draft form. See [Draft Testing Endpoints](/reference/forms-and-submissions/'-draft-submissions).
 + enketoId: `abcdef` (string, optional) - If it exists, this is the survey ID of this draft Form on Enketo at `/enketo`. Authentication is not needed to access the draft form through Enketo.
 
 ## Extended Form Version (Form)
@@ -3250,6 +3318,12 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + appUsers: `4` (number, required) - The number of App Users created within this Project.
 + forms: `7` (number, required) - The number of forms within this Project.
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission to any form in this project, if any.
+
+## Public Link (Actor)
++ once: `false` (boolean, optional) - If set to `true`, an Enketo [single submission survey](https://blog.enketo.org/single-submission-surveys/) will be created instead of a standard one, limiting respondents to a single submission each.
+
+## Extended Public Link (Public Link)
++ createdBy (Actor, required) - The full details about the `Actor` that created this `App User`.
 
 ## Key (object)
 + id: `1` (number, required) - The numerical ID of the Key.
