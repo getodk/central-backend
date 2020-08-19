@@ -1679,7 +1679,7 @@ There are only one set of Roles, applicable to either scenario. There are not a 
 
 + Parameters
     + projectId: `2` (number, required) - The numeric ID of the Project
-    + xmlFormId: `simple` (string, required) - The friendly name of this form. It is given by the `<title>` in the XForms XML definition.
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
 
 ### Listing all Form Assignments [GET]
 
@@ -1755,7 +1755,7 @@ To revoke the access of any Link, terminate its session `token` by issuing [`DEL
 
 + Parameters
     + projectId: `2` (number, required) - The numeric ID of the Project
-    + xmlFormId: `simple` (string, required) - The friendly name of this form. It is given by the `<title>` in the XForms XML definition.
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
 
 ### Listing all Links [GET]
 
