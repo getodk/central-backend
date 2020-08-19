@@ -93,10 +93,10 @@ describe('middleware', () => {
     });
 
     it('should escape slashes in the rewritten path prefix', (done) => {
-      const request = createRequest({ url: '/v1/users/23?st=in$va/id' });
+      const request = createRequest({ url: '/v1/users/23?st=in$va/i/d' });
       fieldKeyParser(request, null, () => {
-        request.fieldKey.should.eql(Option.of('in$va/id'));
-        request.originalUrl.should.equal('/v1/key/in$va%2Fid/users/23?st=in$va/id');
+        request.fieldKey.should.eql(Option.of('in$va/i/d'));
+        request.originalUrl.should.equal('/v1/key/in$va%2Fi%2Fd/users/23?st=in$va/i/d');
         done();
       });
     });
