@@ -198,14 +198,14 @@ describe('api: /projects/:id/app-users', () => {
 
 // Test the actual use of field keys.
 describe('api: /key/:key', () => {
-  it('should return 401 if an invalid key is provided', testService((service) =>
+  it('should return 403 if an invalid key is provided', testService((service) =>
     service.get('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/current')
-      .expect(401)));
+      .expect(403)));
 
   it('should reject non-field tokens', testService((service) =>
     service.post('/v1/sessions').send({ email: 'alice@opendatakit.org', password: 'alice' })
       .then(({ body }) => service.get(`/v1/key/${body.token}/users/current`)
-        .expect(401))));
+        .expect(403))));
 
   it('should passthrough to the appropriate route with successful auth', testService((service) =>
     service.login('alice', (asAlice) =>

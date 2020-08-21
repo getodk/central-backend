@@ -152,7 +152,7 @@ describe('api: /sessions', () => {
           .then((token) => asBob.delete('/v1/sessions/' + token)
             .expect(200)
             .then(() => service.get(`/v1/key/${token}/users/current`)
-              .expect(401))))));
+              .expect(403))))));
 
     it('should allow managers to delete project public link sessions', testService((service) =>
       service.login('bob', (asBob) =>
@@ -163,7 +163,7 @@ describe('api: /sessions', () => {
           .then((token) => asBob.delete('/v1/sessions/' + token)
             .expect(200)
             .then(() => service.get(`/v1/key/${token}/users/current`)
-              .expect(401))))));
+              .expect(403))))));
 
     it('should not allow app users to delete their own sessions', testService((service) =>
       service.login('bob', (asBob) =>
