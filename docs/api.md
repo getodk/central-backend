@@ -1749,7 +1749,7 @@ _(introduced: version 1.0)_
 
 Anybody in possession of a Public Access Link for a Form can use that link to submit data to that Form. Public Links are useful for collecting direct responses from a broad set of respondents, and can be revoked using the administration website or the API at any time.
 
-The API for Public Links is particularly useful, as it can be used to, for example, programmatically create and send individually customized and controlled links for direct distribution.
+The API for Public Links is particularly useful, as it can be used to, for example, programmatically create and send individually customized and controlled links for direct distribution. The user-facing link for a Public Link has the following structure: `/-/{enketoId}?st={token}` where `-` is the Enketo root, `enketoId` is the survey ID of this published Form on Enketo and `token` is a session token to identify this Public Link.
 
 To revoke the access of any Link, terminate its session `token` by issuing [`DELETE /sessions/:token`](/reference/authentication/session-authentication/logging-out).
 
@@ -3266,7 +3266,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + xmlFormId: `simple` (string, required) - The `id` of this form as given in its XForms XML definition
 + name: `Simple` (string, optional) - The friendly name of this form. It is given by the `<title>` in the XForms XML definition.
 + version: `2.1` (string, optional) - The `version` of this form as given in its XForms XML definition. If no `version` was specified in the Form, a blank string will be given. If there is no associated Form, `null` will be returned.
-+ enketoId: `abcdef` (string, optional) - If it exists, this is the survey ID of this published Form on Enketo at `/enketo`. Only a cookie-authenticated user may access the preview through Enketo.
++ enketoId: `abcdef` (string, optional) - If it exists, this is the survey ID of this published Form on Enketo at `/-`. Only a cookie-authenticated user may access the preview through Enketo.
 + hash: `51a93eab3a1974dbffc4c7913fa5a16a` (string, required) - An MD5 sum automatically computed based on the XForms XML definition. This is required for OpenRosa compliance.
 + keyId: `3` (number, optional) - If a public encryption key is present on the form, its numeric ID as tracked by Central is given here.
 + state (Form State, required) - The present lifecycle status of this form. Controls whether it is available for download on survey clients or accepts new submissions.
@@ -3281,7 +3281,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 
 ## Draft Form (Form)
 + draftToken: `lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7` (string, required) - The test token to use to submit to this draft form. See [Draft Testing Endpoints](/reference/forms-and-submissions/'-draft-submissions).
-+ enketoId: `abcdef` (string, optional) - If it exists, this is the survey ID of this draft Form on Enketo at `/enketo`. Authentication is not needed to access the draft form through Enketo.
++ enketoId: `abcdef` (string, optional) - If it exists, this is the survey ID of this draft Form on Enketo at `/-`. Authentication is not needed to access the draft form through Enketo.
 
 ## Extended Form Version (Form)
 + publishedBy: (Actor, optional) - The full information of the Actor who published this version of the Form.
@@ -3320,6 +3320,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission to any form in this project, if any.
 
 ## Public Link (Actor)
++ token: `d1!E2GVHgpr4h9bpxxtqUJ7EVJ1Q$Dusm2RBXg8XyVJMCBCbvyE8cGacxUx3bcUT` (string, optional) - If present, this is the Token to include as the `st` query parameter for this `Public Link`. If not present, this `Public Link` has been revoked.
 + once: `false` (boolean, optional) - If set to `true`, an Enketo [single submission survey](https://blog.enketo.org/single-submission-surveys/) will be created instead of a standard one, limiting respondents to a single submission each.
 
 ## Extended Public Link (Public Link)
