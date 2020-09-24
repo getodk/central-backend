@@ -1,5 +1,8 @@
 const should = require('should');
 const appRoot = require('app-root-path');
+const { testContainer } = require(appRoot + '/test/integration/setup');
+const { exhaust } = require(appRoot + '/lib/worker/worker');
+const testData = require('../../data/xml');
 const Instance = require(appRoot + '/lib/model/instance/instance');
 const injector = require(appRoot + '/lib/model/package')
 const { endpointBase } = require(appRoot + '/lib/http/endpoint');
@@ -38,5 +41,36 @@ describe('transaction integration', () => {
     )({ method: 'POST' })
       .then(() => { queryRun.should.equal(true); });
   });
+});
+
+// resolves in ms ms
+const sometime = (ms) => new Promise((done) => setTimeout(done, ms));
+
+describe('enketo worker transaction', () => {
+  it('should not allow a write conflict @slow', testContainer(async (container) => {
+    const { Audit, Form } = container;
+
+    const simple = (await Form.getByProjectAndXmlFormId(1, 'simple')).get();
+    await Audit.log(null, 'form.update.publish', simple);
+
+    let flush;
+    global.enketoWait = (f) => { flush = f; };
+    const workerTicket = exhaust(container);
+    while (flush == null) await sometime(50);
+
+    const updateTicket = simple.with({ state: 'closed' }).update();
+
+    // now we wait to see if we have deadlocked, which we want.
+    await sometime(400);
+    (await Form.getByProjectAndXmlFormId(1, 'simple')).get()
+      .state.should.equal('open');
+
+    // now finally resolve the locks.
+    flush();
+    await workerTicket;
+
+    (await Form.getByProjectAndXmlFormId(1, 'simple')).get()
+      .state.should.equal('closed');
+  }));
 });
 
