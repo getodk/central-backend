@@ -6,14 +6,14 @@
     "node": ">=8"
   },
   "dependencies": {
-    "archiver": "~3",
+    "archiver": "~5",
     "bcrypt": "~3",
     "body-parser": "~1.18",
     "cli": "~1",
     "cloneable-readable": "~2",
     "config": "~1.26",
     "csv-parse": "~4",
-    "csv-stringify": "~1",
+    "csv-stringify": "~5",
     "digest-stream": "~2",
     "entities": "~2",
     "express": "~4.16",
