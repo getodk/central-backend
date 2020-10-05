@@ -395,13 +395,12 @@ Candace,2,three,three/children/child[1]
       </h:html>`;
 
     const inStream = streamTest.fromObjects(
-      (new Array(50)).fill(null).map(_ => instance(uuid(), `<orx:meta><orx:instanceID>${uuid()}</orx:instanceID></orx:meta><name>${uuid()}</name><children><child><name>${uuid()}</name></child></children>`)));
+      (new Array(127)).fill(null).map(_ => instance(uuid(), `<orx:meta><orx:instanceID>${uuid()}</orx:instanceID></orx:meta><name>${uuid()}</name><children><child><name>${uuid()}</name></child></children>`)));
 
     callAndParse(inStream, formXml, 'singlerepeat', (result) => {
       result.filenames.should.containDeep([ 'singlerepeat.csv', 'singlerepeat-child.csv' ]);
-      result['singlerepeat.csv'].split('\n').length.should.equal(52);
-      result['singlerepeat-child.csv'].split('\n').length.should.equal(52);
-      console.log('aoeuaoeu');
+      result['singlerepeat.csv'].split('\n').length.should.equal(129);
+      result['singlerepeat-child.csv'].split('\n').length.should.equal(129);
       done();
     });
   });
