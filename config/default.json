@@ -10,7 +10,7 @@
       "port": 8383
     },
     "email": {
-      "serviceAccount": "no-reply@opendatakit.org",
+      "serviceAccount": "no-reply@getodk.org",
       "transport": "json"
     },
     "xlsform": {
@@ -19,7 +19,8 @@
     },
     "enketo": {},
     "env": {
-      "domain": "http://localhost:8989"
+      "domain": "http://localhost:8989",
+      "sysadminAccount": "no-reply@getodk.org"
     },
     "external": {
       "google": {
@@ -37,7 +38,7 @@
       "database": "jubilant_test"
     },
     "email": {
-      "serviceAccount": "no-reply@opendatakit.org",
+      "serviceAccount": "no-reply@getodk.org",
       "transport": "json",
       "transportOpts": { "newline": "unix" }
     }
