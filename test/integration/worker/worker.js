@@ -2,7 +2,7 @@ const should = require('should');
 const appRoot = require('app-root-path');
 const { promisify } = require('util');
 const { DateTime, Duration } = require('luxon');
-const { testContainer, testTrxContainer } = require('../setup');
+const { testContainerFullTrx, testContainer } = require('../setup');
 const { runner, checker } = require(appRoot + '/lib/worker/worker');
 
 // we test everything except scheduler() and worker(), because these both start
@@ -33,7 +33,7 @@ describe('worker', () => {
       runner(container, jobMap)({ action: 'test.event' }, done).should.equal(true);
     });
 
-    it('should pass the container and event details to the job', testContainer(async (container) => {
+    it('should pass the container and event details to the job', testContainerFullTrx(async (container) => {
       let sentineledContainer = container.with({ testSentinel: 108 });
       let checked = false;
       const jobMap = { 'test.event': [ (c, e) => {
@@ -50,7 +50,7 @@ describe('worker', () => {
       checked.should.equal(true);
     }));
 
-    it('should run all matched jobs', testContainer(async (container) => {
+    it('should run all matched jobs', testContainerFullTrx(async (container) => {
       let count = 0;
       const jobMap = { 'test.event': [
         () => Promise.resolve(count += 1),
@@ -62,7 +62,7 @@ describe('worker', () => {
       count.should.equal(2);
     }));
 
-    it('should mark the event as processed after on job completion', testContainer(async (container) => {
+    it('should mark the event as processed after on job completion', testContainerFullTrx(async (container) => {
       const { Audit, User } = container;
       const alice = (await User.getByEmail('alice@opendatakit.org')).get();
       const event = await Audit.log(alice.actor, 'submission.attachment.create', alice.actor);
@@ -73,7 +73,7 @@ describe('worker', () => {
       after.processed.should.be.a.recentDate();
     }));
 
-    it('should log to Sentry if a worker goes wrong', testContainer(async (container) => {
+    it('should log to Sentry if a worker goes wrong', testContainerFullTrx(async (container) => {
       let captured = null;
       const Sentry = { captureException(err) { captured = err; } };
       const hijackedContainer = container.with({ Sentry });
@@ -86,7 +86,7 @@ describe('worker', () => {
 
     // ideally we'd test that the error gets written to stderr but i don't like
     // hijacking globals in tests.
-    it('should still survive and reschedule if Sentry goes wrong', testContainer(async (container) => {
+    it('should still survive and reschedule if Sentry goes wrong', testContainerFullTrx(async (container) => {
       const Sentry = { captureException(err) { throw 'no sentry for you'; } };
       const hijackedContainer = container.with({ Sentry });
 
@@ -99,7 +99,7 @@ describe('worker', () => {
     // we need to use a real event here that doesn't get auto-marked as processed, so
     // we can test that it is not indeed processed afterwards.
     // TODO: we should be able to not do this as of block 8.
-    it('should unclaim the event and mark failure in case of failure', testContainer(async (container) => {
+    it('should unclaim the event and mark failure in case of failure', testContainerFullTrx(async (container) => {
       const { Audit, User } = container;
       const alice = (await User.getByEmail('alice@opendatakit.org')).get();
       const event = await Audit.log(alice.actor, 'submission.attachment.update', alice.actor);
@@ -117,7 +117,7 @@ describe('worker', () => {
   // we use submission.attachment.update throughout all these tests as it is currently
   // the only event that is not automarked as processed upon initial audit logging.
   describe('checker', () => {
-    it('should return null if there are no unprocessed events', testTrxContainer(async (container) => {
+    it('should return null if there are no unprocessed events', testContainer(async (container) => {
       const check = checker(container);
       const { Audit, User } = container;
       const alice = (await User.getByEmail('alice@opendatakit.org')).get();
@@ -125,7 +125,7 @@ describe('worker', () => {
       should.not.exist(await check());
     }));
 
-    it('should mark the event as claimed', testTrxContainer(async (container) => {
+    it('should mark the event as claimed', testContainer(async (container) => {
       const check = checker(container);
       const { Audit, User } = container;
       const alice = (await User.getByEmail('alice@opendatakit.org')).get();
@@ -136,7 +136,7 @@ describe('worker', () => {
       found.claimed.should.eql(event.claimed);
     }));
 
-    it('should not mark any other events as claimed', testTrxContainer(async (container) => {
+    it('should not mark any other events as claimed', testContainer(async (container) => {
       const check = checker(container);
       const { Audit, User } = container;
       const alice = (await User.getByEmail('alice@opendatakit.org')).get();
@@ -153,7 +153,7 @@ describe('worker', () => {
       claimed.should.equal(1);
     }));
 
-    it('should return the oldest eligible event', testTrxContainer(async (container) => {
+    it('should return the oldest eligible event', testContainer(async (container) => {
       const check = checker(container);
       const { Audit, User } = container;
       const alice = (await User.getByEmail('alice@opendatakit.org')).get();
@@ -164,7 +164,7 @@ describe('worker', () => {
       event.details.should.eql({ is: 'oldest' });
     }));
 
-    it('should not return a recently failed event', testTrxContainer(async (container) => {
+    it('should not return a recently failed event', testContainer(async (container) => {
       const check = checker(container);
       const { Audit, User } = container;
       const alice = (await User.getByEmail('alice@opendatakit.org')).get();
@@ -174,7 +174,7 @@ describe('worker', () => {
       should.not.exist(await check());
     }));
 
-    it('should retry a previously failed event after some time', testTrxContainer(async (container) => {
+    it('should retry a previously failed event after some time', testContainer(async (container) => {
       const check = checker(container);
       const { Audit, User } = container;
       const alice = (await User.getByEmail('alice@opendatakit.org')).get();
@@ -187,7 +187,7 @@ describe('worker', () => {
       should.exist(await check());
     }));
 
-    it('should not return a repeatedly failed event', testTrxContainer(async (container) => {
+    it('should not return a repeatedly failed event', testContainer(async (container) => {
       const check = checker(container);
       const { Audit, User } = container;
       const alice = (await User.getByEmail('alice@opendatakit.org')).get();
@@ -197,7 +197,7 @@ describe('worker', () => {
       should.not.exist(await check());
     }));
 
-    it('should claim a stale/hung event', testTrxContainer(async (container) => {
+    it('should claim a stale/hung event', testContainer(async (container) => {
       const check = checker(container);
       const { Audit, User } = container;
       const alice = (await User.getByEmail('alice@opendatakit.org')).get();

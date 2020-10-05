@@ -113,22 +113,31 @@ const testService = (test) => () => new Promise((resolve, reject) => {
   }).catch(Promise.resolve.bind(Promise));
 });
 
-// for some tests (see ./other/encryption.js) we explicitly need to make concurrent
-// requests, in which case the transaction butchering we do for testService will
-// not work. for these cases, we offer testContainer.
-const testContainer = (test) => () => new Promise((resolve, reject) => {
+// for some tests we explicitly need to make concurrent requests, in which case
+// the transaction butchering we do for testService will not work. for these cases,
+// we offer testServiceThenReinit:
+const testServiceFullTrx = (test) => () => new Promise((resolve, reject) => {
+  baseContainer.transacting((container) => {
   const reinit = (f) => (x) => { initialize().then(() => f(x)); };
-  test(baseContainer).then(reinit(resolve), reinit(reject));
+    test(augment(request(service(container))), container).then(reinit(resolve), reinit(reject));
+    // we return nothing to prevent knex from auto-committing the transaction.
+  }).catch(Promise.resolve.bind(Promise));
 });
 
-// also gives a simple container, but uses a transaction rollback model rather
-// than reinitializing the entire database.
-const testTrxContainer = (test) => () => new Promise((resolve, reject) => {
+// for some tests we just want a container, without any of the webservice stuffs between.
+// this is that, with the same transaction trickery as a normal test.
+const testContainer = (test) => () => new Promise((resolve, reject) => {
   baseContainer.transacting((container) => {
     const rollback = (f) => (x) => container.db.rollback().then(() => f(x));
     test(container).then(rollback(resolve), rollback(reject));
     // we return nothing to prevent knex from auto-committing the transaction.
   }).catch(Promise.resolve.bind(Promise));
+});
+
+// complete the square of options:
+const testContainerFullTrx = (test) => () => new Promise((resolve, reject) => {
+  const reinit = (f) => (x) => { initialize().then(() => f(x)); };
+  test(baseContainer).then(reinit(resolve), reinit(reject));
 });
 
 // called to get a container context per task. ditto all // from testService.
@@ -146,5 +155,5 @@ const testTask = (test) => () => new Promise((resolve, reject) => {
   }).catch(Promise.resolve.bind(Promise));
 });
 
-module.exports = { testService, testContainer, testTrxContainer, testTask };
+module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask };
 

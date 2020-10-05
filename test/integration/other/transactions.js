@@ -1,6 +1,6 @@
 const should = require('should');
 const appRoot = require('app-root-path');
-const { testContainer } = require(appRoot + '/test/integration/setup');
+const { testContainerFullTrx } = require(appRoot + '/test/integration/setup');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const testData = require('../../data/xml');
 const Instance = require(appRoot + '/lib/model/instance/instance');
@@ -47,7 +47,7 @@ describe('transaction integration', () => {
 const sometime = (ms) => new Promise((done) => setTimeout(done, ms));
 
 describe('enketo worker transaction', () => {
-  it('should not allow a write conflict @slow', testContainer(async (container) => {
+  it('should not allow a write conflict @slow', testContainerFullTrx(async (container) => {
     const { Audit, Form } = container;
 
     const simple = (await Form.getByProjectAndXmlFormId(1, 'simple')).get();
