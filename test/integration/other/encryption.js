@@ -185,6 +185,24 @@ describe('managed encryption', () => {
               done();
             }))))));
 
+    it('should decrypt to CSV successfully as a direct root table', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple.xml')
+            .expect(200)
+            .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
+            .then((send) => send(testData.instances.simple.one)
+              .then(() => send(testData.instances.simple.two))
+              .then(() => send(testData.instances.simple.three))))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
+            .expect(200)
+            .then(({ body }) => body[0].id))
+          .then((keyId) => asAlice.get(`/v1/projects/1/forms/simple/submissions.csv?${keyId}=supersecret`)
+            .expect(200)
+            .then(({ text }) => { text.should.be.an.EncryptedSimpleCsv(); })))));
+
     it('should decrypt with passphrases provided via url-encoded POST body', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')

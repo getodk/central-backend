@@ -78,7 +78,7 @@ const padPkcs7 = (payload) => {
 
 const encryptInstance = (pubkey, version, instance, files = {}) => {
   // get xmlFormId:
-  const xmlFormId = tap(/id="([^"]+)"/.exec(instance)[1]);
+  const xmlFormId = /id="([^"]+)"/.exec(instance)[1];
 
   // generate encryption information:
   const instanceId = /<instanceID>([a-z]+)<\/instanceID>/.exec(instance)[1];
