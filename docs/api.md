@@ -32,6 +32,16 @@ Finally, **system information and configuration** is available via a set of spec
 
 Here major and breaking changes to the API are listed by version.
 
+### ODK Central v1.1
+
+ODK Central v1.1 adds minor new features to the API.
+
+**Added**:
+
+* `POST`/`GET /backup`, will immediately perform a backup of the database and return the encrypted backup.
+* `POST`/`GET /projects/…/forms/…/submissions.csv`, which allows download of the root table (excluding repeat data) as CSV, without a zipfile.
+* `POST`/`GET /projects/…/forms/…/submissions.csv.zip` now allows `?media=false` to exclude attachments.
+
 ### ODK Central v1.0
 
 ODK Central v1.0 adds Public Links to the API, and makes one minor breaking change.
@@ -1834,9 +1844,11 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Exporting Form Submissions to CSV [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip]
+### Exporting Form Submissions to CSV [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip{?media}]
 
 To export all the `Submission` data associated with a `Form`, just add `.csv.zip` to the end of the listing URL. The response will be a ZIP file containing one or more CSV files, as well as all multimedia attachments associated with the included Submissions.
+
+You can exclude the media attachments from the ZIP file by specifying `?media=false`.
 
 If [Project Managed Encryption](/reference/encryption) is being used, additional querystring parameters may be provided in the format `{keyId}={passphrase}` for any number of keys (eg `1=secret&4=password`). This will decrypt any records encrypted under those managed keys. Submissions encrypted under self-supplied keys will not be decrypted. **Note**: if you are building a browser-based application, please consider the alternative `POST` endpoint, described in the following section.
 
@@ -1846,6 +1858,7 @@ If you are running an unsecured (`HTTP` rather than `HTTPS`) Central server, it 
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + media: `true` (boolean, optional) - Set to false to exclude media attachments from the export.
 
 + Response 200
     + Headers
@@ -1862,14 +1875,17 @@ If you are running an unsecured (`HTTP` rather than `HTTPS`) Central server, it 
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Exporting Form Submissions to CSV via POST [POST /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip]
+### Exporting Form Submissions to CSV via POST [POST /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip{?media}]
 
 This non-REST-compliant endpoint is provided for use with [Project Managed Encryption](/reference/encryption). In every respect, it behaves identically to the `GET` endpoint described in the previous section, except that it works over `POST`. This is necessary because for browser-based applications, it is a dangerous idea to simply link the user to `/submissions.csv.zip?2=supersecretpassphrase` because the browser will remember this route in its history and thus the passphrase will become exposed. This is especially dangerous as there are techniques for quickly learning browser-visited URLs of any arbitrary domain.
+
+You can exclude the media attachments from the ZIP file by specifying `?media=false`.
 
 And so, for this `POST` version of the Submission CSV export endpoint, the passphrases may be provided via `POST` body rather than querystring. Two formats are supported: form URL encoding (`application/x-www-form-urlencoded`) and JSON. In either case, the keys should be the `keyId`s and the values should be the `passphrase`s, as with the `GET` version above.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + media: `true` (boolean, optional) - Set to false to exclude media attachments from the export.
 
 + Response 200
     + Headers
@@ -1879,6 +1895,54 @@ And so, for this `POST` version of the Submission CSV export endpoint, the passp
     + Body
 
             (binary data)
+
++ Response 400 (application/json)
+    + Attributes (Error 400)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Exporting Root Data to Plain CSV [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv]
+
+_(introduced: version 1.1)_
+
+The above submission endpoints will give you a ZIP file with the submission data in it. This is necessary to provide all the possible related repeat table files, as well as the media files associated with the submissions. But ZIP files can be difficult to work with, and many Forms have no repeats nor media attachments.
+
+To export _just_ the root table (no repeat data nor media files), you can call this endpoint instead, which will directly give you CSV data.
+
+Please see the [above endpoint](/reference/forms-and-submissions/submissions/exporting-form-submissions-to-csv) for notes on dealing with Managed Encryption.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+
++ Response 200
+    + Body
+
+            (csv text)
+
++ Response 400 (application/json)
+    + Attributes (Error 400)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Exporting Root Data to Plain CSV via POST [POST /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv]
+
+_(introduced: version 1.1)_
+
+This endpoint is useful only for Forms under Project Managed Encryption.
+
+As with `GET` to `.csv` just above, this endpoint will only return CSV text data, rather than a ZIP file containing ore or more files. Please see that endpoint for further explanation.
+
+As with [`POST` to `.csv.zip`](/reference/forms-and-submissions/submissions/exporting-form-submissions-to-csv-via-post) it allows secure submission of decryption passkeys. Please see that endpoint for more information on how to do this.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+
++ Response 200
+    + Body
+
+            (csv data)
 
 + Response 400 (application/json)
     + Attributes (Error 400)
@@ -3102,6 +3166,54 @@ If these two things are present and correct, and Google can be reached to verify
 
 + Response 200 (application/json)
     + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Direct Backup [/v1/backup]
+
+_(introduced: version 1.1)_
+
+ODK Central offers HTTP endpoints that will immediately perform a backup on the system database and send that encrypted backup as the response. You can `POST` with an encryption passphrase, or `GET` if you have encryption [already configured](/reference/system-endpoints/backups-configuration) to use the passphrase you configured then.
+
+Note that performing the backup takes a great deal of time, during which the request will be held open. Both of these endpoints stream a keepalive header every five seconds to prevent the request from timing out. As long as these headers are being sent, the backup is still being performed.
+
+### Using an Ad-Hoc Passphrase [POST]
+
+A `POST` verb will start an direct download ad-hoc backup. You will want to supply a `passphrase` with your chosen encryption passphrase. It is possible to omit this, in which case the backup will still be encrypted, but it will decrypt given an empty passphrase.
+
+Please see the section notes above about the long-running nature of this endpoint.
+
++ Request (application/json)
+    + Attributes
+        + passphrase: `my-password` (string, optional) - The passphrase with which to encrypt the backup.
+
++ Response 200
+    + Headers
+
+            Content-Disposition: attachment; filename=central-backup-2020-01-01T00:00:00.000Z.zip
+
+    + Body
+
+            (binary data)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Using the Configured Scheduled Backups Passphrase [GET]
+
+A `GET` verb will start an direct download backup, but using the configured scheduled backups passphrase. If no scheduled backup has been configured, the endpoint will return not found.
+
+Please see the section notes above about the long-running nature of this endpoint.
+
++ Response 200
+    + Headers
+
+            Content-Disposition: attachment; filename=central-backup-2020-01-01T00:00:00.000Z.zip
+
+    + Body
+
+            (binary data)
 
 + Response 403 (application/json)
     + Attributes (Error 403)
