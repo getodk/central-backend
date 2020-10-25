@@ -877,6 +877,32 @@ describe('api: /forms/:id/submissions', () => {
                 done();
               })))))));
 
+    it('should skip attachments if ?attachments=false is given', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+            .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201))
+            .then(() => new Promise((done) =>
+              zipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip?attachments=false'), (result) => {
+                result.filenames.should.containDeep([ 'binaryType.csv' ]);
+
+                should.not.exist(result['media/my_file1.mp4']);
+                should.not.exist(result['media/here_is_file2.jpg']);
+
+                done();
+              })))))));
+
     it('should properly count present attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
@@ -1053,6 +1079,63 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
                 done();
               })))))));
+  });
+
+  describe('.csv GET', () => {
+    // NOTE: tests related to decryption of .csv.zip export are located in test/integration/other/encryption.js
+
+    it('should return a zipfile with the relevant headers', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/simple/submissions.csv')
+          .expect(200)
+          .then(({ headers }) => {
+            headers['content-disposition'].should.equal('attachment; filename="simple.csv"');
+            headers['content-type'].should.equal('text/csv; charset=utf-8');
+          }))));
+
+    it('should return the root csv table', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.simple.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.simple.three)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions.csv')
+            .expect(200)
+            .then(({ text }) => { text.should.be.a.SimpleCsv(); })))));
+
+    it('should return only the root csv table given repeats', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+          .send(testData.instances.withrepeat.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+            .send(testData.instances.withrepeat.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+            .send(testData.instances.withrepeat.three)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/withrepeat/submissions.csv')
+            .expect(200)
+            .then(({ text }) => {
+              const rows = text.split('\n');
+              rows.length.should.equal(5);
+              rows[0].should.equal('SubmissionDate,meta-instanceID,name,age,children-child-name,children-child-age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status');
+              // (need to drop the iso date)
+              rows[1].slice(24).should.equal(',three,Chelsea,38,,,three,5,Alice,0,0');
+              rows[2].slice(24).should.equal(',two,Bob,34,,,two,5,Alice,0,0');
+              rows[3].slice(24).should.equal(',one,Alice,30,,,one,5,Alice,0,0');
+            })))));
   });
 
   describe('[draft] .csv.zip', () => {
