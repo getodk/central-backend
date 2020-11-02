@@ -466,6 +466,130 @@ describe('api: /forms/:id.svc', () => {
             });
           }))));
 
+    it('should return submitter-filtered toplevel rows if requested', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('bob', (asBob) =>
+          asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+            .send(testData.instances.withrepeat.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asBob.post('/v1/projects/1/forms/withrepeat/submissions')
+              .send(testData.instances.withrepeat.two)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+              .send(testData.instances.withrepeat.three)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=__system/submitterId eq 5')
+              .expect(200)
+              .then(({ body }) => {
+                for (const idx of [ 0, 1 ]) {
+                  body.value[idx].__system.submissionDate.should.be.an.isoDate();
+                  delete body.value[idx].__system.submissionDate;
+                }
+
+                body.should.eql({
+                  '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+                  value: [{
+                    __id: "three",
+                    __system: {
+                      // submissionDate is checked above,
+                      submitterId: "5",
+                      submitterName: "Alice",
+                      attachmentsPresent: 0,
+                      attachmentsExpected: 0,
+                      status: null
+                    },
+                    meta: { instanceID: "three" },
+                    name: "Chelsea",
+                    age: 38,
+                    children: {
+                      'child@odata.navigationLink': "Submissions('three')/children/child"
+                    }
+                  }, {
+                    __id: "one",
+                    __system: {
+                      // submissionDate is checked above,
+                      submitterId: "5",
+                      submitterName: "Alice",
+                      attachmentsPresent: 0,
+                      attachmentsExpected: 0,
+                      status: null
+                    },
+                    meta: { instanceID: "one" },
+                    name: "Alice",
+                    age: 30
+                  }]
+                });
+              }))))));
+
+    it('should return submissionDate-filtered toplevel rows if requested', testService((service, { db }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+          .send(testData.instances.withrepeat.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => db.update({ createdAt: new Date('2010-01-01') }).into('submissions'))
+          .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+            .send(testData.instances.withrepeat.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=__system/submissionDate lt 2015-01-01')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.eql({
+                '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+                value: [{
+                  __id: "one",
+                  __system: {
+                    submissionDate: "2010-01-01T00:00:00.000Z",
+                    submitterId: "5",
+                    submitterName: "Alice",
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 0,
+                    status: null
+                  },
+                  meta: { instanceID: "one" },
+                  name: "Alice",
+                  age: 30
+                }]
+              });
+            })))));
+
+    it('should return submissionDate-filtered toplevel rows if requested', testService((service, { db }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+          .send(testData.instances.withrepeat.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => db.update({ createdAt: new Date('2010-06-01') }).into('submissions'))
+          .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+            .send(testData.instances.withrepeat.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=year(__system/submissionDate) eq 2010')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.eql({
+                '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+                value: [{
+                  __id: "one",
+                  __system: {
+                    submissionDate: "2010-06-01T00:00:00.000Z",
+                    submitterId: "5",
+                    submitterName: "Alice",
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 0,
+                    status: null
+                  },
+                  meta: { instanceID: "one" },
+                  name: "Alice",
+                  age: 30
+                }]
+              });
+            })))));
+
     it('should return encrypted frames (no formdata)', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
