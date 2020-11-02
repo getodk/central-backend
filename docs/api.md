@@ -41,6 +41,8 @@ ODK Central v1.1 adds minor new features to the API.
 * `POST`/`GET /backup`, will immediately perform a backup of the database and return the encrypted backup.
 * `POST`/`GET /projects/…/forms/…/submissions.csv`, which allows download of the root table (excluding repeat data) as CSV, without a zipfile.
 * `POST`/`GET /projects/…/forms/…/submissions.csv.zip` now allows `?media=false` to exclude attachments.
+* OData Data Document requests now allow limited use of `$filter`.
+* The various `submissions.csv.*` endpoints also allow `$filter`, using the same limited OData syntax.
 
 ### ODK Central v1.0
 
@@ -1844,7 +1846,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Exporting Form Submissions to CSV [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip{?media}]
+### Exporting Form Submissions to CSV [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip{?media,%24filter}]
 
 To export all the `Submission` data associated with a `Form`, just add `.csv.zip` to the end of the listing URL. The response will be a ZIP file containing one or more CSV files, as well as all multimedia attachments associated with the included Submissions.
 
@@ -1856,9 +1858,12 @@ If a passphrase is supplied but is incorrect, the entire request will fail. If a
 
 If you are running an unsecured (`HTTP` rather than `HTTPS`) Central server, it is not a good idea to export data this way as your passphrase and the decrypted data will be sent plaintext over the network.
 
+You can use an [OData-style `$filter` query](/reference/odata-endpoints/odata-form-service/data-document) to filter the submissions that will appear in the ZIP file. This is a bit awkward, since this endpoint has nothing to do with OData, but since we already must recognize the OData syntax, it is less strange overall for now not to invent a whole other one here. Only a subset of the `$filter` features are available; please see the linked section for more information.
+
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
     + media: `true` (boolean, optional) - Set to false to exclude media attachments from the export.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported, and the built-in functions `now`, `date`, `time`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200
     + Headers
@@ -1875,7 +1880,7 @@ If you are running an unsecured (`HTTP` rather than `HTTPS`) Central server, it 
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Exporting Form Submissions to CSV via POST [POST /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip{?media}]
+### Exporting Form Submissions to CSV via POST [POST /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip{?media,%24filter}]
 
 This non-REST-compliant endpoint is provided for use with [Project Managed Encryption](/reference/encryption). In every respect, it behaves identically to the `GET` endpoint described in the previous section, except that it works over `POST`. This is necessary because for browser-based applications, it is a dangerous idea to simply link the user to `/submissions.csv.zip?2=supersecretpassphrase` because the browser will remember this route in its history and thus the passphrase will become exposed. This is especially dangerous as there are techniques for quickly learning browser-visited URLs of any arbitrary domain.
 
@@ -1886,6 +1891,7 @@ And so, for this `POST` version of the Submission CSV export endpoint, the passp
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
     + media: `true` (boolean, optional) - Set to false to exclude media attachments from the export.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported, and the built-in functions `now`, `date`, `time`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200
     + Headers
@@ -1902,7 +1908,7 @@ And so, for this `POST` version of the Submission CSV export endpoint, the passp
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Exporting Root Data to Plain CSV [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv]
+### Exporting Root Data to Plain CSV [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv{?%24filter}]
 
 _(introduced: version 1.1)_
 
@@ -1914,6 +1920,7 @@ Please see the [above endpoint](/reference/forms-and-submissions/submissions/exp
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported, and the built-in functions `now`, `date`, `time`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200
     + Body
@@ -1926,7 +1933,7 @@ Please see the [above endpoint](/reference/forms-and-submissions/submissions/exp
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Exporting Root Data to Plain CSV via POST [POST /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv]
+### Exporting Root Data to Plain CSV via POST [POST /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv{?%24filter}]
 
 _(introduced: version 1.1)_
 
@@ -1938,6 +1945,7 @@ As with [`POST` to `.csv.zip`](/reference/forms-and-submissions/submissions/expo
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported, and the built-in functions `now`, `date`, `time`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200
     + Body
@@ -2867,11 +2875,13 @@ While the latest 4.01 OData specification adds a new JSON EDMX CSDL format, most
 + Response 406 (application/json)
     + Attributes (Error 406)
 
-### Data Document [GET /v1/projects/{projectId}/forms/{xmlFormId}.svc/{table}{?%24skip,%24top,%24count,%24wkt}]
+### Data Document [GET /v1/projects/{projectId}/forms/{xmlFormId}.svc/{table}{?%24skip,%24top,%24count,%24wkt,%24filter}]
 
 The data documents are the straightforward JSON representation of each table of `Submission` data. They follow the [corresponding specification](http://docs.oasis-open.org/odata/odata-json-format/v4.01/odata-json-format-v4.01.html), but apart from the representation of geospatial data as GeoJSON rather than the ODK proprietary format, the output here should not be at all surprising. If you are looking for JSON output of Submission data, this is the best place to look.
 
 The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. While paging is possible through these parameters, it will not greatly improve the performance of exporting data. ODK Central prefers to bulk-export all of its data at once if possible.
+
+As of ODK Central v1.1, the [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) is partially supported. In OData, you can use `$filter` to filter by any data field in the schema. In ODK Central, the only fields you can reference are `__system/submitterId` and `__system/submissionDate`. These refer to the numeric `actorId` and the timestamp `createdAt` of the submission overall. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported. The built-in functions `now`, `date`, `time`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported. These supported elements may be combined in any way, but all other `$filter` features will cause an error. Please see the [OData documentation](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) on `$filter` for more information.
 
 In this release of Central, `$expand` is not yet supported. This will likely change in the future, once we can instate Navigation Properties.
 
@@ -2886,6 +2896,7 @@ As the vast majority of clients only support the JSON OData format, that is the 
     + `%24top`: `5` (number, optional) - If supplied, only up to `$top` rows will be returned in the results.
     + `%24count`: `true` (boolean, optional) - If set to `true`, an `@odata.count` property will be added to the result indicating the total number of rows, ignoring the above paging parameters.
     + `%24wkt`: `true` (boolean, optional) - If set to `true`, geospatial data will be returned as Well-Known Text (WKT) strings rather than GeoJSON structures.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported, and the built-in functions `now`, `date`, `time`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200 (application/json)
     + Body
@@ -3034,7 +3045,7 @@ Identical to [the non-Draft version](/reference/odata-endpoints/odata-form-servi
 + Response 406 (application/json)
     + Attributes (Error 406)
 
-### Data Document [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft.svc/{table}{?%24skip,%24top,%24count,%24wkt}]
+### Data Document [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft.svc/{table}{?%24skip,%24top,%24count,%24wkt,%24filter}]
 
 Identical to [the non-Draft version](/reference/odata-endpoints/odata-form-service/data-document) of this endpoint.
 
@@ -3045,6 +3056,7 @@ Identical to [the non-Draft version](/reference/odata-endpoints/odata-form-servi
     + `%24top`: `5` (number, optional) - If supplied, only up to `$top` rows will be returned in the results.
     + `%24count`: `true` (boolean, optional) - If set to `true`, an `@odata.count` property will be added to the result indicating the total number of rows, ignoring the above paging parameters.
     + `%24wkt`: `true` (boolean, optional) - If set to `true`, geospatial data will be returned as Well-Known Text (WKT) strings rather than GeoJSON structures.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported, and the built-in functions `now`, `date`, `time`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200 (application/json)
     + Body
