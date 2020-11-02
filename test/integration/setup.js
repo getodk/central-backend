@@ -115,13 +115,10 @@ const testService = (test) => () => new Promise((resolve, reject) => {
 
 // for some tests we explicitly need to make concurrent requests, in which case
 // the transaction butchering we do for testService will not work. for these cases,
-// we offer testServiceThenReinit:
+// we offer testServiceFullTrx:
 const testServiceFullTrx = (test) => () => new Promise((resolve, reject) => {
-  baseContainer.transacting((container) => {
   const reinit = (f) => (x) => { initialize().then(() => f(x)); };
-    test(augment(request(service(container))), container).then(reinit(resolve), reinit(reject));
-    // we return nothing to prevent knex from auto-committing the transaction.
-  }).catch(Promise.resolve.bind(Promise));
+  test(augment(request(service(baseContainer))), baseContainer).then(reinit(resolve), reinit(reject));
 });
 
 // for some tests we just want a container, without any of the webservice stuffs between.

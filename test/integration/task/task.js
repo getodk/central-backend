@@ -92,7 +92,7 @@ describe('task: emailing', () => {
       .then(() => { global.inbox.length.should.equal(0); })));
 
   it('should send an email on task failure', testTask(({ simply, Audit }) =>
-    emailing('testAction', Promise.reject(Problem.user.missingParameter({ field: 'test' })))
+    emailing('backupFailed', Promise.reject(Problem.user.missingParameter({ field: 'test' })))
       .then(identity, () => {
         const email = global.inbox.pop();
         email.to.should.eql({ address: 'no-reply@getodk.org', name: '' });
