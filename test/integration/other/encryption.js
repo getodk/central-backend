@@ -1,13 +1,13 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 const { toText } = require('streamtest').v2;
-const { testService, testContainer } = require(appRoot + '/test/integration/setup');
+const { testService, testContainerFullTrx } = require(appRoot + '/test/integration/setup');
 const testData = require(appRoot + '/test/data/xml');
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
 
 describe('managed encryption', () => {
   describe('lock management', () => {
-    it('should reject keyless forms in keyed projects @slow', testContainer(async (container) => {
+    it('should reject keyless forms in keyed projects @slow', testContainerFullTrx(async (container) => {
       // enable managed encryption.
       await container.transacting(({ Project }) =>
         Project.getById(1).then((o) => o.get())
@@ -27,7 +27,7 @@ describe('managed encryption', () => {
       error.problemCode.should.equal(409.5);
     }));
 
-    it('should reject forms created while project managed encryption is being enabled @slow', testContainer(async (container) => {
+    it('should reject forms created while project managed encryption is being enabled @slow', testContainerFullTrx(async (container) => {
       // enable managed encryption but don't allow the transaction to close.
       let encReq;
       const unblock = await new Promise((resolve) => {
