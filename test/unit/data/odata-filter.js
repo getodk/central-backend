@@ -26,6 +26,10 @@ describe('OData filter query transformer', () => {
     transform('3 eq __system/submitterId').should.eql([ '(? = ??)', '3', 'actorId' ]);
   });
 
+  it('should transform not operators', () => {
+    transform('not 4 eq 6').should.eql([ '(not (? = ?))', '4', '6' ]);
+  });
+
   it('should transform date extraction method calls', () => {
     transform('2020 eq year(2020-01-01)').should.eql([ '(? = extract(year from ?))', '2020', '2020-01-01' ]);
     transform('2020 eq year(__system/submissionDate)').should.eql([ '(? = extract(year from ??))', '2020', 'submissions.createdAt' ]);
