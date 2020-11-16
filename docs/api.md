@@ -1863,7 +1863,7 @@ You can use an [OData-style `$filter` query](/reference/odata-endpoints/odata-fo
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
     + media: `true` (boolean, optional) - Set to false to exclude media attachments from the export.
-    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported, and the built-in functions `now`, `date`, `time`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200
     + Headers
@@ -1891,7 +1891,7 @@ And so, for this `POST` version of the Submission CSV export endpoint, the passp
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
     + media: `true` (boolean, optional) - Set to false to exclude media attachments from the export.
-    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported, and the built-in functions `now`, `date`, `time`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200
     + Headers
@@ -1920,7 +1920,7 @@ Please see the [above endpoint](/reference/forms-and-submissions/submissions/exp
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
-    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported, and the built-in functions `now`, `date`, `time`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200
     + Body
@@ -1945,7 +1945,7 @@ As with [`POST` to `.csv.zip`](/reference/forms-and-submissions/submissions/expo
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
-    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported, and the built-in functions `now`, `date`, `time`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200
     + Body
@@ -2881,7 +2881,7 @@ The data documents are the straightforward JSON representation of each table of 
 
 The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. While paging is possible through these parameters, it will not greatly improve the performance of exporting data. ODK Central prefers to bulk-export all of its data at once if possible.
 
-As of ODK Central v1.1, the [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) is partially supported. In OData, you can use `$filter` to filter by any data field in the schema. In ODK Central, the only fields you can reference are `__system/submitterId` and `__system/submissionDate`. These refer to the numeric `actorId` and the timestamp `createdAt` of the submission overall. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported. The built-in functions `now`, `date`, `time`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported. These supported elements may be combined in any way, but all other `$filter` features will cause an error. Please see the [OData documentation](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) on `$filter` for more information.
+As of ODK Central v1.1, the [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) is partially supported. In OData, you can use `$filter` to filter by any data field in the schema. In ODK Central, the only fields you can reference are `__system/submitterId` and `__system/submissionDate`. These refer to the numeric `actorId` and the timestamp `createdAt` of the submission overall. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported. These supported elements may be combined in any way, but all other `$filter` features will cause an error. Please see the [OData documentation](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) on `$filter` for more information.
 
 In this release of Central, `$expand` is not yet supported. This will likely change in the future, once we can instate Navigation Properties.
 
@@ -2896,7 +2896,7 @@ As the vast majority of clients only support the JSON OData format, that is the 
     + `%24top`: `5` (number, optional) - If supplied, only up to `$top` rows will be returned in the results.
     + `%24count`: `true` (boolean, optional) - If set to `true`, an `@odata.count` property will be added to the result indicating the total number of rows, ignoring the above paging parameters.
     + `%24wkt`: `true` (boolean, optional) - If set to `true`, geospatial data will be returned as Well-Known Text (WKT) strings rather than GeoJSON structures.
-    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported, and the built-in functions `now`, `date`, `time`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200 (application/json)
     + Body
@@ -3056,7 +3056,7 @@ Identical to [the non-Draft version](/reference/odata-endpoints/odata-form-servi
     + `%24top`: `5` (number, optional) - If supplied, only up to `$top` rows will be returned in the results.
     + `%24count`: `true` (boolean, optional) - If set to `true`, an `@odata.count` property will be added to the result indicating the total number of rows, ignoring the above paging parameters.
     + `%24wkt`: `true` (boolean, optional) - If set to `true`, geospatial data will be returned as Well-Known Text (WKT) strings rather than GeoJSON structures.
-    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported, and the built-in functions `now`, `date`, `time`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200 (application/json)
     + Body
