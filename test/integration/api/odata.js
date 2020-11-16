@@ -543,7 +543,7 @@ describe('api: /forms/:id.svc', () => {
                 value: [{
                   __id: "one",
                   __system: {
-                    submissionDate: "2010-01-01T00:00:00.000Z",
+                    submissionDate: "2010-06-01T00:00:00.000Z",
                     submitterId: "5",
                     submitterName: "Alice",
                     attachmentsPresent: 0,
