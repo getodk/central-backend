@@ -4,25 +4,25 @@ We want ODK Central Backend to be easy to install and use, yet flexible and powe
 
 # Getting Involved
 
-One of the easiest ways you can participate is to help us [track down bugs](https://github.com/opendatakit/central/issues), which we do over in the [ODK Central](https://github.com/opendatakit/central) repository. Did you run into some odd or puzzling behaviour? Did you have trouble installing or updating the server? Is a form upload or data export not working the way you'd expect? We want to know! Please do a quick search of the issues list to see if it's something that's already been submitted. Please do make an effort to figure out if the issue is related to this server, or some other tool you are using (like XLSForm, Build, or Collect). But when in doubt, submit your problem anyway.
+One of the easiest ways you can participate is to help us [track down bugs](https://github.com/getodk/central/issues), which we do over in the [ODK Central](https://github.com/getodk/central) repository. Did you run into some odd or puzzling behaviour? Did you have trouble installing or updating the server? Is a form upload or data export not working the way you'd expect? We want to know! Please do a quick search of the issues list to see if it's something that's already been submitted. Please do make an effort to figure out if the issue is related to this server, or some other tool you are using (like XLSForm, Build, or Collect). But when in doubt, submit your problem anyway.
 
 ## Questions and Discussion
 
-If you are having trouble with making ODK Central Backend work correctly, we encourage you to visit the [community forum](https://forum.opendatakit.org) where a great many of your knowledgeable peers can help you with your problem.
+If you are having trouble with making ODK Central Backend work correctly, we encourage you to visit the [community forum](https://forum.getodk.org) where a great many of your knowledgeable peers can help you with your problem.
 
-If you're looking for help or discussion on _how_ ODK Central Backend works internally and how to understand or update its code, the ODK [developer Slack](https://opendatakit.slack.com) is for you.
+If you're looking for help or discussion on _how_ ODK Central Backend works internally and how to understand or update its code, the ODK [developer Slack](https://getodk.slack.com) is for you.
 
 # Contributing Code
 
 ## Getting Started
 
-Please see the [project README](https://github.com/opendatakit/central-backend#setting-up-a-development-environment) for instructions on how to set up your development environment.
+Please see the [project README](https://github.com/getodk/central-backend#setting-up-a-development-environment) for instructions on how to set up your development environment.
 
 ## Guidelines
 
 If you're starting work on an issue ticket, please leave a comment saying so. If you run into trouble or have to stop working on a ticket, please leave a comment as well. As you write code, the usual guidelines apply; please ensure you are following existing conventions:
 
-* Our **code style** is loosely based on the [AirBnB Javascript Style Guide](https://github.com/airbnb/javascript), and you can run `make lint` in the project directory to check your code against it. We do make [some exceptions](https://github.com/opendatakit/central-backend/blob/master/.eslintrc.json) to their rules, and we do make exceptions to the linter when we have a reason and consensus to do so.
+* Our **code style** is loosely based on the [AirBnB Javascript Style Guide](https://github.com/airbnb/javascript), and you can run `make lint` in the project directory to check your code against it. We do make [some exceptions](https://github.com/getodk/central-backend/blob/master/.eslintrc.json) to their rules, and we do make exceptions to the linter when we have a reason and consensus to do so.
 * More broadly, we also try to keep our code as maintainable as possible by doing the following:
     * Use [immutability](https://en.wikipedia.org/wiki/Immutable_object) (`const`), [pure functions](https://medium.com/@jamesjefferyuk/javascript-what-are-pure-functions-4d4d5392d49c), [higher-order-functions](https://medium.com/javascript-scene/higher-order-functions-composing-software-5365cf2cbe99) (eg when you see stacked arrow functions like `(x) => (y) => …`) and [functional composition](https://hackernoon.com/javascript-functional-composition-for-every-day-use-22421ef65a10) wherever possible. It should almost always be possible. If you are not sure how to accomplish something with these techniques, please don't be afraid to ask for advice.
     * Reduce or eliminate tight coupling and direct dependencies within the codebase as much as possible. Ideally, things you need can be passed in rather than directly instantiated or required; the dependency injection system we have built (see below) should help.
