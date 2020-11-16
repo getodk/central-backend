@@ -466,13 +466,13 @@ describe('preprocessors', () => {
         });
     });
 
-    it('should store uri-decoded query parameters in argData', () => {
+    it('should not re-decode query parameters in argData', () => {
       const request = createRequest({ method: 'GET', query: { type: 'xyz', q: 'test%20search' } });
       const result = queryOptionsHandler(null, new Context(request));
-      result.queryOptions.argData.should.eql({ type: 'xyz', q: 'test search' });
+      result.queryOptions.argData.should.eql({ type: 'xyz', q: 'test%20search' });
     });
 
-    it('should not story query parameters as allowed args', () => {
+    it('should not store query parameters as allowed args', () => {
       const request = createRequest({ method: 'GET', query: { type: 'xyz', q: 'test%20search' } });
       const result = queryOptionsHandler(null, new Context(request));
       should.not.exist(result.queryOptions.args);
