@@ -530,7 +530,7 @@ describe('api: /forms/:id.svc', () => {
           .send(testData.instances.withrepeat.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => db.update({ createdAt: new Date('2010-01-01') }).into('submissions'))
+          .then(() => db.update({ createdAt: new Date('2010-06-01') }).into('submissions'))
           .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
             .send(testData.instances.withrepeat.two)
             .set('Content-Type', 'text/xml')
