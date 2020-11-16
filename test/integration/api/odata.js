@@ -530,7 +530,7 @@ describe('api: /forms/:id.svc', () => {
           .send(testData.instances.withrepeat.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => db.update({ createdAt: new Date('2010-01-01') }).into('submissions'))
+          .then(() => db.update({ createdAt: new Date('2010-06-01') }).into('submissions'))
           .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
             .send(testData.instances.withrepeat.two)
             .set('Content-Type', 'text/xml')
@@ -543,7 +543,7 @@ describe('api: /forms/:id.svc', () => {
                 value: [{
                   __id: "one",
                   __system: {
-                    submissionDate: "2010-01-01T00:00:00.000Z",
+                    submissionDate: "2010-06-01T00:00:00.000Z",
                     submitterId: "5",
                     submitterName: "Alice",
                     attachmentsPresent: 0,
