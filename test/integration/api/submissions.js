@@ -1084,7 +1084,17 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
   describe('.csv GET', () => {
     // NOTE: tests related to decryption of .csv.zip export are located in test/integration/other/encryption.js
 
-    it('should return a zipfile with the relevant headers', testService((service) =>
+    it('should return notfound if the form does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/nope/submissions.csv')
+          .expect(404))));
+
+    it('should reject if the user cannot get submissions', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/projects/1/forms/simple/submissions.csv')
+          .expect(403))));
+
+    it('should return a csv with the relevant headers', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/projects/1/forms/simple/submissions.csv')
           .expect(200)
