@@ -532,6 +532,24 @@ describe('form schema', () => {
           stack.push('name').should.eql(new MockField({ name: 'name', path: '/name', type: 'string', order: 2 }));
         }));
 
+      it('should ignore children of unknown repeats', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields.filter((field) => field.path !== ('/children/child')));
+          stack.push('data');
+          stack.push('children');
+          should.not.exist(stack.push('child'));
+          should.not.exist(stack.push('name'));
+        }));
+
+      it('should navigate through children of unknown repeats if empty navigation is on', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields.filter((field) => field.path !== ('/children/child')), true);
+          stack.push('data');
+          stack.push('children');
+          should.not.exist(stack.push('child'));
+          stack.push('name').should.eql(new MockField({ name: 'name', path: '/children/child/name', type: 'string', order: 5 }));
+        }));
+
       it('should not indicate exit upon return to root', () => fieldsFor(testData.forms.doubleRepeat)
         .then((fields) => {
           const stack = new SchemaStack(fields);

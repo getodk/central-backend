@@ -27,6 +27,7 @@
     "mustache": "~2.3",
     "naught": "~1.6",
     "nodemailer": "~4.4",
+    "odata-v4-parser": "~0.1",
     "pg": "~8",
     "pg-query-stream": "~3",
     "prompt": "~1",
