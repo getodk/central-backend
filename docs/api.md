@@ -1527,6 +1527,8 @@ Once the Draft is published, there will no longer be a Draft version of the form
 
 Once a Draft Form is deleted, its definition and any Form Attachments associated with it will be removed.
 
+You will not be able to delete the draft if there is no published version of the form.
+
 + Response 200 (application/json)
     + Attributes (Success)
 

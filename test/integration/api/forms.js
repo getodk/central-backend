@@ -1863,22 +1863,17 @@ describe('api: /projects/:id/forms', () => {
                 body.version.should.equal('');
               })))));
 
-      it('should delete the draft even if there is no published version', testService((service) =>
+      it('should conflict if there is no published version', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.simple2)
             .set('Content-Type', 'application/xml')
             .expect(200)
             .then(() => asAlice.delete('/v1/projects/1/forms/simple2/draft')
-              .expect(200))
-            .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft')
-              .expect(404))
-            .then(() => asAlice.get('/v1/projects/1/forms/simple2')
-              .expect(200)
+              .expect(409))
               .then(({ body }) => {
-                body.xmlFormId.should.equal('simple2');
-                should.not.exist(body.version);
-              })))));
+                body.code.should.equal(409.5);
+              }))));
 
       it('should create a new draft token after delete', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -2860,10 +2855,12 @@ describe('api: /projects/:id/forms', () => {
 
       it('should reject if the draft has been deleted', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
+          asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft')
+              .expect(200))
             .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
               .send('test,csv\n1,2')
               .set('Content-Type', 'text/csv')
@@ -2962,12 +2959,12 @@ describe('api: /projects/:id/forms', () => {
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .expect(200)
             .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+              .expect(200))
+            .then(({ body }) => body.draftToken)
+            .then((token) => asAlice.delete('/v1/projects/1/forms/simple/draft')
               .expect(200)
-              .then(({ body }) => body.draftToken)
-              .then((token) => asAlice.delete('/v1/projects/1/forms/simple/draft')
-                .expect(200)
-                .then(() => service.get(`/v1/test/${token}/projects/1/forms/simple/draft.xml`)
-                  .expect(404)))))));
+              .then(() => service.get(`/v1/test/${token}/projects/1/forms/simple/draft.xml`)
+                .expect(404))))));
 
       it('should reject if the key is wrong', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -3010,10 +3007,12 @@ describe('api: /projects/:id/forms', () => {
 
       it('should reject if the draft has been deleted', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
+          asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft')
+              .expect(200))
             .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
               .send('test,csv\n1,2')
               .set('Content-Type', 'text/csv')
