@@ -44,6 +44,9 @@ ODK Central v1.1 adds minor new features to the API.
 * OData Data Document requests now allow limited use of `$filter`.
 * The various `submissions.csv.*` endpoints also allow `$filter`, using the same limited OData syntax.
 
+**Fixed**:
+* Documented the `deviceId` property of submission, which was added in version 0.4.
+
 ### ODK Central v1.0
 
 ODK Central v1.0 adds Public Links to the API, and makes one minor breaking change.
@@ -3475,6 +3478,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Submission (object)
 + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the `Submission`, given by the Submission XML.
 + submitterId: `23` (number, required) - The ID of the `Actor` (`App User` or `User`) that submitted this `Submission`.
++ deviceId: `imei:123456` (string, optional) - The self-identified `deviceId` of the device that collected the data, sent by it upon submission to the server.
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format
 
