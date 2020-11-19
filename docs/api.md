@@ -3193,7 +3193,7 @@ _(introduced: version 1.1)_
 
 ODK Central offers HTTP endpoints that will immediately perform a backup on the system database and send that encrypted backup as the response. You can `POST` with an encryption passphrase, or `GET` if you have encryption [already configured](/reference/system-endpoints/backups-configuration) to use the passphrase you configured then.
 
-Note that performing the backup takes a great deal of time, during which the request will be held open. Both of these endpoints stream a keepalive header every five seconds to prevent the request from timing out. As long as these headers are being sent, the backup is still being performed.
+Note that performing the backup takes a great deal of time, during which the request will be held open. Both of these endpoints trickle junk data every five seconds while that processing is occurring to prevent the request from timing out. Depending on how much data you have, it can take many minutes for the data stream to speed up to a full transfer rate.
 
 ### Using an Ad-Hoc Passphrase [POST]
 
