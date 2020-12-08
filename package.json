@@ -6,8 +6,9 @@
     "node": ">=8"
   },
   "dependencies": {
+    "@sentry/node": "~5",
     "archiver": "~5",
-    "bcrypt": "~3",
+    "bcrypt": "~5",
     "body-parser": "~1.18",
     "cli": "~1",
     "cloneable-readable": "~2",
@@ -18,7 +19,7 @@
     "entities": "~2",
     "express": "~4.16",
     "express-graceful-exit": "~0.4",
-    "googleapis": "~42",
+    "googleapis": "~66",
     "htmlparser2": "~3.9",
     "knex": "~0.21",
     "luxon": "~0.3",
@@ -33,7 +34,6 @@
     "prompt": "~1",
     "ramda": "~0",
     "sanitize-filename": "~1",
-    "@sentry/node": "~5",
     "tmp": "~0",
     "uuid": "~3",
     "yauzl": "~2.9"
