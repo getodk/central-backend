@@ -23,7 +23,7 @@ describe('OData filter query transformer', () => {
   it('should transform binary expressions', () => {
     transform('3 eq 5').should.eql([ '(? = ?)', '3', '5' ]);
     transform('2 lt 3 and 5 gt 4').should.eql([ '((? < ?) and (? > ?))', '2', '3' , '5', '4']);
-    transform('3 eq __system/submitterId').should.eql([ '(? = ??)', '3', 'actorId' ]);
+    transform('3 eq __system/submitterId').should.eql([ '(? = ??)', '3', 'submissions.submitterId' ]);
   });
 
   it('should transform not operators', () => {
