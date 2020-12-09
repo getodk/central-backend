@@ -164,11 +164,11 @@ describe('api: /submission', () => {
           .expect(201)
           .then(() => Promise.all([
             asAlice.get('/v1/users/current').then(({ body }) => body.id),
-            db.select('formDefId', 'actorId').from('submission_defs')
+            db.select('formDefId', 'submitterId').from('submission_defs')
           ]))
           .then(([ aliceId, submissions ]) => {
             submissions.length.should.equal(1);
-            submissions[0].actorId.should.equal(aliceId);
+            submissions[0].submitterId.should.equal(aliceId);
             return db.select('xml').from('form_defs').where({ id: submissions[0].formDefId })
               .then(([ def ]) => {
                 def.xml.should.equal(testData.forms.simple);
@@ -709,11 +709,11 @@ describe('api: /forms/:id/submissions', () => {
           .expect(200)
           .then(() => Promise.all([
             asAlice.get('/v1/users/current').then(({ body }) => body.id),
-            db.select('formDefId', 'actorId').from('submission_defs')
+            db.select('formDefId', 'submitterId').from('submission_defs')
           ]))
           .then(([ aliceId, submissions ]) => {
             submissions.length.should.equal(1);
-            submissions[0].actorId.should.equal(aliceId);
+            submissions[0].submitterId.should.equal(aliceId);
             return db.select('xml').from('form_defs').where({ id: submissions[0].formDefId })
               .then(([ def ]) => {
                 def.xml.should.equal(testData.forms.simple);
