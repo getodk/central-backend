@@ -15,7 +15,7 @@ const { applyODataFilter } = require(appRoot + '/lib/data/odata-filter');
 const transform = (filterExpr) => {
   let query, bindings;
   const db = { whereRaw: (q, b) => { query = q; bindings = b; } };
-  applyODataFilter(filterExpr, db);
+  applyODataFilter(filterExpr)(db);
   return [ query ].concat(bindings);
 };
 
