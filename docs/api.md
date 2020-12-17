@@ -43,6 +43,7 @@ ODK Central v1.1 adds minor new features to the API.
 * `POST`/`GET /projects/…/forms/…/submissions.csv.zip` now allows `?media=false` to exclude attachments.
 * OData Data Document requests now allow limited use of `$filter`.
 * The various `submissions.csv.*` endpoints also allow `$filter`, using the same limited OData syntax.
+* `GET /projects/…/forms/…/submissions/submitters` which returns submitter Actors for a given Form.
 
 **Fixed**:
 * Documented the `deviceId` property of submission, which was added in version 0.4.
@@ -1970,6 +1971,19 @@ This endpoint provides a listing of all known encryption keys needed to decrypt 
 
 + Response 200
     + Attributes (array[Key])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Listing Submitters [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions/submitters]
+
+This endpoint provides a listing of all known submitting actors to a given Form. Each Actor that has submitted to the given Form will be returned once.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+
++ Response 200
+    + Attributes (array[Actor])
 
 + Response 403 (application/json)
     + Attributes (Error 403)

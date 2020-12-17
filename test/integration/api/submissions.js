@@ -1641,6 +1641,45 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
     //it('should not return a key attached to an outdated submission', testService((service) =>
   });
 
+  describe('/submitters GET', () => {
+    it('should return notfound if the form does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/nonexistent/submissions/submitters').expect(404))));
+
+    it('should reject if the user cannot read', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/projects/1/forms/simple/submissions/submitters').expect(403))));
+
+    it('should return an empty array if there are no submissions', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/simple/submissions/submitters')
+          .expect(200)
+          .then(({ body }) => { body.should.eql([]); }))));
+
+    it('should return all submitters once', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('bob', (asBob) =>
+          asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asBob.post('/v1/projects/1/forms/simple/submissions')
+              .send(testData.instances.simple.two)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+              .send(testData.instances.simple.three)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/submitters')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(2);
+                body[0].displayName.should.equal('Alice');
+                body[1].displayName.should.equal('Bob');
+              }))))));
+  });
+
   describe('[draft] /keys GET', () => {
     it('should return notfound if the draft does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
