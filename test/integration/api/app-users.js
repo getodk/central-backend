@@ -182,6 +182,17 @@ describe('api: /projects/:id/app-users', () => {
         asBob.post('/v1/projects/1/app-users').send({ displayName: 'condemned' }).expect(200)
           .then(({ body }) => asBob.delete('/v1/projects/1/app-users/' + body.id).expect(200)))));
 
+    it('should delete assignments on the token', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/app-users').send({ displayName: 'condemned' }).expect(200)
+          .then(({ body }) => body.id)
+          .then((id) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${id}`)
+            .expect(200)
+            .then(() => asAlice.delete(`/v1/projects/1/app-users/${id}`).expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/assignments')
+              .expect(200)
+              .then(({ body }) => body.should.eql([])))))));
+
     it('should only delete the token if it is part of the project', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects')

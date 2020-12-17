@@ -1,5 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
+const uuid = require('uuid/v4');
 const { construct } = require('ramda');
 const streamTest = require('streamtest').v2;
 const testData = require(appRoot + '/test/data/xml');
@@ -348,6 +349,58 @@ Billy,4,two,two/children/child[1]
 Blaine,6,two,two/children/child[2]
 Candace,2,three,three/children/child[1]
 `);
+      done();
+    });
+  });
+
+  it('should output all rows', (done) => {
+    const formXml = `
+      <?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+        <h:head>
+          <model>
+            <instance>
+              <data id="singlerepeat">
+                <orx:meta>
+                  <orx:instanceID/>
+                </orx:meta>
+                <name/>
+                <age/>
+                <children>
+                  <child>
+                    <name/>
+                    <age/>
+                  </child>
+                </children>
+              </data>
+            </instance>
+            <bind nodeset="/data/orx:meta/orx:instanceID" preload="uid" type="string"/>
+            <bind nodeset="/data/name" type="string"/>
+            <bind nodeset="/data/children/child/name" type="string"/>
+          </model>
+        </h:head>
+        <h:body>
+          <input ref="/data/name">
+            <label>What is your name?</label>
+          </input>
+          <group ref="/data/children">
+            <label>Child</label>
+            <repeat nodeset="/data/children/child">
+              <input ref="/data/children/child/name">
+                <label>What is the child's name?</label>
+              </input>
+            </repeat>
+          </group>
+        </h:body>
+      </h:html>`;
+
+    const inStream = streamTest.fromObjects(
+      (new Array(127)).fill(null).map(_ => instance(uuid(), `<orx:meta><orx:instanceID>${uuid()}</orx:instanceID></orx:meta><name>${uuid()}</name><children><child><name>${uuid()}</name></child></children>`)));
+
+    callAndParse(inStream, formXml, 'singlerepeat', (result) => {
+      result.filenames.should.containDeep([ 'singlerepeat.csv', 'singlerepeat-child.csv' ]);
+      result['singlerepeat.csv'].split('\n').length.should.equal(129);
+      result['singlerepeat-child.csv'].split('\n').length.should.equal(129);
       done();
     });
   });
