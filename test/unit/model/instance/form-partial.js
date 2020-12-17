@@ -35,6 +35,22 @@ describe('Form', () => {
           failure.problemCode.should.equal(400.2);
         }));
 
+    it('should reject if the formId ends in .xml', () =>
+      FormPartial.fromXml('<html><head><model><instance><data id="form.xml"><field/></data></instance></model></head></html>')
+        .should.be.rejected()
+        .then((failure) => {
+          failure.isProblem.should.equal(true);
+          failure.problemCode.should.equal(400.8);
+          failure.problemDetails.field.should.equal('formId');
+          failure.problemDetails.value.should.equal('form.xml');
+          failure.problemDetails.reason.includes('change form.xls.xls to form.xls').should.equal(true);
+        }));
+
+    it('should reject if the formId ends in .xls(x)', () => Promise.all([
+      FormPartial.fromXml('<html><head><model><instance><data id="form.xls"><field/></data></instance></model></head></html>').should.be.rejected(),
+      FormPartial.fromXml('<html><head><model><instance><data id="form.xlsx"><field/></data></instance></model></head></html>').should.be.rejected()
+    ]));
+
     it('should return a populated Form object if the xml passes', () => {
       const xml = '<html><head><model><instance><data id="mycoolform"><field/></data></instance></model></head></html>';
       return FormPartial.fromXml(xml).then((partial) => {

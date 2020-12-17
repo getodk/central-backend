@@ -273,6 +273,25 @@ describe('api: /projects', () => {
               body.lastSubmission.should.be.a.recentIsoDate();
             })))));
 
+    it('should not count deleted app users', testService((service) =>
+      service.login('alice', (asAlice) =>
+        Promise.all([
+          asAlice.post(`/v1/projects/1/app-users`)
+            .send({ displayName: 'test 1' })
+            .expect(200)
+            .then(({ body }) => asAlice.delete(`/v1/projects/1/app-users/${body.id}`)
+              .expect(200)),
+          asAlice.post(`/v1/projects/1/app-users`)
+            .send({ displayName: 'test 2' })
+            .expect(200)
+        ])
+          .then(() => asAlice.get('/v1/projects/1')
+            .set('X-Extended-Metadata', 'true')
+            .expect(200)
+            .then(({ body }) => {
+              body.appUsers.should.equal(1);
+            })))));
+
     it('should not return verb information unless extended metata is requested', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/projects/1')

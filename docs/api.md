@@ -44,6 +44,9 @@ ODK Central v1.1 adds minor new features to the API.
 * OData Data Document requests now allow limited use of `$filter`.
 * The various `submissions.csv.*` endpoints also allow `$filter`, using the same limited OData syntax.
 
+**Fixed**:
+* Documented the `deviceId` property of submission, which was added in version 0.4.
+
 ### ODK Central v1.0
 
 ODK Central v1.0 adds Public Links to the API, and makes one minor breaking change.
@@ -1046,8 +1049,6 @@ For XLSForm upload, either `.xls` or `.xlsx` are accepted. You must provide the 
 
 By default, any XLSForm conversion Warnings will fail this request and return the warnings rather than use the converted XML to create a form. To override this behaviour, provide a querystring flag `?ignoreWarnings=true`. Conversion Errors will always fail this request.
 
-If the combination of (`xmlFormId`, `version`) conflict with any existing Form, current or deleted, the request will be rejected with error code `409`. We consider even deleted forms when enforcing this restriction to prevent confusion in case a survey client already has the other version of that Form downloaded.
-
 The API will currently check the XML's structure in order to extract the information we need about it, but ODK Central does _not_ run comprehensive validation on the full contents of the XML to ensure compliance with the ODK specification. Future versions will likely do this, but in the meantime you will have to use a tool like [ODK Validate](https://opendatakit.org/use/validate/) to be sure your Forms are correct.
 
 + Parameters
@@ -1525,6 +1526,8 @@ Once the Draft is published, there will no longer be a Draft version of the form
 #### Deleting a Draft Form [DELETE /v1/projects/{projectId}/forms/{xmlFormId}/draft]
 
 Once a Draft Form is deleted, its definition and any Form Attachments associated with it will be removed.
+
+You will not be able to delete the draft if there is no published version of the form.
 
 + Response 200 (application/json)
     + Attributes (Success)
@@ -2802,6 +2805,8 @@ If you are writing a tool to analyze your own data, whose schema you already kno
 
 In general, the way we model the XForms schema in OData terms is to represent `group`s as `ComplexType`s, and `repeat`s as `EntityType`s. In the world of OData, the primary difference between these two types is that Entity Types require Primary Keys, while Complex Types do not. This fits well with the way XForms surveys tend to be structured.
 
+Most other types map to `String`. The exceptions are numbers, which map either to `Int64` or `Decimal` as appropriate, datetime fields which are always `DateTimeOffset`, and geography points which will appear as `GeographyPoint`, `GeographyLineString`, or `GeographyPolygon` given a `geopoint`, `geotrace`, or `geoshape`.
+
 Due to a limitation in Power BI, we do not take the extra step of advertising the actual relationships between tables (the point at which a `repeat` connects the parent data to the repeated subtable). Normally, this would be done with a `NavigationProperty`. However, while the OData specification allows Navigation Properties to exist on Complex Types, Power BI only allows them on Entity Types, as it makes certain assumptions about how Primary Keys must be structured to relate the two tables together. This is a problem for us, because it is a common idiom in ODK XForms design to place `repeat`s inside of `group`s. When Power BI resolves this issue, we will be able to formally represent the joins between these tables.
 
 This implementation of the OData standard includes a set of Annotations describing the supported features of the service in the form of the [Capabilities Vocabulary](https://github.com/oasis-tcs/odata-vocabularies/blob/master/vocabularies/Org.OData.Capabilities.V1.md). In general, however, you can assume that the server supports the Minimal Conformance level and nothing beyond.
@@ -3188,7 +3193,7 @@ _(introduced: version 1.1)_
 
 ODK Central offers HTTP endpoints that will immediately perform a backup on the system database and send that encrypted backup as the response. You can `POST` with an encryption passphrase, or `GET` if you have encryption [already configured](/reference/system-endpoints/backups-configuration) to use the passphrase you configured then.
 
-Note that performing the backup takes a great deal of time, during which the request will be held open. Both of these endpoints stream a keepalive header every five seconds to prevent the request from timing out. As long as these headers are being sent, the backup is still being performed.
+Note that performing the backup takes a great deal of time, during which the request will be held open. Both of these endpoints trickle junk data every five seconds while that processing is occurring to prevent the request from timing out. Depending on how much data you have, it can take many minutes for the data stream to speed up to a full transfer rate.
 
 ### Using an Ad-Hoc Passphrase [POST]
 
@@ -3475,6 +3480,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Submission (object)
 + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the `Submission`, given by the Submission XML.
 + submitterId: `23` (number, required) - The ID of the `Actor` (`App User` or `User`) that submitted this `Submission`.
++ deviceId: `imei:123456` (string, optional) - The self-identified `deviceId` of the device that collected the data, sent by it upon submission to the server.
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format
 

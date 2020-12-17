@@ -590,6 +590,48 @@ describe('api: /forms/:id.svc', () => {
               });
             })))));
 
+    it('should count correctly while filtering', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('bob', (asBob) =>
+          asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+            .send(testData.instances.withrepeat.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asBob.post('/v1/projects/1/forms/withrepeat/submissions')
+              .send(testData.instances.withrepeat.two)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+              .send(testData.instances.withrepeat.three)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$count=true&$filter=__system/submitterId eq 5')
+              .expect(200)
+              .then(({ body }) => {
+                body['@odata.count'].should.equal(2);
+              }))))));
+
+    it('should count correctly while filtering and windowing', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('bob', (asBob) =>
+          asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+            .send(testData.instances.withrepeat.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asBob.post('/v1/projects/1/forms/withrepeat/submissions')
+              .send(testData.instances.withrepeat.two)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+              .send(testData.instances.withrepeat.three)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$count=true&$filter=__system/submitterId eq 5&$top=1&$skip=1')
+              .expect(200)
+              .then(({ body }) => {
+                body['@odata.count'].should.equal(2);
+              }))))));
+
     it('should return encrypted frames (no formdata)', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')

@@ -9,7 +9,7 @@ module.exports = (google) => ({
     generateAuthUrl: (options) => google.auth.generateAuthUrl(options),
     getToken: (code) => ((code === 'happy google')
       ? Promise.resolve({ tokens: { code } })
-      : Promise.reject({ res: { data: { code } } })) // this is the format their errors take.
+      : Promise.reject({ response: { data: { code } } })) // this is the format their errors take.
   }
 });
 
