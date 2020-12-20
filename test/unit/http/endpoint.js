@@ -538,7 +538,7 @@ describe('endpoints', () => {
 
         response.get('Content-Language').should.equal('en');
         response.get('X-OpenRosa-Version').should.equal('1.0');
-        response.get('X-OpenRosa-Accept-Content-Length').should.equal('20000000');
+        response.get('X-OpenRosa-Accept-Content-Length').should.equal('100000000');
         response.get('Date').should.be.an.httpDate();
       });
     });
