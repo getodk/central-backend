@@ -1034,6 +1034,23 @@ describe('api: /forms/:id/submissions', () => {
                 done();
               })))))));
 
+    it('should give the appropriate filename if ?attachments=false is given', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+            .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+            .expect(201))
+            .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip?attachments=false')
+              .expect(200)
+              .then(({ headers }) => {
+                headers['content-disposition'].should.equal('attachment; filename="binaryType.csv.zip"');
+              })))));
+
     it('should properly count present attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
