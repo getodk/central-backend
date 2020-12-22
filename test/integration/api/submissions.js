@@ -1001,7 +1001,7 @@ describe('api: /forms/:id/submissions', () => {
                 .expect(201))
               .then(() => new Promise((done) =>
                 zipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip?$filter=__system/submitterId eq 5'), (result) => {
-                  result.filenames.should.containDeep([
+                  result.filenames.should.eql([
                     'binaryType.csv',
                     'media/my_file1.mp4'
                   ]);
