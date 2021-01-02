@@ -1096,7 +1096,7 @@ describe('form schema', () => {
         </data>
       </instance>
       <bind nodeset="/data/name" type="string"/>
-      <submission action="https://opendatakit.org/custom-action"/>
+      <submission action="https://getodk.org/custom-action"/>
     </model>
   </h:head>
 </h:html>`;
@@ -1112,7 +1112,7 @@ describe('form schema', () => {
         </data>
       </instance>
       <bind nodeset="/data/name" type="string"/>
-      <submission action="https://opendatakit.org/custom-action" base64RsaPublicKey="mybase64key"/>
+      <submission action="https://getodk.org/custom-action" base64RsaPublicKey="mybase64key"/>
     </model>
   </h:head>
 </h:html>`));
@@ -1130,7 +1130,7 @@ describe('form schema', () => {
         </data>
       </instance>
       <bind nodeset="/data/name" type="string"/>
-      <submission action="https://opendatakit.org/custom-action" /  
+      <submission action="https://getodk.org/custom-action" /  
       >
     </model>
   </h:head>
@@ -1147,7 +1147,7 @@ describe('form schema', () => {
         </data>
       </instance>
       <bind nodeset="/data/name" type="string"/>
-      <submission action="https://opendatakit.org/custom-action"  base64RsaPublicKey="mybase64key"/  
+      <submission action="https://getodk.org/custom-action"  base64RsaPublicKey="mybase64key"/  
       >
     </model>
   </h:head>

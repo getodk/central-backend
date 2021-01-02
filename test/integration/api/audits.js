@@ -32,13 +32,13 @@ describe('/audits', () => {
             .send({ name: 'renamed audit project' })
             .expect(200)
             .then(() => asAlice.post('/v1/users')
-              .send({ displayName: 'david', email: 'david@opendatakit.org' })
+              .send({ displayName: 'david', email: 'david@getodk.org' })
               .expect(200))
             .then(() => Promise.all([
               asAlice.get('/v1/audits').expect(200).then(({ body }) => body),
               Project.getById(projectId).then((o) => o.get()),
-              User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
-              User.getByEmail('david@opendatakit.org').then((o) => o.get())
+              User.getByEmail('alice@getodk.org').then((o) => o.get()),
+              User.getByEmail('david@getodk.org').then((o) => o.get())
             ]))
             .then(([ audits, project, alice, david ]) => {
               audits.length.should.equal(3);
@@ -49,7 +49,7 @@ describe('/audits', () => {
               audits[0].acteeId.should.equal(david.actor.acteeId);
               audits[0].details.should.eql({ data: {
                 actor: { displayName: 'david', type: 'user' },
-                email: 'david@opendatakit.org', password: null
+                email: 'david@getodk.org', password: null
               } });
               audits[0].loggedAt.should.be.a.recentIsoDate();
 
@@ -77,7 +77,7 @@ describe('/audits', () => {
             .set('Content-Type', 'text/xml')
             .expect(200)
             .then(() => asAlice.post('/v1/users')
-              .send({ displayName: 'david', email: 'david@opendatakit.org' })
+              .send({ displayName: 'david', email: 'david@getodk.org' })
               .expect(200))
             .then(() => Promise.all([
               asAlice.get('/v1/audits').set('X-Extended-Metadata', true)
@@ -86,8 +86,8 @@ describe('/audits', () => {
                 .then((project) => project.getFormByXmlFormId('simple')
                   .then((o) => o.get())
                   .then((form) => [ project, form ])),
-              User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
-              User.getByEmail('david@opendatakit.org').then((o) => o.get())
+              User.getByEmail('alice@getodk.org').then((o) => o.get()),
+              User.getByEmail('david@getodk.org').then((o) => o.get())
             ]))
             .then(([ audits, [ project, form ], alice, david ]) => {
               audits.length.should.equal(4);
@@ -102,7 +102,7 @@ describe('/audits', () => {
               audits[0].actee.should.eql(plain(david.actor.forApi()));
               audits[0].details.should.eql({ data: {
                 actor: { displayName: 'david', type: 'user' },
-                email: 'david@opendatakit.org', password: null
+                email: 'david@getodk.org', password: null
               } });
               audits[0].loggedAt.should.be.a.recentIsoDate();
 
@@ -176,7 +176,7 @@ describe('/audits', () => {
             .set('Content-Type', 'text/xml')
             .expect(200)
             .then(() => asAlice.post('/v1/users')
-              .send({ displayName: 'david', email: 'david@opendatakit.org' })
+              .send({ displayName: 'david', email: 'david@getodk.org' })
               .expect(200))
             .then(() => asAlice.get('/v1/audits?action=form.create')
               .expect(200)
@@ -192,7 +192,7 @@ describe('/audits', () => {
           .send({ name: 'audit project' })
           .expect(200)
           .then(() => asAlice.post('/v1/users')
-            .send({ displayName: 'david', email: 'david@opendatakit.org' })
+            .send({ displayName: 'david', email: 'david@getodk.org' })
             .expect(200)
             .then(({ body }) => body.id)
             .then((davidId) => asAlice.patch(`/v1/users/${davidId}`)
@@ -227,7 +227,7 @@ describe('/audits', () => {
             .then(() => asAlice.delete(`/v1/projects/${projectId}`)
               .expect(200)))
           .then(() => asAlice.post('/v1/users')
-            .send({ displayName: 'david', email: 'david@opendatakit.org' })
+            .send({ displayName: 'david', email: 'david@getodk.org' })
             .expect(200))
           .then(() => asAlice.get('/v1/audits?action=project')
             .expect(200)
@@ -254,7 +254,7 @@ describe('/audits', () => {
             .then(() => asAlice.delete(`/v1/projects/${projectId}/forms/simple`)
               .expect(200)))
           .then(() => asAlice.post('/v1/users')
-            .send({ displayName: 'david', email: 'david@opendatakit.org' })
+            .send({ displayName: 'david', email: 'david@getodk.org' })
             .expect(200))
           .then(() => asAlice.get('/v1/audits?action=form')
             .expect(200)
@@ -297,7 +297,7 @@ describe('/audits', () => {
             .set('Content-Type', 'text/xml')
             .expect(200)
             .then(() => asAlice.post('/v1/users')
-              .send({ displayName: 'david', email: 'david@opendatakit.org' })
+              .send({ displayName: 'david', email: 'david@getodk.org' })
               .expect(200))
             .then(() => asAlice.get('/v1/audits?action=form.create')
               .set('X-Extended-Metadata', true)
@@ -348,7 +348,7 @@ describe('/audits', () => {
             })))));
 
     it('should filter extended data by start date+time', testService((service, { db, Audit, User }) =>
-      User.getByEmail('alice@opendatakit.org').then((o) => o.get())
+      User.getByEmail('alice@getodk.org').then((o) => o.get())
         .then((alice) => Promise.all(
           [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
             .map((day) => new Audit({ loggedAt: `2000-01-${day}T00:00Z`, action: `test.${day}`, actorId: alice.actor.id, acteeId: alice.actor.acteeId }))
@@ -410,7 +410,7 @@ describe('/audits', () => {
             })))));
 
     it('should filter extended data by end date+time', testService((service, { db, Audit, User }) =>
-      User.getByEmail('alice@opendatakit.org').then((o) => o.get())
+      User.getByEmail('alice@getodk.org').then((o) => o.get())
         .then((alice) => Promise.all(
           [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
             .map((day) => new Audit({ loggedAt: `2000-01-${day}T00:00Z`, action: `test.${day}`, actorId: alice.actor.id, acteeId: alice.actor.acteeId }))

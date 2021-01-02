@@ -6,7 +6,7 @@ describe('api: /sessions', () => {
   describe('POST', () => {
     it('should return a new session if the information is valid', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'chelsea@opendatakit.org', password: 'chelsea' })
+        .send({ email: 'chelsea@getodk.org', password: 'chelsea' })
         .expect(200)
         .then(({ body }) => {
           body.should.be.a.Session();
@@ -14,7 +14,7 @@ describe('api: /sessions', () => {
 
     it('should treat email addresses case insensitively', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'cHeLsEa@oPeNdAtAkIt.OrG', password: 'chelsea' })
+        .send({ email: 'cHeLsEa@gEtOdK.OrG', password: 'chelsea' })
         .expect(200)
         .then(({ body }) => {
           body.should.be.a.Session();
@@ -22,7 +22,7 @@ describe('api: /sessions', () => {
 
     it('should provide a csrf token when the session returns', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'chelsea@opendatakit.org', password: 'chelsea' })
+        .send({ email: 'chelsea@getodk.org', password: 'chelsea' })
         .expect(200)
         .then(({ body }) => {
           body.csrf.should.be.a.token();
@@ -30,7 +30,7 @@ describe('api: /sessions', () => {
 
     it('should set cookie information when the session returns', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'chelsea@opendatakit.org', password: 'chelsea' })
+        .send({ email: 'chelsea@getodk.org', password: 'chelsea' })
         .expect(200)
         .then(({ body, headers }) => {
           // i don't know how this becomes an array but i think superagent does it.
@@ -49,13 +49,13 @@ describe('api: /sessions', () => {
 
     it('should return a 401 if the password is wrong', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'chelsea@opendatakit.org', password: 'letmein' })
+        .send({ email: 'chelsea@getodk.org', password: 'letmein' })
         .expect(401)
         .then(({ body }) => body.message.should.equal('Could not authenticate with the provided credentials.'))));
 
     it('should return a 401 if the email is wrong', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'winnifred@opendatakit.org', password: 'winnifred' })
+        .send({ email: 'winnifred@getodk.org', password: 'winnifred' })
         .expect(401)
         .then(({ body }) => body.message.should.equal('Could not authenticate with the provided credentials.'))));
 
@@ -74,7 +74,7 @@ describe('api: /sessions', () => {
 
     it('should return the active session if it exists', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'alice@opendatakit.org', password: 'alice' })
+        .send({ email: 'alice@getodk.org', password: 'alice' })
         .expect(200)
         .then(({ body }) => service.get('/v1/sessions/restore')
           .set('X-Forwarded-Proto', 'https')
@@ -93,7 +93,7 @@ describe('api: /sessions', () => {
 
     it('should return a 403 if the user cannot delete the given token', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'alice@opendatakit.org', password: 'alice' })
+        .send({ email: 'alice@getodk.org', password: 'alice' })
         .expect(200)
         .then(({ body }) => {
           const token = body.token;
@@ -103,7 +103,7 @@ describe('api: /sessions', () => {
 
     it('should invalidate the token if successful', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'alice@opendatakit.org', password: 'alice' })
+        .send({ email: 'alice@getodk.org', password: 'alice' })
         .expect(200)
         .then(({ body }) => {
           const token = body.token;
@@ -131,7 +131,7 @@ describe('api: /sessions', () => {
 
     it('should allow non-admins to delete their own sessions', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'chelsea@opendatakit.org', password: 'chelsea' })
+        .send({ email: 'chelsea@getodk.org', password: 'chelsea' })
         .expect(200)
         .then(({ body }) => {
           const token = body.token;
@@ -176,7 +176,7 @@ describe('api: /sessions', () => {
 
     it('should clear the cookie if successful for the current session', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'alice@opendatakit.org', password: 'alice' })
+        .send({ email: 'alice@getodk.org', password: 'alice' })
         .expect(200)
         .then(({ body }) => {
           const token = body.token;
@@ -191,7 +191,7 @@ describe('api: /sessions', () => {
 
     it('should not clear the cookie if using some other session', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'alice@opendatakit.org', password: 'alice' })
+        .send({ email: 'alice@getodk.org', password: 'alice' })
         .expect(200)
         .then(({ body }) => body.token)
         .then((token) => service.login('alice', (asAlice) =>
@@ -203,7 +203,7 @@ describe('api: /sessions', () => {
 
     it('should not log the action in the audit log for users', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'alice@opendatakit.org', password: 'alice' })
+        .send({ email: 'alice@getodk.org', password: 'alice' })
         .expect(200)
         .then(({ body }) => body.token)
         .then((token) => service.delete('/v1/sessions/' + token)
@@ -250,7 +250,7 @@ describe('api: /sessions', () => {
   describe('cookie CSRF auth', () => {
     it('should reject if the CSRF token is missing', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'alice@opendatakit.org', password: 'alice' })
+        .send({ email: 'alice@getodk.org', password: 'alice' })
         .expect(200)
         .then(({ body }) => service.post('/v1/projects')
           .send({ name: 'my project' })
@@ -260,7 +260,7 @@ describe('api: /sessions', () => {
 
     it('should reject if the CSRF token is wrong', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'alice@opendatakit.org', password: 'alice' })
+        .send({ email: 'alice@getodk.org', password: 'alice' })
         .expect(200)
         .then(({ body }) => service.post('/v1/projects')
           .send({ name: 'my project', __csrf: 'nope' })
@@ -270,7 +270,7 @@ describe('api: /sessions', () => {
 
     it('should succeed if the CSRF token is correct', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'alice@opendatakit.org', password: 'alice' })
+        .send({ email: 'alice@getodk.org', password: 'alice' })
         .expect(200)
         .then(({ body }) => service.post('/v1/projects')
           .send({ name: 'my project', __csrf: body.csrf })

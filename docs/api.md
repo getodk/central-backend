@@ -1,7 +1,7 @@
 FORMAT: 1A
 
 # ODK Central API
-[ODK Central Backend](https://github.com/opendatakit/central-backend) is a RESTful API server that provides key functionality for creating and managing Open Data Kit data collection campaigns. It couples with [Central Frontend](https://github.com/opendatakit/central-frontend), an independent frontend interface, to form [ODK Central](https://github.com/opendatakit/central), a complete user-installable ODK server solution. While Central Frontend is the primary consumer of the ODK Central API, the API this server provides is fully public and generic: anything that can be done in the user interface can be done directly via the API.
+[ODK Central Backend](https://github.com/getodk/central-backend) is a RESTful API server that provides key functionality for creating and managing ODK data collection campaigns. It couples with [Central Frontend](https://github.com/getodk/central-frontend), an independent frontend interface, to form [ODK Central](https://github.com/getodk/central), a complete user-installable ODK server solution. While Central Frontend is the primary consumer of the ODK Central API, the API this server provides is fully public and generic: anything that can be done in the user interface can be done directly via the API.
 
 You can read on for a brief overview of the main concepts and how they fit together, or jump to one of the sections for a more in-depth description.
 
@@ -23,7 +23,7 @@ The `/projects/:id/forms` resource and its subresource `/projects/:id/forms/…/
 
 Forms and their submissions are also accessible through two **open standards specifications** that we follow:
 
-* The [OpenRosa](https://docs.opendatakit.org/openrosa/) standard allows standard integration with tools like the [ODK Collect](https://docs.opendatakit.org/collect-intro/) mobile data collection app, or various other compatible tools like [Enketo](https://enketo.org/). It allows them to see the forms available on the server, and to send new submissions to them.
+* The [OpenRosa](https://docs.getodk.org/openrosa/) standard allows standard integration with tools like the [ODK Collect](https://docs.getodk.org/collect-intro/) mobile data collection app, or various other compatible tools like [Enketo](https://enketo.org/). It allows them to see the forms available on the server, and to send new submissions to them.
 * The [OData](http://odata.org/) standard allows data to be shared between platforms for analysis and reporting. Tools like [Microsoft Power BI](https://powerbi.microsoft.com/en-us/) and [Tableau](https://public.tableau.com/en-us/s/) are examples of clients that consume the standard OData format and provide advanced features beyond what we offer. If you are looking for a straightforward JSON output of your data, or you are considering building a visualization or reporting tool, this is your best option.
 
 Finally, **system information and configuration** is available via a set of specialized resources. Currently, you may set the Backups configuration, and retrieve Server Audit Logs.
@@ -218,7 +218,7 @@ Successful responses will come with an HTTP-Only, Secure-Only cookie. This cooki
     + Body
 
             {
-                "email": "my.email.address@opendatakit.org",
+                "email": "my.email.address@getodk.org",
                 "password": "my.super.secure.password"
             }
 
@@ -272,7 +272,7 @@ To use HTTPS Basic Authentication, attach an `Authorization` header formatted so
 
     `Authorization: Basic bXkuZW1haWwuYWRkcmVzc0BvcGVuZGF0YWtpdC5vcmc6bXkucGFzc3dvcmQ=`
 
-As given by [the standard](https://en.wikipedia.org/wiki/Basic_access_authentication), the text following the `Basic` marker here is a base64 encoding of the credentials, provided in the form `email:password` (in this example `my.email.address@opendatakit.org:my.password`).
+As given by [the standard](https://en.wikipedia.org/wiki/Basic_access_authentication), the text following the `Basic` marker here is a base64 encoding of the credentials, provided in the form `email:password` (in this example `my.email.address@getodk.org:my.password`).
 
 Unlike the standard, we do not require the client to first send an unauthenticated request and retry the request only after receiving a `WWW-Authenticate` response, and in fact we will never send the `WWW-Authenticate` header. This is mostly because, as noted above, we generally discourage the use of this authentication method, and would rather not advertise its use openly. As a result, if you wish to use Basic Authentication, directly supply the header on any request that needs it.
 
@@ -369,12 +369,12 @@ Users are not able to do anything upon creation besides log in and change their 
 
 + Request (application/json)
     + Attributes
-        + email: `my.email.address@opendatakit.org` (string, required) - The email address of the User account to be created.
+        + email: `my.email.address@getodk.org` (string, required) - The email address of the User account to be created.
         + password: `my.super.secure.password` (string, optional) - If provided, the User account will be created with this password. Otherwise, the user will still be able set their own password later.
 
     + Body
 
-            { "email": "my.email.address@opendatakit.org" }
+            { "email": "my.email.address@getodk.org" }
 
 + Response 200 (application/json)
     + Attributes (User)
@@ -437,13 +437,13 @@ When user details are updated, the `updatedAt` field will be automatically updat
 + Request (application/json)
     + Attributes
         + displayName: `New Name` (string, optional) - The friendly display name that should be associated with this User.
-        + email: `new.email.address@opendatakit.org` (string, optional) - The email address that should be associated with this User.
+        + email: `new.email.address@getodk.org` (string, optional) - The email address that should be associated with this User.
 
     + Body
 
             {
               "displayName": "New Name",
-              "email": "new.email.address@opendatakit.org"
+              "email": "new.email.address@getodk.org"
             }
 
 + Response 200 (application/json)
@@ -493,11 +493,11 @@ If the email address provided does not match any user in the system, that addres
 
 + Request (application/json)
     + Attributes
-        + email: `my.email.address@opendatakit.org` (string, required) - The email address of the User account whose password is to be reset.
+        + email: `my.email.address@getodk.org` (string, required) - The email address of the User account whose password is to be reset.
 
     + Body
 
-            { "email": "my.email.address@opendatakit.org" }
+            { "email": "my.email.address@getodk.org" }
 
 + Response 200 (application/json)
     + Attributes (Success)
@@ -1004,7 +1004,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 # Group Forms and Submissions
 
-`Form`s are the heart of ODK. They are created out of XML documents in the [ODK XForms](https://opendatakit.github.io/xforms-spec/) specification format. The [Intro to Forms](https://docs.opendatakit.org/form-design-intro/) on the ODK Documentation website is a good resource if you are unsure what this means. Once created, Forms can be retrieved in a variety of ways, their state can be managed, and they can be deleted.
+`Form`s are the heart of ODK. They are created out of XML documents in the [ODK XForms](https://getodk.github.io/xforms-spec/) specification format. The [Intro to Forms](https://docs.getodk.org/form-design-intro/) on the ODK Documentation website is a good resource if you are unsure what this means. Once created, Forms can be retrieved in a variety of ways, their state can be managed, and they can be deleted.
 
 `Submission`s are filled-out forms (also called `Instance`s in some other ODK documentation). Each is associated with a particular Form (and in many cases with a particular _version_ of a Form), and is also created out of a standard XML format based on the Form itself. Submissions can be sent with many accompanying multimedia attachments, such as photos taken in the course of the survey. Once created, the Submissions themselves as well as their attachments can be retrieved through this API.
 
@@ -1012,7 +1012,7 @@ These subsections cover only the modern RESTful API resources involving Forms an
 
 ## Forms [/v1/projects/{projectId}/forms]
 
-In this API, `Form`s are distinguished by their [`formId`](https://opendatakit.github.io/xforms-spec/#primary-instance)s, which are a part of the XForms XML that defines each Form. In fact, as you will see below, many of the properties of a Form are extracted automatically from the XML: `hash`, `name`, `version`, as well as the `formId` itself (which to reduce confusion internally is known as `xmlFormId` in ODK Central).
+In this API, `Form`s are distinguished by their [`formId`](https://getodk.github.io/xforms-spec/#primary-instance)s, which are a part of the XForms XML that defines each Form. In fact, as you will see below, many of the properties of a Form are extracted automatically from the XML: `hash`, `name`, `version`, as well as the `formId` itself (which to reduce confusion internally is known as `xmlFormId` in ODK Central).
 
 The only other property Forms currently have is `state`, which can be used to control whether Forms show up in mobile clients like ODK Collect for download, as well as whether they accept new `Submission`s or not.
 
@@ -1050,7 +1050,7 @@ For XLSForm upload, either `.xls` or `.xlsx` are accepted. You must provide the 
 
 By default, any XLSForm conversion Warnings will fail this request and return the warnings rather than use the converted XML to create a form. To override this behaviour, provide a querystring flag `?ignoreWarnings=true`. Conversion Errors will always fail this request.
 
-The API will currently check the XML's structure in order to extract the information we need about it, but ODK Central does _not_ run comprehensive validation on the full contents of the XML to ensure compliance with the ODK specification. Future versions will likely do this, but in the meantime you will have to use a tool like [ODK Validate](https://opendatakit.org/use/validate/) to be sure your Forms are correct.
+The API will currently check the XML's structure in order to extract the information we need about it, but ODK Central does _not_ run comprehensive validation on the full contents of the XML to ensure compliance with the ODK specification. Future versions will likely do this, but in the meantime you will have to use a tool like [ODK Validate](https://getodk.org/use/validate/) to be sure your Forms are correct.
 
 + Parameters
     + ignoreWarnings: `false` (boolean, optional) - Defaults to `false`. Set to `true` if you want the Form to be created even if the XLSForm conversion results in warnings.
@@ -3278,7 +3278,7 @@ Server Audit Logs entries are created for the following `action`s:
 
 This resource allows access to those log entries, with some paging and filtering options. These are provided by querystring parameters: `action` allows filtering by the action types listed above, `start` and `end` allow filtering by log timestamp (see below), and `limit` and `offset` control paging. If no paging parameters are given, the server will attempt to return every audit log entry that it has.
 
-The `start` and `end` parameters work based on exact timestamps, given in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format. It is possible to provide just a datestring (eg `2000-01-01`), in which case midnight will be inferred. But this value alone leaves the timezone unspecified. When no timezone is given, the server's local time will be used: the standard [Docker deployment](https://docs.opendatakit.org/central-install/) will always set server local time to UTC, but installations may have been customized, and there is no guarantee the UTC default hasn't been overridden.
+The `start` and `end` parameters work based on exact timestamps, given in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format. It is possible to provide just a datestring (eg `2000-01-01`), in which case midnight will be inferred. But this value alone leaves the timezone unspecified. When no timezone is given, the server's local time will be used: the standard [Docker deployment](https://docs.getodk.org/central-install/) will always set server local time to UTC, but installations may have been customized, and there is no guarantee the UTC default hasn't been overridden.
 
 For this reason, **we recommend always setting a timezone** when querying based on `start` and `end`: either by appending a `z` to indicate UTC (eg `2000-01-01z`) or by explicitly specifying a timezone per ISO 8601 (eg `2000-01-01+08`). The same applies for full timestamps (eg `2000-01-01T12:12:12z`, `2000-01-01T12:12:12+08`).
 
@@ -3309,7 +3309,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 ODK Central supports two types of encryption:
 
-1. The [old methodology](https://docs.opendatakit.org/encrypted-forms/), where you generate an RSA keypair and use it with locally-downloaded encrypted data to decrypt submissions. We refer to these sorts of keys in this documentation as "self-supplied keys."
+1. The [old methodology](https://docs.getodk.org/encrypted-forms/), where you generate an RSA keypair and use it with locally-downloaded encrypted data to decrypt submissions. We refer to these sorts of keys in this documentation as "self-supplied keys."
 2. Managed Encryption, where Central will generate and store an RSA keypair for you, secured under a passphrase that Central does not save. The CSV export path can then decrypt all records on the fly given the passphrase.
 
 Given the self-supplied key case, Central does not understand how to decrypt records, and the CSV export will export only metadata fields (and no binary attachments) for encrypted records. You may retrieve each data resource over the REST API and decrypt them yourself, or use ODK Briefcase to do this.
@@ -3476,7 +3476,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + hint: `it was a secret` (string, optional) - The hint, if given, related to a managed encryption key.
 
 ## User (Actor)
-+ email: `my.email.address@opendatakit.org` (string, required) - Only `User`s have email addresses associated with them
++ email: `my.email.address@getodk.org` (string, required) - Only `User`s have email addresses associated with them
 
 ## Role (object)
 + id: `4` (number, required) - The numerical ID of the Role.

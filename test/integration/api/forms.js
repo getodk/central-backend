@@ -1211,7 +1211,7 @@ describe('api: /projects/:id/forms', () => {
           .send({ name: 'a fancy name', state: 'closing' })
           .expect(200)
           .then(() => Promise.all([
-            User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+            User.getByEmail('alice@getodk.org').then((o) => o.get()),
             Project.getById(1).then((o) => o.get())
               .then((project) => project.getFormByXmlFormId('simple')).then((o) => o.get()),
             Audit.getLatestByAction('form.update').then((o) => o.get())
@@ -1242,7 +1242,7 @@ describe('api: /projects/:id/forms', () => {
           .then((form) => asAlice.delete('/v1/projects/1/forms/simple')
             .expect(200)
             .then(() => Promise.all([
-              User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+              User.getByEmail('alice@getodk.org').then((o) => o.get()),
               Audit.getLatestByAction('form.delete').then((o) => o.get())
             ])
             .then(([ alice, log ]) => {
@@ -2208,7 +2208,7 @@ describe('api: /projects/:id/forms', () => {
                 .set('Content-Type', 'text/csv')
                 .expect(200)
                 .then(() => Promise.all([
-                  User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+                  User.getByEmail('alice@getodk.org').then((o) => o.get()),
                   Project.getById(1).then((o) => o.get())
                     .then((project) => project.getFormByXmlFormId('withAttachments')).then((o) => o.get())
                     .then((form) => FormAttachment.getByFormDefIdAndName(form.draftDefId, 'goodone.csv')
@@ -2303,7 +2303,7 @@ describe('api: /projects/:id/forms', () => {
                 .set('Content-Type', 'text/csv')
                 .expect(200)
                 .then(() => Promise.all([
-                  User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+                  User.getByEmail('alice@getodk.org').then((o) => o.get()),
                   Project.getById(1).then((o) => o.get())
                     .then((project) => project.getFormByXmlFormId('withAttachments'))
                     .then((o) => o.get())

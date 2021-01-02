@@ -83,7 +83,7 @@ If you override the default `forApi` and `fromApi`, it will be up to you to main
 
 ### Form Encryption
 
-We implement the [ODK XForms Encryption Specification](http://opendatakit.github.io/xforms-spec/encryption) to enable form encryption in transit from the device (in cases where HTTPS is not possible) and at rest on the Central server. In these cases, the XML stored in the `xml` column on the submission is actually the encryption manifest, which lists the files and keys that would be needed to decrypt the data in that submission successfully. The actual encrypted form data is stored as a separate attachment, typically named `submission.xml.enc` (but the name is up to the client).
+We implement the [ODK XForms Encryption Specification](http://getodk.github.io/xforms-spec/encryption) to enable form encryption in transit from the device (in cases where HTTPS is not possible) and at rest on the Central server. In these cases, the XML stored in the `xml` column on the submission is actually the encryption manifest, which lists the files and keys that would be needed to decrypt the data in that submission successfully. The actual encrypted form data is stored as a separate attachment, typically named `submission.xml.enc` (but the name is up to the client).
 
 Within this specification, we also create our own Managed Encryption system, so that with the use of a passphrase the Central server can create and manage the encryption keypair on behalf of the user, rather than make users learn things like OpenSSL and how to store keys securely.
 
