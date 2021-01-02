@@ -1,9 +1,9 @@
 
 module.exports = ({ all, User, Actor, Membership, Project }) => {
   const users = [
-    { type: 'user', email: 'alice@opendatakit.org', password: 'alice', displayName: 'Alice' },
-    { type: 'user', email: 'bob@opendatakit.org', password: 'bob', displayName: 'Bob' },
-    { type: 'user', email: 'chelsea@opendatakit.org', password: 'chelsea', displayName: 'Chelsea' } ]
+    { type: 'user', email: 'alice@getodk.org', password: 'alice', displayName: 'Alice' },
+    { type: 'user', email: 'bob@getodk.org', password: 'bob', displayName: 'Bob' },
+    { type: 'user', email: 'chelsea@getodk.org', password: 'chelsea', displayName: 'Chelsea' } ]
     .map((data) => User.fromData(data));
 
   // hash the passwords, create our three test users, then add grant Alice and Bob their rights.
