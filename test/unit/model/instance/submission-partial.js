@@ -56,6 +56,13 @@ describe('SubmissionPartial', () => {
       });
     });
 
+    it('should detect instanceName if given', () => {
+      const xml = '<data id="mycoolform" version="coolest"><orx:meta><orx:instanceID>myinstance</orx:instanceID><orx:instanceName>my name</orx:instanceName></orx:meta><field/></data>';
+      return SubmissionPartial.fromXml(xml).then((partial) => {
+        partial.instanceName.should.equal('my name');
+      });
+    });
+
     it('should squash null version to empty-string', () => {
       const xml = '<data id="mycoolform"><orx:meta><orx:instanceID>myinstance</orx:instanceID></orx:meta><field/></data>';
       return SubmissionPartial.fromXml(xml).then((partial) => {
