@@ -74,7 +74,7 @@ describe('api: /submission', () => {
           .attach('xml_submission_file', Buffer.from('<data id="simple" version="-1"><orx:meta><orx:instanceID>one</orx:instanceID></orx:meta></data>'), { filename: 'data.xml' })
           .expect(404))));
 
-    it('should save the submission to the appropriate form without device id', testService((service) =>
+    it('should save the submission to the appropriate form', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')

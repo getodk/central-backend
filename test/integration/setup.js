@@ -18,6 +18,11 @@ const db = connect(config.get('test.database'));
 const owner = config.get('test.database.user');
 after(() => { db.destroy(); });
 
+// slonik connection pool
+//const { createPool } = require('slonik');
+const { slonikPool } = require(appRoot + '/lib/util/slonik');
+const pool = slonikPool('postgres://jubilant:jubilant@localhost/jubilant_test');
+
 // set up our mailer.
 const env = config.get('default.env');
 const { mailer } = require(appRoot + '/lib/outbound/mail');
@@ -100,7 +105,7 @@ const augment = (service) => {
 ////////////////////////////////////////////////////////////////////////////////
 // FINAL TEST WRAPPERS
 
-const baseContainer = injector.withDefaults({ db, mail, env, xlsform, google, crypto, enketo, Sentry });
+const baseContainer = injector.withDefaults({ db, pool, mail, env, xlsform, google, crypto, enketo, Sentry });
 
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
