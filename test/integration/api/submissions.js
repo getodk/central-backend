@@ -7,7 +7,7 @@ const testData = require('../../data/xml');
 const { zipStreamToFiles } = require('../../util/zip');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
-describe('api: /submission', () => {
+describe.only('api: /submission', () => {
   describe('HEAD', () => {
     it('should return a 204 with no content', testService((service) =>
       service.head('/v1/projects/1/submission')
@@ -136,6 +136,22 @@ describe('api: /submission', () => {
               .expect(200)
               .then(({ text }) => { text.should.equal(testData.instances.simple.one); })
           ])))));
+
+    /*it.only('should save the submission instance name if given', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(testData.instances.simple.one.replace(/<\/orx:meta>/, '<orx:instanceName>custom name</orx:instanceName></orx:meta>')), { filename: 'data.xml' })
+          .expect(201)
+          .then(({ text }) => {
+            text.should.match(/upload was successful/);
+          })
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+            .expect(200)
+            .then(({ body }) => {
+              console.log(body);
+              body.instanceName.should.equal('custom name');
+            })))));*/
 
     it('should accept a submission for an old form version', testService((service, { simply, SubmissionDef, FormDef }) =>
       service.login('alice', (asAlice) =>

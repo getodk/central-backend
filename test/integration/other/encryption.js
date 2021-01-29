@@ -4,6 +4,7 @@ const { toText } = require('streamtest').v2;
 const { testService, testContainerFullTrx } = require(appRoot + '/test/integration/setup');
 const testData = require(appRoot + '/test/data/xml');
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
+const { mapSequential } = require(appRoot + '/lib/util/promise');
 
 describe('managed encryption', () => {
   describe('lock management', () => {
@@ -75,7 +76,7 @@ describe('managed encryption', () => {
     it('should give a decryptor for the given passphrases', testService((service, { all, Key, SubmissionPartial, db }) =>
       Promise.all([ 'alpha', 'beta' ].map(generateManagedKey))
         .then((pairs) =>
-          all.mapSequential(
+          mapSequential(
             pairs.map((private) => new Key({
               public: stripPemEnvelope(Buffer.from(private.pubkey, 'base64')),
               private,
