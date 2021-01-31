@@ -42,10 +42,11 @@ const google = require('../util/google-mock')(realGoogle);
 // set up our sentry mock.
 const Sentry = require(appRoot + '/lib/util/sentry').init();
 
-// set up our crypto module; possibly mock or not based on params.
-const crypto = (process.env.BCRYPT === 'no')
-  ? require('../util/crypto-mock')
-  : require(appRoot + '/lib/util/crypto');
+// set up our bcrypt module; possibly mock or not based on params.
+const bcrypt = (process.env.BCRYPT === 'no')
+  ? require('../util/bcrypt-mock')
+  : require('bcrypt');
+const password = require(appRoot + '/lib/util/crypto').password(bcrypt);
 
 // set up our enketo mock.
 const enketo = require(appRoot + '/test/util/enketo');
@@ -72,7 +73,7 @@ const populate = (container, [ head, ...tail ] = fixtures) =>
 const initialize = () => db
   .raw('drop owned by current_user')
   .then(() => db.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
-  .then(() => injector.withDefaults({ db, crypto }).transacting(populate));
+  .then(() => injector.withDefaults({ db, password }).transacting(populate));
 before(initialize);
 
 // augments a supertest object with a `.as(user, cb)` method, where user may be the
@@ -105,7 +106,7 @@ const augment = (service) => {
 ////////////////////////////////////////////////////////////////////////////////
 // FINAL TEST WRAPPERS
 
-const baseContainer = injector.withDefaults({ db, pool, mail, env, xlsform, google, crypto, enketo, Sentry });
+const baseContainer = injector.withDefaults({ db, pool, mail, env, xlsform, google, password, enketo, Sentry });
 
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
