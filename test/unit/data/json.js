@@ -407,6 +407,32 @@ describe('submissionToOData', () => {
       });
     }));
 
+  it('should expand all repeat tables for $expand=*', () =>
+    fieldsFor(testData.forms.withrepeat).then((fields) => {
+      const submission = mockSubmission('two', testData.instances.withrepeat.two);
+      return submissionToOData(fields, 'Submissions', submission, { expand: '*' }).then((result) => {
+        result.should.eql([{
+          __id: 'two',
+          __system,
+          meta: { instanceID: 'two' },
+          name: 'Bob',
+          age: 34,
+          children: {
+            'child@odata.navigationLink': "Submissions('two')/children/child",
+            child: [{
+              __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d',
+              age: 4,
+              name: 'Billy'
+            }, {
+              __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172',
+              age: 6,
+              name: 'Blaine'
+            }]
+          }
+        }]);
+      });
+    }));
+
   it('should extract subtable rows within repeats', () =>
     fieldsFor(testData.forms.withrepeat).then((fields) => {
       const row = { submission: { instanceId: 'two' }, xml: testData.instances.withrepeat.two };
