@@ -14,6 +14,7 @@
     "import/order": "off",
     "lines-between-class-members": "off",
     "max-len": "off",
+    "no-continue": "off",
     "no-debugger": "off",
     "no-else-return": "off",
     "no-multiple-empty-lines": "off",
@@ -29,6 +30,7 @@
     "operator-linebreak": "off",
     "padded-blocks": "off",
     "prefer-template": "off",
+    "space-infix-ops": "off",
     "spaced-comment": "off"
   }
 }
