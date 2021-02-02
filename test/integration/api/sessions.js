@@ -2,7 +2,7 @@ const should = require('should');
 const { DateTime } = require('luxon');
 const { testService } = require('../setup');
 
-describe('api: /sessions', () => {
+describe.only('api: /sessions', () => {
   describe('POST', () => {
     it('should return a new session if the information is valid', testService((service) =>
       service.post('/v1/sessions')
