@@ -8,20 +8,16 @@ const { run, task } = require(appRoot + '/lib/task/task');
 // debugging things.
 global.tap = (x) => { console.log(x); return x; };
 
-// database things.
+// knex things.
 const config = require('config');
-const { connect, migrate } = require(appRoot + '/lib/model/database');
-
-// save some time by holding a db connection open globally. they're just tests,
-// so the performance overhead is irrelevant.
+const { connect, migrate } = require(appRoot + '/lib/model/migrate');
 const db = connect(config.get('test.database'));
 const owner = config.get('test.database.user');
 after(() => { db.destroy(); });
 
 // slonik connection pool
-//const { createPool } = require('slonik');
 const { slonikPool } = require(appRoot + '/lib/util/slonik');
-const pool = slonikPool('postgres://jubilant:jubilant@localhost/jubilant_test');
+const pool = slonikPool(config.get('test.database'));
 
 // set up our mailer.
 const env = config.get('default.env');
@@ -73,7 +69,9 @@ const populate = (container, [ head, ...tail ] = fixtures) =>
 const initialize = () => db
   .raw('drop owned by current_user')
   .then(() => db.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
-  .then(() => injector.withDefaults({ db, password }).transacting(populate));
+  .then(() => injector.withDefaults({ pool, password }).transacting(populate));
+const reinit = (f) => (x) => { initialize().then(() => f(x)); };
+
 before(initialize);
 
 // augments a supertest object with a `.as(user, cb)` method, where user may be the
@@ -122,10 +120,9 @@ const testService = (test) => () => new Promise((resolve, reject) => {
 // for some tests we explicitly need to make concurrent requests, in which case
 // the transaction butchering we do for testService will not work. for these cases,
 // we offer testServiceFullTrx:
-const testServiceFullTrx = (test) => () => new Promise((resolve, reject) => {
-  const reinit = (f) => (x) => { initialize().then(() => f(x)); };
-  test(augment(request(service(baseContainer))), baseContainer).then(reinit(resolve), reinit(reject));
-});
+const testServiceFullTrx = (test) => () => new Promise((resolve, reject) =>
+  test(augment(request(service(baseContainer))), baseContainer)
+    .then(reinit(resolve), reinit(reject)));
 
 // for some tests we just want a container, without any of the webservice stuffs between.
 // this is that, with the same transaction trickery as a normal test.
@@ -138,10 +135,8 @@ const testContainer = (test) => () => new Promise((resolve, reject) => {
 });
 
 // complete the square of options:
-const testContainerFullTrx = (test) => () => new Promise((resolve, reject) => {
-  const reinit = (f) => (x) => { initialize().then(() => f(x)); };
-  test(baseContainer).then(reinit(resolve), reinit(reject));
-});
+const testContainerFullTrx = (test) => () => new Promise((resolve, reject) =>
+  test(baseContainer).then(reinit(resolve), reinit(reject)));
 
 // called to get a container context per task. ditto all // from testService.
 // here instead our weird hijack work involves injecting our own constructed

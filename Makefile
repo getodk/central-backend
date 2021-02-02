@@ -5,7 +5,7 @@ node_modules:
 	npm install
 
 migrations: node_modules
-	node -e 'const { withDatabase, migrate } = require("./lib/model/database"); withDatabase(require("config").get("default.database"))(migrate);'
+	node -e 'const { withDatabase, migrate } = require("./lib/model/migrate"); withDatabase(require("config").get("default.database"))(migrate);'
 
 base: node_modules migrations
 
