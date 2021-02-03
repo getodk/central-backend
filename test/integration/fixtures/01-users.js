@@ -1,7 +1,8 @@
 const appRoot = require('app-root-path');
+const { User, Actor } = require(appRoot + '/lib/model/frames');
 const { mapSequential } = require(appRoot + '/lib/util/promise');
 
-module.exports = ({ User, Actor, Membership, Project }) => {
+module.exports = ({ Assignments, Users, Projects, password }) => {
   const users = [
     { type: 'user', email: 'alice@opendatakit.org', password: 'alice', displayName: 'Alice' },
     { type: 'user', email: 'bob@opendatakit.org', password: 'bob', displayName: 'Bob' },
@@ -9,11 +10,11 @@ module.exports = ({ User, Actor, Membership, Project }) => {
     .map((data) => User.fromData(data));
 
   // hash the passwords, create our three test users, then add grant Alice and Bob their rights.
-  return Promise.all(users.map((user) => user.withHashedPassword(user.password)))
-    .then((users) => mapSequential(users, (user) => user.create()))
+  return Promise.all(users.map((user) => user.with({ password: password.hash(user.password) })))
+    .then((users) => mapSequential(users, Users.create))
     .then(([ alice, bob, chelsea ]) => Promise.all([
-      alice.actor.assignSystemRole('admin', '*'),
-      Project.getById(1).then((project) => bob.actor.assignSystemRole('manager', project.get()))
+      Assignments.grantSystem(alice.actor, 'admin', '*'),
+      Projects.getById(1).then((project) => Assignments.grantSystem(bob.actor, 'manager', project.get()))
     ]));
 };
 

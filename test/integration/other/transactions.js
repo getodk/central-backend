@@ -3,8 +3,8 @@ const appRoot = require('app-root-path');
 const { testContainerFullTrx } = require(appRoot + '/test/integration/setup');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const testData = require('../../data/xml');
-const Instance = require(appRoot + '/lib/model/instance/instance');
-const injector = require(appRoot + '/lib/model/package')
+const Frame = require(appRoot + '/lib/model/frame');
+const { injector } = require(appRoot + '/lib/model/container')
 const { endpointBase } = require(appRoot + '/lib/http/endpoint');
 const { noop } = require(appRoot + '/lib/util/util');
 
@@ -15,11 +15,7 @@ describe('transaction integration', () => {
     // do this in a block with really explicit names to isolate these var refs,
     // just to be completely sure.
     const getContainer = () => {
-      const CapybaraInstance = Instance('test', {})(({ capybaras }) => class {
-        create() { return capybaras.create(this); }
-      });
-
-      const capybarasQuery = {
+      const Capybaras = {
         create: (capybara) => ({ db }) => {
           db.isTransacting.should.equal(true);
           queryRun = true;
@@ -30,14 +26,11 @@ describe('transaction integration', () => {
       return injector({ db: {
         isTransacting: false,
         transaction(cb) { return Promise.resolve(cb({ isTransacting: true })); }
-      } }, {
-        queries: { capybaras: capybarasQuery },
-        instances: { Capybara: CapybaraInstance }
-      });
+      } }, { Capybaras });
     };
 
-    return endpointBase({ resultWriter: noop })(getContainer())(({ Capybara }) =>
-      (new Capybara({ id: 42 })).create()
+    return endpointBase({ resultWriter: noop })(getContainer())(({ Capybaras }) =>
+      Capybaras.create(new Frame({ id: 42 }))
     )({ method: 'POST' })
       .then(() => { queryRun.should.equal(true); });
   });

@@ -11,13 +11,13 @@ global.tap = (x) => { console.log(x); return x; };
 // knex things.
 const config = require('config');
 const { connect, migrate } = require(appRoot + '/lib/model/migrate');
-const db = connect(config.get('test.database'));
+const migrator = connect(config.get('test.database'));
 const owner = config.get('test.database.user');
-after(() => { db.destroy(); });
+after(() => { migrator.destroy(); });
 
 // slonik connection pool
 const { slonikPool } = require(appRoot + '/lib/util/slonik');
-const pool = slonikPool(config.get('test.database'));
+const db = slonikPool(config.get('test.database'));
 
 // set up our mailer.
 const env = config.get('default.env');
@@ -48,7 +48,7 @@ const password = require(appRoot + '/lib/util/crypto').password(bcrypt);
 const enketo = require(appRoot + '/test/util/enketo');
 
 // application things.
-const injector = require(appRoot + '/lib/model/package');
+const { withDefaults } = require(appRoot + '/lib/model/container');
 const service = require(appRoot + '/lib/http/service');
 
 // get all our fixture scripts, and set up a function that runs them all.
@@ -66,10 +66,10 @@ const populate = (container, [ head, ...tail ] = fixtures) =>
 //
 // this hook won't run if `test-unit` is called, as this directory is skipped
 // in that case.
-const initialize = () => db
+const initialize = () => migrator
   .raw('drop owned by current_user')
-  .then(() => db.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
-  .then(() => injector.withDefaults({ pool, password }).transacting(populate));
+  .then(() => migrator.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
+  .then(() => withDefaults({ db, password }).transacting(populate));
 const reinit = (f) => (x) => { initialize().then(() => f(x)); };
 
 before(initialize);
@@ -104,7 +104,7 @@ const augment = (service) => {
 ////////////////////////////////////////////////////////////////////////////////
 // FINAL TEST WRAPPERS
 
-const baseContainer = injector.withDefaults({ db, pool, mail, env, xlsform, google, password, enketo, Sentry });
+const baseContainer = withDefaults({ db, mail, env, xlsform, google, password, enketo, Sentry });
 
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then

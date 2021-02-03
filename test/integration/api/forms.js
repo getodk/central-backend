@@ -1957,7 +1957,7 @@ describe('api: /projects/:id/forms', () => {
                   body.sha256.should.equal('f073fe9062e0ca4d6337b96b93e0100164a40e16df5f477d065b33470acabc44');
                 }))))));
 
-      it.only('should succeed and set the publish date', testService((service) =>
+      it('should succeed and set the publish date', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="2"'))

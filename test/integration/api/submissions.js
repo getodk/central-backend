@@ -7,7 +7,7 @@ const testData = require('../../data/xml');
 const { zipStreamToFiles } = require('../../util/zip');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
-describe.only('api: /submission', () => {
+describe('api: /submission', () => {
   describe('HEAD', () => {
     it('should return a 204 with no content', testService((service) =>
       service.head('/v1/projects/1/submission')
