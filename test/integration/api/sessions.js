@@ -4,13 +4,14 @@ const { testService } = require('../setup');
 
 describe.only('api: /sessions', () => {
   describe('POST', () => {
-    it('should return a new session if the information is valid', testService((service) =>
-      service.post('/v1/sessions')
+    it('should return a new session if the information is valid', testService((service) => {
+      return service.post('/v1/sessions')
         .send({ email: 'chelsea@opendatakit.org', password: 'chelsea' })
         .expect(200)
         .then(({ body }) => {
           body.should.be.a.Session();
-        })));
+        });
+    }));
 
     it('should treat email addresses case insensitively', testService((service) =>
       service.post('/v1/sessions')
@@ -86,7 +87,7 @@ describe.only('api: /sessions', () => {
           }))));
   });
 
-  describe('/:token DELETE', () => {
+  describe.skip('/:token DELETE', () => {
     it('should return a 403 if the token does not exist', testService((service) =>
       service.delete('/v1/sessions/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
         .expect(403)));

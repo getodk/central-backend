@@ -1,5 +1,5 @@
 module.exports = {
-  hash: (x) => x,
-  compare: (x, y) => x === y
+  hash: (x) => Promise.resolve(x),
+  compare: (x, y) => Promise.resolve(x === y)
 };
 

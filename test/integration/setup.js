@@ -1,5 +1,6 @@
 const appRoot = require('app-root-path');
 const { merge } = require('ramda');
+const { sql } = require('slonik');
 const { readdirSync } = require('fs');
 const { join } = require('path');
 const request = require('supertest');
@@ -39,10 +40,10 @@ const google = require('../util/google-mock')(realGoogle);
 const Sentry = require(appRoot + '/lib/util/sentry').init();
 
 // set up our bcrypt module; possibly mock or not based on params.
-const bcrypt = (process.env.BCRYPT === 'no')
+const _bcrypt = (process.env.BCRYPT === 'no')
   ? require('../util/bcrypt-mock')
   : require('bcrypt');
-const password = require(appRoot + '/lib/util/crypto').password(bcrypt);
+const bcrypt = require(appRoot + '/lib/util/crypto').password(_bcrypt);
 
 // set up our enketo mock.
 const enketo = require(appRoot + '/test/util/enketo');
@@ -69,7 +70,7 @@ const populate = (container, [ head, ...tail ] = fixtures) =>
 const initialize = () => migrator
   .raw('drop owned by current_user')
   .then(() => migrator.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
-  .then(() => withDefaults({ db, password }).transacting(populate));
+  .then(() => withDefaults({ db, bcrypt }).transacting(populate));
 const reinit = (f) => (x) => { initialize().then(() => f(x)); };
 
 before(initialize);
@@ -104,17 +105,16 @@ const augment = (service) => {
 ////////////////////////////////////////////////////////////////////////////////
 // FINAL TEST WRAPPERS
 
-const baseContainer = withDefaults({ db, mail, env, xlsform, google, password, enketo, Sentry });
+const baseContainer = withDefaults({ db, mail, env, xlsform, google, bcrypt, enketo, Sentry });
 
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
 // gets rolled back for a clean slate on the next test.
 const testService = (test) => () => new Promise((resolve, reject) => {
   baseContainer.transacting((container) => {
-    const rollback = (f) => (x) => container.db.rollback().then(() => f(x));
-    test(augment(request(service(container))), container).then(rollback(resolve), rollback(reject));
-    // we return nothing to prevent knex from auto-committing the transaction.
-  }).catch(Promise.resolve.bind(Promise));
+    const rollback = (f) => (x) => container.run(sql`rollback`).then(() => f(x));
+    return test(augment(request(service(container))), container).then(rollback(resolve), rollback(reject));
+  });//.catch(Promise.resolve.bind(Promise)); // TODO/SL probably restore
 });
 
 // for some tests we explicitly need to make concurrent requests, in which case
@@ -129,9 +129,8 @@ const testServiceFullTrx = (test) => () => new Promise((resolve, reject) =>
 const testContainer = (test) => () => new Promise((resolve, reject) => {
   baseContainer.transacting((container) => {
     const rollback = (f) => (x) => container.db.rollback().then(() => f(x));
-    test(container).then(rollback(resolve), rollback(reject));
-    // we return nothing to prevent knex from auto-committing the transaction.
-  }).catch(Promise.resolve.bind(Promise));
+    return test(container).then(rollback(resolve), rollback(reject));
+  });//.catch(Promise.resolve.bind(Promise));
 });
 
 // complete the square of options:
