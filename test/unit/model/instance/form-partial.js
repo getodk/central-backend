@@ -55,7 +55,6 @@ describe('Form', () => {
     it('should return a populated Form object if the xml passes', () => {
       const xml = '<html><head><model><instance><data id="mycoolform"><field/></data></instance></model></head></html>';
       return Form.fromXml(xml).then((partial) => {
-        console.log(partial);
         partial.def.xml.should.equal(xml);
         partial.xmlFormId.should.equal('mycoolform');
       });

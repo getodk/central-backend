@@ -87,7 +87,7 @@ describe.only('api: /sessions', () => {
           }))));
   });
 
-  describe.skip('/:token DELETE', () => {
+  describe('/:token DELETE', () => {
     it('should return a 403 if the token does not exist', testService((service) =>
       service.delete('/v1/sessions/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
         .expect(403)));
