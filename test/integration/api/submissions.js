@@ -7,7 +7,7 @@ const testData = require('../../data/xml');
 const { zipStreamToFiles } = require('../../util/zip');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
-describe('api: /submission', () => {
+describe.skip('api: /submission', () => {
   describe('HEAD', () => {
     it('should return a 204 with no content', testService((service) =>
       service.head('/v1/projects/1/submission')
@@ -598,7 +598,7 @@ describe('api: /submission', () => {
   });
 });
 
-describe('api: /forms/:id/submissions', () => {
+describe.skip('api: /forms/:id/submissions', () => {
   describe('POST', () => {
     it('should return notfound if the form does not exist', testService((service) =>
       service.login('alice', (asAlice) =>

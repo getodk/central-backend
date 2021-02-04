@@ -4,7 +4,7 @@ const { map } = require('ramda');
 const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { testService } = require('../setup');
 
-describe('api: /config', () => {
+describe.skip('api: /config', () => {
   describe('/backups', () => {
     describe('GET', () => {
       it('should reject unless the user can see backup config', testService((service) =>

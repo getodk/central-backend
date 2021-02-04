@@ -364,7 +364,7 @@ describe('preprocessors', () => {
     describe('fk auth', () => {
       const mockFkSession = (expectedToken, actorType) => ({
         getByBearerToken: (token) => Promise.resolve((token === expectedToken)
-          ? Option.of(new Session({ actor: new Actor({ type: actorType }), token }))
+          ? Option.of(new Session({ token }, { actor: new Actor({ type: actorType }) }))
           : Option.none())
       });
 
@@ -401,9 +401,9 @@ describe('preprocessors', () => {
           new Context(createRequest(), { fieldKey: Option.of('alohomoraalohomoraalohomoraalohomoraalohomoraalohomoraalohomoraa'), })
         )).then((context) => {
           context.auth.session.should.eql(Option.of(new Session({
-            actor: new Actor({ type: 'field_key' }),
             token: 'alohomoraalohomoraalohomoraalohomoraalohomoraalohomoraalohomoraa'
           })));
+          context.auth.actor.should.eql(Option.of(new Actor({ type: 'field_key' })));
         }));
     });
   });

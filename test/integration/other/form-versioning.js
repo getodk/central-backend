@@ -3,7 +3,7 @@ const { pick } = require('ramda');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 
-describe('form forward versioning', () => {
+describe.skip('form forward versioning', () => {
   const force = (x) => x.get();
   const newXml = testData.forms.simple.replace('id="simple"', 'id="simple" version="two"');
 

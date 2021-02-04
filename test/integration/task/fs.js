@@ -9,7 +9,7 @@ const { testTask } = require('../setup');
 const { generateManagedKey } = require(appRoot + '/lib/util/crypto');
 const { tmpdir, tmpfile, encryptToArchive, decryptFromArchive } = require(appRoot + '/lib/task/fs');
 
-describe('task: fs', () => {
+describe.skip('task: fs', () => {
   describe('tmpdir/file', () => {
     it('should create a temporary directory', testTask(() =>
       tmpdir()

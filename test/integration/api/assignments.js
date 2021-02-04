@@ -1,7 +1,7 @@
 const should = require('should');
 const { testService } = require('../setup');
 
-describe('api: /projects/:id/assignments/forms', () => {
+describe.skip('api: /projects/:id/assignments/forms', () => {
   // helper that does a bunch of assignments that we will use to test these apis:
   // * make chelsea a manager on simple form
   // * create app user david and assign app user on simple form
@@ -128,7 +128,7 @@ describe('api: /projects/:id/assignments/forms', () => {
 // 3. cursorily test each of the other resource-specific APIs to be sure they're
 //    plumbed in correctly
 
-describe('api: /assignments', () => {
+describe.skip('api: /assignments', () => {
   describe('GET', () => {
     it('should prohibit anonymous users from listing assignments', testService((service) =>
       service.get('/v1/assignments').expect(403)));
@@ -333,7 +333,7 @@ describe('api: /assignments', () => {
   });
 });
 
-describe('/projects/:id/assignments', () => {
+describe.skip('/projects/:id/assignments', () => {
   describe('GET', () => {
     it('should prohibit unprivileged users from listing assignments', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -526,7 +526,7 @@ describe('/projects/:id/assignments', () => {
   });
 });
 
-describe('api: /projects/:projectId/forms/:xmlFormId/assignments', () => {
+describe.skip('api: /projects/:projectId/forms/:xmlFormId/assignments', () => {
   it('should return all form assignments', testService((service) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/app-users')

@@ -5,7 +5,7 @@ const { testService } = require('../setup');
 const testData = require(appRoot + '/test/data/xml.js');
 const worker = require(appRoot + '/lib/worker/submission.attachment.update');
 
-describe('worker: submission.attachment.update', () => {
+describe.skip('worker: submission.attachment.update', () => {
   it('should do nothing if the attachment is not a client audit', testService((service, container) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms?publish=true')

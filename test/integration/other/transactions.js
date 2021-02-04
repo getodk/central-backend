@@ -8,7 +8,7 @@ const { injector } = require(appRoot + '/lib/model/container')
 const { endpointBase } = require(appRoot + '/lib/http/endpoint');
 const { noop } = require(appRoot + '/lib/util/util');
 
-describe('transaction integration', () => {
+describe.skip('transaction integration', () => {
   it('should run all operations within the correct transaction context', () => {
     let queryRun = false;
 
@@ -39,7 +39,7 @@ describe('transaction integration', () => {
 // resolves in ms ms
 const sometime = (ms) => new Promise((done) => setTimeout(done, ms));
 
-describe('enketo worker transaction', () => {
+describe.skip('enketo worker transaction', () => {
   it('should not allow a write conflict @slow', testContainerFullTrx(async (container) => {
     const { Audit, Form } = container;
 

@@ -9,7 +9,7 @@ const { task, auditing, emailing, run } = require(appRoot + '/lib/task/task');
 const Problem = require(appRoot + '/lib/util/problem');
 const tmp = require('tmp');
 
-describe('task: runner', () => {
+describe.skip('task: runner', () => {
   const success = `
     const { task, run } = require('./lib/task/task');
     run(Promise.resolve({ test: 'result' }));
@@ -38,7 +38,7 @@ describe('task: runner', () => {
     }));
 });
 
-describe('task: auditing', () => {
+describe.skip('task: auditing', () => {
   context('on task success', () => {
     it('should log', testTask(({ simply, Audit }) =>
       auditing('testAction', Promise.resolve({ key: 'value' }))
@@ -86,7 +86,7 @@ describe('task: auditing', () => {
   });
 });
 
-describe('task: emailing', () => {
+describe.skip('task: emailing', () => {
   it('should do nothing on task success', testTask(({ simply, Audit }) =>
     emailing('testAction', Promise.resolve({ key: 'value' }))
       .then(() => { global.inbox.length.should.equal(0); })));

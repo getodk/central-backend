@@ -7,7 +7,7 @@ const { runner, checker } = require(appRoot + '/lib/worker/worker');
 
 // we test everything except scheduler() and worker(), because these both start
 // timed feedback loops that we cannot easily control or halt.
-describe('worker', () => {
+describe.skip('worker', () => {
   describe('runner @slow', () => {
     // we know reschedule is getting called at some point in these flows because
     // these tests would hang otherwise.

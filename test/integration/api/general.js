@@ -1,7 +1,7 @@
 const should = require('should');
 const { testService } = require('../setup');
 
-describe('bodyParser', () => {
+describe.skip('bodyParser', () => {
   it('should return a reasonable error on unparseable requests', testService((service) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects')

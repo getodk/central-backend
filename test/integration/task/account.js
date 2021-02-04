@@ -4,7 +4,7 @@ const { testTask } = require('../setup');
 const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { createUser, promoteUser, setUserPassword } = require(appRoot + '/lib/task/account');
 
-describe('task: accounts', () => {
+describe.skip('task: accounts', () => {
   describe('createUser', () => {
     it('should create a user account', testTask(({ User }) =>
       createUser('testuser@opendatakit.org', 'aoeu')

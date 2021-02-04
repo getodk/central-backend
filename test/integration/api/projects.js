@@ -5,7 +5,7 @@ const testData = require('../../data/xml');
 const { QueryOptions } = require('../../../lib/util/db');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
-describe('api: /projects', () => {
+describe.skip('api: /projects', () => {
   describe('GET', () => {
     it('should return an empty array if not logged in', testService((service) =>
       service.get('/v1/projects')

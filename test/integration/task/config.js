@@ -4,7 +4,7 @@ const { testTask } = require('../setup');
 const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { getConfiguration, getConfigurationJsonValue, setConfiguration } = require(appRoot + '/lib/task/config');
 
-describe('task: config', () => {
+describe.skip('task: config', () => {
   describe('getConfiguration', () => {
     it('should fetch configuration by key', testTask(({ Config }) =>
       Config.set('testConfig', { key: 'value' })

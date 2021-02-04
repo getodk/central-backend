@@ -8,7 +8,7 @@ const testData = require('../../data/xml');
 // that we have plumbed the relevant input to those layers correctly, and have applied
 // the appropriate higher-level logics (notfound, notauthorized, etc.)
 
-describe('api: /forms/:id.svc', () => {
+describe.skip('api: /forms/:id.svc', () => {
   describe('GET', () => {
     it('should reject unless the form exists', testService((service) =>
       service.login('alice', (asAlice) =>

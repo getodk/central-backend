@@ -7,7 +7,7 @@ const { zipStreamToFiles } = require('../../util/zip');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 
-describe('api: /backup', () => {
+describe.skip('api: /backup', () => {
   describe('GET', () => {
     it('should reject if the user cannot backup', testService((service) =>
       service.login('chelsea', (asChelsea) =>

@@ -6,7 +6,7 @@ const testData = require(appRoot + '/test/data/xml');
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
 const { mapSequential } = require(appRoot + '/lib/util/promise');
 
-describe('managed encryption', () => {
+describe.skip('managed encryption', () => {
   describe('lock management', () => {
     it('should reject keyless forms in keyed projects @slow', testContainerFullTrx(async (container) => {
       // enable managed encryption.

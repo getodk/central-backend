@@ -4,7 +4,7 @@ const { DateTime } = require('luxon');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 
-describe('api: /projects/:id/app-users', () => {
+describe.skip('api: /projects/:id/app-users', () => {
   describe('POST', () => {
     it('should return 403 unless the user is allowed to create', testService((service) =>
       service.post('/v1/projects/1/app-users')
@@ -208,7 +208,7 @@ describe('api: /projects/:id/app-users', () => {
 
 
 // Test the actual use of field keys.
-describe('api: /key/:key', () => {
+describe.skip('api: /key/:key', () => {
   it('should return 403 if an invalid key is provided', testService((service) =>
     service.get('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/current')
       .expect(403)));

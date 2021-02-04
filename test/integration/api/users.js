@@ -1,7 +1,7 @@
 const should = require('should');
 const { testService } = require('../setup');
 
-describe('api: /users', () => {
+describe.skip('api: /users', () => {
   describe('GET', () => {
     it('should reject for anonymous users', testService((service) =>
       service.get('/v1/users').expect(403)));
