@@ -1,7 +1,7 @@
 const should = require('should');
 const { testService } = require('../setup');
 
-describe.skip('api: /users', () => {
+describe('api: /users', () => {
   describe('GET', () => {
     it('should reject for anonymous users', testService((service) =>
       service.get('/v1/users').expect(403)));
@@ -133,23 +133,25 @@ describe.skip('api: /users', () => {
           .send({ email: 'david@opendatakit.org' })
           .then(({ body }) => body.displayName.should.equal('david@opendatakit.org')))));
 
-    it('should log the action in the audit log', testService((service, { Audit, User }) =>
+    it('should log the action in the audit log', testService((service, { Audits, Users }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users')
           .send({ email: 'david@opendatakit.org' })
           .expect(200)
           .then(() => Promise.all([
-            User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
-            User.getByEmail('david@opendatakit.org').then((o) => o.get()),
-            Audit.getLatestByAction('user.create').then((o) => o.get())
+            Users.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+            Users.getByEmail('david@opendatakit.org').then((o) => o.get()),
+            Audits.getLatestByAction('user.create').then((o) => o.get())
           ])
           .then(([ alice, david, log ]) => {
             log.actorId.should.equal(alice.actor.id);
             log.acteeId.should.equal(david.actor.acteeId);
+            log.details.data.actorId.should.be.a.Number();
+            delete log.details.data.actorId;
             log.details.should.eql({
               data: {
                 email: 'david@opendatakit.org',
-                actor: { displayName: 'david@opendatakit.org', type: 'user' },
+                mfaSecret: null,
                 password: null
               }
             });
@@ -407,20 +409,21 @@ describe.skip('api: /users', () => {
               global.inbox.length.should.equal(0);
             })))));
 
-    it('should log the action in the audit log', testService((service, { User, Audit }) =>
+    it('should log the action in the audit log', testService((service, { Users, Audits }) =>
       service.login('alice', (asAlice) =>
-        User.getByEmail('chelsea@opendatakit.org').then((o) => o.get())
+        Users.getByEmail('chelsea@opendatakit.org').then((o) => o.get())
           .then((chelsea) => asAlice.patch('/v1/users/' + chelsea.actor.id)
             .send({ displayName: 'cool chelsea', other: 'data' })
             .expect(200)
             .then(() => Promise.all([
-              User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
-              Audit.getLatestByAction('user.update').then((o) => o.get())
+              Users.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+              Audits.getLatestByAction('user.update').then((o) => o.get())
             ])
           .then(([ alice, log ]) => {
             log.actorId.should.equal(alice.actor.id);
             log.acteeId.should.equal(chelsea.actor.acteeId);
-            log.details.should.eql({ data: { actor: { displayName: 'cool chelsea' } } });
+            log.details.data.actorId.should.equal(chelsea.actor.id);
+            log.details.data.email.should.equal('chelsea@opendatakit.org');
           }))))));
   });
 
@@ -486,7 +489,7 @@ describe.skip('api: /users', () => {
               email.subject.should.equal('ODK Central account password change');
             })))));
 
-    it('should log an audit on password change', testService((service, { Audit, User }) =>
+    it('should log an audit on password change', testService((service, { Audits, Users }) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/users/current')
           .expect(200)
@@ -494,8 +497,8 @@ describe.skip('api: /users', () => {
             .send({ old: 'alice', new: 'newpassword' })
             .expect(200)
             .then(() => Promise.all([
-              User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
-              Audit.getLatestWhere({ action: 'user.update' }).then((o) => o.get())
+              Users.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+              Audits.getLatestByAction('user.update').then((o) => o.get())
             ]))
             .then(([ alice, log ]) => {
               log.actorId.should.equal(alice.actor.id);
@@ -545,14 +548,14 @@ describe.skip('api: /users', () => {
                   body.map((actor) => actor.id).includes(chelseaId).should.equal(false);
                 })))))));
 
-    it('should log an audit upon delete', testService((service, { Audit, User }) =>
+    it('should log an audit upon delete', testService((service, { Audits, Users }) =>
       service.login('alice', (asAlice) =>
-        User.getByEmail('chelsea@opendatakit.org')
+        Users.getByEmail('chelsea@opendatakit.org')
           .then((maybeChelsea) => maybeChelsea.get())
           .then((chelsea) => asAlice.delete('/v1/users/' + chelsea.actor.id)
             .expect(200)
             .then(() => Promise.all([
-              Audit.getLatestWhere({ action: 'user.delete' }),
+              Audits.getLatestByAction('user.delete'),
               asAlice.get('/v1/users/current').then(({ body }) => body.id)
             ])
               .then(([ audit, aliceId ]) => {
