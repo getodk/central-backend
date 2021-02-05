@@ -1,7 +1,7 @@
 const should = require('should');
 const { testService } = require('../setup');
 
-describe.skip('api: /projects/:id/assignments/forms', () => {
+describe('api: /projects/:id/assignments/forms', () => {
   // helper that does a bunch of assignments that we will use to test these apis:
   // * make chelsea a manager on simple form
   // * create app user david and assign app user on simple form
@@ -128,7 +128,7 @@ describe.skip('api: /projects/:id/assignments/forms', () => {
 // 3. cursorily test each of the other resource-specific APIs to be sure they're
 //    plumbed in correctly
 
-describe.skip('api: /assignments', () => {
+describe('api: /assignments', () => {
   describe('GET', () => {
     it('should prohibit anonymous users from listing assignments', testService((service) =>
       service.get('/v1/assignments').expect(403)));
@@ -155,7 +155,7 @@ describe.skip('api: /assignments', () => {
           asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id)
       ]).then(([ assignments, adminRoleId ]) => {
         assignments.length.should.equal(1);
-        Object.keys(assignments[0]).should.eql([ 'actor', 'roleId' ]);
+        Object.keys(assignments[0]).should.eql([ 'actorId', 'roleId', 'actor' ]);
         assignments[0].actor.should.be.an.Actor();
         assignments[0].actor.displayName.should.equal('Alice');
         assignments[0].roleId.should.equal(adminRoleId);
@@ -250,16 +250,16 @@ describe.skip('api: /assignments', () => {
                   body.map((actor) => actor.displayName).should.eql([ 'Alice', 'Chelsea' ]);
                 })))))));
 
-      it('should log the action in the audit log', testService((service, { Audit, User }) =>
-        User.getByEmail('chelsea@opendatakit.org')
+      it('should log the action in the audit log', testService((service, { Audits, Users }) =>
+        Users.getByEmail('chelsea@opendatakit.org')
           .then((maybeChelsea) => maybeChelsea.get())
           .then((chelsea) => service.login('alice', (asAlice) =>
             asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id)
               .then((adminRoleId) => asAlice.post(`/v1/assignments/${adminRoleId}/${chelsea.actor.id}`)
                 .expect(200)
                 .then(() => Promise.all([
-                  User.getByEmail('alice@opendatakit.org').then((maybeAlice) => maybeAlice.get()),
-                  Audit.getLatestWhere({ action: 'assignment.create' })
+                  Users.getByEmail('alice@opendatakit.org').then((maybeAlice) => maybeAlice.get()),
+                  Audits.getLatestByAction('assignment.create')
                 ]))
                 .then(([ alice, audit ]) => {
                   audit.isDefined().should.equal(true);
@@ -315,14 +315,14 @@ describe.skip('api: /assignments', () => {
               // again, verify the self-demotion.
               .then(() => asAlice.get('/v1/assignments').expect(403))))));
 
-      it('should log the action in the audit log', testService((service, { Audit, User }) =>
-        User.getByEmail('alice@opendatakit.org')
+      it('should log the action in the audit log', testService((service, { Audits, Users }) =>
+        Users.getByEmail('alice@opendatakit.org')
           .then((maybeAlice) => maybeAlice.get())
           .then((alice) => service.login('alice', (asAlice) =>
             asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id)
               .then((adminRoleId) => asAlice.delete(`/v1/assignments/${adminRoleId}/${alice.actor.id}`)
                 .expect(200)
-                .then(() => Audit.getLatestWhere({ action: 'assignment.delete' }))
+                .then(() => Audits.getLatestByAction('assignment.delete'))
                 .then((audit) => {
                   audit.isDefined().should.equal(true);
                   audit.get().actorId.should.equal(alice.actor.id);
@@ -333,7 +333,7 @@ describe.skip('api: /assignments', () => {
   });
 });
 
-describe.skip('/projects/:id/assignments', () => {
+describe('/projects/:id/assignments', () => {
   describe('GET', () => {
     it('should prohibit unprivileged users from listing assignments', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -440,17 +440,17 @@ describe.skip('/projects/:id/assignments', () => {
                 body.map((actor) => actor.displayName).should.eql([ 'Bob', 'Chelsea' ]);
               })))))));
 
-      it('should log the action in the audit log', testService((service, { Audit, Project, User }) =>
-        User.getByEmail('chelsea@opendatakit.org')
+      it('should log the action in the audit log', testService((service, { Audits, Projects, Users }) =>
+        Users.getByEmail('chelsea@opendatakit.org')
           .then((maybeChelsea) => maybeChelsea.get())
           .then((chelsea) => service.login('alice', (asAlice) =>
             asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id)
               .then((adminRoleId) => asAlice.post(`/v1/projects/1/assignments/${adminRoleId}/${chelsea.actor.id}`)
                 .expect(200)
                 .then(() => Promise.all([
-                  Project.getById(1).then((x) => x.get()),
-                  User.getByEmail('alice@opendatakit.org').then((maybeAlice) => maybeAlice.get()),
-                  Audit.getLatestWhere({ action: 'assignment.create' })
+                  Projects.getById(1).then((x) => x.get()),
+                  Users.getByEmail('alice@opendatakit.org').then((maybeAlice) => maybeAlice.get()),
+                  Audits.getLatestByAction('assignment.create')
                 ]))
                 .then(([ project, alice, audit ]) => {
                   audit.isDefined().should.equal(true);
@@ -505,17 +505,17 @@ describe.skip('/projects/:id/assignments', () => {
                 .expect(200)
                 .then(({ body }) => { body.length.should.equal(0); })))))));
 
-      it('should log the action in the audit log', testService((service, { Audit, Project, User }) =>
-        User.getByEmail('bob@opendatakit.org')
+      it('should log the action in the audit log', testService((service, { Audits, Projects, Users }) =>
+        Users.getByEmail('bob@opendatakit.org')
           .then((maybeBob) => maybeBob.get())
           .then((bob) => service.login('alice', (asAlice) =>
             asAlice.get('/v1/roles/manager').expect(200).then(({ body }) => body.id)
               .then((managerRoleId) => asAlice.delete(`/v1/projects/1/assignments/${managerRoleId}/${bob.actor.id}`)
                 .expect(200)
                 .then(() => Promise.all([
-                  Project.getById(1).then((x) => x.get()),
-                  User.getByEmail('alice@opendatakit.org').then((x) => x.get()),
-                  Audit.getLatestWhere({ action: 'assignment.delete' })
+                  Projects.getById(1).then((x) => x.get()),
+                  Users.getByEmail('alice@opendatakit.org').then((x) => x.get()),
+                  Audits.getLatestByAction('assignment.delete')
                 ]))
                 .then(([ project, alice, audit ]) => {
                   audit.isDefined().should.equal(true);
@@ -526,7 +526,7 @@ describe.skip('/projects/:id/assignments', () => {
   });
 });
 
-describe.skip('api: /projects/:projectId/forms/:xmlFormId/assignments', () => {
+describe('api: /projects/:projectId/forms/:xmlFormId/assignments', () => {
   it('should return all form assignments', testService((service) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/app-users')

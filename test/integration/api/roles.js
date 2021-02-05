@@ -1,7 +1,7 @@
 const should = require('should');
 const { testService } = require('../setup');
 
-describe.skip('api: /roles', () => {
+describe('api: /roles', () => {
   describe('GET', () => {
     it('should return all roles', testService((service) =>
       service.get('/v1/roles')
