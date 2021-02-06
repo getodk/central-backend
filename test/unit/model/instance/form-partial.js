@@ -55,7 +55,7 @@ describe('Form', () => {
     it('should return a populated Form object if the xml passes', () => {
       const xml = '<html><head><model><instance><data id="mycoolform"><field/></data></instance></model></head></html>';
       return Form.fromXml(xml).then((partial) => {
-        partial.def.xml.should.equal(xml);
+        partial.xml.should.equal(xml);
         partial.xmlFormId.should.equal('mycoolform');
       });
     });
@@ -81,15 +81,15 @@ describe('Form', () => {
     it('should detect an encrypted form and extract its key', () => {
       const xml = '<html><head><model><instance><data id="mycoolform"><field/></data></instance><submission base64RsaPublicKey="mypublickeygoeshere"/></model></head></html>';
       return Form.fromXml(xml).then((partial) => {
-        partial.def.key.isDefined().should.equal(true);
-        partial.def.key.get().should.eql(new Key({ public: 'mypublickeygoeshere' }));
+        partial.aux.key.isDefined().should.equal(true);
+        partial.aux.key.get().should.eql(new Key({ public: 'mypublickeygoeshere' }));
       });
     });
 
     it('should detect a not-encrypted form', () => {
       const xml = '<html><head><model><instance><data id="mycoolform"><field/></data></instance><submission method="form-data-post" action="mywebsite.com"/></model></head></html>';
       return Form.fromXml(xml).then((partial) => {
-        partial.def.key.isDefined().should.equal(false);
+        partial.aux.key.isDefined().should.equal(false);
       });
     });
   });

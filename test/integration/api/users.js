@@ -422,8 +422,7 @@ describe('api: /users', () => {
           .then(([ alice, log ]) => {
             log.actorId.should.equal(alice.actor.id);
             log.acteeId.should.equal(chelsea.actor.acteeId);
-            log.details.data.actorId.should.equal(chelsea.actor.id);
-            log.details.data.email.should.equal('chelsea@opendatakit.org');
+            log.details.should.eql({ data: { displayName: 'cool chelsea' } });
           }))))));
   });
 
