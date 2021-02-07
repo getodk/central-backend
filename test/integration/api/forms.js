@@ -2332,7 +2332,7 @@ describe('api: /projects/:id/forms', () => {
     });
   });
 
-  describe.skip('/:id/versions', () => {
+  describe('/:id/versions', () => {
     // for operations that replicate others above we will not exhaustively test every
     // case here. we mostly check plumbing and differences.
 
@@ -2347,7 +2347,7 @@ describe('api: /projects/:id/forms', () => {
           asChelsea.get('/v1/projects/1/forms/simple/versions')
             .expect(403))));
 
-      it('should list all versions', testService((service) =>
+      it('should list all versions', testService((service, XXXXX) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="2"'))
@@ -2708,7 +2708,7 @@ describe('api: /projects/:id/forms', () => {
   // DRAFT FORM TESTING
   ////////////////////////////////////////////////////////////////////////////////
 
-  describe.skip('/test/:key/…/:id/draft', () => {
+  describe('/test/:key/…/:id/draft', () => {
     describe('/formList GET', () => {
       it('should reject if the draft does not exist', testService((service) =>
         service.get('/v1/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/forms/simple/draft/formList')

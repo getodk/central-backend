@@ -544,7 +544,7 @@ describe('api: /projects', () => {
           .then(([ project, alice, log ]) => {
             log.actorId.should.equal(alice.actor.id);
             log.acteeId.should.equal(project.acteeId);
-            log.details.should.eql({ encrypted: true });
+            log.details.should.eql({ data: { keyId: project.keyId } });
           }))));
   });
 
