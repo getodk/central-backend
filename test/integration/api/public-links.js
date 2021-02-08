@@ -181,7 +181,7 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
 
 
 // Test the actual use of public links.
-describe.skip('api: /key/:key', () => {
+describe('api: /key/:key', () => {
   it('should return 403 if an invalid key is provided', testService((service) =>
     service.get('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/current')
       .expect(403)));

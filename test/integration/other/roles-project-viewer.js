@@ -35,7 +35,7 @@ const withSubmissions = (f) => (service) =>
         .expect(200))
       .then(() => f(service)));
 
-describe.skip('project viewer role', () => {
+describe('project viewer role', () => {
   it('should be able to list projects it can access', testService((service) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects')

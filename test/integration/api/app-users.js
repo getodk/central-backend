@@ -208,7 +208,7 @@ describe('api: /projects/:id/app-users', () => {
 
 
 // Test the actual use of field keys.
-describe.skip('api: /key/:key', () => {
+describe('api: /key/:key', () => {
   it('should return 403 if an invalid key is provided', testService((service) =>
     service.get('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/current')
       .expect(403)));

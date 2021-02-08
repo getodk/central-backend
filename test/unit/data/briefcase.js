@@ -15,16 +15,15 @@ const { zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 
 // takes care of instance envelope boilerplate.
 const instance = (id, data) => ({
-  submission: {
-    instanceId: id,
-    createdAt: new Date('2018-01-01T00:00:00Z')
-  },
+  instanceId: id,
+  createdAt: new Date('2018-01-01T00:00:00Z'),
+  def: {},
   xml: `<data id="data">${data}</data>`,
-  attachments: { present: 0, expected: 0 }
+  aux: { attachment: { present: 0, expected: 0 }, encryption: {} }
 });
 
-const withSubmitter = (id, displayName, row) => ({ submitter: { id, displayName }, ...row });
-const withAttachments = (present, expected, row) => ({ ...row, attachments: { expected, present } });
+const withSubmitter = (id, displayName, row) => ({ ...row, aux: { ...row.aux, submitter: { id, displayName } } });
+const withAttachments = (present, expected, row) => ({ ...row, aux: { ...row.aux, attachment: { expected, present } } });
 
 
 const callAndParse = (inStream, formXml, xmlFormId, callback) => {
@@ -75,9 +74,11 @@ describe('.csv.zip briefcase output @slow', () => {
 
   it('should not hang given incomplete markup', (done) => {
     const inStream = streamTest.fromObjects([{
-      submission: { instanceId: 'one', createdAt: new Date('2018-01-01T00:00:00Z') },
+      instanceId: 'one',
+      createdAt: new Date('2018-01-01T00:00:00Z'),
+      def: {},
       xml: '<data id="data">',
-      attachments: { present: 0, expected: 0 }
+      aux: { attachment: { present: 0, expected: 0 }, encryption: {} }
     }]);
 
     // not hanging is the assertion here:
@@ -599,10 +600,9 @@ Chelsea,one,one/children[2]
 </h:html>`;
 
     const inStream = streamTest.fromObjects([{
-      submission: {
-        instanceId: 'uuid:39f3dd36-161e-45cb-a1a4-395831d253a7',
-        createdAt: '2018-04-26T08:58:20.525Z'
-      },
+      instanceId: 'uuid:39f3dd36-161e-45cb-a1a4-395831d253a7',
+      createdAt: '2018-04-26T08:58:20.525Z',
+      def: {},
       xml: `
 <data id="all-data-types" instanceID="uuid:39f3dd36-161e-45cb-a1a4-395831d253a7" submissionDate="2018-04-26T08:58:20.525Z" isComplete="true" markedAsCompleteDate="2018-04-26T08:58:20.525Z" xmlns="http://opendatakit.org/submissions">
   <some_string>Hola</some_string>
@@ -619,7 +619,7 @@ Chelsea,one,one/children[2]
     <n0:instanceID>uuid:39f3dd36-161e-45cb-a1a4-395831d253a7</n0:instanceID>
   </n0:meta>
 </data>`,
-      attachments: { present: 0, expected: 0 }
+      aux: { attachment: { present: 0, expected: 0 }, encryption: {} }
     }]);
 
     callAndParse(inStream, formXml, 'all-data-types', (result) => {
@@ -699,10 +699,9 @@ Chelsea,one,one/children[2]
 </h:html>`;
 
     const inStream = streamTest.fromObjects([{
-      submission: {
-        instanceId: 'uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b',
-        createdAt: '2018-02-01T11:35:19.178Z'
-      },
+      instanceId: 'uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b',
+      createdAt: '2018-02-01T11:35:19.178Z',
+      def: {},
       xml: `
 <data id="nested-repeats" instanceID="uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b" version="2018012404" submissionDate="2018-02-01T11:35:19.178Z" isComplete="true" markedAsCompleteDate="2018-02-01T11:35:19.178Z" xmlns="http://opendatakit.org/submissions">
   <g1>
@@ -747,7 +746,7 @@ Chelsea,one,one/children[2]
     <n0:instanceID>uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b</n0:instanceID>
   </n0:meta>
 </data>`,
-      attachments: { present: 0, expected: 0 }
+      aux: { attachment: { present: 0, expected: 0 }, encryption: {} }
     }]);
 
     callAndParse(inStream, formXml, 'nested-repeats', (result) => {
