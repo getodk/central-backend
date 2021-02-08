@@ -4,7 +4,7 @@ const { DateTime } = require('luxon');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 
-describe.skip('api: /projects/:id/app-users', () => {
+describe('api: /projects/:id/app-users', () => {
   describe('POST', () => {
     it('should return 403 unless the user is allowed to create', testService((service) =>
       service.post('/v1/projects/1/app-users')

@@ -2420,8 +2420,8 @@ describe('api: /projects/:id/forms', () => {
               .expect(200)
               .then(({ body }) => {
                 body.map((f) => f.version).should.eql([ '3', '2.1' ]);
-                body.map((f) => f.enketoId).should.eql([ '::abcdefgh', undefined ]);
-                body.map((f) => f.enketoOnceId).should.eql([ '::::abcdefgh', undefined ]);
+                body.map((f) => f.enketoId).should.eql([ '::abcdefgh', null ]);
+                body.map((f) => f.enketoOnceId).should.eql([ '::::abcdefgh', null ]);
               })))));
 
       it('should return publishedBy if extended is requested', testService((service) =>
@@ -2488,7 +2488,7 @@ describe('api: /projects/:id/forms', () => {
               .expect(200)
               .then(({ body }) => {
                 body.map((f) => f.version).should.eql([ '3', '2.1' ]);
-                body.map((f) => f.enketoId).should.eql([ '::abcdefgh', undefined ]);
+                body.map((f) => f.enketoId).should.eql([ '::abcdefgh', null ]);
               })))));
 
       it('should sort results desc by publishedAt', testService((service) =>

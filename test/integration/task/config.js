@@ -4,10 +4,10 @@ const { testTask } = require('../setup');
 const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { getConfiguration, getConfigurationJsonValue, setConfiguration } = require(appRoot + '/lib/task/config');
 
-describe.skip('task: config', () => {
+describe('task: config', () => {
   describe('getConfiguration', () => {
-    it('should fetch configuration by key', testTask(({ Config }) =>
-      Config.set('testConfig', { key: 'value' })
+    it('should fetch configuration by key', testTask(({ Configs }) =>
+      Configs.set('testConfig', JSON.stringify({ key: 'value' }))
         .then(() => getConfiguration('testConfig'))
         .then((result) => {
           result.key.should.equal('testConfig');
@@ -20,8 +20,8 @@ describe.skip('task: config', () => {
   });
 
   describe('getConfigurationJsonValue', () => {
-    it('should parse the configuration value', testTask(({ Config }) =>
-      Config.set('testConfig', { key: 'value' })
+    it('should parse the configuration value', testTask(({ Configs }) =>
+      Configs.set('testConfig', JSON.stringify({ key: 'value' }))
         .then(() => getConfigurationJsonValue('testConfig'))
         .then((result) => {
           result.should.eql({ key: 'value' });
@@ -32,9 +32,9 @@ describe.skip('task: config', () => {
   });
 
   describe('setConfiguration', () => {
-    it('should save configuration by key', testTask(({ Config }) =>
-      setConfiguration('testConfig', { set: 'data' })
-        .then(() => Config.get('testConfig'))
+    it('should save configuration by key', testTask(({ Configs }) =>
+      setConfiguration('testConfig', JSON.stringify({ set: 'data' }))
+        .then(() => Configs.get('testConfig'))
         .then(getOrNotFound)
         .then((config) => JSON.parse(config.value).should.eql({ set: 'data' }))));
   });

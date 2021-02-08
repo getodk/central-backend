@@ -4,10 +4,12 @@ const { promisify } = require('util');
 const { DateTime, Duration } = require('luxon');
 const { testContainerFullTrx, testContainer } = require('../setup');
 const { runner, checker } = require(appRoot + '/lib/worker/worker');
+const { Audit } = require(appRoot + '/lib/model/frames');
+const { insert } = require(appRoot + '/lib/util/db');
 
 // we test everything except scheduler() and worker(), because these both start
 // timed feedback loops that we cannot easily control or halt.
-describe.skip('worker', () => {
+describe('worker', () => {
   describe('runner @slow', () => {
     // we know reschedule is getting called at some point in these flows because
     // these tests would hang otherwise.
@@ -63,13 +65,14 @@ describe.skip('worker', () => {
     }));
 
     it('should mark the event as processed after on job completion', testContainerFullTrx(async (container) => {
-      const { Audit, User } = container;
-      const alice = (await User.getByEmail('alice@opendatakit.org')).get();
-      const event = await Audit.log(alice.actor, 'submission.attachment.create', alice.actor);
+      const { Audits, Users } = container;
+      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      await Audits.log(alice.actor, 'submission.attachment.create', alice.actor);
+      const event = (await Audits.getLatestByAction('submission.attachment.create')).get();
 
       const jobMap = { 'submission.attachment.create': [ () => Promise.resolve() ] };
       await promisify(runner(container, jobMap))(event);
-      const after = (await Audit.getLatestByAction('submission.attachment.create')).get();
+      const after = (await Audits.getLatestByAction('submission.attachment.create')).get();
       after.processed.should.be.a.recentDate();
     }));
 
@@ -100,13 +103,14 @@ describe.skip('worker', () => {
     // we can test that it is not indeed processed afterwards.
     // TODO: we should be able to not do this as of block 8.
     it('should unclaim the event and mark failure in case of failure', testContainerFullTrx(async (container) => {
-      const { Audit, User } = container;
-      const alice = (await User.getByEmail('alice@opendatakit.org')).get();
-      const event = await Audit.log(alice.actor, 'submission.attachment.update', alice.actor);
+      const { Audits, Users } = container;
+      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
+      const event = (await Audits.getLatestByAction('submission.attachment.update')).get();
 
-      const jobMap = { 'submission.attachment.update': [ () => Promise.reject({ uh: 'oh' }) ] };
+      const jobMap = { 'submission.attachment.update': [ () => Promise.reject({ uh: tap('oh') }) ] };
       await promisify(runner(container, jobMap))(event);
-      const after = (await Audit.getLatestByAction('submission.attachment.update')).get();
+      const after = (await Audits.getLatestByAction('submission.attachment.update')).get();
       should.not.exist(after.claimed);
       should.not.exist(after.processed);
       after.failures.should.equal(1);
@@ -119,33 +123,33 @@ describe.skip('worker', () => {
   describe('checker', () => {
     it('should return null if there are no unprocessed events', testContainer(async (container) => {
       const check = checker(container);
-      const { Audit, User } = container;
-      const alice = (await User.getByEmail('alice@opendatakit.org')).get();
-      await Audit.log(alice.actor, 'test.event', alice.actor);
+      const { Audits, Users } = container;
+      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      await Audits.log(alice.actor, 'test.event', alice.actor);
       should.not.exist(await check());
     }));
 
     it('should mark the event as claimed', testContainer(async (container) => {
       const check = checker(container);
-      const { Audit, User } = container;
-      const alice = (await User.getByEmail('alice@opendatakit.org')).get();
-      await Audit.log(alice.actor, 'submission.attachment.update', alice.actor);
+      const { Audits, Users } = container;
+      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
       const event = (await check());
       event.claimed.should.be.a.recentDate();
-      const found = (await Audit.getLatestByAction('submission.attachment.update')).get();
+      const found = (await Audits.getLatestByAction('submission.attachment.update')).get();
       found.claimed.should.eql(event.claimed);
     }));
 
     it('should not mark any other events as claimed', testContainer(async (container) => {
       const check = checker(container);
-      const { Audit, User } = container;
-      const alice = (await User.getByEmail('alice@opendatakit.org')).get();
-      await Audit.log(alice.actor, 'submission.attachment.update', alice.actor);
-      await Audit.log(alice.actor, 'submission.attachment.update', alice.actor);
-      await Audit.log(alice.actor, 'submission.attachment.update', alice.actor);
+      const { Audits, Users } = container;
+      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
+      await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
+      await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
       await check();
 
-      const events = await Audit.get();
+      const events = await Audits.get();
       let claimed = 0;
       for (const event of events)
         if (event.claimed != null)
@@ -155,55 +159,69 @@ describe.skip('worker', () => {
 
     it('should return the oldest eligible event', testContainer(async (container) => {
       const check = checker(container);
-      const { Audit, User } = container;
-      const alice = (await User.getByEmail('alice@opendatakit.org')).get();
-      await Audit.log(alice.actor, 'submission.attachment.update', alice.actor, { is: 'oldest' });
-      await Audit.log(alice.actor, 'submission.attachment.update', alice.actor, { is: 'older' });
-      await Audit.log(alice.actor, 'submission.attachment.update', alice.actor, { is: 'newer' });
+      const { Audits, Users } = container;
+      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      await Audits.log(alice.actor, 'submission.attachment.update', alice.actor, { is: 'oldest' });
+      await Audits.log(alice.actor, 'submission.attachment.update', alice.actor, { is: 'older' });
+      await Audits.log(alice.actor, 'submission.attachment.update', alice.actor, { is: 'newer' });
       const event = (await check());
       event.details.should.eql({ is: 'oldest' });
     }));
 
     it('should not return a recently failed event', testContainer(async (container) => {
       const check = checker(container);
-      const { Audit, User } = container;
-      const alice = (await User.getByEmail('alice@opendatakit.org')).get();
-      await Audit.of(alice.actor, 'submission.attachment.update', alice.actor)
-        .with({ lastFailure: new Date() })
-        .create();
+      const { Users, run } = container;
+      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      await run(insert(new Audit({
+        actorId: alice.actor.id,
+        action: 'submission.attachment.update',
+        acteeId: alice.actor.acteeId,
+        lastFailure: new Date(),
+        loggedAt: new Date()
+      })));
       should.not.exist(await check());
     }));
 
     it('should retry a previously failed event after some time', testContainer(async (container) => {
       const check = checker(container);
-      const { Audit, User } = container;
-      const alice = (await User.getByEmail('alice@opendatakit.org')).get();
-      await Audit.of(alice.actor, 'submission.attachment.update', alice.actor)
-        .with({
-          failures: 4,
-          lastFailure: DateTime.local().minus(Duration.fromObject({ minutes: 11 })).toJSDate()
-        })
-        .create();
+      const { Users, run } = container;
+      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      await run(insert(new Audit({
+        actorId: alice.actor.id,
+        action: 'submission.attachment.update',
+        acteeId: alice.actor.acteeId,
+        failures: 4,
+        lastFailure: DateTime.local().minus(Duration.fromObject({ minutes: 11 })).toJSDate(),
+        loggedAt: new Date()
+      })));
       should.exist(await check());
     }));
 
     it('should not return a repeatedly failed event', testContainer(async (container) => {
       const check = checker(container);
-      const { Audit, User } = container;
-      const alice = (await User.getByEmail('alice@opendatakit.org')).get();
-      await Audit.of(alice.actor, 'submission.attachment.update', alice.actor)
-        .with({ failures: 6 })
-        .create();
+      const { Users, run } = container;
+      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      await run(insert(new Audit({
+        actorId: alice.actor.id,
+        action: 'submission.attachment.update',
+        acteeId: alice.actor.acteeId,
+        failures: 6,
+        loggedAt: new Date()
+      })));
       should.not.exist(await check());
     }));
 
     it('should claim a stale/hung event', testContainer(async (container) => {
       const check = checker(container);
-      const { Audit, User } = container;
-      const alice = (await User.getByEmail('alice@opendatakit.org')).get();
-      await Audit.of(alice.actor, 'submission.attachment.update', alice.actor)
-        .with({ claimed: DateTime.local().minus(Duration.fromObject({ hours: 3 })).toJSDate() })
-        .create();
+      const { Users, run } = container;
+      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      await run(insert(new Audit({
+        actorId: alice.actor.id,
+        action: 'submission.attachment.update',
+        acteeId: alice.actor.acteeId,
+        claimed: DateTime.local().minus(Duration.fromObject({ hours: 3 })).toJSDate(),
+        loggedAt: new Date()
+      })));
       should.exist(await check());
     }));
   });

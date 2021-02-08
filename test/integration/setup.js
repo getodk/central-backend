@@ -128,7 +128,7 @@ const testServiceFullTrx = (test) => () => new Promise((resolve, reject) =>
 // this is that, with the same transaction trickery as a normal test.
 const testContainer = (test) => () => new Promise((resolve, reject) => {
   baseContainer.transacting((container) => {
-    const rollback = (f) => (x) => container.db.rollback().then(() => f(x));
+    const rollback = (f) => (x) => container.run(sql`rollback`).then(() => f(x));
     return test(container).then(rollback(resolve), rollback(reject));
   });//.catch(Promise.resolve.bind(Promise));
 });
@@ -142,14 +142,13 @@ const testContainerFullTrx = (test) => () => new Promise((resolve, reject) =>
 // container into the task context so it just picks it up and uses it.
 const testTask = (test) => () => new Promise((resolve, reject) => {
   baseContainer.transacting((container) => {
-    task._container = container;
+    task._container = container.with({ task: true });
     const rollback = (f) => (x) => {
       delete task._container;
-      return container.db.rollback().then(() => f(x));
+      return container.run(sql`rollback`).then(() => f(x));
     };
-    test(task._container).then(rollback(resolve), rollback(reject));
-    // we return nothing to prevent knex from auto-committing the transaction.
-  }).catch(Promise.resolve.bind(Promise));
+    return test(task._container).then(rollback(resolve), rollback(reject));
+  });//.catch(Promise.resolve.bind(Promise));
 });
 
 module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask };
