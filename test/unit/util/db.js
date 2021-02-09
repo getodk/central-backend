@@ -1,11 +1,84 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 const { sql } = require('slonik');
+const { Frame, table, into } = require(appRoot + '/lib/model/frame');
 const util = require(appRoot + '/lib/util/db');
 const Option = require(appRoot + '/lib/util/option');
 const Problem = require(appRoot + '/lib/util/problem');
 
 describe('util/db', () => {
+  describe('unjoiner', () => {
+    const { unjoiner } = util;
+    const T = Frame.define(table('frames'), 'x',  'y');
+    const U = Frame.define(into('extra'), 'z');
+    it('should generate fields', () => {
+      unjoiner(Frame.define(table('frames'), 'x',  'y'), Frame.define('z'))
+        .fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y","z" as "z"`);
+    });
+
+    it('should unjoin data', () => {
+      unjoiner(T, U)
+        ({ 'frames!x': 3, 'frames!y': 4, z: 5 })
+        .should.eql(new T({ x: 3, y: 4 }, { extra: new U({ z: 5 }) }));
+    });
+
+    it('should optionally unjoin optional data', () => {
+      const unjoin = unjoiner(T, Option.of(U));
+      unjoin.fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y","a" as "a","b" as "b"`);
+      unjoin({ 'frames!x': 3, 'frames!y': 4, a: 5 })
+        .should.eql(new T({ x: 3, y: 4 }, { extra: Option.of(new U({ z: 5 })) }));
+      unjoin({ 'frames!x': 3, 'frames!y': 4 })
+        .should.eql(new T({ x: 3, y: 4 }, { extra: Option.none() }));
+    });
+  });
+
+  describe('extender', () => {
+    const { extender, QueryOptions } = util;
+    const T = Frame.define(table('frames'), 'x',  'y');
+    const U = Frame.define(into('extra'), 'a', 'b');
+    function noop() { return Promise.resolve({}); };
+    noop.map = (f) => (x) => x;
+    it('should provide the appropriate arguments when not extended', () => {
+      let run = false;
+      extender(T)(U)((fields, extend, options, x, y, z) => {
+        fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y"`);
+        (sql`${extend|| true}`).should.eql(sql``);
+        x.should.equal(2);
+        y.should.equal(3);
+        z.should.equal(4);
+        run = true;
+      })(noop, QueryOptions.none, 2, 3, 4);
+      run.should.equal(true);
+    });
+
+    it('should provide the appropriate arguments when extended', () => {
+      let run = false;
+      extender(T)(U)((fields, extend, options, x, y, z) => {
+        fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y","a" as "a","b" as "b"`);
+        (sql`${extend|| true}`).should.eql(sql`${true}`);
+        x.should.equal(2);
+        y.should.equal(3);
+        z.should.equal(4);
+        run = true;
+      })(noop, QueryOptions.extended, 2, 3, 4);
+      run.should.equal(true);
+    });
+
+    it('should unjoin nonextended fields', () => {
+      function run() { return Promise.resolve({ 'frames!x': 3, 'frames!y': 4 }); };
+      run.map = (f) => (x) => f(x);
+      return extender(T)(U)(noop)(run, QueryOptions.none)
+        .then((result) => result.should.eql(new T({ x: 3, y: 4 })));
+    });
+
+    it('should unjoin extended fields', () => {
+      function run() { return Promise.resolve({ 'frames!x': 3, 'frames!y': 4, a: 5 }); };
+      run.map = (f) => (x) => f(x);
+      return extender(T)(U)(noop)(run, QueryOptions.extended)
+        .then((result) => result.should.eql(new T({ x: 3, y: 4 }, { extra: new U({ a: 5 }) })));
+    });
+  });
+
   describe('QueryOptions', () => {
     const { QueryOptions } = util;
     it('should cascade conditions properly', () => {
