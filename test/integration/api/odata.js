@@ -5,7 +5,7 @@ const testData = require('../../data/xml');
 
 // NOTE: for the data output tests, we do not attempt to extensively determine if every
 // internal case is covered; there are already two layers of tests below these, at
-// test/unit/data/json, then test/unit/outbound/odata. here we simply attempt to verify
+// test/unit/data/json, then test/unit/formats/odata. here we simply attempt to verify
 // that we have plumbed the relevant input to those layers correctly, and have applied
 // the appropriate higher-level logics (notfound, notauthorized, etc.)
 

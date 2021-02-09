@@ -555,7 +555,7 @@ describe('endpoints', () => {
     });
 
     describe('resultWriter', () => {
-      const { createdMessage } = require(appRoot + '/lib/outbound/openrosa');
+      const { createdMessage } = require(appRoot + '/lib/formats/openrosa');
 
       it('should send the appropriate content with the appropriate header', () => {
         const response = createModernResponse();
