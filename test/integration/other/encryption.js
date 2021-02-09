@@ -1,27 +1,29 @@
 const appRoot = require('app-root-path');
 const should = require('should');
+const { sql } = require('slonik');
 const { toText } = require('streamtest').v2;
 const { testService, testContainerFullTrx } = require(appRoot + '/test/integration/setup');
 const testData = require(appRoot + '/test/data/xml');
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
+const { Form, Key } = require(appRoot + '/lib/model/frames');
 const { mapSequential } = require(appRoot + '/lib/util/promise');
 
-describe.skip('managed encryption', () => {
+describe('managed encryption', () => {
   describe('lock management', () => {
     it('should reject keyless forms in keyed projects @slow', testContainerFullTrx(async (container) => {
       // enable managed encryption.
-      await container.transacting(({ Project }) =>
-        Project.getById(1).then((o) => o.get())
-          .then((project) => project.setManagedEncryption('supersecret', 'it is a secret')));
+      await container.transacting(({ Projects }) =>
+        Projects.getById(1).then((o) => o.get())
+          .then((project) => Projects.setManagedEncryption(project, 'supersecret', 'it is a secret')));
 
       // now attempt to create a keyless form.
       let error;
-      await container.transacting(({ Project, FormPartial }) =>
+      await container.transacting(({ Forms, Projects }) =>
         Promise.all([
-          Project.getById(1).then((o) => o.get()),
-          FormPartial.fromXml(testData.forms.simple2)
+          Projects.getById(1).then((o) => o.get()),
+          Form.fromXml(testData.forms.simple2)
         ])
-          .then(([ project, partial ]) => partial.with({ projectId: project.id }).createNew())
+          .then(([ project, partial ]) => Forms.createNew(partial, project))
           .catch((err) => { error = err; })
       );
 
@@ -32,16 +34,16 @@ describe.skip('managed encryption', () => {
       // enable managed encryption but don't allow the transaction to close.
       let encReq;
       const unblock = await new Promise((resolve) => {
-        encReq = container.transacting(({ Project }) => Promise.all([
-          Project.getById(1).then((o) => o.get())
-            .then((project) => project.setManagedEncryption('supersecret', 'it is a secret')),
+        encReq = container.transacting(({ Projects }) => Promise.all([
+          Projects.getById(1).then((o) => o.get())
+            .then((project) => Projects.setManagedEncryption(project, 'supersecret', 'it is a secret')),
           new Promise(resolve) // <- we want unblock to be the function that resolves this inner Promise.
         ]));
       });
 
       // now we have to wait until the above query actually takes the necessary lock.
-      const lockQuery = "select count(*) from pg_locks join pg_class on pg_locks.relation = pg_class.oid where pg_class.relname = 'form_defs' and pg_locks.granted = true;";
-      const locked = () => container.db.raw(lockQuery).then(({ rows }) => rows[0].count > 0);
+      const lockQuery = sql`select count(*) from pg_locks join pg_class on pg_locks.relation = pg_class.oid where pg_class.relname = 'form_defs' and pg_locks.granted = true;`;
+      const locked = () => container.oneFirst(lockQuery).then((count) => Number(count) > 0);
       const wait = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
       const check = () => locked().then((isLocked) => isLocked
         ? true
@@ -50,12 +52,12 @@ describe.skip('managed encryption', () => {
 
       // now that we are sure the lock has been taken, try to create the form.
       let error;
-      const formReq = container.transacting(({ Project, FormPartial }) =>
+      const formReq = container.transacting(({ Projects, Forms }) =>
         Promise.all([
-          Project.getById(1).then((o) => o.get()),
-          FormPartial.fromXml(testData.forms.simple2)
+          Projects.getById(1).then((o) => o.get()),
+          Form.fromXml(testData.forms.simple2)
         ])
-          .then(([ project, partial ]) => partial.with({ projectId: project.id }).createNew())
+          .then(([ project, partial ]) => Forms.createNew(partial, project))
           .catch((err) => { error = err; })
       );
 
@@ -73,7 +75,7 @@ describe.skip('managed encryption', () => {
     const { makePubkey, encryptInstance } = require(appRoot + '/test/util/crypto-odk');
     const { generateManagedKey, stripPemEnvelope } = require(appRoot + '/lib/util/crypto');
 
-    it('should give a decryptor for the given passphrases', testService((service, { all, Key, SubmissionPartial, db }) =>
+    it('should give a decryptor for the given passphrases', testService((service, { Keys }) =>
       Promise.all([ 'alpha', 'beta' ].map(generateManagedKey))
         .then((pairs) =>
           mapSequential(
@@ -83,9 +85,9 @@ describe.skip('managed encryption', () => {
               managed: true
             }))
               .concat([ new Key({ public: 'test' }) ]),
-            (k) => k.create()
+            Keys.create
           )
-          .then((keys) => Key.getDecryptor({ [keys[0].id]: 'alpha', [keys[1].id]: 'beta', [keys[2].id]: 'charlie' })
+          .then((keys) => Keys.getDecryptor({ [keys[0].id]: 'alpha', [keys[1].id]: 'beta', [keys[2].id]: 'charlie' })
             .then((decryptor) => new Promise((done) => {
               // create alpha decrypt stream:
               const encAlpha = encryptInstance(makePubkey(keys[0].public), '', testData.instances.simple.one);
@@ -452,7 +454,7 @@ describe.skip('managed encryption', () => {
               })))))));
 
     // we have to sort of cheat at this to get two different managed keys in effect.
-    it('should handle mixed[managedA/managedB] formdata (decrypting)', testService((service, { Project, FormPartial }) =>
+    it('should handle mixed[managedA/managedB] formdata (decrypting)', testService((service, { Forms, Projects }) =>
       service.login('alice', (asAlice) =>
         // first enable managed encryption and submit submission one.
         asAlice.post('/v1/projects/1/key')
@@ -466,19 +468,19 @@ describe.skip('managed encryption', () => {
           // here's where we have to cheat:
           // 1 manually reset the project keyId to null
           // 2 manually force the formdef to be plaintext again
-          .then(() => Project.getById(1).then((o) => o.get()))
+          .then(() => Projects.getById(1).then((o) => o.get()))
           .then((project) => Promise.all([
-            project.with({ keyId: null }).update(),
+            Projects.update(project, { keyId: null }),
             Promise.all([
-              project.getFormByXmlFormId('simple').then((o) => o.get()),
-              FormPartial.fromXml(testData.forms.simple.replace('id="simple"', 'id="simple" version="two"'))
+              Forms.getByProjectAndXmlFormId(1, 'simple').then((o) => o.get()),
+              Form.fromXml(testData.forms.simple.replace('id="simple"', 'id="simple" version="two"'))
             ])
-              .then(([ form, partial ]) => partial.createVersion(form, true))
+              .then(([ form, partial ]) => Forms.createVersion(partial, form, true))
           ]))
 
           // now we can set managed encryption again and submit our last two submissions.
-          .then(() => Project.getById(1).then((o) => o.get()))
-          .then((project) => project.setManagedEncryption('superdupersecret'))
+          .then(() => Projects.getById(1).then((o) => o.get()))
+          .then((project) => Projects.setManagedEncryption(project, 'superdupersecret'))
           .then(() => asAlice.get('/v1/projects/1/forms/simple.xml')
             .expect(200)
             .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))

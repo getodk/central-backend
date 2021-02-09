@@ -1,5 +1,6 @@
 const should = require('should');
 const appRoot = require('app-root-path');
+const { sql } = require('slonik');
 const { testContainerFullTrx } = require(appRoot + '/test/integration/setup');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const testData = require('../../data/xml');
@@ -39,9 +40,9 @@ describe('transaction integration', () => {
 // resolves in ms ms
 const sometime = (ms) => new Promise((done) => setTimeout(done, ms));
 
-describe.skip('enketo worker transaction', () => {
+describe('enketo worker transaction', () => {
   it('should not allow a write conflict @slow', testContainerFullTrx(async (container) => {
-    const { Audits, Forms } = container;
+    const { Audits, Forms, oneFirst } = container;
 
     const simple = (await Forms.getByProjectAndXmlFormId(1, 'simple')).get();
     await Audits.log(null, 'form.update.publish', simple);
@@ -51,7 +52,7 @@ describe.skip('enketo worker transaction', () => {
     const workerTicket = exhaust(container);
     while (flush == null) await sometime(50);
 
-    const updateTicket = simple.with({ state: 'closed' }).update();
+    const updateTicket = Forms.update(simple, { state: 'closed' });
 
     // now we wait to see if we have deadlocked, which we want.
     await sometime(400);
@@ -61,9 +62,10 @@ describe.skip('enketo worker transaction', () => {
     // now finally resolve the locks.
     flush();
     await workerTicket;
+    await sometime(100); // TODO: oh NO why is this necessary now?
 
-    (await Forms.getByProjectAndXmlFormId(1, 'simple')).get()
-      .state.should.equal('closed');
+    (await oneFirst(sql`select state from forms where "projectId"=1 and "xmlFormId"='simple'`))
+      .should.equal('closed');
   }));
 });
 
