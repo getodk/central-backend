@@ -24,8 +24,8 @@ describe('util/db', () => {
 
     it('should optionally unjoin optional data', () => {
       const unjoin = unjoiner(T, Option.of(U));
-      unjoin.fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y","a" as "a","b" as "b"`);
-      unjoin({ 'frames!x': 3, 'frames!y': 4, a: 5 })
+      unjoin.fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y","z" as "z"`);
+      unjoin({ 'frames!x': 3, 'frames!y': 4, z: 5 })
         .should.eql(new T({ x: 3, y: 4 }, { extra: Option.of(new U({ z: 5 })) }));
       unjoin({ 'frames!x': 3, 'frames!y': 4 })
         .should.eql(new T({ x: 3, y: 4 }, { extra: Option.none() }));
@@ -38,6 +38,7 @@ describe('util/db', () => {
     const U = Frame.define(into('extra'), 'a', 'b');
     function noop() { return Promise.resolve({}); };
     noop.map = (f) => (x) => x;
+
     it('should provide the appropriate arguments when not extended', () => {
       let run = false;
       extender(T)(U)((fields, extend, options, x, y, z) => {
@@ -76,6 +77,106 @@ describe('util/db', () => {
       run.map = (f) => (x) => f(x);
       return extender(T)(U)(noop)(run, QueryOptions.extended)
         .then((result) => result.should.eql(new T({ x: 3, y: 4 }, { extra: new U({ a: 5 }) })));
+    });
+  });
+
+  describe('insert', () => {
+    const { insert } = util;
+    const T = Frame.define(table('frames'));
+
+    it('should formulate a basic response based on data', () => {
+      insert(new T({ x: 2, y: 3 })).should.eql(sql`
+insert into frames ("x","y")
+values (${2},${3})
+returning *`);
+    });
+
+    it('should deal with strange data input types', () => {
+      insert(new T({ x: { test: true }, y: undefined, z: new Date('2000-01-01') }))
+        .should.eql(sql`
+insert into frames ("x","y","z")
+values (${'{"test":true}'},${null},${'2000-01-01T00:00:00.000Z'})
+returning *`);
+    });
+
+    it('should automatically insert into createdAt if expected', () => {
+      const U = Frame.define(table('cats'), 'createdAt', 'updatedAt');
+      insert(new U()).should.eql(sql`
+insert into cats ("createdAt")
+values (${sql`clock_timestamp()`})
+returning *`);
+    });
+  });
+
+  describe('insertMany', () => {
+    const { insertMany } = util;
+    const T = Frame.define(table('dogs'), 'x', 'y');
+
+    it('should do nothing if given no data', () => {
+      insertMany([]).should.eql(sql`select true`);
+    });
+
+    it('should insert all data', () => {
+      insertMany([ new T({ x: 2 }), new T({ y: 3 }) ]).should.eql(sql`
+insert into dogs ("x","y")
+values (${2},${null}),(${null},${3})`);
+    });
+
+    it('should insert createdAt and strange values', () => {
+      const U = Frame.define(table('dogs'), 'x', 'createdAt');
+      insertMany([ new U({ x: new Date('2000-01-01') }), new U() ]).should.eql(sql`
+insert into dogs ("x","createdAt")
+values (${'2000-01-01T00:00:00.000Z'},${sql`clock_timestamp()`}),(${null},${sql`clock_timestamp()`})`);
+    });
+  });
+
+  describe('updater', () => {
+    const { updater } = util;
+    const T = Frame.define(table('rabbits'));
+
+    it('should update the given data', () => {
+      updater(new T({ id: 1, x: 2 }), new T({ y: 3 })).should.eql(sql`
+update rabbits
+set "y"=${3}
+
+where ${sql.identifier([ 'id' ])}=${1}
+returning *`);
+    });
+
+    it('should set updatedAt if present', () => {
+      const U = Frame.define(table('rabbits'), 'createdAt', 'updatedAt');
+      updater(new U({ id: 1, x: 2 }), new U({ y: 3 })).should.eql(sql`
+update rabbits
+set "y"=${3}
+,"updatedAt"=clock_timestamp()
+where "id"=${1}
+returning *`);
+    });
+
+    it('should use a different id key if given', () => {
+      updater(new T({ otherId: 0, x: 2 }), new T({ y: 3 }), 'otherId').should.eql(sql`
+update rabbits
+set "y"=${3}
+
+where "otherId"=${0}
+returning *`);
+    });
+  });
+
+  describe('equals', () => {
+    const { equals } = util;
+    it('should do nothing if given no conditions', () => {
+      equals({}).should.eql(sql`true`);
+    });
+
+    it('should match k/v pairs', () => {
+      equals({ x: 2, y: 3 })
+        .should.eql(sql.join([ sql`"x"=${2}`, sql`"y"=${3}` ], sql` and `));
+    });
+
+    it('should split compound keys', () => {
+      equals({ 'x.y': 2 })
+        .should.eql(sql.join([ sql`"x"."y"=${2}` ], sql` and `));
     });
   });
 
