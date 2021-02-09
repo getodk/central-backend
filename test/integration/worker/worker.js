@@ -108,7 +108,7 @@ describe('worker', () => {
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
       const event = (await Audits.getLatestByAction('submission.attachment.update')).get();
 
-      const jobMap = { 'submission.attachment.update': [ () => Promise.reject({ uh: tap('oh') }) ] };
+      const jobMap = { 'submission.attachment.update': [ () => Promise.reject({ uh: 'oh' }) ] };
       await promisify(runner(container, jobMap))(event);
       const after = (await Audits.getLatestByAction('submission.attachment.update')).get();
       should.not.exist(after.claimed);

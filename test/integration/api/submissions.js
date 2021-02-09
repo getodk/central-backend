@@ -270,7 +270,6 @@ describe('api: /submission', () => {
               asAlice.get('/v1/users/current').then(({ body }) => body)
             ]))
             .then(([ audits, alice ]) => {
-              console.log(audits);
               audits.length.should.equal(1);
               audits[0].should.be.an.Audit();
               audits[0].actorId.should.equal(alice.id);
@@ -1099,8 +1098,7 @@ describe('api: /forms/:id/submissions', () => {
             .set('X-OpenRosa-Version', '1.0')
             .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
             .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
-            .then(({ text }) => console.log(text)))
-            //.expect(201))
+            .expect(201))
           .then(() => asAlice.post('/v1/projects/1/submission')
             .set('X-OpenRosa-Version', '1.0')
             .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
