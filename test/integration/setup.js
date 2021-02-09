@@ -22,7 +22,7 @@ const db = slonikPool(config.get('test.database'));
 
 // set up our mailer.
 const env = config.get('default.env');
-const { mailer } = require(appRoot + '/lib/outbound/mail');
+const { mailer } = require(appRoot + '/lib/external/mail');
 const mailConfig = config.get('test.email');
 const mail = mailer(merge(mailConfig, env));
 if (mailConfig.transport !== 'json')
