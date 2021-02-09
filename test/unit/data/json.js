@@ -14,17 +14,12 @@ const __system = {
 };
 const mockSubmission = (instanceId, xml) => ({
   xml,
-  submission: {
-    instanceId,
-    createdAt: '2017-09-20T17:10:43Z',
-  },
-  submitter: {
-    id: 5,
-    displayName: 'Alice'
-  },
-  attachments: {
-    present: 0,
-    expected: 0
+  instanceId,
+  createdAt: '2017-09-20T17:10:43Z',
+  def: {},
+  aux: {
+    submitter: { id: 5, displayName: 'Alice' },
+    attachment: { present: 0, expected: 0 }
   }
 });
 
@@ -60,7 +55,7 @@ describe('submissionToOData', () => {
 
   it('should not crash if no submitter exists', () => {
     const submission = mockSubmission('test', testData.instances.simple.one);
-    submission.submitter = {}; // wipe it back out.
+    submission.aux.submitter = {}; // wipe it back out.
     return submissionToOData([], 'Submissions', submission).then((result) => {
       result.should.eql([{
         __id: 'test',
@@ -409,7 +404,7 @@ describe('submissionToOData', () => {
 
   it('should extract subtable rows within repeats', () =>
     fieldsFor(testData.forms.withrepeat).then((fields) => {
-      const row = { submission: { instanceId: 'two' }, xml: testData.instances.withrepeat.two };
+      const row = { instanceId: 'two', xml: testData.instances.withrepeat.two, def: {}, aux: { encryption: {}, attachment: {} } };
       return submissionToOData(fields, 'Submissions.children.child', row).then((result) => {
         result.should.eql([{
           '__Submissions-id': 'two',
@@ -427,7 +422,7 @@ describe('submissionToOData', () => {
 
   it('should return navigation links to repeats within a subtable result set', () =>
     fieldsFor(testData.forms.doubleRepeat).then((fields) => {
-      const row = { submission: { instanceId: 'double' }, xml: testData.instances.doubleRepeat.double };
+      const row = { instanceId: 'double', xml: testData.instances.doubleRepeat.double, def: {}, aux: { encryption: {}, attachment: {} } };
       return submissionToOData(fields, 'Submissions.children.child', row).then((result) => {
         result.should.eql([{
           __id: '46ebf42ee83ddec5028c42b2c054402d1e700208',
@@ -453,7 +448,7 @@ describe('submissionToOData', () => {
 
   it('should return second-order subtable results', () =>
     fieldsFor(testData.forms.doubleRepeat).then((fields) => {
-      const row = { submission: { instanceId: 'double' }, xml: testData.instances.doubleRepeat.double };
+      const row = { instanceId: 'double', xml: testData.instances.doubleRepeat.double, def: {}, aux: { encryption: {}, attachment: {} } };
       return submissionToOData(fields, 'Submissions.children.child.toys.toy', row).then((result) => {
         result.should.eql([{
           __id: 'a9058d7b2ed9557205ae53f5b1dc4224043eca2a',

@@ -7,7 +7,7 @@ const testData = require(appRoot + '/test/data/xml');
 
 // Helpers to deal with repeated system metadata generation.
 const submitter = { id: 5, displayName: 'Alice' };
-const attachments = { present: 1, expected: 2 };
+const attachment = { present: 1, expected: 2 };
 const __system = {
   submissionDate: '2017-09-20T17:10:43Z',
   submitterId: submitter.id.toString(),
@@ -18,12 +18,10 @@ const __system = {
 };
 const mockSubmission = (instanceId, xml) => ({
   xml,
-  submission: {
-    instanceId,
-    createdAt: __system.submissionDate
-  },
-  submitter,
-  attachments
+  instanceId,
+  createdAt: __system.submissionDate,
+  def: {},
+  aux: { submitter, attachment, encryption: {} }
 });
 
 describe('odata message composition', () => {
@@ -414,7 +412,7 @@ describe('odata message composition', () => {
           })));
       });
 
-      const instances = (count) => (new Array(count)).fill({ xml: '<data/>', submission: {}, submitter, attachments });
+      const instances = (count) => (new Array(count)).fill({ xml: '<data/>', def: {}, aux: { submitter, attachment } });
       it('should provide no nextUrl if the final row is accounted for', (done) => {
         const query = { $top: '3', $skip: '7' };
         const inRows = streamTest.fromObjects(instances(10));

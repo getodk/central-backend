@@ -1,5 +1,6 @@
 const should = require('should');
 const { testService } = require('../setup');
+const { sql } = require('slonik');
 const testData = require('../../data/xml');
 
 // NOTE: for the data output tests, we do not attempt to extensively determine if every
@@ -8,7 +9,7 @@ const testData = require('../../data/xml');
 // that we have plumbed the relevant input to those layers correctly, and have applied
 // the appropriate higher-level logics (notfound, notauthorized, etc.)
 
-describe.skip('api: /forms/:id.svc', () => {
+describe('api: /forms/:id.svc', () => {
   describe('GET', () => {
     it('should reject unless the form exists', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -528,13 +529,13 @@ describe.skip('api: /forms/:id.svc', () => {
                 });
               }))))));
 
-    it('should return submissionDate-filtered toplevel rows if requested', testService((service, { db }) =>
+    it('should return submissionDate-filtered toplevel rows if requested', testService((service, { run }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
           .send(testData.instances.withrepeat.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => db.update({ createdAt: new Date('2010-06-01') }).into('submissions'))
+          .then(() => run(sql`update submissions set "createdAt"='2010-06-01T00:00:00.000Z'`))
           .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
             .send(testData.instances.withrepeat.two)
             .set('Content-Type', 'text/xml')
@@ -561,13 +562,13 @@ describe.skip('api: /forms/:id.svc', () => {
               });
             })))));
 
-    it('should return submissionDate-filtered toplevel rows if requested', testService((service, { db }) =>
+    it('should return submissionDate-filtered toplevel rows if requested', testService((service, { run }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
           .send(testData.instances.withrepeat.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => db.update({ createdAt: new Date('2010-06-01') }).into('submissions'))
+          .then(() => run(sql`update submissions set "createdAt"='2010-06-01T00:00:00.000Z'`))
           .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
             .send(testData.instances.withrepeat.two)
             .set('Content-Type', 'text/xml')
