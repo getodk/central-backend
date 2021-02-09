@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const { construct } = require('ramda');
-const { submissionToOData } = require(appRoot + '/lib/data/json');
+const { submissionToOData } = require(appRoot + '/lib/data/odata');
 const { MockField, fieldsFor } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
