@@ -1,13 +1,15 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 const uuid = require('uuid/v4');
+const { sql } = require('slonik');
 const { createReadStream, readFileSync } = require('fs');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { zipStreamToFiles } = require('../../util/zip');
+const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
-describe.skip('api: /submission', () => {
+describe('api: /submission', () => {
   describe('HEAD', () => {
     it('should return a 204 with no content', testService((service) =>
       service.head('/v1/projects/1/submission')
@@ -153,7 +155,7 @@ describe.skip('api: /submission', () => {
               body.instanceName.should.equal('custom name');
             })))));*/
 
-    it('should accept a submission for an old form version', testService((service, { simply, SubmissionDef, FormDef }) =>
+    it('should accept a submission for an old form version', testService((service, { Submissions, Forms, one }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/draft')
           .expect(200)
@@ -171,15 +173,12 @@ describe.skip('api: /submission', () => {
             .expect(200))
           // the submission worked, that's good. the rest of this checks that it went
           // to the correct place.
-          .then(() => SubmissionDef.getCurrentByIds(1, 'simple', 'one', false))
+          .then(() => Submissions.getCurrentDefByIds(1, 'simple', 'one', false))
           .then((o) => o.get())
-          .then(({ formDefId }) => simply.getOneWhere('form_defs', { id: formDefId }, FormDef))
-          .then((o) => o.get())
-          .then((formDef) => {
-            formDef.version.should.equal('two');
-          }))));
+          .then(({ formDefId }) => one(sql`select * from form_defs where id=${formDefId}`))
+          .then((formDef) => { formDef.version.should.equal('two'); }))));
 
-    it('should store the correct formdef and actor ids', testService((service, { db }) =>
+    it('should store the correct formdef and actor ids', testService((service, { all, oneFirst }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
@@ -187,14 +186,14 @@ describe.skip('api: /submission', () => {
           .expect(201)
           .then(() => Promise.all([
             asAlice.get('/v1/users/current').then(({ body }) => body.id),
-            db.select('formDefId', 'submitterId').from('submission_defs')
+            all(sql`select "formDefId", "submitterId" from submission_defs`)
           ]))
           .then(([ aliceId, submissions ]) => {
             submissions.length.should.equal(1);
             submissions[0].submitterId.should.equal(aliceId);
-            return db.select('xml').from('form_defs').where({ id: submissions[0].formDefId })
-              .then(([ def ]) => {
-                def.xml.should.equal(testData.forms.simple);
+            return oneFirst(sql`select xml from form_defs where id=${submissions[0].formDefId}`)
+              .then((xml) => {
+                xml.should.equal(testData.forms.simple);
               });
           }))));
 
@@ -271,6 +270,7 @@ describe.skip('api: /submission', () => {
               asAlice.get('/v1/users/current').then(({ body }) => body)
             ]))
             .then(([ audits, alice ]) => {
+              console.log(audits);
               audits.length.should.equal(1);
               audits[0].should.be.an.Audit();
               audits[0].actorId.should.equal(alice.id);
@@ -598,7 +598,7 @@ describe.skip('api: /submission', () => {
   });
 });
 
-describe.skip('api: /forms/:id/submissions', () => {
+describe('api: /forms/:id/submissions', () => {
   describe('POST', () => {
     it('should return notfound if the form does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -679,7 +679,7 @@ describe.skip('api: /forms/:id/submissions', () => {
             body.submitterId.should.equal(5);
           }))));
 
-    it('should accept a submission for an old form version', testService((service, { simply, SubmissionDef, FormDef }) =>
+    it('should accept a submission for an old form version', testService((service, { Submissions, one }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/draft')
           .expect(200)
@@ -697,13 +697,10 @@ describe.skip('api: /forms/:id/submissions', () => {
             .expect(200))
           // the submission worked, that's good. the rest of this checks that it went
           // to the correct place.
-          .then(() => SubmissionDef.getCurrentByIds(1, 'simple', 'one', false))
+          .then(() => Submissions.getCurrentDefByIds(1, 'simple', 'one', false))
           .then((o) => o.get())
-          .then(({ formDefId }) => simply.getOneWhere('form_defs', { id: formDefId }, FormDef))
-          .then((o) => o.get())
-          .then((formDef) => {
-            formDef.version.should.equal('two');
-          }))));
+          .then(({ formDefId }) => one(sql`select * from form_defs where id=${formDefId}`))
+          .then((formDef) => { formDef.version.should.equal('two'); }))));
 
     it('should create expected attachments', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -724,7 +721,7 @@ describe.skip('api: /forms/:id/submissions', () => {
                 ]);
               }))))));
 
-    it('should store the correct formdef and actor ids', testService((service, { db }) =>
+    it('should store the correct formdef and actor ids', testService((service, { all, oneFirst }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
@@ -732,15 +729,13 @@ describe.skip('api: /forms/:id/submissions', () => {
           .expect(200)
           .then(() => Promise.all([
             asAlice.get('/v1/users/current').then(({ body }) => body.id),
-            db.select('formDefId', 'submitterId').from('submission_defs')
+            all(sql`select "formDefId", "submitterId" from submission_defs`)
           ]))
           .then(([ aliceId, submissions ]) => {
             submissions.length.should.equal(1);
             submissions[0].submitterId.should.equal(aliceId);
-            return db.select('xml').from('form_defs').where({ id: submissions[0].formDefId })
-              .then(([ def ]) => {
-                def.xml.should.equal(testData.forms.simple);
-              });
+            return oneFirst(sql`select xml from form_defs where id=${submissions[0].formDefId}`)
+              .then((xml) => { xml.should.equal(testData.forms.simple); });
           }))));
 
     it('should accept encrypted submissions, with attachments', testService((service) =>
@@ -941,14 +936,14 @@ describe.skip('api: /forms/:id/submissions', () => {
                 done();
               })))))));
 
-    it('should return a submissionDate-filtered zipfile with the relevant data', testService((service, { db }) =>
+    it('should return a submissionDate-filtered zipfile with the relevant data', testService((service, { run }) =>
       service.login('alice', (asAlice) =>
         service.login('bob', (asBob) =>
           asAlice.post('/v1/projects/1/forms/simple/submissions')
             .send(testData.instances.simple.one)
             .set('Content-Type', 'text/xml')
             .expect(200)
-            .then(() => db.update({ createdAt: new Date('2010-06-01') }).into('submissions'))
+            .then(() => run(sql`update submissions set "createdAt"='2010-06-01'`))
             .then(() => asBob.post('/v1/projects/1/forms/simple/submissions')
               .send(testData.instances.simple.two)
               .set('Content-Type', 'text/xml')
@@ -1104,7 +1099,8 @@ describe.skip('api: /forms/:id/submissions', () => {
             .set('X-OpenRosa-Version', '1.0')
             .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
             .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
-            .expect(201))
+            .then(({ text }) => console.log(text)))
+            //.expect(201))
           .then(() => asAlice.post('/v1/projects/1/submission')
             .set('X-OpenRosa-Version', '1.0')
             .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
@@ -1133,7 +1129,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
               done();
             })))
-          .then(() => container.simply.countWhere('client_audits')
+          .then(() => container.oneFirst(sql`select count(*) from client_audits`)
             .then((count) => { count.should.equal(8); })))));
 
     it('should return adhoc-processed consolidated client audit log attachments', testService((service, container) =>
@@ -1635,7 +1631,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               body[0].public.should.equal('MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYh7bSui/0xppQ+J3i5xghfao+559Rqg9X0xNbdMEsW35CzYUfmC8sOzeeUiE4pG7HIEUmiJal+mo70UMDUlywXj9z053n0g6MmtLlUyBw0ZGhEZWHsfBxPQixdzY/c5i7sh0dFzWVBZ7UrqBc2qjRFUYxeXqHsAxSPClTH1nW47Mr2h4juBLC7tBNZA3biZA/XTPt//hAuzv1d6MGiF3vQJXvFTNdfsh6Ckq4KXUsAv+07cLtON4KjrKhqsVNNGbFssTUHVL4A9N3gsuRGt329LHOKBxQUGEnhMM2MEtvk4kaVQrgCqpk1pMU/4HlFtRjOoKdAIuzzxIl56gNdRUQIDAQAB');
             })))));
 
-    it('should return multiple self-managed keys if they are used', testService((service, { db, Project, FormDef, FormPartial }) =>
+    it('should return multiple self-managed keys if they are used', testService((service, { Forms }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.encrypted)
@@ -1646,13 +1642,12 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .set('Content-Type', 'text/xml')
             .expect(200))
           .then(() => Promise.all([
-            Project.getById(1).then((o) => o.get())
-              .then((project) => project.getFormByXmlFormId('encrypted')).then((o) => o.get()),
-            FormPartial.fromXml(testData.forms.encrypted
+            Forms.getByProjectAndXmlFormId(1, 'encrypted').then((o) => o.get()),
+            Form.fromXml(testData.forms.encrypted
               .replace(/PublicKey="[a-z0-9+\/]+"/i, 'PublicKey="keytwo"')
               .replace('working3', 'working4'))
           ]))
-          .then(([ form, partial ]) => partial.createVersion(form, true))
+          .then(([ form, partial ]) => Forms.createVersion(partial, form, true))
           .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
             .send(testData.instances.encrypted.two
               .replace(/EncryptedKey.*EncryptedKey/, 'EncryptedKey>keytwo</base64EncryptedKey')
@@ -1669,7 +1664,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               body[1].public.should.equal('MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYh7bSui/0xppQ+J3i5xghfao+559Rqg9X0xNbdMEsW35CzYUfmC8sOzeeUiE4pG7HIEUmiJal+mo70UMDUlywXj9z053n0g6MmtLlUyBw0ZGhEZWHsfBxPQixdzY/c5i7sh0dFzWVBZ7UrqBc2qjRFUYxeXqHsAxSPClTH1nW47Mr2h4juBLC7tBNZA3biZA/XTPt//hAuzv1d6MGiF3vQJXvFTNdfsh6Ckq4KXUsAv+07cLtON4KjrKhqsVNNGbFssTUHVL4A9N3gsuRGt329LHOKBxQUGEnhMM2MEtvk4kaVQrgCqpk1pMU/4HlFtRjOoKdAIuzzxIl56gNdRUQIDAQAB');
             })))));
 
-    it('should not return unused keys', testService((service, { Project, FormDef, FormPartial }) =>
+    it('should not return unused keys', testService((service, { Forms }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.encrypted)
@@ -1680,13 +1675,12 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .set('Content-Type', 'text/xml')
             .expect(200))
           .then(() => Promise.all([
-            Project.getById(1).then((o) => o.get())
-              .then((project) => project.getFormByXmlFormId('encrypted')).then((o) => o.get()),
-            FormPartial.fromXml(testData.forms.encrypted
+            Forms.getByProjectAndXmlFormId(1, 'encrypted').then((o) => o.get()),
+            Form.fromXml(testData.forms.encrypted
               .replace(/PublicKey="[a-z0-9+\/]+"/i, 'PublicKey="keytwo"')
               .replace('working3', 'working4'))
           ]))
-          .then(([ form, partial ]) => partial.createVersion(form))
+          .then(([ form, partial ]) => Forms.createVersion(partial, form))
           .then(() => asAlice.get('/v1/projects/1/forms/encrypted/submissions/keys')
             .expect(200)
             .then(({ body }) => {
@@ -2273,7 +2267,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                   body.toString().should.equal('testvideo');
                 })))))));
 
-    it('should log an audit entry about initial attachment', testService((service, { Audit, Project, Submission, SubmissionAttachment, SubmissionDef }) =>
+    it('should log an audit entry about initial attachment', testService((service, { Audits, Forms, Submissions, SubmissionAttachments }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -2287,18 +2281,17 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .set('Content-Type', 'video/mp4')
             .send('testvideo')
             .expect(200))
-          .then(() => Project.getById(1))
-          .then((project) => project.get().getFormByXmlFormId('binaryType'))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
           .then((o) => o.get())
-          .then((form) => Submission.getById(form.id, 'both', false)
+          .then((form) => Submissions.getById(form.id, 'both', false)
             .then((o) => o.get())
-            .then((submission) => submission.getCurrentVersion()
+            .then((submission) => Submissions.getCurrentDefBySubmissionId(submission.id)
               .then((o) => o.get())
-              .then((def) => SubmissionAttachment.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4')
+              .then((def) => SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4')
                 .then((o) => o.get())
                 .then((attachment) => Promise.all([
                   asAlice.get('/v1/users/current').expect(200),
-                  Audit.getLatestWhere({ action: 'submission.attachment.update' })
+                  Audits.getLatestByAction('submission.attachment.update')
                 ])
                   .then(([ user, maybeLog ]) => {
                     maybeLog.isDefined().should.equal(true);
@@ -2315,7 +2308,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                     });
                   }))))))));
 
-    it('should log an audit entry about reattachment', testService((service, { Audit, Project, Submission, SubmissionAttachment, SubmissionDef }) =>
+    it('should log an audit entry about reattachment', testService((service, { Audits, Forms, Submissions, SubmissionAttachments }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -2329,20 +2322,20 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .set('Content-Type', 'video/mp4')
             .send('testvideo')
             .expect(200))
-          .then(() => Project.getById(1))
-          .then((project) => project.get().getFormByXmlFormId('binaryType'))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
           .then((o) => o.get())
-          .then((form) => Submission.getById(form.id, 'both', false).then((o) => o.get())
-            .then((submission) => submission.getCurrentVersion().then((o) => o.get())
-              .then((def) => SubmissionAttachment.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4').then((o) => o.get())
+          .then((form) => Submissions.getById(form.id, 'both', false).then((o) => o.get())
+            .then((submission) => Submissions.getCurrentDefBySubmissionId(submission.id)
+              .then((o) => o.get())
+              .then((def) => SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4').then((o) => o.get())
                 .then((oldAttachment) => asAlice.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
                   .set('Content-Type', 'video/mp4')
                   .send('testvideo2')
                   .expect(200)
                   .then((attachment) => Promise.all([
                     asAlice.get('/v1/users/current').expect(200),
-                    SubmissionAttachment.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4').then((o) => o.get()),
-                    Audit.getLatestWhere({ action: 'submission.attachment.update' })
+                    SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4').then((o) => o.get()),
+                    Audits.getLatestByAction('submission.attachment.update')
                   ])
                     .then(([ user, newAttachment, maybeLog ]) => {
                       maybeLog.isDefined().should.equal(true);
@@ -2411,7 +2404,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                       ]);
                     })))))))));
 
-    it('should log an audit entry about the deletion', testService((service, { Audit, Project, Submission, SubmissionAttachment, SubmissionDef }) =>
+    it('should log an audit entry about the deletion', testService((service, { Audits, Forms, Submissions, SubmissionAttachments }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -2425,20 +2418,19 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .set('Content-Type', 'video/mp4')
             .send('testvideo')
             .expect(200))
-          .then(() => Project.getById(1))
-          .then((project) => project.get().getFormByXmlFormId('binaryType'))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
           .then((o) => o.get())
-          .then((form) => Submission.getById(form.id, 'both', false)
+          .then((form) => Submissions.getById(form.id, 'both', false)
             .then((o) => o.get())
-            .then((submission) => submission.getCurrentVersion()
+            .then((submission) => Submissions.getCurrentDefBySubmissionId(submission.id)
               .then((o) => o.get())
-              .then((def) => SubmissionAttachment.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4')
+              .then((def) => SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4')
                 .then((o) => o.get())
                 .then((attachment) => asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
                   .expect(200)
                   .then(() => Promise.all([
                     asAlice.get('/v1/users/current').expect(200),
-                    Audit.getLatestWhere({ action: 'submission.attachment.update' })
+                    Audits.getLatestByAction('submission.attachment.update')
                   ])
                     .then(([ user, maybeLog ]) => {
                       maybeLog.isDefined().should.equal(true);

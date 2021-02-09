@@ -53,7 +53,7 @@ describe('Submission', () => {
         partial.xmlFormId.should.equal('mycoolform');
         partial.instanceId.should.equal('myinstance');
         partial.def.version.should.equal('coolest');
-        partial.def.xml.should.equal(xml);
+        partial.xml.should.equal(xml);
       });
     });
 
@@ -76,7 +76,7 @@ describe('Submission', () => {
       return Submission.fromXml(xml).then((partial) => {
         partial.xmlFormId.should.equal('mycoolform');
         partial.instanceId.should.equal('myinstance');
-        partial.def.xml.should.equal(xml);
+        partial.xml.should.equal(xml);
       });
     });
 
