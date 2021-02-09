@@ -32,12 +32,6 @@ describe('util/db', () => {
         .args.should.eql({ b: 2, c: 3, f: 9 });
     });
 
-    it('should merge explicit args on withArgs', () => {
-      (new QueryOptions({ args: { b: 4, f: 9 } }))
-        .withArgs({ b: 7, d: 11 })
-        .args.should.eql({ b: 7, d: 11, f: 9 });
-    });
-
     describe('related functions', () => {
       it('should run the handler only if the arg is present', () => {
         let ran = false;

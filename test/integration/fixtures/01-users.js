@@ -4,10 +4,10 @@ const { mapSequential } = require(appRoot + '/lib/util/promise');
 
 module.exports = ({ Assignments, Users, Projects, bcrypt }) => {
   const users = [
-    { type: 'user', email: 'alice@opendatakit.org', password: 'alice', displayName: 'Alice' },
-    { type: 'user', email: 'bob@opendatakit.org', password: 'bob', displayName: 'Bob' },
-    { type: 'user', email: 'chelsea@opendatakit.org', password: 'chelsea', displayName: 'Chelsea' } ]
-    .map((data) => User.fromData(data));
+    new User({ email: 'alice@opendatakit.org', password: 'alice' }, { actor: new Actor({ type: 'user', displayName: 'Alice' }) }),
+    new User({ email: 'bob@opendatakit.org', password: 'bob' }, { actor: new Actor({ type: 'user', displayName: 'Bob' }) }),
+    new User({ email: 'chelsea@opendatakit.org', password: 'chelsea' }, { actor: new Actor({ type: 'user', displayName: 'Chelsea' }) })
+  ];
 
   // hash the passwords, create our three test users, then add grant Alice and Bob their rights.
   const withPasswords = Promise.all(users.map((user) =>

@@ -23,7 +23,7 @@ describe('preprocessors', () => {
   });
   const mockUsers = (expectedEmail, password) => ({
     getByEmail: (email) => Promise.resolve((email === expectedEmail)
-      ? Option.of(User.fromData({ password, displayName: 'test' }))
+      ? Option.of(new User({ password }, { actor: new Actor({ displayName: 'test' }) }))
       : Option.none())
   });
 
