@@ -2,10 +2,10 @@ const appRoot = require('app-root-path');
 const should = require('should');
 const { sql } = require('slonik');
 const { toText } = require('streamtest').v2;
-const { testService, testContainerFullTrx } = require(appRoot + '/test/integration/setup');
+const { testService, testContainerFullTrx, testContainer } = require(appRoot + '/test/integration/setup');
 const testData = require(appRoot + '/test/data/xml');
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
-const { Form, Key } = require(appRoot + '/lib/model/frames');
+const { Form, Key, Submission } = require(appRoot + '/lib/model/frames');
 const { mapSequential } = require(appRoot + '/lib/util/promise');
 
 describe('managed encryption', () => {
@@ -111,6 +111,35 @@ describe('managed encryption', () => {
                 }));
               }));
             }))))));
+  });
+
+  describe('encrypted submission attachment parsing', () => {
+    it('should correctly record attachment file ordering', testContainer((container) => {
+      const xml = `<submission id="simple">
+  <meta><instanceID>uuid:ad4e5c2a-9637-4bdf-80f5-0157243f8fac</instanceId></meta>
+  <base64EncryptedKey>key</base64EncryptedKey>
+  <encryptedXmlFile>submission.xml.enc</encryptedXmlFile>
+  <media><file>zulu.file</file></media>
+  <media><file>alpha.file</file></media>
+  <media><file>bravo.file</file></media>
+</submission>`;
+
+      // hijack the run routine.
+      const results = [];
+      const db = { query: (x) => { results.push(x); return Promise.resolve(); } };
+      const hijacked = container.with({ db });
+
+      return Submission.fromXml(xml)
+        .then((partial) => hijacked.SubmissionAttachments.create(partial, {}, []))
+        .then(() => {
+          results[0].values.should.eql([
+            null, null, 'zulu.file', 0, null,
+            null, null, 'alpha.file', 1, null,
+            null, null, 'bravo.file', 2, null,
+            null, null, 'submission.xml.enc', 3, null
+            ]);
+        });
+    }));
   });
 
   describe('end-to-end', () => {
