@@ -17,7 +17,7 @@ const owner = config.get('test.database.user');
 after(() => { migrator.destroy(); });
 
 // slonik connection pool
-const { slonikPool } = require(appRoot + '/lib/util/slonik');
+const { slonikPool } = require(appRoot + '/lib/external/slonik');
 const db = slonikPool(config.get('test.database'));
 
 // set up our mailer.
@@ -32,12 +32,12 @@ if (mailConfig.transport !== 'json')
 const xlsform = require(appRoot + '/test/util/xlsform');
 
 // set up our google mock.
-const googler = require(appRoot + '/lib/outbound/google');
+const googler = require(appRoot + '/lib/external/google');
 const realGoogle = googler(config.get('default.external.google'));
 const google = require('../util/google-mock')(realGoogle);
 
 // set up our sentry mock.
-const Sentry = require(appRoot + '/lib/util/sentry').init();
+const Sentry = require(appRoot + '/lib/external/sentry').init();
 
 // set up our bcrypt module; possibly mock or not based on params.
 const _bcrypt = (process.env.BCRYPT === 'no')

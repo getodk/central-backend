@@ -2,7 +2,7 @@ const appRoot = require('app-root-path');
 const nock = require('nock');
 const querystring = require('querystring');
 const should = require('should');
-const enketo_ = require(appRoot + '/lib/util/enketo');
+const enketo_ = require(appRoot + '/lib/external/enketo');
 const Problem = require(appRoot + '/lib/util/problem');
 
 describe('util/enketo', () => {
