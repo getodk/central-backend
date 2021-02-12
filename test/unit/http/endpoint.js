@@ -623,8 +623,14 @@ describe('endpoints', () => {
           .should.be.rejectedWith(Problem, { problemCode: 501.1 });
       });
 
+      it('should reject requests for unsupported OData $expand values', () => {
+        const request = createRequest({ url: '/odata.svc?$expand=magic' });
+        return odataPreprocessor('json')(null, new Context(request), request)
+          .should.be.rejectedWith(Problem, { problemCode: 501.6 });
+      });
+
       it('should allow appropriate requests through', () => {
-        const request = createRequest({ url: '/odata.svc?$top=50', headers: { 'OData-MaxVersion': '4.0', accept: 'application/json' } });
+        const request = createRequest({ url: '/odata.svc?$top=50&$expand=*', headers: { 'OData-MaxVersion': '4.0', accept: 'application/json' } });
         should.not.exist(odataPreprocessor('json')(null, new Context(request), request));
       });
     });
