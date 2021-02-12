@@ -1872,7 +1872,7 @@ describe('api: /projects/:id/forms', () => {
             .then(() => asAlice.delete('/v1/projects/1/forms/simple2/draft')
               .expect(409))
               .then(({ body }) => {
-                body.code.should.equal(409.5);
+                body.code.should.equal(409.7);
               }))));
 
       it('should create a new draft token after delete', testService((service) =>

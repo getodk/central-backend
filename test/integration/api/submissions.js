@@ -463,6 +463,98 @@ describe('api: /submission', () => {
               .expect(200)
               .then(({ body }) => { body.toString('utf8').should.equal('this is test file one'); })
           ])))));
+
+    context('versioning', () => {
+      const withSimpleIds = (deprecatedId, instanceId) => testData.instances.simple.one
+        .replace('one</instance', `${instanceId}</instanceID><deprecatedID>${deprecatedId}</deprecated`);
+      const withBinaryIds = (deprecatedId, instanceId) => testData.instances.binaryType.both
+        .replace('both</instance', `${instanceId}</instanceID><deprecatedID>${deprecatedId}</deprecated`);
+
+      it('should reject if the deprecatedId is not known', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(withSimpleIds('unknown', 'two')), { filename: 'data.xml' })
+              .expect(404)))));
+
+      it('should reject if the deprecatedId is not current', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(withSimpleIds('one', 'two')), { filename: 'data.xml' })
+              .expect(201))
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(withSimpleIds('one', 'three')), { filename: 'data.xml' })
+              .expect(409)
+              .then(({ text }) => {
+                text.includes('but the copy you were editing (one) is now out of date').should.equal(true);
+              })))));
+
+      it('should reject if the new instanceId is a duplicate', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(withSimpleIds('one', 'two')), { filename: 'data.xml' })
+              .expect(201))
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(withSimpleIds('two', 'one')), { filename: 'data.xml' })
+              .expect(409)
+              .then(({ text }) => {
+                text.includes('A resource already exists with instanceId value(s) of one.').should.equal(true);
+              })))));
+
+      it('should accept the new submission', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(withSimpleIds('one', 'two').replace('Alice', 'Alyssa')), { filename: 'data.xml' })
+              .expect(201))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple.svc/Submissions')
+              .then(({ body }) => {
+                body.value[0].name.should.equal('Alyssa');
+              })))));
+
+      it('should replace attachments', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'text/xml')
+            .send(testData.forms.binaryType)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201)
+              .then(() => asAlice.post('/v1/projects/1/submission')
+                .set('X-OpenRosa-Version', '1.0')
+                .attach('xml_submission_file', Buffer.from(withBinaryIds('both', 'both2')), { filename: 'data.xml' })
+                .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+                .expect(201))
+              .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments')
+                .then(({ body }) => {
+                  body.should.eql([
+                    { name: 'here_is_file2.jpg', exists: false },
+                    { name: 'my_file1.mp4', exists: true }
+                  ]);
+                }))))));
+    });
   });
 
   describe('[draft] POST', () => {
