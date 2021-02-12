@@ -387,16 +387,16 @@ describe('submissionToOData', () => {
 
   it('should provide navigation links for repeats', () =>
     fieldsFor(testData.forms.withrepeat).then((fields) => {
-      const submission = mockSubmission('two', testData.instances.withrepeat.two);
+      const submission = mockSubmission('rtwo', testData.instances.withrepeat.two);
       return submissionToOData(fields, 'Submissions', submission).then((result) => {
         result.should.eql([{
-          __id: 'two',
+          __id: 'rtwo',
           __system,
-          meta: { instanceID: 'two' },
+          meta: { instanceID: 'rtwo' },
           name: 'Bob',
           age: 34,
           children: {
-            'child@odata.navigationLink': "Submissions('two')/children/child"
+            'child@odata.navigationLink': "Submissions('rtwo')/children/child"
           }
         }]);
       });

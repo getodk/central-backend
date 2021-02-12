@@ -343,7 +343,7 @@ describe('api: /submission', () => {
             .set('X-OpenRosa-Version', '1.0')
             .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.one), { filename: 'data.xml' })
             .expect(201)
-            .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/one/attachments')
+            .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/bone/attachments')
               .expect(200)
               .then(({ body }) => {
                 body.should.eql([{ name: 'my_file1.mp4', exists: false }]);
@@ -1428,9 +1428,9 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               rows.length.should.equal(5);
               rows[0].should.equal('SubmissionDate,meta-instanceID,name,age,children-child-name,children-child-age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status');
               // (need to drop the iso date)
-              rows[1].slice(24).should.equal(',three,Chelsea,38,,,three,5,Alice,0,0');
-              rows[2].slice(24).should.equal(',two,Bob,34,,,two,5,Alice,0,0');
-              rows[3].slice(24).should.equal(',one,Alice,30,,,one,5,Alice,0,0');
+              rows[1].slice(24).should.equal(',rthree,Chelsea,38,,,rthree,5,Alice,0,0');
+              rows[2].slice(24).should.equal(',rtwo,Bob,34,,,rtwo,5,Alice,0,0');
+              rows[3].slice(24).should.equal(',rone,Alice,30,,,rone,5,Alice,0,0');
             })))));
   });
 

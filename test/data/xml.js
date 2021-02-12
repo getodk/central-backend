@@ -317,14 +317,14 @@ module.exports = {
       three: instance('simple', 'three', '<name>Chelsea</name><age>38</age>')
     },
     withrepeat: {
-      one: fullInstance('withrepeat', '1.0', 'one', '<name>Alice</name><age>30</age>'),
-      two: fullInstance('withrepeat', '1.0', 'two', '<name>Bob</name><age>34</age><children><child><name>Billy</name><age>4</age></child><child><name>Blaine</name><age>6</age></child></children>'),
-      three: fullInstance('withrepeat', '1.0', 'three', '<name>Chelsea</name><age>38</age><children><child><name>Candace</name><age>2</age></child></children>'),
+      one: fullInstance('withrepeat', '1.0', 'rone', '<name>Alice</name><age>30</age>'),
+      two: fullInstance('withrepeat', '1.0', 'rtwo', '<name>Bob</name><age>34</age><children><child><name>Billy</name><age>4</age></child><child><name>Blaine</name><age>6</age></child></children>'),
+      three: fullInstance('withrepeat', '1.0', 'rthree', '<name>Chelsea</name><age>38</age><children><child><name>Candace</name><age>2</age></child></children>'),
     },
     simple2: {
-      one: instance('simple2', 'one', '<name>Alice</name><age>30</age>'),
-      two: instance('simple2', 'two', '<name>Bob</name><age>34</age>'),
-      three: instance('simple2', 'three', '<name>Chelsea</name><age>38</age>')
+      one: instance('simple2', 's2one', '<name>Alice</name><age>30</age>'),
+      two: instance('simple2', 's2two', '<name>Bob</name><age>34</age>'),
+      three: instance('simple2', 's2three', '<name>Chelsea</name><age>38</age>')
     },
     doubleRepeat: {
       double: `<data id="doubleRepeat" version="1.0">
@@ -356,8 +356,8 @@ module.exports = {
   </data>`
     },
     binaryType: {
-      one: instance('binaryType', 'one', '<file1>my_file1.mp4</file1>'),
-      two: instance('binaryType', 'two', '<file2>here_is_file2.jpg</file2>'),
+      one: instance('binaryType', 'bone', '<file1>my_file1.mp4</file1>'),
+      two: instance('binaryType', 'btwo', '<file2>here_is_file2.jpg</file2>'),
       both: instance('binaryType', 'both', '<file1>my_file1.mp4</file1><file2>here_is_file2.jpg</file2>'),
       conflict: instance('binaryType', 'conflict', '<file1>file1</file1><file2>file1</file2>')
     },
