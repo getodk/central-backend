@@ -1,6 +1,6 @@
 
 const appRoot = require('app-root-path');
-const { mapSequential } = require(appRoot + '/lib/util/promise');
+const { mapSequential } = require(appRoot + '/test/util/util');
 const { Form } = require(appRoot + '/lib/model/frames');
 const { simple, withrepeat } = require('../../data/xml').forms;
 const forms = [ simple, withrepeat ];

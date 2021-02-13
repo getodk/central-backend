@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const { User, Actor } = require(appRoot + '/lib/model/frames');
-const { mapSequential } = require(appRoot + '/lib/util/promise');
+const { mapSequential } = require(appRoot + '/test/util/util');
 
 module.exports = ({ Assignments, Users, Projects, bcrypt }) => {
   const users = [

@@ -6,7 +6,7 @@ const { testService, testContainerFullTrx, testContainer } = require(appRoot + '
 const testData = require(appRoot + '/test/data/xml');
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
 const { Form, Key, Submission } = require(appRoot + '/lib/model/frames');
-const { mapSequential } = require(appRoot + '/lib/util/promise');
+const { mapSequential } = require(appRoot + '/test/util/util');
 
 describe('managed encryption', () => {
   describe('lock management', () => {

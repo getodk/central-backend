@@ -143,7 +143,7 @@ describe('api: /submission', () => {
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
-          .attach('xml_submission_file', Buffer.from(testData.instances.simple.one.replace(/<\/orx:meta>/, '<orx:instanceName>custom name</orx:instanceName></orx:meta>')), { filename: 'data.xml' })
+          .attach('xml_submission_file', Buffer.from(tap(testData.instances.simple.one.replace(/<\/meta>/, '<orx:instanceName>custom name</orx:instanceName></orx:meta>'))), { filename: 'data.xml' })
           .expect(201)
           .then(({ text }) => {
             text.should.match(/upload was successful/);
@@ -151,6 +151,7 @@ describe('api: /submission', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
             .expect(200)
             .then(({ body }) => {
+            // needs to be on a specific version!
               console.log(body);
               body.instanceName.should.equal('custom name');
             })))));*/

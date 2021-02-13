@@ -9,9 +9,7 @@ const { by } = require(appRoot + '/lib/model/query/auth');
 const Problem = require(appRoot + '/lib/util/problem');
 const Option = require(appRoot + '/lib/util/option');
 
-const bcrypt = require('bcrypt');
-const crypto = require(appRoot + '/lib/util/crypto');
-const password = crypto.password(bcrypt);
+const bcrypt = require(appRoot + '/lib/util/crypto').password(require('bcrypt'));
 
 describe('preprocessors', () => {
   // some mock helpers to simplify testing this module in isolation:
@@ -120,7 +118,7 @@ describe('preprocessors', () => {
 
       it('should fail the request if the Basic auth credentials are not right', () =>
         Promise.resolve(sessionHandler(
-          { Auth, User: mockUsers('alice@opendatakit.org', 'willnevermatch'), password },
+          { Auth, User: mockUsers('alice@opendatakit.org', 'willnevermatch'), bcrypt },
           new Context(
             createRequest({ headers: {
               Authorization: `Basic ${Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64')}`,
@@ -131,9 +129,9 @@ describe('preprocessors', () => {
         )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should set the appropriate session if valid Basic auth credentials are given @slow', () =>
-        password.hash('alice').then((hashed) =>
+        bcrypt.hash('alice').then((hashed) =>
           Promise.resolve(sessionHandler(
-            { Auth, User: mockUsers('alice@opendatakit.org', hashed), password },
+            { Auth, User: mockUsers('alice@opendatakit.org', tap(hashed)), bcrypt },
             new Context(
               createRequest({ headers: {
                 Authorization: `Basic ${Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64')}`,
