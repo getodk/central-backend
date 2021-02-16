@@ -9,6 +9,12 @@ const { zipStreamToFiles } = require('../../util/zip');
 const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
+// utilities used for versioning instances
+const withSimpleIds = (deprecatedId, instanceId) => testData.instances.simple.one
+  .replace('one</instance', `${instanceId}</instanceID><deprecatedID>${deprecatedId}</deprecated`);
+const withBinaryIds = (deprecatedId, instanceId) => testData.instances.binaryType.both
+  .replace('both</instance', `${instanceId}</instanceID><deprecatedID>${deprecatedId}</deprecated`);
+
 describe('api: /submission', () => {
   describe('HEAD', () => {
     it('should return a 204 with no content', testService((service) =>
@@ -466,11 +472,6 @@ describe('api: /submission', () => {
           ])))));
 
     context('versioning', () => {
-      const withSimpleIds = (deprecatedId, instanceId) => testData.instances.simple.one
-        .replace('one</instance', `${instanceId}</instanceID><deprecatedID>${deprecatedId}</deprecated`);
-      const withBinaryIds = (deprecatedId, instanceId) => testData.instances.binaryType.both
-        .replace('both</instance', `${instanceId}</instanceID><deprecatedID>${deprecatedId}</deprecated`);
-
       it('should reject if the deprecatedId is not known', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/submission')
@@ -2015,6 +2016,26 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               header['content-type'].should.equal('application/xml; charset=utf-8');
               text.should.equal(testData.instances.simple.one);
             })))));
+
+    it('should redirect to the version if the referenced instanceID is out of date', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+          .expect(201)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(withSimpleIds('one', 'two')), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(withSimpleIds('two', 'three')), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/two.xml')
+            .expect(301)
+            .then(({ text }) => {
+              text.should.equal('Moved Permanently. Redirecting to /v1/projects/1/forms/simple/submissions/one/versions/two.xml');
+            })))));
   });
 
   describe('[draft] /:instanceId.xml GET', () => {
@@ -2134,6 +2155,26 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               body.should.be.an.ExtendedSubmission();
               body.submitter.displayName.should.equal('Alice');
             })))));
+
+    it('should redirect to the version if the referenced instanceID is out of date', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+          .expect(201)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(withSimpleIds('one', 'two')), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(withSimpleIds('two', 'three')), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/two')
+            .expect(301)
+            .then(({ text }) => {
+              text.should.equal('Moved Permanently. Redirecting to /v1/projects/1/forms/simple/submissions/one/versions/two');
+            })))));
   });
 
   describe('[draft] /:instanceId GET', () => {
@@ -2236,6 +2277,26 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .then(({ body }) => {
               body.should.eql([]);
             })))));
+
+    it('should redirect to the version if the referenced instanceID is out of date', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+          .expect(201)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(withSimpleIds('one', 'two')), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(withSimpleIds('two', 'three')), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/two/attachments')
+            .expect(301)
+            .then(({ text }) => {
+              text.should.equal('Moved Permanently. Redirecting to /v1/projects/1/forms/simple/submissions/one/versions/two/attachments');
+            })))));
   });
 
   describe('[draft] /:instanceId/attachments GET', () => {
@@ -2302,6 +2363,26 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .expect(201)
           .then(() => service.login('chelsea', (asChelsea) =>
             asChelsea.get('/v1/projects/1/forms/simple/submissions/one/attachments/file.txt').expect(403))))));
+
+    it('should redirect to the version if the referenced instanceID is out of date', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+          .expect(201)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(withSimpleIds('one', 'two')), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(withSimpleIds('two', 'three')), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/two/attachments/anything.mp3')
+            .expect(301)
+            .then(({ text }) => {
+              text.should.equal('Moved Permanently. Redirecting to /v1/projects/1/forms/simple/submissions/one/versions/two/attachments/anything.mp3');
+            })))));
   });
 
   describe('[draft] /:instanceId/attachments/:name GET', () => {
@@ -2413,30 +2494,28 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200))
           .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
           .then((o) => o.get())
-          .then((form) => Submissions.getById(form.id, 'both', false)
+          .then((form) => Submissions.getAnyDefByFormAndInstanceId(form.id, 'both', false)
             .then((o) => o.get())
-            .then((submission) => Submissions.getCurrentDefBySubmissionId(submission.id)
+            .then((def) => SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4')
               .then((o) => o.get())
-              .then((def) => SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4')
-                .then((o) => o.get())
-                .then((attachment) => Promise.all([
-                  asAlice.get('/v1/users/current').expect(200),
-                  Audits.getLatestByAction('submission.attachment.update')
-                ])
-                  .then(([ user, maybeLog ]) => {
-                    maybeLog.isDefined().should.equal(true);
-                    const log = maybeLog.get();
+              .then((attachment) => Promise.all([
+                asAlice.get('/v1/users/current').expect(200),
+                Audits.getLatestByAction('submission.attachment.update')
+              ])
+                .then(([ user, maybeLog ]) => {
+                  maybeLog.isDefined().should.equal(true);
+                  const log = maybeLog.get();
 
-                    log.actorId.should.equal(user.body.id);
-                    log.acteeId.should.equal(form.acteeId);
-                    log.details.should.eql({
-                      instanceId: 'both',
-                      submissionDefId: def.id,
-                      name: 'my_file1.mp4',
-                      oldBlobId: null,
-                      newBlobId: attachment.blobId
-                    });
-                  }))))))));
+                  log.actorId.should.equal(user.body.id);
+                  log.acteeId.should.equal(form.acteeId);
+                  log.details.should.eql({
+                    instanceId: 'both',
+                    submissionDefId: def.id,
+                    name: 'my_file1.mp4',
+                    oldBlobId: null,
+                    newBlobId: attachment.blobId
+                  });
+                })))))));
 
     it('should log an audit entry about reattachment', testService((service, { Audits, Forms, Submissions, SubmissionAttachments }) =>
       service.login('alice', (asAlice) =>
@@ -2454,33 +2533,33 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200))
           .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
           .then((o) => o.get())
-          .then((form) => Submissions.getById(form.id, 'both', false).then((o) => o.get())
-            .then((submission) => Submissions.getCurrentDefBySubmissionId(submission.id)
-              .then((o) => o.get())
-              .then((def) => SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4').then((o) => o.get())
-                .then((oldAttachment) => asAlice.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
-                  .set('Content-Type', 'video/mp4')
-                  .send('testvideo2')
-                  .expect(200)
-                  .then((attachment) => Promise.all([
-                    asAlice.get('/v1/users/current').expect(200),
-                    SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4').then((o) => o.get()),
-                    Audits.getLatestByAction('submission.attachment.update')
-                  ])
-                    .then(([ user, newAttachment, maybeLog ]) => {
-                      maybeLog.isDefined().should.equal(true);
-                      const log = maybeLog.get();
+          .then((form) => Submissions.getAnyDefByFormAndInstanceId(form.id, 'both', false)
+            .then((o) => o.get())
+            .then((def) => SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4')
+            .then((o) => o.get())
+              .then((oldAttachment) => asAlice.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+                .set('Content-Type', 'video/mp4')
+                .send('testvideo2')
+                .expect(200)
+                .then((attachment) => Promise.all([
+                  asAlice.get('/v1/users/current').expect(200),
+                  SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4').then((o) => o.get()),
+                  Audits.getLatestByAction('submission.attachment.update')
+                ])
+                  .then(([ user, newAttachment, maybeLog ]) => {
+                    maybeLog.isDefined().should.equal(true);
+                    const log = maybeLog.get();
 
-                      log.actorId.should.equal(user.body.id);
-                      log.acteeId.should.equal(form.acteeId);
-                      log.details.should.eql({
-                        instanceId: 'both',
-                        submissionDefId: def.id,
-                        name: 'my_file1.mp4',
-                        oldBlobId: oldAttachment.blobId,
-                        newBlobId: newAttachment.blobId
-                      });
-                    })))))))));
+                    log.actorId.should.equal(user.body.id);
+                    log.acteeId.should.equal(form.acteeId);
+                    log.details.should.eql({
+                      instanceId: 'both',
+                      submissionDefId: def.id,
+                      name: 'my_file1.mp4',
+                      oldBlobId: oldAttachment.blobId,
+                      newBlobId: newAttachment.blobId
+                    });
+                  }))))))));
   });
 
   // the draft version of this is already tested above with :name GET
@@ -2550,31 +2629,29 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200))
           .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
           .then((o) => o.get())
-          .then((form) => Submissions.getById(form.id, 'both', false)
+          .then((form) => Submissions.getAnyDefByFormAndInstanceId(form.id, 'both', false)
             .then((o) => o.get())
-            .then((submission) => Submissions.getCurrentDefBySubmissionId(submission.id)
+            .then((def) => SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4')
               .then((o) => o.get())
-              .then((def) => SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4')
-                .then((o) => o.get())
-                .then((attachment) => asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
-                  .expect(200)
-                  .then(() => Promise.all([
-                    asAlice.get('/v1/users/current').expect(200),
-                    Audits.getLatestByAction('submission.attachment.update')
-                  ])
-                    .then(([ user, maybeLog ]) => {
-                      maybeLog.isDefined().should.equal(true);
-                      const log = maybeLog.get();
+              .then((attachment) => asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+                .expect(200)
+                .then(() => Promise.all([
+                  asAlice.get('/v1/users/current').expect(200),
+                  Audits.getLatestByAction('submission.attachment.update')
+                ])
+                  .then(([ user, maybeLog ]) => {
+                    maybeLog.isDefined().should.equal(true);
+                    const log = maybeLog.get();
 
-                      log.actorId.should.equal(user.body.id);
-                      log.acteeId.should.equal(form.acteeId);
-                      log.details.should.eql({
-                        instanceId: 'both',
-                        submissionDefId: def.id,
-                        name: 'my_file1.mp4',
-                        oldBlobId: attachment.blobId
-                      });
-                    })))))))));
+                    log.actorId.should.equal(user.body.id);
+                    log.acteeId.should.equal(form.acteeId);
+                    log.details.should.eql({
+                      instanceId: 'both',
+                      submissionDefId: def.id,
+                      name: 'my_file1.mp4',
+                      oldBlobId: attachment.blobId
+                    });
+                  }))))))));
   });
 
   describe('[draft] /:instanceId/attachments/:name DELETE', () => {
