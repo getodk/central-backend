@@ -131,7 +131,7 @@ describe('preprocessors', () => {
       it('should set the appropriate session if valid Basic auth credentials are given @slow', () =>
         bcrypt.hash('alice').then((hashed) =>
           Promise.resolve(sessionHandler(
-            { Auth, User: mockUsers('alice@opendatakit.org', tap(hashed)), bcrypt },
+            { Auth, User: mockUsers('alice@opendatakit.org', hashed), bcrypt },
             new Context(
               createRequest({ headers: {
                 Authorization: `Basic ${Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64')}`,

@@ -83,6 +83,22 @@ should.Assertion.add('ExtendedSubmission', function() {
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 
+should.Assertion.add('SubmissionDef', function() {
+  this.params = { operator: 'to be a Submission' };
+
+  Object.keys(this.obj).should.containDeep([ 'submitterId', 'createdAt', 'instanceName' ]);
+  this.obj.submitterId.should.be.a.Number();
+  this.obj.createdAt.should.be.an.isoDate();
+  if (this.obj.instanceName != null) this.obj.instanceName.should.be.a.String();
+});
+
+should.Assertion.add('ExtendedSubmissionDef', function() {
+  this.params = { operator: 'to be a Submission' };
+
+  this.obj.should.be.a.SubmissionDef();
+  this.obj.submitter.should.be.an.Actor();
+});
+
 should.Assertion.add('Session', function() {
   this.params = { operator: 'to be a Session' };
 
