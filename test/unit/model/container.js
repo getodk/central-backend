@@ -41,9 +41,7 @@ describe('container', () => {
           done();
         });
     });
-  });
 
-  describe('query modules', () => {
     it('should provide database context to query modules', (done) => {
       const module = { proc: (x) => ({ db }) => Promise.resolve(x + db) };
       const { injected } = injector({ db: 7 }, { injected: module });
