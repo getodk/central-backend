@@ -138,7 +138,7 @@ describe('external/enketo', () => {
         { xml: '<data/>', instanceId: 'instance' },
         [],
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-      ).then((url) => { url.should.equal('https://securehost:80/::editedit'); });
+      ).then((url) => { url.should.equal('https://securehost/::editedit'); });
     });
   });
 });
