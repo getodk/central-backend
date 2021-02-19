@@ -109,7 +109,7 @@ describe('external/enketo', () => {
       ).then(() => { run.should.equal(true); });
     });
 
-    it('should return an enketo edit url', () => {
+    it('should return an enketo edit url with the domain replaced', () => {
       enketoNock
         .post('/enketoPath/api/v2/instance')
         .reply(201, { edit_url: 'http://enke.to/::editedit', code: 201 });
@@ -122,7 +122,7 @@ describe('external/enketo', () => {
         { xml: '<data/>', instanceId: 'instance' },
         [],
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-      ).then((url) => { url.should.equal('http://enke.to/::editedit'); });
+      ).then((url) => { url.should.equal('http://openrosahost:5678/::editedit'); });
     });
   });
 });
