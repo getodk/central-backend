@@ -532,6 +532,42 @@ describe('form schema', () => {
           stack.push('name').should.eql(new MockField({ name: 'name', path: '/name', type: 'string', order: 2 }));
         }));
 
+      it('should navigate deeply in/out of unknown fields', () => fieldsFor(`
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms">
+<h:head>
+  <model>
+    <instance>
+      <data id="bare-repeat" orx:version="1.0">
+        <orx:meta><orx:instanceID/></orx:meta>
+        <name/>
+        <child><name/></child>
+      </data>
+    </instance>
+    <bind nodeset="/data/orx:meta/orx:instanceID" preload="uid" type="string"/>
+    <bind nodeset="/data/name" type="string"/>
+    <bind nodeset="/data/child/name" type="string"/>
+  </model>
+</h:head>
+<h:body>
+  <input ref="/data/name"><label>What is your name?</label></input>
+  <repeat nodeset="/data/child">
+    <input ref="/data/child/name"><label>What is the child's name?</label></input>
+  </repeat>
+</h:body>
+</h:html>`)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.push('data');
+          should.not.exist(stack.push('nope'));
+          should.not.exist(stack.push('stillno'));
+          should.not.exist(stack.push('andnah'));
+          should.not.exist(stack.pop());
+          should.not.exist(stack.pop());
+          should.not.exist(stack.pop());
+          stack.push('child').should.eql(new MockField({ name: 'child', path: '/child', order: 3, type: 'repeat' }));
+          stack.pop();
+        }));
+
       it('should ignore children of unknown repeats', () => fieldsFor(testData.forms.doubleRepeat)
         .then((fields) => {
           const stack = new SchemaStack(fields.filter((field) => field.path !== ('/children/child')));
