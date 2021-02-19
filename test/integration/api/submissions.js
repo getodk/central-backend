@@ -1023,8 +1023,8 @@ describe('api: /forms/:id/submissions', () => {
             .set('Content-Type', 'application/xml')
             .expect(200)
             .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/edit')
-              .expect(301)
-              .then(({ text }) => { text.should.equal('Moved Permanently. Redirecting to https://enketo/edit/url'); }))))));
+              .expect(302)
+              .then(({ text }) => { text.should.equal('Found. Redirecting to https://enketo/edit/url'); }))))));
 
     // TODO: okay, so it'd be better if this were a true true integration test.
     it('should pass the appropriate parameters to the enketo module', testService((service, { run }) =>
@@ -1043,7 +1043,7 @@ describe('api: /forms/:id/submissions', () => {
             .expect(200))
           .then(() => run(sql`update forms set "enketoId"='myenketoid'`))
           .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/edit')
-            .expect(301))
+            .expect(302))
           .then(() => {
             global.enketoEditData.openRosaUrl.should.equal('http://localhost:8989/v1/projects/1');
             global.enketoEditData.domain.should.equal('http://localhost:8989');
