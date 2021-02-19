@@ -12,7 +12,7 @@ describe('util/db', () => {
     const T = Frame.define(table('frames'), 'x',  'y');
     const U = Frame.define(into('extra'), 'z');
     it('should generate fields', () => {
-      unjoiner(Frame.define(table('frames'), 'x',  'y'), Frame.define('z'))
+      unjoiner(T, U)
         .fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y","z" as "z"`);
     });
 

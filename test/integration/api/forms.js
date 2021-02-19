@@ -2347,7 +2347,7 @@ describe('api: /projects/:id/forms', () => {
           asChelsea.get('/v1/projects/1/forms/simple/versions')
             .expect(403))));
 
-      it('should list all versions', testService((service, XXXXX) =>
+      it('should list all versions', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="2"'))

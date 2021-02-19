@@ -212,7 +212,7 @@ describe('api: /projects', () => {
               audit.isDefined().should.equal(true);
               audit.get().actorId.should.equal(user.body.id);
               audit.get().details.data.name.should.equal('Test Project');
-              return one(sql`select *  from projects where "acteeId"=${audit.get().acteeId}`)
+              return one(sql`select * from projects where "acteeId"=${audit.get().acteeId}`)
                 .then((project) => { project.id.should.equal(body.id); });
             })))));
   });
