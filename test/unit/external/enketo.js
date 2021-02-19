@@ -124,6 +124,22 @@ describe('external/enketo', () => {
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
       ).then((url) => { url.should.equal('http://openrosahost:5678/::editedit'); });
     });
+
+    it('should return an enketo edit url with the port and protocol replaced', () => {
+      enketoNock
+        .post('/enketoPath/api/v2/instance')
+        .reply(201, { edit_url: 'http://enke.to/::editedit', code: 201 });
+
+      return enketo.edit(
+        openRosaUrl,
+        'https://securehost',
+        { projectId: 1, xmlFormId: 'wellPumps' },
+        'logical',
+        { xml: '<data/>', instanceId: 'instance' },
+        [],
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+      ).then((url) => { url.should.equal('https://securehost:80/::editedit'); });
+    });
   });
 });
 
