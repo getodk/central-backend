@@ -38,6 +38,18 @@ describe('api: /projects/:id/app-users', () => {
             .send(testData.instances.simple.one)
             .expect(403)))));
 
+    it('should create a long session', testService((service, { one }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'test1' })
+          .expect(200)
+          .then(({ body }) => body.token)
+          .then((key) => service.get(`/v1/key/${key}/sessions/restore`)
+            .expect(200)
+            .then(({ body }) => {
+              body.expiresAt.should.equal('9999-12-31T23:59:59.000Z');
+            })))));
+
     it('should log the action in the audit log', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/app-users')
