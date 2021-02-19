@@ -3102,7 +3102,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .send({ name: 'project two' })
             .expect(200)
             .then(({ body }) => body.id)
-          .then((projectId) => asAlice.post('/v1/projects/2/forms?publish=true')
+          .then((projectId) => asAlice.post(`/v1/projects/${projectId}/forms?publish=true`)
             .send(testData.forms.simple)
             .expect(200)
             .then(() => asAlice.post(`/v1/projects/${projectId}/forms/simple/submissions`)
