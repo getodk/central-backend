@@ -922,6 +922,137 @@ describe('api: /forms/:id/submissions', () => {
           ])))));
   });
 
+  describe('/:instanceId PUT', () => {
+    it('should reject notfound if the submission does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.put('/v1/projects/1/forms/simple/submissions/one')
+          .set('Content-Type', 'text/xml')
+          .send(withSimpleIds('one', 'two'))
+          .expect(404))));
+
+    it('should reject if the user cannot edit', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => service.login('chelsea', (asChelsea) =>
+            asChelsea.put('/v1/projects/1/forms/simple/submissions/one')
+              .set('Content-Type', 'text/xml')
+              .send(withSimpleIds('one', 'two'))
+              .expect(403))))));
+
+    it('should update the submission', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.put('/v1/projects/1/forms/simple/submissions/one')
+            .set('Content-Type', 'text/xml')
+            .send(withSimpleIds('one', 'two'))
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one.xml')
+            .expect(200)
+            .then(({ text }) => { text.should.equal(withSimpleIds('one', 'two')); })))));
+
+    it('should reject if the deprecated submission is not current', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.put('/v1/projects/1/forms/simple/submissions/one')
+            .set('Content-Type', 'text/xml')
+            .send(withSimpleIds('one', 'two'))
+            .expect(200))
+          .then(() => asAlice.put('/v1/projects/1/forms/simple/submissions/one')
+            .set('Content-Type', 'text/xml')
+            .send(withSimpleIds('one', 'three'))
+            .expect(409)))));
+
+    it('should reset attachments', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'text/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions')
+            .send(testData.instances.binaryType.both)
+            .set('Content-Type', 'application/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+            .set('Content-Type', 'application/octet-stream')
+            .send('this is a test file nr 1')
+            .expect(200))
+          .then(() => asAlice.put('/v1/projects/1/forms/binaryType/submissions/both')
+            .set('Content-Type', 'text/xml')
+            .send(withBinaryIds('both', 'two'))
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.eql([
+                { name: 'here_is_file2.jpg', exists: false },
+                { name: 'my_file1.mp4', exists: false }
+              ]);
+            })))));
+  });
+
+  describe('/:instanceId/edit GET', () => {
+    it('should reject if the submission does not exist', testService((service, { run }) =>
+      run(sql`update forms set "enketoId"='myenketoid'`)
+        .then(() => service.login('alice', (asAlice) =>
+          asAlice.get('/v1/projects/1/forms/simple/submissions/one/edit')
+            .expect(404)))));
+
+    it('should reject if the form does not have an enketoId', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/edit')
+            .expect(409)))));
+
+    it('should redirect to the edit_url', testService((service, { run }) =>
+      run(sql`update forms set "enketoId"='myenketoid'`)
+        .then(() => service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/edit')
+              .expect(301)
+              .then(({ text }) => { text.should.equal('Moved Permanently. Redirecting to https://enketo/edit/url'); }))))));
+
+    // TODO: okay, so it'd be better if this were a true true integration test.
+    it('should pass the appropriate parameters to the enketo module', testService((service, { run }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'text/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions')
+            .send(testData.instances.binaryType.both)
+            .set('Content-Type', 'application/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+            .set('Content-Type', 'application/octet-stream')
+            .send('this is a test file nr 1')
+            .expect(200))
+          .then(() => run(sql`update forms set "enketoId"='myenketoid'`))
+          .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/edit')
+            .expect(301))
+          .then(() => {
+            global.enketoEditData.openRosaUrl.should.equal('http://localhost:8989/v1/projects/1');
+            global.enketoEditData.domain.should.equal('http://localhost:8989');
+            global.enketoEditData.logicalId.should.equal('both');
+            global.enketoEditData.attachments.length.should.equal(2);
+            global.enketoEditData.token.should.be.a.token();
+          }))));
+  });
+
   describe('.csv.zip GET', () => {
     // NOTE: tests related to decryption of .csv.zip export are located in test/integration/other/encryption.js
 
@@ -2049,11 +2180,14 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .send(withSimpleIds('one', 'two'))
             .set('Content-Type', 'text/xml')
             .expect(200))
-          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions/two.xml')
-            .expect(200)
-            .then(({ text }) => {
-              text.should.equal(withSimpleIds('one', 'two'));
-            })))));
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions/one.xml')
+              .expect(200)
+              .then(({ text }) => { text.should.equal(testData.instances.simple.one); }),
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions/two.xml')
+              .expect(200)
+              .then(({ text }) => { text.should.equal(withSimpleIds('one', 'two')); })
+          ])))));
   });
 
   describe('[draft] /:instanceId.xml GET', () => {
@@ -2223,13 +2357,28 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .send(testData.instances.simple.one.replace(/<\/meta>/, '<orx:instanceName>custom name</orx:instanceName></orx:meta>'))
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions/one')
-            .expect(200)
-            .then(({ body }) => {
-              body.should.be.a.SubmissionDef();
-              body.submitterId.should.equal(5);
-              body.instanceName.should.equal('custom name');
-            })))));
+          .then(() => asAlice.put('/v1/projects/1/forms/simple/submissions/one')
+            .set('Content-Type', 'text/xml')
+            .send(withSimpleIds('one', 'two'))
+            .expect(200))
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions/one')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.be.a.SubmissionDef();
+                body.submitterId.should.equal(5);
+                body.instanceId.should.equal('one');
+                body.instanceName.should.equal('custom name');
+              }),
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions/two')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.be.a.SubmissionDef();
+                body.submitterId.should.equal(5);
+                body.instanceId.should.equal('two');
+                should(body.instanceName).equal(null);
+              })
+          ])))));
 
     it('should return extended submission details', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -2919,6 +3068,55 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               body[0].should.be.an.ExtendedSubmissionDef();
               body[0].submitter.displayName.should.equal('Alice');
             })))));
+  });
+
+  context('[version] partitioning', () => {
+    it('should keep draft/nondraft versions apart', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one.replace(/<\/meta>/, '<orx:instanceName>custom name</orx:instanceName></meta>'))
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => Promise.all([
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions/one')
+              .expect(200)
+              .then(({ body }) => { body.instanceName.should.equal('custom name'); }),
+            asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one/versions/one')
+              .expect(200)
+              .then(({ body }) => { should(body.instanceName).equal(null); })
+          ])))));
+
+    it('should keep project versions apart', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one.replace(/<\/meta>/, '<orx:instanceName>custom name</orx:instanceName></meta>'))
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects')
+            .send({ name: 'project two' })
+            .expect(200)
+            .then(({ body }) => body.id)
+          .then((projectId) => asAlice.post('/v1/projects/2/forms?publish=true')
+            .send(testData.forms.simple)
+            .expect(200)
+            .then(() => asAlice.post(`/v1/projects/${projectId}/forms/simple/submissions`)
+              .send(testData.instances.simple.one)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => Promise.all([
+              asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions/one')
+                .expect(200)
+                .then(({ body }) => { body.instanceName.should.equal('custom name'); }),
+              asAlice.get(`/v1/projects/${projectId}/forms/simple/submissions/one/versions/one`)
+                .expect(200)
+                .then(({ body }) => { should(body.instanceName).equal(null); })
+            ])))))));
   });
 });
 
