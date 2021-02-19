@@ -2,7 +2,7 @@ const appRoot = require('app-root-path');
 const { call } = require('ramda');
 const Problem = require(appRoot + '/lib/util/problem');
 
-const _create = (prefix) => (openRosaUrl, xmlFormId, token) => new Promise((resolve, reject) => {
+const _create = (prefix) => (openRosaUrl, xmlFormId, authToken) => new Promise((resolve, reject) => {
   const state = global.enketoPreviewTest;
   global.enketoPreviewTest = null;
   const token = global.enketoToken || `${prefix}abcdefgh`;
@@ -22,5 +22,12 @@ const _create = (prefix) => (openRosaUrl, xmlFormId, token) => new Promise((reso
   });
 });
 
-module.exports = { create: _create('::'), createOnceToken: _create('::::') };
+const edit = (openRosaUrl, domain, form, logicalId, submissionDef, attachments, token) => new Promise((resolve, reject) => {
+  const state = global.enketoEditTest;
+  global.enketoEditTest = null;
+  global.enketoEditData = { openRosaUrl, domain, form, logicalId, submissionDef, attachments, token };
+  resolve('https://enketo/edit/url');
+});
+
+module.exports = { create: _create('::'), createOnceToken: _create('::::'), edit };
 

@@ -5,7 +5,7 @@ const should = require('should');
 const enketo_ = require(appRoot + '/lib/external/enketo');
 const Problem = require(appRoot + '/lib/util/problem');
 
-describe('util/enketo', () => {
+describe('external/enketo', () => {
   const enketoConfig = {
     url: 'http://enketoHost:1234/enketoPath',
     apiKey: 'enketoApiKey'
@@ -27,16 +27,15 @@ describe('util/enketo', () => {
           requestBody.should.equal(expectedQueryString);
           return JSON.stringify({ url: 'http://enke.to/::stuvwxyz', code: 201 });
         });
-      const response = {};
-      return enketo.create(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', response);
+      return enketo.create(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
     });
 
     it('should return the Enketo survey ID', () => {
       enketoNock
         .post('/enketoPath/api/v2/survey')
         .reply(201, { url: 'http://enke.to/::stuvwxyz', code: 201 });
-      const response = {};
-      return enketo.create(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', response)
+      
+      return enketo.create(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
         .then((result) => result.should.equal('::stuvwxyz'));
     });
 
@@ -44,8 +43,8 @@ describe('util/enketo', () => {
       enketoNock
         .post('/enketoPath/api/v2/survey/single/once')
         .reply(201, { single_once_url: 'http://enke.to/single/::stuvwxyz', code: 201 });
-      const response = {};
-      return enketo.createOnceToken(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', response)
+      
+      return enketo.createOnceToken(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
         .then((result) => result.should.equal('::stuvwxyz'));
     });
 
@@ -53,8 +52,8 @@ describe('util/enketo', () => {
       enketoNock
         .post('/enketoPath/api/v2/survey')
         .reply(201, 'no json for you!');
-      const response = {};
-      return enketo.create(openRosaUrl, xmlFormId, null, response)
+      
+      return enketo.create(openRosaUrl, xmlFormId, null)
         .should.be.rejectedWith(Problem.internal.enketoUnexpectedResponse('invalid JSON'));
     });
 
@@ -62,8 +61,8 @@ describe('util/enketo', () => {
       enketoNock
         .post('/enketoPath/api/v2/survey')
         .reply(201, { url: 'http://enke.to/$$', code: 201 });
-      const response = {};
-      return enketo.create(openRosaUrl, xmlFormId, null, response)
+      
+      return enketo.create(openRosaUrl, xmlFormId, null)
         .should.be.rejectedWith(Problem.internal.enketoUnexpectedResponse('Could not parse token from enketo response url: http://enke.to/$$'));
     });
 
@@ -71,9 +70,59 @@ describe('util/enketo', () => {
       enketoNock
         .post('/enketoPath/api/v2/survey')
         .reply(204, {});
-      const response = {};
-      return enketo.create(openRosaUrl, xmlFormId, null, response)
+      
+      return enketo.create(openRosaUrl, xmlFormId, null)
         .should.be.rejectedWith(Problem.internal.enketoUnexpectedResponse('wrong status code'));
+    });
+  });
+
+  describe('edit', () => {
+    it('should send a properly formatted request to enketo', () => {
+      let run = false;
+      enketoNock
+        .post('/enketoPath/api/v2/instance')
+        .reply(201, function(uri, requestBody) {
+          run = true;
+          const base64Auth = Buffer.from('enketoApiKey:').toString('base64');
+          const expectedQueryString = querystring.stringify({
+            server_url: openRosaUrl,
+            form_id: xmlFormId,
+            instance: '<data/>',
+            instance_id: 'instance',
+            'instance_attachments[fileone.txt]': 'http://openRosaHost:5678/projects/1/forms/wellPumps/submissions/logical/versions/instance/attachments/fileone.txt',
+            return_url: 'http://openRosaHost:5678/#/projects/1/forms/wellPumps/submissions/logical'
+          });
+          this.req.headers.authorization.should.equal(`Basic ${base64Auth}`);
+          this.req.headers.cookie.should.equal('__Host-session=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+          requestBody.should.equal(expectedQueryString);
+          return JSON.stringify({ edit_url: 'http://enke.to/::editedit', code: 201 });
+        });
+
+      return enketo.edit(
+        openRosaUrl,
+        'http://openRosaHost:5678',
+        { projectId: 1, xmlFormId: 'wellPumps' },
+        'logical',
+        { xml: '<data/>', instanceId: 'instance' },
+        [{ blobId: 1, name: 'fileone.txt' }, { blobId: null, name: 'filetwo.jpg' }],
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+      ).then(() => { run.should.equal(true); });
+    });
+
+    it('should return an enketo edit url', () => {
+      enketoNock
+        .post('/enketoPath/api/v2/instance')
+        .reply(201, { edit_url: 'http://enke.to/::editedit', code: 201 });
+
+      return enketo.edit(
+        openRosaUrl,
+        'http://openRosaHost:5678',
+        { projectId: 1, xmlFormId: 'wellPumps' },
+        'logical',
+        { xml: '<data/>', instanceId: 'instance' },
+        [],
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+      ).then((url) => { url.should.equal('http://enke.to/::editedit'); });
     });
   });
 });
