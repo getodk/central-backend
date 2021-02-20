@@ -214,6 +214,8 @@ should.Assertion.add('Audit', function() {
   should.not.exist(this.obj.processed);
   should.not.exist(this.obj.lastFailure);
   should.not.exist(this.obj.failures);
+
+  if (this.obj.notes != null) this.obj.notes.should.be.a.String();
 });
 
 should.Assertion.add('Key', function() {

@@ -471,7 +471,6 @@ describe('/audits', () => {
           .then(() => asAlice.get('/v1/audits')
             .expect(200)
             .then(({ body }) => {
-              console.log(body);
               body.length.should.equal(3);
               body[0].action.should.equal('submission.create');
               body[0].notes.should.equal('doing this for work');

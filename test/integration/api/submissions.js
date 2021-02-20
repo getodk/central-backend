@@ -2149,6 +2149,67 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .then(({ body }) => { body.should.eql([]); })))));
   });
 
+  describe('/:instanceId/audits GET', () => {
+    it('should return notfound if the instance does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/simple/submissions/one/audits')
+          .expect(404))));
+
+    it('should return notfound if the instance does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => service.login('chelsea', (asChelsea) =>
+            asChelsea.get('/v1/projects/1/forms/simple/submissions/one/audits')
+              .expect(403))))));
+
+    it('should return all audit logs on the submission', testService((service, { oneFirst }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.patch('/v1/projects/1/forms/simple/submissions/one')
+            .send({ reviewState: 'rejected' })
+            .expect(200))
+          .then(() => asAlice.put('/v1/projects/1/forms/simple/submissions/one')
+            .send(withSimpleIds('one', 'two'))
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => oneFirst(sql`select id from submissions`))
+          .then((submissionId) => asAlice.get('/v1/projects/1/forms/simple/submissions/one/audits')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(3);
+              for (const audit of body) audit.should.be.an.Audit();
+              body[0].action.should.equal('submission.update.version');
+              body[0].details.should.eql({ instanceId: 'two', submissionId });
+              body[1].action.should.equal('submission.update');
+              body[1].details.should.eql({ reviewState: 'rejected', submissionId });
+              body[2].action.should.equal('submission.create');
+              body[2].details.should.eql({ instanceId: 'one', submissionId });
+            })))));
+
+    it('should expand actor on extended', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.patch('/v1/projects/1/forms/simple/submissions/one')
+            .send({ reviewState: 'rejected' })
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/audits')
+            .set('X-Extended-Metadata', true)
+            .expect(200)
+            .then(({ body }) => {
+              body[0].actor.should.be.an.Actor();
+              body[0].actor.displayName.should.equal('Alice');
+            })))));
+  });
+
   describe('/:instanceId.xml GET', () => {
     it('should return submission details', testService((service) =>
       service.login('alice', (asAlice) =>
