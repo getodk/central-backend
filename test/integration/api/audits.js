@@ -455,6 +455,31 @@ describe('/audits', () => {
               body[0].action.should.equal('form.update.publish');
               body[1].action.should.equal('form.create');
             })))));
+
+    it('should log and return notes if given', testService((service, { run }) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .set('X-Action-Notes', 'doing this for fun')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .set('X-Action-Notes', 'doing this for work')
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.get('/v1/audits')
+            .expect(200)
+            .then(({ body }) => {
+              console.log(body);
+              body.length.should.equal(3);
+              body[0].action.should.equal('submission.create');
+              body[0].notes.should.equal('doing this for work');
+              body[1].action.should.equal('form.update.publish');
+              body[1].notes.should.equal('doing this for fun');
+              body[2].action.should.equal('form.create');
+              body[2].notes.should.equal('doing this for fun');
+            })))));
   });
 });
 
