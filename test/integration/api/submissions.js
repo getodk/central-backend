@@ -1101,7 +1101,7 @@ describe('api: /forms/:id/submissions', () => {
       service.login('alice', (asAlice) => new Promise((done) =>
         zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
           result.filenames.should.eql([ 'simple.csv' ]);
-          result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status\n');
+          result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState\n');
           done();
         })))));
 
@@ -1180,7 +1180,7 @@ describe('api: /forms/:id/submissions', () => {
             result.filenames.should.eql([ 'simple.csv' ]);
             const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
             csv.length.should.equal(4); // header + 2 data rows + newline
-            csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status' ]);
+            csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState' ]);
             csv[1].shift().should.be.an.recentIsoDate();
             csv[1].should.eql([ 'two','Bob','34','two','5','Alice','0','0' ]);
             csv[2].shift().should.be.an.recentIsoDate();
@@ -1264,7 +1264,7 @@ describe('api: /forms/:id/submissions', () => {
 
                 // we also check the csv for the sake of verifying the attachments counts.
                 const csv = result['binaryType.csv'].split('\n');
-                csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status');
+                csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState');
                 csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,2,2');
                 csv.length.should.equal(3); // newline at end
 
@@ -1360,7 +1360,7 @@ describe('api: /forms/:id/submissions', () => {
 
                 // we also check the csv for the sake of verifying the attachments counts.
                 const csv = result['binaryType.csv'].split('\n');
-                csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status');
+                csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState');
                 csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,1,2');
                 csv.length.should.equal(3); // newline at end
 
@@ -1613,7 +1613,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .then(({ text }) => {
               const rows = text.split('\n');
               rows.length.should.equal(5);
-              rows[0].should.equal('SubmissionDate,meta-instanceID,name,age,children-child-name,children-child-age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status');
+              rows[0].should.equal('SubmissionDate,meta-instanceID,name,age,children-child-name,children-child-age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState');
               // (need to drop the iso date)
               rows[1].slice(24).should.equal(',rthree,Chelsea,38,,,rthree,5,Alice,0,0');
               rows[2].slice(24).should.equal(',rtwo,Bob,34,,,rtwo,5,Alice,0,0');
@@ -1643,7 +1643,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
                 const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
                 csv.length.should.equal(3); // header + data row + newline
-                csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status' ]);
+                csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState' ]);
                 csv[1].shift().should.be.an.recentIsoDate();
                 csv[1].should.eql([ 'one','Alice','30','one','5','Alice','0','0' ]);
 
@@ -1664,7 +1664,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
 
-                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status\n');
+                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState\n');
                 done();
               })))))));
 
@@ -1684,7 +1684,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
 
-                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status\n');
+                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState\n');
                 done();
               })))))));
 
@@ -1704,7 +1704,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
 
-                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status\n');
+                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState\n');
                 done();
               })))))));
 
@@ -1726,7 +1726,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
 
-                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status\n');
+                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState\n');
                 done();
               })))))));
   });
