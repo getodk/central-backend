@@ -1,4 +1,5 @@
 const should = require('should');
+const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 
@@ -22,7 +23,7 @@ describe('/audits', () => {
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/audits').expect(403))));
 
-    it('should return all activity', testService((service, { Project, User }) =>
+    it('should return all activity', testService((service, { Projects, Users }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects')
           .send({ name: 'audit project' })
@@ -36,9 +37,9 @@ describe('/audits', () => {
               .expect(200))
             .then(() => Promise.all([
               asAlice.get('/v1/audits').expect(200).then(({ body }) => body),
-              Project.getById(projectId).then((o) => o.get()),
-              User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
-              User.getByEmail('david@opendatakit.org').then((o) => o.get())
+              Projects.getById(projectId).then((o) => o.get()),
+              Users.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+              Users.getByEmail('david@opendatakit.org').then((o) => o.get())
             ]))
             .then(([ audits, project, alice, david ]) => {
               audits.length.should.equal(3);
@@ -48,8 +49,10 @@ describe('/audits', () => {
               audits[0].action.should.equal('user.create');
               audits[0].acteeId.should.equal(david.actor.acteeId);
               audits[0].details.should.eql({ data: {
-                actor: { displayName: 'david', type: 'user' },
-                email: 'david@opendatakit.org', password: null
+                actorId: david.actor.id,
+                email: 'david@opendatakit.org',
+                mfaSecret: null,
+                password: null
               } });
               audits[0].loggedAt.should.be.a.recentIsoDate();
 
@@ -66,7 +69,7 @@ describe('/audits', () => {
               audits[2].loggedAt.should.be.a.recentIsoDate();
             })))));
 
-    it('should return extended data if requested', testService((service, { Project, Form, User }) =>
+    it('should return extended data if requested', testService((service, { Projects, Forms, Users }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects')
           .send({ name: 'audit project' })
@@ -82,12 +85,12 @@ describe('/audits', () => {
             .then(() => Promise.all([
               asAlice.get('/v1/audits').set('X-Extended-Metadata', true)
                 .expect(200).then(({ body }) => body),
-              Project.getById(projectId).then((o) => o.get())
-                .then((project) => project.getFormByXmlFormId('simple')
+              Projects.getById(projectId).then((o) => o.get())
+                .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple')
                   .then((o) => o.get())
                   .then((form) => [ project, form ])),
-              User.getByEmail('alice@opendatakit.org').then((o) => o.get()),
-              User.getByEmail('david@opendatakit.org').then((o) => o.get())
+              Users.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+              Users.getByEmail('david@opendatakit.org').then((o) => o.get())
             ]))
             .then(([ audits, [ project, form ], alice, david ]) => {
               audits.length.should.equal(4);
@@ -101,8 +104,10 @@ describe('/audits', () => {
               audits[0].acteeId.should.equal(david.actor.acteeId);
               audits[0].actee.should.eql(plain(david.actor.forApi()));
               audits[0].details.should.eql({ data: {
-                actor: { displayName: 'david', type: 'user' },
-                email: 'david@opendatakit.org', password: null
+                actorId: david.actor.id,
+                email: 'david@opendatakit.org',
+                mfaSecret: null,
+                password: null
               } });
               audits[0].loggedAt.should.be.a.recentIsoDate();
 
@@ -131,8 +136,8 @@ describe('/audits', () => {
               audits[3].loggedAt.should.be.a.recentIsoDate();
             })))));
 
-    it('should not expand actor if there is no actor', testService((service, { Audit }) =>
-      (new Audit({ action: 'backup', details: '{"success":true}' })).create()
+    it('should not expand actor if there is no actor', testService((service, { run }) =>
+      run(sql`insert into audits (action, "loggedAt") values ('backup', now())`)
         .then(() => service.login('alice', (asAlice) =>
           asAlice.get('/v1/audits')
             .set('X-Extended-Metadata', true)
@@ -309,11 +314,10 @@ describe('/audits', () => {
                 body[0].actee.xmlFormId.should.equal('simple');
               }))))));
 
-    it('should filter (inclusively) by start date', testService((service, { db, Audit }) =>
+    it('should filter (inclusively) by start date', testService((service, { run }) =>
       Promise.all(
         [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-          .map((day) => new Audit({ loggedAt: `2000-01-${day}T00:00Z`, action: `test.${day}` }))
-          .map((data) => db.insert(data).into('audits'))
+          .map((day) => run(sql`insert into audits ("loggedAt", action) values (${`2000-01-${day}T00:00Z`}, ${`test.${day}`})`))
       )
         .then(() => service.login('alice', (asAlice) =>
           asAlice.get('/v1/audits?start=2000-01-08Z')
@@ -329,11 +333,10 @@ describe('/audits', () => {
               body[2].loggedAt.should.equal('2000-01-08T00:00:00.000Z');
             })))));
 
-    it('should filter by start date+time', testService((service, { db, Audit }) =>
+    it('should filter by start date+time', testService((service, { run }) =>
       Promise.all(
         [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-          .map((day) => new Audit({ loggedAt: `2000-01-${day}T00:00Z`, action: `test.${day}` }))
-          .map((data) => db.insert(data).into('audits'))
+          .map((day) => run(sql`insert into audits ("loggedAt", action) values (${`2000-01-${day}T00:00Z`}, ${`test.${day}`})`))
       )
         .then(() => service.login('alice', (asAlice) =>
           asAlice.get('/v1/audits?start=2000-01-08T12:00Z')
@@ -347,12 +350,11 @@ describe('/audits', () => {
               body[1].loggedAt.should.equal('2000-01-09T00:00:00.000Z');
             })))));
 
-    it('should filter extended data by start date+time', testService((service, { db, Audit, User }) =>
-      User.getByEmail('alice@opendatakit.org').then((o) => o.get())
+    it('should filter extended data by start date+time', testService((service, { Users, run }) =>
+      Users.getByEmail('alice@opendatakit.org').then((o) => o.get())
         .then((alice) => Promise.all(
           [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-            .map((day) => new Audit({ loggedAt: `2000-01-${day}T00:00Z`, action: `test.${day}`, actorId: alice.actor.id, acteeId: alice.actor.acteeId }))
-            .map((data) => db.insert(data).into('audits'))
+            .map((day) => run(sql`insert into audits ("loggedAt", action, "actorId", "acteeId") values (${`2000-01-${day}T00:00Z`}, ${`test.${day}`}, ${alice.actor.id}, ${alice.actor.acteeId})`))
         )
           .then(() => service.login('alice', (asAlice) =>
             asAlice.get('/v1/audits?start=2000-01-08T12:00Z')
@@ -371,11 +373,10 @@ describe('/audits', () => {
                 body[1].actee.displayName.should.equal('Alice');
               }))))));
 
-    it('should filter (inclusively) by end date', testService((service, { db, Audit }) =>
+    it('should filter (inclusively) by end date', testService((service, { run }) =>
       Promise.all(
         [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-          .map((day) => new Audit({ loggedAt: `2000-01-${day}T00:00Z`, action: `test.${day}` }))
-          .map((data) => db.insert(data).into('audits'))
+          .map((day) => run(sql`insert into audits ("loggedAt", action) values (${`2000-01-${day}T00:00Z`}, ${`test.${day}`})`))
       )
         .then(() => service.login('alice', (asAlice) =>
           asAlice.get('/v1/audits?end=2000-01-03Z')
@@ -391,11 +392,10 @@ describe('/audits', () => {
               body[2].loggedAt.should.equal('2000-01-01T00:00:00.000Z');
             })))));
 
-    it('should filter by end date+time', testService((service, { db, Audit }) =>
+    it('should filter by end date+time', testService((service, { run }) =>
       Promise.all(
         [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-          .map((day) => new Audit({ loggedAt: `2000-01-${day}T00:00Z`, action: `test.${day}` }))
-          .map((data) => db.insert(data).into('audits'))
+          .map((day) => run(sql`insert into audits ("loggedAt", action) values (${`2000-01-${day}T00:00Z`}, ${`test.${day}`})`))
       )
         .then(() => service.login('alice', (asAlice) =>
           asAlice.get('/v1/audits?end=2000-01-02T12:00Z')
@@ -409,12 +409,11 @@ describe('/audits', () => {
               body[1].loggedAt.should.equal('2000-01-01T00:00:00.000Z');
             })))));
 
-    it('should filter extended data by end date+time', testService((service, { db, Audit, User }) =>
-      User.getByEmail('alice@opendatakit.org').then((o) => o.get())
+    it('should filter extended data by end date+time', testService((service, { Users, run }) =>
+      Users.getByEmail('alice@opendatakit.org').then((o) => o.get())
         .then((alice) => Promise.all(
           [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-            .map((day) => new Audit({ loggedAt: `2000-01-${day}T00:00Z`, action: `test.${day}`, actorId: alice.actor.id, acteeId: alice.actor.acteeId }))
-            .map((data) => db.insert(data).into('audits'))
+            .map((day) => run(sql`insert into audits ("loggedAt", action, "actorId", "acteeId") values (${`2000-01-${day}T00:00Z`}, ${`test.${day}`}, ${alice.actor.id}, ${alice.actor.acteeId})`))
         )
           .then(() => service.login('alice', (asAlice) =>
             asAlice.get('/v1/audits?end=2000-01-02T12:00Z')
@@ -433,10 +432,10 @@ describe('/audits', () => {
                 body[1].actee.displayName.should.equal('Alice');
               }))))));
 
-    it('should filter out submission and backup events given action=nonverbose', testService((service, { db, Audit }) =>
+    it('should filter out submission and backup events given action=nonverbose', testService((service, { run }) =>
       service.login('alice', (asAlice) =>
         Promise.all([
-          (new Audit({ action: 'backup', details: '{"success":true}' })).create(),
+          run(sql`insert into audits (action, "loggedAt", details) values ('backup', now(), '{"success":true}')`),
           asAlice.post('/v1/projects/1/forms?publish=true')
             .set('Content-Type', 'application/xml')
             .send(testData.forms.binaryType)

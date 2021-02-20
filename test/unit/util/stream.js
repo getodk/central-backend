@@ -6,24 +6,6 @@ const Option = require(appPath + '/lib/util/option');
 const { fromObjects, toObjects } = require('streamtest').v2;
 
 describe('stream utils', () => {
-  describe('mapStreamToPromises', () => {
-    it('should return a promise of mapped promises', () =>
-      mapStreamToPromises(
-        (num) => Option.of(Promise.resolve(num)),
-        fromObjects([ 4, 8, 15, 16, 23, 42 ])
-      ).then((results) => {
-        results.should.eql([ 4, 8, 15, 16, 23, 42 ]);
-      }));
-
-    it('should ignore None results', () =>
-      mapStreamToPromises(
-        (num) => Option.of((num % 2) ? null : Promise.resolve(num)),
-        fromObjects([ 4, 8, 15, 16, 23, 42 ])
-      ).then((results) => {
-        results.should.eql([ 4, 8, 16, 42 ]);
-      }));
-  });
-
   describe('consumeAndBuffer', () => {
     const consumer = (stop) => (stream) => new Promise((resolve, reject) => {
       let result = '';

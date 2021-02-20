@@ -1,10 +1,11 @@
 const should = require('should');
 const { testService } = require('../setup');
+const { sql } = require('slonik');
 const testData = require('../../data/xml');
 
 // NOTE: for the data output tests, we do not attempt to extensively determine if every
 // internal case is covered; there are already two layers of tests below these, at
-// test/unit/data/json, then test/unit/outbound/odata. here we simply attempt to verify
+// test/unit/data/json, then test/unit/formats/odata. here we simply attempt to verify
 // that we have plumbed the relevant input to those layers correctly, and have applied
 // the appropriate higher-level logics (notfound, notauthorized, etc.)
 
@@ -321,7 +322,7 @@ describe('api: /forms/:id.svc', () => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
               value: [{
-                __id: "three",
+                __id: "rthree",
                 __system: {
                   // submissionDate is checked above,
                   submitterId: "5",
@@ -330,14 +331,14 @@ describe('api: /forms/:id.svc', () => {
                   attachmentsExpected: 0,
                   status: null
                 },
-                meta: { instanceID: "three" },
+                meta: { instanceID: "rthree" },
                 name: "Chelsea",
                 age: 38,
                 children: {
-                  'child@odata.navigationLink': "Submissions('three')/children/child"
+                  'child@odata.navigationLink': "Submissions('rthree')/children/child"
                 }
               }, {
-                __id: "two",
+                __id: "rtwo",
                 __system: {
                   // submissionDate is checked above,
                   submitterId: "5",
@@ -346,14 +347,14 @@ describe('api: /forms/:id.svc', () => {
                   attachmentsExpected: 0,
                   status: null
                 },
-                meta: { instanceID: "two" },
+                meta: { instanceID: "rtwo" },
                 name: "Bob",
                 age: 34,
                 children: {
-                  'child@odata.navigationLink': "Submissions('two')/children/child"
+                  'child@odata.navigationLink': "Submissions('rtwo')/children/child"
                 }
               }, {
-                __id: "one",
+                __id: "rone",
                 __system: {
                   // submissionDate is checked above,
                   submitterId: "5",
@@ -362,7 +363,7 @@ describe('api: /forms/:id.svc', () => {
                   attachmentsExpected: 0,
                   status: null
                 },
-                meta: { instanceID: "one" },
+                meta: { instanceID: "rone" },
                 name: "Alice",
                 age: 30
               }]
@@ -385,18 +386,18 @@ describe('api: /forms/:id.svc', () => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions.children.child',
               value: [{
-                __id: 'beaedcdba519e6e6b8037605c9ae3f6a719984fa',
-                '__Submissions-id': 'three',
+                __id: '32809ae2b3dc404ea292205eb884b21fa4e9acc5',
+                '__Submissions-id': 'rthree',
                 name: 'Candace',
                 age: 2
               }, {
-                __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d',
-                '__Submissions-id': 'two',
+                __id: '52eff9ea82550183880b9d64c20487642fa6e60c',
+                '__Submissions-id': 'rtwo',
                 name: 'Billy',
                 age: 4
               }, {
-                __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172',
-                '__Submissions-id': 'two',
+                __id: '1291953ccbe2e5e866f7ab3fefa3036d649186d3',
+                '__Submissions-id': 'rtwo',
                 name: 'Blaine',
                 age: 6
               }]
@@ -415,7 +416,7 @@ describe('api: /forms/:id.svc', () => {
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
               '@odata.nextLink': "http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24skip=2",
               value: [{
-                __id: "two",
+                __id: "rtwo",
                 __system: {
                   // submissionDate is checked above,
                   submitterId: "5",
@@ -424,11 +425,11 @@ describe('api: /forms/:id.svc', () => {
                   attachmentsExpected: 0,
                   status: null
                 },
-                meta: { instanceID: "two" },
+                meta: { instanceID: "rtwo" },
                 name: "Bob",
                 age: 34,
                 children: {
-                  'child@odata.navigationLink': "Submissions('two')/children/child"
+                  'child@odata.navigationLink': "Submissions('rtwo')/children/child"
                 }
               }]
             });
@@ -447,7 +448,7 @@ describe('api: /forms/:id.svc', () => {
               '@odata.nextLink': "http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24count=true&%24skip=1",
               '@odata.count': 3,
               value: [{
-                __id: "three",
+                __id: "rthree",
                 __system: {
                   // submissionDate is checked above,
                   submitterId: "5",
@@ -456,11 +457,11 @@ describe('api: /forms/:id.svc', () => {
                   attachmentsExpected: 0,
                   status: null
                 },
-                meta: { instanceID: "three" },
+                meta: { instanceID: "rthree" },
                 name: "Chelsea",
                 age: 38,
                 children: {
-                  'child@odata.navigationLink': "Submissions('three')/children/child"
+                  'child@odata.navigationLink': "Submissions('rthree')/children/child"
                 }
               }]
             });
@@ -496,7 +497,7 @@ describe('api: /forms/:id.svc', () => {
                 body.should.eql({
                   '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
                   value: [{
-                    __id: "three",
+                    __id: "rthree",
                     __system: {
                       // submissionDate is checked above,
                       submitterId: "5",
@@ -505,14 +506,14 @@ describe('api: /forms/:id.svc', () => {
                       attachmentsExpected: 0,
                       status: null
                     },
-                    meta: { instanceID: "three" },
+                    meta: { instanceID: "rthree" },
                     name: "Chelsea",
                     age: 38,
                     children: {
-                      'child@odata.navigationLink': "Submissions('three')/children/child"
+                      'child@odata.navigationLink': "Submissions('rthree')/children/child"
                     }
                   }, {
-                    __id: "one",
+                    __id: "rone",
                     __system: {
                       // submissionDate is checked above,
                       submitterId: "5",
@@ -521,20 +522,20 @@ describe('api: /forms/:id.svc', () => {
                       attachmentsExpected: 0,
                       status: null
                     },
-                    meta: { instanceID: "one" },
+                    meta: { instanceID: "rone" },
                     name: "Alice",
                     age: 30
                   }]
                 });
               }))))));
 
-    it('should return submissionDate-filtered toplevel rows if requested', testService((service, { db }) =>
+    it('should return submissionDate-filtered toplevel rows if requested', testService((service, { run }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
           .send(testData.instances.withrepeat.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => db.update({ createdAt: new Date('2010-06-01') }).into('submissions'))
+          .then(() => run(sql`update submissions set "createdAt"='2010-06-01T00:00:00.000Z'`))
           .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
             .send(testData.instances.withrepeat.two)
             .set('Content-Type', 'text/xml')
@@ -545,7 +546,7 @@ describe('api: /forms/:id.svc', () => {
               body.should.eql({
                 '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
                 value: [{
-                  __id: "one",
+                  __id: "rone",
                   __system: {
                     submissionDate: "2010-06-01T00:00:00.000Z",
                     submitterId: "5",
@@ -554,20 +555,20 @@ describe('api: /forms/:id.svc', () => {
                     attachmentsExpected: 0,
                     status: null
                   },
-                  meta: { instanceID: "one" },
+                  meta: { instanceID: "rone" },
                   name: "Alice",
                   age: 30
                 }]
               });
             })))));
 
-    it('should return submissionDate-filtered toplevel rows if requested', testService((service, { db }) =>
+    it('should return submissionDate-filtered toplevel rows if requested', testService((service, { run }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
           .send(testData.instances.withrepeat.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => db.update({ createdAt: new Date('2010-06-01') }).into('submissions'))
+          .then(() => run(sql`update submissions set "createdAt"='2010-06-01T00:00:00.000Z'`))
           .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
             .send(testData.instances.withrepeat.two)
             .set('Content-Type', 'text/xml')
@@ -578,7 +579,7 @@ describe('api: /forms/:id.svc', () => {
               body.should.eql({
                 '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
                 value: [{
-                  __id: "one",
+                  __id: "rone",
                   __system: {
                     submissionDate: "2010-06-01T00:00:00.000Z",
                     submitterId: "5",
@@ -587,7 +588,7 @@ describe('api: /forms/:id.svc', () => {
                     attachmentsExpected: 0,
                     status: null
                   },
-                  meta: { instanceID: "one" },
+                  meta: { instanceID: "rone" },
                   name: "Alice",
                   age: 30
                 }]
@@ -782,8 +783,8 @@ describe('api: /forms/:id.svc', () => {
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions.children.child',
               '@odata.nextLink': "http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24skip=2",
               value: [{
-                __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d',
-                '__Submissions-id': 'two',
+                __id: '52eff9ea82550183880b9d64c20487642fa6e60c',
+                '__Submissions-id': 'rtwo',
                 name: 'Billy',
                 age: 4
               }]
@@ -1004,7 +1005,7 @@ describe('api: /forms/:id.svc', () => {
                 body.should.eql({
                   '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat/draft.svc/$metadata#Submissions',
                   value: [{
-                    __id: "three",
+                    __id: "rthree",
                     __system: {
                       // submissionDate is checked above,
                       submitterId: "5",
@@ -1013,14 +1014,14 @@ describe('api: /forms/:id.svc', () => {
                       attachmentsExpected: 0,
                       status: null
                     },
-                    meta: { instanceID: "three" },
+                    meta: { instanceID: "rthree" },
                     name: "Chelsea",
                     age: 38,
                     children: {
-                      'child@odata.navigationLink': "Submissions('three')/children/child"
+                      'child@odata.navigationLink': "Submissions('rthree')/children/child"
                     }
                   }, {
-                    __id: "two",
+                    __id: "rtwo",
                     __system: {
                       // submissionDate is checked above,
                       submitterId: "5",
@@ -1029,14 +1030,14 @@ describe('api: /forms/:id.svc', () => {
                       attachmentsExpected: 0,
                       status: null
                     },
-                    meta: { instanceID: "two" },
+                    meta: { instanceID: "rtwo" },
                     name: "Bob",
                     age: 34,
                     children: {
-                      'child@odata.navigationLink': "Submissions('two')/children/child"
+                      'child@odata.navigationLink': "Submissions('rtwo')/children/child"
                     }
                   }, {
-                    __id: "one",
+                    __id: "rone",
                     __system: {
                       // submissionDate is checked above,
                       submitterId: "5",
@@ -1045,7 +1046,7 @@ describe('api: /forms/:id.svc', () => {
                       attachmentsExpected: 0,
                       status: null
                     },
-                    meta: { instanceID: "one" },
+                    meta: { instanceID: "rone" },
                     name: "Alice",
                     age: 30
                   }]

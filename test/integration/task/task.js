@@ -1,6 +1,7 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 const { testTask } = require('../setup');
+const { sql } = require('slonik');
 const { writeFile, symlink } = require('fs');
 const { join } = require('path');
 const { exec } = require('child_process');
@@ -40,19 +41,19 @@ describe('task: runner', () => {
 
 describe('task: auditing', () => {
   context('on task success', () => {
-    it('should log', testTask(({ simply, Audit }) =>
+    it('should log', testTask(({ all }) =>
       auditing('testAction', Promise.resolve({ key: 'value' }))
-        .then(() => simply.getAll('audits', Audit)
-          .then((audits) => {
-            audits.length.should.equal(1);
-            audits[0].action.should.equal('testAction');
-            audits[0].details.should.eql({ success: true, key: 'value' });
-          }))));
+        .then(() => all(sql`select * from audits`))
+        .then((audits) => {
+          audits.length.should.equal(1);
+          audits[0].action.should.equal('testAction');
+          audits[0].details.should.eql({ success: true, key: 'value' });
+        })));
 
-    it('should fault but passthrough on log failure', testTask(({ Audit }) => {
+    it('should fault but passthrough on log failure', testTask(({ Audits }) => {
       // hijack Audit.log to crash. new container is made for each test so we don't have
       // to restore a working one.
-      Audit.log = () => Promise.reject(false);
+      Audits.log = () => Promise.reject(false);
       return auditing('testAction', Promise.resolve(true))
         .then((result) => {
           // too difficult to test stderr output.
@@ -63,9 +64,9 @@ describe('task: auditing', () => {
   });
 
   context('on task failure', () => {
-    it('should log', testTask(({ simply, Audit }) =>
+    it('should log', testTask(({ all }) =>
       auditing('testAction', Promise.reject(Problem.user.missingParameter({ field: 'test' })))
-        .then(identity, () => simply.getAll('audits', Audit)
+        .then(identity, () => all(sql`select * from audits`)
           .then((audits) => {
             audits.length.should.equal(1);
             audits[0].action.should.equal('testAction');
@@ -73,9 +74,9 @@ describe('task: auditing', () => {
             audits[0].details.code.should.equal(400.2);
           }))));
 
-    it('should fault but passthrough on log failure', testTask(({ Audit }) => {
+    it('should fault but passthrough on log failure', testTask(({ Audits }) => {
       // ditto above.
-      Audit.log = () => Promise.reject(Problem.user.missingParameter({ field: 'test' }));
+      Audits.log = () => Promise.reject(Problem.user.missingParameter({ field: 'test' }));
       return auditing('testAction', Promise.reject(true))
         .then(identity, (result) => {
           // too difficult to test stderr output.
@@ -87,11 +88,11 @@ describe('task: auditing', () => {
 });
 
 describe('task: emailing', () => {
-  it('should do nothing on task success', testTask(({ simply, Audit }) =>
+  it('should do nothing on task success', testTask(() =>
     emailing('testAction', Promise.resolve({ key: 'value' }))
       .then(() => { global.inbox.length.should.equal(0); })));
 
-  it('should send an email on task failure', testTask(({ simply, Audit }) =>
+  it('should send an email on task failure', testTask(() =>
     emailing('backupFailed', Promise.reject(Problem.user.missingParameter({ field: 'test' })))
       .then(identity, (err) => {
         const email = global.inbox.pop();

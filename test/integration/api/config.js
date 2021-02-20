@@ -15,28 +15,14 @@ describe('api: /config', () => {
         service.login('alice', (asAlice) =>
           asAlice.get('/v1/config/backups').expect(404))));
 
-      it('should return backup config details if configured', testService((service, { Config }) =>
-        Config.set('backups.main', '{"type":"google"}')
+      it('should return backup config details if configured', testService((service, { Configs }) =>
+        Configs.set('backups.main', '{"type":"google"}')
           .then(() => service.login('alice', (asAlice) =>
             asAlice.get('/v1/config/backups')
               .expect(200)
               .then(({ body }) => {
                 body.type.should.equal('google');
                 body.setAt.should.be.an.isoDate();
-                body.recent.should.eql([]);
-              })))));
-
-      it('should return latest result if logged', testService((service, { all, Audit, Config }) =>
-        Config.set('backups.main', '{"type":"google"}')
-          .then(() => Audit.log(null, 'backup', null, { order: 'first' }))
-          .then(() => Audit.log(null, 'backup', null, { order: 'second' }))
-          .then(() => service.login('alice', (asAlice) =>
-            asAlice.get('/v1/config/backups')
-              .expect(200)
-              .then(({ body }) => {
-                body.type.should.equal('google');
-                body.recent.map((log) => log.details).should.eql([{ order: 'second' }, { order: 'first' }]);
-                body.recent.forEach((log) => log.loggedAt.should.be.a.recentIsoDate());
               })))));
     });
 
@@ -49,8 +35,8 @@ describe('api: /config', () => {
         service.login('alice', (asAlice) =>
           asAlice.delete('/v1/config/backups').expect(200))));
 
-      it('should clear the config if it exists', testService((service, { Config }) =>
-        Config.set('backups.main', '{"type":"google"}')
+      it('should clear the config if it exists', testService((service, { Configs }) =>
+        Configs.set('backups.main', '{"type":"google"}')
           .then(() => service.login('alice', (asAlice) =>
             asAlice.delete('/v1/config/backups')
               .expect(200)
@@ -88,7 +74,7 @@ describe('api: /config', () => {
           asAlice.post('/v1/config/backups/verify').expect(403))));
 
       // does the entire round-trip:
-      it('should store all configuration in the database', testService((service, { Config }) =>
+      it('should store all configuration in the database', testService((service, { Configs }) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/config/backups/initiate')
             .send({ passphrase: 'super secure' })
@@ -99,7 +85,7 @@ describe('api: /config', () => {
               .expect(200)
               .then(() => asAlice.get('/v1/config/backups')
                 .expect(200)
-                .then(() => Promise.all([ 'backups.main', 'backups.google' ].map(Config.get))
+                .then(() => Promise.all([ 'backups.main', 'backups.google' ].map(Configs.get))
                   .then(map(getOrNotFound))
                   .then(map((x) => JSON.parse(x.value)))
                   .then(([ main, google ]) => {

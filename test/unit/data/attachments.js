@@ -8,9 +8,9 @@ const { zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 describe('.zip attachments streaming', () => {
   it('should stream the contents to files at the appropriate paths', (done) => {
     const inStream = streamTest.fromObjects([
-      { instanceId: 'subone', name: 'firstfile.ext', content: 'this is my first file' },
-      { instanceId: 'subone', name: 'secondfile.ext', content: 'this is my second file' },
-      { instanceId: 'subtwo', name: 'thirdfile.ext', content: 'this is my third file' }
+      { row: { instanceId: 'subone', name: 'firstfile.ext', content: 'this is my first file' } },
+      { row: { instanceId: 'subone', name: 'secondfile.ext', content: 'this is my second file' } },
+      { row: { instanceId: 'subtwo', name: 'thirdfile.ext', content: 'this is my third file' } }
     ]);
     zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream)), (result) => {
       result.filenames.should.eql([
@@ -29,9 +29,9 @@ describe('.zip attachments streaming', () => {
 
   it('should deal with unsafe filenames sanely', (done) => {
     const inStream = streamTest.fromObjects([
-      { instanceId: '../subone', name: 'firstfile.ext', content: 'this is my first file' },
-      { instanceId: 'subone', name: '../secondfile.ext', content: 'this is my second file' },
-      { instanceId: 'subone', name: './.secondfile.ext', content: 'this is my duplicate second file' },
+      { row: { instanceId: '../subone', name: 'firstfile.ext', content: 'this is my first file' } },
+      { row: { instanceId: 'subone', name: '../secondfile.ext', content: 'this is my second file' } },
+      { row: { instanceId: 'subone', name: './.secondfile.ext', content: 'this is my duplicate second file' } },
     ]);
     zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream)), (result) => {
       result.filenames.should.eql([
@@ -46,22 +46,22 @@ describe('.zip attachments streaming', () => {
 
   it('should not strip .enc unless decryption is happening', (done) => {
     const inStream = streamTest.fromObjects([
-      { instanceId: 'subone', name: 'firstfile.ext.enc', content: 'this is my first file' }
+      { row: { instanceId: 'subone', name: 'firstfile.ext.enc', content: 'this is my first file' } }
     ]);
     zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream)), (result) => {
       result.filenames.should.eql([ 'media/firstfile.ext.enc' ]);
       done();
     });
   });
-});
 
   it('should strip .enc if decryption is happening', (done) => {
     const inStream = streamTest.fromObjects([
-      { instanceId: 'subone', name: 'firstfile.ext.enc', content: 'this is my first file' }
+      { row: { instanceId: 'subone', name: 'firstfile.ext.enc', content: 'this is my first file' } }
     ]);
     zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream, () => {})), (result) => {
       result.filenames.should.eql([ 'media/firstfile.ext' ]);
       done();
     });
   });
+});
 

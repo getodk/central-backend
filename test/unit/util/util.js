@@ -50,20 +50,6 @@ describe('util/util', () => {
     });
   });
 
-  describe('ensureArray', () => {
-    const { ensureArray } = util;
-    it('should wrap non-arrays in an array', () => {
-      ensureArray(null).should.eql([ null ]);
-      ensureArray({ x: 1 }).should.eql([{ x: 1 }]);
-    });
-
-    it('should return arrays as-is', () => {
-      ensureArray([]).should.eql([]);
-      ensureArray([[]]).should.eql([[]]);
-      ensureArray([ undefined ]).should.eql([ undefined ]);
-    });
-  });
-
   describe('blankStringToNull', () => {
     const { blankStringToNull } = util;
     it('should crush blank strings', () => {
@@ -74,21 +60,6 @@ describe('util/util', () => {
       (blankStringToNull(undefined) === undefined).should.equal(true);
       (blankStringToNull(null) === null).should.equal(true);
       (blankStringToNull(' ') === ' ').should.equal(true);
-    });
-  });
-
-  describe('superproto', () => {
-    const { superproto } = util;
-    it('should call superclass instance methods', () => {
-      class A {
-        test() { return 42; }
-      }
-
-      class B extends A {
-        test() { return superproto(this).test() / 2; }
-      }
-
-      (new B()).test().should.equal(21);
     });
   });
 });

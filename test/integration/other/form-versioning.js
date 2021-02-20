@@ -1,46 +1,44 @@
+const appPath = require('app-root-path');
 const should = require('should');
 const { pick } = require('ramda');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
+const { Blob, Form } = require(appPath + '/lib/model/frames');
 
 describe('form forward versioning', () => {
   const force = (x) => x.get();
   const newXml = testData.forms.simple.replace('id="simple"', 'id="simple" version="two"');
 
-  it('should create a new def and update the version', testService((_, { Project, Form, FormDef, FormPartial }) =>
+  it('should create a new def and update the version', testService((_, { Projects, Forms }) =>
     Promise.all([
-      FormPartial.fromXml(newXml),
-      Project.getById(1).then(force)
-        .then((project) => project.getFormByXmlFormId('simple')).then(force)
+      Form.fromXml(newXml),
+      Forms.getByProjectAndXmlFormId(1, 'simple').then(force)
     ])
-      .then(([ partial, oldForm ]) => partial.createVersion(oldForm, true))
-      .then(() => Project.getById(1)).then(force)
-      .then((project) => Form.getWithXmlByProjectAndXmlFormId(project.id, 'simple')).then(force)
+      .then(([ partial, oldForm ]) =>  Forms.createVersion(partial, oldForm, true))
+      .then(() => Forms.getByProjectAndXmlFormId(1, 'simple', true)).then(force)
       .then((newForm) => {
         newForm.currentDefId.should.equal(newForm.def.id);
-        /version="two"/.test(newForm.def.xml).should.equal(true);
+        /version="two"/.test(newForm.xml).should.equal(true);
         newForm.def.sha.should.equal('5a31610cb649ccd2482709664e2a6268df66112f');
       })));
 
-  it('should create a new draft def and not update the current version', testService((_, { Project, Form, FormDef, FormPartial }) =>
+  it('should create a new draft def and not update the current version', testService((_, { Projects, Forms }) =>
     Promise.all([
-      FormPartial.fromXml(newXml),
-      Project.getById(1).then(force)
-        .then((project) => project.getFormByXmlFormId('simple')).then(force)
+      Form.fromXml(newXml),
+      Forms.getByProjectAndXmlFormId(1, 'simple').then(force)
     ])
-      .then(([ partial, oldForm ]) => partial.createVersion(oldForm, false)
-        .then(() => Project.getById(1)).then(force)
-        .then((project) => project.getFormByXmlFormId('simple')).then(force)
+      .then(([ partial, oldForm ]) => Forms.createVersion(partial, oldForm, false)
+        .then(() => Forms.getByProjectAndXmlFormId(1, 'simple', true)).then(force)
         .then((newForm) => {
           newForm.currentDefId.should.equal(oldForm.def.id);
-          /version="two"/.test(newForm.def.xml).should.equal(false);
+          /version="two"/.test(newForm.xml).should.equal(false);
           newForm.def.sha.should.equal('6f3b4ee76e0ac9a1e2007ef987be40e02c24d75e');
 
           should.exist(newForm.draftDefId);
           newForm.draftDefId.should.not.equal(newForm.def.id);
         }))));
 
-  it('should preserve submissions', testService((service, { Project, Blob, Form, FormDef, FormAttachment, FormPartial }) =>
+  it('should preserve submissions', testService((service, { Projects, Forms }) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms/simple/submissions')
         .send(testData.instances.simple.one)
@@ -55,11 +53,10 @@ describe('form forward versioning', () => {
           .set('Content-Type', 'text/xml')
           .expect(200))
         .then(() => Promise.all([
-          FormPartial.fromXml(newXml),
-          Project.getById(1).then(force)
-            .then((project) => project.getFormByXmlFormId('simple')).then(force)
+          Form.fromXml(newXml),
+          Forms.getByProjectAndXmlFormId(1, 'simple').then(force)
         ])
-        .then(([ partial, form ]) => partial.createVersion(form, true))
+        .then(([ partial, form ]) => Forms.createVersion(partial, form, true))
         .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions')
           .expect(200)
           .then(({ body }) => {
@@ -69,22 +66,22 @@ describe('form forward versioning', () => {
 
   const withAttachmentsMatching = testData.forms.withAttachments
     .replace('id="withAttachments"', 'id="withAttachments" version="two"');
-  it('should copy forward matching attachments', testService((_, { Project, Blob, Form, FormDef, FormAttachment, FormPartial }) =>
+  it('should copy forward matching attachments', testService((_, { Blobs, Forms, FormAttachments, Projects }) =>
     Promise.all([
-      Project.getById(1).then(force),
-      FormPartial.fromXml(testData.forms.withAttachments),
-      Blob.fromFile(__filename).then((blob) => blob.ensure())
+      Projects.getById(1).then(force),
+      Form.fromXml(testData.forms.withAttachments),
+      Blob.fromFile(__filename).then(Blobs.ensure)
     ])
-      .then(([ project, partial, blob ]) => partial.with({ projectId: project.id }).createNew(true)
+      .then(([ project, partial, blobId ]) => Forms.createNew(partial, project, true)
         .then((savedForm) => Promise.all([ 'goodone.csv', 'goodtwo.mp3' ]
-          .map((name) => FormAttachment.getByFormDefIdAndName(savedForm.def.id, name)
+          .map((name) => FormAttachments.getByFormDefIdAndName(savedForm.def.id, name)
             .then(force)
-            .then((attachment) => attachment.with({ blobId: blob.id }).update()))
+            .then((attachment) => FormAttachments.update(savedForm, attachment, blobId)))
         )
-          .then(() => FormPartial.fromXml(withAttachmentsMatching))
-          .then((partial) => partial.createVersion(savedForm, true))
-          .then(() => project.getFormByXmlFormId('withAttachments')).then(force)
-          .then((finalForm) => FormAttachment.getAllByFormDefId(finalForm.currentDefId)
+          .then(() => Form.fromXml(withAttachmentsMatching))
+          .then((partial) => Forms.createVersion(partial, savedForm, true))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'withAttachments')).then(force)
+          .then((finalForm) => FormAttachments.getAllByFormDefId(finalForm.currentDefId)
             .then((attachments) => {
               savedForm.currentDefId.should.not.equal(finalForm.currentDefId);
 
@@ -94,29 +91,29 @@ describe('form forward versioning', () => {
               attachments[0].formDefId.should.equal(finalForm.currentDefId);
               attachments[1].formDefId.should.equal(finalForm.currentDefId);
 
-              attachments[0].blobId.should.equal(blob.id);
-              attachments[1].blobId.should.equal(blob.id);
+              attachments[0].blobId.should.equal(blobId);
+              attachments[1].blobId.should.equal(blobId);
             }))))));
 
   const withAttachmentsNonmatching = withAttachmentsMatching
     .replace('goodone.csv', 'reallygoodone.csv') // name change
     .replace('form="audio"', 'form="video"'); // type change
-  it('should not copy forward nonmatching attachments', testService((_, { Project, Blob, Form, FormDef, FormAttachment, FormPartial }) =>
+  it('should not copy forward nonmatching attachments', testService((_, { Blobs, Forms, FormAttachments, Projects }) =>
     Promise.all([
-      Project.getById(1).then(force),
-      FormPartial.fromXml(testData.forms.withAttachments),
-      Blob.fromFile(__filename).then((blob) => blob.ensure())
+      Projects.getById(1).then(force),
+      Form.fromXml(testData.forms.withAttachments),
+      Blob.fromFile(__filename).then(Blobs.ensure)
     ])
-      .then(([ project, partial, blob ]) => partial.with({ projectId: project.id }).createNew()
+      .then(([ project, partial, blobId ]) => Forms.createNew(partial, project, true)
         .then((savedForm) => Promise.all([ 'goodone.csv', 'goodtwo.mp3' ]
-          .map((name) => FormAttachment.getByFormDefIdAndName(savedForm.def.id, name)
+          .map((name) => FormAttachments.getByFormDefIdAndName(savedForm.def.id, name)
             .then(force)
-            .then((attachment) => attachment.with({ blobId: blob.id }).update()))
+            .then((attachment) => FormAttachments.update(savedForm, attachment, blobId)))
         )
-          .then(() => FormPartial.fromXml(withAttachmentsNonmatching))
-          .then((partial2) => partial2.createVersion(savedForm, true))
-          .then(() => project.getFormByXmlFormId('withAttachments')).then(force)
-          .then((finalForm) => FormAttachment.getAllByFormDefId(finalForm.currentDefId)
+          .then(() => Form.fromXml(withAttachmentsNonmatching))
+          .then((partial2) => Forms.createVersion(partial2, savedForm, true))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'withAttachments')).then(force)
+          .then((finalForm) => FormAttachments.getAllByFormDefId(finalForm.currentDefId)
             .then((attachments) => {
               attachments.length.should.equal(2);
               should.not.exist(attachments[0].blobId);

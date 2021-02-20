@@ -1,10 +1,12 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 const uuid = require('uuid/v4');
+const { sql } = require('slonik');
 const { createReadStream, readFileSync } = require('fs');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { zipStreamToFiles } = require('../../util/zip');
+const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /submission', () => {
@@ -74,7 +76,7 @@ describe('api: /submission', () => {
           .attach('xml_submission_file', Buffer.from('<data id="simple" version="-1"><orx:meta><orx:instanceID>one</orx:instanceID></orx:meta></data>'), { filename: 'data.xml' })
           .expect(404))));
 
-    it('should save the submission to the appropriate form without device id', testService((service) =>
+    it('should save the submission to the appropriate form', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
@@ -137,7 +139,24 @@ describe('api: /submission', () => {
               .then(({ text }) => { text.should.equal(testData.instances.simple.one); })
           ])))));
 
-    it('should accept a submission for an old form version', testService((service, { simply, SubmissionDef, FormDef }) =>
+    /*it.only('should save the submission instance name if given', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(tap(testData.instances.simple.one.replace(/<\/meta>/, '<orx:instanceName>custom name</orx:instanceName></orx:meta>'))), { filename: 'data.xml' })
+          .expect(201)
+          .then(({ text }) => {
+            text.should.match(/upload was successful/);
+          })
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+            .expect(200)
+            .then(({ body }) => {
+            // needs to be on a specific version!
+              console.log(body);
+              body.instanceName.should.equal('custom name');
+            })))));*/
+
+    it('should accept a submission for an old form version', testService((service, { Submissions, Forms, one }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/draft')
           .expect(200)
@@ -155,15 +174,12 @@ describe('api: /submission', () => {
             .expect(200))
           // the submission worked, that's good. the rest of this checks that it went
           // to the correct place.
-          .then(() => SubmissionDef.getCurrentByIds(1, 'simple', 'one', false))
+          .then(() => Submissions.getCurrentDefByIds(1, 'simple', 'one', false))
           .then((o) => o.get())
-          .then(({ formDefId }) => simply.getOneWhere('form_defs', { id: formDefId }, FormDef))
-          .then((o) => o.get())
-          .then((formDef) => {
-            formDef.version.should.equal('two');
-          }))));
+          .then(({ formDefId }) => one(sql`select * from form_defs where id=${formDefId}`))
+          .then((formDef) => { formDef.version.should.equal('two'); }))));
 
-    it('should store the correct formdef and actor ids', testService((service, { db }) =>
+    it('should store the correct formdef and actor ids', testService((service, { all, oneFirst }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
@@ -171,14 +187,14 @@ describe('api: /submission', () => {
           .expect(201)
           .then(() => Promise.all([
             asAlice.get('/v1/users/current').then(({ body }) => body.id),
-            db.select('formDefId', 'submitterId').from('submission_defs')
+            all(sql`select "formDefId", "submitterId" from submission_defs`)
           ]))
           .then(([ aliceId, submissions ]) => {
             submissions.length.should.equal(1);
             submissions[0].submitterId.should.equal(aliceId);
-            return db.select('xml').from('form_defs').where({ id: submissions[0].formDefId })
-              .then(([ def ]) => {
-                def.xml.should.equal(testData.forms.simple);
+            return oneFirst(sql`select xml from form_defs where id=${submissions[0].formDefId}`)
+              .then((xml) => {
+                xml.should.equal(testData.forms.simple);
               });
           }))));
 
@@ -328,7 +344,7 @@ describe('api: /submission', () => {
             .set('X-OpenRosa-Version', '1.0')
             .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.one), { filename: 'data.xml' })
             .expect(201)
-            .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/one/attachments')
+            .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/bone/attachments')
               .expect(200)
               .then(({ body }) => {
                 body.should.eql([{ name: 'my_file1.mp4', exists: false }]);
@@ -448,6 +464,137 @@ describe('api: /submission', () => {
               .expect(200)
               .then(({ body }) => { body.toString('utf8').should.equal('this is test file one'); })
           ])))));
+
+    context('versioning', () => {
+      const withSimpleIds = (deprecatedId, instanceId) => testData.instances.simple.one
+        .replace('one</instance', `${instanceId}</instanceID><deprecatedID>${deprecatedId}</deprecated`);
+      const withBinaryIds = (deprecatedId, instanceId) => testData.instances.binaryType.both
+        .replace('both</instance', `${instanceId}</instanceID><deprecatedID>${deprecatedId}</deprecated`);
+
+      it('should reject if the deprecatedId is not known', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(withSimpleIds('unknown', 'two')), { filename: 'data.xml' })
+              .expect(404)))));
+
+      it('should reject if the deprecatedId is not current', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(withSimpleIds('one', 'two')), { filename: 'data.xml' })
+              .expect(201))
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(withSimpleIds('one', 'three')), { filename: 'data.xml' })
+              .expect(409)
+              .then(({ text }) => {
+                text.includes('but the copy you were editing (one) is now out of date').should.equal(true);
+              })))));
+
+      it('should reject if the new instanceId is a duplicate', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(withSimpleIds('one', 'two')), { filename: 'data.xml' })
+              .expect(201))
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(withSimpleIds('two', 'one')), { filename: 'data.xml' })
+              .expect(409)
+              .then(({ text }) => {
+                text.includes('A resource already exists with instanceID value(s) of one.').should.equal(true);
+              })))));
+
+      it('should not reject for an instanceID conflict on another form', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.withrepeat.one.replace('rone', 'one')), { filename: 'data.xml' })
+              .expect(201)))));
+
+      it('should accept the new submission', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(withSimpleIds('one', 'two').replace('Alice', 'Alyssa')), { filename: 'data.xml' })
+              .expect(201))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple.svc/Submissions')
+              .then(({ body }) => {
+                body.value[0].name.should.equal('Alyssa');
+              })))));
+
+      it('should replace attachments', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'text/xml')
+            .send(testData.forms.binaryType)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201)
+              .then(() => asAlice.post('/v1/projects/1/submission')
+                .set('X-OpenRosa-Version', '1.0')
+                .attach('xml_submission_file', Buffer.from(withBinaryIds('both', 'both2')), { filename: 'data.xml' })
+                .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+                .expect(201))
+              .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments')
+                .then(({ body }) => {
+                  body.should.eql([
+                    { name: 'here_is_file2.jpg', exists: false },
+                    { name: 'my_file1.mp4', exists: true }
+                  ]);
+                }))))));
+
+      it('should upsert attachments', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'text/xml')
+            .send(testData.forms.binaryType)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201)
+              .then(() => asAlice.post('/v1/projects/1/submission')
+                .set('X-OpenRosa-Version', '1.0')
+                .attach('xml_submission_file', Buffer.from(withBinaryIds('both', 'both2')), { filename: 'data.xml' })
+                .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+                .expect(201))
+              .then(() => asAlice.post('/v1/projects/1/submission')
+                .set('X-OpenRosa-Version', '1.0')
+                .attach('xml_submission_file', Buffer.from(withBinaryIds('both', 'both2')), { filename: 'data.xml' })
+                .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+                .expect(201))
+              .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments')
+                .then(({ body }) => {
+                  body.should.eql([
+                    { name: 'here_is_file2.jpg', exists: true },
+                    { name: 'my_file1.mp4', exists: true }
+                  ]);
+                }))))));
+    });
   });
 
   describe('[draft] POST', () => {
@@ -663,7 +810,7 @@ describe('api: /forms/:id/submissions', () => {
             body.submitterId.should.equal(5);
           }))));
 
-    it('should accept a submission for an old form version', testService((service, { simply, SubmissionDef, FormDef }) =>
+    it('should accept a submission for an old form version', testService((service, { Submissions, one }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/draft')
           .expect(200)
@@ -681,13 +828,10 @@ describe('api: /forms/:id/submissions', () => {
             .expect(200))
           // the submission worked, that's good. the rest of this checks that it went
           // to the correct place.
-          .then(() => SubmissionDef.getCurrentByIds(1, 'simple', 'one', false))
+          .then(() => Submissions.getCurrentDefByIds(1, 'simple', 'one', false))
           .then((o) => o.get())
-          .then(({ formDefId }) => simply.getOneWhere('form_defs', { id: formDefId }, FormDef))
-          .then((o) => o.get())
-          .then((formDef) => {
-            formDef.version.should.equal('two');
-          }))));
+          .then(({ formDefId }) => one(sql`select * from form_defs where id=${formDefId}`))
+          .then((formDef) => { formDef.version.should.equal('two'); }))));
 
     it('should create expected attachments', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -708,7 +852,7 @@ describe('api: /forms/:id/submissions', () => {
                 ]);
               }))))));
 
-    it('should store the correct formdef and actor ids', testService((service, { db }) =>
+    it('should store the correct formdef and actor ids', testService((service, { all, oneFirst }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
@@ -716,15 +860,13 @@ describe('api: /forms/:id/submissions', () => {
           .expect(200)
           .then(() => Promise.all([
             asAlice.get('/v1/users/current').then(({ body }) => body.id),
-            db.select('formDefId', 'submitterId').from('submission_defs')
+            all(sql`select "formDefId", "submitterId" from submission_defs`)
           ]))
           .then(([ aliceId, submissions ]) => {
             submissions.length.should.equal(1);
             submissions[0].submitterId.should.equal(aliceId);
-            return db.select('xml').from('form_defs').where({ id: submissions[0].formDefId })
-              .then(([ def ]) => {
-                def.xml.should.equal(testData.forms.simple);
-              });
+            return oneFirst(sql`select xml from form_defs where id=${submissions[0].formDefId}`)
+              .then((xml) => { xml.should.equal(testData.forms.simple); });
           }))));
 
     it('should accept encrypted submissions, with attachments', testService((service) =>
@@ -925,14 +1067,14 @@ describe('api: /forms/:id/submissions', () => {
                 done();
               })))))));
 
-    it('should return a submissionDate-filtered zipfile with the relevant data', testService((service, { db }) =>
+    it('should return a submissionDate-filtered zipfile with the relevant data', testService((service, { run }) =>
       service.login('alice', (asAlice) =>
         service.login('bob', (asBob) =>
           asAlice.post('/v1/projects/1/forms/simple/submissions')
             .send(testData.instances.simple.one)
             .set('Content-Type', 'text/xml')
             .expect(200)
-            .then(() => db.update({ createdAt: new Date('2010-06-01') }).into('submissions'))
+            .then(() => run(sql`update submissions set "createdAt"='2010-06-01'`))
             .then(() => asBob.post('/v1/projects/1/forms/simple/submissions')
               .send(testData.instances.simple.two)
               .set('Content-Type', 'text/xml')
@@ -1117,7 +1259,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
               done();
             })))
-          .then(() => container.simply.countWhere('client_audits')
+          .then(() => container.oneFirst(sql`select count(*) from client_audits`)
             .then((count) => { count.should.equal(8); })))));
 
     it('should return adhoc-processed consolidated client audit log attachments', testService((service, container) =>
@@ -1326,9 +1468,9 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               rows.length.should.equal(5);
               rows[0].should.equal('SubmissionDate,meta-instanceID,name,age,children-child-name,children-child-age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status');
               // (need to drop the iso date)
-              rows[1].slice(24).should.equal(',three,Chelsea,38,,,three,5,Alice,0,0');
-              rows[2].slice(24).should.equal(',two,Bob,34,,,two,5,Alice,0,0');
-              rows[3].slice(24).should.equal(',one,Alice,30,,,one,5,Alice,0,0');
+              rows[1].slice(24).should.equal(',rthree,Chelsea,38,,,rthree,5,Alice,0,0');
+              rows[2].slice(24).should.equal(',rtwo,Bob,34,,,rtwo,5,Alice,0,0');
+              rows[3].slice(24).should.equal(',rone,Alice,30,,,rone,5,Alice,0,0');
             })))));
   });
 
@@ -1619,7 +1761,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               body[0].public.should.equal('MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYh7bSui/0xppQ+J3i5xghfao+559Rqg9X0xNbdMEsW35CzYUfmC8sOzeeUiE4pG7HIEUmiJal+mo70UMDUlywXj9z053n0g6MmtLlUyBw0ZGhEZWHsfBxPQixdzY/c5i7sh0dFzWVBZ7UrqBc2qjRFUYxeXqHsAxSPClTH1nW47Mr2h4juBLC7tBNZA3biZA/XTPt//hAuzv1d6MGiF3vQJXvFTNdfsh6Ckq4KXUsAv+07cLtON4KjrKhqsVNNGbFssTUHVL4A9N3gsuRGt329LHOKBxQUGEnhMM2MEtvk4kaVQrgCqpk1pMU/4HlFtRjOoKdAIuzzxIl56gNdRUQIDAQAB');
             })))));
 
-    it('should return multiple self-managed keys if they are used', testService((service, { db, Project, FormDef, FormPartial }) =>
+    it('should return multiple self-managed keys if they are used', testService((service, { Forms }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.encrypted)
@@ -1630,13 +1772,12 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .set('Content-Type', 'text/xml')
             .expect(200))
           .then(() => Promise.all([
-            Project.getById(1).then((o) => o.get())
-              .then((project) => project.getFormByXmlFormId('encrypted')).then((o) => o.get()),
-            FormPartial.fromXml(testData.forms.encrypted
+            Forms.getByProjectAndXmlFormId(1, 'encrypted').then((o) => o.get()),
+            Form.fromXml(testData.forms.encrypted
               .replace(/PublicKey="[a-z0-9+\/]+"/i, 'PublicKey="keytwo"')
               .replace('working3', 'working4'))
           ]))
-          .then(([ form, partial ]) => partial.createVersion(form, true))
+          .then(([ form, partial ]) => Forms.createVersion(partial, form, true))
           .then(() => asAlice.post('/v1/projects/1/forms/encrypted/submissions')
             .send(testData.instances.encrypted.two
               .replace(/EncryptedKey.*EncryptedKey/, 'EncryptedKey>keytwo</base64EncryptedKey')
@@ -1653,7 +1794,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               body[1].public.should.equal('MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYh7bSui/0xppQ+J3i5xghfao+559Rqg9X0xNbdMEsW35CzYUfmC8sOzeeUiE4pG7HIEUmiJal+mo70UMDUlywXj9z053n0g6MmtLlUyBw0ZGhEZWHsfBxPQixdzY/c5i7sh0dFzWVBZ7UrqBc2qjRFUYxeXqHsAxSPClTH1nW47Mr2h4juBLC7tBNZA3biZA/XTPt//hAuzv1d6MGiF3vQJXvFTNdfsh6Ckq4KXUsAv+07cLtON4KjrKhqsVNNGbFssTUHVL4A9N3gsuRGt329LHOKBxQUGEnhMM2MEtvk4kaVQrgCqpk1pMU/4HlFtRjOoKdAIuzzxIl56gNdRUQIDAQAB');
             })))));
 
-    it('should not return unused keys', testService((service, { Project, FormDef, FormPartial }) =>
+    it('should not return unused keys', testService((service, { Forms }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.encrypted)
@@ -1664,13 +1805,12 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .set('Content-Type', 'text/xml')
             .expect(200))
           .then(() => Promise.all([
-            Project.getById(1).then((o) => o.get())
-              .then((project) => project.getFormByXmlFormId('encrypted')).then((o) => o.get()),
-            FormPartial.fromXml(testData.forms.encrypted
+            Forms.getByProjectAndXmlFormId(1, 'encrypted').then((o) => o.get()),
+            Form.fromXml(testData.forms.encrypted
               .replace(/PublicKey="[a-z0-9+\/]+"/i, 'PublicKey="keytwo"')
               .replace('working3', 'working4'))
           ]))
-          .then(([ form, partial ]) => partial.createVersion(form))
+          .then(([ form, partial ]) => Forms.createVersion(partial, form))
           .then(() => asAlice.get('/v1/projects/1/forms/encrypted/submissions/keys')
             .expect(200)
             .then(({ body }) => {
@@ -2257,7 +2397,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                   body.toString().should.equal('testvideo');
                 })))))));
 
-    it('should log an audit entry about initial attachment', testService((service, { Audit, Project, Submission, SubmissionAttachment, SubmissionDef }) =>
+    it('should log an audit entry about initial attachment', testService((service, { Audits, Forms, Submissions, SubmissionAttachments }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -2271,18 +2411,17 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .set('Content-Type', 'video/mp4')
             .send('testvideo')
             .expect(200))
-          .then(() => Project.getById(1))
-          .then((project) => project.get().getFormByXmlFormId('binaryType'))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
           .then((o) => o.get())
-          .then((form) => Submission.getById(form.id, 'both', false)
+          .then((form) => Submissions.getById(form.id, 'both', false)
             .then((o) => o.get())
-            .then((submission) => submission.getCurrentVersion()
+            .then((submission) => Submissions.getCurrentDefBySubmissionId(submission.id)
               .then((o) => o.get())
-              .then((def) => SubmissionAttachment.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4')
+              .then((def) => SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4')
                 .then((o) => o.get())
                 .then((attachment) => Promise.all([
                   asAlice.get('/v1/users/current').expect(200),
-                  Audit.getLatestWhere({ action: 'submission.attachment.update' })
+                  Audits.getLatestByAction('submission.attachment.update')
                 ])
                   .then(([ user, maybeLog ]) => {
                     maybeLog.isDefined().should.equal(true);
@@ -2299,7 +2438,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                     });
                   }))))))));
 
-    it('should log an audit entry about reattachment', testService((service, { Audit, Project, Submission, SubmissionAttachment, SubmissionDef }) =>
+    it('should log an audit entry about reattachment', testService((service, { Audits, Forms, Submissions, SubmissionAttachments }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -2313,20 +2452,20 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .set('Content-Type', 'video/mp4')
             .send('testvideo')
             .expect(200))
-          .then(() => Project.getById(1))
-          .then((project) => project.get().getFormByXmlFormId('binaryType'))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
           .then((o) => o.get())
-          .then((form) => Submission.getById(form.id, 'both', false).then((o) => o.get())
-            .then((submission) => submission.getCurrentVersion().then((o) => o.get())
-              .then((def) => SubmissionAttachment.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4').then((o) => o.get())
+          .then((form) => Submissions.getById(form.id, 'both', false).then((o) => o.get())
+            .then((submission) => Submissions.getCurrentDefBySubmissionId(submission.id)
+              .then((o) => o.get())
+              .then((def) => SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4').then((o) => o.get())
                 .then((oldAttachment) => asAlice.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
                   .set('Content-Type', 'video/mp4')
                   .send('testvideo2')
                   .expect(200)
                   .then((attachment) => Promise.all([
                     asAlice.get('/v1/users/current').expect(200),
-                    SubmissionAttachment.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4').then((o) => o.get()),
-                    Audit.getLatestWhere({ action: 'submission.attachment.update' })
+                    SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4').then((o) => o.get()),
+                    Audits.getLatestByAction('submission.attachment.update')
                   ])
                     .then(([ user, newAttachment, maybeLog ]) => {
                       maybeLog.isDefined().should.equal(true);
@@ -2395,7 +2534,7 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                       ]);
                     })))))))));
 
-    it('should log an audit entry about the deletion', testService((service, { Audit, Project, Submission, SubmissionAttachment, SubmissionDef }) =>
+    it('should log an audit entry about the deletion', testService((service, { Audits, Forms, Submissions, SubmissionAttachments }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -2409,20 +2548,19 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .set('Content-Type', 'video/mp4')
             .send('testvideo')
             .expect(200))
-          .then(() => Project.getById(1))
-          .then((project) => project.get().getFormByXmlFormId('binaryType'))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
           .then((o) => o.get())
-          .then((form) => Submission.getById(form.id, 'both', false)
+          .then((form) => Submissions.getById(form.id, 'both', false)
             .then((o) => o.get())
-            .then((submission) => submission.getCurrentVersion()
+            .then((submission) => Submissions.getCurrentDefBySubmissionId(submission.id)
               .then((o) => o.get())
-              .then((def) => SubmissionAttachment.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4')
+              .then((def) => SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4')
                 .then((o) => o.get())
                 .then((attachment) => asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
                   .expect(200)
                   .then(() => Promise.all([
                     asAlice.get('/v1/users/current').expect(200),
-                    Audit.getLatestWhere({ action: 'submission.attachment.update' })
+                    Audits.getLatestByAction('submission.attachment.update')
                   ])
                     .then(([ user, maybeLog ]) => {
                       maybeLog.isDefined().should.equal(true);

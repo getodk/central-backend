@@ -83,13 +83,15 @@ describe('endpoints', () => {
   });
 
   describe('framework', () => {
+    const mockContainer = { with: (_ => mockContainer) };
+
     describe('preprocessors', () => {
       it('should run the format preprocessor', () => {
         let ran = false;
         const resource = endpointBase({
           preprocessor: () => { ran = true; },
           resultWriter: noop
-        })()(always(true));
+        })(mockContainer)(always(true));
 
         return resource(createRequest(), createModernResponse())
           .then(() => { ran.should.equal(true); });
@@ -102,7 +104,7 @@ describe('endpoints', () => {
         const resource = endpointBase({
           preprocessor: push('format'),
           resultWriter: noop
-        })(null, [ push('mid1'), push('mid2') ])(always(true));
+        })(mockContainer, [ push('mid1'), push('mid2') ])(always(true));
 
         return resource(createRequest(), createModernResponse())
           .then(() => { result.should.eql([ 'format', 'mid1', 'mid2' ]); });
@@ -113,7 +115,7 @@ describe('endpoints', () => {
         return endpointBase({
           preprocessor: () => Promise.reject(new Error('format failure')),
           resultWriter: noop
-        })()()(createRequest(), createModernResponse(), (failure) => {
+        })(mockContainer)()(createRequest(), createModernResponse(), (failure) => {
           failure.message.should.equal('format failure');
           failed = true;
         }).then(() => { failed.should.equal(true); });
@@ -124,7 +126,7 @@ describe('endpoints', () => {
         return endpointBase({ resultWriter: noop })(null, [
           () => { return true; },
           () => Promise.reject(new Error('middleware failure'))
-        ])()(createRequest(), createModernResponse(), (failure) => {
+        ])(mockContainer)(createRequest(), createModernResponse(), (failure) => {
           failure.message.should.equal('middleware failure');
           failed = true;
         }).then(() => { failed.should.equal(true); });
@@ -132,7 +134,7 @@ describe('endpoints', () => {
 
       it('should accept Promise results from preprocessors', () => {
         let waited = false;
-        return endpointBase({ resultWriter: noop })(null, [
+        return endpointBase({ resultWriter: noop })(mockContainer, [
           () => new Promise((resolve) => {
             setTimeout(() => { waited = true; resolve(); }, 0);
           })
@@ -145,20 +147,20 @@ describe('endpoints', () => {
         let checked = false;
         return endpointBase({
           preprocessor: (container, context, request) => {
-            container.should.equal(42);
+            container.should.equal(mockContainer);
             context.should.be.an.instanceof(Context);
             request.method.should.equal('TEST');
             checked = true;
           },
           resultWriter: noop
-        })(42)(always(true))({ method: 'TEST' }).then(() => {
+        })(mockContainer)(always(true))({ method: 'TEST' }).then(() => {
           checked.should.equal(true);
         });
       });
 
       it('should leave Context alone between preprocessors if nothing is returned', () => {
         let checked = false;
-        return endpointBase({ resultWriter: noop })(null, [
+        return endpointBase({ resultWriter: noop })(mockContainer, [
           (_, context) => { context.method.should.equal('TEST'); },
           (_, context) => {
             context.method.should.equal('TEST');
@@ -171,7 +173,7 @@ describe('endpoints', () => {
 
       it('should accept the new Context if returned directly by a preprocessor', () => {
         let checked = false;
-        return endpointBase({ resultWriter: noop })(null, [
+        return endpointBase({ resultWriter: noop })(mockContainer, [
           (_, context) => context.with({ test2: true }),
           (_, context) => {
             context.method.should.equal('TEST');
@@ -185,7 +187,7 @@ describe('endpoints', () => {
 
       it('should accept the new Context if returned within Promise by a preprocessor', () => {
         let checked = false;
-        return endpointBase({ resultWriter: noop })(null, [
+        return endpointBase({ resultWriter: noop })(mockContainer, [
           (_, context) => new Promise((resolve) => {
             setTimeout(resolve(context.with({ test2: true })), 0);
           }),
@@ -201,7 +203,7 @@ describe('endpoints', () => {
 
       it('should pass along the final context result to the actual resource', () => {
         let checked = false;
-        return endpointBase({ resultWriter: noop })(null, [
+        return endpointBase({ resultWriter: noop })(mockContainer, [
           (_, context) => context.with({ test2: true })
         ])((_, context) => {
           context.method.should.equal('TEST');
@@ -221,7 +223,7 @@ describe('endpoints', () => {
         return endpointBase({
           before: push('before'),
           resultWriter: noop
-        })(null, [ push('pre') ])(() => {
+        })(mockContainer, [ push('pre') ])(() => {
           ran.push('resource');
           return true;
         })(createRequest(), createModernResponse()).then(() => {
@@ -237,7 +239,7 @@ describe('endpoints', () => {
             checked = true;
           },
           resultWriter: noop
-        })()(always(true))({ method: 'TEST' }, 42).then(() => {
+        })(mockContainer)(always(true))({ method: 'TEST' }, 42).then(() => {
           checked.should.equal(true);
         });
       });
@@ -246,7 +248,7 @@ describe('endpoints', () => {
     describe('resource/finalize/output/error', () => {
       it('should fail the Promise if nothing is returned', () => {
         let failed = false;
-        return endpointBase({})()(noop)(createRequest(), createModernResponse(), (failure) => {
+        return endpointBase({})(mockContainer)(noop)(createRequest(), createModernResponse(), (failure) => {
           failure.problemCode.should.equal(500.3);
           failed = true;
         }).then(() => { failed.should.equal(true); });
@@ -254,7 +256,7 @@ describe('endpoints', () => {
 
       it('should fail the Promise if an unhandled exception is returned', () => {
         let failed = false;
-        return endpointBase({})()(() => { hello; })(createRequest(), createModernResponse(), (failure) => {
+        return endpointBase({})(mockContainer)(() => { hello; })(createRequest(), createModernResponse(), (failure) => {
           failure.should.be.an.instanceof(ReferenceError);
           failed = true;
         }).then(() => { failed.should.equal(true); });
@@ -267,7 +269,7 @@ describe('endpoints', () => {
             error.problemCode.should.equal(404.1);
             errored = true;
           }
-        })()(() => Promise.reject(Problem.user.notFound()))(createRequest(), createModernResponse()).then(() => {
+        })(mockContainer)(() => Promise.reject(Problem.user.notFound()))(createRequest(), createModernResponse()).then(() => {
           errored.should.equal(true);
         });
       });
@@ -282,7 +284,7 @@ describe('endpoints', () => {
             response.should.equal(108);
             outputted = true;
           }
-        })()(always(42))({ method: 'TEST' }, 108).then(() => {
+        })(mockContainer)(always(42))({ method: 'TEST' }, 108).then(() => {
           outputted.should.equal(true);
         });
       });
@@ -294,7 +296,7 @@ describe('endpoints', () => {
             result.should.equal(42);
             outputted = true;
           }
-        })()(() => (request, response) => {
+        })(mockContainer)(() => (request, response) => {
           request.method.should.equal('TEST');
           response.should.equal(108);
           return 42;
@@ -310,7 +312,7 @@ describe('endpoints', () => {
             result.pipe.should.be.a.Function();
             outputted = true;
           }
-        })()(always({ pipe() {} }))({ method: 'TEST' }, 108).then(() => {
+        })(mockContainer)(always({ pipe() {} }))({ method: 'TEST' }, 108).then(() => {
           outputted.should.equal(true);
         });
       });
@@ -320,10 +322,10 @@ describe('endpoints', () => {
       it('should initiate a transaction given a write request', () =>
         Promise.all([ 'POST', 'PUT', 'PATCH', 'DELETE' ].map((method) => {
           let transacted = false;
-          const container = { transacting(cb) {
-            transacted = true;
-            return cb();
-          } };
+          const container = {
+            transacting(cb) { transacted = true; return cb(container); },
+            with() { return container; }
+          };
 
           return endpointBase({ resultWriter: noop })(container)(always(true))({ method })
             .then(() => { transacted.should.equal(true); });
@@ -332,10 +334,10 @@ describe('endpoints', () => {
       it('should not initiate a transaction given a read request', () =>
         Promise.all([ 'GET', 'HEAD', 'OPTIONS' ].map((method) => {
           let transacted = false;
-          const container = { transacting(cb) {
-            transacted = true;
-            return cb();
-          } };
+          const container = {
+            transacting(cb) { transacted = true; return cb(); },
+            with() { return container; }
+          };
 
           return endpointBase({ resultWriter: noop })(container)(always(true))({ method })
             .then(() => { transacted.should.equal(false); });
@@ -343,10 +345,10 @@ describe('endpoints', () => {
 
       it('should not initiate a transaction given a nonwrite POST', () => {
         let transacted = false;
-        const container = { transacting(cb) {
-          transacted = true;
-          return cb();
-        } };
+          const container = {
+            transacting(cb) { transacted = true; return cb(); },
+            with() { return container; }
+          };
 
         const request = {
           method: 'POST',
@@ -359,10 +361,13 @@ describe('endpoints', () => {
       it('should reject on the transacting promise on preprocessor failure', () => {
         // we still check the transacted flag just to be sure the rejectedWith assertion runs.
         let transacted = false;
-        const container = { transacting(cb) {
-          transacted = true;
-          return cb().should.be.rejectedWith(Problem, { problemCode: 404.1 });
-        } };
+        const container = {
+          transacting(cb) {
+            transacted = true;
+            return cb().should.be.rejectedWith(Problem, { problemCode: 404.1 });
+          },
+          with() { return container; }
+        };
 
         return endpointBase({ resultWriter: noop })(container, [
           () => Promise.reject(Problem.user.notFound())
@@ -373,10 +378,13 @@ describe('endpoints', () => {
       it('should reject on the transacting promise on before failure', () => {
         // we still check the transacted flag just to be sure the rejectedWith assertion runs.
         let transacted = false;
-        const container = { transacting(cb) {
-          transacted = true;
-          return cb().should.be.rejectedWith(Problem, { problemCode: 404.1 });
-        } };
+        const container = {
+          transacting(cb) {
+            transacted = true;
+            return cb().should.be.rejectedWith(Problem, { problemCode: 404.1 });
+          },
+          with() { return container; }
+        };
 
         return endpointBase({
           before() { throw Problem.user.notFound(); },
@@ -388,10 +396,13 @@ describe('endpoints', () => {
       it('should reject on the transacting promise on resource failure', () => {
         // we still check the transacted flag just to be sure the rejectedWith assertion runs.
         let transacted = false;
-        const container = { transacting(cb) {
-          transacted = true;
-          return cb().should.be.rejectedWith(Problem, { problemCode: 404.1 });
-        } };
+        const container = {
+          transacting(cb) {
+            transacted = true;
+            return cb(container).should.be.rejectedWith(Problem, { problemCode: 404.1 });
+          },
+          with() { return container; }
+        };
 
         return endpointBase({
           resultWriter() {}
@@ -544,7 +555,7 @@ describe('endpoints', () => {
     });
 
     describe('resultWriter', () => {
-      const { createdMessage } = require(appRoot + '/lib/outbound/openrosa');
+      const { createdMessage } = require(appRoot + '/lib/formats/openrosa');
 
       it('should send the appropriate content with the appropriate header', () => {
         const response = createModernResponse();

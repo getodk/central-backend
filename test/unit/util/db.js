@@ -1,152 +1,187 @@
 const appRoot = require('app-root-path');
 const should = require('should');
+const { sql } = require('slonik');
+const { Frame, table, into } = require(appRoot + '/lib/model/frame');
 const util = require(appRoot + '/lib/util/db');
 const Option = require(appRoot + '/lib/util/option');
 const Problem = require(appRoot + '/lib/util/problem');
 
-// dummy test class that simply stores its own constructor argument.
-class X {
-  constructor(data) { this.data = data; }
-}
-
 describe('util/db', () => {
-  describe('withJoin', () => {
-    const { withJoin } = util;
-
-    class TestInstance {
-      constructor(props) { Object.assign(this, props); }
-    }
-    class TestMain extends TestInstance {
-      static get fields() { return { all: [ 'a', 'b', 'inner' ] }; }
-    }
-    class TestSecondary extends TestInstance {
-      static get fields() { return { all: [ 'c', 'd' ] }; }
-    }
-
-    const getFields = (fields) => fields;
-    const getUnjoiner = (_, unjoiner) => unjoiner;
-
-    it('should return a set of flattened fields given Instances', () => {
-      withJoin('', {
-        prop1: { table: 'prop1table', fields: { all: [ 'a', 'b' ] } },
-        prop2: { table: 'prop2table', fields: { all: [ 'c', 'd' ] } }
-      }, getFields).should.eql({
-        'prop1!a': 'prop1table.a',
-        'prop1!b': 'prop1table.b',
-        'prop2!c': 'prop2table.c',
-        'prop2!d': 'prop2table.d'
-      });
+  describe('unjoiner', () => {
+    const { unjoiner } = util;
+    const T = Frame.define(table('frames'), 'x',  'y');
+    const U = Frame.define(into('extra'), 'z');
+    it('should generate fields', () => {
+      unjoiner(T, U)
+        .fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y","z" as "z"`);
     });
 
-    it('should use select fields rather than all if present', () => {
-      withJoin('', {
-        prop1: { table: 'prop1table', fields: { all: [ 'a', 'b' ], select: [ 'a' ] } },
-        prop2: { table: 'prop2table', fields: { all: [ 'c', 'd' ] } }
-      }, getFields).should.eql({
-        'prop1!a': 'prop1table.a',
-        'prop2!c': 'prop2table.c',
-        'prop2!d': 'prop2table.d'
-      });
+    it('should unjoin data', () => {
+      unjoiner(T, U)
+        ({ 'frames!x': 3, 'frames!y': 4, z: 5 })
+        .should.eql(new T({ x: 3, y: 4 }, { extra: new U({ z: 5 }) }));
     });
 
-    it('should return a set of flattened fields given of/table declarations', () => {
-      withJoin('', {
-        prop1: { Instance: { table: 'prop1table', fields: { all: [ 'a', 'b' ] } }, table: 'override1table' },
-        prop2: { Instance: { table: 'prop2table', fields: { all: [ 'c', 'd' ] } } }
-      }, getFields).should.eql({
-        'prop1!a': 'override1table.a',
-        'prop1!b': 'override1table.b',
-        'prop2!c': 'prop2table.c',
-        'prop2!d': 'prop2table.d'
-      });
+    it('should optionally unjoin optional data', () => {
+      const unjoin = unjoiner(T, Option.of(U));
+      unjoin.fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y","z" as "z"`);
+      unjoin({ 'frames!x': 3, 'frames!y': 4, z: 5 })
+        .should.eql(new T({ x: 3, y: 4 }, { extra: Option.of(new U({ z: 5 })) }));
+      unjoin({ 'frames!x': 3, 'frames!y': 4 })
+        .should.eql(new T({ x: 3, y: 4 }, { extra: Option.none() }));
+    });
+  });
+
+  describe('extender', () => {
+    const { extender, QueryOptions } = util;
+    const T = Frame.define(table('frames'), 'x',  'y');
+    const U = Frame.define(into('extra'), 'a', 'b');
+    function noop() { return Promise.resolve({}); };
+    noop.map = (f) => (x) => x;
+
+    it('should provide the appropriate arguments when not extended', () => {
+      let run = false;
+      extender(T)(U)((fields, extend, options, x, y, z) => {
+        fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y"`);
+        (sql`${extend|| true}`).should.eql(sql``);
+        x.should.equal(2);
+        y.should.equal(3);
+        z.should.equal(4);
+        run = true;
+      })(noop, QueryOptions.none, 2, 3, 4);
+      run.should.equal(true);
     });
 
-    it('should pick up join field declarations', () => {
-      withJoin('', {
-        prop1: { table: 'prop1table', fields: { all: [ 'a', 'b' ], joined: [ 'm' ] } },
-        prop2: { Instance: { table: 'prop2table', fields: { all: [ 'c', 'd' ], joined: [ 'x', 'y' ] } }, table: 'override2table' }
-      }, getFields).should.eql({
-        'prop1!a': 'prop1table.a',
-        'prop1!b': 'prop1table.b',
-        'prop1!m': 'm',
-        'prop2!c': 'override2table.c',
-        'prop2!d': 'override2table.d',
-        'prop2!x': 'x',
-        'prop2!y': 'y'
-      });
+    it('should provide the appropriate arguments when extended', () => {
+      let run = false;
+      extender(T)(U)((fields, extend, options, x, y, z) => {
+        fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y","a" as "a","b" as "b"`);
+        (sql`${extend|| true}`).should.eql(sql`${true}`);
+        x.should.equal(2);
+        y.should.equal(3);
+        z.should.equal(4);
+        run = true;
+      })(noop, QueryOptions.extended, 2, 3, 4);
+      run.should.equal(true);
     });
 
-    it('should deal correctly with Optioned instances', () => {
-      withJoin('', {
-        prop1: Option.of({ fields: { all: [ 'a', 'b' ] }, table: 'override1table' }),
-        prop2: { Instance: Option.of({ table: 'prop2table', fields: { all: [ 'c', 'd' ] } }) }
-      }, getFields).should.eql({
-        'prop1!a': 'override1table.a',
-        'prop1!b': 'override1table.b',
-        'prop2!c': 'prop2table.c',
-        'prop2!d': 'prop2table.d'
-      });
+    it('should unjoin nonextended fields', () => {
+      function run() { return Promise.resolve({ 'frames!x': 3, 'frames!y': 4 }); };
+      run.map = (f) => (x) => f(x);
+      return extender(T)(U)(noop)(run, QueryOptions.none)
+        .then((result) => result.should.eql(new T({ x: 3, y: 4 })));
     });
 
-    it('should inflate instances', () => {
-      const result = withJoin('main', { main: TestMain, inner: TestSecondary }, getUnjoiner)({
-        'main!a': 1,
-        'main!b': 2,
-        'inner!c': 3,
-        'inner!d': 4
-      });
-      result.should.eql(new TestMain({ a: 1, b: 2, inner: new TestSecondary({ c: 3, d: 4 }) }));
-      result.should.be.an.instanceof(TestMain);
-      result.inner.should.be.an.instanceof(TestSecondary);
+    it('should unjoin extended fields', () => {
+      function run() { return Promise.resolve({ 'frames!x': 3, 'frames!y': 4, a: 5 }); };
+      run.map = (f) => (x) => f(x);
+      return extender(T)(U)(noop)(run, QueryOptions.extended)
+        .then((result) => result.should.eql(new T({ x: 3, y: 4 }, { extra: new U({ a: 5 }) })));
+    });
+  });
+
+  describe('insert', () => {
+    const { insert } = util;
+    const T = Frame.define(table('frames'));
+
+    it('should formulate a basic response based on data', () => {
+      insert(new T({ x: 2, y: 3 })).should.eql(sql`
+insert into frames ("x","y")
+values (${2},${3})
+returning *`);
     });
 
-    it('should handle optional instances', () => {
-      const result = withJoin('main', { main: TestMain, one: Option.of(TestSecondary), two: Option.of(TestSecondary) }, getUnjoiner)({
-        'main!a': 1,
-        'main!b': 2,
-        'two!c': 3,
-        'two!d': 4
-      });
-      result.should.eql(new TestMain({ a: 1, b: 2, one: Option.none(), two: Option.of(new TestSecondary({ c: 3, d: 4 })) }));
-      result.should.be.an.instanceof(TestMain);
-      result.one.should.equal(Option.none());
-      result.two.get().should.be.an.instanceof(TestSecondary);
+    it('should deal with strange data input types', () => {
+      insert(new T({ x: { test: true }, y: undefined, z: new Date('2000-01-01') }))
+        .should.eql(sql`
+insert into frames ("x","y","z")
+values (${'{"test":true}'},${null},${'2000-01-01T00:00:00.000Z'})
+returning *`);
     });
 
-    it('should consider an optional instance nonpresent given empty values', () => {
-      const result = withJoin('main', { main: TestMain, inner: Option.of(TestSecondary) }, getUnjoiner)({
-        'main!a': 1,
-        'inner!b': null,
-        'inner!c': undefined
-      });
-      result.should.eql(new TestMain({ a: 1, inner: Option.none() }));
+    it('should automatically insert into createdAt if expected', () => {
+      const U = Frame.define(table('cats'), 'createdAt', 'updatedAt');
+      insert(new U()).should.eql(sql`
+insert into cats ("createdAt")
+values (${sql`clock_timestamp()`})
+returning *`);
+    });
+  });
+
+  describe('insertMany', () => {
+    const { insertMany } = util;
+    const T = Frame.define(table('dogs'), 'x', 'y');
+
+    it('should do nothing if given no data', () => {
+      insertMany([]).should.eql(sql`select true`);
     });
 
-    it('should deal correctly with aliased tables', () => {
-      const result = withJoin('main', { main: TestMain, inner: { Instance: TestSecondary, table: 'some_alias' } }, getUnjoiner)({
-        'main!a': 1,
-        'main!b': 2,
-        'inner!c': 3,
-        'inner!d': 4
-      });
-      result.should.eql(new TestMain({ a: 1, b: 2, inner: new TestSecondary({ c: 3, d: 4 }) }));
-      result.should.be.an.instanceof(TestMain);
-      result.inner.should.be.an.instanceof(TestSecondary);
+    it('should insert all data', () => {
+      insertMany([ new T({ x: 2 }), new T({ y: 3 }) ]).should.eql(sql`
+insert into dogs ("x","y")
+values (${2},${null}),(${null},${3})`);
     });
 
-    it('should deal correctly with optional aliased tables', () => {
-      const result = withJoin('main', { main: TestMain, inner: { Instance: Option.of(TestSecondary), table: 'some_alias' } }, getUnjoiner)({
-        'main!a': 1,
-        'main!b': 2,
-        'inner!c': 3,
-        'inner!d': 4
-      });
-      result.should.eql(new TestMain({ a: 1, b: 2, inner: Option.of(new TestSecondary({ c: 3, d: 4 })) }));
+    it('should insert createdAt and strange values', () => {
+      const U = Frame.define(table('dogs'), 'x', 'createdAt');
+      insertMany([ new U({ x: new Date('2000-01-01') }), new U() ]).should.eql(sql`
+insert into dogs ("x","createdAt")
+values (${'2000-01-01T00:00:00.000Z'},${sql`clock_timestamp()`}),(${null},${sql`clock_timestamp()`})`);
+    });
+  });
+
+  describe('updater', () => {
+    const { updater } = util;
+    const T = Frame.define(table('rabbits'));
+
+    it('should update the given data', () => {
+      updater(new T({ id: 1, x: 2 }), new T({ y: 3 })).should.eql(sql`
+update rabbits
+set "y"=${3}
+
+where ${sql.identifier([ 'id' ])}=${1}
+returning *`);
+    });
+
+    it('should set updatedAt if present', () => {
+      const U = Frame.define(table('rabbits'), 'createdAt', 'updatedAt');
+      updater(new U({ id: 1, x: 2 }), new U({ y: 3 })).should.eql(sql`
+update rabbits
+set "y"=${3}
+,"updatedAt"=clock_timestamp()
+where "id"=${1}
+returning *`);
+    });
+
+    it('should use a different id key if given', () => {
+      updater(new T({ otherId: 0, x: 2 }), new T({ y: 3 }), 'otherId').should.eql(sql`
+update rabbits
+set "y"=${3}
+
+where "otherId"=${0}
+returning *`);
+    });
+  });
+
+  describe('equals', () => {
+    const { equals } = util;
+    it('should do nothing if given no conditions', () => {
+      equals({}).should.eql(sql`true`);
+    });
+
+    it('should match k/v pairs', () => {
+      equals({ x: 2, y: 3 })
+        .should.eql(sql.join([ sql`"x"=${2}`, sql`"y"=${3}` ], sql` and `));
+    });
+
+    it('should split compound keys', () => {
+      equals({ 'x.y': 2 })
+        .should.eql(sql.join([ sql`"x"."y"=${2}` ], sql` and `));
     });
   });
 
   describe('QueryOptions', () => {
-    const { QueryOptions, applyPagingOptions } = util;
+    const { QueryOptions } = util;
     it('should cascade conditions properly', () => {
       const query = QueryOptions.extended.withCondition({ a: 1 }).withCondition({ b: 2 });
       query.condition.should.eql({ a: 1, b: 2 });
@@ -171,113 +206,29 @@ describe('util/db', () => {
         .args.should.eql({ b: 2, c: 3, f: 9 });
     });
 
-    it('should merge explicit args on withArgs', () => {
-      (new QueryOptions({ args: { b: 4, f: 9 } }))
-        .withArgs({ b: 7, d: 11 })
-        .args.should.eql({ b: 7, d: 11, f: 9 });
-    });
-
     describe('related functions', () => {
-      const { ifArg } = util;
-      const mockDb = () => ({
-        offset: function(val) { this._offset = val; return this; },
-        limit: function(val) { this._limit = val; return this; }
-      });
-      it('should correctly apply paging via applyPagingOptions', () => {
-        const db = mockDb();
-        applyPagingOptions(new QueryOptions({ offset: 17, limit: 42 }))(db);
-        db._offset.should.equal(17);
-        db._limit.should.equal(42);
-      });
-
       it('should run the handler only if the arg is present', () => {
         let ran = false;
         const options = new QueryOptions({ args: { b: 42 }, argData: { c: 17 } });
-        ifArg('c', options, () => { ran = true; })();
+        options.ifArg('c', () => { ran = true; });
         ran.should.equal(false);
-        ifArg('b', options, () => { ran = true; })();
+        options.ifArg('b', () => { ran = true; });
         ran.should.equal(true);
       });
 
       it('should provide the correct arguments to the handler', () => {
         let ran = false;
         const options = new QueryOptions({ args: { b: 42 } });
-        ifArg('b', options, (a, b) => {
+        options.ifArg('b', (a) => {
           a.should.equal(42);
-          b.should.equal(17);
           ran = true;
-        })(17);
+        });
         ran.should.equal(true);
       });
 
-      it('should passthrough the query if the arg is not present', () => {
-        ifArg('z', {}, () => {})(42).should.equal(42);
+      it('should return blank if the arg is not present', () => {
+        QueryOptions.none.ifArg('z', () => {}).should.eql(sql``);
       });
-    });
-  });
-
-  describe('rowToInstance', () => {
-    const { rowToInstance } = util;
-    it('should instantiate the first row result as the given class', () => {
-      const result = rowToInstance(X)([ 42 ]);
-      result.should.be.an.instanceof(X);
-      result.data.should.equal(42);
-    });
-
-    it('should work even if no rows are returned', () => {
-      rowToInstance(X)([]).should.be.an.instanceof(X);
-    });
-  });
-
-  describe('maybeRowToInstance', () => {
-    const { maybeRowToInstance } = util;
-    it('should return an Option', () => {
-      maybeRowToInstance(X)([]).should.be.an.instanceof(Option);
-      maybeRowToInstance(X)([ 2 ]).should.be.an.instanceof(Option);
-    });
-
-    it('should be a None if no rows return', () => {
-      maybeRowToInstance(X)([]).isDefined().should.equal(false);
-    });
-
-    it('should be a Some[Class] if no rows return', (done) => {
-      maybeRowToInstance(X)([ 3 ]).ifDefined((result) => {
-        result.should.be.an.instanceof(X);
-        result.data.should.equal(3);
-        done();
-      });
-    });
-  });
-
-  describe('rowsToInstances', () => {
-    const { rowsToInstances } = util;
-    it('should return an array of instances with data provided', () => {
-      const result = rowsToInstances(X)([ 2, 4 ]);
-      result.length.should.equal(2);
-      result[0].should.be.an.instanceof(X);
-      result[0].data.should.equal(2);
-      result[1].should.be.an.instanceof(X);
-      result[1].data.should.equal(4);
-    });
-
-    it('should return empty array given no rows', () => {
-      rowsToInstances(X)([]).length.should.equal(0);
-    });
-  });
-
-  describe('wasUpdateSuccessful', () => {
-    const { wasUpdateSuccessful } = util;
-    it('just counts rows', () => {
-      wasUpdateSuccessful(0).should.equal(false);
-      wasUpdateSuccessful(1).should.equal(true);
-      wasUpdateSuccessful(2).should.equal(true);
-    });
-  });
-
-  describe('resultCount', () => {
-    const { resultCount } = util;
-    it('just coerces .count to a number', () => {
-      resultCount([{ count: '12' }]).should.equal(12);
     });
   });
 

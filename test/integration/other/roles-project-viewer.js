@@ -30,7 +30,7 @@ const withSubmissions = (f) => (service) =>
         .send(testData.instances.binaryType.one)
         .set('Content-Type', 'application/xml')
         .expect(200))
-      .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions/one/attachments/my_file1.mp4')
+      .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions/bone/attachments/my_file1.mp4')
         .send('content')
         .expect(200))
       .then(() => f(service)));
@@ -114,7 +114,7 @@ describe('project viewer role', () => {
       })))));
 
   it('should be able to fetch a submission attachment', testService(withSubmissions(viewer((asViewer) =>
-    asViewer.get('/v1/projects/1/forms/binaryType/submissions/one/attachments/my_file1.mp4')
+    asViewer.get('/v1/projects/1/forms/binaryType/submissions/bone/attachments/my_file1.mp4')
       .expect(200)
       .then(({ text }) => { text.should.equal('content'); })))));
 
