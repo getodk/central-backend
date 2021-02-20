@@ -89,7 +89,7 @@ describe('external/enketo', () => {
             form_id: xmlFormId,
             instance: '<data/>',
             instance_id: 'instance',
-            'instance_attachments[fileone.txt]': 'http://openRosaHost:5678/projects/1/forms/wellPumps/submissions/logical/versions/instance/attachments/fileone.txt',
+            'instance_attachments[fileone.txt]': 'http://openRosaHost:5678/v1/projects/1/forms/wellPumps/submissions/logical/versions/instance/attachments/fileone.txt',
             return_url: 'http://openRosaHost:5678/#/projects/1/forms/wellPumps/submissions/logical'
           });
           this.req.headers.authorization.should.equal(`Basic ${base64Auth}`);
