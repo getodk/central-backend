@@ -10,7 +10,7 @@ One of the easiest ways you can participate is to help us [track down bugs](http
 
 If you are having trouble with making ODK Central Backend work correctly, we encourage you to visit the [community forum](https://forum.getodk.org) where a great many of your knowledgeable peers can help you with your problem.
 
-If you're looking for help or discussion on _how_ ODK Central Backend works internally and how to understand or update its code, the ODK [developer Slack](https://getodk.slack.com) is for you.
+If you're looking for help or discussion on _how_ ODK Central Backend works internally and how to understand or update its code, the ODK [developer Slack](https://slack.getodk.org/) is for you.
 
 # Contributing Code
 
