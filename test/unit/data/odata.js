@@ -10,7 +10,8 @@ const __system = {
   submitterName: 'Alice',
   attachmentsPresent: 0,
   attachmentsExpected: 0,
-  status: null
+  status: null,
+  reviewState: null
 };
 const mockSubmission = (instanceId, xml) => ({
   xml,
@@ -53,6 +54,14 @@ describe('submissionToOData', () => {
     });
   });
 
+  it('should set the correct review state', () => {
+    const submission = Object.assign(mockSubmission('test', testData.instances.simple.one), { reviewState: 'hasIssues' });
+
+    return submissionToOData([], 'Submissions', submission).then((result) => {
+      result.should.eql([{ __id: 'test', __system: Object.assign({}, __system, { reviewState: 'hasIssues' }) }]);
+    });
+  });
+
   it('should not crash if no submitter exists', () => {
     const submission = mockSubmission('test', testData.instances.simple.one);
     submission.aux.submitter = {}; // wipe it back out.
@@ -65,7 +74,8 @@ describe('submissionToOData', () => {
           submitterName: null,
           attachmentsPresent: 0,
           attachmentsExpected: 0,
-          status: null
+          status: null,
+          reviewState: null
         }
       }]);
     });

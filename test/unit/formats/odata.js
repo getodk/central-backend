@@ -14,7 +14,8 @@ const __system = {
   submitterName: submitter.displayName,
   attachmentsPresent: 1,
   attachmentsExpected: 2,
-  status: null
+  status: null,
+  reviewState: null
 };
 const mockSubmission = (instanceId, xml) => ({
   xml,
@@ -70,10 +71,17 @@ describe('odata message composition', () => {
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
         <Property Name="attachmentsExpected" Type="Edm.Int64"/>
         <Property Name="status" Type="org.opendatakit.submission.Status"/>
+        <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
       </ComplexType>
       <EnumType Name="Status">
         <Member Name="NotDecrypted"/>
         <Member Name="MissingEncryptedFormData"/>
+      </EnumType>
+      <EnumType Name="ReviewState">
+        <Member Name="hasIssues"/>
+        <Member Name="needsReview"/>
+        <Member Name="rejected"/>
+        <Member Name="approved"/>
       </EnumType>
     </Schema>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.simple">
@@ -104,10 +112,17 @@ describe('odata message composition', () => {
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
         <Property Name="attachmentsExpected" Type="Edm.Int64"/>
         <Property Name="status" Type="org.opendatakit.submission.Status"/>
+        <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
       </ComplexType>
       <EnumType Name="Status">
         <Member Name="NotDecrypted"/>
         <Member Name="MissingEncryptedFormData"/>
+      </EnumType>
+      <EnumType Name="ReviewState">
+        <Member Name="hasIssues"/>
+        <Member Name="needsReview"/>
+        <Member Name="rejected"/>
+        <Member Name="approved"/>
       </EnumType>
     </Schema>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.my_awesome_form_">`);
@@ -127,10 +142,17 @@ describe('odata message composition', () => {
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
         <Property Name="attachmentsExpected" Type="Edm.Int64"/>
         <Property Name="status" Type="org.opendatakit.submission.Status"/>
+        <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
       </ComplexType>
       <EnumType Name="Status">
         <Member Name="NotDecrypted"/>
         <Member Name="MissingEncryptedFormData"/>
+      </EnumType>
+      <EnumType Name="ReviewState">
+        <Member Name="hasIssues"/>
+        <Member Name="needsReview"/>
+        <Member Name="rejected"/>
+        <Member Name="approved"/>
       </EnumType>
     </Schema>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.withrepeat">
@@ -268,10 +290,17 @@ describe('odata message composition', () => {
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
         <Property Name="attachmentsExpected" Type="Edm.Int64"/>
         <Property Name="status" Type="org.opendatakit.submission.Status"/>
+        <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
       </ComplexType>
       <EnumType Name="Status">
         <Member Name="NotDecrypted"/>
         <Member Name="MissingEncryptedFormData"/>
+      </EnumType>
+      <EnumType Name="ReviewState">
+        <Member Name="hasIssues"/>
+        <Member Name="needsReview"/>
+        <Member Name="rejected"/>
+        <Member Name="approved"/>
       </EnumType>
     </Schema>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.pathprefix">
@@ -335,10 +364,17 @@ describe('odata message composition', () => {
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
         <Property Name="attachmentsExpected" Type="Edm.Int64"/>
         <Property Name="status" Type="org.opendatakit.submission.Status"/>
+        <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
       </ComplexType>
       <EnumType Name="Status">
         <Member Name="NotDecrypted"/>
         <Member Name="MissingEncryptedFormData"/>
+      </EnumType>
+      <EnumType Name="ReviewState">
+        <Member Name="hasIssues"/>
+        <Member Name="needsReview"/>
+        <Member Name="rejected"/>
+        <Member Name="approved"/>
       </EnumType>
     </Schema>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.form">
