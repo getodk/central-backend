@@ -1246,15 +1246,15 @@ describe('api: /forms/:id/submissions', () => {
                 'audits - audit.csv'
               ]);
 
-              result['audits - audit.csv'].should.equal(`event,node,start,end,latitude,longitude,accuracy,old-value,new-value
-a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
-b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
-c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
-d,/data/d,2000-01-01T00:10,,10,11,12,gg,
-e,/data/e,2000-01-01T00:11,,,,,hh,ii
-f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
-g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
-h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+              result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
+one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
+one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
+one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,
+one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
+two,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
+two,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
+two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 `);
 
               done();
@@ -1287,21 +1287,21 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 'audits - audit.csv'
               ]);
 
-              result['audits - audit.csv'].should.equal(`event,node,start,end,latitude,longitude,accuracy,old-value,new-value
-a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
-b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
-c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
-d,/data/d,2000-01-01T00:10,,10,11,12,gg,
-e,/data/e,2000-01-01T00:11,,,,,hh,ii
-f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
-g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
-h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+              result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
+one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
+one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
+one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,
+one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
+two,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
+two,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
+two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 `);
 
               done();
             }))))));
 
-    it('should return adhoc-processed consolidated client audit log attachments', testService((service, container) =>
+    it('should return consolidated client audit log filtered by user', testService((service, container) =>
       service.login('alice', (asAlice) =>
         service.login('bob', (asBob) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
@@ -1326,12 +1326,12 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                   'audits - audit.csv'
                 ]);
 
-                result['audits - audit.csv'].should.equal(`event,node,start,end,latitude,longitude,accuracy,old-value,new-value
-a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
-b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
-c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
-d,/data/d,2000-01-01T00:10,,10,11,12,gg,
-e,/data/e,2000-01-01T00:11,,,,,hh,ii
+                result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
+one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
+one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
+one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,
+one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
 `);
 
                 done();
@@ -1363,10 +1363,10 @@ e,/data/e,2000-01-01T00:11,,,,,hh,ii
                   'audits - audit.csv'
                 ]);
 
-                result['audits - audit.csv'].should.equal(`event,node,start,end,latitude,longitude,accuracy,old-value,new-value
-f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
-g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
-h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+                result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+one,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
+one,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
+one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 `);
 
                 done();
@@ -1397,10 +1397,10 @@ h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                   'audits - audit.csv'
                 ]);
 
-                result['audits - audit.csv'].should.equal(`event,node,start,end,latitude,longitude,accuracy,old-value,new-value
-f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
-g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
-h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+                result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+one,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
+one,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
+one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 `);
 
                 done();
