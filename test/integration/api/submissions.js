@@ -1405,6 +1405,46 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
                 done();
               })))))));
+
+    context('versioning', () => {
+      const withClientAuditIds = (deprecatedId, instanceId) => testData.instances.clientAudits.one
+        .replace('one</instance', `${instanceId}</instanceID><deprecatedID>${deprecatedId}</deprecated`);
+
+      it('should return original instanceId and latest attached audit log when instanceId deprecated with new audit log', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.clientAudits)
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+              .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+              .expect(201))
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('audit.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'audit.csv' })
+              .attach('xml_submission_file', Buffer.from(withClientAuditIds('one', 'two')), { filename: 'data.xml' })
+              .expect(201))
+            .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip')
+              .expect(200)
+              .then(() => new Promise((done) =>
+                zipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'), (result) => {
+                  result.filenames.should.containDeep([
+                    'audits.csv',
+                    'media/audit.csv',
+                    'audits - audit.csv'
+                  ]);
+
+                  result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+one,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
+one,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
+one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+`);
+
+                  done();
+                })))))));
+    });
   });
 
   describe('.csv GET', () => {
