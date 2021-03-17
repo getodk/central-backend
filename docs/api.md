@@ -40,7 +40,7 @@ ODK Central v1.1 adds minor new features to the API.
 
 * `POST`/`GET /backup`, will immediately perform a backup of the database and return the encrypted backup.
 * `POST`/`GET /projects/…/forms/…/submissions.csv`, which allows download of the root table (excluding repeat data) as CSV, without a zipfile.
-* `POST`/`GET /projects/…/forms/…/submissions.csv.zip` now allows `?media=false` to exclude attachments.
+* `POST`/`GET /projects/…/forms/…/submissions.csv.zip` now allows `?attachments=false` to exclude attachments.
 * OData Data Document requests now allow limited use of `$filter`.
 * The various `submissions.csv.*` endpoints also allow `$filter`, using the same limited OData syntax.
 * `GET /projects/…/forms/…/submissions/submitters` which returns submitter Actors for a given Form.
@@ -1854,7 +1854,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 To export all the `Submission` data associated with a `Form`, just add `.csv.zip` to the end of the listing URL. The response will be a ZIP file containing one or more CSV files, as well as all multimedia attachments associated with the included Submissions.
 
-You can exclude the media attachments from the ZIP file by specifying `?media=false`.
+You can exclude the media attachments from the ZIP file by specifying `?attachments=false`.
 
 If [Project Managed Encryption](/reference/encryption) is being used, additional querystring parameters may be provided in the format `{keyId}={passphrase}` for any number of keys (eg `1=secret&4=password`). This will decrypt any records encrypted under those managed keys. Submissions encrypted under self-supplied keys will not be decrypted. **Note**: if you are building a browser-based application, please consider the alternative `POST` endpoint, described in the following section.
 
@@ -1888,7 +1888,7 @@ You can use an [OData-style `$filter` query](/reference/odata-endpoints/odata-fo
 
 This non-REST-compliant endpoint is provided for use with [Project Managed Encryption](/reference/encryption). In every respect, it behaves identically to the `GET` endpoint described in the previous section, except that it works over `POST`. This is necessary because for browser-based applications, it is a dangerous idea to simply link the user to `/submissions.csv.zip?2=supersecretpassphrase` because the browser will remember this route in its history and thus the passphrase will become exposed. This is especially dangerous as there are techniques for quickly learning browser-visited URLs of any arbitrary domain.
 
-You can exclude the media attachments from the ZIP file by specifying `?media=false`.
+You can exclude the media attachments from the ZIP file by specifying `?attachments=false`.
 
 And so, for this `POST` version of the Submission CSV export endpoint, the passphrases may be provided via `POST` body rather than querystring. Two formats are supported: form URL encoding (`application/x-www-form-urlencoded`) and JSON. In either case, the keys should be the `keyId`s and the values should be the `passphrase`s, as with the `GET` version above.
 
