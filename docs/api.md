@@ -807,7 +807,6 @@ You can inspect the Request format for this endpoint to see the exact nested dat
         + forms: (array, optional) - If given, the Form metadata to update.
             + (object)
                 + xmlFormId: `simple` (string, required) - The `id` of this form as given in its XForms XML definition.
-                + name: `Simple Form` (string, optional) - The name to display for this form
                 + state: (Form State, required) - The present lifecycle status of this form.
                 + assignments: (array, optional) - If given, the Assignments to apply to this Form. And if given, any existing Assignments that are not specified here will be revoked.
                     + (object)
