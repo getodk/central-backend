@@ -1246,13 +1246,12 @@ You may optionally add the querystring parameter `?odata=true` to sanitize the f
 
 #### Modifying a Form [PATCH]
 
-It is currently possible to modify two things about a `Form`: its `name`, which is its friendly display name, and its `state`, which governs whether it is available for download onto survey clients and whether it accepts new `Submission`s. See the `state` Attribute in the Request documentation to the right to see the possible values and their meanings.
+It is currently possible to modify only one thing about a `Form`: its `state`, which governs whether it is available for download onto survey clients and whether it accepts new `Submission`s. See the `state` Attribute in the Request documentation to the right to see the possible values and their meanings.
 
 We use `PATCH` rather than `PUT` to represent the update operation, so that you only have to supply the properties you wish to change. Anything you do not supply will remain untouched.
 
 + Request (application/json)
     + Attributes
-        + name: `A New Name` (string, optional) - If supplied, the Form friendly name will be updated to this value.
         + state (Form State, optional) - If supplied, the Form lifecycle state will move to this value.
 
 + Response 200 (application/json)

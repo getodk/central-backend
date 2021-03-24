@@ -1164,18 +1164,16 @@ describe('api: /projects/:id/forms', () => {
     it('should update allowed fields', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple')
-          .send({ name: 'a fancy name', state: 'closing' })
+          .send({ state: 'closing' })
           .expect(200)
           .then(({ body }) => {
             body.should.be.a.Form();
-            body.name.should.equal('a fancy name');
             body.state.should.equal('closing');
           })
           .then(() => asAlice.get('/v1/projects/1/forms/simple')
             .expect(200)
             .then(({ body }) => {
               body.should.be.a.Form();
-              body.name.should.equal('a fancy name');
               body.state.should.equal('closing');
             })))));
 
@@ -1188,7 +1186,12 @@ describe('api: /projects/:id/forms', () => {
     it('should not update disallowed fields', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple')
-          .send({ xmlFormId: 'changed', xml: 'changed', hash: 'changed' })
+          .send({
+            xmlFormId: 'changed',
+            xml: 'changed',
+            hash: 'changed',
+            name: 'a fancy name'
+          })
           .expect(200)
           .then(() => Promise.all([
             asAlice.get('/v1/projects/1/forms/simple')
@@ -1197,6 +1200,7 @@ describe('api: /projects/:id/forms', () => {
               .then(({ body }) => {
                 body.xmlFormId.should.equal('simple');
                 body.hash.should.equal('5c09c21d4c71f2f13f6aa26227b2d133');
+                body.name.should.equal('Simple');
               }),
             asAlice.get('/v1/projects/1/forms/simple.xml')
               .expect(200)
