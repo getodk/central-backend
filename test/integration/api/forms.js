@@ -2934,6 +2934,28 @@ describe('api: /projects/:id/forms', () => {
     </mediaFile>
   </manifest>`);
                 }))))));
+
+      context('renaming', () => {
+        const withRenamedTitle = (newTitle) => testData.forms.simple
+          .replace('Simple', `${newTitle}`);
+
+        it('should rename the form based on the latest draft title', testService((service) =>
+          service.login('alice', (asAlice) =>
+            asAlice.get('/v1/projects/1/forms/simple')
+              .expect(200)
+              .then(({ body }) => {
+                body.name.should.equal("Simple");
+              })
+              .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+                .set('Content-Type', 'application/xml')
+                .send(withRenamedTitle("New Title"))
+                .expect(200))
+                .then(() =>  asAlice.get('/v1/projects/1/forms/simple')
+                  .expect(200)
+                  .then(({ body }) => {
+                    body.name.should.equal("New Title");
+                  })))));
+      });
     });
 
     describe('.xml GET', () => {
