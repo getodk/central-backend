@@ -679,8 +679,8 @@ describe('api: /projects', () => {
           .send({
             name: 'Default Project',
             forms: [
-              { xmlFormId: 'simple', name: 'New Simple', state: 'closed' },
-              { xmlFormId: 'withrepeat', name: 'New Repeat', state: 'closing' }
+              { xmlFormId: 'simple', state: 'closed' },
+              { xmlFormId: 'withrepeat', state: 'closing' }
             ]
           })
           .expect(200)
@@ -689,14 +689,23 @@ describe('api: /projects', () => {
             .then(({ body }) => {
               body.length.should.equal(2);
               body[0].should.be.a.Form();
-              body[0].xmlFormId.should.equal('withrepeat');
-              body[0].name.should.equal('New Repeat');
-              body[0].state.should.equal('closing');
+              body[0].xmlFormId.should.equal('simple');
+              body[0].state.should.equal('closed');
               body[1].should.be.a.Form();
-              body[1].xmlFormId.should.equal('simple');
-              body[1].name.should.equal('New Simple');
-              body[1].state.should.equal('closed');
+              body[1].xmlFormId.should.equal('withrepeat');
+              body[1].state.should.equal('closing');
             })))));
+
+    it('should not allow changing non-writable form details', testService((service) =>
+      service.login('bob', (asBob) =>
+        asBob.put('/v1/projects/1')
+          .send({
+            name: 'Default Project',
+            forms: [
+              { xmlFormId: 'simple', name: 'New Simple', state: 'closed' },
+            ]
+          })
+          .expect(501)))); // 501 not implemented
 
     it('should log the action in the audit log', testService((service, { Audits, Forms, Projects }) =>
       service.login('bob', (asBob) =>
@@ -705,8 +714,8 @@ describe('api: /projects', () => {
           .send({
             name: 'Default Project',
             forms: [
-              { xmlFormId: 'simple', name: 'New Simple', state: 'closed' },
-              { xmlFormId: 'withrepeat', name: 'New Repeat', state: 'closing' }
+              { xmlFormId: 'simple', state: 'closed' },
+              { xmlFormId: 'withrepeat', state: 'closing' }
             ]
           })
           .expect(200)
@@ -719,15 +728,15 @@ describe('api: /projects', () => {
           .then(([ bob, forms, audits ]) => {
             audits.length.should.equal(2);
 
-            const repeatAudit = audits.find((a) => a.acteeId === forms[0].acteeId);
-            should.exist(repeatAudit);
-            repeatAudit.actorId.should.equal(bob.id);
-            repeatAudit.details.should.eql({ data: { name: 'New Repeat', state: 'closing' } });
-
-            const simpleAudit = audits.find((a) => a.acteeId === forms[1].acteeId);
+            const simpleAudit = audits.find((a) => a.acteeId === forms[0].acteeId);
             should.exist(simpleAudit);
             simpleAudit.actorId.should.equal(bob.id);
-            simpleAudit.details.should.eql({ data: { name: 'New Simple', state: 'closed' } });
+            simpleAudit.details.should.eql({ data: { state: 'closed' } });
+
+            const repeatAudit = audits.find((a) => a.acteeId === forms[1].acteeId);
+            should.exist(repeatAudit);
+            repeatAudit.actorId.should.equal(bob.id);
+            repeatAudit.details.should.eql({ data: { state: 'closing' } });
           }))));
 
     ////////////////////////////////////////////////////////////////////////////////

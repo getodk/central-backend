@@ -1212,7 +1212,7 @@ describe('api: /projects/:id/forms', () => {
     it('should log the action in the audit log', testService((service, { Projects, Forms, Users, Audits }) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple')
-          .send({ name: 'a fancy name', state: 'closing' })
+          .send({ state: 'closing' })
           .expect(200)
           .then(() => Promise.all([
             Users.getByEmail('alice@opendatakit.org').then((o) => o.get()),
@@ -1223,7 +1223,7 @@ describe('api: /projects/:id/forms', () => {
           .then(([ alice, form, log ]) => {
             log.actorId.should.equal(alice.actor.id);
             log.acteeId.should.equal(form.acteeId);
-            log.details.should.eql({ data: { name: 'a fancy name', state: 'closing' } });
+            log.details.should.eql({ data: { state: 'closing' } });
           })))));
   });
 
