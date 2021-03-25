@@ -254,6 +254,19 @@ describe('api: /forms/:id.svc', () => {
             });
           }))));
 
+    it('should return just a count if asked', testService((service) =>
+      withSubmission(service, (asAlice) =>
+        asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')/children/child?$top=0&$count=true")
+          .expect(200)
+          .then(({ body }) => {
+            body.should.eql({
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
+              '@odata.nextLink': "http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')/children/child?%24count=true&%24skip=0",
+              '@odata.count': 3,
+              value: []
+            });
+          }))));
+
     // HACK: this test sort of relies on some trickery to make the backend
     // thing the submission is encrypted even though it isn't (see the replace
     // call). there is some chance this methodology is fragile. (mark1)
