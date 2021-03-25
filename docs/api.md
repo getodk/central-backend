@@ -807,7 +807,6 @@ You can inspect the Request format for this endpoint to see the exact nested dat
         + forms: (array, optional) - If given, the Form metadata to update.
             + (object)
                 + xmlFormId: `simple` (string, required) - The `id` of this form as given in its XForms XML definition.
-                + name: `Simple Form` (string, optional) - The name to display for this form
                 + state: (Form State, required) - The present lifecycle status of this form.
                 + assignments: (array, optional) - If given, the Assignments to apply to this Form. And if given, any existing Assignments that are not specified here will be revoked.
                     + (object)
@@ -1246,13 +1245,12 @@ You may optionally add the querystring parameter `?odata=true` to sanitize the f
 
 #### Modifying a Form [PATCH]
 
-It is currently possible to modify two things about a `Form`: its `name`, which is its friendly display name, and its `state`, which governs whether it is available for download onto survey clients and whether it accepts new `Submission`s. See the `state` Attribute in the Request documentation to the right to see the possible values and their meanings.
+It is currently possible to modify only one thing about a `Form`: its `state`, which governs whether it is available for download onto survey clients and whether it accepts new `Submission`s. See the `state` Attribute in the Request documentation to the right to see the possible values and their meanings.
 
 We use `PATCH` rather than `PUT` to represent the update operation, so that you only have to supply the properties you wish to change. Anything you do not supply will remain untouched.
 
 + Request (application/json)
     + Attributes
-        + name: `A New Name` (string, optional) - If supplied, the Form friendly name will be updated to this value.
         + state (Form State, optional) - If supplied, the Form lifecycle state will move to this value.
 
 + Response 200 (application/json)
