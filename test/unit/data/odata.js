@@ -320,14 +320,14 @@ describe('submissionToOData', () => {
         __system,
         polygon: {
           type: 'Polygon',
-          coordinates: [ [ 2.2, 1.1, 3.3 ], [ 6.6, 5.5, 7.7 ], [ 20.0, 10.0, 30.0 ], [ 2.2, 1.1, 3.3 ] ],
+          coordinates: [ [ [ 2.2, 1.1, 3.3 ], [ 6.6, 5.5, 7.7 ], [ 20.0, 10.0, 30.0 ], [ 2.2, 1.1, 3.3 ] ] ],
           properties: {
             accuracies: [ 4.4, 8.8, 40.0, 4.4 ]
           }
         },
         polygonNoAlt: {
           type: 'Polygon',
-          coordinates: [ [ 22.2, 11.1 ], [ 44.4, 33.3 ], [ 66.6, 55.5 ], [ 22.2, 11.1 ] ]
+          coordinates: [ [ [ 22.2, 11.1 ], [ 44.4, 33.3 ], [ 66.6, 55.5 ], [ 22.2, 11.1 ] ] ]
         }
       }]);
     });
