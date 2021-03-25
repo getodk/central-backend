@@ -40,7 +40,7 @@ ODK Central v1.1 adds minor new features to the API.
 
 * `POST`/`GET /backup`, will immediately perform a backup of the database and return the encrypted backup.
 * `POST`/`GET /projects/…/forms/…/submissions.csv`, which allows download of the root table (excluding repeat data) as CSV, without a zipfile.
-* `POST`/`GET /projects/…/forms/…/submissions.csv.zip` now allows `?media=false` to exclude attachments.
+* `POST`/`GET /projects/…/forms/…/submissions.csv.zip` now allows `?attachments=false` to exclude attachments.
 * OData Data Document requests now allow limited use of `$filter`.
 * The various `submissions.csv.*` endpoints also allow `$filter`, using the same limited OData syntax.
 * `GET /projects/…/forms/…/submissions/submitters` which returns submitter Actors for a given Form.
@@ -807,7 +807,6 @@ You can inspect the Request format for this endpoint to see the exact nested dat
         + forms: (array, optional) - If given, the Form metadata to update.
             + (object)
                 + xmlFormId: `simple` (string, required) - The `id` of this form as given in its XForms XML definition.
-                + name: `Simple Form` (string, optional) - The name to display for this form
                 + state: (Form State, required) - The present lifecycle status of this form.
                 + assignments: (array, optional) - If given, the Assignments to apply to this Form. And if given, any existing Assignments that are not specified here will be revoked.
                     + (object)
@@ -1246,13 +1245,12 @@ You may optionally add the querystring parameter `?odata=true` to sanitize the f
 
 #### Modifying a Form [PATCH]
 
-It is currently possible to modify two things about a `Form`: its `name`, which is its friendly display name, and its `state`, which governs whether it is available for download onto survey clients and whether it accepts new `Submission`s. See the `state` Attribute in the Request documentation to the right to see the possible values and their meanings.
+It is currently possible to modify only one thing about a `Form`: its `state`, which governs whether it is available for download onto survey clients and whether it accepts new `Submission`s. See the `state` Attribute in the Request documentation to the right to see the possible values and their meanings.
 
 We use `PATCH` rather than `PUT` to represent the update operation, so that you only have to supply the properties you wish to change. Anything you do not supply will remain untouched.
 
 + Request (application/json)
     + Attributes
-        + name: `A New Name` (string, optional) - If supplied, the Form friendly name will be updated to this value.
         + state (Form State, optional) - If supplied, the Form lifecycle state will move to this value.
 
 + Response 200 (application/json)
@@ -1854,7 +1852,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 To export all the `Submission` data associated with a `Form`, just add `.csv.zip` to the end of the listing URL. The response will be a ZIP file containing one or more CSV files, as well as all multimedia attachments associated with the included Submissions.
 
-You can exclude the media attachments from the ZIP file by specifying `?media=false`.
+You can exclude the media attachments from the ZIP file by specifying `?attachments=false`.
 
 If [Project Managed Encryption](/reference/encryption) is being used, additional querystring parameters may be provided in the format `{keyId}={passphrase}` for any number of keys (eg `1=secret&4=password`). This will decrypt any records encrypted under those managed keys. Submissions encrypted under self-supplied keys will not be decrypted. **Note**: if you are building a browser-based application, please consider the alternative `POST` endpoint, described in the following section.
 
@@ -1888,7 +1886,7 @@ You can use an [OData-style `$filter` query](/reference/odata-endpoints/odata-fo
 
 This non-REST-compliant endpoint is provided for use with [Project Managed Encryption](/reference/encryption). In every respect, it behaves identically to the `GET` endpoint described in the previous section, except that it works over `POST`. This is necessary because for browser-based applications, it is a dangerous idea to simply link the user to `/submissions.csv.zip?2=supersecretpassphrase` because the browser will remember this route in its history and thus the passphrase will become exposed. This is especially dangerous as there are techniques for quickly learning browser-visited URLs of any arbitrary domain.
 
-You can exclude the media attachments from the ZIP file by specifying `?media=false`.
+You can exclude the media attachments from the ZIP file by specifying `?attachments=false`.
 
 And so, for this `POST` version of the Submission CSV export endpoint, the passphrases may be provided via `POST` body rather than querystring. Two formats are supported: form URL encoding (`application/x-www-form-urlencoded`) and JSON. In either case, the keys should be the `keyId`s and the values should be the `passphrase`s, as with the `GET` version above.
 
@@ -2894,7 +2892,7 @@ While the latest 4.01 OData specification adds a new JSON EDMX CSDL format, most
 + Response 406 (application/json)
     + Attributes (Error 406)
 
-### Data Document [GET /v1/projects/{projectId}/forms/{xmlFormId}.svc/{table}{?%24skip,%24top,%24count,%24wkt,%24filter}]
+### Data Document [GET /v1/projects/{projectId}/forms/{xmlFormId}.svc/{table}{?%24skip,%24top,%24count,%24wkt,%24filter,%24expand}]
 
 The data documents are the straightforward JSON representation of each table of `Submission` data. They follow the [corresponding specification](http://docs.oasis-open.org/odata/odata-json-format/v4.01/odata-json-format-v4.01.html), but apart from the representation of geospatial data as GeoJSON rather than the ODK proprietary format, the output here should not be at all surprising. If you are looking for JSON output of Submission data, this is the best place to look.
 
@@ -2902,7 +2900,7 @@ The `$top` and `$skip` querystring parameters, specified by OData, apply `limit`
 
 As of ODK Central v1.1, the [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) is partially supported. In OData, you can use `$filter` to filter by any data field in the schema. In ODK Central, the only fields you can reference are `__system/submitterId` and `__system/submissionDate`. These refer to the numeric `actorId` and the timestamp `createdAt` of the submission overall. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported. These supported elements may be combined in any way, but all other `$filter` features will cause an error. Please see the [OData documentation](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) on `$filter` for more information.
 
-In this release of Central, `$expand` is not yet supported. This will likely change in the future, once we can instate Navigation Properties.
+If you want to expand all repetitions, you can use `%24expand=&#42;`. This might be helpful if you want to get a full dump of all submissions within a single query.
 
 The _nonstandard_ `$wkt` querystring parameter may be set to `true` to request that geospatial data is returned as a [Well-Known Text (WKT) string](https://en.wikipedia.org/wiki/Well-known_text) rather than a GeoJSON structure. This exists primarily to support Tableau, which cannot yet read GeoJSON, but you may find it useful as well depending on your mapping software. **Please note** that both GeoJSON and WKT follow a `(lon, lat, alt)` coördinate ordering rather than the ODK-proprietary `lat lon alt`. This is so that the values map neatly to `(x, y, z)`. GPS accuracy information is not a part of either standards specification, and so is presently omitted from OData output entirely. GeoJSON support may come in a future version.
 
@@ -2916,6 +2914,7 @@ As the vast majority of clients only support the JSON OData format, that is the 
     + `%24count`: `true` (boolean, optional) - If set to `true`, an `@odata.count` property will be added to the result indicating the total number of rows, ignoring the above paging parameters.
     + `%24wkt`: `true` (boolean, optional) - If set to `true`, geospatial data will be returned as Well-Known Text (WKT) strings rather than GeoJSON structures.
     + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24expand`: `&#42;` (string, optional) - Repetitions, which should get expanded. Currently, only `&#42` is implemented, which expands all repetitions.
 
 + Response 200 (application/json)
     + Body

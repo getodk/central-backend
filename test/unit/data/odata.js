@@ -412,6 +412,88 @@ describe('submissionToOData', () => {
       });
     }));
 
+  it('should expand all repeat tables for $expand=*', () =>
+    fieldsFor(testData.forms.doubleRepeat)
+      .then((fields) => {
+        const submission = mockSubmission('two', testData.instances.doubleRepeat.double);
+        return submissionToOData(fields, 'Submissions', submission, { expand: '*' })
+          .then((result) => {
+            result.should.eql([
+              {
+                __id: 'two',
+                name: 'Vick',
+                __system: {
+                  submissionDate: '2017-09-20T17:10:43Z',
+                  submitterId: '5',
+                  submitterName: 'Alice',
+                  attachmentsPresent: 0,
+                  attachmentsExpected: 0,
+                  status: null
+                },
+                meta: { instanceID: 'double' },
+                children: {
+                  'child@odata.navigationLink': 'Submissions(\'two\')/children/child',
+                  child: [
+                    {
+                      __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d',
+                      name: 'Alice'
+                    }, {
+                      __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172',
+                      name: 'Bob',
+                      toys: {
+                        'toy@odata.navigationLink': 'Submissions(\'two\')/children/child(\'c76d0ccc6d5da236be7b93b985a80413d2e3e172\')/toys/toy',
+                        toy: [
+                          {
+                            __id: 'edc8e56945b78ca7d8edeb54c98d5f5e1dec8490',
+                            name: 'Twilight Sparkle'
+                          },
+                          {
+                            __id: '7715214d84af857ba4e64bacc89a31dce16620bb',
+                            name: 'Pinkie Pie'
+                          },
+                          {
+                            __id: 'f69554753d1a7b9d4c6a63596d9776619a232ece',
+                            name: 'Applejack'
+                          },
+                          {
+                            __id: 'ee6ee4f76495c2a7839b2893ab3b409f08bcffaa',
+                            name: 'Spike'
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      __id: '57c0d9e982699e087c34a22696c10753a15beb6c',
+                      name: 'Chelsea',
+                      toys: {
+                        'toy@odata.navigationLink': 'Submissions(\'two\')/children/child(\'57c0d9e982699e087c34a22696c10753a15beb6c\')/toys/toy',
+                        toy: [
+                          {
+                            __id: '0c2ddb3ec8921091961dce34fa2dfbdd25ed368c',
+                            name: 'Rainbow Dash'
+                          },
+                          {
+                            __id: 'efa00a552968b84b1784b4c9c820a32a03cf4aea',
+                            name: 'Rarity'
+                          },
+                          {
+                            __id: '611d4cbce170a9525ccb79a2fd48acb7cc1ef844',
+                            name: 'Fluttershy'
+                          },
+                          {
+                            __id: 'ed4a384b1dfd9002409e5279a2720a685e0e162d',
+                            name: 'Princess Luna'
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]);
+          });
+      }));
+
   it('should extract subtable rows within repeats', () =>
     fieldsFor(testData.forms.withrepeat).then((fields) => {
       const row = { instanceId: 'two', xml: testData.instances.withrepeat.two, def: {}, aux: { encryption: {}, attachment: {} } };
