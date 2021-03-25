@@ -129,8 +129,37 @@ describe('odata message composition', () => {
       }));
 
     it('should express repeats as entity types behind navigation properties', () =>
-      fieldsFor(testData.forms.withrepeat).then((fields) => {
-        const edmx = edmxFor('withrepeat', fields);
+      fieldsFor(`<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Types</h:title>
+    <model>
+      <instance>
+        <data id="types">
+          <meta><instanceID/></meta>
+          <string/><int/><boolean/><decimal/><date/><time/><dateTime/>
+          <geopoint/><geotrace/><geoshape/><binary/><barcode/><intent/>
+        </data>
+      </instance>
+
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+      <bind nodeset="/data/string" type="string"/>
+      <bind nodeset="/data/int" type="int"/>
+      <bind nodeset="/data/boolean" type="boolean"/>
+      <bind nodeset="/data/decimal" type="decimal"/>
+      <bind nodeset="/data/date" type="date"/>
+      <bind nodeset="/data/time" type="time"/>
+      <bind nodeset="/data/dateTime" type="dateTime"/>
+      <bind nodeset="/data/geopoint" type="geopoint"/>
+      <bind nodeset="/data/geotrace" type="geotrace"/>
+      <bind nodeset="/data/geoshape" type="geoshape"/>
+      <bind nodeset="/data/binary" type="binary"/>
+      <bind nodeset="/data/barcode" type="barcode"/>
+      <bind nodeset="/data/intent" type="intent"/>
+    </model>
+  </h:head>
+  <h:body/>
+</h:html>`).then((fields) => {
+        const edmx = edmxFor('types', fields);
         edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
 <edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
   <edmx:DataServices>
@@ -155,38 +184,26 @@ describe('odata message composition', () => {
         <Member Name="approved"/>
       </EnumType>
     </Schema>
-    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.withrepeat">
+    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.types">
       <EntityType Name="Submissions">
         <Key><PropertyRef Name="__id"/></Key>
         <Property Name="__id" Type="Edm.String"/>
         <Property Name="__system" Type="org.opendatakit.submission.metadata"/>
-        <Property Name="meta" Type="org.opendatakit.user.withrepeat.meta"/>
-        <Property Name="name" Type="Edm.String"/>
-        <Property Name="age" Type="Edm.Int64"/>
-        <Property Name="children" Type="org.opendatakit.user.withrepeat.children"/>
-      </EntityType>
-      <EntityType Name="Submissions.children.child">
-        <Key><PropertyRef Name="__id"/></Key>
-        <Property Name="__id" Type="Edm.String"/>
-        <Property Name="__Submissions-id" Type="Edm.String"/>
-        <Property Name="name" Type="Edm.String"/>
-        <Property Name="age" Type="Edm.Int64"/>
-      </EntityType>
-      <ComplexType Name="meta">
-        <Property Name="instanceID" Type="Edm.String"/>
-      </ComplexType>
-      <ComplexType Name="children">
-        <NavigationProperty Name="child" Type="Collection(org.opendatakit.user.withrepeat.Submissions.children.child)"/>
-      </ComplexType>
-      <EntityContainer Name="withrepeat">
-        <EntitySet Name="Submissions" EntityType="org.opendatakit.user.withrepeat.Submissions">`);
-
-        edmx.should.endWith(`<EntitySet Name="Submissions.children.child" EntityType="org.opendatakit.user.withrepeat.Submissions.children.child">
-        </EntitySet>
-      </EntityContainer>
-    </Schema>
-  </edmx:DataServices>
-</edmx:Edmx>`);
+        <Property Name="meta" Type="org.opendatakit.user.types.meta"/>
+        <Property Name="string" Type="Edm.String"/>
+        <Property Name="int" Type="Edm.Int64"/>
+        <Property Name="boolean" Type="Edm.Boolean"/>
+        <Property Name="decimal" Type="Edm.Decimal"/>
+        <Property Name="date" Type="Edm.Date"/>
+        <Property Name="time" Type="Edm.TimeOfDay"/>
+        <Property Name="dateTime" Type="Edm.DateTimeOffset"/>
+        <Property Name="geopoint" Type="Edm.GeographyPoint"/>
+        <Property Name="geotrace" Type="Edm.GeographyLineString"/>
+        <Property Name="geoshape" Type="Edm.GeographyPolygon"/>
+        <Property Name="binary" Type="Edm.String"/>
+        <Property Name="barcode" Type="Edm.String"/>
+        <Property Name="intent" Type="Edm.String"/>
+      </EntityType>`);
       }));
 
     it('should express repeats as entitysets', () => fieldsFor(testData.forms.withrepeat).then((fields) => {
