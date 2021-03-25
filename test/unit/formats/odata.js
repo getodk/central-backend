@@ -74,8 +74,8 @@ describe('odata message composition', () => {
         <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
       </ComplexType>
       <EnumType Name="Status">
-        <Member Name="NotDecrypted"/>
-        <Member Name="MissingEncryptedFormData"/>
+        <Member Name="notDecrypted"/>
+        <Member Name="missingEncryptedFormData"/>
       </EnumType>
       <EnumType Name="ReviewState">
         <Member Name="hasIssues"/>
@@ -115,8 +115,8 @@ describe('odata message composition', () => {
         <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
       </ComplexType>
       <EnumType Name="Status">
-        <Member Name="NotDecrypted"/>
-        <Member Name="MissingEncryptedFormData"/>
+        <Member Name="notDecrypted"/>
+        <Member Name="missingEncryptedFormData"/>
       </EnumType>
       <EnumType Name="ReviewState">
         <Member Name="hasIssues"/>
@@ -145,8 +145,8 @@ describe('odata message composition', () => {
         <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
       </ComplexType>
       <EnumType Name="Status">
-        <Member Name="NotDecrypted"/>
-        <Member Name="MissingEncryptedFormData"/>
+        <Member Name="notDecrypted"/>
+        <Member Name="missingEncryptedFormData"/>
       </EnumType>
       <EnumType Name="ReviewState">
         <Member Name="hasIssues"/>
@@ -293,8 +293,8 @@ describe('odata message composition', () => {
         <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
       </ComplexType>
       <EnumType Name="Status">
-        <Member Name="NotDecrypted"/>
-        <Member Name="MissingEncryptedFormData"/>
+        <Member Name="notDecrypted"/>
+        <Member Name="missingEncryptedFormData"/>
       </EnumType>
       <EnumType Name="ReviewState">
         <Member Name="hasIssues"/>
@@ -367,8 +367,8 @@ describe('odata message composition', () => {
         <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
       </ComplexType>
       <EnumType Name="Status">
-        <Member Name="NotDecrypted"/>
-        <Member Name="MissingEncryptedFormData"/>
+        <Member Name="notDecrypted"/>
+        <Member Name="missingEncryptedFormData"/>
       </EnumType>
       <EnumType Name="ReviewState">
         <Member Name="hasIssues"/>

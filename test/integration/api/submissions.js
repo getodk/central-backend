@@ -2195,7 +2195,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
         asAlice.get('/v1/projects/1/forms/simple/submissions/one/audits')
           .expect(404))));
 
-    it('should return notfound if the instance does not exist', testService((service) =>
+    it('should reject if the user cannot read audits', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
@@ -3175,8 +3175,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .send(withSimpleIds('one', 'two'))
             .set('Content-Type', 'text/xml')
             .expect(200))
-          .then(() => all(sql`select * from submission_defs`))
-          .then((results) => asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions')
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions')
             .expect(200)
             .then(({ body }) => {
               body.length.should.equal(2);

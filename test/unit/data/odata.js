@@ -428,7 +428,8 @@ describe('submissionToOData', () => {
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
                   attachmentsExpected: 0,
-                  status: null
+                  status: null,
+                  reviewState: null
                 },
                 meta: { instanceID: 'double' },
                 children: {

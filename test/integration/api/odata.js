@@ -162,7 +162,7 @@ describe('api: /forms/:id.svc', () => {
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
                     attachmentsExpected: 2,
-                    status: 'MissingEncryptedFormData',
+                    status: 'missingEncryptedFormData',
                     reviewState: null
                   }
                 }]
@@ -199,7 +199,7 @@ describe('api: /forms/:id.svc', () => {
                     submitterName: 'Alice',
                     attachmentsPresent: 1,
                     attachmentsExpected: 2,
-                    status: 'NotDecrypted',
+                    status: 'notDecrypted',
                     reviewState: null
                   }
                 }]
@@ -757,7 +757,7 @@ describe('api: /forms/:id.svc', () => {
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
                     attachmentsExpected: 2,
-                    status: 'MissingEncryptedFormData',
+                    status: 'missingEncryptedFormData',
                     reviewState: null
                   }
                 }, {
@@ -768,7 +768,7 @@ describe('api: /forms/:id.svc', () => {
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
                     attachmentsExpected: 2,
-                    status: 'MissingEncryptedFormData',
+                    status: 'missingEncryptedFormData',
                     reviewState: null
                   }
                 }]
@@ -814,7 +814,7 @@ describe('api: /forms/:id.svc', () => {
                     submitterName: 'Alice',
                     attachmentsPresent: 1,
                     attachmentsExpected: 2,
-                    status: 'NotDecrypted',
+                    status: 'notDecrypted',
                     reviewState: null
                   }
                 }, {
@@ -825,7 +825,7 @@ describe('api: /forms/:id.svc', () => {
                     submitterName: 'Alice',
                     attachmentsPresent: 1,
                     attachmentsExpected: 2,
-                    status: 'NotDecrypted',
+                    status: 'notDecrypted',
                     reviewState: null
                   }
                 }]
