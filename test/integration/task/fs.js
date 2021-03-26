@@ -7,28 +7,9 @@ const tmp = require('tmp');
 const archiver = require('archiver');
 const { testTask } = require('../setup');
 const { generateManagedKey } = require(appRoot + '/lib/util/crypto');
-const { tmpdir, tmpfile, encryptToArchive, decryptFromArchive } = require(appRoot + '/lib/task/fs');
+const { encryptToArchive, decryptFromArchive } = require(appRoot + '/lib/task/fs');
 
 describe('task: fs', () => {
-  describe('tmpdir/file', () => {
-    it('should create a temporary directory', testTask(() =>
-      tmpdir()
-        .then(([ path ]) => promisify(stat)(path)
-          .then((dirstat) => dirstat.isDirectory().should.equal(true)))));
-
-    it('should clean up the temporary directory', testTask(() =>
-      tmpdir()
-        .then(([ path, rm ]) => {
-          rm();
-          return promisify(stat)(path).should.be.rejected();
-        })));
-
-    it('should make a temporary file', testTask(() =>
-      tmpfile()
-        .then((path) => promisify(stat)(path)
-          .then((filestat) => filestat.isFile().should.equal(true)))));
-  });
-
   describe('encrypted archives', () => {
     // helper that creates a tmpdir, drops some test files into it, generates a
     // keyset with the given passphrase and runs the encryption to a tmpfile,
