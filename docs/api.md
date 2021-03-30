@@ -1254,7 +1254,7 @@ We use `PATCH` rather than `PUT` to represent the update operation, so that you 
         + state (Form State, optional) - If supplied, the Form lifecycle state will move to this value.
 
 + Response 200 (application/json)
-    + Attributes (Success)
+    + Attributes (Form)
 
 + Response 400 (application/json)
     + Attributes (Error 400)
