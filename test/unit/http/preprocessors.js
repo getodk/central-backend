@@ -57,7 +57,7 @@ describe('preprocessors', () => {
           } },
           new Context(
             createRequest({ headers: { Authorization: 'Bearer aabbccddeeff123' } }),
-            { auth: { isAuthenticated() { return true; } }, fieldKey: Option.of('a') }
+            { auth: { isAuthenticated() { return true; } }, fieldKey: Option.of('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa') }
           )
         )).should.be.rejectedWith(Problem, { problemCode: 403.1 }));
 
@@ -375,11 +375,11 @@ describe('preprocessors', () => {
           should.not.exist(context);
         }));
 
-      it('should fail the request with 403 if the token is the wrong length', () =>
+      it('should fail the request with 401 if the token is the wrong length', () =>
         Promise.resolve(sessionHandler(
           { Auth, Sessions: mockFkSession('alohomor') },
           new Context(createRequest(), { fieldKey: Option.of('alohomora'), })
-        )).should.be.rejectedWith(Problem, { problemCode: 403.1 }));
+        )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should fail the request with 403 if the session does not exist', () =>
         Promise.resolve(sessionHandler(
