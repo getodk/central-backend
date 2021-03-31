@@ -195,7 +195,7 @@ describe('odata message composition', () => {
         <Property Name="boolean" Type="Edm.Boolean"/>
         <Property Name="decimal" Type="Edm.Decimal"/>
         <Property Name="date" Type="Edm.Date"/>
-        <Property Name="time" Type="Edm.TimeOfDay"/>
+        <Property Name="time" Type="Edm.String"/>
         <Property Name="dateTime" Type="Edm.DateTimeOffset"/>
         <Property Name="geopoint" Type="Edm.GeographyPoint"/>
         <Property Name="geotrace" Type="Edm.GeographyLineString"/>
