@@ -215,6 +215,15 @@ describe('api: /projects/:id/app-users', () => {
             .expect(200)
             .then(({ body }) => asAlice.delete(`/v1/projects/2/app-users/${body.id}`)
               .expect(404))))));
+
+    it('should log the action in the audit log', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/app-users').send({ displayName: 'condemned' }).expect(200)
+          .then(({ body }) => asAlice.delete('/v1/projects/1/app-users/' + body.id).expect(200))
+          .then(() => asAlice.get('/v1/audits')
+            .then(({ body }) => {
+              body.map((audit) => audit.action).should.eql([ 'field_key.delete', 'field_key.create' ]);
+            })))));
   });
 });
 
