@@ -210,19 +210,6 @@ describe('api: /submission', () => {
                 ]);
               }))))));
 
-    it('should return an appropriate error given conflicting attachments', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms?publish=true')
-          .set('Content-Type', 'application/xml')
-          .send(testData.forms.binaryType)
-          .expect(200)
-          .then(() => asAlice.post('/v1/projects/1/submission')
-            .set('X-OpenRosa-Version', '1.0')
-            .attach('file1', Buffer.from('this is test file three'), { filename: 'file1' })
-            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.conflict), { filename: 'data.xml' })
-            .attach('file1', Buffer.from('this is test file four'), { filename: 'file1' })
-            .expect(409)))));
-
     it('should not fail given identical attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
@@ -242,6 +229,24 @@ describe('api: /submission', () => {
                   { name: 'here_is_file2.jpg', exists: true },
                   { name: 'my_file1.mp4', exists: true }
                 ]);
+              }))))));
+
+    it('should not fail given identical attachment references', testService((service) => // gh330
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('my_file1.mp4', Buffer.from('this is a test file'), { filename: 'my_file1.mp4' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both
+              .replace('here_is_file2.jpg', 'my_file1.mp4')), { filename: 'data.xml' })
+            .expect(201)
+            .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.eql([{ name: 'my_file1.mp4', exists: true }]);
               }))))));
 
     it('should create audit log entries for saved attachments', testService((service) =>
