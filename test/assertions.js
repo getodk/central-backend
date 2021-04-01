@@ -229,7 +229,7 @@ should.Assertion.add('SimpleCsv', function() {
 
   const csv = this.obj.split('\n').map((row) => row.split(','));
   csv.length.should.equal(5); // header + 3 data rows + newline
-  csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState' ]);
+  csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits' ]);
   csv[1].shift().should.be.an.recentIsoDate();
   csv[1].should.eql([ 'three','Chelsea','38','three','5','Alice','0','0' ]);
   csv[2].shift().should.be.an.recentIsoDate();
@@ -244,7 +244,7 @@ should.Assertion.add('EncryptedSimpleCsv', function() {
 
   const csv = this.obj.split('\n').map((row) => row.split(','));
   csv.length.should.equal(5); // header + 3 data rows + newline
-  csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState' ]);
+  csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits' ]);
   csv[1].shift().should.be.an.recentIsoDate();
   csv[1].should.eql([ 'three','Chelsea','38','three','5','Alice','1','1' ]);
   csv[2].shift().should.be.an.recentIsoDate();
