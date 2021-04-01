@@ -15,14 +15,16 @@ const __system = {
   attachmentsPresent: 1,
   attachmentsExpected: 2,
   status: null,
-  reviewState: null
+  reviewState: null,
+  deviceId: null,
+  edits: 0
 };
 const mockSubmission = (instanceId, xml) => ({
   xml,
   instanceId,
   createdAt: __system.submissionDate,
   def: {},
-  aux: { submitter, attachment, encryption: {} }
+  aux: { submitter, attachment, encryption: {}, edit: { count: 0 } }
 });
 
 describe('odata message composition', () => {
@@ -72,6 +74,8 @@ describe('odata message composition', () => {
         <Property Name="attachmentsExpected" Type="Edm.Int64"/>
         <Property Name="status" Type="org.opendatakit.submission.Status"/>
         <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
+        <Property Name="deviceId" Type="Edm.String"/>
+        <Property Name="edits" Type="Edm.Int64"/>
       </ComplexType>
       <EnumType Name="Status">
         <Member Name="notDecrypted"/>
@@ -113,6 +117,8 @@ describe('odata message composition', () => {
         <Property Name="attachmentsExpected" Type="Edm.Int64"/>
         <Property Name="status" Type="org.opendatakit.submission.Status"/>
         <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
+        <Property Name="deviceId" Type="Edm.String"/>
+        <Property Name="edits" Type="Edm.Int64"/>
       </ComplexType>
       <EnumType Name="Status">
         <Member Name="notDecrypted"/>
@@ -172,6 +178,8 @@ describe('odata message composition', () => {
         <Property Name="attachmentsExpected" Type="Edm.Int64"/>
         <Property Name="status" Type="org.opendatakit.submission.Status"/>
         <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
+        <Property Name="deviceId" Type="Edm.String"/>
+        <Property Name="edits" Type="Edm.Int64"/>
       </ComplexType>
       <EnumType Name="Status">
         <Member Name="notDecrypted"/>
@@ -308,6 +316,8 @@ describe('odata message composition', () => {
         <Property Name="attachmentsExpected" Type="Edm.Int64"/>
         <Property Name="status" Type="org.opendatakit.submission.Status"/>
         <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
+        <Property Name="deviceId" Type="Edm.String"/>
+        <Property Name="edits" Type="Edm.Int64"/>
       </ComplexType>
       <EnumType Name="Status">
         <Member Name="notDecrypted"/>
@@ -382,6 +392,8 @@ describe('odata message composition', () => {
         <Property Name="attachmentsExpected" Type="Edm.Int64"/>
         <Property Name="status" Type="org.opendatakit.submission.Status"/>
         <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
+        <Property Name="deviceId" Type="Edm.String"/>
+        <Property Name="edits" Type="Edm.Int64"/>
       </ComplexType>
       <EnumType Name="Status">
         <Member Name="notDecrypted"/>
@@ -465,7 +477,7 @@ describe('odata message composition', () => {
           })));
       });
 
-      const instances = (count) => (new Array(count)).fill({ xml: '<data/>', def: {}, aux: { submitter, attachment } });
+      const instances = (count) => (new Array(count)).fill({ xml: '<data/>', def: {}, aux: { submitter, attachment, edit: { count: 0 } } });
       it('should provide no nextUrl if the final row is accounted for', (done) => {
         const query = { $top: '3', $skip: '7' };
         const inRows = streamTest.fromObjects(instances(10));

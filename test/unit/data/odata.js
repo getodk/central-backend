@@ -11,7 +11,9 @@ const __system = {
   attachmentsPresent: 0,
   attachmentsExpected: 0,
   status: null,
-  reviewState: null
+  reviewState: null,
+  deviceId: null,
+  edits: 0
 };
 const mockSubmission = (instanceId, xml) => ({
   xml,
@@ -20,7 +22,8 @@ const mockSubmission = (instanceId, xml) => ({
   def: {},
   aux: {
     submitter: { id: 5, displayName: 'Alice' },
-    attachment: { present: 0, expected: 0 }
+    attachment: { present: 0, expected: 0 },
+    edit: { count: 0 }
   }
 });
 
@@ -62,6 +65,23 @@ describe('submissionToOData', () => {
     });
   });
 
+  it('should set the correct deviceId', () => {
+    const submission = Object.assign(mockSubmission('test', testData.instances.simple.one), { deviceId: 'cool device' });
+
+    return submissionToOData([], 'Submissions', submission).then((result) => {
+      result.should.eql([{ __id: 'test', __system: Object.assign({}, __system, { deviceId: 'cool device' }) }]);
+    });
+  });
+
+  it('should set the correct edit count', () => {
+    const submission = mockSubmission('test', testData.instances.simple.one);
+    submission.aux.edit = { count: 42 };
+
+    return submissionToOData([], 'Submissions', submission).then((result) => {
+      result.should.eql([{ __id: 'test', __system: Object.assign({}, __system, { edits: 42 }) }]);
+    });
+  });
+
   it('should not crash if no submitter exists', () => {
     const submission = mockSubmission('test', testData.instances.simple.one);
     submission.aux.submitter = {}; // wipe it back out.
@@ -75,7 +95,9 @@ describe('submissionToOData', () => {
           attachmentsPresent: 0,
           attachmentsExpected: 0,
           status: null,
-          reviewState: null
+          reviewState: null,
+          deviceId: null,
+          edits: 0
         }
       }]);
     });
@@ -429,7 +451,9 @@ describe('submissionToOData', () => {
                   attachmentsPresent: 0,
                   attachmentsExpected: 0,
                   status: null,
-                  reviewState: null
+                  reviewState: null,
+                  deviceId: null,
+                  edits: 0
                 },
                 meta: { instanceID: 'double' },
                 children: {
