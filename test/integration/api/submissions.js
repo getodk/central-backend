@@ -533,7 +533,7 @@ describe('api: /submission', () => {
                 body.value[0].name.should.equal('Alyssa');
               })))));
 
-      it('should replace attachments', testService((service) =>
+      it('should copy forward missing attachments', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
             .set('Content-Type', 'text/xml')
@@ -551,10 +551,37 @@ describe('api: /submission', () => {
               .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments')
                 .then(({ body }) => {
                   body.should.eql([
-                    { name: 'here_is_file2.jpg', exists: false },
+                    { name: 'here_is_file2.jpg', exists: true },
                     { name: 'my_file1.mp4', exists: true }
                   ]);
                 }))))));
+
+      it('should replace extant attachments', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'text/xml')
+            .send(testData.forms.binaryType)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201)
+              .then(() => asAlice.post('/v1/projects/1/submission')
+                .set('X-OpenRosa-Version', '1.0')
+                .attach('xml_submission_file', Buffer.from(withBinaryIds('both', 'both2')), { filename: 'data.xml' })
+                .attach('here_is_file2.jpg', Buffer.from('this is test file two two'), { filename: 'here_is_file2.jpg' })
+                .expect(201))
+              .then(() => Promise.all([
+                asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments')
+                  .then(({ body }) => {
+                    body.should.eql([
+                      { name: 'here_is_file2.jpg', exists: true },
+                      { name: 'my_file1.mp4', exists: false }
+                    ]);
+                  }),
+                asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
+                  .then(({ body }) => { body.toString('utf8').should.equal('this is test file two two'); })
+              ]))))));
 
       it('should upsert attachments', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -986,7 +1013,7 @@ describe('api: /forms/:id/submissions', () => {
             .send(withSimpleIds('one', 'three'))
             .expect(409)))));
 
-    it('should reset attachments', testService((service) =>
+    it('should copy forward matching attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'text/xml')
@@ -1009,7 +1036,7 @@ describe('api: /forms/:id/submissions', () => {
             .then(({ body }) => {
               body.should.eql([
                 { name: 'here_is_file2.jpg', exists: false },
-                { name: 'my_file1.mp4', exists: false }
+                { name: 'my_file1.mp4', exists: true }
               ]);
             })))));
   });
@@ -2712,7 +2739,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .expect(200)
               .then(({ body }) => {
                 body.should.eql([
-                  { name: 'here_is_file2.jpg', exists: false },
+                  { name: 'here_is_file2.jpg', exists: true },
                   { name: 'my_file1.mp4', exists: true }
                 ]);
               })
