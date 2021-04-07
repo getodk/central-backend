@@ -3338,7 +3338,8 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 
 ## Actor Type (enum)
 + user (string) - A User with an email and login password.
-+ fieldKey (string) - An App User which can submit data to a form. ("Field Key" is a legacy internal name for "App User".)
++ field_key (string) - An App User which can submit data to a Form. ("Field Key" is a legacy internal name for "App User".)
++ public_link (string) - A Public Access Link that grants anonymous browser-based access to submit to a Form.
 + singleUse (string) - A temporary token authorized to perform some specific action, like reset one password.
 
 ## Assignment (object)
@@ -3466,7 +3467,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + once: `false` (boolean, optional) - If set to `true`, an Enketo [single submission survey](https://blog.enketo.org/single-submission-surveys/) will be created instead of a standard one, limiting respondents to a single submission each.
 
 ## Extended Public Link (Public Link)
-+ createdBy (Actor, required) - The full details about the `Actor` that created this `App User`.
++ createdBy (Actor, required) - The full details about the `Actor` that created this `Public Link`.
 
 ## Key (object)
 + id: `1` (number, required) - The numerical ID of the Key.
@@ -3492,7 +3493,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 
 ## Submission (object)
 + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the `Submission`, given by the Submission XML.
-+ submitterId: `23` (number, required) - The ID of the `Actor` (`App User` or `User`) that submitted this `Submission`.
++ submitterId: `23` (number, required) - The ID of the `Actor` (`App User`, `User`, or `Public Link`) that submitted this `Submission`.
 + deviceId: `imei:123456` (string, optional) - The self-identified `deviceId` of the device that collected the data, sent by it upon submission to the server.
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format
