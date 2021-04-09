@@ -177,13 +177,13 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
           .then(({ body }) => asAlice.delete(`/v1/projects/1/forms/simple/public-links/${body.id}`)
             .expect(404)))));
 
-    it('should delete the token', testService((service) =>
+    it('should log the token deletion in the audit log', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/public-links').send({ displayName: 'condemned' }).expect(200)
           .then(({ body }) => asAlice.delete('/v1/projects/1/forms/simple/public-links/' + body.id).expect(200))
           .then(() => asAlice.get('/v1/audits')
             .then(({ body }) => {
-              body.map((audit) => audit.action).should.eql([ 'public_link.delete', 'public_link.create', 'assignment.create' ]);
+              body.map((audit) => audit.action).should.eql([ 'public_link.delete', 'public_link.create', 'public_link.assignment.create' ]);
             })))));
   });
 });

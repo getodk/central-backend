@@ -214,8 +214,8 @@ describe('/audits', () => {
             .then(({ body }) => {
               body.length.should.equal(5);
               body[0].action.should.equal('user.delete');
-              body[1].action.should.equal('assignment.delete');
-              body[2].action.should.equal('assignment.create');
+              body[1].action.should.equal('user.assignment.delete');
+              body[2].action.should.equal('user.assignment.create');
               body[3].action.should.equal('user.update');
               body[4].action.should.equal('user.create');
             })))));

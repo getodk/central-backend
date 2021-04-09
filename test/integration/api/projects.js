@@ -925,7 +925,7 @@ describe('api: /projects', () => {
               asBob.get('/v1/users/current').expect(200).then(({ body }) => body),
               Actors.getById(fk.id).then((o) => o.get()),
               Forms.getByProjectAndXmlFormId(1, 'simple').then((o) => o.get()),
-              Audits.getLatestByAction('assignment.create').then((o) => o.get())
+              Audits.getLatestByAction('field_key.assignment.create').then((o) => o.get())
             ]))
             .then(([ bob, fullfk, form, audit ]) => {
               audit.actorId.should.equal(bob.id);
@@ -1066,7 +1066,7 @@ describe('api: /projects', () => {
               Actors.getById(fk.id).then((o) => o.get()),
               Projects.getById(1).then((o) => o.get())
                 .then((project) => Forms.getByProjectAndXmlFormId(project.id,  'simple')).then((o) => o.get()),
-              Audits.getLatestByAction('assignment.delete').then((o) => o.get())
+              Audits.getLatestByAction('field_key.assignment.delete').then((o) => o.get())
             ]))
             .then(([ bob, appUserRoleId, fullfk, form, audit ]) => {
               audit.actorId.should.equal(bob.id);

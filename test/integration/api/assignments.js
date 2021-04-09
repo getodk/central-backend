@@ -259,7 +259,7 @@ describe('api: /assignments', () => {
                 .expect(200)
                 .then(() => Promise.all([
                   Users.getByEmail('alice@opendatakit.org').then((maybeAlice) => maybeAlice.get()),
-                  Audits.getLatestByAction('assignment.create')
+                  Audits.getLatestByAction('user.assignment.create')
                 ]))
                 .then(([ alice, audit ]) => {
                   audit.isDefined().should.equal(true);
@@ -322,7 +322,7 @@ describe('api: /assignments', () => {
             asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id)
               .then((adminRoleId) => asAlice.delete(`/v1/assignments/${adminRoleId}/${alice.actor.id}`)
                 .expect(200)
-                .then(() => Audits.getLatestByAction('assignment.delete'))
+                .then(() => Audits.getLatestByAction('user.assignment.delete'))
                 .then((audit) => {
                   audit.isDefined().should.equal(true);
                   audit.get().actorId.should.equal(alice.actor.id);
@@ -450,7 +450,7 @@ describe('/projects/:id/assignments', () => {
                 .then(() => Promise.all([
                   Projects.getById(1).then((x) => x.get()),
                   Users.getByEmail('alice@opendatakit.org').then((maybeAlice) => maybeAlice.get()),
-                  Audits.getLatestByAction('assignment.create')
+                  Audits.getLatestByAction('user.assignment.create')
                 ]))
                 .then(([ project, alice, audit ]) => {
                   audit.isDefined().should.equal(true);
@@ -515,7 +515,7 @@ describe('/projects/:id/assignments', () => {
                 .then(() => Promise.all([
                   Projects.getById(1).then((x) => x.get()),
                   Users.getByEmail('alice@opendatakit.org').then((x) => x.get()),
-                  Audits.getLatestByAction('assignment.delete')
+                  Audits.getLatestByAction('user.assignment.delete')
                 ]))
                 .then(([ project, alice, audit ]) => {
                   audit.isDefined().should.equal(true);
