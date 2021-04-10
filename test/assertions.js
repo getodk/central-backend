@@ -55,6 +55,15 @@ should.Assertion.add('Actor', function() {
   should.not.exist(this.obj.meta);
 });
 
+should.Assertion.add('Comment', function() {
+  this.params = { operator: 'to be a Comment' };
+
+  Object.keys(this.obj).should.containDeep([ 'body', 'actorId', 'createdAt' ]);
+  this.obj.body.should.be.a.String();
+  this.obj.actorId.should.be.a.Number();
+  this.obj.createdAt.should.be.an.isoDate();
+});
+
 should.Assertion.add('User', function() {
   this.params = { operator: 'to be a User' };
 
