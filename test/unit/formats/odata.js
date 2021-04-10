@@ -83,7 +83,7 @@ describe('odata message composition', () => {
       </EnumType>
       <EnumType Name="ReviewState">
         <Member Name="hasIssues"/>
-        <Member Name="needsReview"/>
+        <Member Name="edited"/>
         <Member Name="rejected"/>
         <Member Name="approved"/>
       </EnumType>
@@ -126,7 +126,7 @@ describe('odata message composition', () => {
       </EnumType>
       <EnumType Name="ReviewState">
         <Member Name="hasIssues"/>
-        <Member Name="needsReview"/>
+        <Member Name="edited"/>
         <Member Name="rejected"/>
         <Member Name="approved"/>
       </EnumType>
@@ -187,7 +187,7 @@ describe('odata message composition', () => {
       </EnumType>
       <EnumType Name="ReviewState">
         <Member Name="hasIssues"/>
-        <Member Name="needsReview"/>
+        <Member Name="edited"/>
         <Member Name="rejected"/>
         <Member Name="approved"/>
       </EnumType>
@@ -325,7 +325,7 @@ describe('odata message composition', () => {
       </EnumType>
       <EnumType Name="ReviewState">
         <Member Name="hasIssues"/>
-        <Member Name="needsReview"/>
+        <Member Name="edited"/>
         <Member Name="rejected"/>
         <Member Name="approved"/>
       </EnumType>
@@ -401,7 +401,7 @@ describe('odata message composition', () => {
       </EnumType>
       <EnumType Name="ReviewState">
         <Member Name="hasIssues"/>
-        <Member Name="needsReview"/>
+        <Member Name="edited"/>
         <Member Name="rejected"/>
         <Member Name="approved"/>
       </EnumType>
