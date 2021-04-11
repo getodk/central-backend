@@ -7,24 +7,14 @@ jobs:
     docker:
       - image: circleci/node:12.4.0
       - image: circleci/postgres:9.6-alpine-ram
+        environment:
+          POSTGRES_PASSWORD: odktest
 
     working_directory: ~/repo
 
     steps:
       - checkout
-
-      # Download and cache dependencies
-      - restore_cache:
-          keys:
-          - v1-dependencies-{{ checksum "package.json" }}
-
-      - run: yarn install
-
-      - save_cache:
-          paths:
-            - node_modules
-          key: v1-dependencies-{{ checksum "package.json" }}
-
+      - run: npm ci
       - run: node .circleci/initdb.js
       - run: make test-full
 
