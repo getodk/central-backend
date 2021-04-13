@@ -165,7 +165,7 @@ describe('submissionToOData', () => {
     });
   });
 
-  it('should output null field records for missing nested atomic values', () => {
+  it('should output null field records for missing group-nested atomic values', () => {
     const fields = [
       new MockField({ path: '/sun', name: 'sun', type: 'structure', order: 0 }),
       new MockField({ path: '/sun/earth', name: 'earth', type: 'int', order: 1 }),
@@ -184,6 +184,27 @@ describe('submissionToOData', () => {
           mars: null,
           jupiter: null
         }
+      }]);
+    });
+  });
+
+  it('should output null field records for missing repeat-nested atomic values', () => { // gh356
+    const fields = [
+      new MockField({ path: '/sun', name: 'sun', type: 'repeat', order: 0 }),
+      new MockField({ path: '/sun/earth', name: 'earth', type: 'int', order: 1 }),
+      new MockField({ path: '/sun/mars', name: 'mars', type: 'decimal', order: 2 }),
+      new MockField({ path: '/sun/jupiter', name: 'jupiter', type: 'geopoint', order: 3 }),
+      new MockField({ path: '/sun/saturn', name: 'saturn', type: 'structure', order: 4 }),
+      new MockField({ path: '/sun/uranus', name: 'uranus', type: 'repeat', order: 5 })
+    ];
+    const submission = mockSubmission('nulls', '<data><sun><earth>42</earth></sun></data>');
+    return submissionToOData(fields, 'Submissions.sun', submission).then((result) => {
+      result.should.eql([{
+        '__Submissions-id': 'nulls',
+        __id: '68874cc5985b68898fbd0af1156e12b6270820f7',
+        earth: 42,
+        mars: null,
+        jupiter: null
       }]);
     });
   });
