@@ -27,6 +27,7 @@ describe('api: /projects/:id/forms', () => {
             body.forEach((form) => form.should.be.a.Form());
             body.map((form) => form.projectId).should.eql([ 1, 1 ]);
             body.map((form) => form.xmlFormId).should.eql([ 'simple', 'withrepeat' ]);
+            body.map((form) => form.name).should.eql([ 'Simple', null ]);
             body.map((form) => form.hash).should.eql([ '5c09c21d4c71f2f13f6aa26227b2d133', 'e7e9e6b3f11fca713ff09742f4312029' ]);
             body.map((form) => form.version).should.eql([ '', '1.0' ]);
           }))));
@@ -550,14 +551,17 @@ describe('api: /projects/:id/forms', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple2')
             .expect(200)
             .then(({ body }) => {
-              should.not.exist(body.version);
-              should.not.exist(body.hash);
-              should.not.exist(body.sha);
-              should.not.exist(body.sha256);
+              should.not.exist(body.publishedAt);
+              body.name.should.equal('Simple 2');
+              body.version.should.equal('2.1');
+              body.hash.should.equal('07ed8a51cc3f6472b7dfdc14c2005861');
+              body.sha.should.equal('466b8cf532c22aea7b1791ea2e6712ab31ce90a4');
+              body.sha256.should.equal('d438bdfb5c0b9bb800420363ca8900d26c3e664945d4ffc41406cbc599e43cae');
             }))
           .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft')
             .expect(200)
             .then(({ body }) => {
+              body.name.should.equal('Simple 2');
               body.version.should.equal('2.1');
               body.hash.should.equal('07ed8a51cc3f6472b7dfdc14c2005861');
               body.sha.should.equal('466b8cf532c22aea7b1791ea2e6712ab31ce90a4');
@@ -788,6 +792,7 @@ describe('api: /projects/:id/forms', () => {
             .then(({ body }) => {
               body.should.be.a.Form();
               body.xmlFormId.should.equal('simple');
+              body.name.should.equal('Simple');
               body.hash.should.equal('5c09c21d4c71f2f13f6aa26227b2d133');
             }))));
 
@@ -1765,6 +1770,113 @@ describe('api: /projects/:id/forms', () => {
                     form.draftDefId.should.equal(body[0].details.newDraftDefId);
                   });
               })))));
+
+      context('updating form titles', () => {
+        const withRenamedTitleAndVersion = (newTitle, newVersion='2.1') => testData.forms.simple2
+          .replace('Simple 2', `${newTitle}`).replace('version="2.1"', `version="${newVersion}"`);
+
+        it('should update form title with draft title when no published form exists', testService((service) =>
+          service.login('alice', (asAlice) =>
+            asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.simple2)
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+              .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+                .expect(200)
+                .then(({ body }) => {
+                  body.name.should.equal('Simple 2');
+                })
+                .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+                  .send(withRenamedTitleAndVersion('New Title'))
+                  .set('Content-Type', 'application/xml')
+                  .expect(200)
+                  .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+                    .expect(200)
+                    .then(({ body }) => {
+                      body.name.should.equal('New Title');
+                    })
+                ))))));
+
+        it('should not update form title with draft title when form already published', testService((service) =>
+          service.login('alice', (asAlice) =>
+            asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simple2)
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+              .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+                .expect(200)
+                .then(({ body }) => {
+                  body.name.should.equal('Simple 2');
+                })
+                .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+                  .send(withRenamedTitleAndVersion('New Title'))
+                  .set('Content-Type', 'application/xml')
+                  .expect(200)
+                  .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+                    .expect(200)
+                    .then(({ body }) => {
+                      body.name.should.equal('Simple 2');
+                    })
+                ))))));
+
+        it('should not update form title from draft when form published and existing draft present', testService((service) =>
+          service.login('alice', (asAlice) =>
+            asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simple2)
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+              .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+                .expect(200)
+                .then(({ body }) => {
+                  body.name.should.equal('Simple 2');
+                })
+                .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+                  .send(withRenamedTitleAndVersion('New Title', '2.2'))
+                  .set('Content-Type', 'application/xml')
+                  .expect(200)
+                  .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+                    .expect(200)
+                    .then(({ body }) => {
+                          body.name.should.equal('Simple 2');
+                    })
+                    .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+                      .send(withRenamedTitleAndVersion('An Even Newer Title', '2.3'))
+                      .set('Content-Type', 'application/xml')
+                      .expect(200)
+                      .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+                        .expect(200)
+                        .then(({ body }) => {
+                          body.name.should.equal('Simple 2');
+                        })))))))));
+
+        it('should update form title with latest draft title only on publish', testService((service) =>
+          service.login('alice', (asAlice) =>
+            asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simple2)
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+              .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+                .expect(200)
+                .then(({ body }) => {
+                  body.name.should.equal('Simple 2');
+                })
+                .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+                  .send(withRenamedTitleAndVersion('New Title', '2.2'))
+                  .set('Content-Type', 'application/xml')
+                  .expect(200)
+                  .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+                    .expect(200)
+                    .then(({ body }) => {
+                      body.name.should.equal('Simple 2');
+                    })
+                    .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+                      .expect(200)
+                      .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+                        .expect(200)
+                        .then(({ body }) => {
+                          body.name.should.equal('New Title');
+                        })))))))));
+      });
     });
 
     describe('GET', () => {
@@ -2959,28 +3071,6 @@ describe('api: /projects/:id/forms', () => {
     </mediaFile>
   </manifest>`);
                 }))))));
-
-      context('renaming', () => {
-        const withRenamedTitle = (newTitle) => testData.forms.simple
-          .replace('Simple', `${newTitle}`);
-
-        it('should rename the form based on the latest draft title', testService((service) =>
-          service.login('alice', (asAlice) =>
-            asAlice.get('/v1/projects/1/forms/simple')
-              .expect(200)
-              .then(({ body }) => {
-                body.name.should.equal("Simple");
-              })
-              .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
-                .set('Content-Type', 'application/xml')
-                .send(withRenamedTitle("New Title"))
-                .expect(200))
-                .then(() =>  asAlice.get('/v1/projects/1/forms/simple')
-                  .expect(200)
-                  .then(({ body }) => {
-                    body.name.should.equal("New Title");
-                  })))));
-      });
     });
 
     describe('.xml GET', () => {
