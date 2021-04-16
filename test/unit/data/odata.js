@@ -11,7 +11,9 @@ const __system = {
   attachmentsPresent: 0,
   attachmentsExpected: 0,
   status: null,
-  reviewState: null
+  reviewState: null,
+  deviceId: null,
+  edits: 0
 };
 const mockSubmission = (instanceId, xml) => ({
   xml,
@@ -20,7 +22,8 @@ const mockSubmission = (instanceId, xml) => ({
   def: {},
   aux: {
     submitter: { id: 5, displayName: 'Alice' },
-    attachment: { present: 0, expected: 0 }
+    attachment: { present: 0, expected: 0 },
+    edit: { count: 0 }
   }
 });
 
@@ -62,6 +65,23 @@ describe('submissionToOData', () => {
     });
   });
 
+  it('should set the correct deviceId', () => {
+    const submission = Object.assign(mockSubmission('test', testData.instances.simple.one), { deviceId: 'cool device' });
+
+    return submissionToOData([], 'Submissions', submission).then((result) => {
+      result.should.eql([{ __id: 'test', __system: Object.assign({}, __system, { deviceId: 'cool device' }) }]);
+    });
+  });
+
+  it('should set the correct edit count', () => {
+    const submission = mockSubmission('test', testData.instances.simple.one);
+    submission.aux.edit = { count: 42 };
+
+    return submissionToOData([], 'Submissions', submission).then((result) => {
+      result.should.eql([{ __id: 'test', __system: Object.assign({}, __system, { edits: 42 }) }]);
+    });
+  });
+
   it('should not crash if no submitter exists', () => {
     const submission = mockSubmission('test', testData.instances.simple.one);
     submission.aux.submitter = {}; // wipe it back out.
@@ -75,7 +95,9 @@ describe('submissionToOData', () => {
           attachmentsPresent: 0,
           attachmentsExpected: 0,
           status: null,
-          reviewState: null
+          reviewState: null,
+          deviceId: null,
+          edits: 0
         }
       }]);
     });
@@ -143,7 +165,7 @@ describe('submissionToOData', () => {
     });
   });
 
-  it('should output null field records for missing nested atomic values', () => {
+  it('should output null field records for missing group-nested atomic values', () => {
     const fields = [
       new MockField({ path: '/sun', name: 'sun', type: 'structure', order: 0 }),
       new MockField({ path: '/sun/earth', name: 'earth', type: 'int', order: 1 }),
@@ -162,6 +184,27 @@ describe('submissionToOData', () => {
           mars: null,
           jupiter: null
         }
+      }]);
+    });
+  });
+
+  it('should output null field records for missing repeat-nested atomic values', () => { // gh356
+    const fields = [
+      new MockField({ path: '/sun', name: 'sun', type: 'repeat', order: 0 }),
+      new MockField({ path: '/sun/earth', name: 'earth', type: 'int', order: 1 }),
+      new MockField({ path: '/sun/mars', name: 'mars', type: 'decimal', order: 2 }),
+      new MockField({ path: '/sun/jupiter', name: 'jupiter', type: 'geopoint', order: 3 }),
+      new MockField({ path: '/sun/saturn', name: 'saturn', type: 'structure', order: 4 }),
+      new MockField({ path: '/sun/uranus', name: 'uranus', type: 'repeat', order: 5 })
+    ];
+    const submission = mockSubmission('nulls', '<data><sun><earth>42</earth></sun></data>');
+    return submissionToOData(fields, 'Submissions.sun', submission).then((result) => {
+      result.should.eql([{
+        '__Submissions-id': 'nulls',
+        __id: '68874cc5985b68898fbd0af1156e12b6270820f7',
+        earth: 42,
+        mars: null,
+        jupiter: null
       }]);
     });
   });
@@ -320,14 +363,14 @@ describe('submissionToOData', () => {
         __system,
         polygon: {
           type: 'Polygon',
-          coordinates: [ [ 2.2, 1.1, 3.3 ], [ 6.6, 5.5, 7.7 ], [ 20.0, 10.0, 30.0 ], [ 2.2, 1.1, 3.3 ] ],
+          coordinates: [ [ [ 2.2, 1.1, 3.3 ], [ 6.6, 5.5, 7.7 ], [ 20.0, 10.0, 30.0 ], [ 2.2, 1.1, 3.3 ] ] ],
           properties: {
             accuracies: [ 4.4, 8.8, 40.0, 4.4 ]
           }
         },
         polygonNoAlt: {
           type: 'Polygon',
-          coordinates: [ [ 22.2, 11.1 ], [ 44.4, 33.3 ], [ 66.6, 55.5 ], [ 22.2, 11.1 ] ]
+          coordinates: [ [ [ 22.2, 11.1 ], [ 44.4, 33.3 ], [ 66.6, 55.5 ], [ 22.2, 11.1 ] ] ]
         }
       }]);
     });
@@ -429,7 +472,9 @@ describe('submissionToOData', () => {
                   attachmentsPresent: 0,
                   attachmentsExpected: 0,
                   status: null,
-                  reviewState: null
+                  reviewState: null,
+                  deviceId: null,
+                  edits: 0
                 },
                 meta: { instanceID: 'double' },
                 children: {

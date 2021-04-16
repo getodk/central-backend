@@ -46,7 +46,7 @@ describe('task: accounts', () => {
       Users.create(User.fromApi({ email: 'testuser@opendatakit.org', displayName: 'test user' }))
         .then((user) => promoteUser('testuser@opendatakit.org')
           .then(() => Promise.all([
-            Audits.getLatestByAction('assignment.create').then((o) => o.get()),
+            Audits.getLatestByAction('user.assignment.create').then((o) => o.get()),
             Roles.getBySystemName('admin').then((o) => o.get())
           ]))
           .then(([ log, role ]) => {

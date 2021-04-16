@@ -122,7 +122,7 @@ describe('api: /sessions', () => {
           .expect(200)
           .then(({ body }) => asAlice.delete('/v1/sessions/' + body.token)
             .expect(200))
-          .then(() => asAlice.get('/v1/audits?action=session.end')
+          .then(() => asAlice.get('/v1/audits?action=field_key.session.end')
             .expect(200)
             .then(({ body }) => {
               body.length.should.equal(1);
@@ -210,7 +210,7 @@ describe('api: /sessions', () => {
           .set('Authorization', 'Bearer ' + token)
           .expect(200)
           .then(() => service.login('alice', (asAlice) =>
-            asAlice.get('/v1/audits?action=session.end')
+            asAlice.get('/v1/audits')
               .expect(200)
               .then(({ body }) => {
                 body.length.should.equal(0);
@@ -223,7 +223,7 @@ describe('api: /sessions', () => {
           .expect(200)
           .then(({ body }) => asAlice.delete('/v1/sessions/' + body.token)
             .expect(200))
-          .then(() => asAlice.get('/v1/audits?action=session.end')
+          .then(() => asAlice.get('/v1/audits?action=public_link.session.end')
             .expect(200)
             .then(({ body }) => {
               body.length.should.equal(1);
@@ -237,7 +237,7 @@ describe('api: /sessions', () => {
           .expect(200)
           .then(({ body }) => asAlice.delete('/v1/sessions/' + body.token)
             .expect(200))
-          .then(() => asAlice.get('/v1/audits?action=session.end')
+          .then(() => asAlice.get('/v1/audits?action=field_key.session.end')
             .expect(200)
             .then(({ body }) => {
               body.length.should.equal(1);

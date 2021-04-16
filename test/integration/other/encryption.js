@@ -440,7 +440,7 @@ describe('managed encryption', () => {
                 result.filenames.should.eql([ 'simple.csv' ]);
                 const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
                 csv.length.should.equal(5); // header + 3 data rows + newline
-                csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState' ]);
+                csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits' ]);
                 csv[1].shift().should.be.an.recentIsoDate();
                 csv[1].should.eql([ 'three','Chelsea','38','three','5','Alice','1','1' ]);
                 csv[2].shift().should.be.an.recentIsoDate();
@@ -471,7 +471,7 @@ describe('managed encryption', () => {
 
                 const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
                 csv.length.should.equal(5); // header + 3 data rows + newline
-                csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState' ]);
+                csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits' ]);
                 csv[1].shift().should.be.an.recentIsoDate();
                 csv[1].should.eql([ '','','','three','5','Alice','1','1','not decrypted' ]);
                 csv[2].shift().should.be.an.recentIsoDate();
@@ -550,7 +550,7 @@ describe('managed encryption', () => {
 
                 const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
                 csv.length.should.equal(4); // header + 2 data rows + newline
-                csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState' ]);
+                csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits' ]);
                 csv[1].shift().should.be.an.recentIsoDate();
                 csv[1].should.eql([ '','','','two','5','Alice','0','1','missing encrypted form data' ]);
                 csv[2].shift().should.be.an.recentIsoDate();
@@ -581,7 +581,7 @@ describe('managed encryption', () => {
 
                 const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
                 csv.length.should.equal(4); // header + 2 data rows + newline
-                csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState' ]);
+                csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits' ]);
                 csv[1].shift().should.be.an.recentIsoDate();
                 csv[1].should.eql([ '','','','two','5','Alice','0','1','missing encrypted form data' ]);
                 csv[2].shift().should.be.an.recentIsoDate();

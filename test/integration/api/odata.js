@@ -94,7 +94,7 @@ describe('api: /forms/:id.svc', () => {
           .send(testData.forms.doubleRepeat)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => asAlice.post('/v1/projects/1/forms/doubleRepeat/submissions')
+          .then(() => asAlice.post('/v1/projects/1/forms/doubleRepeat/submissions?deviceID=testid')
             .send(testData.instances.doubleRepeat.double)
             .set('Content-Type', 'text/xml')
             .expect(200)
@@ -124,7 +124,9 @@ describe('api: /forms/:id.svc', () => {
                   attachmentsPresent: 0,
                   attachmentsExpected: 0,
                   status: null,
-                  reviewState: null
+                  reviewState: null,
+                  deviceId: 'testid',
+                  edits: 0
                 },
                 children: {
                   'child@odata.navigationLink': "Submissions('double')/children/child"
@@ -134,6 +136,35 @@ describe('api: /forms/:id.svc', () => {
               }]
             });
           }))));
+
+    it('should return success if "uuid:" prefix is encoded', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.doubleRepeat)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/doubleRepeat/submissions')
+            .send(testData.instances.doubleRepeat.double.replace(
+              '<orx:instanceID>double</orx:instanceID>',
+              '<orx:instanceID>uuid:17b09e96-4141-43f5-9a70-611eb0e8f6b4</orx:instanceID>'
+            ))
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('uuid%3A17b09e96-4141-43f5-9a70-611eb0e8f6b4')")
+              .expect(200))))));
+
+    it('should return an accurate edit count', testService((service) =>
+      withSubmission(service, (asAlice) =>
+        asAlice.put('/v1/projects/1/forms/doubleRepeat/submissions/double')
+          .send(testData.instances.doubleRepeat.double.replace(
+            'double</orx', 'double2</orx:instanceID><orx:deprecatedID>double</orx:deprecatedID>'))
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')")
+            .expect(200)
+            .then(({ body }) => {
+              body.value[0].__system.edits.should.equal(1);
+            })))));
 
     it('should return a single encrypted frame (no formdata)', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -163,7 +194,9 @@ describe('api: /forms/:id.svc', () => {
                     attachmentsPresent: 0,
                     attachmentsExpected: 2,
                     status: 'missingEncryptedFormData',
-                    reviewState: null
+                    reviewState: null,
+                    deviceId: null,
+                    edits: 0
                   }
                 }]
               });
@@ -200,7 +233,9 @@ describe('api: /forms/:id.svc', () => {
                     attachmentsPresent: 1,
                     attachmentsExpected: 2,
                     status: 'notDecrypted',
-                    reviewState: null
+                    reviewState: null,
+                    deviceId: null,
+                    edits: 0
                   }
                 }]
               });
@@ -242,7 +277,7 @@ describe('api: /forms/:id.svc', () => {
           .then(({ body }) => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
-              '@odata.nextLink': "http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')/children/child?%24skip=2",
+              '@odata.nextLink': "http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/Submissions(%27double%27)/children/child?%24skip=2",
               value: [{
                 __id: 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
                 '__Submissions-id': 'double',
@@ -261,7 +296,7 @@ describe('api: /forms/:id.svc', () => {
           .then(({ body }) => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
-              '@odata.nextLink': "http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')/children/child?%24count=true&%24skip=0",
+              '@odata.nextLink': "http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/Submissions(%27double%27)/children/child?%24count=true&%24skip=0",
               '@odata.count': 3,
               value: []
             });
@@ -289,6 +324,44 @@ describe('api: /forms/:id.svc', () => {
                 value: []
               });
             })))));
+
+    it('should return encoded URLs', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.doubleRepeat.replace(
+            'id="doubleRepeat"',
+            'id="double repeat"'
+          ))
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/double%20repeat/submissions')
+            .send(testData.instances.doubleRepeat.double
+              .replace('id="doubleRepeat"', 'id="double repeat"')
+              .replace(
+                '<orx:instanceID>double</orx:instanceID>',
+                '<orx:instanceID>uuid:17b09e96-4141-43f5-9a70-611eb0e8f6b4</orx:instanceID>'
+              ))
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => Promise.all([
+              asAlice.get("/v1/projects/1/forms/double%20repeat.svc/Submissions('uuid%3A17b09e96-4141-43f5-9a70-611eb0e8f6b4')")
+                .expect(200)
+                .then(({ body }) => {
+                  body.should.containDeep({
+                    '@odata.context': 'http://localhost:8989/v1/projects/1/forms/double%20repeat.svc/$metadata#Submissions',
+                    value: [{
+                      children: {
+                        'child@odata.navigationLink': "Submissions('uuid%3A17b09e96-4141-43f5-9a70-611eb0e8f6b4')/children/child"
+                      }
+                    }]
+                  });
+                }),
+              asAlice.get("/v1/projects/1/forms/double%20repeat.svc/Submissions('uuid%3A17b09e96-4141-43f5-9a70-611eb0e8f6b4')/children/child?$top=1")
+                .expect(200)
+                .then(({ body }) => {
+                  body['@odata.nextLink'].should.equal('http://localhost:8989/v1/projects/1/forms/double%20repeat.svc/Submissions(%27uuid%3A17b09e96-4141-43f5-9a70-611eb0e8f6b4%27)/children/child?%24skip=1');
+                })
+            ]))))));
   });
 
   describe('/Submissions.xyz.* GET', () => {
@@ -346,7 +419,9 @@ describe('api: /forms/:id.svc', () => {
                   attachmentsPresent: 0,
                   attachmentsExpected: 0,
                   status: null,
-                  reviewState: null
+                  reviewState: null,
+                  deviceId: null,
+                  edits: 0
                 },
                 meta: { instanceID: "rthree" },
                 name: "Chelsea",
@@ -363,7 +438,9 @@ describe('api: /forms/:id.svc', () => {
                   attachmentsPresent: 0,
                   attachmentsExpected: 0,
                   status: null,
-                  reviewState: null
+                  reviewState: null,
+                  deviceId: null,
+                  edits: 0
                 },
                 meta: { instanceID: "rtwo" },
                 name: "Bob",
@@ -380,7 +457,9 @@ describe('api: /forms/:id.svc', () => {
                   attachmentsPresent: 0,
                   attachmentsExpected: 0,
                   status: null,
-                  reviewState: null
+                  reviewState: null,
+                  deviceId: null,
+                  edits: 0
                 },
                 meta: { instanceID: "rone" },
                 name: "Alice",
@@ -443,7 +522,9 @@ describe('api: /forms/:id.svc', () => {
                   attachmentsPresent: 0,
                   attachmentsExpected: 0,
                   status: null,
-                  reviewState: null
+                  reviewState: null,
+                  deviceId: null,
+                  edits: 0
                 },
                 meta: { instanceID: "rtwo" },
                 name: "Bob",
@@ -476,7 +557,9 @@ describe('api: /forms/:id.svc', () => {
                   attachmentsPresent: 0,
                   attachmentsExpected: 0,
                   status: null,
-                  reviewState: null
+                  reviewState: null,
+                  deviceId: null,
+                  edits: 0
                 },
                 meta: { instanceID: "rthree" },
                 name: "Chelsea",
@@ -526,7 +609,9 @@ describe('api: /forms/:id.svc', () => {
                       attachmentsPresent: 0,
                       attachmentsExpected: 0,
                       status: null,
-                      reviewState: null
+                      reviewState: null,
+                    deviceId: null,
+                    edits: 0
                     },
                     meta: { instanceID: "rthree" },
                     name: "Chelsea",
@@ -543,7 +628,9 @@ describe('api: /forms/:id.svc', () => {
                       attachmentsPresent: 0,
                       attachmentsExpected: 0,
                       status: null,
-                      reviewState: null
+                      reviewState: null,
+                      deviceId: null,
+                      edits: 0
                     },
                     meta: { instanceID: "rone" },
                     name: "Alice",
@@ -577,7 +664,9 @@ describe('api: /forms/:id.svc', () => {
                     attachmentsPresent: 0,
                     attachmentsExpected: 0,
                     status: null,
-                    reviewState: null
+                    reviewState: null,
+                    deviceId: null,
+                    edits: 0
                   },
                   meta: { instanceID: "rone" },
                   name: "Alice",
@@ -611,7 +700,9 @@ describe('api: /forms/:id.svc', () => {
                     attachmentsPresent: 0,
                     attachmentsExpected: 0,
                     status: null,
-                    reviewState: null
+                    reviewState: null,
+                    deviceId: null,
+                    edits: 0
                   },
                   meta: { instanceID: "rone" },
                   name: "Alice",
@@ -650,7 +741,9 @@ describe('api: /forms/:id.svc', () => {
                     attachmentsPresent: 0,
                     attachmentsExpected: 0,
                     status: null,
-                    reviewState: 'rejected'
+                    reviewState: 'rejected',
+                    deviceId: null,
+                    edits: 0
                   },
                   meta: { instanceID: "rtwo" },
                   name: "Bob",
@@ -771,7 +864,9 @@ describe('api: /forms/:id.svc', () => {
                     attachmentsPresent: 0,
                     attachmentsExpected: 2,
                     status: 'missingEncryptedFormData',
-                    reviewState: null
+                    reviewState: null,
+                    deviceId: null,
+                    edits: 0
                   }
                 }, {
                   __id: 'uuid:dcf4a151-5088-453f-99e6-369d67828f7a',
@@ -782,7 +877,9 @@ describe('api: /forms/:id.svc', () => {
                     attachmentsPresent: 0,
                     attachmentsExpected: 2,
                     status: 'missingEncryptedFormData',
-                    reviewState: null
+                    reviewState: null,
+                    deviceId: null,
+                    edits: 0
                   }
                 }]
               });
@@ -828,7 +925,9 @@ describe('api: /forms/:id.svc', () => {
                     attachmentsPresent: 1,
                     attachmentsExpected: 2,
                     status: 'notDecrypted',
-                    reviewState: null
+                    reviewState: null,
+                    deviceId: null,
+                    edits: 0
                   }
                 }, {
                   __id: 'uuid:dcf4a151-5088-453f-99e6-369d67828f7a',
@@ -839,7 +938,9 @@ describe('api: /forms/:id.svc', () => {
                     attachmentsPresent: 1,
                     attachmentsExpected: 2,
                     status: 'notDecrypted',
-                    reviewState: null
+                    reviewState: null,
+                    deviceId: null,
+                    edits: 0
                   }
                 }]
               });
@@ -1008,7 +1109,9 @@ describe('api: /forms/:id.svc', () => {
                       attachmentsPresent: 0,
                       attachmentsExpected: 0,
                       status: null,
-                      reviewState: null
+                      reviewState: null,
+                      deviceId: null,
+                      edits: 0
                     },
                     children: {
                       'child@odata.navigationLink': "Submissions('double')/children/child"
@@ -1085,7 +1188,9 @@ describe('api: /forms/:id.svc', () => {
                       attachmentsPresent: 0,
                       attachmentsExpected: 0,
                       status: null,
-                      reviewState: null
+                      reviewState: null,
+                      deviceId: null,
+                      edits: 0
                     },
                     meta: { instanceID: "rthree" },
                     name: "Chelsea",
@@ -1102,7 +1207,9 @@ describe('api: /forms/:id.svc', () => {
                       attachmentsPresent: 0,
                       attachmentsExpected: 0,
                       status: null,
-                      reviewState: null
+                      reviewState: null,
+                      deviceId: null,
+                      edits: 0
                     },
                     meta: { instanceID: "rtwo" },
                     name: "Bob",
@@ -1119,7 +1226,9 @@ describe('api: /forms/:id.svc', () => {
                       attachmentsPresent: 0,
                       attachmentsExpected: 0,
                       status: null,
-                      reviewState: null
+                      reviewState: null,
+                      deviceId: null,
+                      edits: 0
                     },
                     meta: { instanceID: "rone" },
                     name: "Alice",

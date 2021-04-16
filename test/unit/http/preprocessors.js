@@ -57,7 +57,7 @@ describe('preprocessors', () => {
           } },
           new Context(
             createRequest({ headers: { Authorization: 'Bearer aabbccddeeff123' } }),
-            { auth: { isAuthenticated() { return true; } }, fieldKey: Option.of('a') }
+            { auth: { isAuthenticated() { return true; } }, fieldKey: Option.of('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa') }
           )
         )).should.be.rejectedWith(Problem, { problemCode: 403.1 }));
 
@@ -85,7 +85,7 @@ describe('preprocessors', () => {
     describe('Basic auth', () => {
       it('should reject non-https Basic auth requests', () =>
         Promise.resolve(sessionHandler(
-          { Auth, User: mockUsers('alice@opendatakit.org') },
+          { Auth, Users: mockUsers('alice@opendatakit.org') },
           new Context(
             createRequest({ headers: { Authorization: 'Basic abracadabra' } }),
             { fieldKey: Option.none() }
@@ -94,7 +94,7 @@ describe('preprocessors', () => {
 
       it('should fail the request if an improperly-formatted Basic auth is given', () =>
         Promise.resolve(sessionHandler(
-          { Auth, User: mockUsers('alice@opendatakit.org') },
+          { Auth, Users: mockUsers('alice@opendatakit.org') },
           new Context(
             createRequest({ headers: {
               Authorization: `Basic ${Buffer.from('alice@opendatakit.org:', 'utf8').toString('base64')}`,
@@ -106,7 +106,7 @@ describe('preprocessors', () => {
 
       it('should fail the request if the Basic auth user cannot be found', () =>
         Promise.resolve(sessionHandler(
-          { Auth, User: mockUsers('alice@opendatakit.org') },
+          { Auth, Users: mockUsers('alice@opendatakit.org') },
           new Context(
             createRequest({ headers: {
               Authorization: `Basic ${Buffer.from('bob@opendatakit.org:bob', 'utf8').toString('base64')}`,
@@ -118,7 +118,7 @@ describe('preprocessors', () => {
 
       it('should fail the request if the Basic auth credentials are not right', () =>
         Promise.resolve(sessionHandler(
-          { Auth, User: mockUsers('alice@opendatakit.org', 'willnevermatch'), bcrypt },
+          { Auth, Users: mockUsers('alice@opendatakit.org', 'willnevermatch'), bcrypt },
           new Context(
             createRequest({ headers: {
               Authorization: `Basic ${Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64')}`,
@@ -131,7 +131,7 @@ describe('preprocessors', () => {
       it('should set the appropriate session if valid Basic auth credentials are given @slow', () =>
         bcrypt.hash('alice').then((hashed) =>
           Promise.resolve(sessionHandler(
-            { Auth, User: mockUsers('alice@opendatakit.org', hashed), bcrypt },
+            { Auth, Users: mockUsers('alice@opendatakit.org', hashed), bcrypt },
             new Context(
               createRequest({ headers: {
                 Authorization: `Basic ${Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64')}`,
@@ -375,11 +375,11 @@ describe('preprocessors', () => {
           should.not.exist(context);
         }));
 
-      it('should fail the request with 403 if the token is the wrong length', () =>
+      it('should fail the request with 401 if the token is the wrong length', () =>
         Promise.resolve(sessionHandler(
           { Auth, Sessions: mockFkSession('alohomor') },
           new Context(createRequest(), { fieldKey: Option.of('alohomora'), })
-        )).should.be.rejectedWith(Problem, { problemCode: 403.1 }));
+        )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should fail the request with 403 if the session does not exist', () =>
         Promise.resolve(sessionHandler(

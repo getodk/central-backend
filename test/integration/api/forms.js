@@ -705,6 +705,27 @@ describe('api: /projects/:id/forms', () => {
                 Buffer.compare(input, body).should.equal(0);
               })));
       }));
+
+      it('should return the xlsx file originally provided', testService((service) => {
+        const input = readFileSync(appRoot + '/test/data/simple.xlsx');
+        return service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(input)
+            .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+              .send(input)
+              .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xlsx')
+              .buffer(true).parse(superagent.parse['application/octet-stream'])
+              .expect(200)
+              .then(({ headers, body }) => {
+                headers['content-type'].should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx"');
+                Buffer.compare(input, body).should.equal(0);
+              })));
+      }));
     });
 
     describe('.xls GET', () => {

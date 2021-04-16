@@ -222,6 +222,23 @@ describe('api: /users', () => {
             .set('Authorization', 'Bearer ' + token)
             .expect(401)))));
 
+    it('should not log single use token deletion in the audit log', testService((service) =>
+      service.post('/v1/users/reset/initiate')
+        .send({ email: 'alice@opendatakit.org' })
+        .expect(200)
+        .then(() => /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html)[1])
+        .then((token) => service.post('/v1/users/reset/verify')
+          .send({ new: 'reset' })
+          .set('Authorization', 'Bearer ' + token)
+          .expect(200))
+        .then(() => service.get('/v1/audits')
+          .auth('alice@opendatakit.org', 'reset') // cheap way to work around that we just changed the pw
+          .set('x-forwarded-proto', 'https')
+          .then(({ body }) => {
+            body[0].action.should.equal('user.update');
+            body[0].details.data.should.eql({ password: true });
+          }))));
+
     it('should fail the request if invalidation is requested but not allowed', testService((service) =>
       service.post('/v1/users/reset/initiate?invalidate=true')
         .send({ email: 'alice@opendatakit.org' })

@@ -214,8 +214,8 @@ describe('/audits', () => {
             .then(({ body }) => {
               body.length.should.equal(5);
               body[0].action.should.equal('user.delete');
-              body[1].action.should.equal('assignment.delete');
-              body[2].action.should.equal('assignment.create');
+              body[1].action.should.equal('user.assignment.delete');
+              body[2].action.should.equal('user.assignment.create');
               body[3].action.should.equal('user.update');
               body[4].action.should.equal('user.create');
             })))));
@@ -460,7 +460,7 @@ describe('/audits', () => {
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
-          .set('X-Action-Notes', 'doing this for fun')
+          .set('X-Action-Notes', 'doing this for fun%21')
           .send(testData.forms.binaryType)
           .expect(200)
           .then(() => asAlice.post('/v1/projects/1/submission')
@@ -475,9 +475,9 @@ describe('/audits', () => {
               body[0].action.should.equal('submission.create');
               body[0].notes.should.equal('doing this for work');
               body[1].action.should.equal('form.update.publish');
-              body[1].notes.should.equal('doing this for fun');
+              body[1].notes.should.equal('doing this for fun!');
               body[2].action.should.equal('form.create');
-              body[2].notes.should.equal('doing this for fun');
+              body[2].notes.should.equal('doing this for fun!');
             })))));
   });
 });

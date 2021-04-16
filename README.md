@@ -8,6 +8,8 @@ ODK Central Backend is a minimal [Open Data Kit](https://opendatakit.org/) serve
 
 This repository contains only the code for the backend API server: [Central Frontend](https://github.com/opendatakit/central-frontend) holds frontend code, and [Central](https://github.com/opendatakit/central) contains both the Docker-based production deployment infrastructure for the combined frontend/backend, as well as project management and issue tickets.
 
+> **The `master` branch of this repository reflects ongoing development for the next version of ODK Central.** It may or may not be in sync with the `master` branch of the `central-frontend` repository. For the latest stable version, see the [release tags](https://github.com/getodk/central-backend/releases).
+
 ## Contributing
 
 We need your help to make this project as useful as possible! Please see the [Contribution Guide](https://github.com/opendatakit/central-backend/blob/master/CONTRIBUTING.md) for detailed information on discussion forums, project policies, code guidelines, and an overview of the software architecture.

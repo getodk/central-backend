@@ -15,14 +15,16 @@ const __system = {
   attachmentsPresent: 1,
   attachmentsExpected: 2,
   status: null,
-  reviewState: null
+  reviewState: null,
+  deviceId: null,
+  edits: 0
 };
 const mockSubmission = (instanceId, xml) => ({
   xml,
   instanceId,
   createdAt: __system.submissionDate,
   def: {},
-  aux: { submitter, attachment, encryption: {} }
+  aux: { submitter, attachment, encryption: {}, edit: { count: 0 } }
 });
 
 describe('odata message composition', () => {
@@ -72,6 +74,8 @@ describe('odata message composition', () => {
         <Property Name="attachmentsExpected" Type="Edm.Int64"/>
         <Property Name="status" Type="org.opendatakit.submission.Status"/>
         <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
+        <Property Name="deviceId" Type="Edm.String"/>
+        <Property Name="edits" Type="Edm.Int64"/>
       </ComplexType>
       <EnumType Name="Status">
         <Member Name="notDecrypted"/>
@@ -79,7 +83,7 @@ describe('odata message composition', () => {
       </EnumType>
       <EnumType Name="ReviewState">
         <Member Name="hasIssues"/>
-        <Member Name="needsReview"/>
+        <Member Name="edited"/>
         <Member Name="rejected"/>
         <Member Name="approved"/>
       </EnumType>
@@ -113,6 +117,8 @@ describe('odata message composition', () => {
         <Property Name="attachmentsExpected" Type="Edm.Int64"/>
         <Property Name="status" Type="org.opendatakit.submission.Status"/>
         <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
+        <Property Name="deviceId" Type="Edm.String"/>
+        <Property Name="edits" Type="Edm.Int64"/>
       </ComplexType>
       <EnumType Name="Status">
         <Member Name="notDecrypted"/>
@@ -120,12 +126,92 @@ describe('odata message composition', () => {
       </EnumType>
       <EnumType Name="ReviewState">
         <Member Name="hasIssues"/>
-        <Member Name="needsReview"/>
+        <Member Name="edited"/>
         <Member Name="rejected"/>
         <Member Name="approved"/>
       </EnumType>
     </Schema>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.my_awesome_form_">`);
+      }));
+
+    it('should yield all the correct data types', () =>
+      fieldsFor(`<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Types</h:title>
+    <model>
+      <instance>
+        <data id="types">
+          <meta><instanceID/></meta>
+          <string/><int/><boolean/><decimal/><date/><time/><dateTime/>
+          <geopoint/><geotrace/><geoshape/><binary/><barcode/><intent/>
+        </data>
+      </instance>
+
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+      <bind nodeset="/data/string" type="string"/>
+      <bind nodeset="/data/int" type="int"/>
+      <bind nodeset="/data/boolean" type="boolean"/>
+      <bind nodeset="/data/decimal" type="decimal"/>
+      <bind nodeset="/data/date" type="date"/>
+      <bind nodeset="/data/time" type="time"/>
+      <bind nodeset="/data/dateTime" type="dateTime"/>
+      <bind nodeset="/data/geopoint" type="geopoint"/>
+      <bind nodeset="/data/geotrace" type="geotrace"/>
+      <bind nodeset="/data/geoshape" type="geoshape"/>
+      <bind nodeset="/data/binary" type="binary"/>
+      <bind nodeset="/data/barcode" type="barcode"/>
+      <bind nodeset="/data/intent" type="intent"/>
+    </model>
+  </h:head>
+  <h:body/>
+</h:html>`).then((fields) => {
+        const edmx = edmxFor('types', fields);
+        edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
+<edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
+  <edmx:DataServices>
+    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
+      <ComplexType Name="metadata">
+        <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
+        <Property Name="submitterId" Type="Edm.String"/>
+        <Property Name="submitterName" Type="Edm.String"/>
+        <Property Name="attachmentsPresent" Type="Edm.Int64"/>
+        <Property Name="attachmentsExpected" Type="Edm.Int64"/>
+        <Property Name="status" Type="org.opendatakit.submission.Status"/>
+        <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
+        <Property Name="deviceId" Type="Edm.String"/>
+        <Property Name="edits" Type="Edm.Int64"/>
+      </ComplexType>
+      <EnumType Name="Status">
+        <Member Name="notDecrypted"/>
+        <Member Name="missingEncryptedFormData"/>
+      </EnumType>
+      <EnumType Name="ReviewState">
+        <Member Name="hasIssues"/>
+        <Member Name="edited"/>
+        <Member Name="rejected"/>
+        <Member Name="approved"/>
+      </EnumType>
+    </Schema>
+    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.types">
+      <EntityType Name="Submissions">
+        <Key><PropertyRef Name="__id"/></Key>
+        <Property Name="__id" Type="Edm.String"/>
+        <Property Name="__system" Type="org.opendatakit.submission.metadata"/>
+        <Property Name="meta" Type="org.opendatakit.user.types.meta"/>
+        <Property Name="string" Type="Edm.String"/>
+        <Property Name="int" Type="Edm.Int64"/>
+        <Property Name="boolean" Type="Edm.Boolean"/>
+        <Property Name="decimal" Type="Edm.Decimal"/>
+        <Property Name="date" Type="Edm.Date"/>
+        <Property Name="time" Type="Edm.String"/>
+        <Property Name="dateTime" Type="Edm.DateTimeOffset"/>
+        <Property Name="geopoint" Type="Edm.GeographyPoint"/>
+        <Property Name="geotrace" Type="Edm.GeographyLineString"/>
+        <Property Name="geoshape" Type="Edm.GeographyPolygon"/>
+        <Property Name="binary" Type="Edm.String"/>
+        <Property Name="barcode" Type="Edm.String"/>
+        <Property Name="intent" Type="Edm.String"/>
+      </EntityType>`);
       }));
 
     it('should express repeats as entity types behind navigation properties', () =>
@@ -143,6 +229,8 @@ describe('odata message composition', () => {
         <Property Name="attachmentsExpected" Type="Edm.Int64"/>
         <Property Name="status" Type="org.opendatakit.submission.Status"/>
         <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
+        <Property Name="deviceId" Type="Edm.String"/>
+        <Property Name="edits" Type="Edm.Int64"/>
       </ComplexType>
       <EnumType Name="Status">
         <Member Name="notDecrypted"/>
@@ -150,7 +238,7 @@ describe('odata message composition', () => {
       </EnumType>
       <EnumType Name="ReviewState">
         <Member Name="hasIssues"/>
-        <Member Name="needsReview"/>
+        <Member Name="edited"/>
         <Member Name="rejected"/>
         <Member Name="approved"/>
       </EnumType>
@@ -291,6 +379,8 @@ describe('odata message composition', () => {
         <Property Name="attachmentsExpected" Type="Edm.Int64"/>
         <Property Name="status" Type="org.opendatakit.submission.Status"/>
         <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
+        <Property Name="deviceId" Type="Edm.String"/>
+        <Property Name="edits" Type="Edm.Int64"/>
       </ComplexType>
       <EnumType Name="Status">
         <Member Name="notDecrypted"/>
@@ -298,7 +388,7 @@ describe('odata message composition', () => {
       </EnumType>
       <EnumType Name="ReviewState">
         <Member Name="hasIssues"/>
-        <Member Name="needsReview"/>
+        <Member Name="edited"/>
         <Member Name="rejected"/>
         <Member Name="approved"/>
       </EnumType>
@@ -365,6 +455,8 @@ describe('odata message composition', () => {
         <Property Name="attachmentsExpected" Type="Edm.Int64"/>
         <Property Name="status" Type="org.opendatakit.submission.Status"/>
         <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
+        <Property Name="deviceId" Type="Edm.String"/>
+        <Property Name="edits" Type="Edm.Int64"/>
       </ComplexType>
       <EnumType Name="Status">
         <Member Name="notDecrypted"/>
@@ -372,7 +464,7 @@ describe('odata message composition', () => {
       </EnumType>
       <EnumType Name="ReviewState">
         <Member Name="hasIssues"/>
-        <Member Name="needsReview"/>
+        <Member Name="edited"/>
         <Member Name="rejected"/>
         <Member Name="approved"/>
       </EnumType>
@@ -448,7 +540,7 @@ describe('odata message composition', () => {
           })));
       });
 
-      const instances = (count) => (new Array(count)).fill({ xml: '<data/>', def: {}, aux: { submitter, attachment } });
+      const instances = (count) => (new Array(count)).fill({ xml: '<data/>', def: {}, aux: { submitter, attachment, edit: { count: 0 } } });
       it('should provide no nextUrl if the final row is accounted for', (done) => {
         const query = { $top: '3', $skip: '7' };
         const inRows = streamTest.fromObjects(instances(10));
