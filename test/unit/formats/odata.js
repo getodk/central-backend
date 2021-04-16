@@ -134,7 +134,7 @@ describe('odata message composition', () => {
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.my_awesome_form_">`);
       }));
 
-    it('should express repeats as entity types behind navigation properties', () =>
+    it('should yield all the correct data types', () =>
       fieldsFor(`<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
   <h:head>
     <h:title>Types</h:title>
@@ -212,6 +212,69 @@ describe('odata message composition', () => {
         <Property Name="barcode" Type="Edm.String"/>
         <Property Name="intent" Type="Edm.String"/>
       </EntityType>`);
+      }));
+
+    it('should express repeats as entity types behind navigation properties', () =>
+      fieldsFor(testData.forms.withrepeat).then((fields) => {
+        const edmx = edmxFor('withrepeat', fields);
+        edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
+<edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
+  <edmx:DataServices>
+    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
+      <ComplexType Name="metadata">
+        <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
+        <Property Name="submitterId" Type="Edm.String"/>
+        <Property Name="submitterName" Type="Edm.String"/>
+        <Property Name="attachmentsPresent" Type="Edm.Int64"/>
+        <Property Name="attachmentsExpected" Type="Edm.Int64"/>
+        <Property Name="status" Type="org.opendatakit.submission.Status"/>
+        <Property Name="reviewState" Type="org.opendatakit.submission.ReviewState"/>
+        <Property Name="deviceId" Type="Edm.String"/>
+        <Property Name="edits" Type="Edm.Int64"/>
+      </ComplexType>
+      <EnumType Name="Status">
+        <Member Name="notDecrypted"/>
+        <Member Name="missingEncryptedFormData"/>
+      </EnumType>
+      <EnumType Name="ReviewState">
+        <Member Name="hasIssues"/>
+        <Member Name="edited"/>
+        <Member Name="rejected"/>
+        <Member Name="approved"/>
+      </EnumType>
+    </Schema>
+    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.withrepeat">
+      <EntityType Name="Submissions">
+        <Key><PropertyRef Name="__id"/></Key>
+        <Property Name="__id" Type="Edm.String"/>
+        <Property Name="__system" Type="org.opendatakit.submission.metadata"/>
+        <Property Name="meta" Type="org.opendatakit.user.withrepeat.meta"/>
+        <Property Name="name" Type="Edm.String"/>
+        <Property Name="age" Type="Edm.Int64"/>
+        <Property Name="children" Type="org.opendatakit.user.withrepeat.children"/>
+      </EntityType>
+      <EntityType Name="Submissions.children.child">
+        <Key><PropertyRef Name="__id"/></Key>
+        <Property Name="__id" Type="Edm.String"/>
+        <Property Name="__Submissions-id" Type="Edm.String"/>
+        <Property Name="name" Type="Edm.String"/>
+        <Property Name="age" Type="Edm.Int64"/>
+      </EntityType>
+      <ComplexType Name="meta">
+        <Property Name="instanceID" Type="Edm.String"/>
+      </ComplexType>
+      <ComplexType Name="children">
+        <NavigationProperty Name="child" Type="Collection(org.opendatakit.user.withrepeat.Submissions.children.child)"/>
+      </ComplexType>
+      <EntityContainer Name="withrepeat">
+        <EntitySet Name="Submissions" EntityType="org.opendatakit.user.withrepeat.Submissions">`);
+
+        edmx.should.endWith(`<EntitySet Name="Submissions.children.child" EntityType="org.opendatakit.user.withrepeat.Submissions.children.child">
+        </EntitySet>
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>`);
       }));
 
     it('should express repeats as entitysets', () => fieldsFor(testData.forms.withrepeat).then((fields) => {
