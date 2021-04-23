@@ -32,6 +32,30 @@ Finally, **system information and configuration** is available via a set of spec
 
 Here major and breaking changes to the API are listed by version.
 
+### ODK Central v1.2
+
+ODK Central v1.2 adds submission editing, review states, and commenting.
+
+**Added**:
+
+* `POST /projects/…/submission` now accepts ecosystem-compatible submission updates over OpenRosa, using the `deprecatedID`.
+* REST-friendly submission updates by `PUT`ing XML directly to the submission resource path.
+* `GET /projects/…/forms/…/submissions/…/edit` will now redirect the authenticated user (after some thought) to an Enketo-powered webform for editing the submission.
+* There is now a subresource `/projects/…/forms/…/submissions/…/versions` to get all versions of a submission, and details about each one, including submitted media files.
+* There is now a subresource `/projects/…/forms/…/submissions/…/comments` which allows very simple comment creation (`POST`) and listing (`GET`) on a submission.
+* Submissions now have a `reviewState` property which can be updated via `PATCH /projects/…/forms/…/submissions`.
+
+* You can now provide `X-Action-Notes` on any API request that might generate audit logs, to leave a note on those log entries.
+* `GET /projects/…/forms/…/submissions/…/audits` will return just audit logs pertaining to that submission.
+* OData queries may now request `?expand=*` to request all nested data structures inline. Only `*` is accepted.
+* Submissions now have an `instanceName` field which reflects the `<instanceName/>` tag on the submitted XML.
+* The REST submission endpoint now accepts optional `?deviceID=` just like the OpenRosa submission endpoint.
+
+**Changed**:
+
+* Date and Boolean OData types are now given as date and boolean rather than text.
+* Broke Forms and Submissions section apart into two below. This may break some links.
+
 ### ODK Central v1.1
 
 ODK Central v1.1 adds minor new features to the API.
@@ -54,7 +78,7 @@ ODK Central v1.0 adds Public Links to the API, and makes one minor breaking chan
 
 **Added**:
 
-* The new [Public Link](/reference/forms-and-submissions/'-public-access-links) resource lets you create Public Access Links, granting anonymous browser-based access to submit to your Forms using Enketo.
+* The new [Public Link](/reference/forms/public-access-links) resource lets you create Public Access Links, granting anonymous browser-based access to submit to your Forms using Enketo.
 
 **Changed**:
 
@@ -76,8 +100,8 @@ ODK Central v0.8 introduces Draft Forms, publishing, and archived Form versions,
 **Added**:
 
 * Draft Forms and publishing, and archived Form versions.
-  * This includes [a subresource](/reference/forms-and-submissions/'-draft-form) at `/projects/…/forms/…/draft`,
-  * and [another](/reference/forms-and-submissions/'-published-form-versions) at `/projects/…/forms/…/versions`,
+  * This includes [a subresource](/reference/forms/draft-form) at `/projects/…/forms/…/draft`,
+  * and [another](/reference/forms/published-form-versions) at `/projects/…/forms/…/versions`,
   * and a [new collection of OpenRosa endpoints](/reference/openrosa-endpoints/draft-testing-endpoints), under `/test/…/projects/…/forms/…/draft`, for submitting test submissions to the draft version of the form.
 * `GET /projects/…/forms/…/fields`, which replaces `GET /projects/…/forms/….schema.json`.
 * App User responses now include the `projectId` they are bound to.
@@ -98,7 +122,7 @@ ODK Central v0.8 introduces Draft Forms, publishing, and archived Form versions,
 
 **Added**:
 
-* Form-specific [Assignments resource](/reference/forms-and-submissions/'-form-assignments) at `projects/…/forms/…/assignments`, allowing granular role assignments on a per-Form basis.
+* Form-specific [Assignments resource](/reference/forms/form-assignments) at `projects/…/forms/…/assignments`, allowing granular role assignments on a per-Form basis.
   * Relatedly, the [OpenRosa Form Listing API](/reference/openrosa-endpoints/openrosa-form-listing-api) no longer rejects requests outright based on authentication. Rather, it will only return Forms that the authenticated user is allowed to view.
   * A [new summary API](/reference/project-management/project-assignments/seeing-all-form-assignments-within-a-project) `GET /projects/…/assignments/forms` which returns all assignments on all Forms within a Project, so you don't have to request this information separately for each Form.
 * `PUT /projects/:id`, which while complex allows you to update many Forms' states and assignments with a single transactional request.
@@ -107,7 +131,7 @@ ODK Central v0.8 introduces Draft Forms, publishing, and archived Form versions,
 
 **Changed**:
 
-* Newly created App Users are no longer automatically granted download and submission access to all Forms within their Project. You will want to use the [Form Assignments resource](/reference/forms-and-submissions/'-form-assignments) to explicitly grant `app-user` role access to the Forms they should be allowed to see.
+* Newly created App Users are no longer automatically granted download and submission access to all Forms within their Project. You will want to use the [Form Assignments resource](/reference/forms/form-assignments) to explicitly grant `app-user` role access to the Forms they should be allowed to see.
 
 **Fixed**:
 
@@ -136,7 +160,7 @@ ODK Central v0.8 introduces Draft Forms, publishing, and archived Form versions,
 
 **Removed**:
 
-* The Extended responses for Forms and Submissions no longer include an `xml` property. To retrieve Form or Submission XML, use the dedicated endpoints for [Form XML](/reference/forms-and-submissions/'-individual-form/retrieving-form-xml) and [Submission XML](/reference/forms-and-submissions/submissions/retrieving-submission-xml).
+* The Extended responses for Forms and Submissions no longer include an `xml` property. To retrieve Form or Submission XML, use the dedicated endpoints for [Form XML](/reference/forms/individual-form/retrieving-form-xml) and [Submission XML](/reference/submissions/submissions/retrieving-submission-xml).
 
 ### ODK Central v0.5
 
@@ -295,7 +319,7 @@ App Users are only allowed to list and download forms, and upload new submission
 
 ### Using App User Authentication [GET]
 
-To use App User Authentication, first obtain a App User, typically by using the configuration panel in the user interface, or else by using the [App User API Resource(/reference/accounts-and-users/app-users). Once you have the token, you can apply it to any eligible action by prefixing the URL with `/key/{appUser}` as follows:
+To use App User Authentication, first obtain a App User, typically by using the configuration panel in the user interface, or else by using the [App User API Resource](/reference/accounts-and-users/app-users). Once you have the token, you can apply it to any eligible action by prefixing the URL with `/key/{appUser}` as follows:
 
     `/v1/key/!Ms7V3$Zdnd63j5HFacIPFEvFAuwNqTUZW$AsVOmaQFf$vIC!F8dJjdgiDnJXXOt/example/request/path`
 
@@ -553,7 +577,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 The only information required to create a new `App User` is its `displayName` (this is called "Nickname" in the administrative panel).
 
-When an App User is created, they are assigned no rights. They will be able to authenticate and list forms on a mobile client, but the form list will be empty, as the list only includes Forms that the App User has read access to. Once an App User is created, you'll likely wish to use the [Form Assignments resource](/reference/forms-and-submissions/'-form-assignments) to actually assign the `app-user` role to them for the Forms you wish.
+When an App User is created, they are assigned no rights. They will be able to authenticate and list forms on a mobile client, but the form list will be empty, as the list only includes Forms that the App User has read access to. Once an App User is created, you'll likely wish to use the [Form Assignments resource](/reference/forms/form-assignments) to actually assign the `app-user` role to them for the Forms you wish.
 
 + Request (application/json)
     + Attributes
@@ -622,7 +646,7 @@ _(introduced: version 0.5)_
 
 There are multiple Assignments resources. This one, upon the API root (`/v1/assignments`), manages Role assignment to the entire system (e.g. if you are assigned a Role that gives you `form.create`, you may create a form anywhere on the entire server).
 
-The [Project Assignments resource](/reference/project-management/project-assignments), nested under Projects, manages Role assignment to that Project in particular, and all objects within it. And the [Form Assignments resource](/reference/forms-and-submissions/'-form-assignments) allows even more granular assignments, to specific Forms within a Project. All of these resources have the same structure and take and return the same data types.
+The [Project Assignments resource](/reference/project-management/project-assignments), nested under Projects, manages Role assignment to that Project in particular, and all objects within it. And the [Form Assignments resource](/reference/forms/form-assignments) allows even more granular assignments, to specific Forms within a Project. All of these resources have the same structure and take and return the same data types.
 
 Assignments may be created (`POST`) and deleted (`DELETE`) like any other resource in the system. Here, creating an Assignment grants the referenced Actor the verbs associated with the referenced Role upon all system objects. The pathing for creation and deletion is not quite REST-standard: we represent the relationship between Role and Actor directly in the URL rather than as body data: `assignments/{role}/{actor}` represents the assignment of the given Role to the given Actor.
 
@@ -793,7 +817,7 @@ For this purpose, we offer this `PUT` resource, which allows a deep update of Pr
 
 One important mechanic to note immediately here is that we follow true `PUT` semantics, meaning that the data you provide is not merged with existing data to form an update. With our usual `PATCH` endpoints, we do this kind of merging and so data that you don't explicitly pass us is left alone. Because we allow the deletion of Form Assignments by way of omission with this API, we treat _all_ omissions as an explicit specification to null the omitted field. This means that, for example, you must always re-specify the Project name (and archival flag) with every `PUT`.
 
-This adherence to `PUT` semantics would normally imply that Forms could be created or deleted by way of this request, but such an operation could become incredibly complex, we currently return a `501 Not Implemented` error if you supply nested Form information but you do not give us exactly the entire set of extant Forms.
+This adherence to `PUT` semantics would normally imply that Forms could be created or deleted by way of this request, but such an operation could become incredibly complex. We currently return a `501 Not Implemented` error if you supply nested Form information but you do not give us exactly the entire set of extant Forms.
 
 You can inspect the Request format for this endpoint to see the exact nested data structure this endpoint accepts. Each level of increased granularity is optional: you may `PUT` just Project metadata, with no `forms` array, and you may `PUT` Project and Form metadata but omit `assignments` from any Form, in which case the omitted detail will be left as-is.
 
@@ -892,7 +916,7 @@ Deleting a Project will remove it from the management interface and make it perm
 
 _(introduced: version 0.5)_
 
-There are multiple Assignments resources. This one, specific to the Project it is nested within, only governs Role assignments to that Project. Assigning an Actor a Role that grants, for example, a verb `submission.create`, allows that Actor to create a submission anywhere within this Project. It is also possible to assign rights only to specific forms for actions related only to that form and its submissions: see the [Form Assignments resource](/reference/forms-and-submissions/'-form-assignments) for information about this.
+There are multiple Assignments resources. This one, specific to the Project it is nested within, only governs Role assignments to that Project. Assigning an Actor a Role that grants, for example, a verb `submission.create`, allows that Actor to create a submission anywhere within this Project. It is also possible to assign rights only to specific forms for actions related only to that form and its submissions: see the [Form Assignments resource](/reference/forms/form-assignments) for information about this.
 
 The [sitewide Assignments resource](/reference/accounts-and-users/assignments), at the API root, manages Role assignments for all objects across the server. Apart from this difference in scope, the introduction to that section contains information useful for understanding the following endpoints.
 
@@ -984,7 +1008,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 ### Seeing Role-specific Form Assignments within a Project [GET /v1/projects/{projectId}/assignments/forms/:roleId]
 
-Like the [Form Assignments summary API](/reference/forms-and-submissions/'-form-assignments/listing-all-form-assignments), but filtered by some `roleId`.
+Like the [Form Assignments summary API](/reference/forms/form-assignments/listing-all-form-assignments), but filtered by some `roleId`.
 
 This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to expand the `actorId` into a full `actor` objects. The Role reference remains a numeric ID and the Form reference remains a string ID.
 
@@ -1001,13 +1025,11 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-# Group Forms and Submissions
+# Group Forms
 
 `Form`s are the heart of ODK. They are created out of XML documents in the [ODK XForms](https://opendatakit.github.io/xforms-spec/) specification format. The [Intro to Forms](https://docs.opendatakit.org/form-design-intro/) on the ODK Documentation website is a good resource if you are unsure what this means. Once created, Forms can be retrieved in a variety of ways, their state can be managed, and they can be deleted.
 
-`Submission`s are filled-out forms (also called `Instance`s in some other ODK documentation). Each is associated with a particular Form (and in many cases with a particular _version_ of a Form), and is also created out of a standard XML format based on the Form itself. Submissions can be sent with many accompanying multimedia attachments, such as photos taken in the course of the survey. Once created, the Submissions themselves as well as their attachments can be retrieved through this API.
-
-These subsections cover only the modern RESTful API resources involving Forms and Submissions. For documentation on the OpenRosa endpoints (which can be used to list Forms and submit Submissions), or the OData endpoints (which can be used to bulk-export the data in the standardize OData format), see those sections below.
+These subsections cover only the modern RESTful API resources involving Forms. For documentation on the OpenRosa `formList` endpoint (which can be used to list Forms), see that section below.
 
 ## Forms [/v1/projects/{projectId}/forms]
 
@@ -1043,9 +1065,9 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 When creating a `Form`, the only required data is the actual XForms XML or XLSForm itself. Use it as the `POST` body with a `Content-Type` header of `application/xml` (`text/xml` works too), and the Form will be created.
 
-As of Version 0.8, Forms will by default be created in Draft state, accessible under `/projects/…/forms/…/draft`. The Form itself will not have a public XML definition, and will not appear for download onto mobile devices. You will need to [publish the form](/reference/forms-and-submissions/'-draft-form/publishing-a-draft-form) to finalize it for data collection. To disable this behaviour, and force the new Form to be immediately ready, you can pass the querystring option `?publish=true`.
+As of Version 0.8, Forms will by default be created in Draft state, accessible under `/projects/…/forms/…/draft`. The Form itself will not have a public XML definition, and will not appear for download onto mobile devices. You will need to [publish the form](/reference/forms/draft-form/publishing-a-draft-form) to finalize it for data collection. To disable this behaviour, and force the new Form to be immediately ready, you can pass the querystring option `?publish=true`.
 
-For XLSForm upload, either `.xls` or `.xlsx` are accepted. You must provide the `Content-Type` request header corresponding to the file type: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` for `.xlsx` files, and `application/vnd.ms-excel` for `.xls` files. You must also provide an `X-XlsForm-FormId-Fallback` request header with the `formId` you want the resulting form to have, if the spreadsheet does not already specify.
+For XLSForm upload, either `.xls` or `.xlsx` are accepted. You must provide the `Content-Type` request header corresponding to the file type: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` for `.xlsx` files, and `application/vnd.ms-excel` for `.xls` files. You must also provide an `X-XlsForm-FormId-Fallback` request header with the `formId` you want the resulting form to have, if the spreadsheet does not already specify. This header field accepts percent-encoded values.
 
 By default, any XLSForm conversion Warnings will fail this request and return the warnings rather than use the converted XML to create a form. To override this behaviour, provide a querystring flag `?ignoreWarnings=true`. Conversion Errors will always fail this request.
 
@@ -1109,7 +1131,7 @@ The API will currently check the XML's structure in order to extract the informa
 + Response 409 (application/json)
     + Attributes (Error 409)
 
-### › Individual Form [/v1/projects/{projectId}/forms/{xmlFormId}]
+### Individual Form [/v1/projects/{projectId}/forms/{xmlFormId}]
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
@@ -1264,7 +1286,7 @@ We use `PATCH` rather than `PUT` to represent the update operation, so that you 
 
 #### Deleting a Form [DELETE]
 
-Only `DELETE` a `Form` if you are sure you will never need it again. If your goal is to prevent it from showing up on survey clients like ODK Collect, consider setting its `state` to `closing` or `closed` instead (see [Modifying a Form](/reference/forms-and-submissions/'-individual-form/modifying-a-form) just above for more details).
+Only `DELETE` a `Form` if you are sure you will never need it again. If your goal is to prevent it from showing up on survey clients like ODK Collect, consider setting its `state` to `closing` or `closed` instead (see [Modifying a Form](/reference/forms/individual-form/modifying-a-form) just above for more details).
 
 + Response 200 (application/json)
     + Attributes (Success)
@@ -1272,7 +1294,7 @@ Only `DELETE` a `Form` if you are sure you will never need it again. If your goa
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### › Draft Form [/v1/projects/{projectId}/forms/{xmlFormId}/draft]
+### Draft Form [/v1/projects/{projectId}/forms/{xmlFormId}/draft]
 
 _(introduced: version 0.8)_
 
@@ -1280,7 +1302,7 @@ Draft Forms allow you to test and fix issues with Forms before they are finalize
 
 You can create or replace the current Draft Form at any time by `POST`ing to the `/draft` subresource on the Form, and you can publish the current Draft by `POST`ing to `/draft/publish`.
 
-When a Draft Form is created, a Draft Token is also created for it, which can be found in Draft Form responses at `draftToken`. This token allows you to [submit test Submissions to the Draft Form](/reference/forms-and-submissions/'-draft-submissions/creating-a-submission) through clients like Collect. If the Draft is published or deleted, the token will be deactivated. But if you replace the Draft without first deleting it, the existing Draft Token will be carried forward, so that you do not have to reconfigure your device.
+When a Draft Form is created, a Draft Token is also created for it, which can be found in Draft Form responses at `draftToken`. This token allows you to [submit test Submissions to the Draft Form](/reference/submissions/draft-submissions/creating-a-submission) through clients like Collect. If the Draft is published or deleted, the token will be deactivated. But if you replace the Draft without first deleting it, the existing Draft Token will be carried forward, so that you do not have to reconfigure your device.
 
 + Parameters
     + projectId: `1` (number, required) - The `id` of the Project this Form belongs to.
@@ -1288,7 +1310,7 @@ When a Draft Form is created, a Draft Token is also created for it, which can be
 
 #### Creating a Draft Form [POST /v1/projects/{projectId}/forms/{xmlFormId}/draft{?ignoreWarnings}]
 
-`POST`ing here will create a new Draft Form on the given Form. For the most part, it takes the same parameters as the [Create Form request](/reference/forms-and-submissions/forms/creating-a-new-form): you can submit XML or Excel files, you can provide `ignoreWarnings` if you'd like.
+`POST`ing here will create a new Draft Form on the given Form. For the most part, it takes the same parameters as the [Create Form request](/reference/forms/forms/creating-a-new-form): you can submit XML or Excel files, you can provide `ignoreWarnings` if you'd like.
 
 Additionally, however, you may `POST` with no `Content-Type` and an empty body to create a Draft Form with a copy of the definition (XML, XLS, etc) that is already published, if there is one. This can be useful if you don't wish to update the Form definition itself, but rather one or more Form Attachments.
 
@@ -1298,7 +1320,7 @@ When a Draft is created, the expected Form Attachments are computed and slots ar
 
 Even if a Draft exists, you can always replace it by `POST`ing here again. In that case, the attachments that exist on the Draft will similarly be copied over to the new Draft. If you wish to copy from the published version instead, you can do so by first `DELETE`ing the extant Draft.
 
-Draft `version` conflicts are allowed with prior versions of a Form while in Draft state. If you attempt to [publish the Form](/reference/forms-and-submissions/'-draft-form/publishing-a-draft-form) without correcting the conflict, the publish operation will fail. You can request that Central update the version string on your behalf as part of the publish operation to avoid this: see that endpoint for more information.
+Draft `version` conflicts are allowed with prior versions of a Form while in Draft state. If you attempt to [publish the Form](/reference/forms/draft-form/publishing-a-draft-form) without correcting the conflict, the publish operation will fail. You can request that Central update the version string on your behalf as part of the publish operation to avoid this: see that endpoint for more information.
 
 The `xmlFormId`, however, must exactly match that of the Form overall, or the request will be rejected.
 
@@ -1418,7 +1440,7 @@ If a Draft Form was created with an Excel file (`.xls` or `.xlsx`), you can get 
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-#### Listing expected Form Attachments [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments]
+#### Listing expected Draft Form Attachments [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments]
 
 Form Attachments for each form are automatically determined when the form is first created, by scanning the XForms definition for references to media or data files. Because of this, it is not possible to directly modify the list of form attachments; that list is fully determined by the given XForm. Instead, the focus of this API subresource is around communicating that expected list of files, and uploading binaries into those file slots.
 
@@ -1428,7 +1450,7 @@ Form Attachments for each form are automatically determined when the form is fir
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-#### Uploading a Form Attachment [POST /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}]
+#### Uploading a Draft Form Attachment [POST /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}]
 
 To upload a binary to an expected file slot, `POST` the binary to its endpoint. Supply a `Content-Type` MIME-type header if you have one.
 
@@ -1446,7 +1468,7 @@ To upload a binary to an expected file slot, `POST` the binary to its endpoint. 
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-#### Downloading a Form Attachment [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}]
+#### Downloading a Draft Form Attachment [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}]
 
 To download a single file, use this endpoint. The appropriate `Content-Disposition` (attachment with a filename) and `Content-Type` (based on the type supplied at upload time) will be given.
 
@@ -1466,7 +1488,7 @@ To download a single file, use this endpoint. The appropriate `Content-Dispositi
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-#### Clearing a Form Attachment [DELETE /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}]
+#### Clearing a Draft Form Attachment [DELETE /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}]
 
 Because Form Attachments are completely determined by the XForms definition of the form itself, there is no direct way to entirely remove a Form Attachment entry from the list, only to clear its uploaded content. Thus, when you issue a `DELETE` to the attachment's endpoint, that is what happens.
 
@@ -1481,7 +1503,7 @@ Because Form Attachments are completely determined by the XForms definition of t
 
 #### Getting Draft Form Schema Fields [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/fields{?odata}]
 
-Identical to the [same request](/reference/forms-and-submissions/'-individual-form/retrieving-form-schema-fields) for the published Form, but will return the fields related to the current Draft version.
+Identical to the [same request](/reference/forms/individual-form/getting-form-schema-fields) for the published Form, but will return the fields related to the current Draft version.
 
 + Parameters
     + odata: `false` (boolean, optional) - If set to `true`, will sanitize field names.
@@ -1534,7 +1556,7 @@ You will not be able to delete the draft if there is no published version of the
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### › Published Form Versions [/v1/projects/{projectId}/forms/{xmlFormId}/versions]
+### Published Form Versions [/v1/projects/{projectId}/forms/{xmlFormId}/versions]
 
 All published versions of a Form are available read-only at the `/versions` subresource for reference, including the currently published version. You may read that version and its details, retrieve the Form definition, and any attachments associated with each version.
 
@@ -1639,7 +1661,7 @@ Attachments are specific to each version of a Form. You can retrieve the attachm
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-#### Downloading a Form Attachment [GET /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}/attachments/{filename}]
+#### Downloading a Form Version Attachment [GET /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}/attachments/{filename}]
 
 To download a single file, use this endpoint. The appropriate `Content-Disposition` (attachment with a filename) and `Content-Type` (based on the type supplied at upload time) will be given.
 
@@ -1661,7 +1683,7 @@ To download a single file, use this endpoint. The appropriate `Content-Dispositi
 
 #### Getting Form Version Schema Fields [GET /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}/fields{?odata}]
 
-Identical to the [same request](/reference/forms-and-submissions/'-individual-form/retrieving-form-schema-fields) for the published Form, but will return the fields related to the specified version.
+Identical to the [same request](/reference/forms/individual-form/getting-form-schema-fields) for the published Form, but will return the fields related to the specified version.
 
 + Parameters
     + version: `one` (string, required) - The `version` of the Form version being referenced. Pass `___` to indicate a blank `version`.
@@ -1681,7 +1703,7 @@ Identical to the [same request](/reference/forms-and-submissions/'-individual-fo
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-## › Form Assignments [/v1/projects/{projectId}/forms/{xmlFormId}/assignments]
+## Form Assignments [/v1/projects/{projectId}/forms/{xmlFormId}/assignments]
 
 _(introduced: version 0.7)_
 
@@ -1757,7 +1779,7 @@ Given a `roleId`, which may be a numeric ID or a string role `system` name, and 
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-## › Public Access Links [/v1/projects/{projectId}/forms/{xmlFormId}/public-links]
+## Public Access Links [/v1/projects/{projectId}/forms/{xmlFormId}/public-links]
 
 _(introduced: version 1.0)_
 
@@ -1819,6 +1841,12 @@ You can fully delete a link by issuing `DELETE` to its resource. This will remov
 + Response 403 (application/json)
     + Attributes (Error 403)
 
+# Group Submissions
+
+`Submission`s are filled-out forms (also called `Instance`s in some other ODK documentation). Each is associated with a particular Form (and in many cases with a particular _version_ of a Form), and is also created out of a standard XML format based on the Form itself. Submissions can be sent with many accompanying multimedia attachments, such as photos taken in the course of the survey. Once created, the Submissions themselves as well as their attachments can be retrieved through this API.
+
+These subsections cover only the modern RESTful API resources involving Submissions. For documentation on the OpenRosa submission endpoint (which can be used to submit Submissions), or the OData endpoint (which can be used to retrieve and query submission data), see those sections below.
+
 ## Submissions [/v1/projects/{projectId}/forms/{xmlFormId}/submissions]
 
 `Submission`s are available as a subresource under `Form`s. So, for instance, `/v1/projects/1/forms/myForm/submissions` refers only to the Submissions that have been submitted to the Form `myForm`.
@@ -1844,6 +1872,157 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
     This is the Extended Metadata response, if requested via the appropriate header:
 
     + Attributes (array[Extended Submission])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Getting Submission metadata [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}]
+
+Like how `Form`s are addressed by their XML `formId`, individual `Submission`s are addressed in the URL by their `instanceId`.
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to return a `submitter` data object alongside the `submitterId` Actor ID reference.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the Submission being referenced.
+
++ Response 200 (application/json)
+    This is the standard response, if Extended Metadata is not requested:
+
+    + Attributes (Submission)
+
++ Response 200 (application/json; extended)
+    This is the Extended Metadata response, if requested via the appropriate header:
+
+    + Attributes (Extended Submission)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Updating Submission metadata [PATCH /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}]
+
+Currently, the only updatable _metadata_ on a Submission is its `reviewState`. To update the submission _data_ itself, please see [Updating Submission data](/reference/submissions/submissions/updating-submission-data).
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the Submission being referenced.
+
++ Response 200 (application/json)
+    + Attributes (Submission)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Retrieving Submission XML [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}.xml]
+
+To get only the XML of the `Submission` rather than all of the details with the XML as one of many properties, just add `.xml` to the end of the request URL.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the Submission being referenced.
+
++ Response 200 (application/xml)
+    + Body
+
+            <data id="simple">
+              <orx:meta><orx:instanceID>uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44</orx:instanceID></orx:meta>
+              <name>Alice</name>
+              <age>32</age>
+            </data>
+
+### Creating a Submission [POST /v1/projects/{projectId}/forms/{xmlFormId}/submissions{?deviceID}]
+
+To create a Submission by REST rather than over the [OpenRosa interface](/reference/openrosa-endpoints/openrosa-form-submission-api), you may `POST` the Submission XML to this endpoint. The request must have an XML `Content-Type` (`text/xml` or `application/xml`).
+
+Unlike the OpenRosa Form Submission API, this interface does _not_ accept Submission attachments upon Submission creation. Instead, the server will determine which attachments are expected based on the Submission XML, and you may use the endpoints found in the following section to add the appropriate attachments and check the attachment status and content.
+
+If the XML is unparseable or there is some other input problem with your data, you will get a `400` error in response. If a submission already exists with the given `instanceId`, you will get a `409` error in response.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + deviceID: `b1628661-65ed-4cab-8e30-19c17fef2de0` (string, optional) - Optionally record a particular `deviceID` associated with this submission. It is recorded along with the data, but Central does nothing more with it.
+
++ Request (application/xml)
+    + Body
+
+            <data id="simple">
+              <orx:meta><orx:instanceID>uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44</orx:instanceID></orx:meta>
+              <name>Alice</name>
+              <age>32</age>
+            </data>
+
++ Response 200 (application/json)
+    + Attributes (Submission)
+
++ Response 400 (application/json)
+    + Attributes (Error 400)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
++ Response 409 (application/json)
+    + Attributes (Error 409)
+
+### Updating Submission Data [PUT /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}]
+
+_(introduced: version 1.2)_
+
+You can use this endpoint to submit _updates_ to an existing submission.
+
+The `instanceId` that is submitted with the initial version of the submission is used permanently to reference that submission logically, which is to say the initial submission and all its subsequent versions. Each subsequent version will also provide its own `instanceId`. This `instanceId` becomes that particular version's identifier.
+
+To perform an update, you need to provide in the submission XML an additional [`deprecatedID` metadata node](https://getodk.github.io/xforms-spec/#metadata) with the `instanceID` of the particular submission version you are replacing. If the `deprecatedID` you give is anything other than the identifier of the current version of the submission at the time the server receives it, you will get a `409 Conflict` back.
+
+The XML data you send will _replace_ the existing data entirely. All of the data must be present in the updated XML.
+
+When you create a new submission version, any uploaded media files attached to the current version that match expected attachment names in the new version will automatically be copied over to the new version. So if you don't make any changes to media files, there is no need to resubmit them.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the Submission being updated.
+
++ Request (application/xml)
+    + Body
+
+            <data id="simple">
+              <orx:meta>
+                <orx:deprecatedID>uuid:315c2f74-c8fc-4606-ae3f-22f8983e441e</orx:deprecatedID>
+                <orx:instanceID>uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44</orx:instanceID>
+              </orx:meta>
+              <name>Alice</name>
+              <age>36</age>
+            </data>
+
++ Response 200 (application/json)
+    + Attributes (Submission)
+
++ Response 400 (application/json)
+    + Attributes (Error 400)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
++ Response 409 (application/json)
+    + Attributes (Error 409)
+
+### Getting an Enketo Edit URL [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/edit]
+
+_(introduced: version 1.2)_
+
+This endpoint redirects the user to an Enketo-powered page that allows the user to interactively edit th e submission. Once the user is satisfied, they can perform the update submission directly through the Enketo interface.
+
+The Enketo instance is already hosted inside of ODK Central. There is no reason to create or use a separate Enketo installation.
+
+This endpoint is intended for use by the Central administration frontend and will not work without it. In particular, the user must be logged into the Central administration site for Enketo editing to work. If there is no Central authentication cookie present when Enketo is loaded, the browser will then be redirected by Enketo to a Central login page.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the Submission being updated.
+
++ Response 302
+    + Headers
+
+            Location: https://sample.getodk.org/-/edit/BFChy9gKIR86lR54wSlHwrK4TGqBC0F?instance_id=uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -1918,7 +2097,7 @@ The above submission endpoints will give you a ZIP file with the submission data
 
 To export _just_ the root table (no repeat data nor media files), you can call this endpoint instead, which will directly give you CSV data.
 
-Please see the [above endpoint](/reference/forms-and-submissions/submissions/exporting-form-submissions-to-csv) for notes on dealing with Managed Encryption.
+Please see the [above endpoint](/reference/submissions/submissions/exporting-form-submissions-to-csv) for notes on dealing with Managed Encryption.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
@@ -1943,7 +2122,7 @@ This endpoint is useful only for Forms under Project Managed Encryption.
 
 As with `GET` to `.csv` just above, this endpoint will only return CSV text data, rather than a ZIP file containing ore or more files. Please see that endpoint for further explanation.
 
-As with [`POST` to `.csv.zip`](/reference/forms-and-submissions/submissions/exporting-form-submissions-to-csv-via-post) it allows secure submission of decryption passkeys. Please see that endpoint for more information on how to do this.
+As with [`POST` to `.csv.zip`](/reference/submissions/submissions/exporting-form-submissions-to-csv-via-post) it allows secure submission of decryption passkeys. Please see that endpoint for more information on how to do this.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
@@ -1956,6 +2135,27 @@ As with [`POST` to `.csv.zip`](/reference/forms-and-submissions/submissions/expo
 
 + Response 400 (application/json)
     + Attributes (Error 400)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Retrieving Audit Logs [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/audits]
+
+_(introduced: version 1.2)_
+
+You can retrieve all [Server Audit Logs](/reference/system-endpoints/server-audit-logs) relating to a submission. They will be returned most recent first.
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally expand the `actorId` into full `actor` details, and `acteeId` into full `actee` details. The `actor` will always be an Actor, and the `actee` will be the Form this Submission is a part of.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the Submission.
+
++ Response 200 (application/json)
+    + Attributes (array[Audit])
+
++ Response 200 (application/json; extended)
+    + Attributes (array[Extended Audit])
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -1986,79 +2186,52 @@ This endpoint provides a listing of all known submitting actors to a given Form.
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Getting Submission details [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}]
+## Comments [/v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/comments]
 
-Like how `Form`s are addressed by their XML `formId`, individual `Submission`s are addressed in the URL by their `instanceId`.
+_(introduced: version 1.2)_
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to return a `submitter` data object alongside the `submitterId` Actor ID reference.
+This API is likely to change in the future. In version 1.2 we have added comments to submissions, so changes and problems with the data can be discussed. It's very likely we will want comments in more places in the future, and at that time a more complete comments API will be introduced, and this current one may be changed or deprecated entirely.
+
+Currently, it is not possible to get a specific comment's details, or to edit or delete a comment once it has been made.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
     + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the Submission being referenced.
+
+### Listing Comments [GET]
+
+Comments have only a `body` comment text and an `actor` that made the comment.
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to return a `actor` data object alongside the `actorId` Actor ID reference.
 
 + Response 200 (application/json)
     This is the standard response, if Extended Metadata is not requested:
 
-    + Attributes (Submission)
+    + Attributes (array[Comment])
 
 + Response 200 (application/json; extended)
     This is the Extended Metadata response, if requested via the appropriate header:
 
-    + Attributes (Extended Submission)
+    + Attributes (array[Extended Comment])
 
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-#### Retrieving Submission XML [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}.xml]
+### Posting Comments [POST]
 
-To get only the XML of the `Submission` rather than all of the details with the XML as one of many properties, just add `.xml` to the end of the request URL.
+Currently, the only accepted data is `body`, which contains the body of the comment to be made.
 
-+ Parameters
-    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
-    + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the Submission being referenced.
-
-+ Response 200 (application/xml)
-    + Body
-
-            <data id="simple">
-              <orx:meta><orx:instanceID>uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44</orx:instanceID></orx:meta>
-              <name>Alice</name>
-              <age>32</age>
-            </data>
-
-#### Creating a Submission [POST /v1/projects/{projectId}/forms/{xmlFormId}/submissions]
-
-To create a Submission by REST rather than over the [OpenRosa interface](/reference/openrosa-endpoints/openrosa-form-submission-api), you may `POST` the Submission XML to this endpoint. The request must have an XML `Content-Type` (`text/xml` or `application/xml`).
-
-Unlike the OpenRosa Form Submission API, this interface does _not_ accept Submission attachments upon Submission creation. Instead, the server will determine which attachments are expected based on the Submission XML, and you may use the endpoints found in the following section to add the appropriate attachments and check the attachment status and content.
-
-If the XML is unparseable or there is some other input problem with your data, you will get a `400` error in response. If a submission already exists with the given `instanceId`, you will get a `409` error in response.
-
-+ Parameters
-    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
-
-+ Request (application/xml)
-    + Body
-
-            <data id="simple">
-              <orx:meta><orx:instanceID>uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44</orx:instanceID></orx:meta>
-              <name>Alice</name>
-              <age>32</age>
-            </data>
++ Request (application/json)
+    + Attributes
+        + body: `this is the text of my comment` (string, required) - The text of the comment.
 
 + Response 200 (application/json)
-    + Attributes (Submission)
-
-+ Response 400 (application/json)
-    + Attributes (Error 400)
+    + Attributes (Comment)
 
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-+ Response 409 (application/json)
-    + Attributes (Error 409)
-
-## › Attachments [/v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments]
+## Attachments [/v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments]
 
 When a `Submission` is created, either over the OpenRosa or the REST interface, its XML data is analyzed to determine which file attachments it references: these may be photos or video taken as part of the survey, or an audit/timing log, among other things. Each reference is an expected attachment, and these expectations are recorded permanently alongside the Submission.
 
@@ -2146,9 +2319,127 @@ Because Submission Attachments are completely determined by the XML data of the 
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-## › Draft Submissions [/v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions]
+## Submission Versions [/v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/versions]
 
-All [Draft Forms](/reference/forms-and-submissions/'-draft-form) feature a `/submissions` subresource (`/draft/submissions`), which is identical to the same subresource on the form itself. These submissions exist only as long as the Draft Form does: they are removed if the Draft Form is published, and they are abandoned if the Draft Form is deleted or overwritten.
+_(introduced: version 1.2)_
+
+The `instanceId` that is submitted with the initial version of the submission is used permanently to reference that submission logically, which is to say the initial submission and all its subsequent versions. Each subsequent version will also provide its own `instanceId`. This `instanceId` becomes that particular version's identifier.
+
+So if you submit a submission with `<orx:instanceID>one</orx:instanceID>` and then update it, deprecating `one` for version `two`, then the full route for version `one` is `/v1/projects/…/forms/…/submissions/one/versions/one`, and for `two` it is `/v1/projects/…/forms/…/submissions/one/versions/two`.
+
++ Parameters
+    + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, optional) - The `instanceId` of the initially submitted version. Please see the notes at the top of this documentation section for more information.
+
+### Listing Versions [GET]
+
+This will return all submission metadata for every version of this submission, in descending creation order.
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to return a `submitter` data object alongside the `submitterId` Actor ID reference.
+
++ Response 200 (application/json)
+    This is the standard response, if Extended Metadata is not requested:
+
+    + Attributes (array[Submission])
+
++ Response 200 (application/json; extended)
+    This is the Extended Metadata response, if requested via the appropriate header:
+
+    + Attributes (array[Extended Submission])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Getting Version Details [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/versions/{versionId}]
+
+Returns metadata about a particular version of the submission. As with the normal submission endpoint, you'll only get metadata in JSON out of this route. If you want to retrieve the XML, [add `.xml`](/reference/submissions/submission-versions/getting-version-xml).
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to return a `submitter` data object alongside the `submitterId` Actor ID reference.
+
++ Parameters
+    + versionId: `uuid:b1628661-65ed-4cab-8e30-19c17fef2de0` (required, string) - The `instanceId` of the particular version of this submission in question.
+
++ Response 200 (application/json)
+    This is the standard response, if Extended Metadata is not requested:
+
+    + Attributes (Submission)
+
++ Response 200 (application/json; extended)
+    This is the Extended Metadata response, if requested via the appropriate header:
+
+    + Attributes (Extended Submission)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Getting Version XML [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/versions/{versionId}.xml]
+
+Returns the XML of a particular version of the submission.
+
++ Parameters
+    + versionId: `uuid:b1628661-65ed-4cab-8e30-19c17fef2de0` (required, string) - The `instanceId` of the particular version of this submission in question.
+
++ Response 200 (application/xml)
+    + Body
+
+            <data id="simple">
+              <orx:meta><orx:instanceID>uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44</orx:instanceID></orx:meta>
+              <name>Alice</name>
+              <age>32</age>
+            </data>
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Listing Version expected Attachments [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/versions/{versionId}/attachments]
+
+ You can retrieve the list of expected Submission attachments for the given version at this route, along with a boolean flag indicating whether the server actually has a copy of the expected file or not. If the server has a file, you can then append its filename to the request URL to download only that file (see below).
+
++ Parameters
+    + versionId: `uuid:b1628661-65ed-4cab-8e30-19c17fef2de0` (required, string) - The `instanceId` of the particular version of this submission in question.
+
++ Response 200 (application/json)
+    + Attributes (array[Submission Attachment])
+
+    + Body
+
+            [{
+                "name": "file1.jpg",
+                "exists": true
+            }, {
+                "name": "file2.jpg",
+                "exists": false
+            }, {
+                "name": "file3.jpg",
+                "exists": true
+            }]
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Downloading a Version's Attachment [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/versions/{versionId}/attachments/{filename}]
+
+It is important to note that this endpoint returns whatever is _currently_ uploaded against the _particular version_ of the _Submission_. It will not track overwritten attachments.
+
++ Parameters
+    + versionId: `uuid:b1628661-65ed-4cab-8e30-19c17fef2de0` (required, string) - The `instanceId` of the particular version of this submission in question.
+    + filename: `file1.jpg` (string, required) - The name of the file as given by the Attachments listing resource.
+
++ Response 200
+    + Headers
+
+            Content-Type: {the MIME type of the attachment file itself}
+            Content-Disposition: attachment; filename={the file's name}
+
+    + Body
+
+            (binary data)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Draft Submissions [/v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions]
+
+All [Draft Forms](/reference/forms/draft-form) feature a `/submissions` subresource (`/draft/submissions`), which is identical to the same subresource on the form itself. These submissions exist only as long as the Draft Form does: they are removed if the Draft Form is published, and they are abandoned if the Draft Form is deleted or overwritten.
 
 Here we list all those resources again just for completeness.
 
@@ -2158,7 +2449,7 @@ Here we list all those resources again just for completeness.
 
 ### Listing all Submissions on a Draft Form [GET]
 
-Identical to [the non-Draft version](/reference/forms-and-submissions/submissions/listing-all-submissions-on-a-form) of this endpoint.
+Identical to [the non-Draft version](/reference/submissions/submissions/listing-all-submissions-on-a-form) of this endpoint.
 
 + Response 200 (application/json)
     This is the standard response, if Extended Metadata is not requested:
@@ -2175,7 +2466,7 @@ Identical to [the non-Draft version](/reference/forms-and-submissions/submission
 
 ### Exporting Form Submissions to CSV [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions.csv.zip]
 
-Identical to [the non-Draft version](/reference/forms-and-submissions/submissions/exporting-form-submissions-to-csv) of this endpoint.
+Identical to [the non-Draft version](/reference/submissions/submissions/exporting-form-submissions-to-csv) of this endpoint.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
@@ -2197,7 +2488,7 @@ Identical to [the non-Draft version](/reference/forms-and-submissions/submission
 
 ### Exporting Form Submissions to CSV via POST [POST /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions.csv.zip]
 
-Identical to [the non-Draft version](/reference/forms-and-submissions/submissions/exporting-form-submissions-to-csv-via-post) of this endpoint.
+Identical to [the non-Draft version](/reference/submissions/submissions/exporting-form-submissions-to-csv-via-post) of this endpoint.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
@@ -2219,7 +2510,7 @@ Identical to [the non-Draft version](/reference/forms-and-submissions/submission
 
 ### Listing Encryption Keys [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions/keys]
 
-Identical to [the non-Draft version](/reference/forms-and-submissions/submissions/listing-encryption-keys) of this endpoint.
+Identical to [the non-Draft version](/reference/submissions/submissions/listing-encryption-keys) of this endpoint.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
@@ -2232,7 +2523,7 @@ Identical to [the non-Draft version](/reference/forms-and-submissions/submission
 
 ### Getting Submission details [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions/{instanceId}]
 
-Identical to [the non-Draft version](/reference/forms-and-submissions/submissions/getting-submission-details) of this endpoint.
+Identical to [the non-Draft version](/reference/submissions/submissions/getting-submission-metadata) of this endpoint.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
@@ -2253,7 +2544,7 @@ Identical to [the non-Draft version](/reference/forms-and-submissions/submission
 
 ### Retrieving Submission XML [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions/{instanceId}.xml]
 
-Identical to [the non-Draft version](/reference/forms-and-submissions/submissions/retrieving-submission-xml) of this endpoint.
+Identical to [the non-Draft version](/reference/submissions/submissions/retrieving-submission-xml) of this endpoint.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
@@ -2270,7 +2561,7 @@ Identical to [the non-Draft version](/reference/forms-and-submissions/submission
 
 ### Creating a Submission [POST /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions]
 
-Identical to [the non-Draft version](/reference/forms-and-submissions/submissions/creating-a-submission) of this endpoint.
+Identical to [the non-Draft version](/reference/submissions/submissions/creating-a-submission) of this endpoint.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
@@ -2298,7 +2589,7 @@ Identical to [the non-Draft version](/reference/forms-and-submissions/submission
 
 ### Listing expected Submission Attachments [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions/{instanceId}/attachments]
 
-Identical to [the non-Draft version](/reference/forms-and-submissions/'-attachments/listing-expected-submission-attachments) of this endpoint.
+Identical to [the non-Draft version](/reference/submissions/attachments/listing-expected-submission-attachments) of this endpoint.
 
 + Parameters
     + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the Submission being referenced.
@@ -2324,7 +2615,7 @@ Identical to [the non-Draft version](/reference/forms-and-submissions/'-attachme
 
 ### Downloading an Attachment [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions/{instanceId}/attachments/{filename}]
 
-Identical to [the non-Draft version](/reference/forms-and-submissions/'-attachments/downloading-an-attachment) of this endpoint.
+Identical to [the non-Draft version](/reference/submissions/attachments/downloading-an-attachment) of this endpoint.
 
 + Parameters
     + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the Submission being referenced.
@@ -2345,7 +2636,7 @@ Identical to [the non-Draft version](/reference/forms-and-submissions/'-attachme
 
 ### Uploading an Attachment [POST /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions/{instanceId}/attachments/{filename}]
 
-Identical to [the non-Draft version](/reference/forms-and-submissions/'-attachments/uploading-an-attachment) of this endpoint.
+Identical to [the non-Draft version](/reference/submissions/attachments/uploading-an-attachment) of this endpoint.
 
 + Parameters
     + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the Submission being referenced.
@@ -2364,9 +2655,7 @@ Identical to [the non-Draft version](/reference/forms-and-submissions/'-attachme
 
 ### Clearing a Submission Attachment [DELETE /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions/{instanceId}/attachments/{filename}]
 
-_(introduced: version 0.4)_
-
-Identical to [the non-Draft version](/reference/forms-and-submissions/'-attachments/clearing-a-submission-attachment) of this endpoint.
+Identical to [the non-Draft version](/reference/submissions/attachments/clearing-a-submission-attachment) of this endpoint.
 
 + Parameters
     + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the Submission being referenced.
@@ -2385,7 +2674,7 @@ Identical to [the non-Draft version](/reference/forms-and-submissions/'-attachme
 ODK Central is _not_ a fully compliant OpenRosa server. OpenRosa requires compliance with five major components:
 
 1. [**Metadata Schema**](https://bitbucket.org/javarosa/javarosa/wiki/OpenRosaMetaDataSchema), which defines a standard way to include metadata like the survey device ID and survey duration with a Submission. ODK Central will accept and return this data, but does nothing special with anything besides the `instanceId` at this time.
-2. [**HTTP Request API**](https://bitbucket.org/javarosa/javarosa/wiki/OpenRosaRequest), which defines a set of requirements every OpenRosa request and response must follow. ODK Central is fully compliant with this component.
+2. [**HTTP Request API**](https://bitbucket.org/javarosa/javarosa/wiki/OpenRosaRequest), which defines a set of requirements every OpenRosa request and response must follow. ODK Central is fully compliant with this component, except that we do _not_ require the `Date` header.
 3. [**Form Submission API**](https://bitbucket.org/javarosa/javarosa/wiki/FormSubmissionAPI), which defines how Submissions are submitted to the server. ODK Central is fully compliant with this component.
 4. [**Authentication API**](https://bitbucket.org/javarosa/javarosa/wiki/AuthenticationAPI), which defines how users authenticate with the server. ODK Central provides [three authentication methods](/reference/authentication). One of these is HTTPS Basic Authentication, which is recommended by the OpenRosa specification. However, because [we do not follow the try/retry pattern](/reference/authentication/https-basic-authentication/using-basic-authentication) required by the OpenRosa and the RFC specification, ODK Central is _not compliant_ with this component. Our recommendation generally is to use [App User Authentication](/reference/authentication/app-user-authentication) when submitting data from survey clients.
 5. [**Form Discovery (Listing) API**](https://bitbucket.org/javarosa/javarosa/wiki/FormListAPI), which returns a listing of Forms available for survey clients to download and submit to. At this time, ODK Central is _partially compliant_ with this component: the server will return a correctly formatted `formList` response, but it does not currently handle the optional filter parameters.
@@ -2393,7 +2682,7 @@ ODK Central is _not_ a fully compliant OpenRosa server. OpenRosa requires compli
 In practical usage, ODK survey clients like Collect will interact with Central in three places:
 
 * The OpenRosa Form Listing API, [documented below](/reference/openrosa-endpoints/openrosa-form-listing-api), lists the Forms the client can retrieve.
-* The [Form XML download](/reference/forms-and-submissions/'-individual-form/retrieving-form-xml) endpoint, a part of the standard REST API for Forms, is linked in the Form Listing response and allows clients to then download the ODK XForms XML for each form.
+* The [Form XML download](/reference/forms/individual-form/retrieving-form-xml) endpoint, a part of the standard REST API for Forms, is linked in the Form Listing response and allows clients to then download the ODK XForms XML for each form.
 * The OpenRosa Submission API, [documented below](/reference/openrosa-endpoints/openrosa-form-submission-api), allows survey clients to submit new Submissions to any Form.
 
 The Form Listing and Submission APIs are partitioned by Project, and their URLs are nested under the Project in question as a result. When you List or Submit, you will only be able to get forms from and submit submissions to that particular Project at a time.
@@ -2460,9 +2749,9 @@ If you haven't already, please take a look at the **HTTP Request API** notes abo
 
 ## OpenRosa Form Submission API [POST /v1/projects/{projectId}/submission]
 
-This is the fully standards-compliant implementation of the [OpenRosa Form Submission API](https://bitbucket.org/javarosa/javarosa/wiki/FormSubmissionAPI). We will not attempt to redocument the standard here.
+This is the fully standards-compliant implementation of the [OpenRosa Form Submission API](https://bitbucket.org/javarosa/javarosa/wiki/FormSubmissionAPI). We will not attempt to redocument the submission part of the standard here, but please read further for information about _updating_ submissions with new data.
 
-Some additional things to understand when using this API:
+Some things to understand when using this API for any reason:
 
 * ODK Central will always provide an `X-OpenRosa-Accept-Content-Length` of 100 megabytes. In reality, this number depends on how the server has been deployed. The default Docker-based installation, for example, is limited to 100MB at the nginx layer.
 * The `xml_submission_file` may have a Content Type of either `text/xml` _or_ `application/xml`.
@@ -2470,6 +2759,13 @@ Some additional things to understand when using this API:
 * As stated in the standards document, it is possible to submit multimedia attachments with the `Submission` across multiple `POST` requests to this API. _However_, we impose the additional restriction that the Submission XML (`xml_submission_file`) _may not change_ between requests. If Central sees a Submission with an `instanceId` it already knows about but the XML has changed in any way, it will respond with a `409 Conflict` error and reject the submission.
 * Central will never return a `202` in any response from this API.
 * If you haven't already, please take a look at the **HTTP Request API** notes above on the required OpenRosa headers.
+
+You can use this endpoint to submit _updates_ to an existing submission. To do so, provide additionally a [`deprecatedID` metadata XML node](https://getodk.github.io/xforms-spec/#metadata) with the `instanceID` of the submission you are replacing. Some things to understand when submitting updates:
+
+* The new XML entirely replaces the old XML. No merging will be performed. So your new submission must contain exactly the current data.
+* If the `deprecatedID` you provide has already been deprecated, your request will be rejected with a `409 Conflict` and a useful error message.
+* If the submission you are deprecating had media files uploaded for it, any of those that are still relevant will be carried over to the new version by filename reference. Any files you provide will overwrite these carryovers.
+* Just as with initial submission, you can send multiple requests to this endpoint to submit additional media files if they do not comfortably fit in a single request. Also the same as initial submission, you'll need to provide exactly the same XML to make this happen. For updates, this will need to include the `deprecatedID`.
 
 + Parameters
     + projectId: `7` (number, required) - The numeric ID of the Project
@@ -2594,7 +2890,7 @@ To facilitate testing, there is an alternative collection of OpenRosa endpoints 
 
 Otherwise, and in particular if you plan to test your form in Collect or another OpenRosa-compliant client, you will likely want to use the `/test` Draft Token prefix. It functions similarly to the standard OpenRosa support, with App User authentication, but instead of a `/key` route prefix they feature a `/test` route prefix, and they point directly at each form (example: `/test/lSpA…EjR7/projects/1/forms/myform/draft`).
 
-You can get the appropriate Draft Token for any given draft by [requesting the Draft Form](/reference/forms-and-submissions/'-draft-form/getting-draft-form-details).
+You can get the appropriate Draft Token for any given draft by [requesting the Draft Form](/reference/forms/draft-form/getting-draft-form-details).
 
 The `/test` tokens are not actual App Users, and Central does not keep track of user identity when they are used.
 
@@ -2635,7 +2931,7 @@ Identical to the [non-Draft version](/reference/openrosa-endpoints/openrosa-form
 
 ### OpenRosa Form Submission API [POST /v1/test/{token}/projects/{projectId}/forms/{xmlFormId}/draft/submission]
 
-Identical to the [non-Draft version](/reference/openrosa-endpoints/openrosa-form-listing-api/openrosa-form-submission-api), but will only submit to (and allow submissions to) the Draft Form to be tested.
+Identical to the [non-Draft version](/reference/openrosa-endpoints/openrosa-form-submission-api/openrosa-form-submission-api), but will only submit to (and allow submissions to) the Draft Form to be tested.
 
 + Request (multipart/form-data; boundary=28b9211a964e44a3b327c3c51a0dbd32)
     + Headers
@@ -2700,7 +2996,7 @@ Identical to the [non-Draft version](/reference/openrosa-endpoints/openrosa-form
 
 ### OpenRosa Form Manifest API [GET /v1/test/{token}/projects/{projectId}/forms/{xmlFormId}/draft/manifest]
 
-Identical to the [non-Draft version](/reference/openrosa-endpoints/openrosa-form-listing-api/openrosa-form-manifest-api).
+Identical to the [non-Draft version](/reference/openrosa-endpoints/openrosa-form-manifest-api/openrosa-form-manifest-api).
 
 + Request
     + Headers
@@ -2736,7 +3032,7 @@ Identical to the [non-Draft version](/reference/openrosa-endpoints/openrosa-form
 
 ### Downloading a Form Attachment [GET /v1/test/{token}/projects/{projectId}/forms/{xmlFormId}/attachments/{filename}]
 
-Identical to the [non-Draft version](/https://jubilantgarbanzo.docs.apiary.io/reference/forms-and-submissions/'-individual-form/downloading-a-form-attachment).
+Identical to the [non-Draft version](/reference/forms/individual-form/downloading-a-form-attachment).
 
 + Response 200
     + Headers
@@ -2817,9 +3113,9 @@ If you are writing a tool to analyze your own data, whose schema you already kno
 
 In general, the way we model the XForms schema in OData terms is to represent `group`s as `ComplexType`s, and `repeat`s as `EntityType`s. In the world of OData, the primary difference between these two types is that Entity Types require Primary Keys, while Complex Types do not. This fits well with the way XForms surveys tend to be structured.
 
-Most other types map to `String`. The exceptions are numbers, which map either to `Int64` or `Decimal` as appropriate, datetime fields which are always `DateTimeOffset`, and geography points which will appear as `GeographyPoint`, `GeographyLineString`, or `GeographyPolygon` given a `geopoint`, `geotrace`, or `geoshape`.
+Most other types map to `String`. The exceptions are numbers, which map either to `Int64` or `Decimal` as appropriate, datetime fields which are always `DateTimeOffset`, date fields which become `Date`, and geography points which will appear as `GeographyPoint`, `GeographyLineString`, or `GeographyPolygon` given a `geopoint`, `geotrace`, or `geoshape`.
 
-Due to a limitation in Power BI, we do not take the extra step of advertising the actual relationships between tables (the point at which a `repeat` connects the parent data to the repeated subtable). Normally, this would be done with a `NavigationProperty`. However, while the OData specification allows Navigation Properties to exist on Complex Types, Power BI only allows them on Entity Types, as it makes certain assumptions about how Primary Keys must be structured to relate the two tables together. This is a problem for us, because it is a common idiom in ODK XForms design to place `repeat`s inside of `group`s. When Power BI resolves this issue, we will be able to formally represent the joins between these tables.
+We also advertise the relationships between tables (the point at which a `repeat` connects the parent data to the repeated subtable) using the `NavigationProperty`. This should allow clients to present the data in an interconnected way, without the user having to specify how the tables connect to each other.
 
 This implementation of the OData standard includes a set of Annotations describing the supported features of the service in the form of the [Capabilities Vocabulary](https://github.com/oasis-tcs/odata-vocabularies/blob/master/vocabularies/Org.OData.Capabilities.V1.md). In general, however, you can assume that the server supports the Minimal Conformance level and nothing beyond.
 
@@ -2900,7 +3196,7 @@ The `$top` and `$skip` querystring parameters, specified by OData, apply `limit`
 
 As of ODK Central v1.1, the [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) is partially supported. In OData, you can use `$filter` to filter by any data field in the schema. In ODK Central, the only fields you can reference are `__system/submitterId` and `__system/submissionDate`. These refer to the numeric `actorId` and the timestamp `createdAt` of the submission overall. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported. These supported elements may be combined in any way, but all other `$filter` features will cause an error. Please see the [OData documentation](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) on `$filter` for more information.
 
-If you want to expand all repetitions, you can use `%24expand=&#42;`. This might be helpful if you want to get a full dump of all submissions within a single query.
+As of ODK Central v1.2, you can use `%24expand=&#42;` to expand all repeat repetitions. This is helpful if you'd rather get one nested JSON data payload of all hierarchical data, rather than retrieve each of repeat as a separate flat table with references.
 
 The _nonstandard_ `$wkt` querystring parameter may be set to `true` to request that geospatial data is returned as a [Well-Known Text (WKT) string](https://en.wikipedia.org/wiki/Well-known_text) rather than a GeoJSON structure. This exists primarily to support Tableau, which cannot yet read GeoJSON, but you may find it useful as well depending on your mapping software. **Please note** that both GeoJSON and WKT follow a `(lon, lat, alt)` coördinate ordering rather than the ODK-proprietary `lat lon alt`. This is so that the values map neatly to `(x, y, z)`. GPS accuracy information is not a part of either standards specification, and so is presently omitted from OData output entirely. GeoJSON support may come in a future version.
 
@@ -3252,13 +3548,17 @@ Please see the section notes above about the long-running nature of this endpoin
 
 _(introduced: version 0.6)_
 
+Many actions on ODK Central will automatically log an event to the Server Audit Log. Creating a new Form, for instance, will log a `form.create` event, with information about the Actor who performed the action, and sometimes some additional details specific to the event.
+
+Any time an audit action is logged, the request headers are checked. If `X-Action-Notes` are provided anywhere, those notes will be logged into the audit entries as well. Note that some requests generate multiple audit entries; in these cases, the `note` will be attached to every entry logged.
+
 Server Audit Logs entries are created for the following `action`s:
 
 * `user.create` when a new User is created.
 * `user.update` when User information is updated, like email or password.
+* `user.assignment.create` when a User is assigned to a Server Role.
+* `user.assignment.delete` when a User is unassigned from a Server Role.
 * `user.delete` when a User is deleted.
-* `assignment.create` when an Actor is assigned to a Server Role.
-* `assignment.delete` when an Actor is unassigned from a Server Role.
 * `project.create` when a new Project is created.
 * `project.update` when top-level Project information is updated, like its name.
 * `project.delete` when a Project is deleted.
@@ -3269,7 +3569,19 @@ Server Audit Logs entries are created for the following `action`s:
 * `form.update.publish` when a Draft Form is published to the Form.
 * `form.delete` when a Form is deleted.
 * `form.attachment.update` when a Form Attachment binary is set or cleared.
+* `field_key.create` when a new App User is created.
+* `field_key.assignment.create` when an App User is assigned to a Server Role.
+* `field_key.assignment.delete` when an App User is unassigned from a Server Role.
+* `field_key.session.end` when an App User's access is revoked.
+* `field_key.delete` when an App User is deleted.
+* `public_link.create` when a new Public Link is created.
+* `public_link.assignment.create` when a Public Link is assigned to a Server Role.
+* `public_link.assignment.delete` when a Public Link is unassigned from a Server Role.
+* `public_link.session.end` when a Public Link's access is revoked.
+* `public_link.delete` when a Public Link is deleted.
 * `submission.create` when a new Submission is created.
+* `submission.update` when a Submission's metadata is updated.
+* `submission.update.version` when a Submission XML data is updated.
 * `submission.attachment.update` when a Submission Attachment binary is set or cleared, but _only via the REST API_. Attachments created alongside the submission over the OpenRosa `/submission` API (including submissions from Collect) do not generate audit log entries.
 * `backup` when a backup operation is attempted.
 
@@ -3319,9 +3631,9 @@ The relevant API operations are documented inline above; here we guide you throu
 
 To invoke Project Manage Encryption, you may use the web management interface, or [you may `POST /projects/…/key`](/reference/project-management/projects/enabling-project-managed-encryption).
 
-To list all the encryption keys associated with the submissions on a given form, [you can `GET /projects/…/forms/…/submissions/keys`](/reference/forms-and-submissions/submissions/listing-encryption-keys). This is particularly useful for obtaining the integer numeric ID associated with each key, which will be necessary to decrypt the records, as well as for obtaining reminder hints about each passphrase.
+To list all the encryption keys associated with the submissions on a given form, [you can `GET /projects/…/forms/…/submissions/keys`](/reference/submissions/submissions/listing-encryption-keys). This is particularly useful for obtaining the integer numeric ID associated with each key, which will be necessary to decrypt the records, as well as for obtaining reminder hints about each passphrase.
 
-To perform decryption, [you can `GET` or `POST /projects/…/forms/…/submissions.csv.zip`](/reference/forms-and-submissions/submissions/exporting-form-submissions-to-csv) with extra parameters to provide the necessary passphrases. If you are building a browser-based application, it is recommended that you `POST` rather than `GET`: please see the notes in the linked sections for additional details.
+To perform decryption, [you can `GET` or `POST /projects/…/forms/…/submissions.csv.zip`](/reference/submissions/submissions/exporting-form-submissions-to-csv) with extra parameters to provide the necessary passphrases. If you are building a browser-based application, it is recommended that you `POST` rather than `GET`: please see the notes in the linked sections for additional details.
 
 Note that the OData JSON API does not (presently) decrypt data. Any encrypted submissions will be returned only with basic metadata, like submission date and user.
 
@@ -3374,6 +3686,13 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + actor: (Actor, optional) - The details of the actor given by `actorId`.
 + actee: (object, optional) - The details of the actee given by `acteeId`. Depending on the action type, this could be a number of object types, including an `Actor`, a `Project`, or a `Form`.
 
+## Comment (object)
++ body: `this is my comment` (string, required) - The text of the comment.
++ actorId: `42` (number, required) - The ID of the Actor that made the comment.
+
+## Extended Comment (Comment)
++ actor: (Actor, optional) - The details of the actor given by `actorId`.
+
 ## Error 400 (object)
 + code: `400` (string, required)
 + details (object, optional) - a subobject that contains programmatically readable details about this error
@@ -3422,7 +3741,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + excelContentType: (string, optional) - If the Form was created by uploading an Excel file, this field contains the MIME type of that file.
 
 ## Draft Form (Form)
-+ draftToken: `lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7` (string, required) - The test token to use to submit to this draft form. See [Draft Testing Endpoints](/reference/forms-and-submissions/'-draft-submissions).
++ draftToken: `lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7` (string, required) - The test token to use to submit to this draft form. See [Draft Testing Endpoints](/reference/submissions/draft-submissions).
 + enketoId: `abcdef` (string, optional) - If it exists, this is the survey ID of this draft Form on Enketo at `/-`. Authentication is not needed to access the draft form through Enketo.
 
 ## Extended Form Version (Form)
@@ -3492,8 +3811,10 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 
 ## Submission (object)
 + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the `Submission`, given by the Submission XML.
++ instanceName: `village third house` (string, optional) - The `instanceName`, if any, given by the Submission XML in the metadata section.
 + submitterId: `23` (number, required) - The ID of the `Actor` (`App User` or `User`) that submitted this `Submission`.
 + deviceId: `imei:123456` (string, optional) - The self-identified `deviceId` of the device that collected the data, sent by it upon submission to the server.
++ reviewState: `received` (Submission Review State, optional) - The current review state of the submission.
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format
 
@@ -3503,6 +3824,13 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Submission Attachment (object)
 + name: `myfile.mp3` (string, required) - The name of the file as specified in the Submission XML.
 + exists: `true` (boolean, required) - Whether the server has the file or not.
+
+## Submission Review State (enum)
++ received (string) - The submission has been received by the server. No specific review state has been set.
++ edited (string) - An edited copy of this submission has been received by the server. No specific review state has been set since.
++ hasIssues (string) - Somebody has flagged that this submission has potential problems that need to be addressed.
++ rejected (string) - Somebody has flagged that this submission should be ignored.
++ approved (string) - Somebody has approved this submission.
 
 ## Success (object)
 + success: `true` (boolean, required)
