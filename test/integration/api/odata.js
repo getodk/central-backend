@@ -55,7 +55,16 @@ describe('api: /forms/:id.svc', () => {
   describe('/$metadata GET', () => {
     it('should reject unless the form exists', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/projects/1/forms/nonexistent.svc/$metadata').expect(404))));
+        asAlice.get('/v1/projects/1/forms/nonexistent.svc/$metadata')
+          .expect(404)
+          .then(({ headers, text }) => {
+            headers['content-type'].should.equal('text/xml; charset=utf-8');
+            text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+<error code="404.1">
+  <message>Could not find the resource you were looking for.</message>
+  <details></details>
+</error>`);
+          }))));
 
     it('should reject unless the form is published', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -68,7 +77,16 @@ describe('api: /forms/:id.svc', () => {
 
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.get('/v1/projects/1/forms/simple.svc/$metadata').expect(403))));
+        asChelsea.get('/v1/projects/1/forms/simple.svc/$metadata')
+        .expect(403)
+          .then(({ headers, text }) => {
+            headers['content-type'].should.equal('text/xml; charset=utf-8');
+            text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+<error code="403.1">
+  <message>The authentication you provided does not have rights to perform that action.</message>
+  <details></details>
+</error>`);
+          }))));
 
     it('should return an EDMX metadata document', testService((service) =>
       service.login('alice', (asAlice) =>
