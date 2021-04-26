@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=8"
+    "node": ">=12"
   },
   "dependencies": {
     "@sentry/node": "~5",
@@ -45,7 +45,7 @@
     "eslint": "~6",
     "eslint-config-airbnb-base": "~13",
     "eslint-plugin-import": "~2.18",
-    "mocha": "~7",
+    "mocha": "~8",
     "nock": "~12",
     "nyc": "~15",
     "node-mocks-http": "~1.6",
