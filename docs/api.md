@@ -53,6 +53,7 @@ ODK Central v1.2 adds submission editing, review states, and commenting.
 
 **Changed**:
 
+* Unpublished Forms (Forms that only have a Draft and have never been published) will now appear with full details in `GET /projects/…/forms`. Previously, values like `name` would be `null` for these Forms. You can still identify unpublished Forms as they will have a `publishedAt` value of `null`.
 * Date and Boolean OData types are now given as date and boolean rather than text.
 * Broke Forms and Submissions section apart into two below. This may break some links.
 
@@ -1044,7 +1045,9 @@ It is not yet possible to modify a Form's XML definition once it is created.
 
 ### List all Forms [GET]
 
-Currently, there are no paging or filtering options, so listing `Form`s will get you every Form in the system, every time.
+Currently, there are no paging or filtering options, so listing `Form`s will get you every Form you are allowed to access, every time.
+
+As of version 1.2, Forms that are unpublished (that only carry a draft and have never been published) will appear with full metadata detail. Previously, certain details like `name` were omitted. You can determine that a Form is unpublished by checking the `publishedAt` value: it will be `null` for unpublished forms.
 
 This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that each Form has and the `lastSubmission` most recent submission timestamp, as well as the Actor the Form was `createdBy`.
 
@@ -3731,11 +3734,12 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + projectId: `1` (number, required) - The `id` of the project this form belongs to.
 + xmlFormId: `simple` (string, required) - The `id` of this form as given in its XForms XML definition
 + name: `Simple` (string, optional) - The friendly name of this form. It is given by the `<title>` in the XForms XML definition.
-+ version: `2.1` (string, optional) - The `version` of this form as given in its XForms XML definition. If no `version` was specified in the Form, a blank string will be given. If there is no associated Form, `null` will be returned.
++ version: `2.1` (string, optional) - The `version` of this form as given in its XForms XML definition. If no `version` was specified in the Form, a blank string will be given.
 + enketoId: `abcdef` (string, optional) - If it exists, this is the survey ID of this published Form on Enketo at `/-`. Only a cookie-authenticated user may access the preview through Enketo.
 + hash: `51a93eab3a1974dbffc4c7913fa5a16a` (string, required) - An MD5 sum automatically computed based on the XForms XML definition. This is required for OpenRosa compliance.
 + keyId: `3` (number, optional) - If a public encryption key is present on the form, its numeric ID as tracked by Central is given here.
 + state (Form State, required) - The present lifecycle status of this form. Controls whether it is available for download on survey clients or accepts new submissions.
++ publishedAt: `2018-01-21T00:04:11.153Z` (string, optional) - Indicates when a draft has most recently been published for this Form. If this value is `null`, this Form has never been published yet, and contains only a draft.
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format
 
