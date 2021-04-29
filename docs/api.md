@@ -1864,7 +1864,7 @@ You can use an [OData-style `$filter` query](/reference/odata-endpoints/odata-fo
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
-    + media: `true` (boolean, optional) - Set to false to exclude media attachments from the export.
+    + attachments: `true` (boolean, optional) - Set to false to exclude media attachments from the export.
     + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200
@@ -1892,7 +1892,7 @@ And so, for this `POST` version of the Submission CSV export endpoint, the passp
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
-    + media: `true` (boolean, optional) - Set to false to exclude media attachments from the export.
+    + attachments: `true` (boolean, optional) - Set to false to exclude media attachments from the export.
     + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only the fields `__system/submitterId` and `__system/submissionDate` are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200
