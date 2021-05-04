@@ -48,6 +48,7 @@ ODK Central v1.2 adds submission editing, review states, and commenting.
 * You can now provide `X-Action-Notes` on any API request that might generate audit logs, to leave a note on those log entries.
 * `GET /projects/…/forms/…/submissions/…/audits` will return just audit logs pertaining to that submission.
 * OData queries may now request `?expand=*` to request all nested data structures inline. Only `*` is accepted.
+* There is now a [data download path](/reference/odata-endpoints/odata-form-service/data-download-path) you can direct users to which eases media file access.
 * Submissions now have an `instanceName` field which reflects the `<instanceName/>` tag on the submitted XML.
 * The REST submission endpoint now accepts optional `?deviceID=` just like the OpenRosa submission endpoint.
 
@@ -3253,6 +3254,29 @@ As the vast majority of clients only support the JSON OData format, that is the 
 + Response 501 (application/json)
     + Attributes (Error 501)
 
+### Data Download Path [GET /dl/projects{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments/{filename}]
+
+_(introduced: version 1.2)_
+
+This route is a web browser oriented endpoint intended for user-interactive usage only. It's not part of the Central API, but is documented here as it can be useful.
+
+If you are writing or configuring an OData client and have submission media files to deal with, you can run into authentication problems directly fetching or linking the media file URLs that are provided in the OData feed. This can be due to several reasons: if the user is not logged into the Central administration site (and thus has no valid cookie), if the request comes from a foreign origin (and thus cookies are not sent by the browser), and more.
+
+To help manage this, the frontend provides a `/dl` path that allows file download. Just take a normal attachment download path and replace the `/v1` near the beginning of the path with `/dl`, and the user will be taken to a page managed by the Central administration website that will ensure the user is logged in, and offer the file as a download.
+
+Because this `/dl` path returns a web page that causes a file download rather than directly returning the media file in question, it cannot be used to directly embed or retrieve these files, for example in a `<img>` tag.
+
++ Parameters
+    + projectId: `7` (number, required) - The numeric ID of the Project
+    + `xmlFormId`: `simple` (string, required) - The `xmlFormId` of the `Form` whose OData service you wish to access.
+    + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the Submission being referenced.
+    + filename: `file1.jpg` (string, required) - The name of the file to be retrieved.
+
++ Response 200 (text/html)
+    + Body
+
+            (html markup data)
+
 ## Draft Testing [/v1/projects/{projectId}/forms/{xmlFormId}/draft.svc]
 
 _(introduced: version 0.8)_
@@ -3263,7 +3287,6 @@ They are all identical to the non-Draft OData endpoints, but they will only retu
 
 + Parameters
     + projectId: `7` (number, required) - The numeric ID of the Project
-
     + `xmlFormId`: `simple` (string, required) - The `xmlFormId` of the `Form` whose OData service you wish to access.
 
 ### Service Document [GET]
