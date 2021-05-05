@@ -15,22 +15,22 @@ const { odataFilter } = require(appRoot + '/lib/data/odata-filter');
 
 describe('OData filter query transformer', () => {
   it('should transform binary expressions', () => {
-    odataFilter('3 eq 5').should.eql(sql`(${'3'} = ${'5'})`);
+    odataFilter('3 eq 5').should.eql(sql`(${'3'} is not distinct from ${'5'})`);
     odataFilter('2 lt 3 and 5 gt 4').should.eql(sql`((${'2'} < ${'3'}) and (${'5'} > ${'4'}))`);
-    odataFilter('3 eq __system/submitterId').should.eql(sql`(${'3'} = ${sql.identifier([ 'submissions', 'submitterId' ])})`);
+    odataFilter('3 eq __system/submitterId').should.eql(sql`(${'3'} is not distinct from ${sql.identifier([ 'submissions', 'submitterId' ])})`);
   });
 
   it('should transform not operators', () => {
-    odataFilter('not 4 eq 6').should.eql(sql`(not (${'4'} = ${'6'}))`);
+    odataFilter('not 4 eq 6').should.eql(sql`(not (${'4'} is not distinct from ${'6'}))`);
   });
 
   it('should transform date extraction method calls', () => {
-    odataFilter('2020 eq year(2020-01-01)').should.eql(sql`(${'2020'} = extract(year from ${'2020-01-01'}))`);
-    odataFilter('2020 eq year(__system/submissionDate)').should.eql(sql`(${'2020'} = extract(year from ${sql.identifier([ 'submissions', 'createdAt' ])}))`);
+    odataFilter('2020 eq year(2020-01-01)').should.eql(sql`(${'2020'} is not distinct from extract(year from ${'2020-01-01'}))`);
+    odataFilter('2020 eq year(__system/submissionDate)').should.eql(sql`(${'2020'} is not distinct from extract(year from ${sql.identifier([ 'submissions', 'createdAt' ])}))`);
   });
 
   it('should transform now method calls', () => {
-    odataFilter('2020 eq year(now())').should.eql(sql`(${'2020'} = extract(year from now()))`);
+    odataFilter('2020 eq year(now())').should.eql(sql`(${'2020'} is not distinct from extract(year from now()))`);
   });
 
   it('should reject unparseable expressions', () => {
