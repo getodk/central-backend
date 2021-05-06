@@ -48,6 +48,7 @@ ODK Central v1.2 adds submission editing, review states, and commenting.
 * You can now provide `X-Action-Notes` on any API request that might generate audit logs, to leave a note on those log entries.
 * `GET /projects/…/forms/…/submissions/…/audits` will return just audit logs pertaining to that submission.
 * OData queries may now request `?expand=*` to request all nested data structures inline. Only `*` is accepted.
+* OData `$filter` queries may now reference the new `__system/reviewState` metadata field.
 * There is now a [data download path](/reference/odata-endpoints/odata-form-service/data-download-path) you can direct users to which eases media file access.
 * Submissions now have an `instanceName` field which reflects the `<instanceName/>` tag on the submitted XML.
 * The REST submission endpoint now accepts optional `?deviceID=` just like the OpenRosa submission endpoint.
@@ -3198,7 +3199,15 @@ The data documents are the straightforward JSON representation of each table of 
 
 The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. While paging is possible through these parameters, it will not greatly improve the performance of exporting data. ODK Central prefers to bulk-export all of its data at once if possible.
 
-As of ODK Central v1.1, the [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) is partially supported. In OData, you can use `$filter` to filter by any data field in the schema. In ODK Central, the only fields you can reference are `__system/submitterId` and `__system/submissionDate`. These refer to the numeric `actorId` and the timestamp `createdAt` of the submission overall. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported. These supported elements may be combined in any way, but all other `$filter` features will cause an error.
+As of ODK Central v1.1, the [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) is partially supported. In OData, you can use `$filter` to filter by any data field in the schema. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported. These supported elements may be combined in any way, but all other `$filter` features will cause an error.
+
+The fields you can query against are as follows:
+
+| Submission Metadata  | REST API Name | OData Field Name          |
+| -------------------- | ------------- | ------------------------- |
+| Submitter Actor ID   | `submitterId` | `__system/submitterId`    |
+| Submission Timestamp | `createdAt`   | `__system/submissionDate` |
+| Review State         | `reviewState` | `__system/reviewState`    |
 
 Note that the `submissionDate` has a time component. This means that any comparisons you make need to account for the full time of the submission. It might seem like `$filter=__system/submissionDate le 2020-01-31` would return all results on or before 31 Jan 2020, but in fact only submissions made before midnight of that day would be accepted. To include all of the month of January, you need to filter by either `$filter=__system/submissionDate le 2020-01-31T23:59:59.999` or `$filter=__system/submissionDate lt 2020-02-01`. Remember also that you can [query by a specific timezone](https://en.wikipedia.org/wiki/ISO_8601#Time_offsets_from_UTC).
 
@@ -3858,7 +3867,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + exists: `true` (boolean, required) - Whether the server has the file or not.
 
 ## Submission Review State (enum)
-+ received (string) - The submission has been received by the server. No specific review state has been set.
++ null (string, nullable) - The submission has been received by the server. No specific review state has been set. This is called "received" in the administration panel.
 + edited (string) - An edited copy of this submission has been received by the server. No specific review state has been set since.
 + hasIssues (string) - Somebody has flagged that this submission has potential problems that need to be addressed.
 + rejected (string) - Somebody has flagged that this submission should be ignored.
