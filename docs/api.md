@@ -1072,7 +1072,7 @@ When creating a `Form`, the only required data is the actual XForms XML or XLSFo
 
 As of Version 0.8, Forms will by default be created in Draft state, accessible under `/projects/…/forms/…/draft`. The Form itself will not have a public XML definition, and will not appear for download onto mobile devices. You will need to [publish the form](/reference/forms/draft-form/publishing-a-draft-form) to finalize it for data collection. To disable this behaviour, and force the new Form to be immediately ready, you can pass the querystring option `?publish=true`.
 
-For XLSForm upload, either `.xls` or `.xlsx` are accepted. You must provide the `Content-Type` request header corresponding to the file type: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` for `.xlsx` files, and `application/vnd.ms-excel` for `.xls` files. You must also provide an `X-XlsForm-FormId-Fallback` request header with the `formId` you want the resulting form to have, if the spreadsheet does not already specify. This header field accepts percent-encoded values.
+For XLSForm upload, either `.xls` or `.xlsx` are accepted. You must provide the `Content-Type` request header corresponding to the file type: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` for `.xlsx` files, and `application/vnd.ms-excel` for `.xls` files. You must also provide an `X-XlsForm-FormId-Fallback` request header with the `formId` you want the resulting form to have, if the spreadsheet does not already specify. This header field accepts percent-encoded values to support Unicode characters and other non-ASCII values.
 
 By default, any XLSForm conversion Warnings will fail this request and return the warnings rather than use the converted XML to create a form. To override this behaviour, provide a querystring flag `?ignoreWarnings=true`. Conversion Errors will always fail this request.
 
@@ -1852,6 +1852,10 @@ You can fully delete a link by issuing `DELETE` to its resource. This will remov
 
 These subsections cover only the modern RESTful API resources involving Submissions. For documentation on the OpenRosa submission endpoint (which can be used to submit Submissions), or the OData endpoint (which can be used to retrieve and query submission data), see those sections below.
 
+> Like Forms, Submissions can have versions. Each Form has an overall `xmlFormId` that represents the Form as a whole, and each version has a `version` that identifies that particular version. Often, when fetching data by the `xmlFormId` alone, information from the latest Form version is included in the response.
+
+> Similarly with Submissions, the `instanceId` each Submission is first submitted with will always represent that Submission as a whole. Each version of the Submission, though, has its own `instanceId`. Sometimes, but not very often, when getting information about the Submission by only its overall `instanceId`, information from the latest Submission version is included in the response.
+
 ## Submissions [/v1/projects/{projectId}/forms/{xmlFormId}/submissions]
 
 `Submission`s are available as a subresource under `Form`s. So, for instance, `/v1/projects/1/forms/myForm/submissions` refers only to the Submissions that have been submitted to the Form `myForm`.
@@ -1976,11 +1980,11 @@ You can use this endpoint to submit _updates_ to an existing submission.
 
 The `instanceId` that is submitted with the initial version of the submission is used permanently to reference that submission logically, which is to say the initial submission and all its subsequent versions. Each subsequent version will also provide its own `instanceId`. This `instanceId` becomes that particular version's identifier.
 
-To perform an update, you need to provide in the submission XML an additional [`deprecatedID` metadata node](https://getodk.github.io/xforms-spec/#metadata) with the `instanceID` of the particular submission version you are replacing. If the `deprecatedID` you give is anything other than the identifier of the current version of the submission at the time the server receives it, you will get a `409 Conflict` back.
+To perform an update, you need to provide in the submission XML an additional [`deprecatedID` metadata node](https://getodk.github.io/xforms-spec/#metadata) with the `instanceID` of the particular and current submission version you are replacing. If the `deprecatedID` you give is anything other than the identifier of the current version of the submission at the time the server receives it, you will get a `409 Conflict` back. You can get the current version `instanceID` by getting the [current XML of the submission](/reference/submissions/submissions/retrieving-submission-xml).
 
 The XML data you send will _replace_ the existing data entirely. All of the data must be present in the updated XML.
 
-When you create a new submission version, any uploaded media files attached to the current version that match expected attachment names in the new version will automatically be copied over to the new version. So if you don't make any changes to media files, there is no need to resubmit them.
+When you create a new submission version, any uploaded media files attached to the current version that match expected attachment names in the new version will automatically be copied over to the new version. So if you don't make any changes to media files, there is no need to resubmit them. You can get information about all the submission versions [from the `/versions` subresource](reference/submissions/submission-versions).
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
@@ -2014,7 +2018,7 @@ When you create a new submission version, any uploaded media files attached to t
 
 _(introduced: version 1.2)_
 
-This endpoint redirects the user to an Enketo-powered page that allows the user to interactively edit th e submission. Once the user is satisfied, they can perform the update submission directly through the Enketo interface.
+This endpoint redirects the user to an Enketo-powered page that allows the user to interactively edit the submission. Once the user is satisfied, they can perform the submission update directly through the Enketo interface.
 
 The Enketo instance is already hosted inside of ODK Central. There is no reason to create or use a separate Enketo installation.
 
@@ -3209,7 +3213,7 @@ The fields you can query against are as follows:
 | Submission Timestamp | `createdAt`   | `__system/submissionDate` |
 | Review State         | `reviewState` | `__system/reviewState`    |
 
-Note that the `submissionDate` has a time component. This means that any comparisons you make need to account for the full time of the submission. It might seem like `$filter=__system/submissionDate le 2020-01-31` would return all results on or before 31 Jan 2020, but in fact only submissions made before midnight of that day would be accepted. To include all of the month of January, you need to filter by either `$filter=__system/submissionDate le 2020-01-31T23:59:59.999` or `$filter=__system/submissionDate lt 2020-02-01`. Remember also that you can [query by a specific timezone](https://en.wikipedia.org/wiki/ISO_8601#Time_offsets_from_UTC).
+Note that the `submissionDate` has a time component. This means that any comparisons you make need to account for the full time of the submission. It might seem like `$filter=__system/submissionDate le 2020-01-31` would return all results on or before 31 Jan 2020, but in fact only submissions made before midnight of that day would be accepted. To include all of the month of January, you need to filter by either `$filter=__system/submissionDate le 2020-01-31T23:59:59.999Z` or `$filter=__system/submissionDate lt 2020-02-01`. Remember also that you can [query by a specific timezone](https://en.wikipedia.org/wiki/ISO_8601#Time_offsets_from_UTC).
 
 Please see the [OData documentation](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) on `$filter` [operations](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinFilterOperations) and [functions](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinQueryFunctions) for more information.
 
@@ -3766,8 +3770,8 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + projectId: `1` (number, required) - The `id` of the project this form belongs to.
 + xmlFormId: `simple` (string, required) - The `id` of this form as given in its XForms XML definition
 + name: `Simple` (string, optional) - The friendly name of this form. It is given by the `<title>` in the XForms XML definition.
-+ version: `2.1` (string, optional) - The `version` of this form as given in its XForms XML definition. If no `version` was specified in the Form, a blank string will be given.
-+ enketoId: `abcdef` (string, optional) - If it exists, this is the survey ID of this published Form on Enketo at `/-`. Only a cookie-authenticated user may access the preview through Enketo.
++ version: `2.1` (string, required) - The `version` of this form as given in its XForms XML definition. If no `version` was specified in the Form, a blank string will be given.
++ enketoId: `abcdef` (string, optional) - If it exists, this is the survey ID of this Form on Enketo at `/-`. This will be the ID of the published version if it exists, otherwise it will be the draft ID. Only a cookie-authenticated user may access the preview through Enketo.
 + hash: `51a93eab3a1974dbffc4c7913fa5a16a` (string, required) - An MD5 sum automatically computed based on the XForms XML definition. This is required for OpenRosa compliance.
 + keyId: `3` (number, optional) - If a public encryption key is present on the form, its numeric ID as tracked by Central is given here.
 + state (Form State, required) - The present lifecycle status of this form. Controls whether it is available for download on survey clients or accepts new submissions.
@@ -3855,7 +3859,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + instanceName: `village third house` (string, optional) - The `instanceName`, if any, given by the Submission XML in the metadata section.
 + submitterId: `23` (number, required) - The ID of the `Actor` (`App User`, `User`, or `Public Link`) that submitted this `Submission`.
 + deviceId: `imei:123456` (string, optional) - The self-identified `deviceId` of the device that collected the data, sent by it upon submission to the server.
-+ reviewState: `received` (Submission Review State, optional) - The current review state of the submission.
++ reviewState: `approved` (Submission Review State, optional) - The current review state of the submission.
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format
 
