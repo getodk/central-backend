@@ -24,6 +24,10 @@ describe('OData filter query transformer', () => {
     odataFilter('not 4 eq 6').should.eql(sql`(not (${'4'} is not distinct from ${'6'}))`);
   });
 
+  it('should transform null', () => {
+    odataFilter('1 eq null').should.eql(sql`(${'1'} is not distinct from ${null})`);
+  });
+
   it('should transform date extraction method calls', () => {
     odataFilter('2020 eq year(2020-01-01)').should.eql(sql`(${'2020'} is not distinct from extract(year from ${'2020-01-01'}))`);
     odataFilter('2020 eq year(__system/submissionDate)').should.eql(sql`(${'2020'} is not distinct from extract(year from ${sql.identifier([ 'submissions', 'createdAt' ])}))`);

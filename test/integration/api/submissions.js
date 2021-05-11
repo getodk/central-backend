@@ -1072,6 +1072,23 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/edit')
             .expect(409)))));
 
+    it('should reject if the form is closing', testService((service, { run }) =>
+      run(sql`update forms set "enketoId"='myenketoid'`)
+        .then(() => service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.patch('/v1/projects/1/forms/simple')
+              .send({ state: 'closing' })
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/edit')
+              .expect(409)
+              .then(({ body }) => {
+                body.code.should.equal(409.12);
+                /trying to edit a submission of a Form that is in Closing or Closed/.test(body.message).should.equal(true);
+              }))))));
+
     it('should redirect to the edit_url', testService((service, { run }) =>
       run(sql`update forms set "enketoId"='myenketoid'`)
         .then(() => service.login('alice', (asAlice) =>
@@ -1270,6 +1287,33 @@ describe('api: /forms/:id/submissions', () => {
                 lines[2].endsWith(',one,Alice,30,one,5,Alice,0,0').should.equal(true);
                 done();
               })))))));
+
+    it('should return a review state-filtered zipfile with the relevant data', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.simple.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.patch('/v1/projects/1/forms/simple/submissions/two')
+            .send({ reviewState: 'approved' })
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.simple.three)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => new Promise((done) =>
+            zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?$filter=__system/reviewState eq null'), (result) => {
+              result.filenames.should.eql([ 'simple.csv' ]);
+              const lines = result['simple.csv'].split('\n');
+              lines.length.should.equal(4);
+              lines[1].endsWith(',three,Chelsea,38,three,5,Alice,0,0').should.equal(true);
+              lines[2].endsWith(',one,Alice,30,one,5,Alice,0,0').should.equal(true);
+              done();
+            }))))));
 
     it('should return a submissionDate-filtered zipfile with the relevant data', testService((service, { run }) =>
       service.login('alice', (asAlice) =>
@@ -1540,6 +1584,44 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
 
                 done();
               })))))));
+
+    it('should return consolidated client audit log filtered by review state', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.patch('/v1/projects/1/forms/audits/submissions/one')
+            .send({ reviewState: 'approved' })
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => new Promise((done) =>
+            zipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip?$filter=__system/reviewState eq \'approved\''), (result) => {
+              result.filenames.should.containDeep([
+                'audits.csv',
+                'media/audit.csv',
+                'audits - audit.csv'
+              ]);
+
+              result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
+one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
+one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
+one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,
+one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
+`);
+
+              done();
+            }))))));
 
     it('should return the latest attached audit log after openrosa replace', testService((service) =>
       service.login('alice', (asAlice) =>

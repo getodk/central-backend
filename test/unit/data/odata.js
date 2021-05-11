@@ -376,6 +376,34 @@ describe('submissionToOData', () => {
     });
   });
 
+  it('should output geojson geoshape values with a space after the ; separator', () => { // gh300
+    const fields = [
+      new MockField({ path: '/polygon', name: 'polygon', type: 'geoshape' }),
+      new MockField({ path: '/polygonNoAlt', name: 'polygonNoAlt', type: 'geoshape' })
+    ];
+    const submission = mockSubmission('geojson', `<data>
+        <polygon>1.1 2.2 3.3 4.4; 5.5 6.6 7.7 8.8; 10.0 20.0 30.0 40.0;1.1 2.2 3.3 4.4;</polygon>
+        <polygonNoAlt>11.1 22.2; 33.3 44.4;55.5 66.6; 11.1 22.2; </polygonNoAlt>
+      </data>`);
+    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+      result.should.eql([{
+        __id: 'geojson',
+        __system,
+        polygon: {
+          type: 'Polygon',
+          coordinates: [ [ [ 2.2, 1.1, 3.3 ], [ 6.6, 5.5, 7.7 ], [ 20.0, 10.0, 30.0 ], [ 2.2, 1.1, 3.3 ] ] ],
+          properties: {
+            accuracies: [ 4.4, 8.8, 40.0, 4.4 ]
+          }
+        },
+        polygonNoAlt: {
+          type: 'Polygon',
+          coordinates: [ [ [ 22.2, 11.1 ], [ 44.4, 33.3 ], [ 66.6, 55.5 ], [ 22.2, 11.1 ] ] ]
+        }
+      }]);
+    });
+  });
+
   it('should format polygon values as WKT if requested', () => {
     const fields = [
       new MockField({ path: '/polygon', name: 'polygon', type: 'geoshape' }),
