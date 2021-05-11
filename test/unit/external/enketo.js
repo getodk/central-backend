@@ -140,6 +140,25 @@ describe('external/enketo', () => {
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
       ).then((url) => { url.should.equal('https://securehost/::editedit'); });
     });
+
+    it('should return a custom message if Enketo says it is too soon', () => {
+      enketoNock
+        .post('/enketoPath/api/v2/instance')
+        .reply(405, { code: 405, message: 'Not allowed. Record is already being edited' });
+
+      return enketo.edit(
+        openRosaUrl,
+        'http://openRosaHost:5678',
+        { projectId: 1, xmlFormId: 'wellPumps' },
+        'logical',
+        { xml: '<data/>', instanceId: 'instance' },
+        [],
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+      ).should.be.rejected().then((err) => {
+        err.problemCode.should.equal(409.13);
+        /wait one minute/.test(err.message).should.equal(true);
+      });
+    });
   });
 });
 
