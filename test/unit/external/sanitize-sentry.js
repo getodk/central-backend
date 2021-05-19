@@ -58,7 +58,7 @@ const cases = [
     },
     {
       cookies: null,
-      data: '{}',
+      data: null,
       headers: {
         host: 'localhost:8383',
         'user-agent': 'HTTPie/2.4.0',
@@ -151,7 +151,7 @@ const cases = [
     },
     {
       cookies: null,
-      data: '{}',
+      data: null,
       headers: {
         host: 'localhost:8383',
         'user-agent': 'HTTPie/2.4.0',
@@ -187,7 +187,7 @@ const cases = [
     },
     {
       cookies: null,
-      data: '{}',
+      data: null,
       headers: {
         host: 'localhost:8383',
         'user-agent': 'HTTPie/2.4.0',
@@ -201,23 +201,154 @@ const cases = [
       query_string: null,
       url: 'http://localhost/v1/key/[FILTERED]/projects/3/formList'
     }
+  ],
+  // URL with useful query parameters to preserve
+  [
+    {
+      cookies: {
+        csrftoken: 'j0,,U5',
+        __enketo_meta_deviceid: 's..hAE',
+        __csrf: 'tdg...12lwQ',
+        session: 'RPPE..dUz'
+      },
+      data: '{}',
+      headers: {
+        'x-forwarded-proto': 'https',
+        host: 'localhost:8383',
+        connection: 'close',
+        'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="90", "Google Chrome";v="90"',
+        accept: 'application/json, text/plain, */*',
+        authorization: 'Bearer RPPEyOgimjSQY7rQfFDCcFLaySdCMRJflCunYoKoXpvh5JLB5nvrm4lju$QfSdUz',
+        'sec-ch-ua-mobile': '?0',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36',
+        'sec-fetch-site': 'same-origin',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-dest': 'empty',
+        referer: 'http://localhost:8989/',
+        'accept-encoding': 'gzip, deflate, br',
+        'accept-language': 'en-US,en;q=0.9',
+        cookie: 'csrftoken=j0j32..6LEzgQU5; __enketo_meta_deviceid=s%3Alo...ucHhAE; __csrf=tdgs7t0..12lwQ; session=RPP..dUz'
+      },
+      method: 'GET',
+      query_string: '%24top=250&%24skip=0&%24count=true&%24wkt=true&%24filter=__system%2FsubmitterId+eq+48+and+__system%2FreviewState+eq+null',
+      url: 'http://localhost/v1/projects/3/forms/odata-fake-planets.svc/Submissions?%24top=250&%24skip=0&%24count=true&%24wkt=true&%24filter=__system%2FsubmitterId+eq+48+and+__system%2FreviewState+eq+null'
+    }
+    ,
+    {
+      cookies: null,
+      data: null,
+      headers: {
+        'x-forwarded-proto': 'https',
+        host: 'localhost:8383',
+        connection: 'close',
+        'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="90", "Google Chrome";v="90"',
+        accept: 'application/json, text/plain, */*',
+        authorization: null,
+        'sec-ch-ua-mobile': '?0',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36',
+        'sec-fetch-site': 'same-origin',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-dest': 'empty',
+        referer: 'http://localhost:8989/',
+        'accept-encoding': 'gzip, deflate, br',
+        'accept-language': 'en-US,en;q=0.9',
+        cookie: 'csrftoken, __enketo_meta_deviceid, __csrf, session'
+      },
+      method: 'GET',
+      query_string: '%24top=250&%24skip=0&%24count=true&%24wkt=true&%24filter=__system%2FsubmitterId+eq+48+and+__system%2FreviewState+eq+null',
+      url: 'http://localhost/v1/projects/3/forms/odata-fake-planets.svc/Submissions?%24top=250&%24skip=0&%24count=true&%24wkt=true&%24filter=__system%2FsubmitterId+eq+48+and+__system%2FreviewState+eq+null'
+    }
+  ],
+  // Example of Enketo submission
+  [
+    {
+      cookies: {
+        csrftoken: 'j..5',
+        __enketo_meta_deviceid: 's..AE',
+        __csrf: 't..Q',
+        session: 'RP..Uz'
+      },
+      data: '{"__csrf":"td..wQ"}',
+      headers: {
+        'x-forwarded-proto': 'https',
+        host: 'localhost:8383',
+        connection: 'close',
+        'content-length': '619',
+        date: 'Wed, 19 May 2021 21:59:37 GMT',
+        'cache-control': 'max-age=0',
+        'x-openrosa-version': '1.0',
+        'content-type': 'multipart/form-data; boundary=----WebKitFormBoundaryL2oytYPxI0mUpe2B',
+        'sec-ch-ua-mobile': '?0',
+        'x-openrosa-instance-id': 'uuid:acc694d9-63af-4893-9d19-6877c3f39fa1',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36',
+        'x-openrosa-deprecated-id': '',
+        'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="90", "Google Chrome";v="90"',
+        accept: '*/*',
+        origin: 'http://localhost:8989',
+        'sec-fetch-site': 'same-origin',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-dest': 'empty',
+        referer: 'http://localhost:8989/-/XoecwziQ',
+        'accept-encoding': 'gzip, deflate, br',
+        'accept-language': 'en-US,en;q=0.9',
+        cookie: 'csrftoken=j0j3..QU5; __enketo_meta_deviceid=s%3Aloc..AE; __csrf=tdg..lwQ; session=RP..SdUz'
+      },
+      method: 'POST',
+      query_string: null,
+      url: 'http://localhost/v1/projects/5/submission'
+    }
+    ,
+    {
+      cookies: null,
+      data: null,
+      headers: {
+        'x-forwarded-proto': 'https',
+        host: 'localhost:8383',
+        connection: 'close',
+        'content-length': '619',
+        date: 'Wed, 19 May 2021 21:59:37 GMT',
+        'cache-control': 'max-age=0',
+        'x-openrosa-version': '1.0',
+        'content-type': 'multipart/form-data; boundary=----WebKitFormBoundaryL2oytYPxI0mUpe2B',
+        'sec-ch-ua-mobile': '?0',
+        'x-openrosa-instance-id': 'uuid:acc694d9-63af-4893-9d19-6877c3f39fa1',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36',
+        'x-openrosa-deprecated-id': '',
+        'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="90", "Google Chrome";v="90"',
+        accept: '*/*',
+        origin: 'http://localhost:8989',
+        'sec-fetch-site': 'same-origin',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-dest': 'empty',
+        referer: 'http://localhost:8989/-/XoecwziQ',
+        'accept-encoding': 'gzip, deflate, br',
+        'accept-language': 'en-US,en;q=0.9',
+        cookie: 'csrftoken, __enketo_meta_deviceid, __csrf, session'
+      },
+      method: 'POST',
+      query_string: null,
+      url: 'http://localhost/v1/projects/5/submission'
+    }
   ]
 ];
 
-const sensitiveUrls = [
-  '/v1/config/backups/initiate',
-  '/v1/backup',
-  '/v1/sessions',
-  '/v1/sessions/some-token', // DELETE
-  '/v1/users',
-  '/v1/users/123',
-  '/v1/users/reset/initiate',
-  '/v1/users/reset/verify',
-  '/v1/users/123/password'
+// sensitive endpoints where querystrings need to be removed
+const sensitiveEndpoints = [
+  ['GET', '/v1/users?q=personal_name'],
+  ['GET', '/v1/projects/6/forms/formid/submissions.csv?keyid=pass'],
+  ['GET', '/v1/projects/6/forms/formid/submissions.csv.zip?keyid=pass'],
+  ['GET', '/v1/projects/6/forms/formid/draft/submissions.csv?keyid=pass'],
+  ['GET', '/v1/projects/6/forms/formid/draft/submissions.csv.zip?keyid=pass'],
 ];
 
-const nonSensitiveUrls = [
-  '/v1/key/8s_key_7i/projects/3/formList'
+// non-sensitive endpoints to send along useful querystrings
+const nonSensitiveEndpoints = [
+  ['GET', '/v1/users/reset/initiate?invalidate=true'],
+  ['POST', '/v1/projects/6/forms/formid/submissions.csv?attachments=false'],
+  ['POST', '/v1/projects/6/forms/formid/submissions.csv.zip?attachments=false'],
+  ['POST', '/v1/projects/6/forms/formid/draft/submissions.csv?attachments=false'],
+  ['POST', '/v1/projects/6/forms/formid/draft/submissions.csv.zip?attachments=false'],
+  ['POST', '/v1/projects/6/forms/formid/submissions.csv?attachments=false'],
 ];
 
 const filteredTokenUrls = [
@@ -234,14 +365,14 @@ describe('external: sanitize-sentry', () => {
   });
 
   it('identifies sensitive URLs ', () => {
-    for (const url of sensitiveUrls) {
-      isSensitiveEndpoint(url).should.equal(true);
+    for (const [method, url] of sensitiveEndpoints) {
+      isSensitiveEndpoint({url, method}).should.equal(true);
     }
   });
 
   it('identifies non-sensitive URLs ', () => {
-    for (const url of nonSensitiveUrls) {
-      isSensitiveEndpoint(url).should.equal(false);
+    for (const [method, url] of nonSensitiveEndpoints) {
+      isSensitiveEndpoint({url, method}).should.equal(false);
     }
   });
 
