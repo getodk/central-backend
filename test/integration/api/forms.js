@@ -420,7 +420,34 @@ describe('api: /projects/:id/forms', () => {
             body.hash.should.equal('07ed8a51cc3f6472b7dfdc14c2005861');
           }))));
 
-    it('should reject if form id is too long', testService((service) =>
+    it('should reject if form id ends in .xml', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple.replace(/id=".*"/i, 'id="formid.xml"'))
+          .set('Content-Type', 'application/xml')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.8);
+          }))));
+
+    it('should reject if form id ends in .xls(x)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple.replace(/id=".*"/i, 'id="formid.xls"'))
+          .set('Content-Type', 'application/xml')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.8);
+          })
+          .then(asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simple.replace(/id=".*"/i, 'id="formid.xlsx"'))
+            .set('Content-Type', 'application/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.equal(400.8);
+            })))));
+
+    it('should reject if form id contains is too long', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.simple.replace(/id=".*"/i, 'id="simple_form_with_form_id_length_more_than_sixty_four_characters_long"'))
