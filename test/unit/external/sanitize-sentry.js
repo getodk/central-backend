@@ -348,7 +348,6 @@ const nonSensitiveEndpoints = [
   ['POST', '/v1/projects/6/forms/formid/submissions.csv.zip?attachments=false'],
   ['POST', '/v1/projects/6/forms/formid/draft/submissions.csv?attachments=false'],
   ['POST', '/v1/projects/6/forms/formid/draft/submissions.csv.zip?attachments=false'],
-  ['POST', '/v1/projects/6/forms/formid/submissions.csv?attachments=false'],
 ];
 
 const filteredTokenUrls = [
