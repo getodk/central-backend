@@ -2446,6 +2446,45 @@ It is important to note that this endpoint returns whatever is _currently_ uploa
 + Response 403 (application/json)
     + Attributes (Error 403)
 
+### Getting changes between Versions [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/diffs
+
+This returns the changes, or edits, between different versions of a Submission. These changes are returned in an object that is indexed by the `instanceId` that uniquely identifies that version. Between two submissions, there is an array of objects representing how each field changed. This change object contains the old and new values, as well as the path of that changed node in the Submission XML. These changes reflect the updated `instanceID` and `deprecatedID` fields as well as the edited value.
+
++ Response 200
+		+ Attributes (array[array[Submission Diff Value]])
+
+    + Body
+
+			{
+			  "two": [
+			    {
+			      "new": "Donna",
+			      "old": "Dana",
+			      "path": ["name"]
+			    },
+			    {
+			      "new": "55",
+			      "old": "44",
+			      "path": ["age"]
+			    },
+			    {
+			      "new": "two",
+			      "old": "one",
+			      "path": ["meta", "instanceID"]
+			    },
+			    {
+			      "new": "one",
+			      "old": null,
+			      "path": ["meta", "deprecatedID"]
+			      ]
+			    }
+			  ]
+			}
+
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
 ## Draft Submissions [/v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions]
 
 All [Draft Forms](/reference/forms/draft-form) feature a `/submissions` subresource (`/draft/submissions`), which is identical to the same subresource on the form itself. These submissions exist only as long as the Draft Form does: they are removed if the Draft Form is published, and they are abandoned if the Draft Form is deleted or overwritten.
@@ -3876,6 +3915,11 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + hasIssues (string) - Somebody has flagged that this submission has potential problems that need to be addressed.
 + rejected (string) - Somebody has flagged that this submission should be ignored.
 + approved (string) - Somebody has approved this submission.
+
+## Submission Diff Value (object)
++ new (string, nullable) - The new value of this node, which can either be a simple string, or JSON string representing a larger structural change to the Submission XML. It can also be null if this field no longer exists in the Submission.
++ old (string, nullable) - The old value of this node, with similar properties to `new`. It can be null if this field did not exist previously.
++ path (array) - An array representing the path (XPath) in the Submission tree for this node. It does not include the outermost path `data`. For elements that are part of repeat groups, the path element is the node name and the index (starting at 0), e.g. ['child', 2] is the third child.
 
 ## Success (object)
 + success: `true` (boolean, required)

@@ -2843,6 +2843,56 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           ])))));
   });
 
+  describe('[version] /:rootId/diffs GET', () => {
+    it('should return notfound if the root does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/simple/submissions/one/diffs').expect(404))));
+
+    it('should reject if the user cannot read', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => service.login('chelsea', (asChelsea) =>
+            asChelsea.get('/v1/projects/1/forms/simple/submissions/one/diffs').expect(403))))));
+
+    it('should return diffs between different submission versions', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.put('/v1/projects/1/forms/simple/submissions/one')
+            .send(withSimpleIds('one', 'two').replace('<name>Alice</name>','<name>Angela</name>'))
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/diffs')
+            .expect(200)
+            .then(({ body }) => {
+              const expected = {
+                'two': [
+                  {
+                    "new": "two",
+                    "old": "one",
+                    "path": [ "meta", "instanceID" ]
+                  },
+                  {
+                    "new": "one",
+                    "old": null,
+                    "path": [ "meta", "deprecatedID" ]
+                  },
+                  {
+                    "new": "Angela",
+                    "old": "Alice",
+                    "path": [ "name" ]
+                  }
+                ]
+              };
+              body.should.eql(expected);
+            })))));
+  });
+
   describe('[draft] /:instanceId/attachments GET', () => {
     it('should return draft attachments', testService((service) =>
       service.login('alice', (asAlice) =>
