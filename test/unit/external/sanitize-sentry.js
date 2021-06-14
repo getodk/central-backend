@@ -120,7 +120,7 @@ const cases = [
         'sec-fetch-mode': 'navigate',
         'sec-fetch-user': '?1',
         'sec-fetch-dest': 'document',
-        referer: 'http://localhost:8989/',
+        referer: null,
         'accept-encoding': 'gzip, deflate, br',
         'accept-language': 'en-US,en;q=0.9',
         cookie: 'csrftoken, __enketo_meta_deviceid, __csrf, session'
@@ -249,7 +249,7 @@ const cases = [
         'sec-fetch-site': 'same-origin',
         'sec-fetch-mode': 'cors',
         'sec-fetch-dest': 'empty',
-        referer: 'http://localhost:8989/',
+        referer: null,
         'accept-encoding': 'gzip, deflate, br',
         'accept-language': 'en-US,en;q=0.9',
         cookie: 'csrftoken, __enketo_meta_deviceid, __csrf, session'
@@ -320,7 +320,7 @@ const cases = [
         'sec-fetch-site': 'same-origin',
         'sec-fetch-mode': 'cors',
         'sec-fetch-dest': 'empty',
-        referer: 'http://localhost:8989/-/XoecwziQ',
+        referer:  null,
         'accept-encoding': 'gzip, deflate, br',
         'accept-language': 'en-US,en;q=0.9',
         cookie: 'csrftoken, __enketo_meta_deviceid, __csrf, session'
@@ -328,6 +328,150 @@ const cases = [
       method: 'POST',
       query_string: null,
       url: 'http://localhost/v1/projects/5/submission'
+    }
+  ],
+  // Example of Enketo public access link (showing form)
+  [
+    {
+      cookies: {
+        __enketo_meta_deviceid: 's:localhost:ZzE...hFp4',
+        _csrf: 'W...Ua'
+      },
+      data: '{}',
+      headers: {
+        'x-forwarded-proto': 'https',
+        host: 'localhost:8383',
+        connection: 'close',
+        'content-length': '0',
+        cookie: '__enketo_meta_deviceid=s%3Aloc..p4; _csrf=W_..Ua',
+        'x-openrosa-version': '1.0',
+        date: 'Mon, 14 Jun 2021 18:47:25 GMT'
+      },
+      method: 'HEAD',
+      query_string: 'formID=simple-name-age&st=Cpl...62M0d',
+      url: 'http://localhost/v1/projects/5/formList?formID=simple-name-age&st=Cpl..M0d'
+    },
+    {
+      cookies: null,
+      data: null,
+      headers: {
+        'x-forwarded-proto': 'https',
+        host: 'localhost:8383',
+        connection: 'close',
+        'content-length': '0',
+        cookie: '__enketo_meta_deviceid, _csrf',
+        'x-openrosa-version': '1.0',
+        date: 'Mon, 14 Jun 2021 18:47:25 GMT'
+      },
+      method: 'HEAD',
+      query_string: null,
+      url: 'http://localhost/v1/projects/5/formList'
+    }
+  ],
+  // Example of Enketo public access link (submitting form)
+  [
+    {
+      cookies: {
+        __enketo_meta_deviceid: 's:localhost:Zz...p4',
+        _csrf: 'W_..Ua'
+      },
+      data: '{}',
+      headers: {
+        'x-forwarded-proto': 'https',
+        host: 'localhost:8383',
+        connection: 'close',
+        'content-length': '460',
+        date: 'Mon, 14 Jun 2021 19:05:52 GMT',
+        'cache-control': 'max-age=0',
+        'x-openrosa-version': '1.0',
+        'content-type': 'multipart/form-data; boundary=----WebKitFormBoundaryAhdIGqG3gmVb17IB',
+        'sec-ch-ua-mobile': '?0',
+        'x-openrosa-instance-id': 'uuid:4c1129d2-cf06-4cda-bde9-645340368dea',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36',
+        'x-openrosa-deprecated-id': '',
+        'sec-ch-ua': '" Not;A Brand";v="99", "Google Chrome";v="91", "Chromium";v="91"',
+        accept: '*/*',
+        origin: 'http://localhost:8989',
+        'sec-fetch-site': 'same-origin',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-dest': 'empty',
+        referer: 'http://localhost:8989/-/single/Xo..iQ?st=Cp...d',
+        'accept-encoding': 'gzip, deflate, br',
+        'accept-language': 'en-US,en;q=0.9',
+        cookie: '__enketo_meta_deviceid=s%3Alocalhost%3AZzEustWflva1byvA.R..p4; _csrf=W_..a'
+      },
+      method: 'POST',
+      query_string: 'st=Cpl...M0d',
+      url: 'http://localhost/v1/projects/5/submission?st=Cpl...M0d'
+    },
+    {
+      cookies: null,
+      data: null,
+      headers: {
+        'x-forwarded-proto': 'https',
+        host: 'localhost:8383',
+        connection: 'close',
+        'content-length': '460',
+        date: 'Mon, 14 Jun 2021 19:05:52 GMT',
+        'cache-control': 'max-age=0',
+        'x-openrosa-version': '1.0',
+        'content-type': 'multipart/form-data; boundary=----WebKitFormBoundaryAhdIGqG3gmVb17IB',
+        'sec-ch-ua-mobile': '?0',
+        'x-openrosa-instance-id': 'uuid:4c1129d2-cf06-4cda-bde9-645340368dea',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36',
+        'x-openrosa-deprecated-id': '',
+        'sec-ch-ua': '" Not;A Brand";v="99", "Google Chrome";v="91", "Chromium";v="91"',
+        accept: '*/*',
+        origin: 'http://localhost:8989',
+        'sec-fetch-site': 'same-origin',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-dest': 'empty',
+        referer: null,
+        'accept-encoding': 'gzip, deflate, br',
+        'accept-language': 'en-US,en;q=0.9',
+        cookie: '__enketo_meta_deviceid, _csrf'
+      },
+      method: 'POST',
+      query_string: null,
+      url: 'http://localhost/v1/projects/5/submission'
+    }
+  ],
+  // Example of Enketo public access link (both key and ?st token in query string)
+  [
+    {
+      cookies: {
+        __enketo_meta_deviceid: 's:localhost:Zz..4',
+        _csrf: 'W..Ua'
+      },
+      data: '{}',
+      headers: {
+        'x-forwarded-proto': 'https',
+        host: 'localhost:8383',
+        connection: 'close',
+        'content-length': '0',
+        cookie: '__enketo_meta_deviceid=s%3Alocalhost%3AZz..Fp4; _csrf=W..Ua',
+        'x-openrosa-version': '1.0',
+        date: 'Mon, 14 Jun 2021 19:08:30 GMT'
+      },
+      method: 'HEAD',
+      query_string: 'formID=simple-name-age&st=CplI..0d',
+      url: 'http://localhost/v1/key/Cpl.0d/projects/5/formList?formID=simple-name-age&st=Cpl...M0d'
+    },
+    {
+      cookies: null,
+      data: null,
+      headers: {
+        'x-forwarded-proto': 'https',
+        host: 'localhost:8383',
+        connection: 'close',
+        'content-length': '0',
+        cookie: '__enketo_meta_deviceid, _csrf',
+        'x-openrosa-version': '1.0',
+        date: 'Mon, 14 Jun 2021 19:08:30 GMT'
+      },
+      method: 'HEAD',
+      query_string: null,
+      url: 'http://localhost/v1/key/[FILTERED]/projects/5/formList'
     }
   ]
 ];
@@ -339,6 +483,8 @@ const sensitiveEndpoints = [
   ['GET', '/v1/projects/6/forms/formid/submissions.csv.zip?keyid=pass'],
   ['GET', '/v1/projects/6/forms/formid/draft/submissions.csv?keyid=pass'],
   ['GET', '/v1/projects/6/forms/formid/draft/submissions.csv.zip?keyid=pass'],
+  ['HEAD', '/v1/projects/6/formList?formID=my_form_id&st=enketo_token'],
+  ['POST', '/v1/projects/6/submission?st=enketo_token']
 ];
 
 // non-sensitive endpoints to send along useful querystrings
@@ -354,6 +500,7 @@ const filteredTokenUrls = [
   ['/v1/key/APP_USER_KEY/projects/3/formList', '/v1/key/[FILTERED]/projects/3/formList'],
   ['/v1/test/DRAFT_TOKEN/projects/3/forms/draft/submission', '/v1/test/[FILTERED]/projects/3/forms/draft/submission'],
   ['/v1/projects/2/forms/test/attachments', '/v1/projects/2/forms/test/attachments'], // the form ID is 'test' but doesn't get filtered
+  ['/v1/key/PUBLIC_ACCESS_KEY/projects/5/formList?formID=form_id&st=PUBLIC_ACCESS_KEY', '/v1/key/[FILTERED]/projects/5/formList?formID=form_id&st=PUBLIC_ACCESS_KEY'] // query string removal is not in the filtering step
 ]
 
 describe('external: sanitize-sentry', () => {
