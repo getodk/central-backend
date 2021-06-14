@@ -473,6 +473,45 @@ const cases = [
       query_string: null,
       url: 'http://localhost/v1/key/[FILTERED]/projects/5/formList'
     }
+  ],
+  // Example of X-Action-Notes header being removed
+  [
+    {
+      cookies: {},
+      data: '{"displayName":"Test Display Name"}',
+      headers: {
+        host: 'localhost:8383',
+        'user-agent': 'HTTPie/2.4.0',
+        'accept-encoding': 'gzip, deflate',
+        accept: 'application/json, */*;q=0.5',
+        connection: 'keep-alive',
+        'content-type': 'application/json',
+        'x-action-notes': 'some test note',
+        authorization: 'Bearer Ojz....1I',
+        'content-length': '36'
+      },
+      method: 'POST',
+      query_string: null,
+      url: 'http://localhost/v1/projects/3/forms/simple-form/public-links'
+    },
+    {
+      cookies: null,
+      data: null,
+      headers: {
+        host: 'localhost:8383',
+        'user-agent': 'HTTPie/2.4.0',
+        'accept-encoding': 'gzip, deflate',
+        accept: 'application/json, */*;q=0.5',
+        connection: 'keep-alive',
+        'content-type': 'application/json',
+        'x-action-notes': null,
+        authorization: null,
+        'content-length': '36'
+      },
+      method: 'POST',
+      query_string: null,
+      url: 'http://localhost/v1/projects/3/forms/simple-form/public-links'
+    }
   ]
 ];
 
