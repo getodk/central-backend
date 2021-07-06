@@ -216,7 +216,7 @@ should.Assertion.add('Audit', function() {
   Object.keys(this.obj).should.containDeep([ 'actorId', 'action', 'acteeId', 'details', 'loggedAt' ]);
   this.obj.actorId.should.be.a.Number();
   this.obj.action.should.be.a.String();
-  this.obj.acteeId.should.be.a.uuid();
+  if (this.obj.acteeId != null) this.obj.acteeId.should.be.a.uuid();
   this.obj.loggedAt.should.be.an.isoDate();
 
   should.not.exist(this.obj.claimed);
