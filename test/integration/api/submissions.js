@@ -1731,6 +1731,20 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                   done();
                 })))))));
     });
+
+    it('should log the action in the audit log', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip')
+          .expect(200)
+          .then(() => asAlice.get('/v1/audits?action=form.submission.export')
+            .set('X-Extended-Metadata', 'true')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].actorId.should.equal(5);
+              body[0].actee.xmlFormId.should.equal('simple');
+              should.not.exist(body[0].details);
+            })))));
   });
 
   describe('.csv GET', () => {
@@ -1797,6 +1811,20 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               rows[1].slice(24).should.equal(',rthree,Chelsea,38,,,rthree,5,Alice,0,0');
               rows[2].slice(24).should.equal(',rtwo,Bob,34,,,rtwo,5,Alice,0,0');
               rows[3].slice(24).should.equal(',rone,Alice,30,,,rone,5,Alice,0,0');
+            })))));
+
+    it('should log the action in the audit log', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/simple/submissions.csv')
+          .expect(200)
+          .then(() => asAlice.get('/v1/audits?action=form.submission.export')
+            .set('X-Extended-Metadata', 'true')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].actorId.should.equal(5);
+              body[0].actee.xmlFormId.should.equal('simple');
+              should.not.exist(body[0].details);
             })))));
   });
 
@@ -1908,6 +1936,18 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits\n');
                 done();
               })))))));
+
+    it('should not log the action in the audit log', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip')
+            .expect(200))
+          .then(() => asAlice.get('/v1/audits?action=form.submission.export')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(0);
+            })))));
   });
 
   describe('GET', () => {
