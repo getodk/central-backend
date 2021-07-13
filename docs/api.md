@@ -750,7 +750,7 @@ The Projects listing endpoint is somewhat unique in that it is freely accessible
 
 Currently, there are no paging or filtering options, so listing `Project`s will get you every Project you have access to.
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `appUsers` count of App Users and `forms` count of Forms within the Project, as well as the `lastSubmission` timestamp of the latest submission to any for in the project, if any.
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `appUsers` count of App Users and `forms` count of Forms within the Project, as well as the `lastSubmission` timestamp of the latest submission to any form in the project, if any. The response will also include the `lastSubmissionUpdate` timestamp, indicating when a submission to any form in the project was last modified.
 
 + Response 200 (application/json)
     This is the standard response, if Extended Metadata is not requested:
@@ -784,7 +784,7 @@ To create a Project, the only information you must supply (via POST body) is the
 
 To get just the details of a single Project, `GET` its single resource route by its numeric ID.
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `appUsers` count of App Users and `forms` count of forms within the Project, as well as the `lastSubmission` timestamp of the latest submission to any for in the project, if any.
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `appUsers` count of App Users and `forms` count of forms within the Project, as well as the `lastSubmission` timestamp of the latest submission to any form in the project, if any. The response will also include the `lastSubmissionUpdate` timestamp, indicating when a submission to any form in the project was last modified.
 
 In addition, the extended metadata version of this endpoint (but not the overall Project listing) returns an array of the `verbs` the authenticated Actor is able to perform on/within the Project.
 
@@ -1070,7 +1070,7 @@ Currently, there are no paging or filtering options, so listing `Form`s will get
 
 As of version 1.2, Forms that are unpublished (that only carry a draft and have never been published) will appear with full metadata detail. Previously, certain details like `name` were omitted. You can determine that a Form is unpublished by checking the `publishedAt` value: it will be `null` for unpublished forms.
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that each Form has and the `lastSubmission` most recent submission timestamp, as well as the Actor the Form was `createdBy`.
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that each Form has and the `lastSubmission` most recent submission timestamp, as well as the Actor the Form was `createdBy`. The response will also include the `lastSubmissionUpdate` timestamp, indicating when a submission was last modified.
 
 + Response 200 (application/json)
     This is the standard response, if Extended Metadata is not requested:
@@ -1162,7 +1162,7 @@ The API will currently check the XML's structure in order to extract the informa
 
 #### Getting Form Details [GET]
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that this Form has, as well as the `lastSubmission` most recent submission timestamp.
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that this Form has, as well as the `lastSubmission` most recent submission timestamp. The response will also include the `lastSubmissionUpdate` timestamp, indicating when a submission was last modified.
 
 + Response 200 (application/json)
     This is the standard response, if Extended Metadata is not requested:
@@ -3934,6 +3934,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Extended Form (Form)
 + submissions: `10` (number, required) - The number of `Submission`s that have been submitted to this `Form`.
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission, if any.
++ lastSubmissionUpdate: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. Timestamp, indicating when a submission was last modified.
 + createdBy: (Actor, optional) - The full information of the Actor who created this Form.
 + excelContentType: (string, optional) - If the Form was created by uploading an Excel file, this field contains the MIME type of that file.
 
@@ -3976,6 +3977,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + appUsers: `4` (number, required) - The number of App Users created within this Project.
 + forms: `7` (number, required) - The number of forms within this Project.
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission to any form in this project, if any.
++ lastSubmissionUpdate: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. Timestamp, indicating when a submission to any form in the project was last modified.
 
 ## Public Link (Actor)
 + token: `d1!E2GVHgpr4h9bpxxtqUJ7EVJ1Q$Dusm2RBXg8XyVJMCBCbvyE8cGacxUx3bcUT` (string, optional) - If present, this is the Token to include as the `st` query parameter for this `Public Link`. If not present, this `Public Link` has been revoked.

@@ -46,6 +46,7 @@ describe('api: /projects/:id/forms', () => {
               const simple = body.find((form) => form.xmlFormId === 'simple');
               simple.submissions.should.equal(1);
               simple.lastSubmission.should.be.a.recentIsoDate();
+              should(simple.lastSubmissionUpdate).equal(null);
             })))));
   });
 
@@ -882,6 +883,7 @@ describe('api: /projects/:id/forms', () => {
                 body.should.be.an.ExtendedForm();
                 body.xmlFormId.should.equal('simple2');
                 (body.lastSubmission == null).should.equal(true);
+                (body.lastSubmissionUpdate == null).should.equal(true);
                 body.submissions.should.equal(0);
                 body.createdBy.should.be.an.Actor();
                 body.createdBy.displayName.should.equal('Alice');
@@ -2016,6 +2018,7 @@ describe('api: /projects/:id/forms', () => {
                 body.should.be.an.ExtendedForm();
                 body.submissions.should.equal(1);
                 body.lastSubmission.should.be.a.recentIsoDate();
+                (body.lastSubmissionUpdate == null).should.equal(true);
               })))));
 
     it('should return the correct enketoId with extended draft', testService((service, container) =>

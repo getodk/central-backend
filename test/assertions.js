@@ -174,9 +174,10 @@ should.Assertion.add('ExtendedForm', function() {
   this.params = { operator: 'to be a ExtendedForm' };
 
   this.obj.should.be.a.Form();
-  Object.keys(this.obj).should.containDeep([ 'submissions', 'lastSubmission' ]);
+  Object.keys(this.obj).should.containDeep([ 'submissions', 'lastSubmission', 'lastSubmissionUpdate' ]);
   if (this.obj.submissions != null) this.obj.submissions.should.be.a.Number();
   if (this.obj.lastSubmission != null) this.obj.lastSubmission.should.be.an.isoDate();
+  if (this.obj.lastSubmissionUpdate != null) this.obj.lastSubmissionUpdate.should.be.an.isoDate();
 });
 
 should.Assertion.add('Project', function() {
@@ -193,10 +194,11 @@ should.Assertion.add('ExtendedProject', function() {
   this.params = { operator: 'to be a Project' };
 
   this.obj.should.be.a.Project();
-  Object.keys(this.obj).should.containDeep([ 'forms', 'appUsers', 'lastSubmission' ]);
+  Object.keys(this.obj).should.containDeep([ 'forms', 'appUsers', 'lastSubmission', 'lastSubmissionUpdate' ]);
   this.obj.forms.should.be.a.Number();
   this.obj.appUsers.should.be.a.Number();
   if (this.obj.lastSubmission != null) this.obj.lastSubmission.should.be.an.isoDate();
+  if (this.obj.lastSubmissionUpdate != null) this.obj.lastSubmissionUpdate.should.be.an.isoDate();
 });
 
 should.Assertion.add('Role', function() {

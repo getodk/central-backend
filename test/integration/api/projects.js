@@ -120,11 +120,13 @@ describe('api: /projects', () => {
             body[0].forms.should.equal(0);
             body[0].appUsers.should.equal(0);
             should.not.exist(body[0].lastSubmission);
+            should.not.exist(body[0].lastSubmissionUpdate);
 
             body[1].name.should.equal('Default Project');
             body[1].forms.should.equal(2);
             body[1].appUsers.should.equal(2);
             body[1].lastSubmission.should.be.a.recentIsoDate();
+            should.not.exist(body[1].lastSubmissionUpdate);
           })))));
 
     it('should return extended metadata if requested', testService((service) =>
@@ -251,6 +253,7 @@ describe('api: /projects', () => {
             body.should.be.an.ExtendedProject();
             body.forms.should.equal(2);
             should.not.exist(body.lastSubmission);
+            should.not.exist(body.lastSubmissionUpdate);
           })
           .then(() => Promise.all([
             asAlice.post('/v1/projects/1/forms/simple/submissions')
@@ -269,6 +272,7 @@ describe('api: /projects', () => {
               body.should.be.an.ExtendedProject();
               body.forms.should.equal(2);
               body.lastSubmission.should.be.a.recentIsoDate();
+              should.not.exist(body.lastSubmissionUpdate);
             })))));
 
     it('should not count deleted app users', testService((service) =>
