@@ -16,7 +16,7 @@ describe('api: /config', () => {
           asAlice.get('/v1/config/backups').expect(404))));
 
       it('should return backup config details if configured', testService((service, { Configs }) =>
-        Configs.set('backups.main', '{"type":"google"}')
+        Configs.set('backups.main', { type: 'google' })
           .then(() => service.login('alice', (asAlice) =>
             asAlice.get('/v1/config/backups')
               .expect(200)
@@ -36,7 +36,7 @@ describe('api: /config', () => {
           asAlice.delete('/v1/config/backups').expect(200))));
 
       it('should clear the config if it exists', testService((service, { Configs }) =>
-        Configs.set('backups.main', '{"type":"google"}')
+        Configs.set('backups.main', { type: 'google' })
           .then(() => service.login('alice', (asAlice) =>
             asAlice.delete('/v1/config/backups')
               .expect(200)
@@ -87,7 +87,7 @@ describe('api: /config', () => {
                 .expect(200)
                 .then(() => Promise.all([ 'backups.main', 'backups.google' ].map(Configs.get))
                   .then(map(getOrNotFound))
-                  .then(map((x) => JSON.parse(x.value)))
+                  .then(map((x) => x.value))
                   .then(([ main, google ]) => {
                     main.type.should.equal('google');
                     should.exist(main.keys);
