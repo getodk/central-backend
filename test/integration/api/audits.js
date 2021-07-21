@@ -70,7 +70,7 @@ describe('/audits', () => {
 
               audits[3].actorId.should.equal(alice.actor.id);
               audits[3].action.should.equal('user.session.create');
-              should.not.exist(audits[3].acteeId);
+              audits[3].acteeId.should.equal(alice.actor.acteeId);
               audits[3].loggedAt.should.be.a.recentIsoDate();
             })))));
 
@@ -143,8 +143,8 @@ describe('/audits', () => {
               audits[4].actorId.should.equal(alice.actor.id);
               audits[4].actor.should.eql(plain(alice.actor.forApi()));
               audits[4].action.should.equal('user.session.create');
-              should.not.exist(audits[4].acteeId);
-              should.not.exist(audits[4].actee);
+              audits[4].acteeId.should.equal(alice.actor.acteeId);
+              audits[4].actee.should.eql(plain(alice.actor.forApi()));
               audits[4].loggedAt.should.be.a.recentIsoDate();
             })))));
 
