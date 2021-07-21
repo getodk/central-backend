@@ -1336,6 +1336,28 @@ describe('api: /forms/:id/submissions', () => {
                 done();
               })))))));
 
+    it('should return an updatedAt-filtered zipfile with the relevant data', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.simple.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.patch('/v1/projects/1/forms/simple/submissions/two')
+            .send({ reviewState: 'approved' })
+            .expect(200))
+          .then(() => new Promise((done) =>
+            zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?$filter=__system/updatedAt eq null'), (result) => {
+              result.filenames.should.eql([ 'simple.csv' ]);
+              const lines = result['simple.csv'].split('\n');
+              lines.length.should.equal(3);
+              lines[1].endsWith(',one,Alice,30,one,5,Alice,0,0').should.equal(true);
+              done();
+            }))))));
+
     it('should return a zipfile with the relevant attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')

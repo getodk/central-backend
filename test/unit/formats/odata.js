@@ -10,6 +10,7 @@ const submitter = { id: 5, displayName: 'Alice' };
 const attachment = { present: 1, expected: 2 };
 const __system = {
   submissionDate: '2017-09-20T17:10:43Z',
+  updatedAt: null,
   submitterId: submitter.id.toString(),
   submitterName: submitter.displayName,
   attachmentsPresent: 1,
@@ -23,6 +24,7 @@ const mockSubmission = (instanceId, xml) => ({
   xml,
   instanceId,
   createdAt: __system.submissionDate,
+  updatedAt: null,
   def: {},
   aux: { submitter, attachment, encryption: {}, edit: { count: 0 } }
 });
@@ -68,6 +70,7 @@ describe('odata message composition', () => {
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
       <ComplexType Name="metadata">
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
@@ -111,6 +114,7 @@ describe('odata message composition', () => {
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
       <ComplexType Name="metadata">
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
@@ -172,6 +176,7 @@ describe('odata message composition', () => {
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
       <ComplexType Name="metadata">
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
@@ -223,6 +228,7 @@ describe('odata message composition', () => {
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
       <ComplexType Name="metadata">
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
@@ -373,6 +379,7 @@ describe('odata message composition', () => {
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
       <ComplexType Name="metadata">
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
@@ -449,6 +456,7 @@ describe('odata message composition', () => {
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
       <ComplexType Name="metadata">
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>

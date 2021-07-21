@@ -6,6 +6,7 @@ const testData = require(appRoot + '/test/data/xml');
 
 const __system = {
   submissionDate: '2017-09-20T17:10:43Z',
+  updatedAt: null,
   submitterId: '5',
   submitterName: 'Alice',
   attachmentsPresent: 0,
@@ -19,6 +20,7 @@ const mockSubmission = (instanceId, xml) => ({
   xml,
   instanceId,
   createdAt: '2017-09-20T17:10:43Z',
+  updatedAt: null,
   def: {},
   aux: {
     submitter: { id: 5, displayName: 'Alice' },
@@ -90,6 +92,7 @@ describe('submissionToOData', () => {
         __id: 'test',
         __system: {
           submissionDate: '2017-09-20T17:10:43Z',
+          updatedAt: null,
           submitterId: null,
           submitterName: null,
           attachmentsPresent: 0,
@@ -495,6 +498,7 @@ describe('submissionToOData', () => {
                 name: 'Vick',
                 __system: {
                   submissionDate: '2017-09-20T17:10:43Z',
+                  updatedAt: null,
                   submitterId: '5',
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
