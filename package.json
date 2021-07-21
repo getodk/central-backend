@@ -19,6 +19,7 @@
     "entities": "~2",
     "express": "~4.16",
     "express-graceful-exit": "~0.5",
+    "fast-myers-diff": "~3",
     "googleapis": "~66",
     "htmlparser2": "~3.9",
     "knex": "~0.21",
