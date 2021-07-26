@@ -47,6 +47,23 @@ describe('api: /sessions', () => {
           csrf[2].should.equal(DateTime.fromISO(body.expiresAt).toHTTP());
         })));
 
+    it('should log the action in the audit log', testService((service) =>
+      service.post('/v1/sessions')
+        .send({ email: 'alice@opendatakit.org', password: 'alice' })
+        .expect(200)
+        .then(({ body }) => body.token)
+        .then((token) => service.get('/v1/audits')
+          .set('Authorization', `Bearer ${token}`)
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].actorId.should.equal(5);
+            body[0].action.should.equal('user.session.create');
+            body[0].actee.id.should.equal(5);
+            body[0].details.userAgent.should.startWith('node-superagent');
+          }))));
+
     it('should return a 401 if the password is wrong', testService((service) =>
       service.post('/v1/sessions')
         .send({ email: 'chelsea@opendatakit.org', password: 'letmein' })
@@ -213,7 +230,9 @@ describe('api: /sessions', () => {
             asAlice.get('/v1/audits')
               .expect(200)
               .then(({ body }) => {
-                body.length.should.equal(0);
+                body.length.should.equal(2);
+                body[0].action.should.equal('user.session.create');
+                body[1].action.should.equal('user.session.create');
               }))))));
 
     it('should log the action in the audit log for public links', testService((service) =>

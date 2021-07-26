@@ -3640,6 +3640,7 @@ Server Audit Logs entries are created for the following `action`s:
 * `user.update` when User information is updated, like email or password.
 * `user.assignment.create` when a User is assigned to a Server Role.
 * `user.assignment.delete` when a User is unassigned from a Server Role.
+* `user.session.create` when a User logs in.
 * `user.delete` when a User is deleted.
 * `project.create` when a new Project is created.
 * `project.update` when top-level Project information is updated, like its name.
@@ -3649,8 +3650,9 @@ Server Audit Logs entries are created for the following `action`s:
 * `form.update.draft.set` when a Draft Form definition is set.
 * `form.update.draft.delete` when a Draft Form definition is deleted.
 * `form.update.publish` when a Draft Form is published to the Form.
-* `form.delete` when a Form is deleted.
 * `form.attachment.update` when a Form Attachment binary is set or cleared.
+* `form.submissions.export` when a Form's Submissions are exported to CSV.
+* `form.delete` when a Form is deleted.
 * `field_key.create` when a new App User is created.
 * `field_key.assignment.create` when an App User is assigned to a Server Role.
 * `field_key.assignment.delete` when an App User is unassigned from a Server Role.

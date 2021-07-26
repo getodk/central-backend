@@ -42,7 +42,7 @@ describe('/audits', () => {
               Users.getByEmail('david@opendatakit.org').then((o) => o.get())
             ]))
             .then(([ audits, project, alice, david ]) => {
-              audits.length.should.equal(3);
+              audits.length.should.equal(4);
               audits.forEach((audit) => { audit.should.be.an.Audit(); });
 
               audits[0].actorId.should.equal(alice.actor.id);
@@ -67,6 +67,11 @@ describe('/audits', () => {
               audits[2].acteeId.should.equal(project.acteeId);
               audits[2].details.should.eql({ data: { name: 'audit project' } });
               audits[2].loggedAt.should.be.a.recentIsoDate();
+
+              audits[3].actorId.should.equal(alice.actor.id);
+              audits[3].action.should.equal('user.session.create');
+              audits[3].acteeId.should.equal(alice.actor.acteeId);
+              audits[3].loggedAt.should.be.a.recentIsoDate();
             })))));
 
     it('should return extended data if requested', testService((service, { Projects, Forms, Users }) =>
@@ -93,7 +98,7 @@ describe('/audits', () => {
               Users.getByEmail('david@opendatakit.org').then((o) => o.get())
             ]))
             .then(([ audits, [ project, form ], alice, david ]) => {
-              audits.length.should.equal(4);
+              audits.length.should.equal(5);
               audits.forEach((audit) => { audit.should.be.an.Audit(); });
 
               const plain = (x) => JSON.parse(JSON.stringify(x));
@@ -134,12 +139,19 @@ describe('/audits', () => {
               audits[3].actee.should.eql(plain(project.forApi()));
               audits[3].details.should.eql({ data: { name: 'audit project' } });
               audits[3].loggedAt.should.be.a.recentIsoDate();
+
+              audits[4].actorId.should.equal(alice.actor.id);
+              audits[4].actor.should.eql(plain(alice.actor.forApi()));
+              audits[4].action.should.equal('user.session.create');
+              audits[4].acteeId.should.equal(alice.actor.acteeId);
+              audits[4].actee.should.eql(plain(alice.actor.forApi()));
+              audits[4].loggedAt.should.be.a.recentIsoDate();
             })))));
 
     it('should not expand actor if there is no actor', testService((service, { run }) =>
       run(sql`insert into audits (action, "loggedAt") values ('backup', now())`)
         .then(() => service.login('alice', (asAlice) =>
-          asAlice.get('/v1/audits')
+          asAlice.get('/v1/audits?action=backup')
             .set('X-Extended-Metadata', true)
             .expect(200)
             .then(({ body }) => {
@@ -212,12 +224,13 @@ describe('/audits', () => {
           .then(() => asAlice.get('/v1/audits?action=user')
             .expect(200)
             .then(({ body }) => {
-              body.length.should.equal(5);
+              body.length.should.equal(6);
               body[0].action.should.equal('user.delete');
               body[1].action.should.equal('user.assignment.delete');
               body[2].action.should.equal('user.assignment.create');
               body[3].action.should.equal('user.update');
               body[4].action.should.equal('user.create');
+              body[5].action.should.equal('user.session.create');
             })))));
 
     it('should filter by action category (project)', testService((service) =>
@@ -323,14 +336,15 @@ describe('/audits', () => {
           asAlice.get('/v1/audits?start=2000-01-08Z')
             .expect(200)
             .then(({ body }) => {
-              body.length.should.equal(3);
+              body.length.should.equal(4);
 
-              body[0].action.should.equal('test.10');
-              body[0].loggedAt.should.equal('2000-01-10T00:00:00.000Z');
-              body[1].action.should.equal('test.9');
-              body[1].loggedAt.should.equal('2000-01-09T00:00:00.000Z');
-              body[2].action.should.equal('test.8');
-              body[2].loggedAt.should.equal('2000-01-08T00:00:00.000Z');
+              body[0].action.should.equal('user.session.create');
+              body[1].action.should.equal('test.10');
+              body[1].loggedAt.should.equal('2000-01-10T00:00:00.000Z');
+              body[2].action.should.equal('test.9');
+              body[2].loggedAt.should.equal('2000-01-09T00:00:00.000Z');
+              body[3].action.should.equal('test.8');
+              body[3].loggedAt.should.equal('2000-01-08T00:00:00.000Z');
             })))));
 
     it('should filter by start date+time', testService((service, { run }) =>
@@ -342,12 +356,13 @@ describe('/audits', () => {
           asAlice.get('/v1/audits?start=2000-01-08T12:00Z')
             .expect(200)
             .then(({ body }) => {
-              body.length.should.equal(2);
+              body.length.should.equal(3);
 
-              body[0].action.should.equal('test.10');
-              body[0].loggedAt.should.equal('2000-01-10T00:00:00.000Z');
-              body[1].action.should.equal('test.9');
-              body[1].loggedAt.should.equal('2000-01-09T00:00:00.000Z');
+              body[0].action.should.equal('user.session.create');
+              body[1].action.should.equal('test.10');
+              body[1].loggedAt.should.equal('2000-01-10T00:00:00.000Z');
+              body[2].action.should.equal('test.9');
+              body[2].loggedAt.should.equal('2000-01-09T00:00:00.000Z');
             })))));
 
     it('should filter extended data by start date+time', testService((service, { Users, run }) =>
@@ -361,16 +376,17 @@ describe('/audits', () => {
               .set('X-Extended-Metadata', true)
               .expect(200)
               .then(({ body }) => {
-                body.length.should.equal(2);
+                body.length.should.equal(3);
 
-                body[0].action.should.equal('test.10');
-                body[0].loggedAt.should.equal('2000-01-10T00:00:00.000Z');
-                body[0].actor.displayName.should.equal('Alice');
-                body[0].actee.displayName.should.equal('Alice');
-                body[1].action.should.equal('test.9');
-                body[1].loggedAt.should.equal('2000-01-09T00:00:00.000Z');
+                body[0].action.should.equal('user.session.create');
+                body[1].action.should.equal('test.10');
+                body[1].loggedAt.should.equal('2000-01-10T00:00:00.000Z');
                 body[1].actor.displayName.should.equal('Alice');
                 body[1].actee.displayName.should.equal('Alice');
+                body[2].action.should.equal('test.9');
+                body[2].loggedAt.should.equal('2000-01-09T00:00:00.000Z');
+                body[2].actor.displayName.should.equal('Alice');
+                body[2].actee.displayName.should.equal('Alice');
               }))))));
 
     it('should filter (inclusively) by end date', testService((service, { run }) =>
@@ -451,9 +467,10 @@ describe('/audits', () => {
           .then(() => asAlice.get('/v1/audits?action=nonverbose')
             .expect(200)
             .then(({ body }) => {
-              body.length.should.equal(2);
+              body.length.should.equal(3);
               body[0].action.should.equal('form.update.publish');
               body[1].action.should.equal('form.create');
+              body[2].action.should.equal('user.session.create');
             })))));
 
     it('should log and return notes if given', testService((service, { run }) =>
@@ -471,13 +488,14 @@ describe('/audits', () => {
           .then(() => asAlice.get('/v1/audits')
             .expect(200)
             .then(({ body }) => {
-              body.length.should.equal(3);
+              body.length.should.equal(4);
               body[0].action.should.equal('submission.create');
               body[0].notes.should.equal('doing this for work');
               body[1].action.should.equal('form.update.publish');
               body[1].notes.should.equal('doing this for fun!');
               body[2].action.should.equal('form.create');
               body[2].notes.should.equal('doing this for fun!');
+              body[3].action.should.equal('user.session.create');
             })))));
   });
 });
