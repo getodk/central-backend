@@ -2053,7 +2053,7 @@ You can use an [OData-style `$filter` query](/reference/odata-endpoints/odata-fo
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
     + attachments: `true` (boolean, optional) - Set to false to exclude media attachments from the export.
-    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only certain fields are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200
     + Headers
@@ -2081,7 +2081,7 @@ And so, for this `POST` version of the Submission CSV export endpoint, the passp
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
     + attachments: `true` (boolean, optional) - Set to false to exclude media attachments from the export.
-    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only certain fields are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200
     + Headers
@@ -2110,7 +2110,7 @@ Please see the [above endpoint](/reference/submissions/submissions/exporting-for
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
-    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only certain fields are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200
     + Body
@@ -2135,7 +2135,7 @@ As with [`POST` to `.csv.zip`](/reference/submissions/submissions/exporting-form
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
-    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only certain fields are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200
     + Body
@@ -3270,7 +3270,7 @@ As the vast majority of clients only support the JSON OData format, that is the 
     + `%24top`: `5` (number, optional) - If supplied, only up to `$top` rows will be returned in the results.
     + `%24count`: `true` (boolean, optional) - If set to `true`, an `@odata.count` property will be added to the result indicating the total number of rows, ignoring the above paging parameters.
     + `%24wkt`: `true` (boolean, optional) - If set to `true`, geospatial data will be returned as Well-Known Text (WKT) strings rather than GeoJSON structures.
-    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only certain fields are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
     + `%24expand`: `&#42;` (string, optional) - Repetitions, which should get expanded. Currently, only `&#42` is implemented, which expands all repetitions.
 
 + Response 200 (application/json)
@@ -3453,7 +3453,7 @@ Identical to [the non-Draft version](/reference/odata-endpoints/odata-form-servi
     + `%24top`: `5` (number, optional) - If supplied, only up to `$top` rows will be returned in the results.
     + `%24count`: `true` (boolean, optional) - If set to `true`, an `@odata.count` property will be added to the result indicating the total number of rows, ignoring the above paging parameters.
     + `%24wkt`: `true` (boolean, optional) - If set to `true`, geospatial data will be returned as Well-Known Text (WKT) strings rather than GeoJSON structures.
-    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only certain fields are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200 (application/json)
     + Body
@@ -3900,8 +3900,8 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + submitterId: `23` (number, required) - The ID of the `Actor` (`App User`, `User`, or `Public Link`) that submitted this `Submission`.
 + deviceId: `imei:123456` (string, optional) - The self-identified `deviceId` of the device that collected the data, sent by it upon submission to the server.
 + reviewState: `approved` (Submission Review State, optional) - The current review state of the submission.
-+ createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format
-+ updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format
++ createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format. The time that the server received the Submission.
++ updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format. `null` when the Submission is first created, then updated when the Submission's XML data or metadata is updated.
 
 ## Extended Submission (Submission)
 + submitter (Actor, required) - The full details of the `Actor` that submitted this `Submission`.
