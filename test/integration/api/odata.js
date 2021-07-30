@@ -137,6 +137,7 @@ describe('api: /forms/:id.svc', () => {
                 __id: "double",
                 __system: {
                   // submissionDate is checked above!
+                  updatedAt: null,
                   submitterId: '5',
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
@@ -207,6 +208,7 @@ describe('api: /forms/:id.svc', () => {
                   __id: 'uuid:dcf4a151-5088-453f-99e6-369d67828f7a',
                   __system: {
                     // submissionDate is checked above!
+                    updatedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
@@ -246,6 +248,7 @@ describe('api: /forms/:id.svc', () => {
                   __id: 'uuid:dcf4a151-5088-453f-99e6-369d67828f7a',
                   __system: {
                     // submissionDate is checked above!
+                    updatedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 1,
@@ -432,6 +435,7 @@ describe('api: /forms/:id.svc', () => {
                 __id: "rthree",
                 __system: {
                   // submissionDate is checked above,
+                  updatedAt: null,
                   submitterId: "5",
                   submitterName: "Alice",
                   attachmentsPresent: 0,
@@ -451,6 +455,7 @@ describe('api: /forms/:id.svc', () => {
                 __id: "rtwo",
                 __system: {
                   // submissionDate is checked above,
+                  updatedAt: null,
                   submitterId: "5",
                   submitterName: "Alice",
                   attachmentsPresent: 0,
@@ -470,6 +475,7 @@ describe('api: /forms/:id.svc', () => {
                 __id: "rone",
                 __system: {
                   // submissionDate is checked above,
+                  updatedAt: null,
                   submitterId: "5",
                   submitterName: "Alice",
                   attachmentsPresent: 0,
@@ -535,6 +541,7 @@ describe('api: /forms/:id.svc', () => {
                 __id: "rtwo",
                 __system: {
                   // submissionDate is checked above,
+                  updatedAt: null,
                   submitterId: "5",
                   submitterName: "Alice",
                   attachmentsPresent: 0,
@@ -570,6 +577,7 @@ describe('api: /forms/:id.svc', () => {
                 __id: "rthree",
                 __system: {
                   // submissionDate is checked above,
+                  updatedAt: null,
                   submitterId: "5",
                   submitterName: "Alice",
                   attachmentsPresent: 0,
@@ -622,6 +630,7 @@ describe('api: /forms/:id.svc', () => {
                     __id: "rthree",
                     __system: {
                       // submissionDate is checked above,
+                      updatedAt: null,
                       submitterId: "5",
                       submitterName: "Alice",
                       attachmentsPresent: 0,
@@ -641,6 +650,7 @@ describe('api: /forms/:id.svc', () => {
                     __id: "rone",
                     __system: {
                       // submissionDate is checked above,
+                      updatedAt: null,
                       submitterId: "5",
                       submitterName: "Alice",
                       attachmentsPresent: 0,
@@ -677,6 +687,7 @@ describe('api: /forms/:id.svc', () => {
                   __id: "rone",
                   __system: {
                     submissionDate: "2010-06-01T00:00:00.000Z",
+                    updatedAt: null,
                     submitterId: "5",
                     submitterName: "Alice",
                     attachmentsPresent: 0,
@@ -713,6 +724,7 @@ describe('api: /forms/:id.svc', () => {
                   __id: "rone",
                   __system: {
                     submissionDate: "2010-06-01T00:00:00.000Z",
+                    updatedAt: null,
                     submitterId: "5",
                     submitterName: "Alice",
                     attachmentsPresent: 0,
@@ -729,7 +741,49 @@ describe('api: /forms/:id.svc', () => {
               });
             })))));
 
-    it('should return reviewState-filtered toplevel rows with a function', testService((service, { run }) =>
+    it('should return updatedAt-filtered toplevel rows if requested', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+          .send(testData.instances.withrepeat.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+            .send(testData.instances.withrepeat.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.patch('/v1/projects/1/forms/withrepeat/submissions/rtwo')
+            .send({ reviewState: 'rejected' })
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=__system/updatedAt eq null')
+            .expect(200)
+            .then(({ body }) => {
+              // have to manually check and clear the date for exact match:
+              body.value[0].__system.submissionDate.should.be.an.isoDate();
+              delete body.value[0].__system.submissionDate;
+
+              body.should.eql({
+                '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+                value: [{
+                  __id: 'rone',
+                  __system: {
+                    updatedAt: null,
+                    submitterId: '5',
+                    submitterName: 'Alice',
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 0,
+                    status: null,
+                    reviewState: null,
+                    deviceId: null,
+                    edits: 0
+                  },
+                  meta: { instanceID: 'rone' },
+                  name: 'Alice',
+                  age: 30
+                }]
+              });
+            })))));
+
+    it('should return reviewState-filtered toplevel rows if requested', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
           .send(testData.instances.withrepeat.one)
@@ -745,9 +799,11 @@ describe('api: /forms/:id.svc', () => {
           .then(() => asAlice.get("/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=__system/reviewState eq 'rejected'")
             .expect(200)
             .then(({ body }) => {
-              // have to manually check and clear the date for exact match:
+              // have to manually check and clear the dates for exact match:
               body.value[0].__system.submissionDate.should.be.an.isoDate();
+              body.value[0].__system.updatedAt.should.be.an.isoDate();
               delete body.value[0].__system.submissionDate;
+              delete body.value[0].__system.updatedAt;
 
               body.should.eql({
                 '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
@@ -877,6 +933,7 @@ describe('api: /forms/:id.svc', () => {
                   __id: 'uuid:99b303d9-6494-477b-a30d-d8aae8867335',
                   __system: {
                     // submissionDate is checked above!
+                    updatedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
@@ -890,6 +947,7 @@ describe('api: /forms/:id.svc', () => {
                   __id: 'uuid:dcf4a151-5088-453f-99e6-369d67828f7a',
                   __system: {
                     // submissionDate is checked above!
+                    updatedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
@@ -938,6 +996,7 @@ describe('api: /forms/:id.svc', () => {
                   __id: 'uuid:99b303d9-6494-477b-a30d-d8aae8867335',
                   __system: {
                     // submissionDate is checked above!
+                    updatedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 1,
@@ -951,6 +1010,7 @@ describe('api: /forms/:id.svc', () => {
                   __id: 'uuid:dcf4a151-5088-453f-99e6-369d67828f7a',
                   __system: {
                     // submissionDate is checked above!
+                    updatedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 1,
@@ -1122,6 +1182,7 @@ describe('api: /forms/:id.svc', () => {
                     __id: "double",
                     __system: {
                       // submissionDate is checked above!
+                      updatedAt: null,
                       submitterId: '5',
                       submitterName: 'Alice',
                       attachmentsPresent: 0,
@@ -1201,6 +1262,7 @@ describe('api: /forms/:id.svc', () => {
                     __id: "rthree",
                     __system: {
                       // submissionDate is checked above,
+                      updatedAt: null,
                       submitterId: "5",
                       submitterName: "Alice",
                       attachmentsPresent: 0,
@@ -1220,6 +1282,7 @@ describe('api: /forms/:id.svc', () => {
                     __id: "rtwo",
                     __system: {
                       // submissionDate is checked above,
+                      updatedAt: null,
                       submitterId: "5",
                       submitterName: "Alice",
                       attachmentsPresent: 0,
@@ -1239,6 +1302,7 @@ describe('api: /forms/:id.svc', () => {
                     __id: "rone",
                     __system: {
                       // submissionDate is checked above,
+                      updatedAt: null,
                       submitterId: "5",
                       submitterName: "Alice",
                       attachmentsPresent: 0,
