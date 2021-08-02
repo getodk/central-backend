@@ -22,6 +22,12 @@ describe('api: /config', () => {
               body.code.should.equal(400.8);
             }))));
 
+      it('should reject for an unknown config', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/config/unknown')
+            .send({ foo: 'bar' })
+            .expect(400))));
+
       it('should set the config', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/config/analytics')
@@ -34,7 +40,7 @@ describe('api: /config', () => {
               body.setAt.should.be.a.recentIsoDate();
             }))));
 
-      it('should call fromApi for the config value', testService((service) =>
+      it('should call fromValue for the config frame', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/config/analytics')
             .send({ enabled: false, email: 'alice@getodk.org' })
@@ -98,7 +104,7 @@ describe('api: /config', () => {
                 body.setAt.should.be.a.recentIsoDate();
               })))));
 
-      it('should call forApi for the config value', testService((service, { Configs }) =>
+      it('should transform the config value', testService((service, { Configs }) =>
         Configs.set('backups.main', { type: 'google', keys: { super: 'secret' } })
           .then(() => service.login('alice', (asAlice) =>
             asAlice.get('/v1/config/backups.main')
@@ -122,6 +128,10 @@ describe('api: /config', () => {
             .then(({ body }) => {
               body.code.should.equal(400.8);
             }))));
+
+      it('should reject for an unknown config', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.delete('/v1/config/unknown').expect(400))));
 
       it('should unset the config', testService((service) =>
         service.login('alice', (asAlice) =>

@@ -1,5 +1,7 @@
 const { reduce } = require('ramda');
 
+const plain = (x) => JSON.parse(JSON.stringify(x));
+
 // Given an array of any kind of data and a mapping function f that translates
 // each entry into a database operation, runs all the operations in guaranteed
 // sequential order and returns all results.
@@ -13,5 +15,5 @@ const mapSequential = (xs, f) => {
   return reduce(step, f(head).then(push), tail).then(() => results);
 };
 
-module.exports = { mapSequential };
+module.exports = { plain, mapSequential };
 

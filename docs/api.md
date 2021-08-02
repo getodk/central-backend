@@ -3848,7 +3848,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 
 ## Config (object)
 + key: `some_type` (string, required) - The type of system configuration.
-+ setAt: `2018-01-06T00:32:52.787Z` (string, required) - ISO date format
++ setAt: `2018-01-06T00:32:52.787Z` (string, required) - ISO date format. The last time this system configuration was set.
 
 ## Analytics Config Value (object)
 + enabled: `true` (boolean, required) - `true` if the server will share usage data with the Central team and `false` if not.
