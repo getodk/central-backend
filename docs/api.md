@@ -26,7 +26,7 @@ Forms and their submissions are also accessible through two **open standards spe
 * The [OpenRosa](https://docs.opendatakit.org/openrosa/) standard allows standard integration with tools like the [ODK Collect](https://docs.opendatakit.org/collect-intro/) mobile data collection app, or various other compatible tools like [Enketo](https://enketo.org/). It allows them to see the forms available on the server, and to send new submissions to them.
 * The [OData](http://odata.org/) standard allows data to be shared between platforms for analysis and reporting. Tools like [Microsoft Power BI](https://powerbi.microsoft.com/en-us/) and [Tableau](https://public.tableau.com/en-us/s/) are examples of clients that consume the standard OData format and provide advanced features beyond what we offer. If you are looking for a straightforward JSON output of your data, or you are considering building a visualization or reporting tool, this is your best option.
 
-Finally, **system information and configuration** is available via a set of specialized resources. Currently, you may set the Backups configuration, and retrieve Server Audit Logs.
+Finally, **system information and configuration** is available via a set of specialized resources. Currently, you may set the Backups configuration, set the Analytics configuration, and retrieve Server Audit Logs.
 
 ## Changelog
 
@@ -3491,7 +3491,7 @@ Identical to [the non-Draft version](/reference/odata-endpoints/odata-form-servi
 
 # Group System Endpoints
 
-There are some resources available for getting or setting system information and configuration. You can [set the Backups configuration](/reference/system-endpoints/backups-configuration) for the server, or you can [retrieve the Server Audit Logs](/reference/system-endpoints/server-audit-logs).
+There are some resources available for getting or setting system information and configuration. You can [set the Backups configuration](/reference/system-endpoints/backups-configuration) for the server, [set the Analytics configuration](/reference/system-endpoints/analytics-configuration), or you can [retrieve the Server Audit Logs](/reference/system-endpoints/server-audit-logs).
 
 ## Backups Configuration [/v1/config/backups]
 
@@ -3499,7 +3499,7 @@ This resource does not conform to REST standards, as it has a multi-step initial
 
 ### Getting the current configuration [GET]
 
-If configured, this endpoint will return a combination of the present backups configuration type, along with the `Audit` log entry of the most recent backup attempt, if one exists. For security reasons, none of the actual internal authentication and encryption information is returned.
+If configured, this endpoint will return the present backups configuration type. For security reasons, none of the actual internal authentication and encryption information is returned.
 
 If no backups are configured, this endpoint will return a `404`.
 
@@ -3508,16 +3508,7 @@ If no backups are configured, this endpoint will return a `404`.
 
             {
                 "type": "google",
-                "setAt": "2018-01-06T00:32:52.787Z",
-                "recent": [{
-                    "acteeId": null,
-                    "action": "backup",
-                    "actorId": null,
-                    "details": {
-                        "success": true
-                    },
-                    "loggedAt": "2018-03-21T03:47:03.504Z"
-                }]
+                "setAt": "2018-01-06T00:32:52.787Z"
             }
 
 + Response 403 (application/json)
@@ -3627,6 +3618,55 @@ Please see the section notes above about the long-running nature of this endpoin
 + Response 403 (application/json)
     + Attributes (Error 403)
 
+## Analytics Configuration [/v1/config/analytics]
+
+_(introduced: version 1.3)_
+
+### Setting a new configuration [POST]
+
+An Administrator can use this endpoint to choose whether the server will share anonymous usage data with the Central team. This configuration affects the entire server. Until the Analytics configuration is set, Administrators will see a message on the Central administration website that provides further information.
+
+If an Administrator specifies `true` for `enabled`, the server will share anonymous usage data monthly with the Central team. By specifying `true`, the Administrator accepts the [Terms of Service](https://getodk.org/legal/tos.html) and [Privacy Policy](https://getodk.org/legal/privacy.html). The Administrator can also share contact information to include with the report.
+
+If an Administrator specifies `false` for `enabled`, the server will not share anonymous usage data with the Central team. Administrators will no longer see the message on the administration website.
+
+If the Analytics configuration is already set, the current configuration will be overwritten with the new one.
+
++ Request (application/json)
+    + Attributes
+        + enabled: `true` (boolean, required) - See above.
+        + email: `my.email.address@getodk.org` (string, optional) - A work email address to include with the metrics report.
+        + organization: `Organization Name` (string, optional) - An organization name to include with the metrics report.
+
++ Response 200 (application/json)
+    + Attributes (Analytics Config)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Getting the current configuration [GET]
+
+If the Analytics configuration is not set, this endpoint will return a `404`. Once the configuration is set, this endpoint will indicate whether the server will share usage data with the Central team. If the server will share usage data, and contact information was provided, this endpoint will also return the provided work email address and organization name.
+
++ Response 200 (application/json)
+    + Attributes (Analytics Config)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
++ Response 404 (application/json)
+    + Attributes (Error 404)
+
+### Unsetting the current configuration [DELETE]
+
+If the Analytics configuration is unset, Administrators will once again see a message on the the Central administration website.
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
 ## Server Audit Logs [/v1/audits]
 
 _(introduced: version 0.6)_
@@ -3668,6 +3708,7 @@ Server Audit Logs entries are created for the following `action`s:
 * `submission.update` when a Submission's metadata is updated.
 * `submission.update.version` when a Submission XML data is updated.
 * `submission.attachment.update` when a Submission Attachment binary is set or cleared, but _only via the REST API_. Attachments created alongside the submission over the OpenRosa `/submission` API (including submissions from Collect) do not generate audit log entries.
+* `config.set` when a system configuration is set.
 * `backup` when a backup operation is attempted.
 
 ### Getting Audit Log Entries [GET /v1/audits{?action,start,end,limit,offset}]
@@ -3807,6 +3848,18 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Error 501 (object)
 + code: `501.1` (string, required)
 + message: `The requested feature $unsupported is not supported by this server.` (string)
+
+## Config (object)
++ key: `some_type` (string, required) - The type of system configuration.
++ setAt: `2018-01-06T00:32:52.787Z` (string, required) - ISO date format. The last time this system configuration was set.
+
+## Analytics Config Value (object)
++ enabled: `true` (boolean, required) - `true` if the server will share usage data with the Central team and `false` if not.
++ email: `my.email.address@getodk.org` (string, optional) - The work email address to include with the metrics report.
++ organization: `Organization Name` (string, optional) - The organization name to include with the metrics report.
+
+## Analytics Config (Config)
++ value: (Analytics Config Value, required) - Details about the Analytics configuration.
 
 ## Form (object)
 + projectId: `1` (number, required) - The `id` of the project this form belongs to.

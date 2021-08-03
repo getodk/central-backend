@@ -233,6 +233,15 @@ should.Assertion.add('Key', function() {
   Object.keys(this.obj).should.containDeep([ 'hint', 'managed', 'public' ]);
 });
 
+should.Assertion.add('Config', function() {
+  this.params = { operator: 'to be a Config' };
+
+  Object.keys(this.obj).should.containDeep([ 'key', 'value', 'setAt' ]);
+  this.obj.key.should.be.a.String();
+  this.obj.value.should.be.an.Object();
+  this.obj.setAt.should.be.an.isoDate();
+});
+
 should.Assertion.add('SimpleCsv', function() {
   this.params = { operator: 'to be a full simple.csv export with three rows' };
 

@@ -1,5 +1,6 @@
 const should = require('should');
 const { sql } = require('slonik');
+const { plain } = require('../../util/util');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 
@@ -100,8 +101,6 @@ describe('/audits', () => {
             .then(([ audits, [ project, form ], alice, david ]) => {
               audits.length.should.equal(5);
               audits.forEach((audit) => { audit.should.be.an.Audit(); });
-
-              const plain = (x) => JSON.parse(JSON.stringify(x));
 
               audits[0].actorId.should.equal(alice.actor.id);
               audits[0].actor.should.eql(plain(alice.actor.forApi()));
