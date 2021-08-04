@@ -291,6 +291,19 @@ describe('diffing', () => {
       ]);
     });
 
+    it(`should diff mixed changes (x y => y')`, () => {
+      const x = [ 'a', { a: 1, x: 'a', [keys]: [ 'a', 'x' ] }, { b: 1, x: 'b', [keys]: [ 'b', 'x' ] }, 'c' ];
+      x[subhashes] = [ 1, 2, 3, 4 ];
+
+      const y = [ 'a', { b: 2, x: 'b', [keys]: [ 'b', 'x' ] }, 'c' ];
+      y[subhashes] = [ 1, 5, 4 ];
+
+      _diffArray(x, y, [ 'data' ], 'repeat').should.eql([
+        { old: { a: 1, x: 'a' }, path: [ 'data', [ 'repeat', 1 ] ] },
+        { old: 1, new: 2, path: [ 'data', [ 'repeat', 2 ], 'b' ] }
+      ]);
+    });
+
     it(`should diff mixed changes (x => x' y)`, () => {
       const x = [ 'a', { a: 1, [keys]: [ 'a' ] }, 'c' ];
       x[subhashes] = [ 1, 2, 3 ];
@@ -301,6 +314,19 @@ describe('diffing', () => {
       _diffArray(x, y, [ 'data' ], 'repeat').should.eql([
         { old: 1, new: 2, path: [ 'data', [ 'repeat', 1 ], 'a' ] },
         { new: { b: 1 }, path: [ 'data', [ 'repeat', 2 ] ] }
+      ]);
+    });
+
+    it(`should diff mixed changes (y => x y')`, () => {
+      const x = [ 'a', { b: 1, x: 'b', [keys]: [ 'b', 'x' ] }, 'c' ];
+      x[subhashes] = [ 1, 2, 3 ];
+
+      const y = [ 'a', { a: 1, x: 'a', [keys]: [ 'a', 'x' ] }, { b: 2, x: 'b', [keys]: [ 'b', 'x' ] }, 'c' ];
+      y[subhashes] = [ 1, 4, 5, 3 ];
+
+      _diffArray(x, y, [ 'data' ], 'repeat').should.eql([
+        { new: { a: 1, x: 'a' }, path: [ 'data', [ 'repeat', 1 ] ] },
+        { old: 1, new: 2, path: [ 'data', [ 'repeat', 1 ], 'b' ] } // TODO: this is sort of odd. someday choose index intelligently.
       ]);
     });
   });
