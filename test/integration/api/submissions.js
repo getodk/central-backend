@@ -2941,7 +2941,6 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                   },
                   {
                     "new": "one",
-                    "old": null,
                     "path": [ "meta", "deprecatedID" ]
                   },
                   {
