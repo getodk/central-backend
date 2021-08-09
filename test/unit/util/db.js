@@ -7,6 +7,177 @@ const Option = require(appRoot + '/lib/util/option');
 const Problem = require(appRoot + '/lib/util/problem');
 
 describe('util/db', () => {
+  describe('connectionString', () => {
+    const { connectionString } = util;
+
+    it('should return a string with the required options', () => {
+      const result = connectionString({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz'
+      });
+      result.should.equal('postgres://bar:baz@localhost/foo');
+    });
+
+    it('should encode the password', () => {
+      const result = connectionString({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'b@z'
+      });
+      result.should.equal('postgres://bar:b%40z@localhost/foo');
+    });
+
+    it('should use the port if one is specified', () => {
+      const result = connectionString({
+        host: 'localhost',
+        port: 1234,
+        database: 'foo',
+        user: 'bar',
+        password: 'baz'
+      });
+      result.should.equal('postgres://bar:baz@localhost:1234/foo');
+    });
+
+    it('should return ?ssl=true if specified', () => {
+      const result = connectionString({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz',
+        ssl: true
+      });
+      result.should.equal('postgres://bar:baz@localhost/foo?ssl=true');
+    });
+
+    it('should return ?ssl=false if specified', () => {
+      const result = connectionString({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz',
+        ssl: false
+      });
+      result.should.equal('postgres://bar:baz@localhost/foo?ssl=false');
+    });
+
+    it('should throw if ssl is not true or false', () => {
+      const result = () => connectionString({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz',
+        ssl: { rejectUnauthorized: false }
+      });
+      result.should.throw();
+    });
+
+    it('should throw for an unsupported option', () => {
+      const result = () => connectionString({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz',
+        encoding: 'latin1'
+      });
+      result.should.throw();
+    });
+  });
+
+  describe('connectionObject', () => {
+    const { connectionObject } = util;
+
+    it('should return an object with the required options', () => {
+      const result = connectionObject({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz'
+      });
+      result.should.eql({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz'
+      });
+    });
+
+    it('should include the port if one is specified', () => {
+      const result = connectionObject({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz',
+        port: 1234
+      });
+      result.should.eql({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz',
+        port: 1234
+      });
+    });
+
+    it('should return the correct object if ssl is true', () => {
+      const result = connectionObject({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz',
+        ssl: true
+      });
+      result.should.eql({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz',
+        ssl: { rejectUnauthorized: false }
+      });
+    });
+
+    it('should return the correct object if ssl is false', () => {
+      const result = connectionObject({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz',
+        ssl: false
+      });
+      result.should.eql({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz',
+        ssl: false
+      });
+    });
+
+    it('should throw if ssl is not true or false', () => {
+      const result = () => connectionObject({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz',
+        ssl: { rejectUnauthorized: false }
+      });
+      result.should.throw();
+    });
+
+    it('should throw for an unsupported option', () => {
+      const result = () => connectionObject({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz',
+        encoding: 'latin1'
+      });
+      result.should.throw();
+    });
+  });
+
   describe('unjoiner', () => {
     const { unjoiner } = util;
     const T = Frame.define(table('frames'), 'x',  'y');
