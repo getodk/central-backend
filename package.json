@@ -43,9 +43,9 @@
   },
   "devDependencies": {
     "app-root-path": "~2",
-    "eslint": "~6",
-    "eslint-config-airbnb-base": "~13",
-    "eslint-plugin-import": "~2.18",
+    "eslint": "~7",
+    "eslint-config-airbnb-base": "~14",
+    "eslint-plugin-import": "~2",
     "mocha": "~8",
     "nock": "~12",
     "nyc": "~15",
