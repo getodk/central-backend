@@ -41,7 +41,7 @@ describe('util/db', () => {
       result.should.equal('postgres://bar:baz@localhost:1234/foo');
     });
 
-    it('should return ?ssl=true if specified', () => {
+    it('should return ?ssl=true if ssl is true', () => {
       const result = connectionString({
         host: 'localhost',
         database: 'foo',
@@ -52,18 +52,18 @@ describe('util/db', () => {
       result.should.equal('postgres://bar:baz@localhost/foo?ssl=true');
     });
 
-    it('should return ?ssl=false if specified', () => {
-      const result = connectionString({
+    it('should throw if ssl is false', () => {
+      const result = () => connectionString({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
         password: 'baz',
         ssl: false
       });
-      result.should.equal('postgres://bar:baz@localhost/foo?ssl=false');
+      result.should.throw();
     });
 
-    it('should throw if ssl is not true or false', () => {
+    it('should throw if ssl is an object', () => {
       const result = () => connectionString({
         host: 'localhost',
         database: 'foo',
@@ -138,24 +138,18 @@ describe('util/db', () => {
       });
     });
 
-    it('should return the correct object if ssl is false', () => {
-      const result = connectionObject({
+    it('should throw if ssl is false', () => {
+      const result = () => connectionObject({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
         password: 'baz',
         ssl: false
       });
-      result.should.eql({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        ssl: false
-      });
+      result.should.throw();
     });
 
-    it('should throw if ssl is not true or false', () => {
+    it('should throw if ssl is an object', () => {
       const result = () => connectionObject({
         host: 'localhost',
         database: 'foo',
