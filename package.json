@@ -6,7 +6,7 @@
     "node": ">=12"
   },
   "dependencies": {
-    "@sentry/node": "~5",
+    "@sentry/node": "~6",
     "archiver": "~5",
     "bcrypt": "~5",
     "body-parser": "~1.18",
