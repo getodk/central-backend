@@ -757,6 +757,41 @@ describe('api: /projects/:id/forms', () => {
                 Buffer.compare(input, body).should.equal(0);
               })));
       }));
+
+      it('should continue to offer the xlsx file after a copy-draft', testService((service) => {
+        const input = readFileSync(appRoot + '/test/data/simple.xlsx');
+        return service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(input)
+            .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft').expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft/publish?version=new').expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2.xlsx')
+              .buffer(true).parse(superagent.parse['application/octet-stream'])
+              .expect(200)
+              .then(({ headers, body }) => {
+                headers['content-type'].should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx"');
+                Buffer.compare(input, body).should.equal(0);
+              })));
+      }));
+
+      it('should not continue to offer the xlsx file after a noncopy-draft', testService((service) => {
+        const input = readFileSync(appRoot + '/test/data/simple.xlsx');
+        return service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(input)
+            .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+              .send(testData.forms.simple2)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft/publish?version=new').expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2.xlsx')
+              .expect(404)));
+      }));
     });
 
     describe('.xls GET', () => {
