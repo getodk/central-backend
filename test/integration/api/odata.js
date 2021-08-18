@@ -272,7 +272,8 @@ describe('api: /forms/:id.svc', () => {
               value: [{
                 __id: '46ebf42ee83ddec5028c42b2c054402d1e700208',
                 '__Submissions-id': 'double',
-                name: 'Alice'
+                name: 'Alice',
+                toys: {}
               }, {
                 __id: 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
                 '__Submissions-id': 'double',
@@ -487,7 +488,8 @@ describe('api: /forms/:id.svc', () => {
                 },
                 meta: { instanceID: "rone" },
                 name: "Alice",
-                age: 30
+                age: 30,
+                children: {}
               }]
             });
           }))));
@@ -662,7 +664,8 @@ describe('api: /forms/:id.svc', () => {
                     },
                     meta: { instanceID: "rone" },
                     name: "Alice",
-                    age: 30
+                    age: 30,
+                    children: {}
                   }]
                 });
               }))))));
@@ -699,7 +702,8 @@ describe('api: /forms/:id.svc', () => {
                   },
                   meta: { instanceID: "rone" },
                   name: "Alice",
-                  age: 30
+                  age: 30,
+                  children: {}
                 }]
               });
             })))));
@@ -736,7 +740,8 @@ describe('api: /forms/:id.svc', () => {
                   },
                   meta: { instanceID: "rone" },
                   name: "Alice",
-                  age: 30
+                  age: 30,
+                  children: {}
                 }]
               });
             })))));
@@ -778,7 +783,8 @@ describe('api: /forms/:id.svc', () => {
                   },
                   meta: { instanceID: 'rone' },
                   name: 'Alice',
-                  age: 30
+                  age: 30,
+                  children: {}
                 }]
               });
             })))));
@@ -1314,7 +1320,8 @@ describe('api: /forms/:id.svc', () => {
                     },
                     meta: { instanceID: "rone" },
                     name: "Alice",
-                    age: 30
+                    age: 30,
+                    children: {}
                   }]
                 });
               })))));

@@ -632,6 +632,14 @@ describe('form schema', () => {
           ]);
         }));
 
+      it('should give structure children at a path', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.children('/meta').should.eql([
+            new MockField({ name: 'instanceID', path: '/meta/instanceID', type: 'string', order: 1 })
+          ]);
+        }));
+
       it('should give repeat children', () => fieldsFor(testData.forms.doubleRepeat)
         .then((fields) => {
           const stack = new SchemaStack(fields);
@@ -639,6 +647,15 @@ describe('form schema', () => {
           stack.push('children');
           stack.push('child');
           stack.children().should.eql([
+            new MockField({ name: 'name', path: '/children/child/name', type: 'string', order: 5 }),
+            new MockField({ name: 'toys', path: '/children/child/toys', type: 'structure', order: 6 })
+          ]);
+        }));
+
+      it('should give repeat children at a path', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.children('/children/child').should.eql([
             new MockField({ name: 'name', path: '/children/child/name', type: 'string', order: 5 }),
             new MockField({ name: 'toys', path: '/children/child/toys', type: 'structure', order: 6 })
           ]);
