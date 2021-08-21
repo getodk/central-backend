@@ -19,8 +19,9 @@
     },
     "enketo": {},
     "env": {
-      "domain": "http://localhost:8989",
-      "sysadminAccount": "no-reply@getodk.org"
+      "domain": "http://localhost",
+      "sysadminAccount": "no-reply@getodk.org",
+      "port": "8989"
     },
     "external": {
       "google": {
