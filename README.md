@@ -28,9 +28,20 @@ ODK Central Backend is, first and foremost, a RESTful HTTP API server that manag
 
 ## Setting up a development environment
 
-First, install Node.js 12+.
+1. Install Node.js 12 (other versions _may_ also work. Node.js 15+ is known to **not** currently work).
+2. Set up the database. This can be done manually (see "Setting up the database manually) or by running `make run-docker-postgres` if you have docker installed.
+3. Go to the repository root in a command line (where this README is) and run `make` with no arguments. This will install all npm dependencies and run all necessary migrations on the database; see the [makefile](Makefile) for details.
 
-Next, create a database and user in Postgres. Either use the same settings as the [default configuration file](config/default.json), or update your local configuration file to match the settings you choose. For example:
+Setup is now complete.
+
+To run the server, run `make run` from the repository root. Once started, the server will be available on port `8383`. If you run into trouble with this step, the typical solution is to run `npm install` manually.
+
+You can also run `make debug` to run the server with a standard node inspector port running (use your favorite tool, or visit [`about:inspect`](chrome://inspect) in Chrome to attach breakpoints and step through statements).
+
+
+### Setting up the database manually
+
+First, create a database and user in Postgres. Either use the same settings as the [default configuration file](config/default.json), or update your local configuration file to match the settings you choose. For example:
 
 ```sql
 CREATE USER jubilant WITH PASSWORD 'jubilant';
@@ -40,12 +51,6 @@ CREATE DATABASE jubilant with owner=jubilant encoding=UTF8;
 CREATE EXTENSION IF NOT EXISTS CITEXT;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 ```
-
-Then, go to the repository root in a command line (where this README is) and run `make` with no arguments. This will install all npm dependencies and run all necessary migrations on the database; see the [makefile](Makefile) for details.
-
-To run the server, run `make run` from the repository root. Once started, the server will be available on port `8383`. If you run into trouble with this step, the typical solution is to run `npm install` manually.
-
-You can also run `make debug` to run the server with a standard node inspector port running (use your favorite tool, or visit [`about:inspect`](chrome://inspect) in Chrome to attach breakpoints and step through statements).
 
 ### Sending email
 
@@ -72,6 +77,7 @@ Various other commands are available:
 
 * To run only unit tests (which are much speedier than integration tests), run `make test-unit` in the project root.
 * To run only API integration tests, run `make test-integration` instead.
+  * Note that this will use a different database than the `make run` command. This database is cleaned before every integration test run. The application does _not_ need to be running in order to run this command.
 * As provided by default by our testing framework Mocha, add `.only` after any `describe` or `it` call in the tests to run only the marked tests (eg: `it.only('should do something`,…`).
 * To examine test coverage (runs both test suites), type `make test-coverage`.
 
