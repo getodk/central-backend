@@ -1724,6 +1724,31 @@ describe('api: /projects/:id/forms', () => {
                 body.details.should.eql({ path: '/age', type: 'string' });
               })))));
 
+      it('should complain on downcast from group to string', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('nodeset="/data/meta/instanceID"', 'nodeset="/data/meta"'))
+            .set('Content-Type', 'application/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.equal(400.17);
+              body.details.should.eql({ path: '/meta', type: 'structure' });
+            }))));
+
+      it('should complain on downcast from repeat to string', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/withrepeat/draft')
+            .send(testData.forms.withrepeat
+              .replace('</model>', '<bind nodeset="/data/children/child" type="int"/></model>')
+              .replace('<repeat', '<rpt')
+              .replace('</repeat', '</rpt'))
+            .set('Content-Type', 'application/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.equal(400.17);
+              body.details.should.eql({ path: '/children/child', type: 'repeat' });
+            }))));
+
       it('should not complain about discarded draft field conflicts', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
