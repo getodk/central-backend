@@ -3667,6 +3667,44 @@ If the Analytics configuration is unset, Administrators will once again see a me
 + Response 403 (application/json)
     + Attributes (Error 403)
 
+
+## Analytics Preview [/v1/analytics/preview]
+
+_(introduced: version 1.3)_
+
+An Administrator of Central may opt in to sending periodic analytics reports summarizing usage. Configuration of this reporting is described [here](/reference/system-endpoints/analytics-configuration). For added transparency, the API provides a preview of the reported metrics.
+
+### Getting the analytics preview [GET]
+
+An Administrator can use this endpoint to preview the metrics being sent. The preview is computed on the fly and represents what the report would look like if sent at that time. This endpoint does not directly submit the analytics; that is handled internally as a scheduled Central task.
+
++ Response 200 (application/json)
+    + Body
+            {
+              "system":{
+                "num_admins":{
+                  "recent":1,
+                  "total":1
+                },
+                "backups_configured":1,
+                "database_size":12345,
+                ...
+              },
+              "projects":[
+                {
+                  "id":1,
+                  "users":{ ... },
+                  "forms":{ ... },
+                  "submissions":{ ... }
+                },
+                ...
+              ]
+            }
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+
 ## Server Audit Logs [/v1/audits]
 
 _(introduced: version 0.6)_
@@ -3741,6 +3779,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 + Response 403 (application/json)
     + Attributes (Error 403)
+
 
 # Group Encryption
 
