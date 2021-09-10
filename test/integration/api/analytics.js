@@ -4,7 +4,7 @@ const { map, sortBy } = require('ramda');
 const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { testService } = require('../setup');
 
-describe.only('api: /analytics/preview', () => {
+describe('api: /analytics/preview', () => {
   describe('GET', () => {
     it('should reject if the user cannot read analytics', testService((service) =>
       service.login('chelsea', (asChelsea) =>
