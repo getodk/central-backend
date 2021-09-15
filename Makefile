@@ -37,3 +37,11 @@ run-multi: base
 stop-multi:
 	node node_modules/naught/lib/main.js stop
 
+run-docker-postgres: stop-docker-postgres
+	docker run -d --name odk-postgres -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:9.6
+	sleep 5
+	node .circleci/initdb.js
+
+stop-docker-postgres:
+	docker stop odk-postgres || true
+	docker rm odk-postgres || true
