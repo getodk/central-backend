@@ -1134,6 +1134,20 @@ describe('form schema', () => {
         attachments.should.eql([]);
       });
     });
+
+    it('should fail gracefully on broken search() appearances', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model/>
+          </h:head>
+          <h:body>
+            <select1 appearance="search('fileone)"/>
+          </h:body>
+        </h:html>`;
+      return expectedFormAttachments(xml).should.be.rejectedWith('Unexpected search() appearance value search(\'fileone); broken syntax, maybe unmatched quotes?');
+    });
   });
 
   describe('public key injection', () => {
