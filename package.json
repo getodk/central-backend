@@ -6,7 +6,7 @@
     "node": ">=12"
   },
   "dependencies": {
-    "@sentry/node": "~5",
+    "@sentry/node": "~6",
     "archiver": "~5",
     "bcrypt": "~5",
     "body-parser": "~1.18",
@@ -27,7 +27,6 @@
     "morgan": "~1.9",
     "multer": "~1.4",
     "mustache": "~2.3",
-    "naught": "~1.6",
     "nodemailer": "~6",
     "odata-v4-parser": "~0.1",
     "pg": "~8",
@@ -43,9 +42,9 @@
   },
   "devDependencies": {
     "app-root-path": "~2",
-    "eslint": "~6",
-    "eslint-config-airbnb-base": "~13",
-    "eslint-plugin-import": "~2.18",
+    "eslint": "~7",
+    "eslint-config-airbnb-base": "~14",
+    "eslint-plugin-import": "~2",
     "mocha": "~8",
     "nock": "~12",
     "nyc": "~15",

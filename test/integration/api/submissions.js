@@ -400,7 +400,7 @@ describe('api: /submission', () => {
               .expect(200)
               .then(({ headers, body }) => {
                 headers['content-type'].should.equal('video/mp4');
-                headers['content-disposition'].should.equal('attachment; filename="my_file1.mp4"');
+                headers['content-disposition'].should.equal('attachment; filename="my_file1.mp4" filename*=UTF-8\'\'my_file1.mp4');
                 body.toString('utf8').should.equal('this is test file one');
               }))))));
 
@@ -424,7 +424,7 @@ describe('api: /submission', () => {
                 .expect(200)
                 .then(({ headers, body }) => {
                   headers['content-type'].should.equal('image/jpeg');
-                  headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"');
+                  headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg" filename*=UTF-8\'\'here_is_file2.jpg');
                   body.toString('utf8').should.equal('this is test file two');
                 })))))));
 
@@ -1167,7 +1167,7 @@ describe('api: /forms/:id/submissions', () => {
         asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip')
           .expect(200)
           .then(({ headers }) => {
-            headers['content-disposition'].should.equal('attachment; filename="simple.zip"');
+            headers['content-disposition'].should.equal('attachment; filename="simple.zip" filename*=UTF-8\'\'simple.zip');
             headers['content-type'].should.equal('application/zip');
           }))));
 
@@ -1460,7 +1460,7 @@ describe('api: /forms/:id/submissions', () => {
             .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip?attachments=false')
               .expect(200)
               .then(({ headers }) => {
-                headers['content-disposition'].should.equal('attachment; filename="binaryType.csv.zip"');
+                headers['content-disposition'].should.equal('attachment; filename="binaryType.csv.zip" filename*=UTF-8\'\'binaryType.csv.zip');
               })))));
 
     it('should properly count present attachments', testService((service) =>
@@ -1787,7 +1787,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
         asAlice.get('/v1/projects/1/forms/simple/submissions.csv')
           .expect(200)
           .then(({ headers }) => {
-            headers['content-disposition'].should.equal('attachment; filename="simple.csv"');
+            headers['content-disposition'].should.equal('attachment; filename="simple.csv" filename*=UTF-8\'\'simple.csv');
             headers['content-type'].should.equal('text/csv; charset=utf-8');
           }))));
 

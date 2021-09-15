@@ -732,7 +732,7 @@ describe('api: /projects/:id/forms', () => {
               .expect(200)
               .then(({ headers, body }) => {
                 headers['content-type'].should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-                headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx"');
+                headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx" filename*=UTF-8\'\'simple2.xlsx');
                 Buffer.compare(input, body).should.equal(0);
               })));
       }));
@@ -753,9 +753,44 @@ describe('api: /projects/:id/forms', () => {
               .expect(200)
               .then(({ headers, body }) => {
                 headers['content-type'].should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-                headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx"');
+                headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx" filename*=UTF-8\'\'simple2.xlsx');
                 Buffer.compare(input, body).should.equal(0);
               })));
+      }));
+
+      it('should continue to offer the xlsx file after a copy-draft', testService((service) => {
+        const input = readFileSync(appRoot + '/test/data/simple.xlsx');
+        return service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(input)
+            .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft').expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft/publish?version=new').expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2.xlsx')
+              .buffer(true).parse(superagent.parse['application/octet-stream'])
+              .expect(200)
+              .then(({ headers, body }) => {
+                headers['content-type'].should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx" filename*=UTF-8\'\'simple2.xlsx');
+                Buffer.compare(input, body).should.equal(0);
+              })));
+      }));
+
+      it('should not continue to offer the xlsx file after a noncopy-draft', testService((service) => {
+        const input = readFileSync(appRoot + '/test/data/simple.xlsx');
+        return service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(input)
+            .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+              .send(testData.forms.simple2)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft/publish?version=new').expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2.xlsx')
+              .expect(404)));
       }));
     });
 
@@ -1194,7 +1229,7 @@ describe('api: /projects/:id/forms', () => {
               .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
                 .expect(200)
                 .then(({ headers, text }) => {
-                  headers['content-disposition'].should.equal('attachment; filename="goodone.csv"');
+                  headers['content-disposition'].should.equal('attachment; filename="goodone.csv" filename*=UTF-8\'\'goodone.csv');
                   headers['content-type'].should.equal('text/csv; charset=utf-8');
                   text.should.equal('test,csv\n1,2');
                 })))));
@@ -1688,6 +1723,31 @@ describe('api: /projects/:id/forms', () => {
                 body.code.should.equal(400.17);
                 body.details.should.eql({ path: '/age', type: 'string' });
               })))));
+
+      it('should complain on downcast from group to string', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('nodeset="/data/meta/instanceID"', 'nodeset="/data/meta"'))
+            .set('Content-Type', 'application/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.equal(400.17);
+              body.details.should.eql({ path: '/meta', type: 'structure' });
+            }))));
+
+      it('should complain on downcast from repeat to string', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/withrepeat/draft')
+            .send(testData.forms.withrepeat
+              .replace('</model>', '<bind nodeset="/data/children/child" type="int"/></model>')
+              .replace('<repeat', '<rpt')
+              .replace('</repeat', '</rpt'))
+            .set('Content-Type', 'application/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.equal(400.17);
+              body.details.should.eql({ path: '/children/child', type: 'repeat' });
+            }))));
 
       it('should not complain about discarded draft field conflicts', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -2755,7 +2815,7 @@ describe('api: /projects/:id/forms', () => {
                 .buffer(true).parse(superagent.parse['application/octet-stream'])
                 .then(({ headers, body }) => {
                   headers['content-type'].should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-                  headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx"');
+                  headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx" filename*=UTF-8\'\'simple2.xlsx');
                   Buffer.compare(input, body).should.equal(0);
                 })));
         }));

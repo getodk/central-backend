@@ -13,6 +13,7 @@
     "import/newline-after-import": "off",
     "import/order": "off",
     "lines-between-class-members": "off",
+    "max-classes-per-file": "off",
     "max-len": "off",
     "no-continue": "off",
     "no-debugger": "off",
@@ -29,6 +30,7 @@
     "object-property-newline": "off",
     "operator-linebreak": "off",
     "padded-blocks": "off",
+    "prefer-object-spread": "off",
     "prefer-template": "off",
     "space-infix-ops": "off",
     "spaced-comment": "off"

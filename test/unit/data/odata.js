@@ -153,8 +153,8 @@ describe('submissionToOData', () => {
       new MockField({ path: '/earth', name: 'earth', type: 'int' }),
       new MockField({ path: '/mars', name: 'mars', type: 'decimal' }),
       new MockField({ path: '/jupiter', name: 'jupiter', type: 'geopoint' }),
-      new MockField({ path: '/saturn', name: 'saturn', type: 'structure', children: [] }),
-      new MockField({ path: '/uranus', name: 'uranus', type: 'repeat', children: [] })
+      new MockField({ path: '/saturn', name: 'saturn', type: 'structure' }),
+      new MockField({ path: '/uranus', name: 'uranus', type: 'repeat' })
     ];
     const submission = mockSubmission('nulls', '<data><earth>42</earth></data>');
     return submissionToOData(fields, 'Submissions', submission).then((result) => {
@@ -163,14 +163,40 @@ describe('submissionToOData', () => {
         __system,
         earth: 42,
         mars: null,
-        jupiter: null
+        jupiter: null,
+        saturn: {}
+      }]);
+    });
+  });
+
+  // n.b. the different hyphenation between this test and next (facepalm)
+  it('should output null field records for missing-group nested atomic values', () => {
+    const fields = [
+      new MockField({ path: '/earth', name: 'earth', type: 'int', order: 0 }),
+      new MockField({ path: '/mars', name: 'mars', type: 'decimal', order: 1 }),
+      new MockField({ path: '/jupiter', name: 'jupiter', type: 'geopoint', order: 2 }),
+      new MockField({ path: '/saturn', name: 'saturn', type: 'structure', order: 3 }),
+      new MockField({ path: '/saturn/titan', name: 'titan', type: 'int', order: 4 }),
+      new MockField({ path: '/uranus', name: 'uranus', type: 'repeat', order: 5 }),
+      new MockField({ path: '/neptune', name: 'neptune', type: 'structure', order: 6 })
+    ];
+    const submission = mockSubmission('nulls', '<data><earth>42</earth></data>');
+    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+      result.should.eql([{
+        __id: 'nulls',
+        __system,
+        earth: 42,
+        mars: null,
+        jupiter: null,
+        saturn: { titan: null },
+        neptune: {}
       }]);
     });
   });
 
   it('should output null field records for missing group-nested atomic values', () => {
     const fields = [
-      new MockField({ path: '/sun', name: 'sun', type: 'structure', order: 0 }),
+      new MockField({ path: '/sun', name: 'sun', type: 'structure', order: 0 }), // < structure
       new MockField({ path: '/sun/earth', name: 'earth', type: 'int', order: 1 }),
       new MockField({ path: '/sun/mars', name: 'mars', type: 'decimal', order: 2 }),
       new MockField({ path: '/sun/jupiter', name: 'jupiter', type: 'geopoint', order: 3 }),
@@ -185,7 +211,8 @@ describe('submissionToOData', () => {
         sun: {
           earth: 42,
           mars: null,
-          jupiter: null
+          jupiter: null,
+          saturn: {}
         }
       }]);
     });
@@ -193,7 +220,7 @@ describe('submissionToOData', () => {
 
   it('should output null field records for missing repeat-nested atomic values', () => { // gh356
     const fields = [
-      new MockField({ path: '/sun', name: 'sun', type: 'repeat', order: 0 }),
+      new MockField({ path: '/sun', name: 'sun', type: 'repeat', order: 0 }), // < repeat
       new MockField({ path: '/sun/earth', name: 'earth', type: 'int', order: 1 }),
       new MockField({ path: '/sun/mars', name: 'mars', type: 'decimal', order: 2 }),
       new MockField({ path: '/sun/jupiter', name: 'jupiter', type: 'geopoint', order: 3 }),
@@ -207,6 +234,30 @@ describe('submissionToOData', () => {
         __id: '68874cc5985b68898fbd0af1156e12b6270820f7',
         earth: 42,
         mars: null,
+        saturn: {},
+        jupiter: null
+      }]);
+    });
+  });
+
+  it('should output null field records for missing group-nested atomic values within a repeat', () => {
+    const fields = [
+      new MockField({ path: '/sun', name: 'sun', type: 'repeat', order: 0 }), // < repeat
+      new MockField({ path: '/sun/earth', name: 'earth', type: 'int', order: 1 }),
+      new MockField({ path: '/sun/mars', name: 'mars', type: 'decimal', order: 2 }),
+      new MockField({ path: '/sun/jupiter', name: 'jupiter', type: 'geopoint', order: 3 }),
+      new MockField({ path: '/sun/saturn', name: 'saturn', type: 'structure', order: 4 }),
+      new MockField({ path: '/sun/saturn/titan', name: 'titan', type: 'int', order: 5 }),
+      new MockField({ path: '/sun/uranus', name: 'uranus', type: 'repeat', order: 6 })
+    ];
+    const submission = mockSubmission('nulls', '<data><sun><earth>42</earth></sun></data>');
+    return submissionToOData(fields, 'Submissions.sun', submission).then((result) => {
+      result.should.eql([{
+        '__Submissions-id': 'nulls',
+        __id: '68874cc5985b68898fbd0af1156e12b6270820f7',
+        earth: 42,
+        mars: null,
+        saturn: { titan: null },
         jupiter: null
       }]);
     });
@@ -514,7 +565,8 @@ describe('submissionToOData', () => {
                   child: [
                     {
                       __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d',
-                      name: 'Alice'
+                      name: 'Alice',
+                      toys: {}
                     }, {
                       __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172',
                       name: 'Bob',
@@ -597,7 +649,8 @@ describe('submissionToOData', () => {
         result.should.eql([{
           __id: '46ebf42ee83ddec5028c42b2c054402d1e700208',
           '__Submissions-id': 'double',
-          name: 'Alice'
+          name: 'Alice',
+          toys: {}
         }, {
           __id: 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
           '__Submissions-id': 'double',

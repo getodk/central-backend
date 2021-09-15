@@ -479,7 +479,7 @@ describe('endpoints', () => {
       const requestTest = streamTest.fromChunks();
       const responseTest = streamTest.toText((_, result) => {
         trailers.should.eql({ Status: 'Error' });
-        result.should.equal('a!test!');
+        should.not.exist(result); // as of node 14 the events come in a different order
         done();
       });
       responseTest.addTrailers = function(t) { trailers = t; };

@@ -632,6 +632,14 @@ describe('form schema', () => {
           ]);
         }));
 
+      it('should give structure children at a path', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.children('/meta').should.eql([
+            new MockField({ name: 'instanceID', path: '/meta/instanceID', type: 'string', order: 1 })
+          ]);
+        }));
+
       it('should give repeat children', () => fieldsFor(testData.forms.doubleRepeat)
         .then((fields) => {
           const stack = new SchemaStack(fields);
@@ -639,6 +647,15 @@ describe('form schema', () => {
           stack.push('children');
           stack.push('child');
           stack.children().should.eql([
+            new MockField({ name: 'name', path: '/children/child/name', type: 'string', order: 5 }),
+            new MockField({ name: 'toys', path: '/children/child/toys', type: 'structure', order: 6 })
+          ]);
+        }));
+
+      it('should give repeat children at a path', () => fieldsFor(testData.forms.doubleRepeat)
+        .then((fields) => {
+          const stack = new SchemaStack(fields);
+          stack.children('/children/child').should.eql([
             new MockField({ name: 'name', path: '/children/child/name', type: 'string', order: 5 }),
             new MockField({ name: 'toys', path: '/children/child/toys', type: 'structure', order: 6 })
           ]);
@@ -1116,6 +1133,20 @@ describe('form schema', () => {
       return expectedFormAttachments(xml).then((attachments) => {
         attachments.should.eql([]);
       });
+    });
+
+    it('should fail gracefully on broken search() appearances', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model/>
+          </h:head>
+          <h:body>
+            <select1 appearance="search('fileone)"/>
+          </h:body>
+        </h:html>`;
+      return expectedFormAttachments(xml).should.be.rejectedWith('Unexpected search() appearance value search(\'fileone); broken syntax, maybe unmatched quotes?');
     });
   });
 
