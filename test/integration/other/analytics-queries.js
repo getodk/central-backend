@@ -11,6 +11,9 @@ const testData = require('../../data/xml');
 const simpleInstance = (newInstanceId) => testData.instances.simple.one
   .replace('one</instance', `${newInstanceId}</instance`);
 
+const withSimpleIds = (deprecatedId, instanceId) => testData.instances.simple.one
+  .replace('one</instance', `${instanceId}</instanceID><deprecatedID>${deprecatedId}</deprecated`);
+
 describe.only('analytics task queries', () => {
   describe('general server metrics', () => {
     it('should count audit log entries', testContainer( async (container) => {
@@ -241,18 +244,89 @@ describe.only('analytics task queries', () => {
     }));
 
     it('should calculate submissions by review state', testService( async (service, container) => {
+      await submitToForm(service, 'alice', 1, 'simple', simpleInstance('aaa'));
+      await service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple/submissions/aaa')
+          .send({ reviewState: 'approved' }));
+
+      await submitToForm(service, 'alice', 1, 'simple', simpleInstance('bbb'));
+      await service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple/submissions/bbb')
+          .send({ reviewState: 'rejected' }));
+
+
+      await submitToForm(service, 'alice', 1, 'simple', simpleInstance('ccc'));
+      await service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple/submissions/ccc')
+          .send({ reviewState: 'hasIssues' }));
+
+      // make all submissions so far in the distant past
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+
+      await submitToForm(service, 'alice', 1, 'simple', simpleInstance('ddd'));
+      await service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple/submissions/ddd')
+          .send({ reviewState: 'hasIssues' }));
+
       const res = await container.Analytics.countSubmissionReviewStates();
-      res.should.equal('TODO')
+      const projects = {};
+      for (const row of res) {
+        const id = row.projectId;
+        if (!(id in projects)) {
+          projects[id] = {};
+        }
+        projects[id][row.reviewState] = {recent: row.recent, total: row.total};
+      }
+
+      projects['1'].approved.recent.should.equal(0);
+      projects['1'].approved.total.should.equal(1);
+      projects['1'].rejected.recent.should.equal(0);
+      projects['1'].rejected.total.should.equal(1);
+      projects['1'].hasIssues.recent.should.equal(1);
+      projects['1'].hasIssues.total.should.equal(2);
     }));
 
     it('should calculate submissions that have been edited', testService( async (service, container) => {
+      await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one);
+      await service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(withSimpleIds('one', '111').replace('Alice', 'Alyssa')), { filename: 'data.xml' })
+          .expect(201));
+
+      // make all submissions (and their defs in this case) so far in the distant past
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submission_defs set "createdAt" = '1999-1-1' where true`);
+
+      await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.two);
+      await service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(withSimpleIds('two', '222').replace('Bob', 'Barb')), { filename: 'data.xml' })
+          .expect(201));
       const res = await container.Analytics.countSubmissionsEdited();
-      res.should.equal('TODO')
+      res[0].projectId.should.equal(1);
+      res[0].total.should.equal(2);
+      res[0].recent.should.equal(1);
     }));
 
     it('should calculate submissions that have comments', testService( async (service, container) => {
+      await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one);
+      await service.login('alice', (asAlice) =>
+        asAlice.post(`/v1/projects/1/forms/simple/submissions/one/comments`)
+          .send({ body: 'new comment here' })
+          .expect(200));
+      // make all submissions so far in the past
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.two);
+      await service.login('alice', (asAlice) =>
+        asAlice.post(`/v1/projects/1/forms/simple/submissions/two/comments`)
+          .send({ body: 'new comment here' })
+          .expect(200));
       const res = await container.Analytics.countSubmissionsComments();
-      res.should.equal('TODO')
+      res[0].projectId.should.equal(1);
+      res[0].total.should.equal(2);
+      res[0].recent.should.equal(1);
     }));
 
     it('should calculate submissions by user type', testService( async (service, container) => {
