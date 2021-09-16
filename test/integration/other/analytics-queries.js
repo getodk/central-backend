@@ -95,7 +95,7 @@ const submitToForm = (service, user, projectId, xmlFormId, xml, deviceId = 'abcd
 ////////////////////////////////////////////////////////////////////////////////
 describe('analytics task queries', () => {
   describe('general server metrics', () => {
-    it('should count audit log entries', testContainer( async (container) => {
+    it('should count audit log entries', testContainer(async (container) => {
       // recent "now" audits
       await container.Audits.log(null, 'dummy.action', null, 'test audit details');
       await container.Audits.log(null, 'dummy.action', null, 'test audit details');
@@ -107,7 +107,7 @@ describe('analytics task queries', () => {
       res.total.should.equal(3);
     }));
 
-    it('should count admins', testContainer( async (container) => {
+    it('should count admins', testContainer(async (container) => {
       await createTestUser(container, 'A', 'admin', 1);
       await createTestUser(container, 'B', 'admin', 1, false); // no recent activity
       // a third admin exists already from fixtures: 'alice' but with no recent activity
@@ -117,7 +117,7 @@ describe('analytics task queries', () => {
       res.total.should.equal(3);
     }));
 
-    it('should count encrypted projects',  testService( async (service, container) => {
+    it('should count encrypted projects',  testService(async (service, container) => {
       // encrypted project that has recent activity
       const proj = await createTestProject(container, 'New Proj');
       const form = await createTestForm(container, testData.forms.simple, proj); 
@@ -132,18 +132,18 @@ describe('analytics task queries', () => {
       res.recent.should.equal(1);
     }));
 
-    it('should count the number of questions in the biggest form', testContainer( async ({ Analytics }) => {
+    it('should count the number of questions in the biggest form', testContainer(async ({ Analytics }) => {
       const res = await Analytics.biggestForm();
       // fixture form withrepeats has 4 questions plus meta/instanceID, which is included in this count
       res.should.equal(5);
     }));
 
-    it('should get the database size', testContainer( async ({ Analytics }) => {
+    it('should get the database size', testContainer(async ({ Analytics }) => {
       const res = await Analytics.databaseSize();
       res.database_size.should.be.above(0); // Probably around 13 MB?
     }));
 
-    it('should determine whether backups are enabled', testContainer( async ({ Analytics, Configs }) => {
+    it('should determine whether backups are enabled', testContainer(async ({ Analytics, Configs }) => {
       let res = await Analytics.backupsEnabled();
       res.backups_configured.should.equal(0);
       await Configs.set('backups.main', {detail: 'dummy'});
@@ -153,7 +153,7 @@ describe('analytics task queries', () => {
   });
 
   describe('user metrics', () => {
-    it('should calculate number of managers, viewers, and data collectors per project', testContainer( async (container) => {
+    it('should calculate number of managers, viewers, and data collectors per project', testContainer(async (container) => {
       // default project has 1 manager already (bob)
       const proj = await createTestProject(container, 'New Proj');
       
@@ -192,7 +192,7 @@ describe('analytics task queries', () => {
       projects[proj.id].formfill.recent.should.equal(3);
     }));
 
-    it('should calculate number of app user per project', testService( async (service, container) => {
+    it('should calculate number of app user per project', testService(async (service, container) => {
       // an app user that will make a submission
       const token = await createAppUser(service, 1, 'simple');
       // another non-recent app user
@@ -209,7 +209,7 @@ describe('analytics task queries', () => {
       res[0].recent.should.equal(1);
     }));
 
-    it('should calculate unique device ids per project', testService( async (service, container) => {
+    it('should calculate unique device ids per project', testService(async (service, container) => {
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one, 'device1');
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.two, 'device2');
       // make all submissions so far in the distant past
@@ -221,7 +221,7 @@ describe('analytics task queries', () => {
       res[0].recent.should.equal(1);
     }));
 
-    it('should calculate public links per project', testService( async (service, container) => {
+    it('should calculate public links per project', testService(async (service, container) => {
       const proj = await createTestProject(container, 'New Proj');
       const form = await createTestForm(container, testData.forms.simple, proj); 
 
@@ -242,7 +242,7 @@ describe('analytics task queries', () => {
   });
 
   describe('form metrics', () => {
-    it('should calculate forms per project', testService( async (service, container) => {
+    it('should calculate forms per project', testService(async (service, container) => {
       const proj = await createTestProject(container, 'New Proj');
       const form = await createTestForm(container, testData.forms.simple, proj); 
       await submitToForm(service, 'alice', proj.id, form.xmlFormId, testData.instances.simple.one);
@@ -265,14 +265,14 @@ describe('analytics task queries', () => {
       projects[proj.id].recent.should.equal(1);
     }));
 
-    it('should calculate forms with repeats', testService( async (service, container) => {
+    it('should calculate forms with repeats', testService(async (service, container) => {
       const res = await container.Analytics.countFormsGeoRepeats();
       res[0].projectId.should.equal(1);
       res[0].repeat_total.should.equal(1);
       res[0].repeat_recent.should.equal(0);
     }));
 
-    it('should calculate forms with audits', testService( async (service, container) => {
+    it('should calculate forms with audits', testService(async (service, container) => {
       const proj = await createTestProject(container, 'New Proj');
       const auditForm = await createTestForm(container, testData.forms.clientAudits, proj);
       await service.login('alice', (asAlice) =>
@@ -298,7 +298,7 @@ describe('analytics task queries', () => {
       projects[proj.id].recent.should.equal(1);
     }));
 
-    it('should calculate forms with geospatial elements', testService( async (service, container) => {
+    it('should calculate forms with geospatial elements', testService(async (service, container) => {
       const proj = await createTestProject(container, 'New Proj');
       const form = await createTestForm(container, geoForm, proj); 
       await submitToForm(service, 'alice', proj.id, form.xmlFormId, geoSubmission('one'));
@@ -317,7 +317,7 @@ describe('analytics task queries', () => {
       projects[proj.id].recent.should.equal(1);
     }));
 
-    it('should count encrypted forms per project', testService( async (service, container) => {
+    it('should count encrypted forms per project', testService(async (service, container) => {
       const proj = await createTestProject(container, 'New Proj');
       const encryptedForm = await createTestForm(container, testData.forms.encrypted, proj);
       await submitToForm(service, 'alice', proj.id, encryptedForm.xmlFormId, testData.instances.encrypted.one);
@@ -340,7 +340,7 @@ describe('analytics task queries', () => {
   });
 
   describe('submission metrics', () => {
-    it('should calculate submissions', testService( async (service, container) => {
+    it('should calculate submissions', testService(async (service, container) => {
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one);
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.two);
       // make all submissions so far in the distant past
@@ -352,7 +352,7 @@ describe('analytics task queries', () => {
       res[0].recent.should.equal(1);
     }));
 
-    it('should calculate submissions by review state', testService( async (service, container) => {
+    it('should calculate submissions by review state', testService(async (service, container) => {
       await submitToForm(service, 'alice', 1, 'simple', simpleInstance('aaa'));
       await service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple/submissions/aaa')
@@ -395,7 +395,7 @@ describe('analytics task queries', () => {
       projects['1'].hasIssues.total.should.equal(2);
     }));
 
-    it('should calculate submissions that have been edited', testService( async (service, container) => {
+    it('should calculate submissions that have been edited', testService(async (service, container) => {
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one);
       await service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission')
@@ -419,7 +419,7 @@ describe('analytics task queries', () => {
       res[0].recent.should.equal(1);
     }));
 
-    it('should calculate submissions that have comments', testService( async (service, container) => {
+    it('should calculate submissions that have comments', testService(async (service, container) => {
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one);
       await service.login('alice', (asAlice) =>
         asAlice.post(`/v1/projects/1/forms/simple/submissions/one/comments`)
@@ -438,7 +438,7 @@ describe('analytics task queries', () => {
       res[0].recent.should.equal(1);
     }));
 
-    it('should calculate submissions by user type', testService( async (service, container) => {
+    it('should calculate submissions by user type', testService(async (service, container) => {
       // web user submission
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one);
 
