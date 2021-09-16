@@ -2451,35 +2451,35 @@ It is important to note that this endpoint returns whatever is _currently_ uploa
 This returns the changes, or edits, between different versions of a Submission. These changes are returned in an object that is indexed by the `instanceId` that uniquely identifies that version. Between two submissions, there is an array of objects representing how each field changed. This change object contains the old and new values, as well as the path of that changed node in the Submission XML. These changes reflect the updated `instanceID` and `deprecatedID` fields as well as the edited value.
 
 + Response 200
-		+ Attributes (array[array[Submission Diff Value]])
+    + Attributes (array[array[Submission Diff Value]])
 
     + Body
 
-			{
-			  "two": [
-			    {
-			      "new": "Donna",
-			      "old": "Dana",
-			      "path": ["name"]
-			    },
-			    {
-			      "new": "55",
-			      "old": "44",
-			      "path": ["age"]
-			    },
-			    {
-			      "new": "two",
-			      "old": "one",
-			      "path": ["meta", "instanceID"]
-			    },
-			    {
-			      "new": "one",
-			      "old": null,
-			      "path": ["meta", "deprecatedID"]
-			      ]
-			    }
-			  ]
-			}
+      {
+        "two": [
+          {
+            "new": "Donna",
+            "old": "Dana",
+            "path": ["name"]
+          },
+          {
+            "new": "55",
+            "old": "44",
+            "path": ["age"]
+          },
+          {
+            "new": "two",
+            "old": "one",
+            "path": ["meta", "instanceID"]
+          },
+          {
+            "new": "one",
+            "old": null,
+            "path": ["meta", "deprecatedID"]
+            ]
+          }
+        ]
+      }
 
 
 + Response 403 (application/json)
