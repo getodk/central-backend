@@ -3780,7 +3780,6 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-
 # Group Encryption
 
 ODK Central supports two types of encryption:
