@@ -7,6 +7,37 @@ const { User, Actor } = require(appRoot + '/lib/model/frames');
 const { createAppUser, createPublicLink, createTestForm, createTestProject, createTestUser, submitToForm } = require('../../data/analytics');
 const testData = require('../../data/xml');
 
+const geoForm = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <h:head>
+    <h:title>Simple Geo</h:title>
+    <model odk:xforms-version="1">
+      <instance>
+        <data id="simple-geo">
+          <location_gps/>
+          <meta>
+            <instanceID/>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/location_gps" type="geopoint"/>
+      <bind jr:preload="uid" nodeset="/data/meta/instanceID" readonly="true()" type="string"/>
+    </model>
+  </h:head>
+  <h:body>
+    <input ref="/data/location_gps">
+      <label>Location Position</label>
+    </input>
+  </h:body>
+</h:html>`;
+
+const geoSubmission = (instanceId) =>
+  `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="simple-geo">
+  <location_gps>20.96144 18.512518 0 0</location_gps>
+  <meta>
+    <instanceID>${instanceId}</instanceID>
+  </meta>
+</data>`;
+
 // Utility
 const simpleInstance = (newInstanceId) => testData.instances.simple.one
   .replace('one</instance', `${newInstanceId}</instance`);
@@ -14,7 +45,7 @@ const simpleInstance = (newInstanceId) => testData.instances.simple.one
 const withSimpleIds = (deprecatedId, instanceId) => testData.instances.simple.one
   .replace('one</instance', `${instanceId}</instanceID><deprecatedID>${deprecatedId}</deprecated`);
 
-describe.only('analytics task queries', () => {
+describe('analytics task queries', () => {
   describe('general server metrics', () => {
     it('should count audit log entries', testContainer( async (container) => {
       // recent "now" audits
@@ -220,13 +251,43 @@ describe.only('analytics task queries', () => {
     }));
 
     it('should calculate forms with geospatial elements', testService( async (service, container) => {
+      const proj = await createTestProject(container, 'New Proj');
+      const form = await createTestForm(container, geoForm, proj); 
+      await submitToForm(service, 'alice', proj.id, form.xmlFormId, geoSubmission('one'));
       const res = await container.Analytics.countFormsGeoRepeats();
-      res.should.equal('TODO')
+
+      const projects = {};
+      for (const row of res) {
+        const id = row.projectId;
+        if (!(id in projects)) {
+          projects[id] = {};
+        }
+        projects[id] = {recent: row.geo_recent, total: row.geo_total};
+      }
+
+      projects[proj.id].total.should.equal(1);
+      projects[proj.id].recent.should.equal(1);
     }));
 
     it('should count encrypted forms per project', testService( async (service, container) => {
+      const proj = await createTestProject(container, 'New Proj');
+      const encryptedForm = await createTestForm(container, testData.forms.encrypted, proj);
+      await submitToForm(service, 'alice', proj.id, encryptedForm.xmlFormId, testData.instances.encrypted.one);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
       const res = await container.Analytics.countFormsEncrypted();
-      res.should.equal('TODO')
+      const projects = {};
+      for (const row of res) {
+        const id = row.projectId;
+        if (!(id in projects)) {
+          projects[id] = {};
+        }
+        projects[id] = {recent: row.recent, total: row.total};
+      }
+
+      projects['1'].total.should.equal(0);
+      projects['1'].recent.should.equal(0);
+      projects[proj.id].total.should.equal(1);
+      projects[proj.id].recent.should.equal(0);
     }));
   });
 
