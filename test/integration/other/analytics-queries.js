@@ -37,40 +37,42 @@ const geoSubmission = (instanceId) =>
   </meta>
 </data>`;
 
-// Utility
+// Utilities for making submissions
 const simpleInstance = (newInstanceId) => testData.instances.simple.one
   .replace('one</instance', `${newInstanceId}</instance`);
 
 const withSimpleIds = (deprecatedId, instanceId) => testData.instances.simple.one
   .replace('one</instance', `${instanceId}</instanceID><deprecatedID>${deprecatedId}</deprecated`);
 
-const createTestUser = async (container, name, role, projectId, recent = true) => {
-  const newUser = await container.Users.create(new User({ email: `${name}@opendatakit.org`, password: name }, { actor: new Actor({ type: 'user', displayName: name }) }));
-  if (role === 'admin')
-    await container.Assignments.grantSystem(newUser.actor, 'admin', '*');
-  else
-    await container.Projects.getById(projectId).then((project) => container.Assignments.grantSystem(newUser.actor, role, project.get()));
+// Utilities for creating things for tests
+const createTestUser = (service, container, name, role, projectId, recent = true) =>
+  service.login('alice', (asAlice) =>
+    asAlice.post('/v1/users')
+      .send({ email: `${name}@opendatakit.org`, password: name })
+      .then(({ body }) => ((role === 'admin')
+        ? asAlice.post(`/v1/assignments/admin/${body.id}`)
+        : asAlice.post(`/v1/projects/${projectId}/assignments/${role}/${body.id}`))
+        .then(() => (recent)
+          ? container.Audits.log(body, 'dummy.action', null, 'a recent activity')
+          : Promise.resolve())));
 
-  if (recent)
-    await container.Audits.log(newUser.actor, 'dummy.action', null, 'test audit details');
+const createTestProject = (service, container, name) =>
+  service.login('alice', (asAlice) =>
+    asAlice.post('/v1/projects')
+      .send({ name })
+      .then(({ body }) => body.id));
 
-  return newUser;
-};
-
-const createTestProject = (container, name) =>
-  container.Projects.create(new Project({ name }))
-    .then((proj) => container.Projects.getById(proj.id).then((o) => o.get()));
-
-const createTestForm = async (container, xml, project) => {
-  const newForm = await Form.fromXml(xml).then((partial) => container.Forms.createNew(partial, project, true));
-  return newForm;
-};
+const createTestForm = (service, container, xml, projectId) =>
+  service.login('alice', (asAlice) =>
+    asAlice.post(`/v1/projects/${projectId}/forms?publish=true`)
+      .set('Content-Type', 'application/xml')
+      .send(xml)
+      .then(({ body }) => body.xmlFormId));
 
 const createPublicLink = (service, projectId, xmlFormId) =>
   service.login('alice', (asAlice) =>
     asAlice.post(`/v1/projects/${projectId}/forms/${xmlFormId}/public-links`)
       .send({ displayName: 'test1' })
-      .expect(200)
       .then(({ body }) => Promise.resolve(body.token)));
 
 const createAppUser = (service, projectId, xmlFormId) =>
@@ -79,15 +81,13 @@ const createAppUser = (service, projectId, xmlFormId) =>
       .send({ displayName: 'test1' })
       .then(({ body }) => body)
       .then((fk) => asAlice.post(`/v1/projects/${projectId}/forms/${xmlFormId}/assignments/app-user/${fk.id}`)
-        .expect(200)
         .then(() => Promise.resolve(fk.token))));
 
 const submitToForm = (service, user, projectId, xmlFormId, xml, deviceId = 'abcd') =>
   service.login(user, (asUser) =>
     asUser.post(`/v1/projects/${projectId}/forms/${xmlFormId}/submissions?deviceID=${deviceId}`)
       .send(xml)
-      .set('Content-Type', 'text/xml')
-      .expect(200));
+      .set('Content-Type', 'text/xml'));
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -107,25 +107,33 @@ describe('analytics task queries', () => {
       res.total.should.equal(3);
     }));
 
-    it('should count admins', testContainer(async (container) => {
-      await createTestUser(container, 'A', 'admin', 1);
-      await createTestUser(container, 'B', 'admin', 1, false); // no recent activity
-      // a third admin exists already from fixtures: 'alice' but with no recent activity
+    it('should count admins', testService(async (service, container) => {
+      await createTestUser(service, container, 'annie', 'admin', 1);
+      await createTestUser(service, container, 'betty', 'admin', 1, false); // no recent activity
+      await createTestUser(service, container, 'carly', 'admin', 1, false); // no recent activity
+      // another admin exists already from fixtures: 'alice', who should have recent activity from logging the others in
 
       const res = await container.Analytics.countAdmins();
-      res.recent.should.equal(1);
-      res.total.should.equal(3);
+      res.recent.should.equal(2);
+      res.total.should.equal(4);
     }));
 
     it('should count encrypted projects',  testService(async (service, container) => {
       // encrypted project that has recent activity
-      const proj = await createTestProject(container, 'New Proj');
-      const form = await createTestForm(container, testData.forms.simple, proj); 
-      await submitToForm(service, 'alice', proj.id, form.xmlFormId, testData.instances.simple.one);
-      await container.Projects.setManagedEncryption(proj, 'secretpassword', 'hint');
+      const projId = await createTestProject(service, container, 'New Proj');
+      const xmlFormId = await createTestForm(service, container, testData.forms.simple, projId);
+      await submitToForm(service, 'alice', projId, xmlFormId, testData.instances.simple.one);
+
+      await service.login('alice', (asAlice) =>
+        asAlice.post(`/v1/projects/${projId}/key`)
+          .send({ passphrase: 'supersecret', hint: 'it is a secret' }));
+
       // encrypted project with no recent activity
-      const unusedProj = await createTestProject(container, 'Unused Proj');
-      await container.Projects.setManagedEncryption(unusedProj, 'secretpassword', 'hint');
+      const unusedProjId = await createTestProject(service, container, 'Unused Proj');
+      await service.login('alice', (asAlice) =>
+        asAlice.post(`/v1/projects/${unusedProjId}/key`)
+          .send({ passphrase: 'supersecret', hint: 'it is a secret' }));
+
       // compute metrics
       const res = await container.Analytics.encryptedProjects();
       res.total.should.equal(2);
@@ -153,20 +161,20 @@ describe('analytics task queries', () => {
   });
 
   describe('user metrics', () => {
-    it('should calculate number of managers, viewers, and data collectors per project', testContainer(async (container) => {
+    it('should calculate number of managers, viewers, and data collectors per project', testService(async (service, container) => {
       // default project has 1 manager already (bob)
-      const proj = await createTestProject(container, 'New Proj');
+      const projId = await createTestProject(service, container, 'New Proj');
       
       // users with recent activity
-      await createTestUser(container, 'Manager1', 'manager', proj.id);
-      await createTestUser(container, 'Viewer1', 'viewer', proj.id);
-      await createTestUser(container, 'Viewer2', 'viewer', proj.id);
-      await createTestUser(container, 'Collector1', 'formfill', proj.id);
-      await createTestUser(container, 'Collector2', 'formfill', proj.id);
-      await createTestUser(container, 'Collector3', 'formfill', proj.id);
+      await createTestUser(service, container, 'Manager1', 'manager',projId);
+      await createTestUser(service, container, 'Viewer1', 'viewer', projId);
+      await createTestUser(service, container, 'Viewer2', 'viewer', projId);
+      await createTestUser(service, container, 'Collector1', 'formfill', projId);
+      await createTestUser(service, container, 'Collector2', 'formfill', projId);
+      await createTestUser(service, container, 'Collector3', 'formfill', projId);
       
       // users without recent activity
-      await createTestUser(container, 'Collector4', 'formfill', proj.id, false);
+      await createTestUser(service, container, 'Collector4', 'formfill', projId, false);
 
       // compute metrics
       const res = await container.Analytics.countUsersPerRole();
@@ -184,12 +192,12 @@ describe('analytics task queries', () => {
       projects['1'].manager.recent.should.equal(0);
 
       // new project
-      projects[proj.id].manager.total.should.equal(1);
-      projects[proj.id].manager.recent.should.equal(1);
-      projects[proj.id].viewer.total.should.equal(2);
-      projects[proj.id].viewer.recent.should.equal(2);
-      projects[proj.id].formfill.total.should.equal(4);
-      projects[proj.id].formfill.recent.should.equal(3);
+      projects[projId].manager.total.should.equal(1);
+      projects[projId].manager.recent.should.equal(1);
+      projects[projId].viewer.total.should.equal(2);
+      projects[projId].viewer.recent.should.equal(2);
+      projects[projId].formfill.total.should.equal(4);
+      projects[projId].formfill.recent.should.equal(3);
     }));
 
     it('should calculate number of app user per project', testService(async (service, container) => {
@@ -200,8 +208,8 @@ describe('analytics task queries', () => {
       // make a submission through that app user
       await service.post(`/v1/key/${token}/projects/1/forms/simple/submissions`)
         .send(testData.instances.simple.one)
-        .set('Content-Type', 'application/xml')
-        .expect(200);;
+        .set('Content-Type', 'application/xml');
+
       // calculate metrics
       const res = await container.Analytics.countAppUsers();
       res[0].projectId.should.equal(1);
@@ -222,20 +230,16 @@ describe('analytics task queries', () => {
     }));
 
     it('should calculate public links per project', testService(async (service, container) => {
-      const proj = await createTestProject(container, 'New Proj');
-      const form = await createTestForm(container, testData.forms.simple, proj); 
-
-      const publicLink = await createPublicLink(service, proj.id, form.xmlFormId);
-      await service.post(`/v1/key/${publicLink}/projects/${proj.id}/forms/${form.xmlFormId}/submissions`)
+      const publicLink = await createPublicLink(service, 1, 'simple');
+      await service.post(`/v1/key/${publicLink}/projects/1/forms/simple/submissions`)
         .send(testData.instances.simple.one)
-        .set('Content-Type', 'application/xml')
-        .expect(200);
+        .set('Content-Type', 'application/xml');
 
       // extra inactive link
-      await createPublicLink(service, proj.id, form.xmlFormId);
+      await createPublicLink(service, 1, 'simple');
 
       const res = await container.Analytics.countPublicLinks();
-      res[0].projectId.should.equal(proj.id);
+      res[0].projectId.should.equal(1);
       res[0].total.should.equal(2);
       res[0].recent.should.equal(1);
     }));
@@ -243,9 +247,9 @@ describe('analytics task queries', () => {
 
   describe('form metrics', () => {
     it('should calculate forms per project', testService(async (service, container) => {
-      const proj = await createTestProject(container, 'New Proj');
-      const form = await createTestForm(container, testData.forms.simple, proj); 
-      await submitToForm(service, 'alice', proj.id, form.xmlFormId, testData.instances.simple.one);
+      const projId = await createTestProject(service, container, 'New Proj');
+      const xmlFormId = await createTestForm(service, container, testData.forms.simple, projId);
+      await submitToForm(service, 'alice', projId, xmlFormId, testData.instances.simple.one);
 
       const res = await container.Analytics.countForms();
       
@@ -261,8 +265,8 @@ describe('analytics task queries', () => {
       projects['1'].total.should.equal(2);
       projects['1'].recent.should.equal(0);
 
-      projects[proj.id].total.should.equal(1);
-      projects[proj.id].recent.should.equal(1);
+      projects[projId].total.should.equal(1);
+      projects[projId].recent.should.equal(1);
     }));
 
     it('should calculate forms with repeats', testService(async (service, container) => {
@@ -273,16 +277,15 @@ describe('analytics task queries', () => {
     }));
 
     it('should calculate forms with audits', testService(async (service, container) => {
-      const proj = await createTestProject(container, 'New Proj');
-      const auditForm = await createTestForm(container, testData.forms.clientAudits, proj);
+      const projId = await createTestProject(service, container, 'New Proj');
+      await createTestForm(service, container, testData.forms.clientAudits, projId);
       await service.login('alice', (asAlice) =>
-        asAlice.post(`/v1/projects/${proj.id}/submission`)
+        asAlice.post(`/v1/projects/${projId}/submission`)
           .set('X-OpenRosa-Version', '1.0')
           .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
-          .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
-          .expect(201));
-      const res = await container.Analytics.countFormsGeoRepeats();
+          .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' }));
 
+      const res = await container.Analytics.countFormsGeoRepeats();
       const projects = {};
       for (const row of res) {
         const id = row.projectId;
@@ -294,14 +297,13 @@ describe('analytics task queries', () => {
 
       projects['1'].total.should.equal(0);
       projects['1'].recent.should.equal(0);
-      projects[proj.id].total.should.equal(1);
-      projects[proj.id].recent.should.equal(1);
+      projects[projId].total.should.equal(1);
+      projects[projId].recent.should.equal(1);
     }));
 
     it('should calculate forms with geospatial elements', testService(async (service, container) => {
-      const proj = await createTestProject(container, 'New Proj');
-      const form = await createTestForm(container, geoForm, proj); 
-      await submitToForm(service, 'alice', proj.id, form.xmlFormId, geoSubmission('one'));
+      const xmlFormId = await createTestForm(service, container, geoForm, 1);
+      await submitToForm(service, 'alice', 1, xmlFormId, geoSubmission('one'));
       const res = await container.Analytics.countFormsGeoRepeats();
 
       const projects = {};
@@ -313,14 +315,14 @@ describe('analytics task queries', () => {
         projects[id] = {recent: row.geo_recent, total: row.geo_total};
       }
 
-      projects[proj.id].total.should.equal(1);
-      projects[proj.id].recent.should.equal(1);
+      projects['1'].total.should.equal(1);
+      projects['1'].recent.should.equal(1);
     }));
 
     it('should count encrypted forms per project', testService(async (service, container) => {
-      const proj = await createTestProject(container, 'New Proj');
-      const encryptedForm = await createTestForm(container, testData.forms.encrypted, proj);
-      await submitToForm(service, 'alice', proj.id, encryptedForm.xmlFormId, testData.instances.encrypted.one);
+      const projId = await createTestProject(service, container, 'New Proj');
+      const encryptedFormId = await createTestForm(service, container, testData.forms.encrypted, projId);
+      await submitToForm(service, 'alice', projId, encryptedFormId, testData.instances.encrypted.one);
       await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
       const res = await container.Analytics.countFormsEncrypted();
       const projects = {};
@@ -334,8 +336,8 @@ describe('analytics task queries', () => {
 
       projects['1'].total.should.equal(0);
       projects['1'].recent.should.equal(0);
-      projects[proj.id].total.should.equal(1);
-      projects[proj.id].recent.should.equal(0);
+      projects[projId].total.should.equal(1);
+      projects[projId].recent.should.equal(0);
     }));
   });
 
@@ -400,8 +402,7 @@ describe('analytics task queries', () => {
       await service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
-          .attach('xml_submission_file', Buffer.from(withSimpleIds('one', '111').replace('Alice', 'Alyssa')), { filename: 'data.xml' })
-          .expect(201));
+          .attach('xml_submission_file', Buffer.from(withSimpleIds('one', '111').replace('Alice', 'Alyssa')), { filename: 'data.xml' }));
 
       // make all submissions (and their defs in this case) so far in the distant past
       await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
@@ -423,15 +424,15 @@ describe('analytics task queries', () => {
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one);
       await service.login('alice', (asAlice) =>
         asAlice.post(`/v1/projects/1/forms/simple/submissions/one/comments`)
-          .send({ body: 'new comment here' })
-          .expect(200));
+          .send({ body: 'new comment here' }));
+
       // make all submissions so far in the past
       await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.two);
       await service.login('alice', (asAlice) =>
         asAlice.post(`/v1/projects/1/forms/simple/submissions/two/comments`)
-          .send({ body: 'new comment here' })
-          .expect(200));
+          .send({ body: 'new comment here' }));
+
       const res = await container.Analytics.countSubmissionsComments();
       res[0].projectId.should.equal(1);
       res[0].total.should.equal(2);
@@ -446,20 +447,17 @@ describe('analytics task queries', () => {
       const publicLink = await createPublicLink(service, 1, 'simple');
       await service.post(`/v1/key/${publicLink}/projects/1/forms/simple/submissions`)
         .send(simpleInstance('111'))
-        .set('Content-Type', 'application/xml')
-        .expect(200);
+        .set('Content-Type', 'application/xml');
 
       // app user token
       const token = await createAppUser(service, 1, 'simple');
       await service.post(`/v1/key/${token}/projects/1/forms/simple/submissions`)
         .send(simpleInstance('aaa'))
-        .set('Content-Type', 'application/xml')
-        .expect(200);
+        .set('Content-Type', 'application/xml');
 
       await service.post(`/v1/key/${token}/projects/1/forms/simple/submissions`)
         .send(simpleInstance('bbb'))
-        .set('Content-Type', 'application/xml')
-        .expect(200);
+        .set('Content-Type', 'application/xml');
 
       // make all submissions so far in the distant past
       await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
@@ -468,8 +466,7 @@ describe('analytics task queries', () => {
 
       await service.post(`/v1/key/${publicLink}/projects/1/forms/simple/submissions`)
         .send(simpleInstance('222'))
-        .set('Content-Type', 'application/xml')
-        .expect(200);
+        .set('Content-Type', 'application/xml');
 
       const res = await container.Analytics.countSubmissionsByUserType();
 
