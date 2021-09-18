@@ -459,7 +459,36 @@ describe('analytics task queries', () => {
       projects['1'].hasIssues.total.should.equal(2);
     }));
 
+    it('should calculate submissions by review state: edited', testService(async (service, container) => {
+      await submitToForm(service, 'alice', 1, 'simple', simpleInstance('aaa'));
+      await service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple/submissions/aaa')
+          .send({ reviewState: 'edited' }));
+
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+
+      await submitToForm(service, 'alice', 1, 'simple', simpleInstance('bbb'));
+      await service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple/submissions/bbb')
+          .send({ reviewState: 'edited' }));
+
+      const res = await container.Analytics.countSubmissionReviewStates();
+
+      const projects = {};
+      for (const row of res) {
+        const id = row.projectId;
+        if (!(id in projects)) {
+          projects[id] = {};
+        }
+        projects[id][row.reviewState] = {recent: row.recent, total: row.total};
+      }
+
+      projects['1'].edited.recent.should.equal(1);
+      projects['1'].edited.total.should.equal(2);
+    }));
+
     it('should calculate submissions that have been edited', testService(async (service, container) => {
+      // submissions can be edited (have new versions) while the review state is something else
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one);
       await service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission')
