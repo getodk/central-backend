@@ -290,7 +290,7 @@ describe('analytics task queries', () => {
     }));
 
     it('should calculate forms with repeats', testService(async (service, container) => {
-      const res = await container.Analytics.countFormsGeoRepeats();
+      const res = await container.Analytics.countFormFieldTypes();
       res[0].projectId.should.equal(1);
       res[0].repeat_total.should.equal(1);
       res[0].repeat_recent.should.equal(0);
@@ -305,7 +305,7 @@ describe('analytics task queries', () => {
           .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
           .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' }));
 
-      const res = await container.Analytics.countFormsGeoRepeats();
+      const res = await container.Analytics.countFormFieldTypes();
       const projects = {};
       for (const row of res) {
         const id = row.projectId;
@@ -324,7 +324,7 @@ describe('analytics task queries', () => {
     it('should calculate forms with geospatial elements', testService(async (service, container) => {
       const xmlFormId = await createTestForm(service, container, geoForm, 1);
       await submitToForm(service, 'alice', 1, xmlFormId, geoSubmission('one'));
-      const res = await container.Analytics.countFormsGeoRepeats();
+      const res = await container.Analytics.countFormFieldTypes();
 
       const projects = {};
       for (const row of res) {
