@@ -160,17 +160,30 @@ describe('analytics task queries', () => {
   });
 
   describe('user metrics', () => {
-    it('should calculate number of managers, viewers, and data collectors per project', testService(async (service, container) => {
-      // default project has 1 manager already (bob)
-      const projId = await createTestProject(service, container, 'New Proj');
+    it('should calculate number of managers per project', testService(async (service, container) => {
+      // default project has 1 manager already (bob) with no activity
+      await createTestUser(service, container, 'Manager1', 'manager', 1);
       
+      // compute metrics
+      const res = await container.Analytics.countUsersPerRole();
+
+      const projects = {};
+      for (const row of res) {
+        const id = row.projectId;
+        if (!(id in projects)) {
+          projects[id] = {};
+        }
+        projects[id][row.system] = {recent: row.recent, total: row.total};
+      }
+
+      projects['1'].manager.total.should.equal(2);
+      projects['1'].manager.recent.should.equal(1);
+    }));
+
+    it('should calculate number of viewers per project', testService(async (service, container) => {
       // users with recent activity
-      await createTestUser(service, container, 'Manager1', 'manager',projId);
-      await createTestUser(service, container, 'Viewer1', 'viewer', projId);
-      await createTestUser(service, container, 'Collector1', 'formfill', projId);
-      
-      // users without recent activity
-      await createTestUser(service, container, 'Collector2', 'formfill', projId, false);
+      await createTestUser(service, container, 'Viewer1', 'viewer', 1);
+      await createTestUser(service, container, 'Viewer2', 'viewer', 1, false); // user without recent activity
 
       // compute metrics
       const res = await container.Analytics.countUsersPerRole();
@@ -183,17 +196,28 @@ describe('analytics task queries', () => {
         projects[id][row.system] = {recent: row.recent, total: row.total};
       }
 
-      // default project
-      projects['1'].manager.total.should.equal(1);
-      projects['1'].manager.recent.should.equal(0);
+      projects['1'].viewer.total.should.equal(2);
+      projects['1'].viewer.recent.should.equal(1);
+    }));
 
-      // new project
-      projects[projId].manager.total.should.equal(1);
-      projects[projId].manager.recent.should.equal(1);
-      projects[projId].viewer.total.should.equal(1);
-      projects[projId].viewer.recent.should.equal(1);
-      projects[projId].formfill.total.should.equal(2);
-      projects[projId].formfill.recent.should.equal(1);
+    it('should calculate number of data collectors per project', testService(async (service, container) => {
+      // users with recent activity
+      await createTestUser(service, container, 'Collector1', 'formfill', 1);
+      await createTestUser(service, container, 'Collector2', 'formfill', 1, false); // user without recent activity
+
+      // compute metrics
+      const res = await container.Analytics.countUsersPerRole();
+      const projects = {};
+      for (const row of res) {
+        const id = row.projectId;
+        if (!(id in projects)) {
+          projects[id] = {};
+        }
+        projects[id][row.system] = {recent: row.recent, total: row.total};
+      }
+
+      projects['1'].formfill.total.should.equal(2);
+      projects['1'].formfill.recent.should.equal(1);
     }));
 
     it('should calculate number of app user per project', testService(async (service, container) => {
