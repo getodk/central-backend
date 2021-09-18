@@ -120,12 +120,10 @@ describe('analytics task queries', () => {
 
     it('should count encrypted projects',  testService(async (service, container) => {
       // encrypted project that has recent activity
-      const projId = await createTestProject(service, container, 'New Proj');
-      const xmlFormId = await createTestForm(service, container, testData.forms.simple, projId);
-      await submitToForm(service, 'alice', projId, xmlFormId, testData.instances.simple.one);
+      await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one);
 
       await service.login('alice', (asAlice) =>
-        asAlice.post(`/v1/projects/${projId}/key`)
+        asAlice.post(`/v1/projects/1/key`)
           .send({ passphrase: 'supersecret', hint: 'it is a secret' }));
 
       // encrypted project with no recent activity
