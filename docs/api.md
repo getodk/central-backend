@@ -2451,35 +2451,35 @@ It is important to note that this endpoint returns whatever is _currently_ uploa
 This returns the changes, or edits, between different versions of a Submission. These changes are returned in an object that is indexed by the `instanceId` that uniquely identifies that version. Between two submissions, there is an array of objects representing how each field changed. This change object contains the old and new values, as well as the path of that changed node in the Submission XML. These changes reflect the updated `instanceID` and `deprecatedID` fields as well as the edited value.
 
 + Response 200
-		+ Attributes (array[array[Submission Diff Value]])
+    + Attributes (array[array[Submission Diff Value]])
 
     + Body
 
-			{
-			  "two": [
-			    {
-			      "new": "Donna",
-			      "old": "Dana",
-			      "path": ["name"]
-			    },
-			    {
-			      "new": "55",
-			      "old": "44",
-			      "path": ["age"]
-			    },
-			    {
-			      "new": "two",
-			      "old": "one",
-			      "path": ["meta", "instanceID"]
-			    },
-			    {
-			      "new": "one",
-			      "old": null,
-			      "path": ["meta", "deprecatedID"]
-			      ]
-			    }
-			  ]
-			}
+      {
+        "two": [
+          {
+            "new": "Donna",
+            "old": "Dana",
+            "path": ["name"]
+          },
+          {
+            "new": "55",
+            "old": "44",
+            "path": ["age"]
+          },
+          {
+            "new": "two",
+            "old": "one",
+            "path": ["meta", "instanceID"]
+          },
+          {
+            "new": "one",
+            "old": null,
+            "path": ["meta", "deprecatedID"]
+            ]
+          }
+        ]
+      }
 
 
 + Response 403 (application/json)
@@ -3666,6 +3666,44 @@ If the Analytics configuration is unset, Administrators will once again see a me
 
 + Response 403 (application/json)
     + Attributes (Error 403)
+
+
+## Analytics Preview [/v1/analytics/preview]
+
+_(introduced: version 1.3)_
+
+An Administrator of Central may opt in to sending periodic analytics reports summarizing usage. Configuration of this reporting is described [here](/reference/system-endpoints/analytics-configuration). For added transparency, the API provides a preview of the reported metrics.
+
+### Getting the analytics preview [GET]
+
+An Administrator can use this endpoint to preview the metrics being sent. The preview is computed on the fly and represents what the report would look like if sent at that time. This endpoint does not directly submit the analytics; that is handled internally as a scheduled Central task.
+
++ Response 200 (application/json)
+    + Body
+            {
+              "system":{
+                "num_admins":{
+                  "recent":1,
+                  "total":1
+                },
+                "backups_configured":1,
+                "database_size":12345,
+                ...
+              },
+              "projects":[
+                {
+                  "id":1,
+                  "users":{ ... },
+                  "forms":{ ... },
+                  "submissions":{ ... }
+                },
+                ...
+              ]
+            }
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
 
 ## Server Audit Logs [/v1/audits]
 
