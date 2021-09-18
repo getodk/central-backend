@@ -87,7 +87,8 @@ const submitToForm = (service, user, projectId, xmlFormId, xml, deviceId = 'abcd
   service.login(user, (asUser) =>
     asUser.post(`/v1/projects/${projectId}/forms/${xmlFormId}/submissions?deviceID=${deviceId}`)
       .send(xml)
-      .set('Content-Type', 'text/xml'));
+      .set('Content-Type', 'text/xml')
+      .expect(200));
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -166,13 +167,10 @@ describe('analytics task queries', () => {
       // users with recent activity
       await createTestUser(service, container, 'Manager1', 'manager',projId);
       await createTestUser(service, container, 'Viewer1', 'viewer', projId);
-      await createTestUser(service, container, 'Viewer2', 'viewer', projId);
       await createTestUser(service, container, 'Collector1', 'formfill', projId);
-      await createTestUser(service, container, 'Collector2', 'formfill', projId);
-      await createTestUser(service, container, 'Collector3', 'formfill', projId);
       
       // users without recent activity
-      await createTestUser(service, container, 'Collector4', 'formfill', projId, false);
+      await createTestUser(service, container, 'Collector2', 'formfill', projId, false);
 
       // compute metrics
       const res = await container.Analytics.countUsersPerRole();
@@ -192,10 +190,10 @@ describe('analytics task queries', () => {
       // new project
       projects[projId].manager.total.should.equal(1);
       projects[projId].manager.recent.should.equal(1);
-      projects[projId].viewer.total.should.equal(2);
-      projects[projId].viewer.recent.should.equal(2);
-      projects[projId].formfill.total.should.equal(4);
-      projects[projId].formfill.recent.should.equal(3);
+      projects[projId].viewer.total.should.equal(1);
+      projects[projId].viewer.recent.should.equal(1);
+      projects[projId].formfill.total.should.equal(2);
+      projects[projId].formfill.recent.should.equal(1);
     }));
 
     it('should calculate number of app user per project', testService(async (service, container) => {
@@ -352,32 +350,21 @@ describe('analytics task queries', () => {
       res[0].recent.should.equal(1);
     }));
 
-    it('should calculate submissions by review state', testService(async (service, container) => {
+    it('should calculate submissions by review state: approved', testService(async (service, container) => {
       await submitToForm(service, 'alice', 1, 'simple', simpleInstance('aaa'));
       await service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple/submissions/aaa')
           .send({ reviewState: 'approved' }));
 
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+
       await submitToForm(service, 'alice', 1, 'simple', simpleInstance('bbb'));
       await service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple/submissions/bbb')
-          .send({ reviewState: 'rejected' }));
-
-
-      await submitToForm(service, 'alice', 1, 'simple', simpleInstance('ccc'));
-      await service.login('alice', (asAlice) =>
-        asAlice.patch('/v1/projects/1/forms/simple/submissions/ccc')
-          .send({ reviewState: 'hasIssues' }));
-
-      // make all submissions so far in the distant past
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
-
-      await submitToForm(service, 'alice', 1, 'simple', simpleInstance('ddd'));
-      await service.login('alice', (asAlice) =>
-        asAlice.patch('/v1/projects/1/forms/simple/submissions/ddd')
-          .send({ reviewState: 'hasIssues' }));
+          .send({ reviewState: 'approved' }));
 
       const res = await container.Analytics.countSubmissionReviewStates();
+
       const projects = {};
       for (const row of res) {
         const id = row.projectId;
@@ -387,10 +374,63 @@ describe('analytics task queries', () => {
         projects[id][row.reviewState] = {recent: row.recent, total: row.total};
       }
 
-      projects['1'].approved.recent.should.equal(0);
-      projects['1'].approved.total.should.equal(1);
-      projects['1'].rejected.recent.should.equal(0);
-      projects['1'].rejected.total.should.equal(1);
+      projects['1'].approved.recent.should.equal(1);
+      projects['1'].approved.total.should.equal(2);
+    }));
+
+
+    it('should calculate submissions by review state: rejected', testService(async (service, container) => {
+      await submitToForm(service, 'alice', 1, 'simple', simpleInstance('aaa'));
+      await service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple/submissions/aaa')
+          .send({ reviewState: 'rejected' }));
+
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+
+      await submitToForm(service, 'alice', 1, 'simple', simpleInstance('bbb'));
+      await service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple/submissions/bbb')
+          .send({ reviewState: 'rejected' }));
+
+      const res = await container.Analytics.countSubmissionReviewStates();
+
+      const projects = {};
+      for (const row of res) {
+        const id = row.projectId;
+        if (!(id in projects)) {
+          projects[id] = {};
+        }
+        projects[id][row.reviewState] = {recent: row.recent, total: row.total};
+      }
+
+      projects['1'].rejected.recent.should.equal(1);
+      projects['1'].rejected.total.should.equal(2);
+    }));
+
+    it('should calculate submissions by review state: hasIssues', testService(async (service, container) => {
+      await submitToForm(service, 'alice', 1, 'simple', simpleInstance('aaa'));
+      await service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple/submissions/aaa')
+          .send({ reviewState: 'hasIssues' }));
+
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+
+      await submitToForm(service, 'alice', 1, 'simple', simpleInstance('bbb'));
+      await service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple/submissions/bbb')
+          .send({ reviewState: 'hasIssues' }));
+
+      const res = await container.Analytics.countSubmissionReviewStates();
+
+      const projects = {};
+      for (const row of res) {
+        const id = row.projectId;
+        if (!(id in projects)) {
+          projects[id] = {};
+        }
+        projects[id][row.reviewState] = {recent: row.recent, total: row.total};
+      }
+
       projects['1'].hasIssues.recent.should.equal(1);
       projects['1'].hasIssues.total.should.equal(2);
     }));
