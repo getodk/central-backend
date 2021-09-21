@@ -29,8 +29,9 @@
       },
       "sentry": {},
       "analytics": {
-        "formId": "test-form",
-        "version": "test-version"
+        "url": "",
+        "formId": "",
+        "version": ""
       }
     }
   },
