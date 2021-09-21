@@ -45,7 +45,7 @@
     "eslint": "~7",
     "eslint-config-airbnb-base": "~14",
     "eslint-plugin-import": "~2",
-    "mocha": "~8",
+    "mocha": "~9",
     "nock": "~12",
     "nyc": "~15",
     "node-mocks-http": "~1.6",
