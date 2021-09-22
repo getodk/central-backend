@@ -48,6 +48,10 @@ const bcrypt = require(appRoot + '/lib/util/crypto').password(_bcrypt);
 // set up our enketo mock.
 const enketo = require(appRoot + '/test/util/enketo');
 
+// set up odk analytics mock.
+const { ODKAnalytics } = require(appRoot + '/test/util/odk-analytics-mock');
+const odkAnalytics = new ODKAnalytics();
+
 // application things.
 const { withDefaults } = require(appRoot + '/lib/model/container');
 const service = require(appRoot + '/lib/http/service');
@@ -105,7 +109,7 @@ const augment = (service) => {
 ////////////////////////////////////////////////////////////////////////////////
 // FINAL TEST WRAPPERS
 
-const baseContainer = withDefaults({ db, mail, env, xlsform, google, bcrypt, enketo, Sentry });
+const baseContainer = withDefaults({ db, mail, env, xlsform, google, bcrypt, enketo, Sentry, odkAnalytics });
 
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
