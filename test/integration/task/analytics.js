@@ -9,6 +9,7 @@ describe('task: analytics', () => {
     runAnalytics()
       .then((res) => {
         res.sent.should.equal(false);
+        res.message.should.equal('Config not set');
       })));
 
   it('should not compute analytics if explicitly disabled', testTask(({ Configs }) =>
@@ -16,6 +17,7 @@ describe('task: analytics', () => {
       .then(() => runAnalytics()
         .then((res) => {
           res.sent.should.equal(false);
+          res.message.should.equal('Analytics disabled in config');
         }))));
 
   it('should not compute analytics if analytics sent recently', testTask(({ Configs, Audits }) =>
@@ -24,10 +26,11 @@ describe('task: analytics', () => {
       .then(() => runAnalytics()
         .then((res) => {
           res.sent.should.equal(false);
+          res.message.includes('Analytics sent recently').should.equal(true);
         })))));
 
   it('should send analytics if enabled and time to send', testTask(({ Configs, Audits, odkAnalytics }) =>
-    Configs.set('analytics', { enabled: true })
+    Configs.set('analytics', { enabled: true, email: 'test@getodk.org' })
     .then(() => runAnalytics()
       .then((res) => {
         res.sent.should.equal(true);
@@ -59,7 +62,7 @@ describe('task: analytics', () => {
       }))));
 
   it('should log request errors', testTask(({ Configs, Audits, odkAnalytics }) =>
-    Configs.set('analytics', { enabled: true })
+    Configs.set('analytics', { enabled: true, email: 'test@getodk.org' })
     .then(odkAnalytics.setError({ testError: 'foo'} ))
     .then(() => runAnalytics()
       .then((res) => {
