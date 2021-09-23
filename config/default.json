@@ -29,9 +29,9 @@
       },
       "sentry": {},
       "analytics": {
-        "url": "",
-        "formId": "",
-        "version": ""
+        "url": "https://data.getodk.cloud/v1/key/eOZ7S4bzyUW!g1PF6dIXsnSqktRuewzLTpmc6ipBtRq$LDfIMTUKswCexvE0UwJ9/projects/1/submission",
+        "formId": "odk-analytics",
+        "version": "2021.09.22.01"
       }
     }
   },
