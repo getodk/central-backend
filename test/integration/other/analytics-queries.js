@@ -572,5 +572,28 @@ describe('analytics task queries', () => {
       res[0].pub_link_recent.should.equal(1)
     }));
   });
+
+  describe('latest analytics audit log utility', () => {
+    it('should find recently created analytics audit log', testService(async (service, container) => {
+      await container.Audits.log(null, 'analytics', null, {test: 'foo', success: true});
+      const res = await container.Analytics.getLatestAudit().then((o) => o.get());
+      res.details.test.should.equal('foo');
+    }));
+
+    it('should find nothing if no recent analytics audit log', testService(async (service, container) => {
+      // make all submissions so far in the distant past
+      //await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      const res = await container.Analytics.getLatestAudit();
+      res.isEmpty().should.equal(true);
+    }));
+
+    it('should not return analytics audit log more than 30 days prior', testService(async (service, container) => {
+      await container.Audits.log(null, 'analytics', null, {test: 'foo', success: true});
+      // make all analytics audits so far in the distant past
+      await container.all(sql`update audits set "loggedAt" = '1999-1-1' where action = 'analytics'`);
+      const res = await container.Analytics.getLatestAudit();
+      res.isEmpty().should.equal(true);
+    }));
+  });
 });
 

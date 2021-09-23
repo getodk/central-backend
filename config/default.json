@@ -27,7 +27,12 @@
         "clientId": "660095633112-h7bhsjenhp1agd0c4v3cmqk6bccgkdu0.apps.googleusercontent.com",
         "clientSecret": "lzu2vK1NFqqd6Y5HiN-7ByvE"
       },
-      "sentry": {}
+      "sentry": {},
+      "analytics": {
+        "url": "https://data.getodk.cloud/v1/key/eOZ7S4bzyUW!g1PF6dIXsnSqktRuewzLTpmc6ipBtRq$LDfIMTUKswCexvE0UwJ9/projects/1/submission",
+        "formId": "odk-analytics",
+        "version": "2021.09.22.01"
+      }
     }
   },
   "test": {
