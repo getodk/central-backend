@@ -495,6 +495,98 @@ describe('diffing', () => {
       diffSubmissions([], []).should.eql({});
       diffSubmissions([], [{ xml: testData.instances.simple.one }]).should.eql({});
     });
+
+    // because there are no good matches this test checks the degenerate case that every
+    // match can be swapped out for the next one.
+    it('should not be fooled into replacing the same worst match repeatedly', () => {
+      const formXml = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <h:head>
+        <h:title>indexed-repeat-nested</h:title>
+        <model odk:xforms-version="1.0.0">
+            <instance>
+                <data id="indexed-repeat-nested">
+                    <my-repeat jr:template="">
+                        <uuid/>
+                        <my-nested-repeat jr:template="">
+                            <Parent/>
+                        </my-nested-repeat>
+                    </my-repeat>
+                    <my-repeat>
+                        <uuid/>
+                        <my-nested-repeat>
+                            <Parent/>
+                        </my-nested-repeat>
+                    </my-repeat>
+                    <meta>
+                        <instanceID/>
+                    </meta>
+                </data>
+            </instance>
+            <bind calculate="uuid()" nodeset="/data/my-repeat/uuid" type="string"/>
+            <bind calculate="../../uuid" nodeset="/data/my-repeat/my-nested-repeat/Parent" type="string"/>
+            <bind jr:preload="uid" nodeset="/data/meta/instanceID" readonly="true()" type="string"/>
+        </model>
+    </h:head>
+    <h:body>
+        <group ref="/data/my-repeat">
+            <label></label>
+            <repeat nodeset="/data/my-repeat">
+                <group ref="/data/my-repeat/my-nested-repeat">
+                    <label></label>
+                    <repeat nodeset="/data/my-repeat/my-nested-repeat">
+                        <input ref="/data/my-repeat/my-nested-repeat/Parent">
+                            <label>Parent</label>
+                        </input>
+                    </repeat>
+                </group>
+            </repeat>
+        </group>
+    </h:body>
+</h:html>`;
+      const newer = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="indexed-repeat-nested"><my-repeat><uuid>2b19075a-0db2-4560-8c1e-b40e7c878f79</uuid><my-nested-repeat><Parent>2b19075a-0db2-4560-8c1e-b40e7c878f79</Parent></my-nested-repeat></my-repeat><meta><instanceID>uuid:b27d98e4-e759-4843-ad97-3a0358f1eaf1</instanceID><deprecatedID>uuid:49cb8f10-6ee2-4e34-9009-e0e8a084c2e3</deprecatedID></meta></data>`;
+      const older = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="indexed-repeat-nested"><my-repeat><uuid>2dd99095-56aa-4504-bcbb-d6531d6ec73b</uuid><my-nested-repeat><Parent>2dd99095-56aa-4504-bcbb-d6531d6ec73b</Parent></my-nested-repeat><my-nested-repeat><Parent>3e4e8b15-222b-418c-8e20-ab57f9853505</Parent></my-nested-repeat><my-nested-repeat><Parent>3e4e8b15-222b-418c-8e20-ab57f9853505</Parent></my-nested-repeat></my-repeat><my-repeat><uuid>57a5c37f-7ec9-41af-ba90-c084b9d9fcee</uuid><my-nested-repeat><Parent>57a5c37f-7ec9-41af-ba90-c084b9d9fcee</Parent></my-nested-repeat></my-repeat><meta><instanceID>uuid:49cb8f10-6ee2-4e34-9009-e0e8a084c2e3</instanceID></meta></data>`;
+
+      return structuralFieldsFor(formXml).then((fields) => {
+        diffSubmissions(fields, [
+          { instanceId: 'uuid:b27d98e4-e759-4843-ad97-3a0358f1eaf1', xml: newer },
+          { instanceId: 'uuid:49cb8f10-6ee2-4e34-9009-e0e8a084c2e3', xml: older }
+        ]).should.eql({
+          'uuid:b27d98e4-e759-4843-ad97-3a0358f1eaf1': [
+            {
+              old: {
+                uuid: '2dd99095-56aa-4504-bcbb-d6531d6ec73b',
+                'my-nested-repeat': [
+                  { Parent: '2dd99095-56aa-4504-bcbb-d6531d6ec73b' },
+                  { Parent: '3e4e8b15-222b-418c-8e20-ab57f9853505' },
+                  { Parent: '3e4e8b15-222b-418c-8e20-ab57f9853505' }
+                ]
+              },
+              path: [ [ 'my-repeat', 0 ] ]
+            },
+            {
+              old: '57a5c37f-7ec9-41af-ba90-c084b9d9fcee',
+              new: '2b19075a-0db2-4560-8c1e-b40e7c878f79',
+              path: [ [ 'my-repeat', 1 ], 'uuid' ]
+            },
+            {
+              old: '57a5c37f-7ec9-41af-ba90-c084b9d9fcee',
+              new: '2b19075a-0db2-4560-8c1e-b40e7c878f79',
+              path: [ [ 'my-repeat', 1 ], [ 'my-nested-repeat', 0 ], 'Parent' ]
+            },
+            {
+              old: 'uuid:49cb8f10-6ee2-4e34-9009-e0e8a084c2e3',
+              new: 'uuid:b27d98e4-e759-4843-ad97-3a0358f1eaf1',
+              path: [ 'meta', 'instanceID' ]
+            },
+            {
+              new: 'uuid:49cb8f10-6ee2-4e34-9009-e0e8a084c2e3',
+              path: [ 'meta', 'deprecatedID' ]
+            }
+          ]
+        });
+      });
+    });
   });
 });
 
