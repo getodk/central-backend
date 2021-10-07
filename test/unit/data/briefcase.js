@@ -385,6 +385,56 @@ describe('.csv.zip briefcase output @slow', () => {
     });
   });
 
+  it('should leave out structure names if groupPaths = false', (done) => {
+    const formXml = `
+      <?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+        <h:head>
+          <model>
+            <instance>
+              <data id="structuredform">
+                <orx:meta>
+                  <orx:instanceID/>
+                </orx:meta>
+                <name/>
+                <home>
+                  <type/>
+                  <address>
+                    <street/>
+                    <city/>
+                  </address>
+                </home>
+              </data>
+            </instance>
+            <bind nodeset="/data/orx:meta/orx:instanceID" preload="uid" type="string"/>
+            <bind nodeset="/data/name" type="string"/>
+            <bind nodeset="/data/home/type" type="select1"/>
+            <bind nodeset="/data/home/address/street" type="string"/>
+            <bind nodeset="/data/home/address/city" type="string"/>
+          </model>
+        </h:head>
+      </h:html>`
+
+    const inStream = streamTest.fromObjects([
+      instance('one', '<orx:meta><orx:instanceID>one</orx:instanceID></orx:meta><name>Alice</name><home><type>Apartment</type><address><street>101 Pike St</street><city>Seattle, WA</city></address></home>'),
+      instance('two', '<orx:meta><orx:instanceID>two</orx:instanceID></orx:meta><name>Bob</name><home><address><street>20 Broadway</street><city>Portland, OR</city></address><type>Condo</type></home>'),
+      instance('three', '<orx:meta><orx:instanceID>three</orx:instanceID></orx:meta><name>Chelsea</name><home><type>House</type><address><city>San Francisco, CA</city><street>99 Mission Ave</street></address></home>'),
+    ]);
+
+    fieldsFor(formXml).then((fields) => {
+      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'structuredform', undefined, false, { groupPaths: false })), (result) => {
+        result.filenames.should.eql([ 'structuredform.csv' ]);
+        result['structuredform.csv'].should.equal(
+`SubmissionDate,instanceID,name,type,street,city,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits
+2018-01-01T00:00:00.000Z,one,Alice,Apartment,101 Pike St,"Seattle, WA",one,,,0,0
+2018-01-01T00:00:00.000Z,two,Bob,Condo,20 Broadway,"Portland, OR",two,,,0,0
+2018-01-01T00:00:00.000Z,three,Chelsea,House,99 Mission Ave,"San Francisco, CA",three,,,0,0
+`);
+      done();
+      });
+    });
+  });
+
   it('should handle single-level repeats, with KEY/PARENT_KEY', (done) => {
     const formXml = `
       <?xml version="1.0"?>

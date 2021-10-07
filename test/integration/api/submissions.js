@@ -1463,6 +1463,19 @@ describe('api: /forms/:id/submissions', () => {
                 headers['content-disposition'].should.equal('attachment; filename="binaryType.csv.zip"; filename*=UTF-8\'\'binaryType.csv.zip');
               })))));
 
+    it('should omit group paths ?omitGroupPaths=true is given', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+          .expect(201)
+          .then(() => new Promise((done) =>
+            zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?groupPaths=false'), (result) => {
+              const csv = result['simple.csv'].split('\n');
+              csv[0].should.equal('SubmissionDate,instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits');
+              done();
+            }))))));
+
     it('should properly count present attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
