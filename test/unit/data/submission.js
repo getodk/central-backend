@@ -406,7 +406,7 @@ describe('diffing', () => {
           { instanceId: 'three', xml: testData.instances.withrepeat.three }
         ]);
         const expected = [
-          { old: 'rthree', new: 'rtwo', path: [ 'orx:meta', 'orx:instanceID' ] },
+          { old: 'rthree', new: 'rtwo', path: [ 'meta', 'instanceID' ] },
           { old: 'Chelsea', new: 'Bob', path: [ 'name' ] },
           { old: '38', new: '34', path: [ 'age' ] },
           { old: 'Candace', new: 'Billy', path: [ 'children', [ 'child', 0 ], 'name' ] },
@@ -587,6 +587,19 @@ describe('diffing', () => {
         });
       });
     });
+
+    it('should strip XML prefix from field names', () =>
+      structuralFieldsFor(testData.forms.withrepeat).then((fields) => {
+        const newer = '<data id="withrepeat" version="1.0"><orx:meta><orx:instanceID>john</orx:instanceID></orx:meta><name>Bob</name><age>34</age><children><child><name>Billy</name><age>4</age></child><child><name>Blaine</name><age>6</age></child></children></data>';
+        const older = '<data id="withrepeat" version="1.0"><orx:meta><orx:instanceID>jon</orx:instanceID></orx:meta><name>Bob</name><age>34</age><children><child><name>Billy</name><age>4</age></child><child><name>Blaine</name><age>6</age></child></children></data>';
+
+        diffSubmissions(fields, [
+          { instanceId: 'john', xml: newer },
+          { instanceId: 'jon', xml: older }
+        ]).should.eql({
+          'john': [{ old: 'jon', new: 'john', path: [ 'meta', 'instanceID'] }]
+        });
+      }));
   });
 });
 
