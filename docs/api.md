@@ -26,7 +26,7 @@ Forms and their submissions are also accessible through two **open standards spe
 * The [OpenRosa](https://docs.opendatakit.org/openrosa/) standard allows standard integration with tools like the [ODK Collect](https://docs.opendatakit.org/collect-intro/) mobile data collection app, or various other compatible tools like [Enketo](https://enketo.org/). It allows them to see the forms available on the server, and to send new submissions to them.
 * The [OData](http://odata.org/) standard allows data to be shared between platforms for analysis and reporting. Tools like [Microsoft Power BI](https://powerbi.microsoft.com/en-us/) and [Tableau](https://public.tableau.com/en-us/s/) are examples of clients that consume the standard OData format and provide advanced features beyond what we offer. If you are looking for a straightforward JSON output of your data, or you are considering building a visualization or reporting tool, this is your best option.
 
-Finally, **system information and configuration** is available via a set of specialized resources. Currently, you may set the Backups configuration, set the Analytics configuration, and retrieve Server Audit Logs.
+Finally, **system information and configuration** is available via a set of specialized resources. Currently, you may set the Backups configuration, set the Usage Reporting configuration, and retrieve Server Audit Logs.
 
 ## Changelog
 
@@ -3491,7 +3491,7 @@ Identical to [the non-Draft version](/reference/odata-endpoints/odata-form-servi
 
 # Group System Endpoints
 
-There are some resources available for getting or setting system information and configuration. You can [set the Backups configuration](/reference/system-endpoints/backups-configuration) for the server, [set the Analytics configuration](/reference/system-endpoints/analytics-configuration), or you can [retrieve the Server Audit Logs](/reference/system-endpoints/server-audit-logs).
+There are some resources available for getting or setting system information and configuration. You can [set the Backups configuration](/reference/system-endpoints/backups-configuration) for the server, [set the Usage Reporting configuration](/reference/system-endpoints/usage-reporting-configuration), or you can [retrieve the Server Audit Logs](/reference/system-endpoints/server-audit-logs).
 
 ## Backups Configuration [/v1/config/backups]
 
@@ -3618,19 +3618,19 @@ Please see the section notes above about the long-running nature of this endpoin
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-## Analytics Configuration [/v1/config/analytics]
+## Usage Reporting Configuration [/v1/config/analytics]
 
 _(introduced: version 1.3)_
 
 ### Setting a new configuration [POST]
 
-An Administrator can use this endpoint to choose whether the server will share anonymous usage data with the Central team. This configuration affects the entire server. Until the Analytics configuration is set, Administrators will see a message on the Central administration website that provides further information.
+An Administrator can use this endpoint to choose whether the server will share anonymous usage data with the Central team. This configuration affects the entire server. Until the Usage Reporting configuration is set, Administrators will see a message on the Central administration website that provides further information.
 
 If an Administrator specifies `true` for `enabled`, the server will share anonymous usage data monthly with the Central team. By specifying `true`, the Administrator accepts the [Terms of Service](https://getodk.org/legal/tos.html) and [Privacy Policy](https://getodk.org/legal/privacy.html). The Administrator can also share contact information to include with the report.
 
 If an Administrator specifies `false` for `enabled`, the server will not share anonymous usage data with the Central team. Administrators will no longer see the message on the administration website.
 
-If the Analytics configuration is already set, the current configuration will be overwritten with the new one.
+If the Usage Reporting configuration is already set, the current configuration will be overwritten with the new one.
 
 + Request (application/json)
     + Attributes
@@ -3639,17 +3639,17 @@ If the Analytics configuration is already set, the current configuration will be
         + organization: `Organization Name` (string, optional) - An organization name to include with the metrics report.
 
 + Response 200 (application/json)
-    + Attributes (Analytics Config)
+    + Attributes (Usage Reporting Config)
 
 + Response 403 (application/json)
     + Attributes (Error 403)
 
 ### Getting the current configuration [GET]
 
-If the Analytics configuration is not set, this endpoint will return a `404`. Once the configuration is set, this endpoint will indicate whether the server will share usage data with the Central team. If the server will share usage data, and contact information was provided, this endpoint will also return the provided work email address and organization name.
+If the Usage Reporting configuration is not set, this endpoint will return a `404`. Once the configuration is set, this endpoint will indicate whether the server will share usage data with the Central team. If the server will share usage data, and contact information was provided, this endpoint will also return the provided work email address and organization name.
 
 + Response 200 (application/json)
-    + Attributes (Analytics Config)
+    + Attributes (Usage Reporting Config)
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -3659,7 +3659,7 @@ If the Analytics configuration is not set, this endpoint will return a `404`. On
 
 ### Unsetting the current configuration [DELETE]
 
-If the Analytics configuration is unset, Administrators will once again see a message on the the Central administration website.
+If the Usage Reporting configuration is unset, Administrators will once again see a message on the the Central administration website.
 
 + Response 200 (application/json)
     + Attributes (Success)
@@ -3667,16 +3667,15 @@ If the Analytics configuration is unset, Administrators will once again see a me
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-
-## Analytics Preview [/v1/analytics/preview]
+## Usage Report Preview [/v1/analytics/preview]
 
 _(introduced: version 1.3)_
 
-An Administrator of Central may opt in to sending periodic analytics reports summarizing usage. Configuration of this reporting is described [here](/reference/system-endpoints/analytics-configuration). For added transparency, the API provides a preview of the reported metrics.
+An Administrator of Central may opt in to sending periodic reports summarizing usage. Configuration of this reporting is described [here](/reference/system-endpoints/usage-reporting-configuration). For added transparency, the API provides a preview of the reported metrics.
 
-### Getting the analytics preview [GET]
+### Getting the Usage Report preview [GET]
 
-An Administrator can use this endpoint to preview the metrics being sent. The preview is computed on the fly and represents what the report would look like if sent at that time. This endpoint does not directly submit the analytics; that is handled internally as a scheduled Central task.
+An Administrator can use this endpoint to preview the metrics being sent. The preview is computed on the fly and represents what the report would look like if sent at that time. This endpoint does not directly submit the Usage Report; that is handled internally as a scheduled Central task.
 
 + Response 200 (application/json)
     + Body
@@ -3891,13 +3890,13 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + key: `some_type` (string, required) - The type of system configuration.
 + setAt: `2018-01-06T00:32:52.787Z` (string, required) - ISO date format. The last time this system configuration was set.
 
-## Analytics Config Value (object)
+## Usage Reporting Config Value (object)
 + enabled: `true` (boolean, required) - `true` if the server will share usage data with the Central team and `false` if not.
 + email: `my.email.address@getodk.org` (string, optional) - The work email address to include with the metrics report.
 + organization: `Organization Name` (string, optional) - The organization name to include with the metrics report.
 
-## Analytics Config (Config)
-+ value: (Analytics Config Value, required) - Details about the Analytics configuration.
+## Usage Reporting Config (Config)
++ value: (Usage Reporting Config Value, required) - Details about the Usage Reporting configuration.
 
 ## Form (object)
 + projectId: `1` (number, required) - The `id` of the project this form belongs to.
