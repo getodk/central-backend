@@ -2446,7 +2446,7 @@ It is important to note that this endpoint returns whatever is _currently_ uploa
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Getting changes between Versions [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/diffs
+### Getting changes between Versions [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/diffs]
 
 This returns the changes, or edits, between different versions of a Submission. These changes are returned in an object that is indexed by the `instanceId` that uniquely identifies that version. Between two submissions, there is an array of objects representing how each field changed. This change object contains the old and new values, as well as the path of that changed node in the Submission XML. These changes reflect the updated `instanceID` and `deprecatedID` fields as well as the edited value.
 
