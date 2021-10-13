@@ -3747,6 +3747,7 @@ Server Audit Logs entries are created for the following `action`s:
 * `submission.attachment.update` when a Submission Attachment binary is set or cleared, but _only via the REST API_. Attachments created alongside the submission over the OpenRosa `/submission` API (including submissions from Collect) do not generate audit log entries.
 * `config.set` when a system configuration is set.
 * `backup` when a backup operation is attempted.
+* `analytics` when a Usage Report is attempted.
 
 ### Getting Audit Log Entries [GET /v1/audits{?action,start,end,limit,offset}]
 
