@@ -376,7 +376,6 @@ describe('managed encryption', () => {
             .then(({ body }) => body[0].id))
           .then((keyId) => new Promise((done) =>
             zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/audits/submissions.csv.zip?${keyId}=supersecret`), (result) => {
-              console.log(result['media/audit.csv']);
               result.filenames.should.containDeep([
                 'audits.csv',
                 'media/audit.csv',
@@ -484,11 +483,11 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 csv.length.should.equal(5); // header + 3 data rows + newline
                 csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits' ]);
                 csv[1].shift().should.be.an.recentIsoDate();
-                csv[1].should.eql([ 'three','Chelsea','38','three','5','Alice','1','1' ]);
+                csv[1].should.eql([ 'three','Chelsea','38','three','5','Alice','1','1','','','','0' ]);
                 csv[2].shift().should.be.an.recentIsoDate();
-                csv[2].should.eql([ 'two','Bob','34','two','5','Alice','1','1' ]);
+                csv[2].should.eql([ 'two','Bob','34','two','5','Alice','1','1','','','','0' ]);
                 csv[3].shift().should.be.an.recentIsoDate();
-                csv[3].should.eql([ 'one','Alice','30','one','5','Alice','0','0' ]);
+                csv[3].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0' ]);
                 csv[4].should.eql([ '' ]);
                 done();
               })))))));
@@ -515,11 +514,11 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 csv.length.should.equal(5); // header + 3 data rows + newline
                 csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits' ]);
                 csv[1].shift().should.be.an.recentIsoDate();
-                csv[1].should.eql([ '','','','three','5','Alice','1','1','not decrypted' ]);
+                csv[1].should.eql([ '','','','three','5','Alice','1','1','not decrypted','','','0' ]);
                 csv[2].shift().should.be.an.recentIsoDate();
-                csv[2].should.eql([ '','','','two','5','Alice','1','1','not decrypted' ]);
+                csv[2].should.eql([ '','','','two','5','Alice','1','1','not decrypted','','','0' ]);
                 csv[3].shift().should.be.an.recentIsoDate();
-                csv[3].should.eql([ 'one','Alice','30','one','5','Alice','0','0' ]);
+                csv[3].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0' ]);
                 csv[4].should.eql([ '' ]);
                 done();
               })))))));
@@ -594,9 +593,9 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 csv.length.should.equal(4); // header + 2 data rows + newline
                 csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits' ]);
                 csv[1].shift().should.be.an.recentIsoDate();
-                csv[1].should.eql([ '','','','two','5','Alice','0','1','missing encrypted form data' ]);
+                csv[1].should.eql([ '','','','two','5','Alice','0','1','missing encrypted form data','','','0' ]);
                 csv[2].shift().should.be.an.recentIsoDate();
-                csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0' ]);
+                csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0' ]);
                 csv[3].should.eql([ '' ]);
                 done();
               })))))));
@@ -625,9 +624,9 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 csv.length.should.equal(4); // header + 2 data rows + newline
                 csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits' ]);
                 csv[1].shift().should.be.an.recentIsoDate();
-                csv[1].should.eql([ '','','','two','5','Alice','0','1','missing encrypted form data' ]);
+                csv[1].should.eql([ '','','','two','5','Alice','0','1','missing encrypted form data','','','0' ]);
                 csv[2].shift().should.be.an.recentIsoDate();
-                csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0' ]);
+                csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0' ]);
                 csv[3].should.eql([ '' ]);
                 done();
               })))))));

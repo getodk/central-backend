@@ -1256,9 +1256,9 @@ describe('api: /forms/:id/submissions', () => {
             csv.length.should.equal(4); // header + 2 data rows + newline
             csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits' ]);
             csv[1].shift().should.be.an.recentIsoDate();
-            csv[1].should.eql([ 'two','Bob','34','two','5','Alice','0','0' ]);
+            csv[1].should.eql([ 'two','Bob','34','two','5','Alice','0','0','','','','0' ]);
             csv[2].shift().should.be.an.recentIsoDate();
-            csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0' ]);
+            csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0' ]);
             csv[3].should.eql([ '' ]);
             done();
           }))))));
@@ -1283,8 +1283,8 @@ describe('api: /forms/:id/submissions', () => {
                 result.filenames.should.eql([ 'simple.csv' ]);
                 const lines = result['simple.csv'].split('\n');
                 lines.length.should.equal(4);
-                lines[1].endsWith(',three,Chelsea,38,three,5,Alice,0,0').should.equal(true);
-                lines[2].endsWith(',one,Alice,30,one,5,Alice,0,0').should.equal(true);
+                lines[1].endsWith(',three,Chelsea,38,three,5,Alice,0,0,,,,0').should.equal(true);
+                lines[2].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0').should.equal(true);
                 done();
               })))))));
 
@@ -1310,8 +1310,8 @@ describe('api: /forms/:id/submissions', () => {
               result.filenames.should.eql([ 'simple.csv' ]);
               const lines = result['simple.csv'].split('\n');
               lines.length.should.equal(4);
-              lines[1].endsWith(',three,Chelsea,38,three,5,Alice,0,0').should.equal(true);
-              lines[2].endsWith(',one,Alice,30,one,5,Alice,0,0').should.equal(true);
+              lines[1].endsWith(',three,Chelsea,38,three,5,Alice,0,0,,,,0').should.equal(true);
+              lines[2].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0').should.equal(true);
               done();
             }))))));
 
@@ -1332,7 +1332,7 @@ describe('api: /forms/:id/submissions', () => {
                 result.filenames.should.eql([ 'simple.csv' ]);
                 const lines = result['simple.csv'].split('\n');
                 lines.length.should.equal(3);
-                lines[1].endsWith(',one,Alice,30,one,5,Alice,0,0').should.equal(true);
+                lines[1].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0').should.equal(true);
                 done();
               })))))));
 
@@ -1354,7 +1354,7 @@ describe('api: /forms/:id/submissions', () => {
               result.filenames.should.eql([ 'simple.csv' ]);
               const lines = result['simple.csv'].split('\n');
               lines.length.should.equal(3);
-              lines[1].endsWith(',one,Alice,30,one,5,Alice,0,0').should.equal(true);
+              lines[1].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0').should.equal(true);
               done();
             }))))));
 
@@ -1388,7 +1388,7 @@ describe('api: /forms/:id/submissions', () => {
                 // we also check the csv for the sake of verifying the attachments counts.
                 const csv = result['binaryType.csv'].split('\n');
                 csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits');
-                csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,2,2');
+                csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,2,2,,,,0');
                 csv.length.should.equal(3); // newline at end
 
                 done();
@@ -1484,7 +1484,7 @@ describe('api: /forms/:id/submissions', () => {
                 // we also check the csv for the sake of verifying the attachments counts.
                 const csv = result['binaryType.csv'].split('\n');
                 csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits');
-                csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,1,2');
+                csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,1,2,,,,0');
                 csv.length.should.equal(3); // newline at end
 
                 done();
@@ -1862,9 +1862,9 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               rows.length.should.equal(5);
               rows[0].should.equal('SubmissionDate,meta-instanceID,name,age,children-child-name,children-child-age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits');
               // (need to drop the iso date)
-              rows[1].slice(24).should.equal(',rthree,Chelsea,38,,,rthree,5,Alice,0,0');
-              rows[2].slice(24).should.equal(',rtwo,Bob,34,,,rtwo,5,Alice,0,0');
-              rows[3].slice(24).should.equal(',rone,Alice,30,,,rone,5,Alice,0,0');
+              rows[1].slice(24).should.equal(',rthree,Chelsea,38,,,rthree,5,Alice,0,0,,,,0');
+              rows[2].slice(24).should.equal(',rtwo,Bob,34,,,rtwo,5,Alice,0,0,,,,0');
+              rows[3].slice(24).should.equal(',rone,Alice,30,,,rone,5,Alice,0,0,,,,0');
             })))));
 
     it('should log the action in the audit log', testService((service) =>
@@ -1906,7 +1906,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 csv.length.should.equal(3); // header + data row + newline
                 csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits' ]);
                 csv[1].shift().should.be.an.recentIsoDate();
-                csv[1].should.eql([ 'one','Alice','30','one','5','Alice','0','0' ]);
+                csv[1].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0' ]);
 
                 done();
               })))))));
