@@ -732,7 +732,7 @@ describe('api: /projects/:id/forms', () => {
               .expect(200)
               .then(({ headers, body }) => {
                 headers['content-type'].should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-                headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx" filename*=UTF-8\'\'simple2.xlsx');
+                headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx"; filename*=UTF-8\'\'simple2.xlsx');
                 Buffer.compare(input, body).should.equal(0);
               })));
       }));
@@ -753,7 +753,7 @@ describe('api: /projects/:id/forms', () => {
               .expect(200)
               .then(({ headers, body }) => {
                 headers['content-type'].should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-                headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx" filename*=UTF-8\'\'simple2.xlsx');
+                headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx"; filename*=UTF-8\'\'simple2.xlsx');
                 Buffer.compare(input, body).should.equal(0);
               })));
       }));
@@ -772,7 +772,7 @@ describe('api: /projects/:id/forms', () => {
               .expect(200)
               .then(({ headers, body }) => {
                 headers['content-type'].should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-                headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx" filename*=UTF-8\'\'simple2.xlsx');
+                headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx"; filename*=UTF-8\'\'simple2.xlsx');
                 Buffer.compare(input, body).should.equal(0);
               })));
       }));
@@ -1229,7 +1229,7 @@ describe('api: /projects/:id/forms', () => {
               .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
                 .expect(200)
                 .then(({ headers, text }) => {
-                  headers['content-disposition'].should.equal('attachment; filename="goodone.csv" filename*=UTF-8\'\'goodone.csv');
+                  headers['content-disposition'].should.equal('attachment; filename="goodone.csv"; filename*=UTF-8\'\'goodone.csv');
                   headers['content-type'].should.equal('text/csv; charset=utf-8');
                   text.should.equal('test,csv\n1,2');
                 })))));
@@ -2815,7 +2815,7 @@ describe('api: /projects/:id/forms', () => {
                 .buffer(true).parse(superagent.parse['application/octet-stream'])
                 .then(({ headers, body }) => {
                   headers['content-type'].should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-                  headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx" filename*=UTF-8\'\'simple2.xlsx');
+                  headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx"; filename*=UTF-8\'\'simple2.xlsx');
                   Buffer.compare(input, body).should.equal(0);
                 })));
         }));
