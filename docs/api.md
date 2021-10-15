@@ -49,17 +49,7 @@ ODK Central v1.3 adds granular Submission edit history, as well as opt-in usage 
   * A `form.submissions.export` action will be logged when a User exports Form Submissions to CSV.
 * The Submission update timestamp is now included in OData (as `__system/updatedAt`). Resources that accept the `$filter` query parameter can be filered on `__system/updatedAt`.
 * All groups are now included in OData, even if they are not relevant. For more information, see [this post](https://forum.getodk.org/t/include-non-relevant-groups-and-fields-in-odk-central-api-responses/33536) in the ODK Forum.
-
-**Fixed**:
-
-* An XLSForm is now available in more cases:
-  * Previously, if an XLSForm was uploaded as a Draft Form, then the version string was changed as the Draft was published, the XLSForm would not be available.
-  * Also, if you created a Draft Form without providing a definition (thereby copying the published definition), the XLSForm would not be available on the Draft.
-  * The XLSForm is now available in both cases.
 * The `Content-Disposition` header now specifies the `filename*` parameter, allowing filenames to contain Unicode.
-* When exporting Form Submissions to CSV under Project Managed Encryption, a decrypted combined client audit log will now be exported.
-* Previously, ODK Central could hang if an incorrect passphrase was provided for decryption. This has been fixed.
-* If a Form definition contains an invalid `search()` appearance, an informative 400 error will be returned rather than a 500 error.
 
 ### ODK Central v1.2
 
