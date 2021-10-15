@@ -8,6 +8,7 @@ const testData = require(appRoot + '/test/data/xml');
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
 const { Form, Key, Submission } = require(appRoot + '/lib/model/frames');
 const { mapSequential } = require(appRoot + '/test/util/util');
+const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('managed encryption', () => {
   describe('lock management', () => {
@@ -356,6 +357,27 @@ describe('managed encryption', () => {
               result['media/testfile.jpg'].should.equal('hello this is a suffixed file');
               done();
             })))))));
+
+    it('should decrypt client audit log attachments', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.clientAudits)
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/audits.xml')
+            .expect(200)
+            .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
+            .then((send) => send(testData.instances.clientAudits.one, { 'audit.csv.enc': readFileSync(appRoot + '/test/data/audit.csv') })
+              .then(() => send(testData.instances.clientAudits.two, { 'audit.csv.enc': readFileSync(appRoot + '/test/data/audit2.csv') }))))
+          .then(() => exhaust(container))
+          .then(() => container.oneFirst(sql`select count(*) from client_audits`)
+            .then((count) => { count.should.equal(0); }))
+          .then(() => container.oneFirst(sql`select count(*) from audits
+            where action='submission.attachment.update' and processed is not null and failures = 0`)
+            .then((count) => { count.should.equal(4); })))));
 
     it('should decrypt client audit log attachments', testService((service, container) =>
       service.login('alice', (asAlice) =>
