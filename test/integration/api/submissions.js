@@ -1420,6 +1420,42 @@ describe('api: /forms/:id/submissions', () => {
                   done();
                 }))))))));
 
+    it('should export deleted fields and values if ?deletedFields=true', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .set('Content-Type', 'application/xml')
+          .send(testData.instances.simple.one)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .set('Content-Type', 'application/xml')
+            .send(testData.instances.simple.two))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .set('Content-Type', 'application/xml')
+            .send(`
+              <?xml version="1.0"?>
+              <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+                <h:head>
+                  <model>
+                    <instance>
+                      <data id="simple" version="2">
+                        <name/>
+                      </data>
+                    </instance>
+                    <bind nodeset="/data/name" type="string"/>
+                  </model>
+                </h:head>
+              </h:html>`)
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish').expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .set('Content-Type', 'application/xml')
+            .send(testData.instances.simple.three.replace('id="simple"', 'id="simple" version="2"')))
+          .then(() => new Promise((done) =>
+            zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?deletedFields=true'), (result) => {
+              result.filenames.should.containDeep([ 'simple.csv' ]);
+              result['simple.csv'].should.be.a.SimpleCsv();
+              done();
+            }))))));
+
     it('should skip attachments if ?attachments=false is given', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
