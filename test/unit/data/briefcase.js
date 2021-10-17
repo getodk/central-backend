@@ -426,9 +426,9 @@ describe('.csv.zip briefcase output @slow', () => {
         result.filenames.should.eql([ 'structuredform.csv' ]);
         result['structuredform.csv'].should.equal(
 `SubmissionDate,instanceID,name,type,street,city,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits
-2018-01-01T00:00:00.000Z,one,Alice,Apartment,101 Pike St,"Seattle, WA",one,,,0,0
-2018-01-01T00:00:00.000Z,two,Bob,Condo,20 Broadway,"Portland, OR",two,,,0,0
-2018-01-01T00:00:00.000Z,three,Chelsea,House,99 Mission Ave,"San Francisco, CA",three,,,0,0
+2018-01-01T00:00:00.000Z,one,Alice,Apartment,101 Pike St,"Seattle, WA",one,,,0,0,,,,0
+2018-01-01T00:00:00.000Z,two,Bob,Condo,20 Broadway,"Portland, OR",two,,,0,0,,,,0
+2018-01-01T00:00:00.000Z,three,Chelsea,House,99 Mission Ave,"San Francisco, CA",three,,,0,0,,,,0
 `);
       done();
       });
