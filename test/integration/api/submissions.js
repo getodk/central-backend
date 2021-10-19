@@ -1746,6 +1746,38 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
                 done();
               })))))));
 
+    it('should tolerate quote inside unquoted field of client audit log', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('audit.csv', Buffer.from(readFileSync(appRoot + '/test/data/audit.csv').toString('utf8').replace('gg', 'g"g'), 'utf8'), { filename: 'audit.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip')
+            .expect(200)
+            .then(() => new Promise((done) =>
+              zipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'), (result) => {
+                result.filenames.should.containDeep([
+                  'audits.csv',
+                  'media/audit.csv',
+                  'audits - audit.csv'
+                ]);
+
+                result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
+one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
+one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
+one,d,/data/d,2000-01-01T00:10,,10,11,12,"g""g",
+one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
+`);
+
+                done();
+              })))))));
+
     context('versioning', () => {
       const withClientAuditIds = (deprecatedId, instanceId) => testData.instances.clientAudits.one
         .replace('one</instance', `${instanceId}</instanceID><deprecatedID>${deprecatedId}</deprecated`);
