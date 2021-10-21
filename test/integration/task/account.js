@@ -24,7 +24,15 @@ describe('task: accounts', () => {
         .then(([ user, log ]) => {
           log.acteeId.should.equal(user.actor.acteeId);
           log.details.data.email.should.equal(user.email);
+          should(log.details.data.password).equal(null);
         })));
+
+    it('should set the password if given', testTask(({ Users, bcrypt }) =>
+      createUser('testuser@opendatakit.org', 'aoeu')
+        .then(() => Users.getByEmail('testuser@opendatakit.org'))
+        .then(getOrNotFound)
+        .then((user) => bcrypt.verify('aoeu', user.password))
+        .then((verified) => verified.should.equal(true))));
   });
 
   describe('promoteUser', () => {
