@@ -469,6 +469,59 @@ describe('form schema', () => {
         ]);
       });
     });
+
+    it('should mark selectMany fields as such', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <q1/>
+                  <q2/>
+                  <q3/>
+                  <g1><q4/></g1>
+                </data>
+              </instance>
+              <bind nodeset="/data/q1" type="string"/>
+              <bind nodeset="/data/q2" type="string"/>
+              <bind nodeset="/data/q3" type="string"/>
+              <bind nodeset="/data/g1/q4" type="string"/>
+            </model>
+          </h:head>
+          <h:body>
+            <select1 ref="/data/q1">
+              <label>one</label>
+              <item><label>a</label><value>a</value></item>
+            </select1>
+            <select ref="/data/q2">
+              <label>two</label>
+              <item><label>b</label><value>b</value></item>
+            </select>
+            <select nodeset="/data/q3">
+              <label>three</label>
+              <item><label>c</label><value>c</value></item>
+            </select>
+            <group ref="/data/g1">
+              <label>group</label>
+              <select ref="/data/g1/q4">
+                <label>four</label>
+                <item><label>d</label><value>d</value></item>
+              </select>
+            </group>
+          </h:body>
+        </h:html>`;
+      return getFormFields(xml).then((schema) => {
+        schema.should.eql([
+          { name: 'q1', path: '/q1', type: 'string', order: 0 },
+          { name: 'q2', path: '/q2', type: 'string', order: 1, selectMany: true },
+          { name: 'q3', path: '/q3', type: 'string', order: 2, selectMany: true },
+          { name: 'g1', path: '/g1', type: 'structure', order: 3 },
+          { name: 'q4', path: '/g1/q4', type: 'string', order: 4, selectMany: true }
+        ]);
+      });
+    });
   });
 
   describe('SchemaStack', () => {

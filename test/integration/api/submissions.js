@@ -1437,9 +1437,11 @@ describe('api: /forms/:id/submissions', () => {
                   <model>
                     <instance>
                       <data id="simple" version="2">
+                        <meta><instanceID/></meta>
                         <name/>
                       </data>
                     </instance>
+                    <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
                     <bind nodeset="/data/name" type="string"/>
                   </model>
                 </h:head>
