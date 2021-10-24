@@ -45,7 +45,7 @@
     "app-root-path": "~2",
     "eslint": "~8",
     "eslint-config-airbnb-base": "~14",
-    "eslint-plugin-import": "~2",
+    "eslint-plugin-import": "~2.25",
     "mocha": "~9",
     "nock": "~12",
     "nyc": "~15",

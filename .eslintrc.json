@@ -1,6 +1,7 @@
 {
   "extends": "airbnb-base",
   "env": { "node": true },
+  "parserOptions": { "ecmaVersion": 2020 },
   "rules": {
     "array-bracket-spacing": "off",
     "arrow-parens": "off",
