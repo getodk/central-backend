@@ -32,7 +32,7 @@
     "odata-v4-parser": "~0.1",
     "pg": "~8",
     "pg-query-stream": "~4",
-    "prompt": "~1",
+    "prompt": "^1.2.0",
     "ramda": "~0",
     "sanitize-filename": "~1",
     "slonik": "~23",
