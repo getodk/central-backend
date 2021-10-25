@@ -28,6 +28,11 @@ describe('OData filter query transformer', () => {
     odataFilter('1 eq null').should.eql(sql`(${'1'} is not distinct from ${null})`);
   });
 
+  it('should allow parentheses around a boolean expression', () => {
+    const result = odataFilter('(1 lt 2 or 3 lt 4) and 5 lt 6');
+    result.should.eql(sql`(((${'1'} < ${'2'}) or (${'3'} < ${'4'})) and (${'5'} < ${'6'}))`);
+  });
+
   it('should transform date extraction method calls', () => {
     odataFilter('2020 eq year(2020-01-01)').should.eql(sql`(${'2020'} is not distinct from extract(year from ${'2020-01-01'}))`);
     odataFilter('2020 eq year(__system/submissionDate)').should.eql(sql`(${'2020'} is not distinct from extract(year from ${sql.identifier([ 'submissions', 'createdAt' ])}))`);
