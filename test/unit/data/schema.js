@@ -470,7 +470,7 @@ describe('form schema', () => {
       });
     });
 
-    it('should mark selectMany fields as such', () => {
+    it('should mark selectMultiple fields as such', () => {
       const xml = `
         <?xml version="1.0"?>
         <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
@@ -515,10 +515,10 @@ describe('form schema', () => {
       return getFormFields(xml).then((schema) => {
         schema.should.eql([
           { name: 'q1', path: '/q1', type: 'string', order: 0 },
-          { name: 'q2', path: '/q2', type: 'string', order: 1, selectMany: true },
-          { name: 'q3', path: '/q3', type: 'string', order: 2, selectMany: true },
+          { name: 'q2', path: '/q2', type: 'string', order: 1, selectMultiple: true },
+          { name: 'q3', path: '/q3', type: 'string', order: 2, selectMultiple: true },
           { name: 'g1', path: '/g1', type: 'structure', order: 3 },
-          { name: 'q4', path: '/g1/q4', type: 'string', order: 4, selectMany: true }
+          { name: 'q4', path: '/g1/q4', type: 'string', order: 4, selectMultiple: true }
         ]);
       });
     });

@@ -9,22 +9,22 @@ describe('select many value processing', () => {
   it('should process values on submission ingest', testService((service, container) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.selectMany)
+        .send(testData.forms.selectMultiple)
         .set('Content-Type', 'text/xml')
         .expect(200)
-        .then(() => asAlice.post('/v1/projects/1/forms/selectMany/submissions')
-          .send(testData.instances.selectMany.one)
+        .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+          .send(testData.instances.selectMultiple.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
           .then(() => exhaust(container)))
-        .then(() => asAlice.post('/v1/projects/1/forms/selectMany/submissions')
-          .send(testData.instances.selectMany.two)
+        .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+          .send(testData.instances.selectMultiple.two)
           .set('Content-Type', 'text/xml')
           .expect(200)
           .then(() => exhaust(container)))
         .then(() => Promise.all([
           container.all(sql`select * from form_field_values`),
-          container.one(sql`select id, "currentDefId" from forms where "xmlFormId"='selectMany'`)
+          container.one(sql`select id, "currentDefId" from forms where "xmlFormId"='selectMultiple'`)
             .then(({ id, currentDefId }) => Promise.all([
               container.oneFirst(sql`select id from submission_defs where "formDefId"=${currentDefId} and "instanceId"='one'`),
               container.oneFirst(sql`select id from submission_defs where "formDefId"=${currentDefId} and "instanceId"='two'`)
@@ -47,16 +47,16 @@ describe('select many value processing', () => {
   it('should update values on submission update', testService((service, container) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.selectMany)
+        .send(testData.forms.selectMultiple)
         .set('Content-Type', 'text/xml')
         .expect(200)
-        .then(() => asAlice.post('/v1/projects/1/forms/selectMany/submissions')
-          .send(testData.instances.selectMany.one)
+        .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+          .send(testData.instances.selectMultiple.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
           .then(() => exhaust(container)))
-        .then(() => asAlice.put('/v1/projects/1/forms/selectMany/submissions/one')
-          .send(testData.instances.selectMany.one
+        .then(() => asAlice.put('/v1/projects/1/forms/selectMultiple/submissions/one')
+          .send(testData.instances.selectMultiple.one
             .replace('x y z', 'xyz')
             .replace('one</instanceID>', 'one2</instanceID><deprecatedID>one</deprecatedID>'))
           .set('Content-Type', 'text/xml')
@@ -64,7 +64,7 @@ describe('select many value processing', () => {
           .then(() => exhaust(container)))
         .then(() => Promise.all([
           container.all(sql`select * from form_field_values`),
-          container.one(sql`select id, "currentDefId" from forms where "xmlFormId"='selectMany'`)
+          container.one(sql`select id, "currentDefId" from forms where "xmlFormId"='selectMultiple'`)
             .then(({ id, currentDefId }) => Promise.all([
               container.oneFirst(sql`select id from submission_defs where "formDefId"=${currentDefId} and "instanceId"='one'`),
               container.oneFirst(sql`select id from submission_defs where "formDefId"=${currentDefId} and "instanceId"='one2'`)

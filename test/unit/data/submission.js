@@ -2,7 +2,7 @@ require('should');
 const appRoot = require('app-root-path');
 const { always, construct, filter, compose } = require('ramda');
 const { toObjects } = require('streamtest').v2;
-const { submissionXmlToFieldStream, getSelectManyResponses, _hashedTree, _diffObj, _diffArray, diffSubmissions, _symbols } = require(appRoot + '/lib/data/submission');
+const { submissionXmlToFieldStream, getSelectMultipleResponses, _hashedTree, _diffObj, _diffArray, diffSubmissions, _symbols } = require(appRoot + '/lib/data/submission');
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
@@ -59,11 +59,11 @@ describe('submission field streamer', () => {
   });
 });
 
-describe('getSelectManyResponses', () => {
-  it('should return all selectMany values', () =>
-    fieldsFor(testData.forms.selectMany)
-      .then((fields) => fields.filter((field) => field.selectMany))
-      .then((fields) => getSelectManyResponses(fields, testData.instances.selectMany.one))
+describe('getSelectMultipleResponses', () => {
+  it('should return all selectMultiple values', () =>
+    fieldsFor(testData.forms.selectMultiple)
+      .then((fields) => fields.filter((field) => field.selectMultiple))
+      .then((fields) => getSelectMultipleResponses(fields, testData.instances.selectMultiple.one))
       .then((result) => {
         result.should.eql({
           '/q1': new Set([ 'a', 'b' ]), '/g1/q2': new Set([ 'x', 'y', 'z' ])
@@ -71,9 +71,9 @@ describe('getSelectManyResponses', () => {
       }));
 
   it('should ignore nonpresent fields', () =>
-    fieldsFor(testData.forms.selectMany)
-      .then((fields) => fields.filter((field) => field.selectMany))
-      .then((fields) => getSelectManyResponses(fields, testData.instances.selectMany.three))
+    fieldsFor(testData.forms.selectMultiple)
+      .then((fields) => fields.filter((field) => field.selectMultiple))
+      .then((fields) => getSelectMultipleResponses(fields, testData.instances.selectMultiple.three))
       .then((result) => {
         result.should.eql({
           '/q1': new Set([ 'b', 'c' ])

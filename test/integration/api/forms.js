@@ -1016,26 +1016,26 @@ describe('api: /projects/:id/forms', () => {
             .expect(200)
             .then(({ body }) => {
               body.should.eql([
-                { name: 'meta', path: '/meta', type: 'structure', binary: null, selectMany: null },
-                { name: 'instanceID', path: '/meta/instanceID', type: 'string', binary: null, selectMany: null },
-                { name: 'name', path: '/name', type: 'string', binary: null, selectMany: null },
-                { name: 'age', path: '/age', type: 'int', binary: null, selectMany: null }
+                { name: 'meta', path: '/meta', type: 'structure', binary: null, selectMultiple: null },
+                { name: 'instanceID', path: '/meta/instanceID', type: 'string', binary: null, selectMultiple: null },
+                { name: 'name', path: '/name', type: 'string', binary: null, selectMultiple: null },
+                { name: 'age', path: '/age', type: 'int', binary: null, selectMultiple: null }
               ]);
             }))));
 
-      it('should indicate selectMany fields', testService((service) =>
+      it('should indicate selectMultiple fields', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
-            .send(testData.forms.selectMany)
+            .send(testData.forms.selectMultiple)
             .set('Content-Type', 'text/xml')
             .expect(200)
-            .then(() => asAlice.get('/v1/projects/1/forms/selectMany/fields')
+            .then(() => asAlice.get('/v1/projects/1/forms/selectMultiple/fields')
               .expect(200)
               .then(({ body }) => {
                 body.should.eql([
-                  { name: 'q1', path: '/q1', type: 'string', binary: null, selectMany: true },
-                  { name: 'g1', path: '/g1', type: 'structure', binary: null, selectMany: null },
-                  { name: 'q2', path: '/g1/q2', type: 'string', binary: null, selectMany: true }
+                  { name: 'q1', path: '/q1', type: 'string', binary: null, selectMultiple: true },
+                  { name: 'g1', path: '/g1', type: 'structure', binary: null, selectMultiple: null },
+                  { name: 'q2', path: '/g1/q2', type: 'string', binary: null, selectMultiple: true }
                 ]);
               })))));
 
@@ -1074,9 +1074,9 @@ describe('api: /projects/:id/forms', () => {
               .expect(200)
               .then(({ body }) => {
                 body.should.eql([
-                  { name: 'q1_8', path: '/q1_8', type: 'structure', binary: null, selectMany: null },
-                  { name: '_17', path: '/q1_8/_17', type: 'string', binary: null, selectMany: null },
-                  { name: '_4_2', path: '/_4_2', type: 'number', binary: null, selectMany: null }
+                  { name: 'q1_8', path: '/q1_8', type: 'structure', binary: null, selectMultiple: null },
+                  { name: '_17', path: '/q1_8/_17', type: 'string', binary: null, selectMultiple: null },
+                  { name: '_4_2', path: '/_4_2', type: 'number', binary: null, selectMultiple: null }
                 ]);
               })))));
     });
@@ -2318,10 +2318,10 @@ describe('api: /projects/:id/forms', () => {
               .expect(200)
               .then(({ body }) => {
                 body.should.eql([
-                  { path: '/meta', name: 'meta', type: 'structure', binary: null, selectMany: null },
-                  { path: '/meta/instanceID', name: 'instanceID', type: 'string', binary: null, selectMany: null },
-                  { path: '/name', name: 'name', type: 'string', binary: null, selectMany: null },
-                  { path: '/age', name: 'age', type: 'int', binary: null, selectMany: null }
+                  { path: '/meta', name: 'meta', type: 'structure', binary: null, selectMultiple: null },
+                  { path: '/meta/instanceID', name: 'instanceID', type: 'string', binary: null, selectMultiple: null },
+                  { path: '/name', name: 'name', type: 'string', binary: null, selectMultiple: null },
+                  { path: '/age', name: 'age', type: 'int', binary: null, selectMultiple: null }
                 ]);
               })))));
     });
@@ -2850,10 +2850,10 @@ describe('api: /projects/:id/forms', () => {
                 .expect(200)
                 .then(({ body }) => {
                   body.should.eql([
-                    { name: 'meta', path: '/meta', type: 'structure', binary: null, selectMany: null },
-                    { name: 'instanceID', path: '/meta/instanceID', type: 'string', binary: null, selectMany: null },
-                    { name: 'name', path: '/name', type: 'string', binary: null, selectMany: null },
-                    { name: 'age', path: '/age', type: 'int', binary: null, selectMany: null }
+                    { name: 'meta', path: '/meta', type: 'structure', binary: null, selectMultiple: null },
+                    { name: 'instanceID', path: '/meta/instanceID', type: 'string', binary: null, selectMultiple: null },
+                    { name: 'name', path: '/name', type: 'string', binary: null, selectMultiple: null },
+                    { name: 'age', path: '/age', type: 'int', binary: null, selectMultiple: null }
                   ]);
                 })))));
       });
