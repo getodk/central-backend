@@ -337,6 +337,25 @@ describe('.csv.zip briefcase output @slow', () => {
     });
   });
 
+  it('should split known select many fields into value columns', (done) => {
+    const inStream = streamTest.fromObjects([
+      instance('one', '<q1>a b</q1><g1><q2>x y z</q2>'),
+      instance('two', '<q1>b</q1><g1><q2>m x</q2>')
+    ]);
+
+    fieldsFor(testData.forms.selectMultiple).then((fields) => {
+      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] })), (result) => {
+        result.filenames.should.eql([ 'selectMultiple.csv' ]);
+        result['selectMultiple.csv'].should.equal(
+`SubmissionDate,q1,q1/x,q1/y,q1/z,g1-q2,g1-q2/m,g1-q2/n,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits
+2018-01-01T00:00:00.000Z,a b,0,0,0,x y z,0,0,one,,,0,0,,,,0
+2018-01-01T00:00:00.000Z,b,0,0,0,m x,1,0,two,,,0,0,,,,0
+`);
+        done();
+      });
+    });
+  });
+
   it('should flatten structures within a table', (done) => {
     const formXml = `
       <?xml version="1.0"?>
@@ -422,7 +441,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     fieldsFor(formXml).then((fields) => {
-      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'structuredform', undefined, false, { groupPaths: false })), (result) => {
+      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'structuredform', undefined, undefined, false, { groupPaths: false })), (result) => {
         result.filenames.should.eql([ 'structuredform.csv' ]);
         result['structuredform.csv'].should.equal(
 `SubmissionDate,instanceID,name,type,street,city,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits
@@ -431,6 +450,25 @@ describe('.csv.zip briefcase output @slow', () => {
 2018-01-01T00:00:00.000Z,three,Chelsea,House,99 Mission Ave,"San Francisco, CA",three,,,0,0,,,,0
 `);
       done();
+      });
+    });
+  });
+
+  it('should split known select many fields And omit group names if asked', (done) => {
+    const inStream = streamTest.fromObjects([
+      instance('one', '<q1>a b</q1><g1><q2>x y z</q2>'),
+      instance('two', '<q1>b</q1><g1><q2>m x</q2>')
+    ]);
+
+    fieldsFor(testData.forms.selectMultiple).then((fields) => {
+      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] }, undefined, false, { groupPaths: false })), (result) => {
+        result.filenames.should.eql([ 'selectMultiple.csv' ]);
+        result['selectMultiple.csv'].should.equal(
+`SubmissionDate,q1,q1/x,q1/y,q1/z,q2,q2/m,q2/n,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits
+2018-01-01T00:00:00.000Z,a b,0,0,0,x y z,0,0,one,,,0,0,,,,0
+2018-01-01T00:00:00.000Z,b,0,0,0,m x,1,0,two,,,0,0,,,,0
+`);
+        done();
       });
     });
   });

@@ -1420,6 +1420,53 @@ describe('api: /forms/:id/submissions', () => {
                   done();
                 }))))))));
 
+    it('should split select multiple values if ?splitSelectMultiples=true', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.selectMultiple)
+          .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+            .set('Content-Type', 'application/xml')
+            .send(testData.instances.selectMultiple.one))
+          .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+            .set('Content-Type', 'application/xml')
+            .send(testData.instances.selectMultiple.two))
+          .then(() => exhaust(container))
+          .then(() => new Promise((done) =>
+            zipStreamToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true'), (result) => {
+              result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
+              const lines = result['selectMultiple.csv'].split('\n');
+              lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits');
+              lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                .should.equal(',b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0');
+              lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                .should.equal(',a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0');
+              done();
+            }))))));
+
+    it('should omit multiples it does not know about', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.selectMultiple)
+          .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+            .set('Content-Type', 'application/xml')
+            .send(testData.instances.selectMultiple.one))
+          .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+            .set('Content-Type', 'application/xml')
+            .send(testData.instances.selectMultiple.two))
+          .then(() => new Promise((done) =>
+            zipStreamToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true'), (result) => {
+              result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
+              const lines = result['selectMultiple.csv'].split('\n');
+              lines[0].should.equal('SubmissionDate,q1,g1-q2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits');
+              lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                .should.equal(',b,m x,two,5,Alice,0,0,,,,0');
+              lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                .should.equal(',a b,x y z,one,5,Alice,0,0,,,,0');
+              done();
+            }))))));
+
     it('should export deleted fields and values if ?deletedFields=true', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
@@ -1511,6 +1558,30 @@ describe('api: /forms/:id/submissions', () => {
             zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?groupPaths=false'), (result) => {
               const csv = result['simple.csv'].split('\n');
               csv[0].should.equal('SubmissionDate,instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits');
+              done();
+            }))))));
+
+    it('should split select AND omit group paths given both options', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.selectMultiple)
+          .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+            .set('Content-Type', 'application/xml')
+            .send(testData.instances.selectMultiple.one))
+          .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+            .set('Content-Type', 'application/xml')
+            .send(testData.instances.selectMultiple.two))
+          .then(() => exhaust(container))
+          .then(() => new Promise((done) =>
+            zipStreamToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true&groupPaths=false'), (result) => {
+              result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
+              const lines = result['selectMultiple.csv'].split('\n');
+              lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,q2,q2/m,q2/x,q2/y,q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits');
+              lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                .should.equal(',b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0');
+              lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                .should.equal(',a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0');
               done();
             }))))));
 
@@ -1948,6 +2019,29 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               rows[1].slice(24).should.equal(',rthree,Chelsea,38,,,rthree,5,Alice,0,0,,,,0');
               rows[2].slice(24).should.equal(',rtwo,Bob,34,,,rtwo,5,Alice,0,0,,,,0');
               rows[3].slice(24).should.equal(',rone,Alice,30,,,rone,5,Alice,0,0,,,,0');
+            })))));
+
+    it('should split select multiple values if ?splitSelectMultiples=true', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.selectMultiple)
+          .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+            .set('Content-Type', 'application/xml')
+            .send(testData.instances.selectMultiple.one))
+          .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+            .set('Content-Type', 'application/xml')
+            .send(testData.instances.selectMultiple.two))
+          .then(() => exhaust(container))
+          .then(() => asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv?splitSelectMultiples=true')
+            .expect(200)
+            .then(({ text }) =>  {
+              const lines = text.split('\n');
+              lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits');
+              lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                .should.equal(',b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0');
+              lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                .should.equal(',a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0');
             })))));
 
     it('should log the action in the audit log', testService((service) =>
