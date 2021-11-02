@@ -43,7 +43,7 @@
   },
   "devDependencies": {
     "app-root-path": "~2",
-    "eslint": "~7",
+    "eslint": "~8",
     "eslint-config-airbnb-base": "~14",
     "eslint-plugin-import": "~2",
     "mocha": "~9",
