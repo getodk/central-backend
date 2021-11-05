@@ -47,54 +47,6 @@ describe('api: /projects/:id/forms', () => {
               simple.submissions.should.equal(1);
               simple.lastSubmission.should.be.a.recentIsoDate();
             })))));
-
-    it('should list soft-deleted forms', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.delete('/v1/projects/1/forms/withrepeat')
-          .expect(200)
-          .then(() => asAlice.get('/v1/projects/1/deletedForms')
-            .expect(200)
-            .then(({ body }) => {
-              should.exist(body[0].deletedAt);
-              body.forEach((form) => form.should.be.a.Form());
-              body.map((form) => form.projectId).should.eql([ 1 ]);
-              body.map((form) => form.xmlFormId).should.eql([ 'withrepeat' ]);
-              body.map((form) => form.name).should.eql([ null ]);
-              body.map((form) => form.hash).should.eql([ 'e7e9e6b3f11fca713ff09742f4312029' ]);
-              body.map((form) => form.version).should.eql([ '1.0' ]);
-            })))));
-
-    it('should list soft-deleted forms including extended metadata and submissions', testService((service) =>
-      service.login('alice', (asAlice) =>
-         asAlice.post('/v1/projects/1/forms/simple/submissions')
-          .send(testData.instances.simple.one)
-          .set('Content-Type', 'application/xml')
-          .expect(200)
-          .then(() => asAlice.delete('/v1/projects/1/forms/simple')
-            .expect(200)
-            .then(() => asAlice.get('/v1/projects/1/deletedForms')
-              .set('X-Extended-Metadata', 'true')
-              .expect(200)
-              .then(({ body }) => {
-                const simple = body.find((form) => form.xmlFormId === 'simple');
-                should.exist(simple.deletedAt);
-                simple.submissions.should.equal(1);
-                simple.lastSubmission.should.be.a.recentIsoDate();
-              }))))));
-
-    it('should not include deletedAt form field on regular forms', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.get('/v1/projects/1/forms')
-          .set('X-Extended-Metadata', 'true')
-          .expect(200)
-          .then(({ body }) => {
-            body.forEach((form) => form.hasOwnProperty('deletedAt').should.be.false());
-          })
-          .then(() => asAlice.get('/v1/projects/1/forms')
-            .expect(200)
-            .then(({ body }) => {
-              body.forEach((form) => form.hasOwnProperty('deletedAt').should.be.false());
-            })))));
   });
 
   describe('../formList GET', () => {
@@ -1426,6 +1378,116 @@ describe('api: /projects/:id/forms', () => {
               .then(({ body }) => {
                 body.should.eql([]);
               }))))));
+  });
+
+  describe('/deletedForms (listing trashed forms)', () => {
+    it('should reject unless the user can read', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/projects/1/deletedForms').expect(403))));
+    
+    it('should list soft-deleted forms', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/withrepeat')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/deletedForms')
+            .expect(200)
+            .then(({ body }) => {
+              should.exist(body[0].deletedAt);
+              body.forEach((form) => form.should.be.a.Form());
+              body.map((form) => form.projectId).should.eql([ 1 ]);
+              body.map((form) => form.xmlFormId).should.eql([ 'withrepeat' ]);
+              body.map((form) => form.name).should.eql([ null ]);
+              body.map((form) => form.hash).should.eql([ 'e7e9e6b3f11fca713ff09742f4312029' ]);
+              body.map((form) => form.version).should.eql([ '1.0' ]);
+            })))));
+
+    it('should list soft-deleted forms including extended metadata and submissions', testService((service) =>
+      service.login('alice', (asAlice) =>
+         asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.delete('/v1/projects/1/forms/simple')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/deletedForms')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                const simple = body.find((form) => form.xmlFormId === 'simple');
+                should.exist(simple.deletedAt);
+                simple.submissions.should.equal(1);
+                simple.lastSubmission.should.be.a.recentIsoDate();
+              }))))));
+
+    it('should not include deletedAt form field on regular forms', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.forEach((form) => form.hasOwnProperty('deletedAt').should.be.false());
+          })
+          .then(() => asAlice.get('/v1/projects/1/forms')
+            .expect(200)
+            .then(({ body }) => {
+              body.forEach((form) => form.hasOwnProperty('deletedAt').should.be.false());
+            })))));
+  });
+
+  describe('/:id/restore (undeleting trashed forms)', () => {
+    it('should reject restoring unless the user can delete', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/simple')
+          .expect(200)
+          .then(() => service.login('chelsea', (asChelsea) =>
+            asChelsea.post('/v1/projects/1/forms/simple/restore').expect(403))))));
+
+    it('should restore a soft-deleted form', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/simple')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/restore')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple')
+            .expect(200)))));
+
+    it('should fail when restoring is ambiguous (multiple trashed forms with the same xmlFormId)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/simple')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="two"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200))
+          .then(() => asAlice.delete('/v1/projects/1/forms/simple')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/restore')
+            .expect(501)
+            .then(({ body }) => {
+              body.code.should.equal(501.1);
+              body.details.should.eql({ feature: 'restoring ambiguous xmlFormId' });
+            })))));
+
+    it('should fail restoring a form that is not deleted', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/restore')
+          .expect(404))));
+
+    it('should fail to restore a form when another active form with the same form id exists', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/simple')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="two"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/restore')
+            .expect(409)
+            .then(({ body }) => {
+              body.code.should.equal(409.3);
+              body.details.should.eql({ fields: 'xmlFormId', values: 'simple' });
+            })))));
+
   });
 
 
