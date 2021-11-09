@@ -6,9 +6,6 @@ const { join } = require('path');
 const request = require('supertest');
 const { run, task } = require(appRoot + '/lib/task/task');
 
-// debugging things.
-global.tap = (x) => { console.log(x); return x; };
-
 // knex things.
 const config = require('config');
 const { connect, migrate } = require(appRoot + '/lib/model/migrate');

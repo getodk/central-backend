@@ -308,6 +308,29 @@ module.exports = {
       <label>What is your age?</label>
     </input>
   </h:body>
+</h:html>`,
+
+    selectMultiple: `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <model>
+      <instance>
+        <data id="selectMultiple">
+          <q1/>
+          <g1><q2/></g1>
+        </data>
+      </instance>
+      <bind nodeset="/data/q1" type="string"/>
+      <bind nodeset="/data/g1/q2" type="string"/>
+    </model>
+  </h:head>
+  <h:body>
+    <select ref="/data/q1"><label>one</label></select>
+    <group ref="/data/g1">
+      <label>group</label>
+      <select ref="/data/g1/q2"><label>two</label></select>
+    </group>
+  </h:body>
 </h:html>`
   },
   instances: {
@@ -381,6 +404,11 @@ module.exports = {
     clientAudits: {
       one: `<data id="audits"><meta><instanceID>one</instanceID><audit>audit.csv</audit></meta><name>Alice</name><age>30</age></data>`,
       two: `<data id="audits"><meta><instanceID>two</instanceID><audit>log.csv</audit></meta><name>Bob</name><age>34</age></data>`
+    },
+    selectMultiple: {
+      one: instance('selectMultiple', 'one', '<q1>a b</q1><g1><q2>x y z</q2>'),
+      two: instance('selectMultiple', 'two', '<q1>b</q1><g1><q2>m x</q2>'),
+      three: instance('selectMultiple', 'three', '<q1> b c</q1>')
     }
   }
 };

@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { getFormFields, sanitizeFieldsForOdata, SchemaStack, expectedFormAttachments, injectPublicKey, addVersionSuffix, setVersion } = require(appRoot + '/lib/data/schema');
+const { getFormFields, sanitizeFieldsForOdata, SchemaStack, merge, expectedFormAttachments, injectPublicKey, addVersionSuffix, setVersion } = require(appRoot + '/lib/data/schema');
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const { toTraversable } = require(appRoot + '/lib/util/xml');
 const testData = require(appRoot + '/test/data/xml');
@@ -469,6 +469,59 @@ describe('form schema', () => {
         ]);
       });
     });
+
+    it('should mark selectMultiple fields as such', () => {
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <q1/>
+                  <q2/>
+                  <q3/>
+                  <g1><q4/></g1>
+                </data>
+              </instance>
+              <bind nodeset="/data/q1" type="string"/>
+              <bind nodeset="/data/q2" type="string"/>
+              <bind nodeset="/data/q3" type="string"/>
+              <bind nodeset="/data/g1/q4" type="string"/>
+            </model>
+          </h:head>
+          <h:body>
+            <select1 ref="/data/q1">
+              <label>one</label>
+              <item><label>a</label><value>a</value></item>
+            </select1>
+            <select ref="/data/q2">
+              <label>two</label>
+              <item><label>b</label><value>b</value></item>
+            </select>
+            <select nodeset="/data/q3">
+              <label>three</label>
+              <item><label>c</label><value>c</value></item>
+            </select>
+            <group ref="/data/g1">
+              <label>group</label>
+              <select ref="/data/g1/q4">
+                <label>four</label>
+                <item><label>d</label><value>d</value></item>
+              </select>
+            </group>
+          </h:body>
+        </h:html>`;
+      return getFormFields(xml).then((schema) => {
+        schema.should.eql([
+          { name: 'q1', path: '/q1', type: 'string', order: 0 },
+          { name: 'q2', path: '/q2', type: 'string', order: 1, selectMultiple: true },
+          { name: 'q3', path: '/q3', type: 'string', order: 2, selectMultiple: true },
+          { name: 'g1', path: '/g1', type: 'structure', order: 3 },
+          { name: 'q4', path: '/g1/q4', type: 'string', order: 4, selectMultiple: true }
+        ]);
+      });
+    });
   });
 
   describe('SchemaStack', () => {
@@ -809,6 +862,275 @@ describe('form schema', () => {
         sanitizeFieldsForOdata(fields).map((field) => field.path)
           .should.eql([ '/q1_8', '/q1_8/_17', '/_4_2' ]);
       }));
+  });
+
+  describe('merge', () => {
+    it('should merge root primitive differences', () => Promise.all([
+      fieldsFor(`
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <age/>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind type="int" nodeset="/data/age"/>
+            </model>
+          </h:head>
+        </h:html>`),
+      fieldsFor(`
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <hometown/>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind nodeset="/data/hometown" type="select1"/>
+            </model>
+          </h:head>
+        </h:html>`)
+    ]).then(([ a, b ]) => {
+      merge(a, b).should.eql([
+        new MockField({ name: 'name', order: 0, path: '/name', type: 'string' }),
+        new MockField({ name: 'hometown', order: 1, path: '/hometown', type: 'select1' }),
+        new MockField({ name: 'age', order: 2, path: '/age', type: 'int' })
+      ]);
+    }));
+
+    it('should merge multiple root primitive differences', () => Promise.all([
+      fieldsFor(`
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <gender/>
+                  <name/>
+                  <age/>
+                </data>
+              </instance>
+              <bind nodeset="/data/gender" type="string"/>
+              <bind nodeset="/data/name" type="string"/>
+              <bind type="int" nodeset="/data/age"/>
+            </model>
+          </h:head>
+        </h:html>`),
+      fieldsFor(`
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                  <hometown/>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind nodeset="/data/hometown" type="select1"/>
+            </model>
+          </h:head>
+        </h:html>`)
+    ]).then(([ a, b ]) => {
+      merge(a, b).should.eql([
+        new MockField({ name: 'name', order: 0, path: '/name', type: 'string' }),
+        new MockField({ name: 'hometown', order: 1, path: '/hometown', type: 'select1' }),
+        new MockField({ name: 'gender', order: 2, path: '/gender', type: 'string' }),
+        new MockField({ name: 'age', order: 3, path: '/age', type: 'int' })
+      ]);
+    }));
+
+    it('should merge nested primitive differences', () => Promise.all([
+      fieldsFor(`
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <meta><instanceID/></meta>
+                  <name/>
+                </data>
+              </instance>
+              <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+              <bind nodeset="/data/name" type="string"/>
+            </model>
+          </h:head>
+        </h:html>`),
+      fieldsFor(`
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <meta><audit/></meta>
+                  <name/>
+                </data>
+              </instance>
+              <bind nodeset="/data/meta/audit" type="binary"/>
+              <bind nodeset="/data/name" type="string"/>
+            </model>
+          </h:head>
+        </h:html>`)
+    ]).then(([ a, b ]) => {
+      merge(a, b).should.eql([
+        new MockField({ name: 'meta', order: 0, path: '/meta', type: 'structure' }),
+        new MockField({ name: 'audit', order: 1, path: '/meta/audit', type: 'binary', binary: true }),
+        new MockField({ name: 'instanceID', order: 2, path: '/meta/instanceID', type: 'string' }),
+        new MockField({ name: 'name', order: 3, path: '/name', type: 'string' })
+      ]);
+    }));
+
+    it('should merge root subtrees', () => Promise.all([
+      fieldsFor(`
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <meta><instanceID/><audit/></meta>
+                  <name/>
+                </data>
+              </instance>
+              <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+              <bind nodeset="/data/meta/audit" type="binary"/>
+              <bind nodeset="/data/name" type="string"/>
+            </model>
+          </h:head>
+        </h:html>`),
+      fieldsFor(`
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <name/>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+            </model>
+          </h:head>
+        </h:html>`)
+    ]).then(([ a, b ]) => {
+      merge(a, b).should.eql([
+        new MockField({ name: 'name', order: 0, path: '/name', type: 'string' }),
+        new MockField({ name: 'meta', order: 1, path: '/meta', type: 'structure' }),
+        new MockField({ name: 'instanceID', order: 2, path: '/meta/instanceID', type: 'string' }),
+        new MockField({ name: 'audit', order: 3, path: '/meta/audit', type: 'binary', binary: true })
+      ]);
+    }));
+
+    it('should merge multiple root subtrees', () => Promise.all([
+      fieldsFor(`
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <group1><nested><a/></nested></group1>
+                  <name/>
+                  <group2><b/></group2>
+                  <age/>
+                </data>
+              </instance>
+              <bind nodeset="/data/group1/nested/a" type="string"/>
+              <bind nodeset="/data/name" type="string"/>
+              <bind nodeset="/data/group2/b" type="binary"/>
+              <bind nodeset="/data/age" type="int"/>
+            </model>
+          </h:head>
+        </h:html>`),
+      fieldsFor(`
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <age/>
+                  <name/>
+                </data>
+              </instance>
+              <bind nodeset="/data/age" type="int"/>
+              <bind nodeset="/data/name" type="string"/>
+            </model>
+          </h:head>
+        </h:html>`)
+    ]).then(([ a, b ]) => {
+      merge(a, b).should.eql([
+        new MockField({ name: 'age', order: 0, path: '/age', type: 'int' }),
+        new MockField({ name: 'name', order: 1, path: '/name', type: 'string' }),
+        new MockField({ name: 'group1', order: 2, path: '/group1', type: 'structure' }),
+        new MockField({ name: 'nested', order: 3, path: '/group1/nested', type: 'structure' }),
+        new MockField({ name: 'a', order: 4, path: '/group1/nested/a', type: 'string' }),
+        new MockField({ name: 'group2', order: 5, path: '/group2', type: 'structure' }),
+        new MockField({ name: 'b', order: 6, path: '/group2/b', type: 'binary', binary: true })
+      ]);
+    }));
+
+    it('should merge multiple nested subtrees', () => Promise.all([
+      fieldsFor(`
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <group><z/><nested><a/><b/></nested><c/></group>
+                  <name/>
+                </data>
+              </instance>
+              <bind nodeset="/data/group/z" type="string"/>
+              <bind nodeset="/data/group/nested/a" type="string"/>
+              <bind nodeset="/data/group/nested/b" type="string"/>
+              <bind nodeset="/data/group/c" type="string"/>
+              <bind nodeset="/data/name" type="string"/>
+            </model>
+          </h:head>
+        </h:html>`),
+      fieldsFor(`
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+          <h:head>
+            <model>
+              <instance>
+                <data id="form">
+                  <group><nested><b/></nested><d/></group>
+                  <name/>
+                </data>
+              </instance>
+              <bind nodeset="/data/group/nested/b" type="string"/>
+              <bind nodeset="/data/group/d" type="string"/>
+              <bind nodeset="/data/name" type="string"/>
+            </model>
+          </h:head>
+        </h:html>`)
+    ]).then(([ a, b ]) => {
+      merge(a, b).should.eql([
+        new MockField({ name: 'group', order: 0, path: '/group', type: 'structure' }),
+        new MockField({ name: 'nested', order: 1, path: '/group/nested', type: 'structure' }),
+        new MockField({ name: 'b', order: 2, path: '/group/nested/b', type: 'string' }),
+        new MockField({ name: 'a', order: 3, path: '/group/nested/a', type: 'string' }),
+        new MockField({ name: 'd', order: 4, path: '/group/d', type: 'string' }),
+        new MockField({ name: 'z', order: 5, path: '/group/z', type: 'string' }),
+        new MockField({ name: 'c', order: 6, path: '/group/c', type: 'string' }),
+        new MockField({ name: 'name', order: 7, path: '/name', type: 'string' })
+      ]);
+    }));
   });
 
   describe('expectedFormAttachments', () => {
