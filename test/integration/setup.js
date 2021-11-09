@@ -93,7 +93,7 @@ const authProxy = (token) => ({
 const augment = (service) => {
   service.login = function(user, test) {
     const credentials = (typeof user === 'string')
-      ? { email: `${user}@opendatakit.org`, password: user }
+      ? { email: `${user}@getodk.org`, password: user }
       : user;
 
     return service.post('/v1/sessions').send(credentials)

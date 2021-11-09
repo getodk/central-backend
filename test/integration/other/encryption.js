@@ -276,7 +276,7 @@ describe('managed encryption', () => {
               .expect(200)
               .then(({ body }) => body[0].id),
             service.post('/v1/sessions')
-              .send({ email: 'alice@opendatakit.org', password: 'alice' })
+              .send({ email: 'alice@getodk.org', password: 'alice' })
               .expect(200)
               .then(({ body }) => body)
           ]))

@@ -85,7 +85,7 @@ describe('preprocessors', () => {
     describe('Basic auth', () => {
       it('should reject non-https Basic auth requests', () =>
         Promise.resolve(sessionHandler(
-          { Auth, Users: mockUsers('alice@opendatakit.org') },
+          { Auth, Users: mockUsers('alice@getodk.org') },
           new Context(
             createRequest({ headers: { Authorization: 'Basic abracadabra' } }),
             { fieldKey: Option.none() }
@@ -94,10 +94,10 @@ describe('preprocessors', () => {
 
       it('should fail the request if an improperly-formatted Basic auth is given', () =>
         Promise.resolve(sessionHandler(
-          { Auth, Users: mockUsers('alice@opendatakit.org') },
+          { Auth, Users: mockUsers('alice@getodk.org') },
           new Context(
             createRequest({ headers: {
-              Authorization: `Basic ${Buffer.from('alice@opendatakit.org:', 'utf8').toString('base64')}`,
+              Authorization: `Basic ${Buffer.from('alice@getodk.org:', 'utf8').toString('base64')}`,
               'X-Forwarded-Proto': 'https'
             } }),
             { fieldKey: Option.none() }
@@ -106,10 +106,10 @@ describe('preprocessors', () => {
 
       it('should fail the request if the Basic auth user cannot be found', () =>
         Promise.resolve(sessionHandler(
-          { Auth, Users: mockUsers('alice@opendatakit.org') },
+          { Auth, Users: mockUsers('alice@getodk.org') },
           new Context(
             createRequest({ headers: {
-              Authorization: `Basic ${Buffer.from('bob@opendatakit.org:bob', 'utf8').toString('base64')}`,
+              Authorization: `Basic ${Buffer.from('bob@getodk.org:bob', 'utf8').toString('base64')}`,
               'X-Forwarded-Proto': 'https'
             } }),
             { fieldKey: Option.none() }
@@ -118,10 +118,10 @@ describe('preprocessors', () => {
 
       it('should fail the request if the Basic auth credentials are not right', () =>
         Promise.resolve(sessionHandler(
-          { Auth, Users: mockUsers('alice@opendatakit.org', 'willnevermatch'), bcrypt },
+          { Auth, Users: mockUsers('alice@getodk.org', 'willnevermatch'), bcrypt },
           new Context(
             createRequest({ headers: {
-              Authorization: `Basic ${Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64')}`,
+              Authorization: `Basic ${Buffer.from('alice@getodk.org:alice', 'utf8').toString('base64')}`,
               'X-Forwarded-Proto': 'https'
             } }),
             { fieldKey: Option.none() }
@@ -131,10 +131,10 @@ describe('preprocessors', () => {
       it('should set the appropriate session if valid Basic auth credentials are given @slow', () =>
         bcrypt.hash('alice').then((hashed) =>
           Promise.resolve(sessionHandler(
-            { Auth, Users: mockUsers('alice@opendatakit.org', hashed), bcrypt },
+            { Auth, Users: mockUsers('alice@getodk.org', hashed), bcrypt },
             new Context(
               createRequest({ headers: {
-                Authorization: `Basic ${Buffer.from('alice@opendatakit.org:alice', 'utf8').toString('base64')}`,
+                Authorization: `Basic ${Buffer.from('alice@getodk.org:alice', 'utf8').toString('base64')}`,
                 'X-Forwarded-Proto': 'https'
               } }),
               { fieldKey: Option.none() }

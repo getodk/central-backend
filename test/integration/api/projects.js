@@ -538,7 +538,7 @@ describe('api: /projects', () => {
           .expect(200)
           .then(() => Promise.all([
             Projects.getById(1).then((o) => o.get()),
-            Users.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+            Users.getByEmail('alice@getodk.org').then((o) => o.get()),
             Audits.getLatestByAction('project.update').then((o) => o.get())
           ]))
           .then(([ project, alice, log ]) => {

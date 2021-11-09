@@ -4,9 +4,9 @@ const { mapSequential } = require(appRoot + '/test/util/util');
 
 module.exports = ({ Assignments, Users, Projects, bcrypt }) => {
   const users = [
-    new User({ email: 'alice@opendatakit.org', password: 'alice' }, { actor: new Actor({ type: 'user', displayName: 'Alice' }) }),
-    new User({ email: 'bob@opendatakit.org', password: 'bob' }, { actor: new Actor({ type: 'user', displayName: 'Bob' }) }),
-    new User({ email: 'chelsea@opendatakit.org', password: 'chelsea' }, { actor: new Actor({ type: 'user', displayName: 'Chelsea' }) })
+    new User({ email: 'alice@getodk.org', password: 'alice' }, { actor: new Actor({ type: 'user', displayName: 'Alice' }) }),
+    new User({ email: 'bob@getodk.org', password: 'bob' }, { actor: new Actor({ type: 'user', displayName: 'Bob' }) }),
+    new User({ email: 'chelsea@getodk.org', password: 'chelsea' }, { actor: new Actor({ type: 'user', displayName: 'Chelsea' }) })
   ];
 
   // hash the passwords, create our three test users, then add grant Alice and Bob their rights.
