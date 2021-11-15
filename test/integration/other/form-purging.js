@@ -6,7 +6,7 @@ const testData = require('../../data/xml');
 const { createReadStream } = require('fs');
 
 
-describe.only('query module form purge', () => {
+describe('query module form purge', () => {
   it('should purge a soft-deleted form', testService((service, container) =>
     service.login('alice', (asAlice) =>
       asAlice.delete('/v1/projects/1/forms/simple')
@@ -116,6 +116,21 @@ describe.only('query module form purge', () => {
           container.oneFirst(sql`select count(*) from form_defs where "formId"=1`)
         ]))
         .then((counts) => counts.should.eql([0, 0])))));
+
+  it('should immediately purge a deleted form with only a draft', testService((service, container) =>
+    service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simple2)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => container.Forms.getByProjectAndXmlFormId(1, 'simple2').then((o) => o.get())
+        .then((ghostForm) => asAlice.delete('/v1/projects/1/forms/simple2') // purge should happen internally
+          .expect(200)
+          .then(() => Promise.all([
+            container.oneFirst(sql`select count(*) from forms where id=${ghostForm.id}`),
+            container.oneFirst(sql`select count(*) from form_defs where "formId"=${ghostForm.id}`)
+          ]))
+          .then((counts) => counts.should.eql([0, 0])))))));
 
   it('should purge attachments (and blobs) of a form', testService((service, container) =>
     service.login('alice', (asAlice) =>
