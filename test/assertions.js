@@ -250,13 +250,13 @@ should.Assertion.add('SimpleCsv', function() {
 
   const csv = this.obj.split('\n').map((row) => row.split(','));
   csv.length.should.equal(5); // header + 3 data rows + newline
-  csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits' ]);
+  csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
   csv[1].shift().should.be.an.recentIsoDate();
-  csv[1].should.eql([ 'three','Chelsea','38','three','5','Alice','0','0','','','','0' ]);
+  csv[1].should.eql([ 'three','Chelsea','38','three','5','Alice','0','0','','','','0', '' ]);
   csv[2].shift().should.be.an.recentIsoDate();
-  csv[2].should.eql([ 'two','Bob','34','two','5','Alice','0','0','','','','0' ]);
+  csv[2].should.eql([ 'two','Bob','34','two','5','Alice','0','0','','','','0', '' ]);
   csv[3].shift().should.be.an.recentIsoDate();
-  csv[3].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0' ]);
+  csv[3].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0', '' ]);
   csv[4].should.eql([ '' ]);
 });
 
@@ -265,12 +265,15 @@ should.Assertion.add('EncryptedSimpleCsv', function() {
 
   const csv = this.obj.split('\n').map((row) => row.split(','));
   csv.length.should.equal(5); // header + 3 data rows + newline
-  csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits' ]);
+  csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
   csv[1].shift().should.be.an.recentIsoDate();
+  csv[1].pop().should.match(/^\[encrypted:........\]$/);
   csv[1].should.eql([ 'three','Chelsea','38','three','5','Alice','1','1','','','','0' ]);
   csv[2].shift().should.be.an.recentIsoDate();
+  csv[2].pop().should.match(/^\[encrypted:........\]$/);
   csv[2].should.eql([ 'two','Bob','34','two','5','Alice','1','1','','','','0' ]);
   csv[3].shift().should.be.an.recentIsoDate();
+  csv[3].pop().should.match(/^\[encrypted:........\]$/);
   csv[3].should.eql([ 'one','Alice','30','one','5','Alice','1','1','','','','0' ]);
   csv[4].should.eql([ '' ]);
 });
