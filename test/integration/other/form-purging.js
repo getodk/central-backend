@@ -6,7 +6,7 @@ const testData = require('../../data/xml');
 const { createReadStream } = require('fs');
 
 
-describe('query module form purge', () => {
+describe.only('query module form purge', () => {
   it('should purge a soft-deleted form', testService((service, container) =>
     service.login('alice', (asAlice) =>
       asAlice.delete('/v1/projects/1/forms/simple')
@@ -46,6 +46,25 @@ describe('query module form purge', () => {
         .then((counts) => {
           counts.should.eql([1, 1]);
         })))));
+
+  it('should purge a deleted form by ID', testService((service, container) =>
+    service.login('alice', (asAlice) =>
+      asAlice.delete('/v1/projects/1/forms/simple')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200))
+        .then(() => container.Forms.getByProjectAndXmlFormId(1, 'withAttachments').then((o) => o.get()))
+        .then((ghostForm) => asAlice.delete('/v1/projects/1/withAttachments')
+          .then(() => container.Forms.purge(true, 1)) // force delete a single form
+          .then(() => Promise.all([
+            container.oneFirst(sql`select count(*) from forms where id=${ghostForm.id}`),
+            container.oneFirst(sql`select count(*) from forms where id=1`), // deleted form id
+          ])
+          .then((counts) => {
+            counts.should.eql([1, 0]);
+          }))))));
 
   it('should log the purge action in the audit log', testService((service, container) =>
     service.login('alice', (asAlice) =>
