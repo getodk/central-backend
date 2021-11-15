@@ -14,7 +14,8 @@ const __system = {
   status: null,
   reviewState: null,
   deviceId: null,
-  edits: 0
+  edits: 0,
+  formVersion: ''
 };
 const mockSubmission = (instanceId, xml) => ({
   xml,
@@ -25,7 +26,8 @@ const mockSubmission = (instanceId, xml) => ({
   aux: {
     submitter: { id: 5, displayName: 'Alice' },
     attachment: { present: 0, expected: 0 },
-    edit: { count: 0 }
+    edit: { count: 0 },
+    exports: { formVersion: '' }
   }
 });
 
@@ -100,7 +102,8 @@ describe('submissionToOData', () => {
           status: null,
           reviewState: null,
           deviceId: null,
-          edits: 0
+          edits: 0,
+          formVersion: ''
         }
       }]);
     });
@@ -557,7 +560,8 @@ describe('submissionToOData', () => {
                   status: null,
                   reviewState: null,
                   deviceId: null,
-                  edits: 0
+                  edits: 0,
+                  formVersion: ''
                 },
                 meta: { instanceID: 'double' },
                 children: {
