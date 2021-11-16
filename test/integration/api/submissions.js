@@ -124,10 +124,11 @@ describe('api: /submission', () => {
               .then(({ text }) => { text.should.equal(testData.instances.simple.one); })
           ])))));
 
-    it('should save the submission to the appropriate form with device id', testService((service) =>
+    it('should save the submission to the appropriate form with device id and user agent', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission?deviceID=imei%3A358240051111110')
           .set('X-OpenRosa-Version', '1.0')
+          .set('User-Agent', 'central/test')
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .expect(201)
           .then(({ text }) => {
@@ -138,7 +139,13 @@ describe('api: /submission', () => {
               .expect(200)
               .then(({ body }) => {
                 body.createdAt.should.be.a.recentIsoDate();
-              body.deviceId.should.equal('imei:358240051111110');
+                body.deviceId.should.equal('imei:358240051111110');
+              }),
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions')
+              .expect(200)
+              .then(({ body }) => {
+                body[0].deviceId.should.equal('imei:358240051111110');
+                body[0].userAgent.should.equal('central/test');
               }),
             asAlice.get('/v1/projects/1/forms/simple/submissions/one.xml')
               .expect(200)
@@ -841,15 +848,22 @@ describe('api: /forms/:id/submissions', () => {
             body.submitterId.should.equal(5);
           }))));
 
-    it('should record a deviceId if given', testService((service) =>
+    it('should record a deviceId and userAgent if given', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions?deviceID=testtest')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'text/xml')
+          .set('User-Agent', 'central/test')
           .expect(200)
           .then(({ body }) => {
             body.deviceId.should.equal('testtest');
-          }))));
+          })
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions')
+            .expect(200)
+            .then(({ body }) => {
+              body[0].deviceId.should.equal('testtest');
+              body[0].userAgent.should.equal('central/test');
+            })))));
 
     it('should accept a submission for an old form version', testService((service, { Submissions, one }) =>
       service.login('alice', (asAlice) =>
@@ -3702,12 +3716,28 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .send(testData.instances.simple.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="2.0"'))
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish')
+            .expect(200))
+          .then(() => asAlice.put('/v1/projects/1/forms/simple/submissions/one')
+            .send(testData.instances.simple.one
+              .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2')
+              .replace('id="simple"', 'id="simple" version="2.0"'))
+            .set('Content-Type', 'text/xml')
+            .expect(200))
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions')
             .set('X-Extended-Metadata', true)
             .expect(200)
             .then(({ body }) => {
               body[0].should.be.an.ExtendedSubmissionDef();
+              body[0].formVersion.should.equal('2.0');
               body[0].submitter.displayName.should.equal('Alice');
+              body[1].should.be.an.ExtendedSubmissionDef();
+              body[1].formVersion.should.equal('');
+              body[1].submitter.displayName.should.equal('Alice');
             })))));
   });
 
