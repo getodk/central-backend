@@ -197,7 +197,7 @@ describe('api: /key/:key', () => {
 
   it('should allow cookie+public-link', testService((service) =>
     service.post('/v1/sessions')
-      .send({ email: 'alice@opendatakit.org', password: 'alice' })
+      .send({ email: 'alice@getodk.org', password: 'alice' })
       .expect(200)
       .then(({ body }) => body.token)
       .then((aliceToken) => service.login('alice', (asAlice) =>

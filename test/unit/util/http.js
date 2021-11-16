@@ -25,11 +25,11 @@ describe('util/http', () => {
   describe('urlPathname', () => {
     const { urlPathname } = http;
     it('should return the pathname part of a url', () => {
-      urlPathname('https://www.opendatakit.org/help').should.equal('/help');
+      urlPathname('https://www.getodk.org/help').should.equal('/help');
     });
 
     it('should not include query parameters', () => {
-      urlPathname('https://www.opendatakit.org/a/test/path?and=some&extra=bits').should.equal('/a/test/path');
+      urlPathname('https://www.getodk.org/a/test/path?and=some&extra=bits').should.equal('/a/test/path');
     });
   });
 

@@ -19,7 +19,7 @@ describe('api: /users', () => {
           .expect(({ body }) => {
             body.forEach((user) => user.should.be.a.User());
             body.map((user) => user.displayName).should.eql([ 'Alice', 'Bob', 'Chelsea' ]);
-            body.map((user) => user.email).should.eql([ 'alice@opendatakit.org', 'bob@opendatakit.org', 'chelsea@opendatakit.org' ]);
+            body.map((user) => user.email).should.eql([ 'alice@getodk.org', 'bob@getodk.org', 'chelsea@getodk.org' ]);
           }))));
 
     it('should search user display names if a query is given', testService((service) =>
@@ -33,7 +33,7 @@ describe('api: /users', () => {
               body.length.should.equal(2);
               body.forEach((user) => user.should.be.a.User());
               body.map((user) => user.displayName).should.eql([ 'Alice', 'alicia' ]);
-              body.map((user) => user.email).should.eql([ 'alice@opendatakit.org', 'test@email.org' ]);
+              body.map((user) => user.email).should.eql([ 'alice@getodk.org', 'test@email.org' ]);
             })))));
 
     it('should search user emails if a query is given', testService((service) =>
@@ -41,18 +41,18 @@ describe('api: /users', () => {
         asAlice.post('/v1/users')
           .send({ email: 'david@closeddatakit.org', displayName: 'David' })
           .expect(200)
-          .then(() => asAlice.get('/v1/users?q=opendatakit')
+          .then(() => asAlice.get('/v1/users?q=getodk')
             .expect(200)
             .then(({ body }) => {
               body.length.should.equal(3);
               body.forEach((user) => user.should.be.a.User());
               body.map((user) => user.displayName).should.containDeep([ 'Alice', 'Bob', 'Chelsea' ]);
-              body.map((user) => user.email).should.containDeep([ 'alice@opendatakit.org', 'bob@opendatakit.org', 'chelsea@opendatakit.org' ]);
+              body.map((user) => user.email).should.containDeep([ 'alice@getodk.org', 'bob@getodk.org', 'chelsea@getodk.org' ]);
             })))));
 
     it('should search with compound phrases if given', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.get('/v1/users?q=chelsea opendatakit')
+        asAlice.get('/v1/users?q=chelsea getodk')
           .expect(200)
           .then(({ body }) => {
             body.length.should.equal(3);
@@ -63,15 +63,15 @@ describe('api: /users', () => {
           }))));
 
     it('should reject unauthed users even if they exactly match an email', testService((service) =>
-      service.get('/v1/users/?q=alice@opendatakit.org').expect(403)));
+      service.get('/v1/users/?q=alice@getodk.org').expect(403)));
 
     it('should return an exact email match to any authed user', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.get('/v1/users/?q=alice@opendatakit.org')
+        asChelsea.get('/v1/users/?q=alice@getodk.org')
           .expect(200)
           .then(({ body }) => {
             body.length.should.equal(1);
-            body[0].email.should.equal('alice@opendatakit.org');
+            body[0].email.should.equal('alice@getodk.org');
             body[0].displayName.should.equal('Alice');
           }))));
   });
@@ -80,41 +80,41 @@ describe('api: /users', () => {
     it('should prohibit non-admins from creating users', testService((service) =>
       service.login('bob', (asBob) =>
         asBob.post('/v1/users')
-          .send({ email: 'david@opendatakit.org' })
+          .send({ email: 'david@getodk.org' })
           .expect(403))));
 
     it('should hash and store passwords if provided', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users')
-          .send({ email: 'david@opendatakit.org', password: 'apassword' })
+          .send({ email: 'david@getodk.org', password: 'apassword' })
           .expect(200)
-          .then(() => service.login({ email: 'david@opendatakit.org', password: 'apassword' }, (asDavid) =>
+          .then(() => service.login({ email: 'david@getodk.org', password: 'apassword' }, (asDavid) =>
             asDavid.get('/v1/users/current').expect(200))))));
 
     it('should not accept and hash blank passwords', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users')
-          .send({ email: 'david@opendatakit.org', password: '' })
+          .send({ email: 'david@getodk.org', password: '' })
           .expect(200)
-          .then(() => service.login({ email: 'david@opendatakit.org', password: '' }, (failed) =>
+          .then(() => service.login({ email: 'david@getodk.org', password: '' }, (failed) =>
             failed.get('/v1/users/current').expect(401))))));
 
     it('should send an email to provisioned users', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users')
-          .send({ email: 'david@opendatakit.org', password: 'david' })
+          .send({ email: 'david@getodk.org', password: 'david' })
           .expect(200)
           .then(() => {
             const email = global.inbox.pop();
             global.inbox.length.should.equal(0);
-            email.to.should.eql([{ address: 'david@opendatakit.org', name: '' }]);
+            email.to.should.eql([{ address: 'david@getodk.org', name: '' }]);
             email.subject.should.equal('ODK Central account created');
           }))));
 
     it('should send a token which can reset the new user password', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users')
-          .send({ email: 'david@opendatakit.org' })
+          .send({ email: 'david@getodk.org' })
           .expect(200)
           .then(() => {
             const token = /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html)[1];
@@ -122,7 +122,7 @@ describe('api: /users', () => {
               .send({ new: 'testreset' })
               .set('Authorization', 'Bearer ' + token)
               .expect(200)
-              .then(() => service.login({ email: 'david@opendatakit.org', password: 'testreset' }, (asDavid) =>
+              .then(() => service.login({ email: 'david@getodk.org', password: 'testreset' }, (asDavid) =>
                 asDavid.get('/v1/users/current').expect(200)));
           }))));
 
@@ -130,17 +130,17 @@ describe('api: /users', () => {
     it('should duplicate the email into the display name if not given', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users')
-          .send({ email: 'david@opendatakit.org' })
-          .then(({ body }) => body.displayName.should.equal('david@opendatakit.org')))));
+          .send({ email: 'david@getodk.org' })
+          .then(({ body }) => body.displayName.should.equal('david@getodk.org')))));
 
     it('should log the action in the audit log', testService((service, { Audits, Users }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users')
-          .send({ email: 'david@opendatakit.org' })
+          .send({ email: 'david@getodk.org' })
           .expect(200)
           .then(() => Promise.all([
-            Users.getByEmail('alice@opendatakit.org').then((o) => o.get()),
-            Users.getByEmail('david@opendatakit.org').then((o) => o.get()),
+            Users.getByEmail('alice@getodk.org').then((o) => o.get()),
+            Users.getByEmail('david@getodk.org').then((o) => o.get()),
             Audits.getLatestByAction('user.create').then((o) => o.get())
           ])
           .then(([ alice, david, log ]) => {
@@ -150,7 +150,7 @@ describe('api: /users', () => {
             delete log.details.data.actorId;
             log.details.should.eql({
               data: {
-                email: 'david@opendatakit.org',
+                email: 'david@getodk.org',
                 mfaSecret: null,
                 password: null
               }
@@ -161,12 +161,12 @@ describe('api: /users', () => {
   describe('/reset/initiate POST', () => {
     it('should send an email with a helpful message if no account exists', testService((service) =>
       service.post('/v1/users/reset/initiate')
-        .send({ email: 'winnifred@opendatakit.org' })
+        .send({ email: 'winnifred@getodk.org' })
         .expect(200)
         .then(() => {
           const email = global.inbox.pop();
           global.inbox.length.should.equal(0);
-          email.to.should.eql([{ address: 'winnifred@opendatakit.org', name: '' }]);
+          email.to.should.eql([{ address: 'winnifred@getodk.org', name: '' }]);
           email.subject.should.equal('ODK Central account password reset');
           email.html.should.match(/no account exists/);
         })));
@@ -179,24 +179,24 @@ describe('api: /users', () => {
             .then((chelseaId) => asAlice.delete('/v1/users/' + chelseaId)
               .expect(200)
               .then(() => service.post('/v1/users/reset/initiate')
-                .send({ email: 'chelsea@opendatakit.org' })
+                .send({ email: 'chelsea@getodk.org' })
                 .expect(200)
                 .then(() => {
                   const email = global.inbox.pop();
                   global.inbox.length.should.equal(0);
-                  email.to.should.eql([{ address: 'chelsea@opendatakit.org', name: '' }]);
+                  email.to.should.eql([{ address: 'chelsea@getodk.org', name: '' }]);
                   email.subject.should.equal('ODK Central account password reset');
                   email.html.should.match(/account has been deleted/);
                 })))))));
 
     it('should send an email with a token which can reset the user password', testService((service) =>
       service.post('/v1/users/reset/initiate')
-        .send({ email: 'alice@opendatakit.org' })
+        .send({ email: 'alice@getodk.org' })
         .expect(200)
         .then(() => {
           const email = global.inbox.pop();
           global.inbox.length.should.equal(0);
-          email.to.should.eql([{ address: 'alice@opendatakit.org', name: '' }]);
+          email.to.should.eql([{ address: 'alice@getodk.org', name: '' }]);
           email.subject.should.equal('ODK Central account password reset');
           const token = /token=([a-z0-9!$]+)/i.exec(email.html)[1];
 
@@ -204,13 +204,13 @@ describe('api: /users', () => {
             .send({ new: 'reset!' })
             .set('Authorization', 'Bearer ' + token)
             .expect(200)
-            .then(() => service.login({ email: 'alice@opendatakit.org', password: 'reset!' }, (asAlice) =>
+            .then(() => service.login({ email: 'alice@getodk.org', password: 'reset!' }, (asAlice) =>
               asAlice.get('/v1/users/current').expect(200)));
         })));
 
     it('should not allow password reset token replay', testService((service) =>
       service.post('/v1/users/reset/initiate')
-        .send({ email: 'alice@opendatakit.org' })
+        .send({ email: 'alice@getodk.org' })
         .expect(200)
         .then(() => /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html)[1])
         .then((token) => service.post('/v1/users/reset/verify')
@@ -224,7 +224,7 @@ describe('api: /users', () => {
 
     it('should not log single use token deletion in the audit log', testService((service) =>
       service.post('/v1/users/reset/initiate')
-        .send({ email: 'alice@opendatakit.org' })
+        .send({ email: 'alice@getodk.org' })
         .expect(200)
         .then(() => /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html)[1])
         .then((token) => service.post('/v1/users/reset/verify')
@@ -232,7 +232,7 @@ describe('api: /users', () => {
           .set('Authorization', 'Bearer ' + token)
           .expect(200))
         .then(() => service.get('/v1/audits')
-          .auth('alice@opendatakit.org', 'reset') // cheap way to work around that we just changed the pw
+          .auth('alice@getodk.org', 'reset') // cheap way to work around that we just changed the pw
           .set('x-forwarded-proto', 'https')
           .then(({ body }) => {
             body[0].action.should.equal('user.update');
@@ -241,23 +241,23 @@ describe('api: /users', () => {
 
     it('should fail the request if invalidation is requested but not allowed', testService((service) =>
       service.post('/v1/users/reset/initiate?invalidate=true')
-        .send({ email: 'alice@opendatakit.org' })
+        .send({ email: 'alice@getodk.org' })
         .expect(403)));
 
     it('should invalidate the existing password if requested', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users/reset/initiate?invalidate=true')
-          .send({ email: 'bob@opendatakit.org' })
+          .send({ email: 'bob@getodk.org' })
           .expect(200)
           .then(() => {
             // should still send the email.
             const email = global.inbox.pop();
             global.inbox.length.should.equal(0);
-            email.to.should.eql([{ address: 'bob@opendatakit.org', name: '' }]);
+            email.to.should.eql([{ address: 'bob@getodk.org', name: '' }]);
             email.subject.should.equal('ODK Central account password reset');
 
             return service.post('/v1/sessions')
-              .send({ email: 'bob@opendatakit.org', password: 'bob' })
+              .send({ email: 'bob@getodk.org', password: 'bob' })
               .expect(401);
           }))));
 
@@ -276,7 +276,7 @@ describe('api: /users', () => {
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/users/current')
           .expect(200)
-          .then(({ body }) => body.email.should.equal('chelsea@opendatakit.org')))));
+          .then(({ body }) => body.email.should.equal('chelsea@getodk.org')))));
 
     it('should not return sidewide verbs if not extended', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -324,7 +324,7 @@ describe('api: /users', () => {
             .expect(200)
             .then(({ body }) => {
               body.should.be.a.User();
-              body.email.should.equal('alice@opendatakit.org');
+              body.email.should.equal('alice@getodk.org');
             })))));
 
     it('should allow nonadministrator users to get themselves', testService((service) =>
@@ -334,7 +334,7 @@ describe('api: /users', () => {
             .expect(200)
             .then(({ body }) => {
               body.should.be.a.User();
-              body.email.should.equal('chelsea@opendatakit.org');
+              body.email.should.equal('chelsea@getodk.org');
             })))));
 
     it('should reject if the user does not exist', testService((service) =>
@@ -396,7 +396,7 @@ describe('api: /users', () => {
             .then(() => asChelsea.get('/v1/users/' + chelseaId)
               .then(({ body }) => {
                 body.should.be.a.User();
-                body.email.should.equal('chelsea@opendatakit.org');
+                body.email.should.equal('chelsea@getodk.org');
                 body.displayName.should.equal('a new display name');
               }))))));
 
@@ -405,14 +405,14 @@ describe('api: /users', () => {
         asAlice.get('/v1/users/current')
           .expect(200)
           .then((before) => asAlice.patch(`/v1/users/${before.body.id}`)
-            .send({ email: 'david123@opendatakit.org' })
+            .send({ email: 'david123@getodk.org' })
             .expect(200)
             .then(() => {
               const email = global.inbox.pop();
               global.inbox.length.should.equal(0);
-              email.to.should.eql([{ address: 'alice@opendatakit.org', name: '' }]);
+              email.to.should.eql([{ address: 'alice@getodk.org', name: '' }]);
               email.subject.should.equal('ODK Central account email changed');
-              email.html.should.equal('<html>Hello!<p><p>We are emailing because you have an ODK Central data collection account, and somebody has just changed the email address associated with the account from this one you are reading right now (alice@opendatakit.org) to a new address (david123@opendatakit.org).</p><p>If this was you, please feel free to ignore this email. Otherwise, please contact your local ODK system administrator immediately.</p></html>');
+              email.html.should.equal('<html>Hello!<p><p>We are emailing because you have an ODK Central data collection account, and somebody has just changed the email address associated with the account from this one you are reading right now (alice@getodk.org) to a new address (david123@getodk.org).</p><p>If this was you, please feel free to ignore this email. Otherwise, please contact your local ODK system administrator immediately.</p></html>');
             })))));
 
     it('should not send an email to a user when their email does not change', testService((service) =>
@@ -420,7 +420,7 @@ describe('api: /users', () => {
         asAlice.get('/v1/users/current')
           .expect(200)
           .then((before) => asAlice.patch(`/v1/users/${before.body.id}`)
-            .send({ email: 'alice@opendatakit.org' })
+            .send({ email: 'alice@getodk.org' })
             .expect(200)
             .then(() => {
               global.inbox.length.should.equal(0);
@@ -428,12 +428,12 @@ describe('api: /users', () => {
 
     it('should log the action in the audit log', testService((service, { Users, Audits }) =>
       service.login('alice', (asAlice) =>
-        Users.getByEmail('chelsea@opendatakit.org').then((o) => o.get())
+        Users.getByEmail('chelsea@getodk.org').then((o) => o.get())
           .then((chelsea) => asAlice.patch('/v1/users/' + chelsea.actor.id)
             .send({ displayName: 'cool chelsea', other: 'data' })
             .expect(200)
             .then(() => Promise.all([
-              Users.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+              Users.getByEmail('alice@getodk.org').then((o) => o.get()),
               Audits.getLatestByAction('user.update').then((o) => o.get())
             ])
           .then(([ alice, log ]) => {
@@ -477,7 +477,7 @@ describe('api: /users', () => {
           .then(({ body }) => {
             body.success.should.equal(true);
             return service.post('/v1/sessions')
-              .send({ email: 'alice@opendatakit.org', password: 'newpassword' })
+              .send({ email: 'alice@getodk.org', password: 'newpassword' })
               .expect(200);
           }))));
 
@@ -488,7 +488,7 @@ describe('api: /users', () => {
             .send({ old: 'chelsea', new: 'newchelsea' })
             .expect(200)
             .then(() => service.post('/v1/sessions')
-              .send({ email: 'chelsea@opendatakit.org', password: 'newchelsea' })
+              .send({ email: 'chelsea@getodk.org', password: 'newchelsea' })
               .expect(200))))));
 
     it('should send an email to a user when their password changes', testService((service) =>
@@ -501,7 +501,7 @@ describe('api: /users', () => {
             .then(() => {
               const email = global.inbox.pop();
               global.inbox.length.should.equal(0);
-              email.to.should.eql([{ address: 'alice@opendatakit.org', name: '' }]);
+              email.to.should.eql([{ address: 'alice@getodk.org', name: '' }]);
               email.subject.should.equal('ODK Central account password change');
             })))));
 
@@ -513,7 +513,7 @@ describe('api: /users', () => {
             .send({ old: 'alice', new: 'newpassword' })
             .expect(200)
             .then(() => Promise.all([
-              Users.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+              Users.getByEmail('alice@getodk.org').then((o) => o.get()),
               Audits.getLatestByAction('user.update').then((o) => o.get())
             ]))
             .then(([ alice, log ]) => {
@@ -566,7 +566,7 @@ describe('api: /users', () => {
 
     it('should log an audit upon delete', testService((service, { Audits, Users }) =>
       service.login('alice', (asAlice) =>
-        Users.getByEmail('chelsea@opendatakit.org')
+        Users.getByEmail('chelsea@getodk.org')
           .then((maybeChelsea) => maybeChelsea.get())
           .then((chelsea) => asAlice.delete('/v1/users/' + chelsea.actor.id)
             .expect(200)
@@ -589,7 +589,7 @@ describe('api: /users', () => {
             .then((chelseaId) => asAlice.delete('/v1/users/' + chelseaId)
               .expect(200)
               .then(() => service.post('/v1/sessions')
-                .send({ email: 'chelsea@opendatakit.org', password: 'chelsea' })
+                .send({ email: 'chelsea@getodk.org', password: 'chelsea' })
                 .expect(401)))))));
 
     it('should disable active sessions', testService((service) =>

@@ -251,14 +251,14 @@ describe('api: /assignments', () => {
                 })))))));
 
       it('should log the action in the audit log', testService((service, { Audits, Users }) =>
-        Users.getByEmail('chelsea@opendatakit.org')
+        Users.getByEmail('chelsea@getodk.org')
           .then((maybeChelsea) => maybeChelsea.get())
           .then((chelsea) => service.login('alice', (asAlice) =>
             asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id)
               .then((adminRoleId) => asAlice.post(`/v1/assignments/${adminRoleId}/${chelsea.actor.id}`)
                 .expect(200)
                 .then(() => Promise.all([
-                  Users.getByEmail('alice@opendatakit.org').then((maybeAlice) => maybeAlice.get()),
+                  Users.getByEmail('alice@getodk.org').then((maybeAlice) => maybeAlice.get()),
                   Audits.getLatestByAction('user.assignment.create')
                 ]))
                 .then(([ alice, audit ]) => {
@@ -316,7 +316,7 @@ describe('api: /assignments', () => {
               .then(() => asAlice.get('/v1/assignments').expect(403))))));
 
       it('should log the action in the audit log', testService((service, { Audits, Users }) =>
-        Users.getByEmail('alice@opendatakit.org')
+        Users.getByEmail('alice@getodk.org')
           .then((maybeAlice) => maybeAlice.get())
           .then((alice) => service.login('alice', (asAlice) =>
             asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id)
@@ -441,7 +441,7 @@ describe('/projects/:id/assignments', () => {
               })))))));
 
       it('should log the action in the audit log', testService((service, { Audits, Projects, Users }) =>
-        Users.getByEmail('chelsea@opendatakit.org')
+        Users.getByEmail('chelsea@getodk.org')
           .then((maybeChelsea) => maybeChelsea.get())
           .then((chelsea) => service.login('alice', (asAlice) =>
             asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id)
@@ -449,7 +449,7 @@ describe('/projects/:id/assignments', () => {
                 .expect(200)
                 .then(() => Promise.all([
                   Projects.getById(1).then((x) => x.get()),
-                  Users.getByEmail('alice@opendatakit.org').then((maybeAlice) => maybeAlice.get()),
+                  Users.getByEmail('alice@getodk.org').then((maybeAlice) => maybeAlice.get()),
                   Audits.getLatestByAction('user.assignment.create')
                 ]))
                 .then(([ project, alice, audit ]) => {
@@ -506,7 +506,7 @@ describe('/projects/:id/assignments', () => {
                 .then(({ body }) => { body.length.should.equal(0); })))))));
 
       it('should log the action in the audit log', testService((service, { Audits, Projects, Users }) =>
-        Users.getByEmail('bob@opendatakit.org')
+        Users.getByEmail('bob@getodk.org')
           .then((maybeBob) => maybeBob.get())
           .then((bob) => service.login('alice', (asAlice) =>
             asAlice.get('/v1/roles/manager').expect(200).then(({ body }) => body.id)
@@ -514,7 +514,7 @@ describe('/projects/:id/assignments', () => {
                 .expect(200)
                 .then(() => Promise.all([
                   Projects.getById(1).then((x) => x.get()),
-                  Users.getByEmail('alice@opendatakit.org').then((x) => x.get()),
+                  Users.getByEmail('alice@getodk.org').then((x) => x.get()),
                   Audits.getLatestByAction('user.assignment.delete')
                 ]))
                 .then(([ project, alice, audit ]) => {

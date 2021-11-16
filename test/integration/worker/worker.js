@@ -66,7 +66,7 @@ describe('worker', () => {
 
     it('should mark the event as processed after on job completion', testContainerFullTrx(async (container) => {
       const { Audits, Users } = container;
-      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.create', alice.actor);
       const event = (await Audits.getLatestByAction('submission.attachment.create')).get();
 
@@ -104,7 +104,7 @@ describe('worker', () => {
     // TODO: we should be able to not do this as of block 8.
     it('should unclaim the event and mark failure in case of failure', testContainerFullTrx(async (container) => {
       const { Audits, Users } = container;
-      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
       const event = (await Audits.getLatestByAction('submission.attachment.update')).get();
 
@@ -124,7 +124,7 @@ describe('worker', () => {
     it('should return null if there are no unprocessed events', testContainer(async (container) => {
       const check = checker(container);
       const { Audits, Users } = container;
-      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'test.event', alice.actor);
       should.not.exist(await check());
     }));
@@ -132,7 +132,7 @@ describe('worker', () => {
     it('should mark the event as claimed', testContainer(async (container) => {
       const check = checker(container);
       const { Audits, Users } = container;
-      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
       const event = (await check());
       event.claimed.should.be.a.recentDate();
@@ -143,7 +143,7 @@ describe('worker', () => {
     it('should not mark any other events as claimed', testContainer(async (container) => {
       const check = checker(container);
       const { Audits, Users } = container;
-      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
@@ -160,7 +160,7 @@ describe('worker', () => {
     it('should return the oldest eligible event', testContainer(async (container) => {
       const check = checker(container);
       const { Audits, Users } = container;
-      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor, { is: 'oldest' });
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor, { is: 'older' });
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor, { is: 'newer' });
@@ -171,7 +171,7 @@ describe('worker', () => {
     it('should not return a recently failed event', testContainer(async (container) => {
       const check = checker(container);
       const { Users, run } = container;
-      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await run(insert(new Audit({
         actorId: alice.actor.id,
         action: 'submission.attachment.update',
@@ -185,7 +185,7 @@ describe('worker', () => {
     it('should retry a previously failed event after some time', testContainer(async (container) => {
       const check = checker(container);
       const { Users, run } = container;
-      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await run(insert(new Audit({
         actorId: alice.actor.id,
         action: 'submission.attachment.update',
@@ -200,7 +200,7 @@ describe('worker', () => {
     it('should not return a repeatedly failed event', testContainer(async (container) => {
       const check = checker(container);
       const { Users, run } = container;
-      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await run(insert(new Audit({
         actorId: alice.actor.id,
         action: 'submission.attachment.update',
@@ -214,7 +214,7 @@ describe('worker', () => {
     it('should claim a stale/hung event', testContainer(async (container) => {
       const check = checker(container);
       const { Users, run } = container;
-      const alice = (await Users.getByEmail('alice@opendatakit.org')).get();
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await run(insert(new Audit({
         actorId: alice.actor.id,
         action: 'submission.attachment.update',
