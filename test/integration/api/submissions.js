@@ -1538,7 +1538,6 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => new Promise((done) =>
             zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?deletedFields=true'), (result) => {
               result.filenames.should.containDeep([ 'simple.csv' ]);
-              console.log(result['simple.csv']);
               const lines = result['simple.csv'].split('\n');
               lines[0].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)

@@ -215,7 +215,6 @@ describe('managed encryption', () => {
           .then((keyId) => new Promise((done) =>
             zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`), (result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
-              console.log(result['simple.csv']);
               result['simple.csv'].should.be.an.EncryptedSimpleCsv();
               done();
             }))))));
@@ -588,7 +587,6 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .then(({ body }) => body.map((key) => key.id)))
           .then((keyIds) => new Promise((done) =>
             zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyIds[1]}=supersecret&${keyIds[0]}=superdupersecret`), (result) => {
-              console.log('simple.csv');
               const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
               csv.length.should.equal(5); // header + 3 data rows + newline
               csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
