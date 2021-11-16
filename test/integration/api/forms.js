@@ -25,6 +25,7 @@ describe('api: /projects/:id/forms', () => {
           .expect(200)
           .then(({ body }) => {
             body.forEach((form) => form.should.be.a.Form());
+            body.map((form) => form.id).should.eql([ 1, 2 ]);
             body.map((form) => form.projectId).should.eql([ 1, 1 ]);
             body.map((form) => form.xmlFormId).should.eql([ 'simple', 'withrepeat' ]);
             body.map((form) => form.name).should.eql([ 'Simple', null ]);
@@ -1440,18 +1441,25 @@ describe('api: /projects/:id/forms', () => {
         asAlice.delete('/v1/projects/1/forms/simple')
           .expect(200)
           .then(() => service.login('chelsea', (asChelsea) =>
-            asChelsea.post('/v1/projects/1/forms/simple/restore').expect(403))))));
+            asChelsea.post('/v1/projects/1/forms/1/restore').expect(403))))));
+
+    it('should reject restoring if referenced by the xml form id', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/simple')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/restore')
+            .expect(400))))); // bad request
 
     it('should restore a soft-deleted form', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1/forms/simple')
           .expect(200)
-          .then(() => asAlice.post('/v1/projects/1/forms/simple/restore')
+          .then(() => asAlice.post('/v1/projects/1/forms/1/restore')
             .expect(200))
           .then(() => asAlice.get('/v1/projects/1/forms/simple')
             .expect(200)))));
 
-    it('should fail when restoring is ambiguous (multiple trashed forms with the same xmlFormId)', testService((service) =>
+    it('should restore a specific form by numeric id when multiple trashed forms share the same xmlFormId', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1/forms/simple')
           .expect(200)
@@ -1461,16 +1469,12 @@ describe('api: /projects/:id/forms', () => {
             .expect(200))
           .then(() => asAlice.delete('/v1/projects/1/forms/simple')
             .expect(200))
-          .then(() => asAlice.post('/v1/projects/1/forms/simple/restore')
-            .expect(501)
-            .then(({ body }) => {
-              body.code.should.equal(501.1);
-              body.details.should.eql({ feature: 'restoring ambiguous xmlFormId' });
-            })))));
+          .then(() => asAlice.post('/v1/projects/1/forms/1/restore')
+            .expect(200)))));
 
     it('should fail restoring a form that is not deleted', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms/simple/restore')
+        asAlice.post('/v1/projects/1/forms/1/restore')
           .expect(404))));
 
     it('should fail to restore a form when another active form with the same form id exists', testService((service) =>
@@ -1481,7 +1485,7 @@ describe('api: /projects/:id/forms', () => {
             .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="two"'))
             .set('Content-Type', 'application/xml')
             .expect(200))
-          .then(() => asAlice.post('/v1/projects/1/forms/simple/restore')
+          .then(() => asAlice.post('/v1/projects/1/forms/1/restore')
             .expect(409)
             .then(({ body }) => {
               body.code.should.equal(409.3);
