@@ -303,7 +303,7 @@ describe('api: /projects', () => {
           .expect(200)
           .then(({ body }) => {
             body.verbs.should.be.an.Array();
-            body.verbs.length.should.be.greaterThan(34);
+            body.verbs.length.should.be.greaterThan(39);
             body.verbs.should.containDeep([ 'user.password.invalidate', 'project.delete' ]);
           }))));
 
@@ -314,7 +314,7 @@ describe('api: /projects', () => {
           .expect(200)
           .then(({ body }) => {
             body.verbs.should.be.an.Array();
-            body.verbs.length.should.be.lessThan(25);
+            body.verbs.length.should.be.lessThan(26);
             body.verbs.should.containDeep([ 'assignment.create', 'project.delete' ]);
             body.verbs.should.not.containDeep([ 'project.create' ]);
           }))));
