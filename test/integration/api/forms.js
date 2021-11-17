@@ -1383,13 +1383,13 @@ describe('api: /projects/:id/forms', () => {
   describe('/deletedForms (listing trashed forms)', () => {
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        asChelsea.get('/v1/projects/1/deletedForms').expect(403))));
+        asChelsea.get('/v1/projects/1/forms?deleted=true').expect(403))));
     
     it('should list soft-deleted forms', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1/forms/withrepeat')
           .expect(200)
-          .then(() => asAlice.get('/v1/projects/1/deletedForms')
+          .then(() => asAlice.get('/v1/projects/1/forms?deleted=true')
             .expect(200)
             .then(({ body }) => {
               should.exist(body[0].deletedAt);
@@ -1410,7 +1410,7 @@ describe('api: /projects/:id/forms', () => {
           .expect(200)
           .then(() => asAlice.delete('/v1/projects/1/forms/simple')
             .expect(200)
-            .then(() => asAlice.get('/v1/projects/1/deletedForms')
+            .then(() => asAlice.get('/v1/projects/1/forms?deleted=true')
               .set('X-Extended-Metadata', 'true')
               .expect(200)
               .then(({ body }) => {
