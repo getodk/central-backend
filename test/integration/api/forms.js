@@ -25,7 +25,6 @@ describe('api: /projects/:id/forms', () => {
           .expect(200)
           .then(({ body }) => {
             body.forEach((form) => form.should.be.a.Form());
-            body.map((form) => form.id).should.eql([ 1, 2 ]);
             body.map((form) => form.projectId).should.eql([ 1, 1 ]);
             body.map((form) => form.xmlFormId).should.eql([ 'simple', 'withrepeat' ]);
             body.map((form) => form.name).should.eql([ 'Simple', null ]);
@@ -1395,6 +1394,7 @@ describe('api: /projects/:id/forms', () => {
             .then(({ body }) => {
               should.exist(body[0].deletedAt);
               body.forEach((form) => form.should.be.a.Form());
+              body.map((form) => form.id).should.eql([ 2 ]);
               body.map((form) => form.projectId).should.eql([ 1 ]);
               body.map((form) => form.xmlFormId).should.eql([ 'withrepeat' ]);
               body.map((form) => form.name).should.eql([ null ]);
