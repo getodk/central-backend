@@ -1469,7 +1469,7 @@ describe('api: /projects/:id/forms', () => {
           .then(() => asAlice.post('/v1/projects/1/forms/1/restore')
             .expect(200))
           .then(() => Promise.all([
-            Users.getByEmail('alice@opendatakit.org').then((o) => o.get()),
+            Users.getByEmail('alice@getodk.org').then((o) => o.get()),
             Forms.getByProjectAndXmlFormId(1, 'simple').then((o) => o.get()),
             Audits.getLatestByAction('form.restore').then((o) => o.get())
           ])
