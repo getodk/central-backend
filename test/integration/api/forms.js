@@ -1448,7 +1448,10 @@ describe('api: /projects/:id/forms', () => {
         asAlice.delete('/v1/projects/1/forms/simple')
           .expect(200)
           .then(() => asAlice.post('/v1/projects/1/forms/simple/restore')
-            .expect(400))))); // bad request
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.equal(400.11); // Invalid input data type
+            })))));
 
     it('should restore a soft-deleted form', testService((service) =>
       service.login('alice', (asAlice) =>
