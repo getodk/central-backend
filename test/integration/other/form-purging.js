@@ -86,14 +86,12 @@ describe('query module form purge', () => {
           .then(() => container.Forms.purge(true)) // force all deleted forms to be purged
           .then(() => container.one(sql`select * from actees where id = ${form.acteeId}`))
           .then((res) => {
-            const deletedFormDetails = {
-              projectId: 1,
-              formId: 1,
-              xmlFormId: 'simple',
-              name: 'Simple',
-              version: ''
-            };
-            res.details.should.eql(deletedFormDetails);
+            res.details.projectId.should.equal(1);
+            res.details.formId.should.equal(1);
+            res.details.version.should.equal('');
+            res.details.xmlFormId.should.equal('simple');
+            res.details.deletedAt.should.be.an.isoDate();
+            res.purgedName.should.equal('Simple');
           })))));
 
   it('should purge a form with multiple versions', testService((service, container) =>
