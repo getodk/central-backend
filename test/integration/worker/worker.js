@@ -2,13 +2,12 @@ const should = require('should');
 const appRoot = require('app-root-path');
 const { promisify } = require('util');
 const { DateTime, Duration } = require('luxon');
+const { sql } = require('slonik');
 const { testContainerFullTrx, testContainer } = require('../setup');
-const { runner, checker } = require(appRoot + '/lib/worker/worker');
+const { runner, checker, worker } = require(appRoot + '/lib/worker/worker');
 const { Audit } = require(appRoot + '/lib/model/frames');
 const { insert } = require(appRoot + '/lib/util/db');
 
-// we test everything except scheduler() and worker(), because these both start
-// timed feedback loops that we cannot easily control or halt.
 describe('worker', () => {
   describe('runner @slow', () => {
     // we know reschedule is getting called at some point in these flows because
@@ -224,6 +223,127 @@ describe('worker', () => {
       })));
       should.exist(await check());
     }));
+  });
+
+  describe('worker', () => {
+    const millis = (x) => new Promise((done) => { setTimeout(done, x); });
+
+    it('should run a full loop right away', testContainerFullTrx(async (container) => {
+      const { Audits, Users } = container;
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
+      await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
+
+      let ran;
+      const jobMap = { 'submission.attachment.update': [ () => { ran = true; return Promise.resolve(); } ] };
+      const cancel = worker(container, jobMap);
+
+      while ((await Audits.getLatestByAction('submission.attachment.update')).get().processed == null)
+        await millis(20);
+
+      cancel();
+      await millis(20); // buffer so the next check lands before the database is wiped on return
+      ran.should.equal(true);
+    }));
+
+    it('should run two full loops right away', testContainerFullTrx(async (container) => {
+      const { Audits, Users } = container;
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
+      await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
+      await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
+
+      const jobMap = { 'submission.attachment.update': [ () => Promise.resolve() ] };
+      const cancel = worker(container, jobMap);
+
+      while ((await container.oneFirst(sql`
+select count(*) from audits where action='submission.attachment.update' and processed is null`)) > 0)
+        await millis(40);
+
+      cancel();
+      await millis(20); // ditto above
+    }));
+
+    it('should restart if the check fails prequery', testContainerFullTrx(async (container) => {
+      const { Audits, Users } = container;
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
+      await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
+
+      let failed;
+      const hijacked = Object.create(container.__proto__);
+      Object.assign(hijacked, container);
+      hijacked.all = (q) => {
+        if (q.sql.startsWith('\nwith q as')) {
+          if (failed) return container.all(q);
+          failed = true;
+          throw new Error('oh whoops!');
+        }
+      };
+      const jobMap = { 'submission.attachment.update': [ () => Promise.resolve() ] };
+      const cancel = worker(hijacked, jobMap);
+
+      while ((await Audits.getLatestByAction('submission.attachment.update')).get().processed == null)
+        await millis(20);
+
+      cancel();
+      await millis(20);
+      failed.should.equal(true);
+    }));
+
+    it('should restart if the check fails in-query', testContainerFullTrx(async (container) => {
+      const { Audits, Users } = container;
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
+      await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
+
+      let failed;
+      const hijacked = Object.create(container.__proto__);
+      Object.assign(hijacked, container);
+      hijacked.all = (q) => {
+        if (q.sql.startsWith('\nwith q as')) {
+          if (failed) return container.all(q);
+          failed = true;
+          return new Promise(async (_, reject) => { await millis(5); reject('not this time'); });
+        }
+      };
+      const jobMap = { 'submission.attachment.update': [ () => Promise.resolve() ] };
+      const cancel = worker(hijacked, jobMap);
+
+      while ((await Audits.getLatestByAction('submission.attachment.update')).get().processed == null)
+        await millis(20);
+
+      cancel();
+      await millis(20);
+      failed.should.equal(true);
+    }));
+
+    it('should restart if the process itself fails', testContainerFullTrx(async (container) => {
+      const { Audits, Users } = container;
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
+      await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
+
+      let failed;
+      let checks = 0;
+      const hijacked = Object.create(container.__proto__);
+      Object.assign(hijacked, container);
+      hijacked.all = (q) => {
+        if (q.sql.startsWith('\nwith q as')) checks++;
+        return container.all(q);
+      };
+      const jobMap = { 'submission.attachment.update': [ () => {
+        if (failed) return Promise.resolve();
+        failed = true;
+        checks.should.equal(1);
+        throw new Error('oh no!');
+      } ] };
+      const cancel = worker(hijacked, jobMap);
+
+      while ((await Audits.getLatestByAction('submission.attachment.update')).get().lastFailure == null)
+        await millis(40);
+
+      cancel();
+      await millis(20); // ditto above
+      checks.should.equal(2);
+    }));
+
+    // TODO: maybe someday test the watchdog loop too.
   });
 });
 
