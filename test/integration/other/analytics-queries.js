@@ -573,6 +573,132 @@ describe('analytics task queries', () => {
     }));
   });
 
+  describe('combined analytics', () => {
+    it('should combine the sub queries properly', testService(async (service, container) => {
+      const projId = await createTestProject(service, container, 'New Proj');
+      const xmlFormId = await createTestForm(service, container, testData.forms.simple, projId);
+
+      // backups
+      await container.Configs.set('backups.main', {detail: 'dummy'});
+
+      // create more submissions
+      await submitToForm(service, 'alice', 1, xmlFormId, testData.instances.simple.one, 'device1');
+      await submitToForm(service, 'alice', projId, xmlFormId, testData.instances.simple.one, 'device2');
+      await submitToForm(service, 'alice', projId, xmlFormId, testData.instances.simple.two, 'device3');
+
+      // create more users
+      await createTestUser(service, container, 'Collector1', 'formfill', projId, false);
+      await createTestUser(service, container, 'Viewer1', 'viewer', projId, false); // no recent activity
+
+      // create app users
+      const token = await createAppUser(service, projId, 'simple');
+      await service.post(`/v1/key/${token}/projects/${projId}/forms/simple/submissions`)
+        .send(simpleInstance('app_user_token'))
+        .set('Content-Type', 'application/xml');
+
+      // public links
+      const publicLink = await createPublicLink(service, projId, 'simple');
+      await service.post(`/v1/key/${publicLink}/projects/${projId}/forms/simple/submissions`)
+        .send(simpleInstance('pub_link'))
+        .set('Content-Type', 'application/xml');
+
+      // geospatial form
+      await createTestForm(service, container, geoForm, projId);
+
+      // encrypted form
+      await createTestForm(service, container, testData.forms.encrypted, projId);
+
+      // form with audit
+      await createTestForm(service, container, testData.forms.clientAudits, projId);
+      await service.login('alice', (asAlice) =>
+        asAlice.post(`/v1/projects/${projId}/submission`)
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+          .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' }));
+
+      // submissions
+      for (const state of ['approved', 'rejected', 'hasIssues', 'edited']) {
+        await submitToForm(service, 'alice', projId, 'simple', simpleInstance(state));
+        await service.login('alice', (asAlice) =>
+          asAlice.patch(`/v1/projects/${projId}/forms/simple/submissions/${state}`)
+            .send({ reviewState: state }));
+      }
+
+      await submitToForm(service, 'alice', projId, 'simple', simpleInstance('v1'));
+      await service.login('alice', (asAlice) =>
+        asAlice.post(`/v1/projects/${projId}/submission`)
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(withSimpleIds('v1', 'v2').replace('Alice', 'Alyssa')), { filename: 'data.xml' }));
+
+      await service.login('alice', (asAlice) =>
+        asAlice.post(`/v1/projects/${projId}/forms/simple/submissions/one/comments`)
+          .send({ body: 'new comment here' }));
+
+      const res = await container.Analytics.previewMetrics();
+
+      // system
+      res.system.num_admins.total.should.equal(1);
+      res.system.num_projects_encryption.total.should.equal(0);
+      res.system.num_questions_biggest_form.should.equal(5);
+      res.system.num_audit_log_entries.total.should.be.above(0);
+      res.system.backups_configured.should.equal(1);
+      res.system.database_size.should.be.above(0);
+
+      // projects
+      // (testing that non-zero counts come through)
+      res.projects.length.should.equal(2);
+
+      // projects.users
+      res.projects[0].users.num_managers.total.should.equal(1);
+      res.projects[1].users.num_viewers.total.should.equal(1);
+
+      // projects.forms
+      res.projects[0].forms.num_forms.total.should.equal(2);
+      res.projects[1].forms.num_forms.total.should.equal(4);
+      res.projects[0].forms.num_forms_with_repeats.total.should.equal(1);
+      res.projects[1].forms.num_forms_with_geospatial.total.should.equal(1);
+      res.projects[1].forms.num_forms_with_encryption.total.should.equal(1);
+      res.projects[1].forms.num_forms_with_audits.total.should.equal(1);
+
+      // projects.submissions
+      res.projects[1].submissions.num_submissions_received.total.should.equal(10);
+      res.projects[1].submissions.num_submissions_approved.total.should.equal(1);
+      res.projects[1].submissions.num_submissions_has_issues.total.should.equal(1);
+      res.projects[1].submissions.num_submissions_rejected.total.should.equal(1);
+      res.projects[1].submissions.num_submissions_edited.total.should.equal(2);
+      res.projects[1].submissions.num_submissions_with_edits.total.should.equal(1);
+      res.projects[1].submissions.num_submissions_with_comments.total.should.equal(1);
+      res.projects[1].submissions.num_submissions_from_app_users.total.should.equal(1);
+      res.projects[1].submissions.num_submissions_from_public_links.total.should.equal(1);
+      res.projects[1].submissions.num_submissions_from_web_users.total.should.equal(8);
+    }));
+
+    it('should be idempotent and not cross-polute project counts', testService(async (service, container) => {
+      const proj1 = await createTestProject(service, container, 'New Proj 1');
+      const formId1 = await createTestForm(service, container, testData.forms.simple, proj1);
+
+      // approved submission in original project
+      await submitToForm(service, 'alice', 1, 'simple', simpleInstance('aaa'));
+      await service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple/submissions/aaa')
+          .send({ reviewState: 'approved' }));
+
+      // rejected submission in new project
+      await submitToForm(service, 'alice', proj1, 'simple', simpleInstance('aaa'));
+      await service.login('alice', (asAlice) =>
+        asAlice.patch(`/v1/projects/${proj1}/forms/simple/submissions/aaa`)
+          .send({ reviewState: 'rejected' }));
+
+      let res = await container.Analytics.previewMetrics();
+      res.projects[1].submissions.num_submissions_approved.total.should.equal(0);
+
+      // there used to be a bug where counts from one project could
+      // pollute another project.
+      res = await container.Analytics.previewMetrics();
+      res.projects[1].submissions.num_submissions_approved.total.should.equal(0);
+    }));
+  });
+
   describe('latest analytics audit log utility', () => {
     it('should find recently created analytics audit log', testService(async (service, container) => {
       await container.Audits.log(null, 'analytics', null, {test: 'foo', success: true});
