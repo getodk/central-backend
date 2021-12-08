@@ -573,7 +573,10 @@ describe('analytics task queries', () => {
     }));
   });
 
-  describe('combined analytics', () => {
+  describe('combined analytics', function() {
+    // increasing timeouts on this set of tests
+    this.timeout(3000);
+
     it('should combine system level queries', testService(async (service, container) => {
       // backups
       await container.Configs.set('backups.main', {detail: 'dummy'});
