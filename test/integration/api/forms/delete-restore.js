@@ -41,7 +41,7 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
               log.acteeId.should.equal(form.acteeId);
             }))))));
 
-    it('should delete all associated assignments', testService((service) =>
+    it('should not return associated assignments for a deleted form', testService((service) =>
       service.login('alice', (asAlice) =>
         Promise.all([
           asAlice.post('/v1/projects/1/app-users')
@@ -57,6 +57,27 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
             .then(() => asAlice.delete('/v1/projects/1/forms/simple')
               .expect(200))
             .then(() => asAlice.get('/v1/projects/1/assignments/forms/')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.eql([]);
+              }))))));
+
+    it('should not return associated assignments for a specific role for a deleted form', testService((service) =>
+      service.login('alice', (asAlice) =>
+        Promise.all([
+          asAlice.post('/v1/projects/1/app-users')
+            .send({ displayName: 'test app user' })
+            .expect(200)
+            .then(({ body }) => body.id),
+          asAlice.get('/v1/roles/app-user')
+            .expect(200)
+            .then(({ body }) => body.id)
+        ])
+          .then(([ fkId, roleId ]) => asAlice.post(`/v1/projects/1/forms/simple/assignments/${roleId}/${fkId}`)
+            .expect(200)
+            .then(() => asAlice.delete('/v1/projects/1/forms/simple')
+              .expect(200))
+            .then(() => asAlice.get(`/v1/projects/1/assignments/forms/${roleId}`)
               .expect(200)
               .then(({ body }) => {
                 body.should.eql([]);
@@ -139,5 +160,67 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
               body.details.fields.should.eql([ 'projectId', 'xmlFormId' ]);
               body.details.values.should.eql([ '1', 'simple' ]);
             })))));
+
+    describe('restoring access to undeleted forms', () => {
+      it('should restore web user submission access', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.delete('/v1/projects/1/forms/simple')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+              .send(testData.instances.simple.one)
+              .set('Content-Type', 'application/xml')
+              .expect(404))
+            .then(() => asAlice.post('/v1/projects/1/forms/1/restore')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+              .send(testData.instances.simple.one)
+              .set('Content-Type', 'application/xml')
+              .expect(200)))));
+
+      it('should restore public link submission access', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post(`/v1/projects/1/forms/simple/public-links`)
+            .send({ displayName: 'test public link' })
+            .then(({ body }) => Promise.resolve(body.token))
+            .then((token) => service.post(`/v1/key/${token}/projects/1/forms/simple/submissions`)
+              .send(testData.instances.simple.one)
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+              .then(() => asAlice.delete('/v1/projects/1/forms/simple')
+                .expect(200))
+              .then(() => service.post(`/v1/key/${token}/projects/1/forms/simple/submissions`)
+                .send(testData.instances.simple.two)
+                .set('Content-Type', 'application/xml')
+                .expect(404))
+              .then(() => asAlice.post('/v1/projects/1/forms/1/restore')
+                .expect(200))
+              .then(() => service.post(`/v1/key/${token}/projects/1/forms/simple/submissions`)
+                .send(testData.instances.simple.two)
+                .set('Content-Type', 'application/xml')
+                .expect(200))))));
+
+      it('should restore app user submission access', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post(`/v1/projects/1/app-users`)
+            .send({ displayName: 'test app user' })
+            .then(({ body }) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${body.id}`)
+                .expect(200)
+              .then(() => service.post(`/v1/key/${body.token}/projects/1/forms/simple/submissions`)
+                .send(testData.instances.simple.one)
+                .set('Content-Type', 'application/xml')
+                .expect(200))
+              .then(() => asAlice.delete('/v1/projects/1/forms/simple')
+                .expect(200))
+              .then(() => service.post(`/v1/key/${body.token}/projects/1/forms/simple/submissions`)
+                .send(testData.instances.simple.two)
+                .set('Content-Type', 'application/xml')
+                .expect(404))
+              .then(() => asAlice.post('/v1/projects/1/forms/1/restore')
+                .expect(200))
+              .then(() => service.post(`/v1/key/${body.token}/projects/1/forms/simple/submissions`)
+                .send(testData.instances.simple.two)
+                .set('Content-Type', 'application/xml')
+                .expect(200))))));
+    });
   });
 });
