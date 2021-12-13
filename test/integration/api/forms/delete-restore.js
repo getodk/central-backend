@@ -221,6 +221,19 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
                 .send(testData.instances.simple.two)
                 .set('Content-Type', 'application/xml')
                 .expect(200))))));
+
+      it('should not be able to access assignments of deleted form thru the form', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/app-users')
+            .send({ displayName: 'david' })
+            .expect(200)
+            .then(({ body }) => body)
+            .then((david) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${david.id}`)
+              .expect(200))
+            .then(() => asAlice.delete('/v1/projects/1/forms/simple')
+              .expect(200))
+              .then(() => asAlice.get('/v1/projects/1/forms/simple/assignments')
+                .expect(404)))));
     });
   });
 });
