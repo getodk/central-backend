@@ -130,6 +130,25 @@ describe('query module form purge', () => {
           ]))
           .then((counts) => counts.should.eql([0, 0])))))));
 
+  it('should correctly update purgedName of purged form with only a draft', testService((service, container) =>
+    service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simple2)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => container.Forms.getByProjectAndXmlFormId(1, 'simple2').then((o) => o.get())
+        .then((ghostForm) => asAlice.delete('/v1/projects/1/forms/simple2') // purge should happen internally
+          .expect(200)
+          .then(() => container.one(sql`select * from actees where id = ${ghostForm.acteeId}`))
+          .then((res) => {
+            res.details.projectId.should.equal(1);
+            res.details.formId.should.equal(ghostForm.id);
+            res.details.version.should.equal(ghostForm.def.version);
+            res.details.xmlFormId.should.equal(ghostForm.xmlFormId);
+            res.details.deletedAt.should.be.an.isoDate();
+            res.purgedName.should.equal(ghostForm.def.name);
+          }))))));
+
   it('should purge attachments (and blobs) of a form', testService((service, container) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms')
