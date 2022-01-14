@@ -124,10 +124,11 @@ describe('api: /submission', () => {
               .then(({ text }) => { text.should.equal(testData.instances.simple.one); })
           ])))));
 
-    it('should save the submission to the appropriate form with device id', testService((service) =>
+    it('should save the submission to the appropriate form with device id and user agent', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission?deviceID=imei%3A358240051111110')
           .set('X-OpenRosa-Version', '1.0')
+          .set('User-Agent', 'central/test')
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .expect(201)
           .then(({ text }) => {
@@ -138,7 +139,13 @@ describe('api: /submission', () => {
               .expect(200)
               .then(({ body }) => {
                 body.createdAt.should.be.a.recentIsoDate();
-              body.deviceId.should.equal('imei:358240051111110');
+                body.deviceId.should.equal('imei:358240051111110');
+              }),
+            asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions')
+              .expect(200)
+              .then(({ body }) => {
+                body[0].deviceId.should.equal('imei:358240051111110');
+                body[0].userAgent.should.equal('central/test');
               }),
             asAlice.get('/v1/projects/1/forms/simple/submissions/one.xml')
               .expect(200)
@@ -841,15 +848,22 @@ describe('api: /forms/:id/submissions', () => {
             body.submitterId.should.equal(5);
           }))));
 
-    it('should record a deviceId if given', testService((service) =>
+    it('should record a deviceId and userAgent if given', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions?deviceID=testtest')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'text/xml')
+          .set('User-Agent', 'central/test')
           .expect(200)
           .then(({ body }) => {
             body.deviceId.should.equal('testtest');
-          }))));
+          })
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions')
+            .expect(200)
+            .then(({ body }) => {
+              body[0].deviceId.should.equal('testtest');
+              body[0].userAgent.should.equal('central/test');
+            })))));
 
     it('should accept a submission for an old form version', testService((service, { Submissions, one }) =>
       service.login('alice', (asAlice) =>
@@ -1175,7 +1189,7 @@ describe('api: /forms/:id/submissions', () => {
       service.login('alice', (asAlice) => new Promise((done) =>
         zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
           result.filenames.should.eql([ 'simple.csv' ]);
-          result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits\n');
+          result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion\n');
           done();
         })))));
 
@@ -1254,11 +1268,11 @@ describe('api: /forms/:id/submissions', () => {
             result.filenames.should.eql([ 'simple.csv' ]);
             const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
             csv.length.should.equal(4); // header + 2 data rows + newline
-            csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits' ]);
+            csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
             csv[1].shift().should.be.an.recentIsoDate();
-            csv[1].should.eql([ 'two','Bob','34','two','5','Alice','0','0','','','','0' ]);
+            csv[1].should.eql([ 'two','Bob','34','two','5','Alice','0','0','','','','0','' ]);
             csv[2].shift().should.be.an.recentIsoDate();
-            csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0' ]);
+            csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0','' ]);
             csv[3].should.eql([ '' ]);
             done();
           }))))));
@@ -1283,8 +1297,8 @@ describe('api: /forms/:id/submissions', () => {
                 result.filenames.should.eql([ 'simple.csv' ]);
                 const lines = result['simple.csv'].split('\n');
                 lines.length.should.equal(4);
-                lines[1].endsWith(',three,Chelsea,38,three,5,Alice,0,0,,,,0').should.equal(true);
-                lines[2].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0').should.equal(true);
+                lines[1].endsWith(',three,Chelsea,38,three,5,Alice,0,0,,,,0,').should.equal(true);
+                lines[2].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0,').should.equal(true);
                 done();
               })))))));
 
@@ -1310,8 +1324,8 @@ describe('api: /forms/:id/submissions', () => {
               result.filenames.should.eql([ 'simple.csv' ]);
               const lines = result['simple.csv'].split('\n');
               lines.length.should.equal(4);
-              lines[1].endsWith(',three,Chelsea,38,three,5,Alice,0,0,,,,0').should.equal(true);
-              lines[2].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0').should.equal(true);
+              lines[1].endsWith(',three,Chelsea,38,three,5,Alice,0,0,,,,0,').should.equal(true);
+              lines[2].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0,').should.equal(true);
               done();
             }))))));
 
@@ -1332,7 +1346,7 @@ describe('api: /forms/:id/submissions', () => {
                 result.filenames.should.eql([ 'simple.csv' ]);
                 const lines = result['simple.csv'].split('\n');
                 lines.length.should.equal(3);
-                lines[1].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0').should.equal(true);
+                lines[1].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0,').should.equal(true);
                 done();
               })))))));
 
@@ -1354,7 +1368,7 @@ describe('api: /forms/:id/submissions', () => {
               result.filenames.should.eql([ 'simple.csv' ]);
               const lines = result['simple.csv'].split('\n');
               lines.length.should.equal(3);
-              lines[1].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0').should.equal(true);
+              lines[1].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0,').should.equal(true);
               done();
             }))))));
 
@@ -1387,8 +1401,8 @@ describe('api: /forms/:id/submissions', () => {
 
                 // we also check the csv for the sake of verifying the attachments counts.
                 const csv = result['binaryType.csv'].split('\n');
-                csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits');
-                csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,2,2,,,,0');
+                csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+                csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,2,2,,,,0,');
                 csv.length.should.equal(3); // newline at end
 
                 done();
@@ -1420,6 +1434,43 @@ describe('api: /forms/:id/submissions', () => {
                   done();
                 }))))))));
 
+    it('should list the original submitted form version per submission', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.simple.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .set('Content-Type', 'text/xml')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="updated"'))
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.simple.one
+              .replace('id="simple"', 'id="simple" version="updated"')
+              .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2')),
+              { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.simple.three.replace('id="simple"', 'id="simple" version="updated"'))
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => new Promise((done) =>
+            zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
+              result.filenames.should.eql([ 'simple.csv' ]);
+              const lines = result['simple.csv'].split('\n');
+              lines[1].endsWith('0,updated').should.equal(true);
+              lines[2].endsWith('0,').should.equal(true);
+              lines[3].endsWith('1,').should.equal(true);
+              done();
+            }))))));
+
     it('should split select multiple values if ?splitSelectMultiples=true', testService((service, container) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
@@ -1436,11 +1487,11 @@ describe('api: /forms/:id/submissions', () => {
             zipStreamToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true'), (result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
               const lines = result['selectMultiple.csv'].split('\n');
-              lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits');
+              lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0');
+                .should.equal(',b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0,');
               lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0');
+                .should.equal(',a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0,');
               done();
             }))))));
 
@@ -1459,11 +1510,11 @@ describe('api: /forms/:id/submissions', () => {
             zipStreamToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true'), (result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
               const lines = result['selectMultiple.csv'].split('\n');
-              lines[0].should.equal('SubmissionDate,q1,g1-q2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits');
+              lines[0].should.equal('SubmissionDate,q1,g1-q2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',b,m x,two,5,Alice,0,0,,,,0');
+                .should.equal(',b,m x,two,5,Alice,0,0,,,,0,');
               lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',a b,x y z,one,5,Alice,0,0,,,,0');
+                .should.equal(',a b,x y z,one,5,Alice,0,0,,,,0,');
               done();
             }))))));
 
@@ -1501,7 +1552,14 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => new Promise((done) =>
             zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?deletedFields=true'), (result) => {
               result.filenames.should.containDeep([ 'simple.csv' ]);
-              result['simple.csv'].should.be.a.SimpleCsv();
+              const lines = result['simple.csv'].split('\n');
+              lines[0].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+              lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                .should.equal(',three,Chelsea,38,three,5,Alice,0,0,,,,0,2');
+              lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                .should.equal(',two,Bob,34,two,5,Alice,0,0,,,,0,');
+              lines[3].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                .should.equal(',one,Alice,30,one,5,Alice,0,0,,,,0,');
               done();
             }))))));
 
@@ -1557,7 +1615,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => new Promise((done) =>
             zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?groupPaths=false'), (result) => {
               const csv = result['simple.csv'].split('\n');
-              csv[0].should.equal('SubmissionDate,instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits');
+              csv[0].should.equal('SubmissionDate,instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               done();
             }))))));
 
@@ -1577,11 +1635,11 @@ describe('api: /forms/:id/submissions', () => {
             zipStreamToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true&groupPaths=false'), (result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
               const lines = result['selectMultiple.csv'].split('\n');
-              lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,q2,q2/m,q2/x,q2/y,q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits');
+              lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,q2,q2/m,q2/x,q2/y,q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0');
+                .should.equal(',b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0,');
               lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0');
+                .should.equal(',a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0,');
               done();
             }))))));
 
@@ -1605,8 +1663,8 @@ describe('api: /forms/:id/submissions', () => {
 
                 // we also check the csv for the sake of verifying the attachments counts.
                 const csv = result['binaryType.csv'].split('\n');
-                csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits');
-                csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,1,2,,,,0');
+                csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+                csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,1,2,,,,0,');
                 csv.length.should.equal(3); // newline at end
 
                 done();
@@ -2014,11 +2072,11 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .then(({ text }) => {
               const rows = text.split('\n');
               rows.length.should.equal(5);
-              rows[0].should.equal('SubmissionDate,meta-instanceID,name,age,children-child-name,children-child-age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits');
+              rows[0].should.equal('SubmissionDate,meta-instanceID,name,age,children-child-name,children-child-age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               // (need to drop the iso date)
-              rows[1].slice(24).should.equal(',rthree,Chelsea,38,,,rthree,5,Alice,0,0,,,,0');
-              rows[2].slice(24).should.equal(',rtwo,Bob,34,,,rtwo,5,Alice,0,0,,,,0');
-              rows[3].slice(24).should.equal(',rone,Alice,30,,,rone,5,Alice,0,0,,,,0');
+              rows[1].slice(24).should.equal(',rthree,Chelsea,38,,,rthree,5,Alice,0,0,,,,0,1.0');
+              rows[2].slice(24).should.equal(',rtwo,Bob,34,,,rtwo,5,Alice,0,0,,,,0,1.0');
+              rows[3].slice(24).should.equal(',rone,Alice,30,,,rone,5,Alice,0,0,,,,0,1.0');
             })))));
 
     it('should split select multiple values if ?splitSelectMultiples=true', testService((service, container) =>
@@ -2037,11 +2095,11 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200)
             .then(({ text }) =>  {
               const lines = text.split('\n');
-              lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits');
+              lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0');
+                .should.equal(',b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0,');
               lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0');
+                .should.equal(',a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0,');
             })))));
 
     it('should log the action in the audit log', testService((service) =>
@@ -2081,9 +2139,9 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
                 const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
                 csv.length.should.equal(3); // header + data row + newline
-                csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits' ]);
+                csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
                 csv[1].shift().should.be.an.recentIsoDate();
-                csv[1].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0' ]);
+                csv[1].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0','' ]);
 
                 done();
               })))))));
@@ -2102,7 +2160,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
 
-                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits\n');
+                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion\n');
                 done();
               })))))));
 
@@ -2122,7 +2180,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
 
-                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits\n');
+                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion\n');
                 done();
               })))))));
 
@@ -2142,7 +2200,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
 
-                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits\n');
+                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion\n');
                 done();
               })))))));
 
@@ -2164,7 +2222,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               zipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'), (result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
 
-                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits\n');
+                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion\n');
                 done();
               })))))));
 
@@ -3630,9 +3688,10 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .send(testData.instances.simple.one.replace(/<\/meta>/, '<orx:instanceName>custom name</orx:instanceName></meta>'))
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => asAlice.put('/v1/projects/1/forms/simple/submissions/one')
+          .then(() => asAlice.put('/v1/projects/1/forms/simple/submissions/one?deviceID=updateDevice')
             .send(withSimpleIds('one', 'two'))
             .set('Content-Type', 'text/xml')
+            .set('User-Agent', 'central/tests')
             .expect(200))
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions')
             .expect(200)
@@ -3644,6 +3703,11 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               body[1].submitterId.should.equal(5);
               should(body[0].instanceName).equal(null);
               body[1].instanceName.should.equal('custom name');
+
+              body[0].deviceId.should.equal('updateDevice');
+              body[0].userAgent.should.equal('central/tests');
+              (body[1].deviceId == null).should.equal(true);
+              body[1].userAgent.should.equal('node-superagent/3.8.3');
             })))));
 
     it('should return extended submission details', testService((service) =>
@@ -3652,12 +3716,28 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .send(testData.instances.simple.one)
           .set('Content-Type', 'text/xml')
           .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="2.0"'))
+            .set('Content-Type', 'text/xml')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish')
+            .expect(200))
+          .then(() => asAlice.put('/v1/projects/1/forms/simple/submissions/one')
+            .send(testData.instances.simple.one
+              .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2')
+              .replace('id="simple"', 'id="simple" version="2.0"'))
+            .set('Content-Type', 'text/xml')
+            .expect(200))
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions')
             .set('X-Extended-Metadata', true)
             .expect(200)
             .then(({ body }) => {
               body[0].should.be.an.ExtendedSubmissionDef();
+              body[0].formVersion.should.equal('2.0');
               body[0].submitter.displayName.should.equal('Alice');
+              body[1].should.be.an.ExtendedSubmissionDef();
+              body[1].formVersion.should.equal('');
+              body[1].submitter.displayName.should.equal('Alice');
             })))));
   });
 

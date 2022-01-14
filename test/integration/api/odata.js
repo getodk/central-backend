@@ -145,7 +145,8 @@ describe('api: /forms/:id.svc', () => {
                   status: null,
                   reviewState: null,
                   deviceId: 'testid',
-                  edits: 0
+                  edits: 0,
+                  formVersion: '1.0'
                 },
                 children: {
                   'child@odata.navigationLink': "Submissions('double')/children/child"
@@ -216,7 +217,8 @@ describe('api: /forms/:id.svc', () => {
                     status: 'missingEncryptedFormData',
                     reviewState: null,
                     deviceId: null,
-                    edits: 0
+                    edits: 0,
+                    formVersion: 'working3'
                   }
                 }]
               });
@@ -256,7 +258,8 @@ describe('api: /forms/:id.svc', () => {
                     status: 'notDecrypted',
                     reviewState: null,
                     deviceId: null,
-                    edits: 0
+                    edits: 0,
+                    formVersion: 'working3'
                   }
                 }]
               });
@@ -444,7 +447,8 @@ describe('api: /forms/:id.svc', () => {
                   status: null,
                   reviewState: null,
                   deviceId: null,
-                  edits: 0
+                  edits: 0,
+                  formVersion: '1.0'
                 },
                 meta: { instanceID: "rthree" },
                 name: "Chelsea",
@@ -464,7 +468,8 @@ describe('api: /forms/:id.svc', () => {
                   status: null,
                   reviewState: null,
                   deviceId: null,
-                  edits: 0
+                  edits: 0,
+                  formVersion: '1.0'
                 },
                 meta: { instanceID: "rtwo" },
                 name: "Bob",
@@ -484,7 +489,8 @@ describe('api: /forms/:id.svc', () => {
                   status: null,
                   reviewState: null,
                   deviceId: null,
-                  edits: 0
+                  edits: 0,
+                  formVersion: '1.0'
                 },
                 meta: { instanceID: "rone" },
                 name: "Alice",
@@ -551,7 +557,8 @@ describe('api: /forms/:id.svc', () => {
                   status: null,
                   reviewState: null,
                   deviceId: null,
-                  edits: 0
+                  edits: 0,
+                  formVersion: '1.0'
                 },
                 meta: { instanceID: "rtwo" },
                 name: "Bob",
@@ -587,7 +594,8 @@ describe('api: /forms/:id.svc', () => {
                   status: null,
                   reviewState: null,
                   deviceId: null,
-                  edits: 0
+                  edits: 0,
+                  formVersion: '1.0'
                 },
                 meta: { instanceID: "rthree" },
                 name: "Chelsea",
@@ -639,8 +647,9 @@ describe('api: /forms/:id.svc', () => {
                       attachmentsExpected: 0,
                       status: null,
                       reviewState: null,
-                    deviceId: null,
-                    edits: 0
+                      deviceId: null,
+                      edits: 0,
+                      formVersion: '1.0'
                     },
                     meta: { instanceID: "rthree" },
                     name: "Chelsea",
@@ -660,7 +669,8 @@ describe('api: /forms/:id.svc', () => {
                       status: null,
                       reviewState: null,
                       deviceId: null,
-                      edits: 0
+                      edits: 0,
+                    formVersion: '1.0'
                     },
                     meta: { instanceID: "rone" },
                     name: "Alice",
@@ -698,7 +708,8 @@ describe('api: /forms/:id.svc', () => {
                     status: null,
                     reviewState: null,
                     deviceId: null,
-                    edits: 0
+                    edits: 0,
+                    formVersion: '1.0'
                   },
                   meta: { instanceID: "rone" },
                   name: "Alice",
@@ -736,7 +747,8 @@ describe('api: /forms/:id.svc', () => {
                     status: null,
                     reviewState: null,
                     deviceId: null,
-                    edits: 0
+                    edits: 0,
+                    formVersion: '1.0'
                   },
                   meta: { instanceID: "rone" },
                   name: "Alice",
@@ -779,7 +791,8 @@ describe('api: /forms/:id.svc', () => {
                     status: null,
                     reviewState: null,
                     deviceId: null,
-                    edits: 0
+                    edits: 0,
+                    formVersion: '1.0'
                   },
                   meta: { instanceID: 'rone' },
                   name: 'Alice',
@@ -823,7 +836,8 @@ describe('api: /forms/:id.svc', () => {
                     status: null,
                     reviewState: 'rejected',
                     deviceId: null,
-                    edits: 0
+                    edits: 0,
+                    formVersion: '1.0'
                   },
                   meta: { instanceID: "rtwo" },
                   name: "Bob",
@@ -947,7 +961,8 @@ describe('api: /forms/:id.svc', () => {
                     status: 'missingEncryptedFormData',
                     reviewState: null,
                     deviceId: null,
-                    edits: 0
+                    edits: 0,
+                    formVersion: 'working3'
                   }
                 }, {
                   __id: 'uuid:dcf4a151-5088-453f-99e6-369d67828f7a',
@@ -961,7 +976,8 @@ describe('api: /forms/:id.svc', () => {
                     status: 'missingEncryptedFormData',
                     reviewState: null,
                     deviceId: null,
-                    edits: 0
+                    edits: 0,
+                    formVersion: 'working3'
                   }
                 }]
               });
@@ -1010,7 +1026,8 @@ describe('api: /forms/:id.svc', () => {
                     status: 'notDecrypted',
                     reviewState: null,
                     deviceId: null,
-                    edits: 0
+                    edits: 0,
+                    formVersion: 'working3'
                   }
                 }, {
                   __id: 'uuid:dcf4a151-5088-453f-99e6-369d67828f7a',
@@ -1024,7 +1041,8 @@ describe('api: /forms/:id.svc', () => {
                     status: 'notDecrypted',
                     reviewState: null,
                     deviceId: null,
-                    edits: 0
+                    edits: 0,
+                    formVersion: 'working3'
                   }
                 }]
               });
@@ -1196,7 +1214,8 @@ describe('api: /forms/:id.svc', () => {
                       status: null,
                       reviewState: null,
                       deviceId: null,
-                      edits: 0
+                      edits: 0,
+                      formVersion: '1.0'
                     },
                     children: {
                       'child@odata.navigationLink': "Submissions('double')/children/child"
@@ -1276,7 +1295,8 @@ describe('api: /forms/:id.svc', () => {
                       status: null,
                       reviewState: null,
                       deviceId: null,
-                      edits: 0
+                      edits: 0,
+                      formVersion: '1.0'
                     },
                     meta: { instanceID: "rthree" },
                     name: "Chelsea",
@@ -1296,7 +1316,8 @@ describe('api: /forms/:id.svc', () => {
                       status: null,
                       reviewState: null,
                       deviceId: null,
-                      edits: 0
+                      edits: 0,
+                      formVersion: '1.0'
                     },
                     meta: { instanceID: "rtwo" },
                     name: "Bob",
@@ -1316,7 +1337,8 @@ describe('api: /forms/:id.svc', () => {
                       status: null,
                       reviewState: null,
                       deviceId: null,
-                      edits: 0
+                      edits: 0,
+                      formVersion: '1.0'
                     },
                     meta: { instanceID: "rone" },
                     name: "Alice",
