@@ -4,6 +4,7 @@ const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { createReadStream } = require('fs');
+const { exhaust } = require(appPath + '/lib/worker/worker');
 
 
 describe('query module form purge', () => {
@@ -171,6 +172,20 @@ describe('query module form purge', () => {
             container.oneFirst(sql`select count(*) from blobs`)
           ]))
           .then((counts) => counts.should.eql([0, 0, 0, 0])))))));
+
+  it('should purge the select multiple values of a purged form', testService((service, container) =>
+    service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.selectMultiple)
+        .set('Content-Type', 'application/xml')
+        .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+          .set('Content-Type', 'application/xml')
+          .send(testData.instances.selectMultiple.one))
+        .then(() => exhaust(container))
+        .then(() => asAlice.delete('/v1/projects/1/forms/selectMultiple'))
+        .then(() => container.Forms.purge(true))
+        .then(() => container.oneFirst(sql`select count(*) from form_field_values`))
+        .then((count) => count.should.eql(0)))));
 
   describe('puring form submissions', () => {
     const withSimpleIds = (deprecatedId, instanceId) => testData.instances.simple.one
