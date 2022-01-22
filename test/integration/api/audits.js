@@ -496,6 +496,28 @@ describe('/audits', () => {
               body[2].notes.should.equal('doing this for fun!');
               body[3].action.should.equal('user.session.create');
             })))));
+
+    describe('audits of deleted and purged actees', () => {
+      it('should get the information of a purged actee', testService(async (service, container) => {
+        // There is not a way in the code to purge anything (yet)
+        // so we manually create a purged actee that is not in any other table
+        // and log an audit about it.
+        const acteeId = '11111111-2222-3333-4444-555555555555';
+        await container.run(sql`insert into actees ("id", "purgedAt", "purgedName", "details")
+          values (${acteeId}, '1999-1-1', 'Purged Actee Name', '{"projectId": 123}')`);
+        await container.Audits.log(null, 'dummy.action', { acteeId }, 'test');
+
+        return service.login('alice', (asAlice) =>
+          asAlice.get('/v1/audits').set('X-Extended-Metadata', true)
+            .expect(200).then(({ body }) => {
+              // first audit is user login, second is about purged actee
+              const purgedActee = body[1].actee;
+              purgedActee.purgedName.should.equal('Purged Actee Name');
+              purgedActee.purgedAt.should.not.be.null();
+              purgedActee.details.should.eql({ projectId: 123 });
+            }));
+        }));
+    });
   });
 });
 
