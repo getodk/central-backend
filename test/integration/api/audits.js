@@ -517,6 +517,16 @@ describe('/audits', () => {
               purgedActee.details.should.eql({ projectId: 123 });
             }));
         }));
+
+      it('should get the deletedAt date of a deleted form actee', testService((service, { Projects, Forms, Users, Audits }) =>
+        service.login('alice', (asAlice) =>
+          asAlice.delete('/v1/projects/1/forms/simple')
+            .then(() => asAlice.get('/v1/audits').set('X-Extended-Metadata', true))
+            .then(({ body }) => {
+              const deletedActee = body[0].actee; // actee (form) of most recent audit
+              deletedActee.name.should.equal('Simple');
+              deletedActee.deletedAt.should.not.be.null();
+            }))));
     });
   });
 });
