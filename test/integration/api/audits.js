@@ -497,7 +497,7 @@ describe('/audits', () => {
               body[3].action.should.equal('user.session.create');
             })))));
 
-    describe('audits of deleted and purged actees', () => {
+    describe('audit logs of deleted and purged actees', () => {
       it('should get the information of a purged actee', testService(async (service, container) => {
         // There is not a way in the code to purge anything (yet)
         // so we manually create a purged actee that is not in any other table
@@ -518,13 +518,63 @@ describe('/audits', () => {
             }));
         }));
 
-      it('should get the deletedAt date of a deleted form actee', testService((service, { Projects, Forms, Users, Audits }) =>
+      it('should get the deletedAt date of a deleted form', testService((service, { Projects, Forms, Users, Audits }) =>
         service.login('alice', (asAlice) =>
           asAlice.delete('/v1/projects/1/forms/simple')
             .then(() => asAlice.get('/v1/audits').set('X-Extended-Metadata', true))
             .then(({ body }) => {
-              const deletedActee = body[0].actee; // actee (form) of most recent audit
+              const deletedActee = body[0].actee; // actee of most recent audit, which is a form
               deletedActee.name.should.equal('Simple');
+              deletedActee.deletedAt.should.not.be.null();
+            }))));
+
+      it('should get the deletedAt date of a deleted user', testService((service, { Projects, Forms, Users, Audits }) =>
+        service.login('alice', (asAlice) =>
+          Users.getByEmail('chelsea@getodk.org').then((o) => o.get())
+            .then((chelsea) => asAlice.delete('/v1/users/' + chelsea.actorId)
+              .expect(200))
+            .then(() => asAlice.get('/v1/audits').set('X-Extended-Metadata', true))
+            .then(({ body }) => {
+              const deletedActee = body[0].actee;
+              deletedActee.displayName.should.equal('Chelsea');
+              deletedActee.deletedAt.should.not.be.null();
+            }))));
+
+      it('should get the deletedAt date of a deleted project', testService((service, { Projects, Forms, Users, Audits }) =>
+        service.login('alice', (asAlice) =>
+          asAlice.delete('/v1/projects/1')
+            .expect(200)
+            .then(() => asAlice.get('/v1/audits').set('X-Extended-Metadata', true))
+            .then(({ body }) => {
+              const deletedActee = body[0].actee;
+              deletedActee.name.should.equal('Default Project');
+              deletedActee.deletedAt.should.not.be.null();
+            }))));
+
+      it('should get the deletedAt date of a deleted app user', testService((service, { Projects, Forms, Users, Audits }) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post(`/v1/projects/1/app-users`)
+            .send({ displayName: 'App User Name' })
+            .then(({ body }) => body)
+            .then((appUser) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${appUser.id}`)
+              .then(() => asAlice.delete('/v1/projects/1/app-users/' + appUser.id)))
+            .then(() => asAlice.get('/v1/audits').set('X-Extended-Metadata', true))
+            .then(({ body }) => {
+              const deletedActee = body[0].actee;
+              deletedActee.displayName.should.equal('App User Name');
+              deletedActee.deletedAt.should.not.be.null();
+            }))));
+
+      it('should get the deletedAt date of a deleted public link', testService((service, { Projects, Forms, Users, Audits }) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post(`/v1/projects/1/forms/simple/public-links`)
+            .send({ displayName: 'Public Link Name' })
+            .then(({ body }) => body)
+            .then((link) => asAlice.delete('/v1/projects/1/forms/simple/public-links/' + link.id))
+            .then(() => asAlice.get('/v1/audits').set('X-Extended-Metadata', true))
+            .then(({ body }) => {
+              const deletedActee = body[0].actee;
+              deletedActee.displayName.should.equal('Public Link Name');
               deletedActee.deletedAt.should.not.be.null();
             }))));
     });
