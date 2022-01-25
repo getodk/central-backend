@@ -32,6 +32,20 @@ Finally, **system information and configuration** is available via a set of spec
 
 Here major and breaking changes to the API are listed by version.
 
+### ODK Central v1.4
+
+(TODO: write this section)
+
+**Added**:
+* Forms can be restored
+* List of deleted forms available
+* More stuff
+
+**Changed**:
+* Deleting a form is now a reversible action
+* Deleted forms are purged after 30 days (all related data including submissions is destroyed)
+* More stuff
+
 ### ODK Central v1.3
 
 ODK Central v1.3 adds granular Submission edit history, as well as opt-in usage reporting to the Central team.
@@ -923,7 +937,7 @@ Enabling managed encryption will modify all unencrypted forms in the project, an
 
 ### Deleting a Project [DELETE /v1/projects/{id}]
 
-Deleting a Project will remove it from the management interface and make it permanently inaccessible. Do not do this unless you are certain you will never need any of its data again.
+Deleting a Project will remove it from the management interface and make it permanently inaccessible. Do not do this unless you are certain you will never need any of its data again. For now, deleting a Project will not purge its Forms. (We will change that in a future release.)
 
 + Parameters
     + id: `16` (number, required) - The numeric ID of the Project
@@ -1081,6 +1095,27 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
     This is the Extended Metadata response, if requested via the appropriate header:
 
     + Attributes (array[Extended Form])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### List all deleted Forms [GET /v1/projects/{projectId}/forms?deleted=true]
+
+_(introduced: Version 1.4)_
+
+This endpoint returns a list of the current soft-deleted Forms that appear in the Trash section. In addition to the normal `Form` values, each Form will also included when it was deleted (`deletedAt`) and its numeric ID (`id`) that can be used to restore the Form.
+
+Like the standard Form List endpoint, this endpoint also supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that each Form has and the `lastSubmission` most recent submission timestamp, as well as the Actor the Form was `createdBy`.
+
++ Response 200 (application/json)
+    This is the standard response, if Extended Metadata is not requested:
+
+    + Attributes (array[Deleted Form])
+
++ Response 200 (application/json; extended)
+    This is the Extended Metadata response, if requested via the appropriate header:
+
+    + Attributes (array[Extended Deleted Form])
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -1310,7 +1345,19 @@ We use `PATCH` rather than `PUT` to represent the update operation, so that you 
 
 #### Deleting a Form [DELETE]
 
-Only `DELETE` a `Form` if you are sure you will never need it again. If your goal is to prevent it from showing up on survey clients like ODK Collect, consider setting its `state` to `closing` or `closed` instead (see [Modifying a Form](/reference/forms/individual-form/modifying-a-form) just above for more details).
+When a Form is deleted, it goes into Trash section, but it can now be restored from the Trash. After 30 days in the Trash, the Form and all of its resources and submissions will be automatically purged. If your goal is to prevent it from showing up on survey clients like ODK Collect, consider setting its `state` to `closing` or `closed` instead (see [Modifying a Form](/reference/forms/individual-form/modifying-a-form) just above for more details).
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Restoring a Form [POST /v1/projects/{projectId}/forms/{id}/restore]
+
+_(introduced: version 1.4)_
+
+Deleted forms can now be restored (as long as they have been in the Trash less than 30 days and have not been purged). However, a deleted Form with the same `xmlFormId` as an active Form cannot be restored while that other Form is active. This `/restore` URL uses the numeric ID of the Form (now returned by the `/forms` endpoint) rather than the `xmlFormId` to unambigously restore.
 
 + Response 200 (application/json)
     + Attributes (Success)
@@ -3931,11 +3978,19 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format
 
+## Deleted Form (Form)
++ deletedAt: `2018-03-21T12:45:02.312Z` (string, required) - ISO date format
++ id: `42` (number, required) - Numeric ID as it is represented in the database.
+
 ## Extended Form (Form)
 + submissions: `10` (number, required) - The number of `Submission`s that have been submitted to this `Form`.
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission, if any.
 + createdBy: (Actor, optional) - The full information of the Actor who created this Form.
 + excelContentType: (string, optional) - If the Form was created by uploading an Excel file, this field contains the MIME type of that file.
+
+## Extended Deleted Form (Extended Form)
++ deletedAt: `2018-03-21T12:45:02.312Z` (string, required) - ISO date format
++ id: `42` (number, required) - Numeric ID as it is represented in the database.
 
 ## Draft Form (Form)
 + draftToken: `lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7` (string, required) - The test token to use to submit to this draft form. See [Draft Testing Endpoints](/reference/submissions/draft-submissions).
