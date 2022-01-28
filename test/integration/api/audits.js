@@ -496,6 +496,89 @@ describe('/audits', () => {
               body[2].notes.should.equal('doing this for fun!');
               body[3].action.should.equal('user.session.create');
             })))));
+
+    describe('audit logs of deleted and purged actees', () => {
+      it('should get the information of a purged actee', testService(async (service, container) => {
+        // There is not a way in the code to purge anything (yet)
+        // so we manually create a purged actee that is not in any other table
+        // and log an audit about it.
+        // TODO: replace this test with one that uses the external API to purge something as soon as it is available.
+        const acteeId = '11111111-2222-3333-4444-555555555555';
+        await container.run(sql`insert into actees ("id", "purgedAt", "purgedName", "details")
+          values (${acteeId}, '1999-01-01T00:00:00.000Z', 'Purged Actee Name', '{"projectId": 123}')`);
+        await container.Audits.log(null, 'dummy.action', { acteeId }, 'test');
+
+        return service.login('alice', (asAlice) =>
+          asAlice.get('/v1/audits').set('X-Extended-Metadata', true)
+            .expect(200).then(({ body }) => {
+              // first audit is user login, second is about purged actee
+              const purgedActee = body[1].actee;
+              purgedActee.purgedName.should.equal('Purged Actee Name');
+              purgedActee.purgedAt.should.eql('1999-01-01T00:00:00.000Z');
+              purgedActee.details.should.eql({ projectId: 123 });
+            }));
+        }));
+
+      it('should get the deletedAt date of a deleted form', testService((service, { Projects, Forms, Users, Audits }) =>
+        service.login('alice', (asAlice) =>
+          asAlice.delete('/v1/projects/1/forms/simple')
+            .then(() => asAlice.get('/v1/audits').set('X-Extended-Metadata', true))
+            .then(({ body }) => {
+              const deletedActee = body[0].actee; // actee of most recent audit, which is a form
+              deletedActee.name.should.equal('Simple');
+              deletedActee.deletedAt.should.be.a.recentIsoDate();
+            }))));
+
+      it('should get the deletedAt date of a deleted user', testService((service, { Projects, Forms, Users, Audits }) =>
+        service.login('alice', (asAlice) =>
+          Users.getByEmail('chelsea@getodk.org').then((o) => o.get())
+            .then((chelsea) => asAlice.delete('/v1/users/' + chelsea.actorId)
+              .expect(200))
+            .then(() => asAlice.get('/v1/audits').set('X-Extended-Metadata', true))
+            .then(({ body }) => {
+              const deletedActee = body[0].actee;
+              deletedActee.displayName.should.equal('Chelsea');
+              deletedActee.deletedAt.should.be.a.recentIsoDate();
+            }))));
+
+      it('should get the deletedAt date of a deleted project', testService((service, { Projects, Forms, Users, Audits }) =>
+        service.login('alice', (asAlice) =>
+          asAlice.delete('/v1/projects/1')
+            .expect(200)
+            .then(() => asAlice.get('/v1/audits').set('X-Extended-Metadata', true))
+            .then(({ body }) => {
+              const deletedActee = body[0].actee;
+              deletedActee.name.should.equal('Default Project');
+              deletedActee.deletedAt.should.be.a.recentIsoDate();
+            }))));
+
+      it('should get the deletedAt date of a deleted app user', testService((service, { Projects, Forms, Users, Audits }) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post(`/v1/projects/1/app-users`)
+            .send({ displayName: 'App User Name' })
+            .then(({ body }) => body)
+            .then((appUser) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${appUser.id}`)
+              .then(() => asAlice.delete('/v1/projects/1/app-users/' + appUser.id)))
+            .then(() => asAlice.get('/v1/audits').set('X-Extended-Metadata', true))
+            .then(({ body }) => {
+              const deletedActee = body[0].actee;
+              deletedActee.displayName.should.equal('App User Name');
+              deletedActee.deletedAt.should.be.a.recentIsoDate();
+            }))));
+
+      it('should get the deletedAt date of a deleted public link', testService((service, { Projects, Forms, Users, Audits }) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post(`/v1/projects/1/forms/simple/public-links`)
+            .send({ displayName: 'Public Link Name' })
+            .then(({ body }) => body)
+            .then((link) => asAlice.delete('/v1/projects/1/forms/simple/public-links/' + link.id))
+            .then(() => asAlice.get('/v1/audits').set('X-Extended-Metadata', true))
+            .then(({ body }) => {
+              const deletedActee = body[0].actee;
+              deletedActee.displayName.should.equal('Public Link Name');
+              deletedActee.deletedAt.should.be.a.recentIsoDate();
+            }))));
+    });
   });
 });
 
