@@ -153,7 +153,7 @@ describe('query module form purge', () => {
         .then(() => container.oneFirst(sql`select count(*) from form_field_values`))
         .then((count) => count.should.eql(0)))));
 
-  describe('puring form submissions', () => {
+  describe('purging form submissions', () => {
     const withSimpleIds = (deprecatedId, instanceId) => testData.instances.simple.one
       .replace('one</instance', `${instanceId}</instanceID><deprecatedID>${deprecatedId}</deprecated`);
 

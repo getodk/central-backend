@@ -498,26 +498,21 @@ describe('/audits', () => {
             })))));
 
     describe('audit logs of deleted and purged actees', () => {
-      it('should get the information of a purged actee', testService(async (service, container) => {
-        // There is not a way in the code to purge anything (yet)
-        // so we manually create a purged actee that is not in any other table
-        // and log an audit about it.
-        // TODO: replace this test with one that uses the external API to purge something as soon as it is available.
-        const acteeId = '11111111-2222-3333-4444-555555555555';
-        await container.run(sql`insert into actees ("id", "purgedAt", "purgedName", "details")
-          values (${acteeId}, '1999-01-01T00:00:00.000Z', 'Purged Actee Name', '{"projectId": 123}')`);
-        await container.Audits.log(null, 'dummy.action', { acteeId }, 'test');
-
-        return service.login('alice', (asAlice) =>
-          asAlice.get('/v1/audits').set('X-Extended-Metadata', true)
-            .expect(200).then(({ body }) => {
-              // first audit is user login, second is about purged actee
-              const purgedActee = body[1].actee;
-              purgedActee.purgedName.should.equal('Purged Actee Name');
-              purgedActee.purgedAt.should.eql('1999-01-01T00:00:00.000Z');
-              purgedActee.details.should.eql({ projectId: 123 });
-            }));
-        }));
+      it('should get the information of a purged actee', testService(async (service, { Forms }) =>
+        service.login('alice', (asAlice) =>
+          asAlice.delete('/v1/projects/1/forms/simple')
+            .then(() => Forms.purge(true))
+            .then(() => asAlice.get('/v1/audits').set('X-Extended-Metadata', true)
+              .expect(200))
+            .then(({ body }) => {
+              const purgedActee = body[0].actee;
+              purgedActee.purgedName.should.equal('Simple');
+              purgedActee.purgedAt.should.be.a.recentIsoDate();
+              purgedActee.details.formId.should.equal(1);
+              purgedActee.details.projectId.should.equal(1);
+              purgedActee.details.version.should.equal('');
+              purgedActee.details.xmlFormId.should.equal('simple');
+            }))));
 
       it('should get the deletedAt date of a deleted form', testService((service, { Projects, Forms, Users, Audits }) =>
         service.login('alice', (asAlice) =>
