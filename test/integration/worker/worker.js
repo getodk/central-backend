@@ -262,6 +262,27 @@ select count(*) from audits where action='submission.attachment.update' and proc
       await millis(20); // ditto above
     }));
 
+    it('should run two full loops with an idle cycle in between', testContainerFullTrx(async (container) => {
+      const { Audits, Users } = container;
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
+      await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
+
+      const jobMap = { 'submission.attachment.update': [ () => Promise.resolve() ] };
+      const cancel = worker(container, jobMap, 50);
+
+      while ((await container.oneFirst(sql`
+select count(*) from audits where action='submission.attachment.update' and processed is null`)) > 0)
+        await millis(40);
+
+      await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
+      while ((await container.oneFirst(sql`
+select count(*) from audits where action='submission.attachment.update' and processed is null`)) > 0)
+        await millis(40);
+
+      cancel();
+      await millis(20); // ditto above
+    }));
+
     it('should restart if the check fails prequery', testContainerFullTrx(async (container) => {
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
@@ -278,7 +299,7 @@ select count(*) from audits where action='submission.attachment.update' and proc
         }
       };
       const jobMap = { 'submission.attachment.update': [ () => Promise.resolve() ] };
-      const cancel = worker(hijacked, jobMap);
+      const cancel = worker(hijacked, jobMap, 10);
 
       while ((await Audits.getLatestByAction('submission.attachment.update')).get().processed == null)
         await millis(20);
@@ -304,7 +325,7 @@ select count(*) from audits where action='submission.attachment.update' and proc
         }
       };
       const jobMap = { 'submission.attachment.update': [ () => Promise.resolve() ] };
-      const cancel = worker(hijacked, jobMap);
+      const cancel = worker(hijacked, jobMap, 10);
 
       while ((await Audits.getLatestByAction('submission.attachment.update')).get().processed == null)
         await millis(20);
