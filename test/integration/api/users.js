@@ -129,7 +129,7 @@ describe('api: /users', () => {
     it('should send a message explaining a pre-assigned password if given', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users')
-          .send({ email: 'david@opendatakit.org', password: 'david' })
+          .send({ email: 'david@getodk.org', password: 'david' })
           .expect(200)
           .then(() => {
             /Your account was created with an assigned password\./

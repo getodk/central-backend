@@ -28,8 +28,8 @@ describe('task: accounts', () => {
         })));
 
     it('should set the password if given', testTask(({ Users, bcrypt }) =>
-      createUser('testuser@opendatakit.org', 'aoeu')
-        .then(() => Users.getByEmail('testuser@opendatakit.org'))
+      createUser('testuser@getodk.org', 'aoeu')
+        .then(() => Users.getByEmail('testuser@getodk.org'))
         .then(getOrNotFound)
         .then((user) => bcrypt.verify('aoeu', user.password))
         .then((verified) => verified.should.equal(true))));
