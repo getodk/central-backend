@@ -8,45 +8,57 @@ const { exhaust } = require(appPath + '/lib/worker/worker');
 
 
 describe('query module form purge', () => {
-  it('should purge a soft-deleted form', testService((service, container) =>
+  it('should purge a form deleted over 30 days ago', testService((service, container) =>
+    service.login('alice', (asAlice) =>
+      asAlice.delete('/v1/projects/1/forms/simple')
+        .expect(200)
+        .then(() => container.run(sql`update forms set "deletedAt" = '1999-1-1' where id = 1`))
+        .then(() => container.Forms.purge()) // default purge() targets forms deleted > 30 days ago
+        .then(() => Promise.all([
+          container.oneFirst(sql`select count(*) from forms where id = 1`),
+          container.oneFirst(sql`select count(*) from form_defs where "formId" = 1`)
+        ])
+          .then((counts) => {
+            counts.should.eql([ 0, 0 ]);
+          })))));
+
+  it('should purge multiple forms deleted over 30 days ago', testService((service, container) =>
+    service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simple2)
+        .set('Content-Type', 'application/xml')
+        .then(() => asAlice.delete('/v1/projects/1/forms/simple'))
+        .then(() => asAlice.delete('/v1/projects/1/forms/simple2'))
+        .then(() => asAlice.delete('/v1/projects/1/forms/withrepeat'))
+        .then(() => container.run(sql`update forms set "deletedAt" = '1999-1-1' where "xmlFormId" in ('simple', 'simple2')`))
+        .then(() => container.Forms.purge())
+        .then((purgeCount) => purgeCount.should.equal(2)))));
+
+  it('should by default not purge a recently deleted form', testService((service, container) =>
+    service.login('alice', (asAlice) =>
+      asAlice.delete('/v1/projects/1/forms/simple')
+        .expect(200)
+        .then(() => container.Forms.purge())
+        .then(() => Promise.all([
+          container.oneFirst(sql`select count(*) from forms where id = 1`),
+          container.oneFirst(sql`select count(*) from form_defs where "formId" = 1`)
+        ])
+          .then((counts) => {
+            counts.should.eql([ 1, 1 ]);
+          })))));
+
+  it('should purge a recently deleted form immediately when forced', testService((service, container) =>
     service.login('alice', (asAlice) =>
       asAlice.delete('/v1/projects/1/forms/simple')
         .expect(200)
         .then(() => container.Forms.purge(true)) // force all deleted forms to be purged
         .then(() => Promise.all([
-          container.oneFirst(sql`select count(*) from forms where id=1`),
-          container.oneFirst(sql`select count(*) from form_defs where "formId"=1`)
+          container.oneFirst(sql`select count(*) from forms where id = 1`),
+          container.oneFirst(sql`select count(*) from form_defs where "formId" = 1`)
         ])
-        .then((counts) => {
-          counts.should.eql([0, 0]);
-        })))));
-
-  it('should purge a form deleted over 30 days ago', testService((service, container) =>
-    service.login('alice', (asAlice) =>
-      asAlice.delete('/v1/projects/1/forms/simple')
-        .expect(200)
-        .then(() => container.run(sql`update forms set "deletedAt" = '1999-1-1' where id=1`))
-        .then(() => container.Forms.purge()) // purge forms deleted more than 30 days ago
-        .then(() => Promise.all([
-          container.oneFirst(sql`select count(*) from forms where id=1`),
-          container.oneFirst(sql`select count(*) from form_defs where "formId"=1`)
-        ])
-        .then((counts) => {
-          counts.should.eql([0, 0]);
-        })))));
-
-  it('should not purge a recently deleted form', testService((service, container) =>
-    service.login('alice', (asAlice) =>
-      asAlice.delete('/v1/projects/1/forms/simple')
-        .expect(200)
-        .then(() => container.Forms.purge()) // purge forms deleted more than 30 days ago
-        .then(() => Promise.all([
-          container.oneFirst(sql`select count(*) from forms where id=1`),
-          container.oneFirst(sql`select count(*) from form_defs where "formId"=1`)
-        ])
-        .then((counts) => {
-          counts.should.eql([1, 1]);
-        })))));
+          .then((counts) => {
+            counts.should.eql([ 0, 0 ]);
+          })))));
 
   it('should purge a deleted form by ID', testService((service, container) =>
     service.login('alice', (asAlice) =>
@@ -60,12 +72,12 @@ describe('query module form purge', () => {
         .then((ghostForm) => asAlice.delete('/v1/projects/1/withAttachments')
           .then(() => container.Forms.purge(true, 1)) // force delete a single form
           .then(() => Promise.all([
-            container.oneFirst(sql`select count(*) from forms where id=${ghostForm.id}`),
-            container.oneFirst(sql`select count(*) from forms where id=1`), // deleted form id
+            container.oneFirst(sql`select count(*) from forms where id = ${ghostForm.id}`),
+            container.oneFirst(sql`select count(*) from forms where id = 1`), // deleted form id
           ])
-          .then((counts) => {
-            counts.should.eql([1, 0]);
-          }))))));
+            .then((counts) => {
+              counts.should.eql([ 1, 0 ]);
+            }))))));
 
   it('should log the purge action in the audit log', testService((service, container) =>
     service.login('alice', (asAlice) =>
@@ -111,10 +123,10 @@ describe('query module form purge', () => {
           .expect(200))
         .then(() => container.Forms.purge(true)) // force all deleted forms to be purged
         .then(() => Promise.all([
-          container.oneFirst(sql`select count(*) from forms where id=1`),
-          container.oneFirst(sql`select count(*) from form_defs where "formId"=1`)
+          container.oneFirst(sql`select count(*) from forms where id = 1`),
+          container.oneFirst(sql`select count(*) from form_defs where "formId" = 1`)
         ]))
-        .then((counts) => counts.should.eql([0, 0])))));
+        .then((counts) => counts.should.eql([ 0, 0 ])))));
 
   it('should purge attachments (and blobs) of a form', testService((service, container) =>
     service.login('alice', (asAlice) =>
@@ -127,17 +139,17 @@ describe('query module form purge', () => {
           .expect(200))
         .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
           .expect(200))
-        .then(() => container.Forms.getByProjectAndXmlFormId(1, 'withAttachments').then((o) => o.get())
+        .then(() => container.Forms.getByProjectAndXmlFormId(1, 'withAttachments').then((o) => o.get()))
         .then((ghostForm) => asAlice.delete('/v1/projects/1/forms/withAttachments')
           .expect(200)
           .then(() => container.Forms.purge(true))
           .then(() => Promise.all([
-            container.oneFirst(sql`select count(*) from forms where id=${ghostForm.id}`),
-            container.oneFirst(sql`select count(*) from form_defs where "formId"=${ghostForm.id}`),
-            container.oneFirst(sql`select count(*) from form_attachments where "formId"=${ghostForm.id}`),
+            container.oneFirst(sql`select count(*) from forms where id = ${ghostForm.id}`),
+            container.oneFirst(sql`select count(*) from form_defs where "formId" = ${ghostForm.id}`),
+            container.oneFirst(sql`select count(*) from form_attachments where "formId" = ${ghostForm.id}`),
             container.oneFirst(sql`select count(*) from blobs`)
           ]))
-          .then((counts) => counts.should.eql([0, 0, 0, 0])))))));
+          .then((counts) => counts.should.eql([ 0, 0, 0, 0 ]))))));
 
   it('should purge the select multiple values of a purged form', testService((service, container) =>
     service.login('alice', (asAlice) =>
@@ -232,7 +244,7 @@ describe('query module form purge', () => {
           .then(() => asAlice.delete('/v1/projects/1/forms/simple'))
           .then(() => container.Forms.purge(true))
           .then(() => container.Audits.getLatestByAction('submission.update')
-            .then((audit) => { audit.get().notes.should.equal(''); })))));
+            .then((audit) => audit.get().notes.should.equal('') )))));
 
     it('should purge client audit log attachments', testService((service, container) =>
       service.login('alice', (asAlice) =>
@@ -244,13 +256,13 @@ describe('query module form purge', () => {
             .set('X-OpenRosa-Version', '1.0')
             .attach('audit.csv', createReadStream(appPath + '/test/data/audit.csv'), { filename: 'audit.csv' })
             .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
-            .expect(201)
+            .expect(201))
           .then(() => asAlice.delete('/v1/projects/1/forms/audits'))
           .then(() => container.Forms.purge(true))
           .then(() => Promise.all([
             container.oneFirst(sql`select count(*) from client_audits`),
             container.oneFirst(sql`select count(*) from blobs`)
-          ])
-          .then((count) => count.should.eql([0, 0])))))));
+          ]))
+          .then((count) => count.should.eql([ 0, 0 ])))));
   });
 });
