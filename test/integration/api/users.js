@@ -126,6 +126,17 @@ describe('api: /users', () => {
                 asDavid.get('/v1/users/current').expect(200)));
           }))));
 
+    it('should send a message explaining a pre-assigned password if given', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'david@getodk.org', password: 'david' })
+          .expect(200)
+          .then(() => {
+            /Your account was created with an assigned password\./
+              .test(global.inbox.pop().html)
+              .should.equal(true);
+          }))));
+
     // TODO: for initial release only:
     it('should duplicate the email into the display name if not given', testService((service) =>
       service.login('alice', (asAlice) =>
