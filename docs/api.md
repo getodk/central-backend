@@ -2107,7 +2107,7 @@ This endpoint is intended for use by the Central administration frontend and wil
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Exporting Form Submissions to CSV [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip{?media,%24filter}]
+### Exporting Form Submissions to CSV [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip{?attachments,%24filter,groupPaths,deletedFields,splitSelectMultiples}]
 
 To export all the `Submission` data associated with a `Form`, just add `.csv.zip` to the end of the listing URL. The response will be a ZIP file containing one or more CSV files, as well as all multimedia attachments associated with the included Submissions.
 
@@ -2125,6 +2125,9 @@ You can use an [OData-style `$filter` query](/reference/odata-endpoints/odata-fo
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
     + attachments: `true` (boolean, optional) - Set to false to exclude media attachments from the export.
     + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + groupPaths: `true` (boolean, optional) - Set to false to remove group path prefixes from field header names (eg `instanceID` instead of `meta-instanceID`). This behavior mimics a similar behavior in ODK Briefcase.
+    + deletedFields: `false` (boolean, optional) - Set to true to restore all fields previously deleted from this form for this export. All known fields and data for those fields will be merged and exported.
+    + splitSelectMultiples: `false` (boolean, optional) - Set to true to create a boolean column for every known select multiple option in the export. The option name is in the field header, and a `0` or a `1` will be present in each cell indicating whether that option was checked for that row. This behavior mimics a similar behavior in ODK Briefcase.
 
 + Response 200
     + Headers
@@ -2141,7 +2144,7 @@ You can use an [OData-style `$filter` query](/reference/odata-endpoints/odata-fo
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Exporting Form Submissions to CSV via POST [POST /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip{?media,%24filter}]
+### Exporting Form Submissions to CSV via POST [POST /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip{?attachments,%24filter,groupPaths,deletedFields,splitSelectMultiples}]
 
 This non-REST-compliant endpoint is provided for use with [Project Managed Encryption](/reference/encryption). In every respect, it behaves identically to the `GET` endpoint described in the previous section, except that it works over `POST`. This is necessary because for browser-based applications, it is a dangerous idea to simply link the user to `/submissions.csv.zip?2=supersecretpassphrase` because the browser will remember this route in its history and thus the passphrase will become exposed. This is especially dangerous as there are techniques for quickly learning browser-visited URLs of any arbitrary domain.
 
@@ -2153,6 +2156,9 @@ And so, for this `POST` version of the Submission CSV export endpoint, the passp
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
     + attachments: `true` (boolean, optional) - Set to false to exclude media attachments from the export.
     + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + groupPaths: `true` (boolean, optional) - Set to false to remove group path prefixes from field header names (eg `instanceID` instead of `meta-instanceID`). This behavior mimics a similar behavior in ODK Briefcase.
+    + deletedFields: `false` (boolean, optional) - Set to true to restore all fields previously deleted from this form for this export. All known fields and data for those fields will be merged and exported.
+    + splitSelectMultiples: `false` (boolean, optional) - Set to true to create a boolean column for every known select multiple option in the export. The option name is in the field header, and a `0` or a `1` will be present in each cell indicating whether that option was checked for that row. This behavior mimics a similar behavior in ODK Briefcase.
 
 + Response 200
     + Headers
@@ -2528,31 +2534,31 @@ This returns the changes, or edits, between different versions of a Submission. 
 
     + Body
 
-      {
-        "two": [
-          {
-            "new": "Donna",
-            "old": "Dana",
-            "path": ["name"]
-          },
-          {
-            "new": "55",
-            "old": "44",
-            "path": ["age"]
-          },
-          {
-            "new": "two",
-            "old": "one",
-            "path": ["meta", "instanceID"]
-          },
-          {
-            "new": "one",
-            "old": null,
-            "path": ["meta", "deprecatedID"]
-            ]
-          }
-        ]
-      }
+            {
+              "two": [
+                {
+                  "new": "Donna",
+                  "old": "Dana",
+                  "path": ["name"]
+                },
+                {
+                  "new": "55",
+                  "old": "44",
+                  "path": ["age"]
+                },
+                {
+                  "new": "two",
+                  "old": "one",
+                  "path": ["meta", "instanceID"]
+                },
+                {
+                  "new": "one",
+                  "old": null,
+                  "path": ["meta", "deprecatedID"]
+                  ]
+                }
+              ]
+            }
 
 
 + Response 403 (application/json)
@@ -3752,6 +3758,7 @@ An Administrator can use this endpoint to preview the metrics being sent. The pr
 
 + Response 200 (application/json)
     + Body
+
             {
               "system":{
                 "num_admins":{
