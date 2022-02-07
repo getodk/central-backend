@@ -1,9 +1,8 @@
+const { createReadStream, readFileSync } = require('fs');
 const appPath = require('app-root-path');
-const should = require('should');
 const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
-const { createReadStream } = require('fs');
 const { exhaust } = require(appPath + '/lib/worker/worker');
 
 
@@ -264,5 +263,16 @@ describe('query module form purge', () => {
             container.oneFirst(sql`select count(*) from blobs`)
           ]))
           .then((count) => count.should.eql([ 0, 0 ])))));
+
+    it('should purge xls blob of a form', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(readFileSync(appPath + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .then(() => asAlice.delete('/v1/projects/1/forms/simple2') // Delete form
+            .expect(200))
+          .then(() => container.Forms.purge(true))
+          .then(() => container.oneFirst(sql`select count(*) from blobs`))
+          .then((count) => count.should.equal(0)))));
   });
 });
