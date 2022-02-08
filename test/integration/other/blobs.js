@@ -5,7 +5,7 @@ const testData = require('../../data/xml');
 const { testService } = require('../setup');
 
 describe('blob query module', () => {
-  it('should not try to purge blobs that are still referenced', testService((service, container) =>
+  it('should not purge xls blob that is still referenced', testService((service, container) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms?publish=true')
         .send(readFileSync(appPath + '/test/data/simple.xlsx'))
