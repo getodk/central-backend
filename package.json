@@ -21,7 +21,7 @@
     "express-graceful-exit": "~0.5",
     "fast-myers-diff": "~3",
     "form-data": "~4",
-    "googleapis": "~66",
+    "googleapis": "~94",
     "htmlparser2": "~3.9",
     "knex": "~0.21",
     "luxon": "~0.3",
