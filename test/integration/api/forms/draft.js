@@ -4,6 +4,7 @@ const should = require('should');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
+const { sql } = require('slonik');
 
 describe('api: /projects/:id/forms (drafts)', () => {
 
@@ -603,6 +604,46 @@ describe('api: /projects/:id/forms (drafts)', () => {
                         .then(({ body }) => {
                           body.name.should.equal('New Title');
                         })))))))));
+
+        describe('purging unneeded drafts', () => {
+          it('should purge the old undeeded draft when a new version is uploaded', testService((service, { oneFirst }) =>
+            service.login('alice', (asAlice) =>
+              asAlice.post('/v1/projects/1/forms/simple/draft')
+                .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+                .set('Content-Type', 'application/xml')
+                .expect(200)
+                .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+                  .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
+                  .set('Content-Type', 'application/xml')
+                  .expect(200))
+                .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+                  .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty3"'))
+                  .set('Content-Type', 'application/xml')
+                  .expect(200))
+                .then(() => oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple'`)
+                  .then((count) => {
+                    count.should.equal(2); // one for the first published version and for the new draft
+                  })))));
+
+          it('should purge the old undeeded draft when a new version is uploaded (and no published draft)', testService((service, { oneFirst }) =>
+            service.login('alice', (asAlice) =>
+              asAlice.post('/v1/projects/1/forms')
+                .send(testData.forms.simple2)
+                .set('Content-Type', 'application/xml')
+                .expect(200)
+                .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+                  .send(testData.forms.simple2.replace('id="simple2"', 'id="simple2" version="drafty2"'))
+                  .set('Content-Type', 'application/xml')
+                  .expect(200))
+                .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+                  .send(testData.forms.simple2.replace('id="simple2"', 'id="simple2" version="drafty3"'))
+                  .set('Content-Type', 'application/xml')
+                  .expect(200))
+                .then(() => oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple2'`)
+                  .then((count) => {
+                    count.should.equal(1); // only one for the new draft
+                  })))));
+        });
       });
     });
 

@@ -223,10 +223,10 @@ describe('api: /projects', () => {
 
     it('should reject if id is non-numeric', testService((service) =>
       service.login('alice', (asAlice) =>
-      asAlice.get('/v1/projects/1a')
-        .expect(400)
-        .then(({ body }) => {
-          body.code.should.equal(400.11)}))));
+        asAlice.get('/v1/projects/1a')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.11)}))));
 
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -512,6 +512,30 @@ describe('api: /projects', () => {
               text.should.match(/<data id="simple2" version="2\.1\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
               text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
             })))));
+
+    it('should purge the unneeded form defs being replaced when encrypted', testService((service, { oneFirst }) => {
+      const countDraftDefsQuery = sql`
+        select count(*)
+        from form_defs as fd
+        join forms as f on fd."formId" = f.id
+        where fd."publishedAt" is null`;
+
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft') // make a draft of a published form
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms') // make a new form that only has a draft
+            .send(testData.forms.simple2)
+            .set('Content-Type', 'application/xml')
+            .expect(200))
+          .then(() => oneFirst(countDraftDefsQuery))
+          .then((initialCount) => asAlice.post('/v1/projects/1/key') // turn on managed encryption
+            .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+            .expect(200)
+            .then(() => oneFirst(countDraftDefsQuery)
+              .then((count) => {
+                count.should.equal(initialCount);
+              }))));
+    }));
 
     it('should automatically enable subsequently created forms for encryption', testService((service) =>
       service.login('alice', (asAlice) =>
