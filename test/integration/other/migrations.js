@@ -106,7 +106,7 @@ describe('database migrations', function() {
     count.should.equal(0); // blobs should all be purged
   }));
 
-  it('should not purge form defs (published and active drafts)', testServiceFullTrx(async (service, container) => {
+  it('should not purge certain form defs that are either published or active drafts', testServiceFullTrx(async (service, container) => {
     // 20220209-01-purge-unneeded-drafts.js
     await upToMigration('20220121-02-purge-deleted-forms.js');
     await populateUsers(container);
@@ -156,7 +156,8 @@ describe('database migrations', function() {
     await populateForms(container);
 
     // There isn't a way to get the code to make unneeded drafts anymore
-    // so we are trying to do it manually
+    // so we are trying to do it manually by taking one of the intermediate
+    // (but not current) published defs and setting its publishedAt value to null.
     await service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms/simple/draft')
         .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="2"'))
