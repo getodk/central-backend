@@ -768,6 +768,19 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body.version.should.equal('');
               })))));
 
+      it('should purge the draft when it is deleted', testService((service, { oneFirst }) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.delete('/v1/projects/1/forms/simple/draft')
+              .expect(200))
+            .then(() => oneFirst(sql`select count(*) from form_defs where "formId" = 1 and "publishedAt" is null`)
+              .then((count) => {
+                count.should.equal(0); // one for the first published version and for the new draft
+              })))));
+
       it('should conflict if there is no published version', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
