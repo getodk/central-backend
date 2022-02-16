@@ -530,7 +530,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
       it('should return encrypted form keyId', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/key')
-            .send({ passphrase: 'encryptme' })
+            .send({ passphrase: 'supersecret' })
             .expect(200)
             .then(() => asAlice.get('/v1/projects/1/forms/simple')
               .expect(200)
