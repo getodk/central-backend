@@ -86,23 +86,29 @@ describe('api: /users', () => {
     it('should hash and store passwords if provided', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users')
-          .send({ email: 'david@getodk.org', password: 'apassword' })
+          .send({ email: 'david@getodk.org', password: 'alongpassword' })
           .expect(200)
-          .then(() => service.login({ email: 'david@getodk.org', password: 'apassword' }, (asDavid) =>
+          .then(() => service.login({ email: 'david@getodk.org', password: 'alongpassword' }, (asDavid) =>
             asDavid.get('/v1/users/current').expect(200))))));
 
     it('should not accept and hash blank passwords', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users')
           .send({ email: 'david@getodk.org', password: '' })
-          .expect(200)
+          .expect(200) // treats a blank password as no password provided
           .then(() => service.login({ email: 'david@getodk.org', password: '' }, (failed) =>
             failed.get('/v1/users/current').expect(401))))));
+
+    it('should not accept a password that is too short', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'david@getodk.org', password: 'short' })
+          .expect(400))));
 
     it('should send an email to provisioned users', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users')
-          .send({ email: 'david@getodk.org', password: 'david' })
+          .send({ email: 'david@getodk.org', password: 'daviddavid' })
           .expect(200)
           .then(() => {
             const email = global.inbox.pop();
@@ -119,17 +125,30 @@ describe('api: /users', () => {
           .then(() => {
             const token = /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html)[1];
             return service.post('/v1/users/reset/verify')
-              .send({ new: 'testreset' })
+              .send({ new: 'testresetpassword' })
               .set('Authorization', 'Bearer ' + token)
               .expect(200)
-              .then(() => service.login({ email: 'david@getodk.org', password: 'testreset' }, (asDavid) =>
+              .then(() => service.login({ email: 'david@getodk.org', password: 'testresetpassword' }, (asDavid) =>
                 asDavid.get('/v1/users/current').expect(200)));
+          }))));
+
+    it('should not allow a too-short password when resetting via token', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'david@getodk.org' })
+          .expect(200)
+          .then(() => {
+            const token = /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html)[1];
+            return service.post('/v1/users/reset/verify')
+              .send({ new: 'tooshort' })
+              .set('Authorization', 'Bearer ' + token)
+              .expect(400);
           }))));
 
     it('should send a message explaining a pre-assigned password if given', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users')
-          .send({ email: 'david@getodk.org', password: 'david' })
+          .send({ email: 'david@getodk.org', password: 'daviddavid' })
           .expect(200)
           .then(() => {
             /Your account was created with an assigned password\./
@@ -154,19 +173,19 @@ describe('api: /users', () => {
             Users.getByEmail('david@getodk.org').then((o) => o.get()),
             Audits.getLatestByAction('user.create').then((o) => o.get())
           ])
-          .then(([ alice, david, log ]) => {
-            log.actorId.should.equal(alice.actor.id);
-            log.acteeId.should.equal(david.actor.acteeId);
-            log.details.data.actorId.should.be.a.Number();
-            delete log.details.data.actorId;
-            log.details.should.eql({
-              data: {
-                email: 'david@getodk.org',
-                mfaSecret: null,
-                password: null
-              }
-            });
-          })))));
+            .then(([ alice, david, log ]) => {
+              log.actorId.should.equal(alice.actor.id);
+              log.acteeId.should.equal(david.actor.acteeId);
+              log.details.data.actorId.should.be.a.Number();
+              delete log.details.data.actorId;
+              log.details.should.eql({
+                data: {
+                  email: 'david@getodk.org',
+                  mfaSecret: null,
+                  password: null
+                }
+              });
+            })))));
   });
 
   describe('/reset/initiate POST', () => {
@@ -212,10 +231,10 @@ describe('api: /users', () => {
           const token = /token=([a-z0-9!$]+)/i.exec(email.html)[1];
 
           return service.post('/v1/users/reset/verify')
-            .send({ new: 'reset!' })
+            .send({ new: 'resetthis!' })
             .set('Authorization', 'Bearer ' + token)
             .expect(200)
-            .then(() => service.login({ email: 'alice@getodk.org', password: 'reset!' }, (asAlice) =>
+            .then(() => service.login({ email: 'alice@getodk.org', password: 'resetthis!' }, (asAlice) =>
               asAlice.get('/v1/users/current').expect(200)));
         })));
 
@@ -225,7 +244,7 @@ describe('api: /users', () => {
         .expect(200)
         .then(() => /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html)[1])
         .then((token) => service.post('/v1/users/reset/verify')
-          .send({ new: 'reset!' })
+          .send({ new: 'reset the first time!' })
           .set('Authorization', 'Bearer ' + token)
           .expect(200)
           .then(() => service.post('/v1/users/reset/verify')
@@ -239,11 +258,11 @@ describe('api: /users', () => {
         .expect(200)
         .then(() => /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html)[1])
         .then((token) => service.post('/v1/users/reset/verify')
-          .send({ new: 'reset' })
+          .send({ new: 'resetpassword' })
           .set('Authorization', 'Bearer ' + token)
           .expect(200))
         .then(() => service.get('/v1/audits')
-          .auth('alice@getodk.org', 'reset') // cheap way to work around that we just changed the pw
+          .auth('alice@getodk.org', 'resetpassword') // cheap way to work around that we just changed the pw
           .set('x-forwarded-proto', 'https')
           .then(({ body }) => {
             body[0].action.should.equal('user.update');
@@ -491,6 +510,14 @@ describe('api: /users', () => {
               .send({ email: 'alice@getodk.org', password: 'newpassword' })
               .expect(200);
           }))));
+
+    it('should disallow a password that is too short (<10 chars)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current')
+          .expect(200)
+          .then(({ body }) => asAlice.put(`/v1/users/${body.id}/password`)
+            .send({ old: 'alice', new: '123456789' })
+            .expect(400))))); // 400.21
 
     it('should allow nonadministrator users to set their own password', testService((service) =>
       service.login('chelsea', (asChelsea) =>

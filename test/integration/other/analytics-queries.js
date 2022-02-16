@@ -48,7 +48,7 @@ const withSimpleIds = (deprecatedId, instanceId) => testData.instances.simple.on
 const createTestUser = (service, container, name, role, projectId, recent = true) =>
   service.login('alice', (asAlice) =>
     asAlice.post('/v1/users')
-      .send({ email: `${name}@getodk.org`, password: name })
+      .send({ email: `${name}@getodk.org`, password: `${name}slongpassword` }) // password has to be >10 chars
       .then(({ body }) => ((role === 'admin')
         ? asAlice.post(`/v1/assignments/admin/${body.id}`)
         : asAlice.post(`/v1/projects/${projectId}/assignments/${role}/${body.id}`))

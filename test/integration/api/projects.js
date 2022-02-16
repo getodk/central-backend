@@ -415,6 +415,12 @@ describe('api: /projects', () => {
           .send({ passphrase: '' })
           .expect(400))));
 
+    it('should reject if passphrase is too short', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'x' })
+          .expect(400))));
+
     it('should reject if managed encryption is already active', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
