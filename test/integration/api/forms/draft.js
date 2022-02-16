@@ -1,12 +1,10 @@
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const should = require('should');
-const config = require('config');
-const superagent = require('superagent');
-const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
+const { sql } = require('slonik');
 
 describe('api: /projects/:id/forms (drafts)', () => {
 
@@ -83,44 +81,44 @@ describe('api: /projects/:id/forms (drafts)', () => {
                     }));
               })))));
 
-    it('should worker-process the draft form over to enketo', testService((service, container) =>
-      service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms/simple/draft')
-          .expect(200)
-          .then(({ body }) => {
-            should.not.exist(body.enketoId);
-          })
-          .then(() => exhaust(container))
-          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+      it('should worker-process the draft form over to enketo', testService((service, container) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
             .expect(200)
             .then(({ body }) => {
-              body.enketoId.should.equal('::abcdefgh');
-              should.not.exist(body.enketoOnceId);
-              global.enketoReceivedUrl.startsWith(container.env.domain).should.equal(true);
-              global.enketoReceivedUrl.should.match(/\/v1\/test\/[a-z0-9$!]{64}\/projects\/1\/forms\/simple\/draft/i);
-            })))));
-
-    it('should manage draft/published enketo tokens separately', testService((service, container) =>
-      service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms?publish=true')
-          .set('Content-Type', 'application/xml')
-          .send(testData.forms.simple2)
-          .expect(200)
-          .then(() => exhaust(container))
-          .then(() => {
-            global.enketoToken = '::ijklmnop';
-            return asAlice.post('/v1/projects/1/forms/simple2/draft')
+              should.not.exist(body.enketoId);
+            })
+            .then(() => exhaust(container))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
               .expect(200)
-              .then(() => exhaust(container))
-              .then(() => Promise.all([
-                asAlice.get('/v1/projects/1/forms/simple2')
-                  .expect(200)
-                  .then(({ body }) => { body.enketoId.should.equal('::abcdefgh'); }),
-                asAlice.get('/v1/projects/1/forms/simple2/draft')
-                  .expect(200)
-                  .then(({ body }) => { body.enketoId.should.equal('::ijklmnop'); })
-              ]));
-          }))));
+              .then(({ body }) => {
+                body.enketoId.should.equal('::abcdefgh');
+                should.not.exist(body.enketoOnceId);
+                global.enketoReceivedUrl.startsWith(container.env.domain).should.equal(true);
+                global.enketoReceivedUrl.should.match(/\/v1\/test\/[a-z0-9$!]{64}\/projects\/1\/forms\/simple\/draft/i);
+              })))));
+
+      it('should manage draft/published enketo tokens separately', testService((service, container) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.simple2)
+            .expect(200)
+            .then(() => exhaust(container))
+            .then(() => {
+              global.enketoToken = '::ijklmnop';
+              return asAlice.post('/v1/projects/1/forms/simple2/draft')
+                .expect(200)
+                .then(() => exhaust(container))
+                .then(() => Promise.all([
+                  asAlice.get('/v1/projects/1/forms/simple2')
+                    .expect(200)
+                    .then(({ body }) => { body.enketoId.should.equal('::abcdefgh'); }),
+                  asAlice.get('/v1/projects/1/forms/simple2/draft')
+                    .expect(200)
+                    .then(({ body }) => { body.enketoId.should.equal('::ijklmnop'); })
+                ]));
+            }))));
 
       it('should replace the draft version', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -361,7 +359,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
             .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
               .expect(200))
             .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
-            .send(testData.forms.simple)
+              .send(testData.forms.simple)
               .set('Content-Type', 'application/xml')
               .expect(400)
               .then(({ body }) => {
@@ -526,8 +524,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                     .expect(200)
                     .then(({ body }) => {
                       body.name.should.equal('New Title');
-                    })
-                ))))));
+                    })))))));
 
         it('should not update form title with draft title when form already published', testService((service) =>
           service.login('alice', (asAlice) =>
@@ -548,8 +545,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                     .expect(200)
                     .then(({ body }) => {
                       body.name.should.equal('Simple 2');
-                    })
-                ))))));
+                    })))))));
 
         it('should not update form title from draft when form published and existing draft present', testService((service) =>
           service.login('alice', (asAlice) =>
@@ -569,7 +565,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   .then(() => asAlice.get('/v1/projects/1/forms/simple2')
                     .expect(200)
                     .then(({ body }) => {
-                          body.name.should.equal('Simple 2');
+                      body.name.should.equal('Simple 2');
                     })
                     .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
                       .send(withRenamedTitleAndVersion('An Even Newer Title', '2.3'))
@@ -608,6 +604,46 @@ describe('api: /projects/:id/forms (drafts)', () => {
                         .then(({ body }) => {
                           body.name.should.equal('New Title');
                         })))))))));
+
+        describe('purging unneeded drafts', () => {
+          it('should purge the old undeeded draft when a new version is uploaded', testService((service, { oneFirst }) =>
+            service.login('alice', (asAlice) =>
+              asAlice.post('/v1/projects/1/forms/simple/draft')
+                .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+                .set('Content-Type', 'application/xml')
+                .expect(200)
+                .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+                  .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
+                  .set('Content-Type', 'application/xml')
+                  .expect(200))
+                .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+                  .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty3"'))
+                  .set('Content-Type', 'application/xml')
+                  .expect(200))
+                .then(() => oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple'`)
+                  .then((count) => {
+                    count.should.equal(2); // one for the first published version and for the new draft
+                  })))));
+
+          it('should purge the old undeeded draft when a new version is uploaded (and no published draft)', testService((service, { oneFirst }) =>
+            service.login('alice', (asAlice) =>
+              asAlice.post('/v1/projects/1/forms')
+                .send(testData.forms.simple2)
+                .set('Content-Type', 'application/xml')
+                .expect(200)
+                .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+                  .send(testData.forms.simple2.replace('id="simple2"', 'id="simple2" version="drafty2"'))
+                  .set('Content-Type', 'application/xml')
+                  .expect(200))
+                .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+                  .send(testData.forms.simple2.replace('id="simple2"', 'id="simple2" version="drafty3"'))
+                  .set('Content-Type', 'application/xml')
+                  .expect(200))
+                .then(() => oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple2'`)
+                  .then((count) => {
+                    count.should.equal(1); // only one for the new draft
+                  })))));
+        });
       });
     });
 
@@ -663,23 +699,23 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body.lastSubmission.should.be.a.recentIsoDate();
               })))));
 
-    it('should return the correct enketoId with extended draft', testService((service, container) =>
-      service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms?publish=true')
-          .set('Content-Type', 'application/xml')
-          .send(testData.forms.simple2)
-          .expect(200)
-          .then(() => exhaust(container))
-          .then(() => {
-            global.enketoToken = '::ijklmnop';
-            return asAlice.post('/v1/projects/1/forms/simple2/draft')
-              .expect(200)
-              .then(() => exhaust(container))
-              .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft')
-                .set('X-Extended-Metadata', true)
+      it('should return the correct enketoId with extended draft', testService((service, container) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.simple2)
+            .expect(200)
+            .then(() => exhaust(container))
+            .then(() => {
+              global.enketoToken = '::ijklmnop';
+              return asAlice.post('/v1/projects/1/forms/simple2/draft')
                 .expect(200)
-                .then(({ body }) => { body.enketoId.should.equal('::ijklmnop'); }));
-          }))));
+                .then(() => exhaust(container))
+                .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft')
+                  .set('X-Extended-Metadata', true)
+                  .expect(200)
+                  .then(({ body }) => { body.enketoId.should.equal('::ijklmnop'); }));
+            }))));
 
       it('should not count nondraft submissions in its count', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -730,6 +766,19 @@ describe('api: /projects/:id/forms (drafts)', () => {
               .then(({ body }) => {
                 body.xmlFormId.should.equal('simple');
                 body.version.should.equal('');
+              })))));
+
+      it('should purge the draft when it is deleted', testService((service, { oneFirst }) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.delete('/v1/projects/1/forms/simple/draft')
+              .expect(200))
+            .then(() => oneFirst(sql`select count(*) from form_defs where "formId" = 1 and "publishedAt" is null`)
+              .then((count) => {
+                count.should.equal(0); // one for the first published version and for the new draft
               })))));
 
       it('should conflict if there is no published version', testService((service) =>

@@ -105,4 +105,82 @@ describe('database migrations', function() {
     count = await container.oneFirst(sql`select count(*) from blobs`);
     count.should.equal(0); // blobs should all be purged
   }));
+
+  it('should not purge certain form defs that are either published or active drafts', testServiceFullTrx(async (service, container) => {
+    // 20220209-01-purge-unneeded-drafts.js
+    await upToMigration('20220121-02-purge-deleted-forms.js');
+    await populateUsers(container);
+    await populateForms(container);
+
+    // Creating form defs that should still be there after the purge
+    // 1. published defs (withrepeat) (1)
+    // 2. published def and new draft of simple (2)
+    // 3. just a new draft of simple2 (1)
+    // 4. defs in a managed encryption project (3)
+    await service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms/simple/draft')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200))
+        .then(() => asAlice.post('/v1/projects')
+          .set('Content-Type', 'application/json')
+          .send({ name: 'New Encrypted Proj' })
+          .expect(200)
+          .then(({ body }) => body.id))
+        .then((newProjId) => asAlice.post(`/v1/projects/${newProjId}/forms?publish=true`)
+          .send(testData.forms.simple)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.post(`/v1/projects/${newProjId}/forms/simple/draft`)
+            .expect(200))
+          .then(() => asAlice.post(`/v1/projects/${newProjId}/key`)
+            .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+            .expect(200))));
+
+    const before = await container.oneFirst(sql`select count(*) from form_defs`);
+    before.should.equal(7);
+
+    // running migration 20220209-01-purge-unneeded-drafts.js
+    await migrator.migrate.up({ directory: appRoot + '/lib/model/migrations' });
+
+    const after = await container.oneFirst(sql`select count(*) from form_defs`);
+    after.should.equal(before); // no defs purged
+  }));
+
+  it('should purge unneeded form draft defs', testServiceFullTrx(async (service, container) => {
+    // 20220209-01-purge-unneeded-drafts.js
+    await upToMigration('20220121-02-purge-deleted-forms.js');
+    await populateUsers(container);
+    await populateForms(container);
+
+    // There isn't a way to get the code to make unneeded drafts anymore
+    // so we are trying to do it manually by taking one of the intermediate
+    // (but not current) published defs and setting its publishedAt value to null.
+    await service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms/simple/draft')
+        .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="2"'))
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish')
+          .expect(200))
+        .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+          .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="3"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish')
+            .expect(200)))
+        .then(() => container.run(sql`update form_defs set "publishedAt" = null where "formId" = 1 and "version" = '2'`)));
+
+    const before = await container.oneFirst(sql`select count(*) from form_defs`);
+    before.should.equal(4);
+
+    // running migration 20220209-01-purge-unneeded-drafts.js
+    await migrator.migrate.up({ directory: appRoot + '/lib/model/migrations' });
+
+    const after = await container.oneFirst(sql`select count(*) from form_defs`);
+    after.should.equal(before - 1); // one purged
+  }));
+
 });
