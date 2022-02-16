@@ -8,7 +8,7 @@ const { User } = require(appRoot + '/lib/model/frames');
 describe('task: accounts', () => {
   describe('createUser', () => {
     it('should create a user account', testTask(({ Users }) =>
-      createUser('testuser@getodk.org', 'aoeu')
+      createUser('testuser@getodk.org', 'aoeuidhtns')
         .then((result) => {
           result.email.should.equal('testuser@getodk.org');
           return Users.getByEmail('testuser@getodk.org')
@@ -16,7 +16,7 @@ describe('task: accounts', () => {
         })));
 
     it('should log an audit entry', testTask(({ Audits, Users }) =>
-      createUser('testuser@getodk.org', 'aoeu')
+      createUser('testuser@getodk.org', 'aoeuidhtns')
         .then((result) => Promise.all([
           Users.getByEmail('testuser@getodk.org').then((o) => o.get()),
           Audits.getLatestByAction('user.create').then((o) => o.get())
@@ -28,11 +28,16 @@ describe('task: accounts', () => {
         })));
 
     it('should set the password if given', testTask(({ Users, bcrypt }) =>
-      createUser('testuser@getodk.org', 'aoeu')
+      createUser('testuser@getodk.org', 'aoeuidhtns')
         .then(() => Users.getByEmail('testuser@getodk.org'))
         .then(getOrNotFound)
-        .then((user) => bcrypt.verify('aoeu', user.password))
+        .then((user) => bcrypt.verify('aoeuidhtns', user.password))
         .then((verified) => verified.should.equal(true))));
+
+
+    it('should complain if the password is too short', testTask(({ Users, bcrypt }) =>
+      createUser('testuser@getodk.org', 'short')
+        .catch((problem) => problem.problemCode.should.equal(400.21))));
   });
 
   describe('promoteUser', () => {
@@ -67,23 +72,28 @@ describe('task: accounts', () => {
   describe('setUserPassword', () => {
     it('should set a user password', testTask(({ Users, bcrypt }) =>
       Users.create(User.fromApi({ email: 'testuser@getodk.org', displayName: 'test user' }))
-        .then(() => setUserPassword('testuser@getodk.org', 'aoeu'))
+        .then(() => setUserPassword('testuser@getodk.org', 'aoeuidhtns'))
         .then(() => Users.getByEmail('testuser@getodk.org'))
         .then(getOrNotFound)
-        .then((user) => bcrypt.verify('aoeu', user.password))
+        .then((user) => bcrypt.verify('aoeuidhtns', user.password))
         .then((verified) => verified.should.equal(true))));
+
+    it('should complain about a password that is too short', testTask(({ Users, bcrypt }) =>
+      Users.create(User.fromApi({ email: 'testuser@getodk.org', displayName: 'test user' }))
+        .then(() => setUserPassword('testuser@getodk.org', 'aoeu'))
+        .catch((problem) => problem.problemCode.should.equal(400.21))));
 
     it('should log an audit entry', testTask(({ Audits, Users }) =>
       Users.create(User.fromApi({ email: 'testuser@getodk.org', displayName: 'test user' }))
-        .then(() => setUserPassword('testuser@getodk.org', 'aoeu'))
+        .then(() => setUserPassword('testuser@getodk.org', 'aoeuidhtns'))
         .then(() => Promise.all([
           Audits.getLatestByAction('user.update').then((o) => o.get()),
           Users.getByEmail('testuser@getodk.org').then((o) => o.get())
         ])
-        .then(([ log, user ]) => {
-          log.acteeId.should.equal(user.actor.acteeId);
-          log.details.data.should.eql({ password: true });
-        }))));
+          .then(([ log, user ]) => {
+            log.acteeId.should.equal(user.actor.acteeId);
+            log.details.data.should.eql({ password: true });
+          }))));
   });
 });
 
