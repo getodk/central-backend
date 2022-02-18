@@ -1606,7 +1606,7 @@ describe('api: /forms/:id/submissions', () => {
                 headers['content-disposition'].should.equal('attachment; filename="binaryType.csv.zip"; filename*=UTF-8\'\'binaryType.csv.zip');
               })))));
 
-    it('should omit group paths ?omitGroupPaths=true is given', testService((service) =>
+    it('should omit group paths if ?groupPaths=false is given', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
@@ -2101,6 +2101,15 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
                 .should.equal(',a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0,');
             })))));
+
+    it('should omit group paths if ?groupPaths=false is given', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/simple/submissions.csv?groupPaths=false')
+          .expect(200)
+          .then(({ text }) => {
+            const lines = text.split('\n');
+            lines[0].should.equal('SubmissionDate,instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+          }))));
 
     it('should log the action in the audit log', testService((service) =>
       service.login('alice', (asAlice) =>
