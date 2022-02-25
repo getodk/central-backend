@@ -38,14 +38,14 @@ ODK Central v1.4 enables additional CSV export options and creates an API-manage
 
 **Added**:
 
-* New `?groupPaths` and `?splitSelectMultiple` options on [CSV export paths](/reference/submissions/submissions/exporting-form-submissions-to-csv) which aim to replicate ODK Briefcase export behavior. One simplifies nested path names and the other breaks select multiple options out into multiple columns.
+* New `?groupPaths` and `?splitSelectMultiples` options on [CSV export paths](/reference/submissions/submissions/exporting-form-submissions-to-csv) which aim to replicate ODK Briefcase export behavior. One simplifies nested path names and the other breaks select multiple options out into multiple columns.
 * New `?deletedFields` option on [CSV export](/reference/submissions/submissions/exporting-form-submissions-to-csv) which exports all previously known and deleted fields and data on the form.
 * Deleted Forms (either by API `DELETE` or through the web interface) are now placed in a 30 day hold, after which an automated process will permanently delete all data related to the Form.
   * You can see Forms in the 30 day wait by [listing Forms with `?deleted=true`](/reference/forms/forms/list-all-forms). You can also see them in the Trash section on the web interface.
   * `POST /projects/…/forms/…/restore` to restore a Form that hasn't yet been permanently purged.
 * Additional metadata field 'formVersion' on [CSV export](/reference/submissions/submissions/exporting-form-submissions-to-csv), [OData feed](/reference/odata-endpoints/odata-form-service/data-document), and [extended Submission Version request](/reference/submissions/submission-versions/listing-versions) which reports the version of the Form the Submission was _originally_ created with.
-* Additional metadata fields `userAgent` and `deviceId` tracked and returned for each [Submission](/reference/submissions/submission-versions/listing-versions).
-  * These are collected automatically upon submission through transmitted client metadata information, similar to the existing `deviceId` field returned with Forms.
+* Additional metadata fields `userAgent` and `deviceId` tracked and returned for each [Submission Version](/reference/submissions/submission-versions/listing-versions).
+  * These are collected automatically upon submission through transmitted client metadata information, similar to the existing `deviceId` field returned with each Submission.
 
 ### ODK Central v1.3
 
@@ -1936,8 +1936,6 @@ Once created (which, like with Forms, is done by way of their XML data rather th
 ### Listing all Submissions on a Form [GET]
 
 Currently, there are no paging or filtering options, so listing `Submission`s will get you every Submission in the system, every time.
-
-As of version 1.4, a `deviceId` and `userAgent` will also be returned with each submission. The client device may transmit these extra metadata when the data is submitted. If it does, those fields will be recognized and returned here for reference. Here, only the initial `deviceId` and `userAgent` will be reported. If you wish to see these metadata for any submission edits, including the most recent edit, you will need to [list the versions](/reference/submissions/submission-versions/listing-versions).
 
 This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to return a `submitter` data object alongside the `submitterId` Actor ID reference.
 
@@ -4080,14 +4078,14 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + instanceName: `village third house` (string, optional) - The `instanceName`, if any, given by the Submission XML in the metadata section.
 + submitterId: `23` (number, required) - The ID of the `Actor` (`App User`, `User`, or `Public Link`) that submitted this `Submission`.
 + deviceId: `imei:123456` (string, optional) - The self-identified `deviceId` of the device that collected the data, sent by it upon submission to the server. On overall ("logical") submission requests, the initial submission `deviceId` will be returned here. For specific version listings of a submission, the value associated with the submission of that particular version will be given.
-+ userAgent: `Enketo/3.0.4` (string, optional) - The self-identified `userAgent` of the device that collected the data, sent by it upon submission to the server. On overall ("logical") submission requests, the initial submission `deviceId` will be returned here. For specific version listings of a submission, the value associated with the submission of that particular version will be given.
++ userAgent: `Enketo/3.0.4` (string, optional) - The self-identified `userAgent` of the device that collected the data, sent by it upon submission to the server.
 + reviewState: `approved` (Submission Review State, optional) - The current review state of the submission.
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format. The time that the server received the Submission.
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format. `null` when the Submission is first created, then updated when the Submission's XML data or metadata is updated.
 
 ## Extended Submission (Submission)
 + submitter (Actor, required) - The full details of the `Actor` that submitted this `Submission`.
-+ formVersion: `1.0` (string, optional) - The version of the form the submission was initially created against.
++ formVersion: `1.0` (string, optional) - The version of the form the submission was initially created against. Only returned with specific Submission Version requests.
 
 ## Submission Attachment (object)
 + name: `myfile.mp3` (string, required) - The name of the file as specified in the Submission XML.
