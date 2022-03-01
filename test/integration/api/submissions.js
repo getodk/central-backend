@@ -2235,6 +2235,18 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 done();
               })))))));
 
+    it('should not log the action in the audit log', testService((service) =>
+      service.login('alice', (asAlice) =>
+         asAlice.post('/v1/projects/1/forms/simple/draft')
+           .expect(200)
+           .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip')
+             .expect(200))
+           .then(() => asAlice.get('/v1/audits?action=form.submission.export')
+             .expect(200)
+             .then(({ body }) => {
+               body.length.should.equal(0);
+             })))));
+
     it('should split select multiple values submitted over /test/ if ?splitSelectMultiples=true', testService((service, container) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
