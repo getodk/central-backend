@@ -1104,7 +1104,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 _(introduced: Version 1.4)_
 
-This endpoint returns a list of the current soft-deleted Forms that appear in the Trash section. In addition to the normal `Form` values, each Form will also included when it was deleted (`deletedAt`) and its numeric ID (`id`) that can be used to restore the Form.
+This endpoint returns a list of the current soft-deleted Forms that appear in the Trash section. In addition to the normal `Form` values, each Form will also include when it was deleted (`deletedAt`) and its numeric ID (`id`) that can be used to restore the Form.
 
 Like the standard Form List endpoint, this endpoint also supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that each Form has and the `lastSubmission` most recent submission timestamp, as well as the Actor the Form was `createdBy`.
 
@@ -1346,7 +1346,7 @@ We use `PATCH` rather than `PUT` to represent the update operation, so that you 
 
 #### Deleting a Form [DELETE]
 
-When a Form is deleted, it goes into Trash section, but it can now be restored from the Trash. After 30 days in the Trash, the Form and all of its resources and submissions will be automatically purged. If your goal is to prevent it from showing up on survey clients like ODK Collect, consider setting its `state` to `closing` or `closed` instead (see [Modifying a Form](/reference/forms/individual-form/modifying-a-form) just above for more details).
+When a Form is deleted, it goes into the Trash section, but it can now be restored from the Trash. After 30 days in the Trash, the Form and all of its resources and submissions will be automatically purged. If your goal is to prevent it from showing up on survey clients like ODK Collect, consider setting its `state` to `closing` or `closed` instead (see [Modifying a Form](/reference/forms/individual-form/modifying-a-form) just above for more details).
 
 + Response 200 (application/json)
     + Attributes (Success)
@@ -3809,6 +3809,8 @@ Server Audit Logs entries are created for the following `action`s:
 * `form.attachment.update` when a Form Attachment binary is set or cleared.
 * `form.submissions.export` when a Form's Submissions are exported to CSV.
 * `form.delete` when a Form is deleted.
+* `form.restore` when a Form that was deleted is restored.
+* `form.purge` when a Form is permanently purged.
 * `field_key.create` when a new App User is created.
 * `field_key.assignment.create` when an App User is assigned to a Server Role.
 * `field_key.assignment.delete` when an App User is unassigned from a Server Role.
@@ -3992,7 +3994,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 
 ## Deleted Form (Form)
 + deletedAt: `2018-03-21T12:45:02.312Z` (string, required) - ISO date format
-+ id: `42` (number, required) - Numeric ID as it is represented in the database.
++ id: `42` (number, required) - Numeric ID that distinguishes the Form from other Forms in the Project with the same xmlFormId. This ID can be used to restore the Form.
 
 ## Extended Form (Form)
 + submissions: `10` (number, required) - The number of `Submission`s that have been submitted to this `Form`.
