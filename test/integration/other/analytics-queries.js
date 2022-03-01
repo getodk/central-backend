@@ -414,7 +414,7 @@ describe('analytics task queries', () => {
       emptyRes.should.eql([]);
 
       // one purged form reused
-      await container.Forms.purge(force=true);
+      await container.Forms.purge(true);
       await createTestForm(service, container, testData.forms.simple, 1);
 
       // one deleted unpublished form reused (in the same project)
@@ -430,8 +430,8 @@ describe('analytics task queries', () => {
       // delete multiple times (only count 1 active form with reused id)
       const proj2 = await createTestProject(service, container, 'New Proj');
       await service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
-          .send(testData.forms.simple1)
+        asAlice.post(`/v1/projects/${proj2}/forms`)
+          .send(testData.forms.simple)
           .set('Content-Type', 'application/xml')
           .then(() => asAlice.delete(`/v1/projects/${proj2}/forms/simple`))
           .then(() => asAlice.post(`/v1/projects/${proj2}/forms?publish=true`)
