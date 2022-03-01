@@ -3891,6 +3891,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + id: `115` (number, required)
 + type: (Actor Type, required) - the Type of this Actor; typically this will be `user`.
 + updatedAt: `2018-04-18T23:42:11.406Z` (string, optional) - ISO date format
++ deletedAt: `2018-04-18T23:42:11.406Z` (string, optional) - ISO date format
 
 ## Actor Type (enum)
 + user (string) - A User with an email and login password.
