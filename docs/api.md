@@ -32,6 +32,21 @@ Finally, **system information and configuration** is available via a set of spec
 
 Here major and breaking changes to the API are listed by version.
 
+### ODK Central v1.4
+
+ODK Central v1.4 enables additional CSV export options and creates an API-manageable 30 day permanent purge system for deleted Forms. Previously, deleted Forms were made inaccessible but the data was not purged from the database.
+
+**Added**:
+
+* New `?groupPaths` and `?splitSelectMultiples` options on [CSV export paths](/reference/submissions/submissions/exporting-form-submissions-to-csv) which aim to replicate ODK Briefcase export behavior. One simplifies nested path names and the other breaks select multiple options out into multiple columns.
+* New `?deletedFields` option on [CSV export](/reference/submissions/submissions/exporting-form-submissions-to-csv) which exports all previously known and deleted fields and data on the form.
+* Deleted Forms (either by API `DELETE` or through the web interface) are now placed in a 30 day hold, after which an automated process will permanently delete all data related to the Form.
+  * You can see Forms in the 30 day wait by [listing Forms with `?deleted=true`](/reference/forms/forms/list-all-forms). You can also see them in the Trash section on the web interface.
+  * `POST /projects/…/forms/…/restore` to restore a Form that hasn't yet been permanently purged.
+* Additional metadata field 'formVersion' on [CSV export](/reference/submissions/submissions/exporting-form-submissions-to-csv), [OData feed](/reference/odata-endpoints/odata-form-service/data-document), and [extended Submission Version request](/reference/submissions/submission-versions/listing-versions) which reports the version of the Form the Submission was _originally_ created with.
+* Additional metadata fields `userAgent` and `deviceId` tracked and returned for each [Submission Version](/reference/submissions/submission-versions/listing-versions).
+  * These are collected automatically upon submission through transmitted client metadata information, similar to the existing `deviceId` field returned with each Submission.
+
 ### ODK Central v1.3
 
 ODK Central v1.3 adds granular Submission edit history, as well as opt-in usage reporting to the Central team.
@@ -923,7 +938,7 @@ Enabling managed encryption will modify all unencrypted forms in the project, an
 
 ### Deleting a Project [DELETE /v1/projects/{id}]
 
-Deleting a Project will remove it from the management interface and make it permanently inaccessible. Do not do this unless you are certain you will never need any of its data again.
+Deleting a Project will remove it from the management interface and make it permanently inaccessible. Do not do this unless you are certain you will never need any of its data again. For now, deleting a Project will not purge its Forms. (We will change that in a future release.)
 
 + Parameters
     + id: `16` (number, required) - The numeric ID of the Project
@@ -1081,6 +1096,27 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
     This is the Extended Metadata response, if requested via the appropriate header:
 
     + Attributes (array[Extended Form])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### List all deleted Forms [GET /v1/projects/{projectId}/forms?deleted=true]
+
+_(introduced: Version 1.4)_
+
+This endpoint returns a list of the current soft-deleted Forms that appear in the Trash section. In addition to the normal `Form` values, each Form will also include when it was deleted (`deletedAt`) and its numeric ID (`id`) that can be used to restore the Form.
+
+Like the standard Form List endpoint, this endpoint also supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that each Form has and the `lastSubmission` most recent submission timestamp, as well as the Actor the Form was `createdBy`.
+
++ Response 200 (application/json)
+    This is the standard response, if Extended Metadata is not requested:
+
+    + Attributes (array[Deleted Form])
+
++ Response 200 (application/json; extended)
+    This is the Extended Metadata response, if requested via the appropriate header:
+
+    + Attributes (array[Extended Deleted Form])
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -1310,7 +1346,19 @@ We use `PATCH` rather than `PUT` to represent the update operation, so that you 
 
 #### Deleting a Form [DELETE]
 
-Only `DELETE` a `Form` if you are sure you will never need it again. If your goal is to prevent it from showing up on survey clients like ODK Collect, consider setting its `state` to `closing` or `closed` instead (see [Modifying a Form](/reference/forms/individual-form/modifying-a-form) just above for more details).
+When a Form is deleted, it goes into the Trash section, but it can now be restored from the Trash. After 30 days in the Trash, the Form and all of its resources and submissions will be automatically purged. If your goal is to prevent it from showing up on survey clients like ODK Collect, consider setting its `state` to `closing` or `closed` instead (see [Modifying a Form](/reference/forms/individual-form/modifying-a-form) just above for more details).
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Restoring a Form [POST /v1/projects/{projectId}/forms/{id}/restore]
+
+_(introduced: version 1.4)_
+
+Deleted forms can now be restored (as long as they have been in the Trash less than 30 days and have not been purged). However, a deleted Form with the same `xmlFormId` as an active Form cannot be restored while that other Form is active. This `/restore` URL uses the numeric ID of the Form (now returned by the `/forms` endpoint) rather than the `xmlFormId` to unambigously restore.
 
 + Response 200 (application/json)
     + Attributes (Success)
@@ -1908,6 +1956,8 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 Like how `Form`s are addressed by their XML `formId`, individual `Submission`s are addressed in the URL by their `instanceId`.
 
+As of version 1.4, a `deviceId` and `userAgent` will also be returned with each submission. The client device may transmit these extra metadata when the data is submitted. If it does, those fields will be recognized and returned here for reference. Here, only the initial `deviceId` and `userAgent` will be reported. If you wish to see these metadata for any submission edits, including the most recent edit, you will need to [list the versions](/reference/submissions/submission-versions/listing-versions).
+
 This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to return a `submitter` data object alongside the `submitterId` Actor ID reference.
 
 + Parameters
@@ -2055,7 +2105,7 @@ This endpoint is intended for use by the Central administration frontend and wil
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Exporting Form Submissions to CSV [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip{?media,%24filter}]
+### Exporting Form Submissions to CSV [GET /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip{?attachments,%24filter,groupPaths,deletedFields,splitSelectMultiples}]
 
 To export all the `Submission` data associated with a `Form`, just add `.csv.zip` to the end of the listing URL. The response will be a ZIP file containing one or more CSV files, as well as all multimedia attachments associated with the included Submissions.
 
@@ -2073,6 +2123,9 @@ You can use an [OData-style `$filter` query](/reference/odata-endpoints/odata-fo
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
     + attachments: `true` (boolean, optional) - Set to false to exclude media attachments from the export.
     + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + groupPaths: `true` (boolean, optional) - Set to false to remove group path prefixes from field header names (eg `instanceID` instead of `meta-instanceID`). This behavior mimics a similar behavior in ODK Briefcase.
+    + deletedFields: `false` (boolean, optional) - Set to true to restore all fields previously deleted from this form for this export. All known fields and data for those fields will be merged and exported.
+    + splitSelectMultiples: `false` (boolean, optional) - Set to true to create a boolean column for every known select multiple option in the export. The option name is in the field header, and a `0` or a `1` will be present in each cell indicating whether that option was checked for that row. This behavior mimics a similar behavior in ODK Briefcase.
 
 + Response 200
     + Headers
@@ -2089,7 +2142,7 @@ You can use an [OData-style `$filter` query](/reference/odata-endpoints/odata-fo
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Exporting Form Submissions to CSV via POST [POST /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip{?media,%24filter}]
+### Exporting Form Submissions to CSV via POST [POST /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip{?attachments,%24filter,groupPaths,deletedFields,splitSelectMultiples}]
 
 This non-REST-compliant endpoint is provided for use with [Project Managed Encryption](/reference/encryption). In every respect, it behaves identically to the `GET` endpoint described in the previous section, except that it works over `POST`. This is necessary because for browser-based applications, it is a dangerous idea to simply link the user to `/submissions.csv.zip?2=supersecretpassphrase` because the browser will remember this route in its history and thus the passphrase will become exposed. This is especially dangerous as there are techniques for quickly learning browser-visited URLs of any arbitrary domain.
 
@@ -2101,6 +2154,9 @@ And so, for this `POST` version of the Submission CSV export endpoint, the passp
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
     + attachments: `true` (boolean, optional) - Set to false to exclude media attachments from the export.
     + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + groupPaths: `true` (boolean, optional) - Set to false to remove group path prefixes from field header names (eg `instanceID` instead of `meta-instanceID`). This behavior mimics a similar behavior in ODK Briefcase.
+    + deletedFields: `false` (boolean, optional) - Set to true to restore all fields previously deleted from this form for this export. All known fields and data for those fields will be merged and exported.
+    + splitSelectMultiples: `false` (boolean, optional) - Set to true to create a boolean column for every known select multiple option in the export. The option name is in the field header, and a `0` or a `1` will be present in each cell indicating whether that option was checked for that row. This behavior mimics a similar behavior in ODK Briefcase.
 
 + Response 200
     + Headers
@@ -2355,6 +2411,8 @@ The `instanceId` that is submitted with the initial version of the submission is
 
 So if you submit a submission with `<orx:instanceID>one</orx:instanceID>` and then update it, deprecating `one` for version `two`, then the full route for version `one` is `/v1/projects/…/forms/…/submissions/one/versions/one`, and for `two` it is `/v1/projects/…/forms/…/submissions/one/versions/two`.
 
+As of version 1.4, a `deviceId` and `userAgent` will also be returned with each submission. For each submission of a version, the submitting client device may transmit these extra metadata. If it does, those fields will be recognized and returned here for reference.
+
 + Parameters
     + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, optional) - The `instanceId` of the initially submitted version. Please see the notes at the top of this documentation section for more information.
 
@@ -2474,31 +2532,31 @@ This returns the changes, or edits, between different versions of a Submission. 
 
     + Body
 
-      {
-        "two": [
-          {
-            "new": "Donna",
-            "old": "Dana",
-            "path": ["name"]
-          },
-          {
-            "new": "55",
-            "old": "44",
-            "path": ["age"]
-          },
-          {
-            "new": "two",
-            "old": "one",
-            "path": ["meta", "instanceID"]
-          },
-          {
-            "new": "one",
-            "old": null,
-            "path": ["meta", "deprecatedID"]
-            ]
-          }
-        ]
-      }
+            {
+              "two": [
+                {
+                  "new": "Donna",
+                  "old": "Dana",
+                  "path": ["name"]
+                },
+                {
+                  "new": "55",
+                  "old": "44",
+                  "path": ["age"]
+                },
+                {
+                  "new": "two",
+                  "old": "one",
+                  "path": ["meta", "instanceID"]
+                },
+                {
+                  "new": "one",
+                  "old": null,
+                  "path": ["meta", "deprecatedID"]
+                  ]
+                }
+              ]
+            }
 
 
 + Response 403 (application/json)
@@ -3698,6 +3756,7 @@ An Administrator can use this endpoint to preview the metrics being sent. The pr
 
 + Response 200 (application/json)
     + Body
+
             {
               "system":{
                 "num_admins":{
@@ -3750,6 +3809,8 @@ Server Audit Logs entries are created for the following `action`s:
 * `form.attachment.update` when a Form Attachment binary is set or cleared.
 * `form.submissions.export` when a Form's Submissions are exported to CSV.
 * `form.delete` when a Form is deleted.
+* `form.restore` when a Form that was deleted is restored.
+* `form.purge` when a Form is permanently purged.
 * `field_key.create` when a new App User is created.
 * `field_key.assignment.create` when an App User is assigned to a Server Role.
 * `field_key.assignment.delete` when an App User is unassigned from a Server Role.
@@ -3830,6 +3891,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + id: `115` (number, required)
 + type: (Actor Type, required) - the Type of this Actor; typically this will be `user`.
 + updatedAt: `2018-04-18T23:42:11.406Z` (string, optional) - ISO date format
++ deletedAt: `2018-04-18T23:42:11.406Z` (string, optional) - ISO date format
 
 ## Actor Type (enum)
 + user (string) - A User with an email and login password.
@@ -3931,11 +3993,19 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format
 
+## Deleted Form (Form)
++ deletedAt: `2018-03-21T12:45:02.312Z` (string, required) - ISO date format
++ id: `42` (number, required) - Numeric ID that distinguishes the Form from other Forms in the Project with the same xmlFormId. This ID can be used to restore the Form.
+
 ## Extended Form (Form)
 + submissions: `10` (number, required) - The number of `Submission`s that have been submitted to this `Form`.
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission, if any.
 + createdBy: (Actor, optional) - The full information of the Actor who created this Form.
 + excelContentType: (string, optional) - If the Form was created by uploading an Excel file, this field contains the MIME type of that file.
+
+## Extended Deleted Form (Extended Form)
++ deletedAt: `2018-03-21T12:45:02.312Z` (string, required) - ISO date format
++ id: `42` (number, required) - Numeric ID as it is represented in the database.
 
 ## Draft Form (Form)
 + draftToken: `lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7` (string, required) - The test token to use to submit to this draft form. See [Draft Testing Endpoints](/reference/submissions/draft-submissions).
@@ -4010,13 +4080,15 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the `Submission`, given by the Submission XML.
 + instanceName: `village third house` (string, optional) - The `instanceName`, if any, given by the Submission XML in the metadata section.
 + submitterId: `23` (number, required) - The ID of the `Actor` (`App User`, `User`, or `Public Link`) that submitted this `Submission`.
-+ deviceId: `imei:123456` (string, optional) - The self-identified `deviceId` of the device that collected the data, sent by it upon submission to the server.
++ deviceId: `imei:123456` (string, optional) - The self-identified `deviceId` of the device that collected the data, sent by it upon submission to the server. On overall ("logical") submission requests, the initial submission `deviceId` will be returned here. For specific version listings of a submission, the value associated with the submission of that particular version will be given.
++ userAgent: `Enketo/3.0.4` (string, optional) - The self-identified `userAgent` of the device that collected the data, sent by it upon submission to the server.
 + reviewState: `approved` (Submission Review State, optional) - The current review state of the submission.
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format. The time that the server received the Submission.
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format. `null` when the Submission is first created, then updated when the Submission's XML data or metadata is updated.
 
 ## Extended Submission (Submission)
 + submitter (Actor, required) - The full details of the `Actor` that submitted this `Submission`.
++ formVersion: `1.0` (string, optional) - The version of the form the submission was initially created against. Only returned with specific Submission Version requests.
 
 ## Submission Attachment (object)
 + name: `myfile.mp3` (string, required) - The name of the file as specified in the Submission XML.
