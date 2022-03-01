@@ -2237,15 +2237,44 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     it('should not log the action in the audit log', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms/simple/draft')
-          .expect(200)
-          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip')
-            .expect(200))
-          .then(() => asAlice.get('/v1/audits?action=form.submission.export')
+         asAlice.post('/v1/projects/1/forms/simple/draft')
+           .expect(200)
+           .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip')
+             .expect(200))
+           .then(() => asAlice.get('/v1/audits?action=form.submission.export')
+             .expect(200)
+             .then(({ body }) => {
+               body.length.should.equal(0);
+             })))));
+
+    it('should split select multiple values submitted over /test/ if ?splitSelectMultiples=true', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.selectMultiple)
+          .then(() => asAlice.get('/v1/projects/1/forms/selectMultiple/draft')
             .expect(200)
-            .then(({ body }) => {
-              body.length.should.equal(0);
-            })))));
+            .then(({ body }) => body.draftToken)
+            .then((token) => service.post(`/v1/test/${token}/projects/1/forms/selectMultiple/draft/submission`)
+              .set('Content-Type', 'application/xml')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.selectMultiple.one), { filename: 'data.xml' })
+              .then(() => service.post(`/v1/test/${token}/projects/1/forms/selectMultiple/draft/submission`)
+                .set('Content-Type', 'application/xml')
+                .set('X-OpenRosa-Version', '1.0')
+                .attach('xml_submission_file', Buffer.from(testData.instances.selectMultiple.two), { filename: 'data.xml' }))))
+          .then(() => exhaust(container))
+          .then(() => new Promise((done) =>
+            zipStreamToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/draft/submissions.csv.zip?splitSelectMultiples=true'), (result) => {
+              result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
+              const lines = result['selectMultiple.csv'].split('\n');
+              lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+              lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                .should.equal(',b,0,1,m x,1,1,0,0,two,,,0,0,,,,0,');
+              lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                .should.equal(',a b,1,1,x y z,0,1,1,1,one,,,0,0,,,,0,');
+              done();
+            }))))));
   });
 
   describe('GET', () => {
