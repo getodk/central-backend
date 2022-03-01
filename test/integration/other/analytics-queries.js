@@ -103,7 +103,7 @@ describe('analytics task queries', () => {
       // old audit
       await container.run(sql`insert into audits ("actorId", action, "acteeId", details, "loggedAt")
         values (null, 'dummy.action', null, null, '1999-1-1')`);
-      res = await container.Analytics.auditLogs();
+      const res = await container.Analytics.auditLogs();
       res.recent.should.equal(2);
       res.total.should.equal(3);
     }));
@@ -143,6 +143,50 @@ describe('analytics task queries', () => {
       const res = await Analytics.biggestForm();
       // fixture form withrepeats has 4 questions plus meta/instanceID, which is included in this count
       res.should.equal(5);
+    }));
+
+    it('should count the number of unique roles across projects', testService(async (service, container) => {
+      // managers, viewers, data collectors
+      // bob is a manager on original project 1
+      // dana is a viewer on proj 1 and proj 2 (only gets counted once)
+      // emmy is a data collector on proj 2 and a viewer on proj 3
+      //  (gets counted once for each role)
+
+      const proj2 = await createTestProject(service, container, 'An extra project');
+      const proj3 = await createTestProject(service, container, 'Another extra project');
+
+      await service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'dana@getodk.org' })
+          .then(({ body }) =>
+            asAlice.post(`/v1/projects/1/assignments/viewer/${body.id}`)
+              .expect(200)
+              .then(() => asAlice.post(`/v1/projects/${proj2}/assignments/viewer/${body.id}`)
+                .expect(200)))
+          .then(() => asAlice.post('/v1/users')
+            .send({ email: 'emmy@getodk.org' })
+            .then(({ body }) =>
+              asAlice.post(`/v1/projects/${proj2}/assignments/formfill/${body.id}`)
+                .expect(200)
+                .then(() => asAlice.post(`/v1/projects/${proj3}/assignments/viewer/${body.id}`)
+                  .expect(200)))));
+
+      const managers = await container.Analytics.countUniqueManagers();
+      const viewers = await container.Analytics.countUniqueViewers();
+      const collectors = await container.Analytics.countUniqueDataCollectors();
+      managers.should.equal(1);
+      viewers.should.equal(2);
+      collectors.should.equal(1);
+    }));
+
+    it('should count the number archived projects', testService(async (service, { Analytics }) => {
+      await service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1')
+          .set('Content-Type', 'application/json')
+          .send({ archived: true })
+          .expect(200));
+      const res = await Analytics.archivedProjects();
+      res.num_archived_projects.should.equal(1);
     }));
 
     it('should get the database size', testContainer(async ({ Analytics }) => {
@@ -358,6 +402,51 @@ describe('analytics task queries', () => {
       projects['1'].recent.should.equal(0);
       projects[projId].total.should.equal(1);
       projects[projId].recent.should.equal(0);
+    }));
+
+    it('should calculate number of forms reusing ids of deleted forms', testService(async (service, container) => {
+      await service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/simple')
+          .expect(200));
+
+      // no deleted forms reused yet
+      const emptyRes = await container.Analytics.countReusedFormIds();
+      emptyRes.should.eql([]);
+
+      // one purged form reused
+      await container.Forms.purge(true);
+      await createTestForm(service, container, testData.forms.simple, 1);
+
+      // one deleted unpublished form reused (in the same project)
+      await service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .then(() => asAlice.delete('/v1/projects/1/forms/simple2'))
+          .then(() => asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simple2)
+            .set('Content-Type', 'application/xml')));
+
+      // delete multiple times (only count 1 active form with reused id)
+      const proj2 = await createTestProject(service, container, 'New Proj');
+      await service.login('alice', (asAlice) =>
+        asAlice.post(`/v1/projects/${proj2}/forms`)
+          .send(testData.forms.simple)
+          .set('Content-Type', 'application/xml')
+          .then(() => asAlice.delete(`/v1/projects/${proj2}/forms/simple`))
+          .then(() => asAlice.post(`/v1/projects/${proj2}/forms?publish=true`)
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="two"'))
+            .set('Content-Type', 'application/xml'))
+          .then(() => asAlice.delete(`/v1/projects/${proj2}/forms/simple`))
+          .then(() => asAlice.post(`/v1/projects/${proj2}/forms?publish=true`)
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="three"'))
+            .set('Content-Type', 'application/xml')));
+
+      const res = await container.Analytics.countReusedFormIds();
+      res.should.eql([
+        { projectId: 1, total: 2 },
+        { projectId: proj2, total: 1 }
+      ]);
     }));
   });
 
@@ -586,15 +675,28 @@ describe('analytics task queries', () => {
         asAlice.post(`/v1/projects/1/key`)
           .send({ passphrase: 'supersecret', hint: 'it is a secret' }));
 
+      // creating and archiving a project
+      await service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects')
+          .set('Content-Type', 'application/json')
+          .send({ name: 'New Project' })
+          .expect(200)
+          .then(({ body }) => asAlice.patch(`/v1/projects/${body.id}`)
+            .set('Content-Type', 'application/json')
+            .send({ archived: true })
+            .expect(200)));
+
+      // creating more roles
+      await createTestUser(service, container, 'Viewer1', 'viewer', 1);
+      await createTestUser(service, container, 'Collector1', 'formfill', 1);
+
       const res = await container.Analytics.previewMetrics();
 
       // everything in system filled in
-      res.system.num_admins.total.should.equal(1);
-      res.system.num_projects_encryption.total.should.equal(1);
-      res.system.num_questions_biggest_form.should.equal(5);
-      res.system.num_audit_log_entries.total.should.be.above(0);
-      res.system.backups_configured.should.equal(1);
-      res.system.database_size.should.be.above(0);
+      Object.values(res.system).forEach((metric) =>
+        (metric.total
+          ? metric.total.should.be.above(0)
+          : metric.should.be.above(0)));
     }));
 
     it('should fill in all project.users queries', testService(async (service, container) => {
@@ -638,10 +740,23 @@ describe('analytics task queries', () => {
           .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
           .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' }));
 
+      // deleted and reused form id
+      await service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .then(() => asAlice.delete('/v1/projects/1/forms/simple2'))
+          .then(() => asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simple2)
+            .set('Content-Type', 'application/xml')));
+
       const res = await container.Analytics.previewMetrics();
 
       // check everything is non-zero
-      Object.values(res.projects[0].forms).forEach((metric) => metric.total.should.be.above(0));
+      Object.values(res.projects[0].forms).forEach((metric) =>
+        (metric.total
+          ? metric.total.should.be.above(0)
+          : metric.should.be.above(0)));
     }));
 
     it('should fill in all project.submissions queries', testService(async (service, container) => {
