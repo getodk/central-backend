@@ -7,9 +7,12 @@ node_modules:
 migrations: node_modules
 	node -e 'const { withDatabase, migrate } = require("./lib/model/migrate"); withDatabase(require("config").get("default.database"))(migrate);'
 
+check-migrations: node_modules
+	node -e 'const { withDatabase, checkMigrations } = require("./lib/model/migrate"); withDatabase(require("config").get("default.database"))(checkMigrations);'
+
 base: node_modules migrations
 
-run: base
+run: base check-migrations
 	node lib/bin/run-server.js
 
 debug: base
