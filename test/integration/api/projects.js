@@ -365,6 +365,22 @@ describe('api: /projects', () => {
               body.archived.should.equal(true);
             })))));
 
+    it('should update the project description', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1')
+          .set('Content-Type', 'application/json')
+          .send({ description: 'new project description' })
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.a.Project();
+            body.description.should.equal('new project description');
+          })
+          .then(() => asAlice.get('/v1/projects/1')
+            .expect(200)
+            .then(({ body }) => {
+              body.description.should.equal('new project description');
+            })))));
+
     it('should log the action in the audit log', testService((service, { Audits, Projects }) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1')
@@ -653,7 +669,7 @@ describe('api: /projects', () => {
 
             audit.get().actorId.should.equal(user.body.id);
             audit.get().acteeId.should.equal(project.get().acteeId);
-            audit.get().details.should.eql({ data: { name: 'New Test Name', archived: null } });
+            audit.get().details.should.eql({ data: { name: 'New Test Name', archived: null, description: null } });
           }))));
 
     ////////////////////////////////////////////////////////////////////////////////

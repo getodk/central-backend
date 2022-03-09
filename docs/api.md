@@ -832,11 +832,12 @@ By default, `archived` is not set, which is equivalent to `false`. If `archived`
 + Request (application/json)
     + Attributes
         + name: `New Project Name` (string, required) - The desired name of the Project.
+        + description: `Description of this Project to show on Central.` (string, optional) - The description of the Project.
         + archived: `true` (boolean, optional) - Archives the Project.
 
     + Body
 
-            { "name": "New Project Name", "archived": true }
+            { "name": "New Project Name", "description": "Description of this Project to show on Central.", "archived": true }
 
 + Response 200 (application/json)
     + Attributes (Project)
@@ -4039,6 +4040,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Project (object)
 + id: `1` (number) - The numerical ID of the Project.
 + name: `Default Project` (string, required) - The name of the Project.
++ description: `Description of this Project to show on Central.` (string, optional) - The description of the Project, which is rendered as Markdown on Frontend.
 + keyId: `3` (number, optional) - If managed encryption is enabled on the project, the numeric ID of the encryption key as tracked by Central is given here.
 + archived: false (boolean, optional) - Whether the Project is archived or not. `null` is equivalent to `false`. All this does is sort the Project to the bottom of the list and disable management features in the web management application.
 
