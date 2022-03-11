@@ -1518,6 +1518,30 @@ describe('api: /forms/:id/submissions', () => {
               done();
             }))))));
 
+    it('should split select multiples and filter given both options', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.selectMultiple)
+          .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+            .set('Content-Type', 'application/xml')
+            .send(testData.instances.selectMultiple.one))
+          .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+            .set('Content-Type', 'application/xml')
+            .send(testData.instances.selectMultiple.two))
+          .then(() => asAlice.patch('/v1/projects/1/forms/selectMultiple/submissions/two')
+            .send({ reviewState: 'approved' }))
+          .then(() => exhaust(container))
+          .then(() => new Promise((done) =>
+            zipStreamToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true&$filter=__system/reviewState eq null'), (result) => {
+              const lines = result['selectMultiple.csv'].split('\n');
+              lines.length.should.equal(3);
+              lines[1].should.containEql(',one,');
+              lines[1].should.not.containEql('two');
+              lines[2].should.equal('');
+              done();
+            }))))));
+
     it('should export deleted fields and values if ?deletedFields=true', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
