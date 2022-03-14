@@ -1,5 +1,6 @@
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
+const uuid = require('uuid/v4');
 const should = require('should');
 const config = require('config');
 const { testServiceFullTrx } = require('../setup');
@@ -188,4 +189,41 @@ describe.skip('database migrations', function() {
     after.should.equal(before - 1); // one purged
   }));
 
+});
+
+describe('datbase migrations: removing default project', function() {
+  this.timeout(4000);
+
+  it('should put old forms into project', testServiceFullTrx(async (service, container) => {
+    // before 20181206-01-add-projects.js
+    await upToMigration('20181012-01-add-submissions-createdat-index.js');
+
+    // create a form to put in the default project
+    const formActeeId = uuid();
+    await container.run(sql`insert into actees ("id", "species") values (${formActeeId}, 'form')`);
+    await container.run(sql`insert into forms ("acteeId", "name", "xmlFormId", "xml", "version")
+      values (${formActeeId}, 'A Form', '123', '<xml></xml>', '1')`);
+
+    // running migration 20181206-01-add-projects.js
+    await migrator.migrate.up({ directory: appRoot + '/lib/model/migrations' });
+
+    // check projects and forms
+    const projects = await container.all(sql`select * from projects`);
+    projects.length.should.equal(1);
+
+    const proj = projects[0];
+    proj.name.should.equal('Forms you made before projects existed');
+
+    const formCount = await container.oneFirst(sql`select count(*) from forms where "projectId"=${proj.id}`);
+    formCount.should.equal(1);
+  }));
+
+  it('should not make a default project if no forms', testServiceFullTrx(async (service, container) => {
+    // before 20181206-01-add-projects.js
+    await upToMigration('20181206-01-add-projects.js');
+
+    // check projects and forms
+    const projCount = await container.oneFirst(sql`select count(*) from projects`);
+    projCount.should.equal(0);
+  }));
 });
