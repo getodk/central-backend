@@ -822,7 +822,7 @@ In addition, the extended metadata version of this endpoint (but not the overall
 
 ### Updating Project Details [PATCH /v1/projects/{id}]
 
-The Project name may be updated, as well as the `archived` flag.
+The Project name may be updated, as well as the Project description and the `archived` flag.
 
 By default, `archived` is not set, which is equivalent to `false`. If `archived` is set to `true`, the Project will be sorted to the bottom of the list, and in the web management application the Project will become effectively read-only. API write access will not be affected.
 
@@ -853,7 +853,7 @@ When managing a large deployment, it can be necessary to make sweeping changes t
 
 For this purpose, we offer this `PUT` resource, which allows a deep update of Project metadata, Form metadata, and Form Assignment metadata at once and transactionally using a nested data format.
 
-One important mechanic to note immediately here is that we follow true `PUT` semantics, meaning that the data you provide is not merged with existing data to form an update. With our usual `PATCH` endpoints, we do this kind of merging and so data that you don't explicitly pass us is left alone. Because we allow the deletion of Form Assignments by way of omission with this API, we treat _all_ omissions as an explicit specification to null the omitted field. This means that, for example, you must always re-specify the Project name (and archival flag) with every `PUT`.
+One important mechanic to note immediately here is that we follow true `PUT` semantics, meaning that the data you provide is not merged with existing data to form an update. With our usual `PATCH` endpoints, we do this kind of merging and so data that you don't explicitly pass us is left alone. Because we allow the deletion of Form Assignments by way of omission with this API, we treat _all_ omissions as an explicit specification to null the omitted field. This means that, for example, you must always re-specify the Project name, the Project description, and archival flag with every `PUT`.
 
 This adherence to `PUT` semantics would normally imply that Forms could be created or deleted by way of this request, but such an operation could become incredibly complex. We currently return a `501 Not Implemented` error if you supply nested Form information but you do not give us exactly the entire set of extant Forms.
 
@@ -865,6 +865,7 @@ You can inspect the Request format for this endpoint to see the exact nested dat
 + Request (application/json)
     + Attributes
         + name: `New Project Name` (string, required) - The desired name of the Project.
+        + description: `New Project Description` (string, optional) - The desired description of the Project.
         + archived: `true` (boolean, optional) - Archives the Project.
         + forms: (array, optional) - If given, the Form metadata to update.
             + (object)
@@ -879,6 +880,7 @@ You can inspect the Request format for this endpoint to see the exact nested dat
 
             {
               "name": "New Project Name",
+              "description": "New Project Description",
               "archived": false,
               "forms": [{
                 "xmlFormId": "simple",
