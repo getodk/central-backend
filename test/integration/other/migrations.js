@@ -219,7 +219,7 @@ describe('datbase migrations: removing default project', function() {
   }));
 
   it('should not make a default project if no forms', testServiceFullTrx(async (service, container) => {
-    // before 20181206-01-add-projects.js
+    // up to and including this default project migration
     await upToMigration('20181206-01-add-projects.js');
 
     // check projects and forms
