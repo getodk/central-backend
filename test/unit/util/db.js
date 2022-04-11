@@ -460,6 +460,15 @@ returning *`);
       });
     });
 
+    it('recognizes and parses unique_violation when value contains brackets', (done) => { // github #450
+      postgresErrorToProblem(errorWith({ code: '23505', detail: 'Key ("projectId", "xmlFormId")=(3, my_form (1)) already exists.' })).catch((result) => {
+        result.problemCode.should.equal(409.3);
+        result.problemDetails.fields.should.eql([ 'projectId', 'xmlFormId' ]);
+        result.problemDetails.values.should.eql([ '3', 'my_form (1)' ]);
+        done();
+      });
+    });
+
     it('recognizes undefined_column', (done) => {
       postgresErrorToProblem(errorWith({ code: '42703', message: 'column "test" of relation "aa" does not exist' })).catch((result) => {
         result.problemCode.should.equal(400.4);
