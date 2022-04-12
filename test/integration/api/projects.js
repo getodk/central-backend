@@ -1180,3 +1180,78 @@ describe('api: /projects', () => {
   });
 });
 
+
+describe('api: /projects?forms=true', () => {
+  describe('GET', () => {
+    it('should return projects with nested extended forms', testService((service) =>
+      service.login('alice', (asAlice) => asAlice.get('/v1/projects?forms=true')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+          body[0].should.be.a.Project();
+          const form = body[0].formList[0];
+          form.should.be.a.ExtendedForm();
+          form.name.should.equal('Simple');
+          form.reviewStates.received.should.equal(0);
+        }))));
+
+    it('should not return projects/forms not assigned to user', testService((service) =>
+      service.login('chelsea', (asChelsea) => asChelsea.get('/v1/projects?forms=true')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(0);
+        }))));
+
+    it('should return all forms including drafts to managers and above', testService((service) =>
+      service.login('alice', (asAlice) => asAlice.post('/v1/projects/1/forms')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200)
+        .then(() => service.login('bob', (asBob) => asBob.get('/v1/projects?forms=true')
+          .expect(200)
+          .then(({ body }) => {
+            const { formList } = body[0];
+            formList.length.should.equal(3);
+          }))))));
+
+    it('should not return draft forms to data collectors', testService((service, { Users }) =>
+      service.login('alice', (asAlice) => asAlice.post('/v1/projects/1/forms')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200)
+        .then(() => Users.getByEmail('chelsea@getodk.org').then((o) => o.get()))
+        .then((chelsea) => asAlice.post(`/v1/projects/1/assignments/formfill/${chelsea.actorId}`))
+        .then(() => service.login('chelsea', (asChelsea) => asChelsea.get('/v1/projects?forms=true')
+          .expect(200)
+          .then(({ body }) => {
+            const { formList } = body[0];
+            formList.length.should.equal(2);
+          }))))));
+
+    // project 1: 2 published forms, bob = manager
+    // project 2: 1 published, 1 draft, bob = data collector
+    it('should return multiple projects with forms', testService((service, { Users }) =>
+      service.login('alice', (asAlice) => asAlice.post('/v1/projects')
+        .set('Content-Type', 'application/json')
+        .send({ name: 'Another Project' })
+        .expect(200)
+        .then(({ body }) => asAlice.post(`/v1/projects/${body.id}/forms?publish=true`)
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple)
+          .expect(200)
+          .then(() => asAlice.post(`/v1/projects/${body.id}/forms`)
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.binaryType)
+            .expect(200))
+          .then(() => Users.getByEmail('bob@getodk.org').then((o) => o.get()))
+          .then((bob) => asAlice.post(`/v1/projects/${body.id}/assignments/formfill/${bob.actorId}`)))
+        .then(() => service.login('bob', (asBob) => asBob.get('/v1/projects?forms=true')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(2);
+            body[0].formList.length.should.equal(2);
+            body[1].formList.length.should.equal(1);
+            body[1].formList[0].name.should.equal('Simple');
+          }))))));
+  });
+});
