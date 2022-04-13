@@ -1237,7 +1237,7 @@ describe('api: /projects?forms=true', () => {
         .expect(200)
         .then(({ body }) => asAlice.post(`/v1/projects/${body.id}/forms?publish=true`)
           .set('Content-Type', 'application/xml')
-          .send(testData.forms.simple)
+          .send(testData.forms.simple2)
           .expect(200)
           .then(() => asAlice.post(`/v1/projects/${body.id}/forms`)
             .set('Content-Type', 'application/xml')
@@ -1251,7 +1251,7 @@ describe('api: /projects?forms=true', () => {
             body.length.should.equal(2);
             body[0].formList.length.should.equal(2);
             body[1].formList.length.should.equal(1);
-            body[1].formList[0].name.should.equal('Simple');
+            body[1].formList[0].name.should.equal('Simple 2');
           }))))));
   });
 });

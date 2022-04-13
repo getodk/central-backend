@@ -178,9 +178,8 @@ should.Assertion.add('ExtendedForm', function() {
 
   this.obj.should.be.a.Form();
   Object.keys(this.obj).should.containDeep([ 'submissions', 'lastSubmission', 'reviewStates' ]);
-  if (this.obj.submissions != null) this.obj.submissions.should.be.a.Number();
-  if (this.obj.reviewStates != null)
-    Object.keys(this.obj.reviewStates).should.containDeep([ 'received', 'hasIssues', 'edited']);
+  this.obj.submissions.should.be.a.Number();
+  Object.keys(this.obj.reviewStates).should.containDeep([ 'received', 'hasIssues', 'edited']);
   if (this.obj.lastSubmission != null) this.obj.lastSubmission.should.be.an.isoDate();
 });
 
