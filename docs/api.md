@@ -777,6 +777,17 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
     + Attributes (array[Extended Project])
 
+### Listing Projects with nested Forms [GET /v1/projects?forms=true]
+
+_(introduced: Version 1.5)_
+
+This endpoint works similarly to the Project listing endpoint above, except it also returns the Forms that the authenticated Actor is allowed to see, with those Forms nested within their corresponding Project under a new parameter `formList`. The returned Forms will match structure of Forms requested with extended metadata (including additional `lastSubmission` timestamp and `submissions` and `reviewStates` counts).
+
++ Response 200 (application/json)
+    This is the standard response:
+
+    + Attributes (array[Project With Forms])
+
 ### Creating a Project [POST /v1/projects]
 
 To create a Project, the only information you must supply (via POST body) is the desired name of the Project.
@@ -1088,7 +1099,7 @@ Currently, there are no paging or filtering options, so listing `Form`s will get
 
 As of version 1.2, Forms that are unpublished (that only carry a draft and have never been published) will appear with full metadata detail. Previously, certain details like `name` were omitted. You can determine that a Form is unpublished by checking the `publishedAt` value: it will be `null` for unpublished forms.
 
-This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of `Submission`s that each Form has and the `lastSubmission` most recent submission timestamp, as well as the Actor the Form was `createdBy`.
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of Submissions that each Form has, the `reviewStates` object of counts of Submissions with specific review states, the `lastSubmission` most recent submission timestamp, as well as the Actor the Form was `createdBy`.
 
 + Response 200 (application/json)
     This is the standard response, if Extended Metadata is not requested:
@@ -4002,6 +4013,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 
 ## Extended Form (Form)
 + submissions: `10` (number, required) - The number of `Submission`s that have been submitted to this `Form`.
++ reviewStates: (Review State Counts, required) - Additional counts of the number of submissions in various states of review.
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission, if any.
 + createdBy: (Actor, optional) - The full information of the Actor who created this Form.
 + excelContentType: (string, optional) - If the Form was created by uploading an Excel file, this field contains the MIME type of that file.
@@ -4051,6 +4063,9 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + forms: `7` (number, required) - The number of forms within this Project.
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission to any form in this project, if any.
 
+## Project With Forms (Project)
++ formList: (array[Extended Form], required) - The extended Forms associated with this Project that are visible to the authenticated Actor.
+
 ## Public Link (Actor)
 + token: `d1!E2GVHgpr4h9bpxxtqUJ7EVJ1Q$Dusm2RBXg8XyVJMCBCbvyE8cGacxUx3bcUT` (string, optional) - If present, this is the Token to include as the `st` query parameter for this `Public Link`. If not present, this `Public Link` has been revoked.
 + once: `false` (boolean, optional) - If set to `true`, an Enketo [single submission survey](https://blog.enketo.org/single-submission-surveys/) will be created instead of a standard one, limiting respondents to a single submission each.
@@ -4093,6 +4108,11 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Extended Submission (Submission)
 + submitter (Actor, required) - The full details of the `Actor` that submitted this `Submission`.
 + formVersion: `1.0` (string, optional) - The version of the form the submission was initially created against. Only returned with specific Submission Version requests.
+
+## Review State Counts (object)
++ received: `3` (number, required) - The number of submissions receieved with no other review state.
++ hasIssues: `2` (number, required) - The number of submissions marked as having issues.
++ edited: `1` (number, required) - The number of edited submissions.
 
 ## Submission Attachment (object)
 + name: `myfile.mp3` (string, required) - The name of the file as specified in the Submission XML.

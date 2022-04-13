@@ -45,6 +45,9 @@ describe('api: /projects/:id/forms (listing forms)', () => {
               body.forEach((form) => form.should.be.an.ExtendedForm());
               const simple = body.find((form) => form.xmlFormId === 'simple');
               simple.submissions.should.equal(1);
+              simple.reviewStates.received.should.equal(1);
+              simple.reviewStates.hasIssues.should.equal(0);
+              simple.reviewStates.edited.should.equal(0);
               simple.lastSubmission.should.be.a.recentIsoDate();
             })))));
   });
