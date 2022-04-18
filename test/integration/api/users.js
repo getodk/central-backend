@@ -192,8 +192,7 @@ describe('api: /users', () => {
     it('should not send any email if no account exists', testService((service) =>
       service.post('/v1/users/reset/initiate')
         .send({ email: 'winnifred@getodk.org' })
-        .expect(404)
-        .then(({ body }) => body.should.eql({"message":"No account exists with the provided email address","code":404.6}))
+        .expect(200)
         .then(() => {
           global.inbox.length.should.equal(0);
         })));
