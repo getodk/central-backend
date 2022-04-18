@@ -189,16 +189,12 @@ describe('api: /users', () => {
   });
 
   describe('/reset/initiate POST', () => {
-    it('should send an email with a helpful message if no account exists', testService((service) =>
+    it('should not send any email if no account exists', testService((service) =>
       service.post('/v1/users/reset/initiate')
         .send({ email: 'winnifred@getodk.org' })
         .expect(200)
         .then(() => {
-          const email = global.inbox.pop();
           global.inbox.length.should.equal(0);
-          email.to.should.eql([{ address: 'winnifred@getodk.org', name: '' }]);
-          email.subject.should.equal('ODK Central account password reset');
-          email.html.should.match(/no account exists/);
         })));
 
     it('should send a specific email if an account existed but was deleted', testService((service) =>
