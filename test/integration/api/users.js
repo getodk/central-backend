@@ -287,6 +287,15 @@ describe('api: /users', () => {
               .expect(401);
           }))));
 
+    it('should return 403 if invalidate is true and no email exists', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users/reset/initiate?invalidate=true')
+          .send({ email: 'winnifred@getodk.org' })
+          .expect(403)
+          .then(() => {
+            global.inbox.length.should.equal(0);
+          }))));
+
     it('should not allow a user to reset their own password directly', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users/reset/verify')
