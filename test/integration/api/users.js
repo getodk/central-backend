@@ -287,11 +287,18 @@ describe('api: /users', () => {
               .expect(401);
           }))));
 
-    it('should return 403 if invalidate is true and no email exists', testService((service) =>
+    it('should return 403 if user doesn\'t have rights to invalidate', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+      asChelsea.post('/v1/users/reset/initiate?invalidate=true')
+          .send({ email: 'winnifred@getodk.org' })
+          .expect(403)
+          )));
+
+    it('should return 200 if user has rights to invalidate but account doesn\'nt exist', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users/reset/initiate?invalidate=true')
           .send({ email: 'winnifred@getodk.org' })
-          .expect(403)
+          .expect(200)
           .then(() => {
             global.inbox.length.should.equal(0);
           }))));
