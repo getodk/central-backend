@@ -289,7 +289,7 @@ describe('api: /users', () => {
 
     it('should return 403 if user doesn\'t have rights to invalidate', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-      asChelsea.post('/v1/users/reset/initiate?invalidate=true')
+        asChelsea.post('/v1/users/reset/initiate?invalidate=true')
           .send({ email: 'winnifred@getodk.org' })
           .expect(403)
           )));
