@@ -287,6 +287,21 @@ describe('api: /users', () => {
               .expect(401);
           }))));
 
+    it('should fail the request if invalidation is not allowed and email doesn\'t exist', testService((service) =>
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.post('/v1/users/reset/initiate?invalidate=true')
+          .send({ email: 'winnifred@getodk.org' })
+          .expect(403))));
+
+    it('should return 200 if user has rights to invalidate but account doesn\'nt exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users/reset/initiate?invalidate=true')
+          .send({ email: 'winnifred@getodk.org' })
+          .expect(200)
+          .then(() => {
+            global.inbox.length.should.equal(0);
+          }))));
+
     it('should not allow a user to reset their own password directly', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users/reset/verify')
