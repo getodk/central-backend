@@ -74,6 +74,17 @@ describe('util/db', () => {
       result.should.throw();
     });
 
+    it('should allow (but ignore) maximumPoolSize', () => {
+      const result = connectionString({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz',
+        maximumPoolSize: 42
+      });
+      result.should.equal('postgres://bar:baz@localhost/foo');
+    });
+
     it('should throw for an unsupported option', () => {
       const result = () => connectionString({
         host: 'localhost',
@@ -158,6 +169,22 @@ describe('util/db', () => {
         ssl: { rejectUnauthorized: false }
       });
       result.should.throw();
+    });
+
+    it('should allow (but ignore) maximumPoolSize', () => {
+      const result = connectionObject({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz',
+        maximumPoolSize: 42
+      });
+      result.should.eql({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz'
+      });
     });
 
     it('should throw for an unsupported option', () => {
