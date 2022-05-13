@@ -59,6 +59,20 @@ describe('api: /projects', () => {
                 body[0].name.should.equal('Default Project');
               }))))));
 
+    it('should return the verbs of the more permissive assignment if multiply assigned', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+          .then((aliceId) => asAlice.post('/v1/projects/1/assignments/manager/' + aliceId)
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.verbs.length.should.be.greaterThan(39);
+                body.should.be.a.Project();
+                body.name.should.equal('Default Project');
+              }))))));
+
     it('should order projects appropriately', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects')
@@ -1190,6 +1204,7 @@ describe('api: /projects?forms=true', () => {
           body.length.should.equal(1);
           body[0].should.be.a.Project();
           const { formList, verbs } = body[0];
+          // verbs seems to have 1 more verb than it should - one is duplicated
           verbs.length.should.be.greaterThan(40);
           formList.length.should.equal(2);
           const form = formList[0];
