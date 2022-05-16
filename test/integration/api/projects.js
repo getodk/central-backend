@@ -59,7 +59,7 @@ describe('api: /projects', () => {
                 body[0].name.should.equal('Default Project');
               }))))));
 
-    it('should return the verbs of the more permissive assignment if multiply assigned', testService((service) =>
+    it('should return the correct project verbs when multiply assigned', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
           .then((aliceId) => asAlice.post('/v1/projects/1/assignments/manager/' + aliceId)
@@ -1267,9 +1267,11 @@ describe('api: /projects?forms=true', () => {
           .expect(200)
           .then(({ body }) => {
             body.length.should.equal(2);
+            // First project
             body[0].formList.length.should.equal(2);
-            body[1].formList.length.should.equal(1);
             body[0].verbs.length.should.be.greaterThan(25); // 26 for manager
+            // Second project
+            body[1].formList.length.should.equal(1);
             body[1].verbs.length.should.be.lessThan(5); // 4 for data collector
             body[1].formList[0].name.should.equal('Simple 2');
           }))))));
@@ -1279,6 +1281,10 @@ describe('api: /projects?forms=true', () => {
         .send(testData.instances.simple.one)
         .set('Content-Type', 'application/xml')
         .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200))
         .then(() => asAlice.get('/v1/projects?forms=true')
           .expect(200)
           .then(({ body }) => {
@@ -1286,11 +1292,11 @@ describe('api: /projects?forms=true', () => {
             const project = body[0];
             project.should.be.a.Project();
             project.forms.should.equal(2);
-            project.lastSubmission.should.not.be.null();
+            should.exist(project.lastSubmission);
             const form = body[0].formList[0];
             form.should.be.a.ExtendedForm();
             form.name.should.equal('Simple');
-            form.reviewStates.received.should.equal(1);
+            form.reviewStates.received.should.equal(2);
           })))));
   });
 });
