@@ -201,6 +201,18 @@ describe('analytics task queries', () => {
       res = await Analytics.backupsEnabled();
       res.backups_configured.should.equal(1);
     }));
+
+    it('should check database configurations', testContainer(async ({ Analytics }) => {
+      // only localhost (dev) and postgres (docker) should count as not external
+      await Analytics.databaseExternal('localhost').should.equal(0);
+      await Analytics.databaseExternal('postgres').should.equal(0);
+      await Analytics.databaseExternal('blah.stuff.com').should.equal(1);
+      await Analytics.databaseExternal('').should.equal(1);
+      await Analytics.databaseExternal('localhost-not').should.equal(1);
+      await Analytics.databaseExternal('not-localhost').should.equal(1);
+      await Analytics.databaseExternal(undefined).should.equal(1);
+      await Analytics.databaseExternal(null).should.equal(1);
+    }));
   });
 
   describe('user metrics', () => {
