@@ -204,14 +204,14 @@ describe('analytics task queries', () => {
 
     it('should check database configurations', testContainer(async ({ Analytics }) => {
       // only localhost (dev) and postgres (docker) should count as not external
-      await Analytics.databaseExternal('localhost').should.equal(0);
-      await Analytics.databaseExternal('postgres').should.equal(0);
-      await Analytics.databaseExternal('blah.stuff.com').should.equal(1);
-      await Analytics.databaseExternal('').should.equal(1);
-      await Analytics.databaseExternal('localhost-not').should.equal(1);
-      await Analytics.databaseExternal('not-localhost').should.equal(1);
-      await Analytics.databaseExternal(undefined).should.equal(1);
-      await Analytics.databaseExternal(null).should.equal(1);
+      Analytics.databaseExternal('localhost').should.equal(0);
+      Analytics.databaseExternal('postgres').should.equal(0);
+      Analytics.databaseExternal('blah.stuff.com').should.equal(1);
+      Analytics.databaseExternal('').should.equal(1);
+      Analytics.databaseExternal('localhost-not').should.equal(1);
+      Analytics.databaseExternal('not-localhost').should.equal(1);
+      Analytics.databaseExternal(undefined).should.equal(1);
+      Analytics.databaseExternal(null).should.equal(1);
     }));
   });
 
@@ -711,7 +711,7 @@ describe('analytics task queries', () => {
         asAlice.patch('/v1/projects/1')
           .send({ description: 'test desc' }));
 
-      const projId2 = await service.login('alice', (asAlice) =>
+      const projWithDesc = await service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects')
           .send({ name: 'A project', description: 'a description' })
           .then(({ body }) => body.id));
@@ -728,7 +728,7 @@ describe('analytics task queries', () => {
           .send({ description: null }));
 
       const res = await container.Analytics.getProjectsWithDescriptions();
-      res.should.eql([ { projectId: 1 }, { projectId: projId2 } ]);
+      res.should.eql([ { projectId: 1 }, { projectId: projWithDesc } ]);
     }));
   });
 
