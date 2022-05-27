@@ -404,6 +404,37 @@ describe('analytics task queries', () => {
       projects[projId].recent.should.equal(0);
     }));
 
+    it('should calculate forms in each form state per project', testService(async (service, container) => {
+      const projId = await createTestProject(service, container, 'New Proj');
+      const xmlFormId = await createTestForm(service, container, testData.forms.simple, projId);
+      await submitToForm(service, 'alice', projId, xmlFormId, testData.instances.simple.one);
+
+      await service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple')
+          .send({ state: 'closed' })
+          .expect(200)
+          .then(() => asAlice.patch(`/v1/projects/${projId}/forms/simple`)
+            .send({ state: 'closing' })
+            .expect(200)));
+
+      const res = await container.Analytics.countFormsInStates();
+
+      const projects = {};
+      for (const row of res) {
+        const id = row.projectId;
+        const { state } = row;
+        if (!(id in projects)) {
+          projects[id] = {};
+        }
+        if (!(state in projects[id])) {
+          projects[id][state] = { recent: row.recent, total: row.total };
+        }
+      }
+
+      projects['1'].should.eql({ closed: { recent: 0, total: 1 }, open: { recent: 0, total: 1 } });
+      projects[projId].should.eql({ closing: { recent: 1, total: 1 } });
+    }));
+
     it('should calculate number of forms reusing ids of deleted forms', testService(async (service, container) => {
       await service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1/forms/simple')
@@ -658,7 +689,34 @@ describe('analytics task queries', () => {
       res[0].app_user_recent.should.equal(0);
 
       res[0].pub_link_total.should.equal(2);
-      res[0].pub_link_recent.should.equal(1)
+      res[0].pub_link_recent.should.equal(1);
+    }));
+  });
+
+  describe('other project metrics', () => {
+    it('should calculate projects with descriptions', testService(async (service, container) => {
+      await service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1')
+          .send({ description: 'test desc' }));
+
+      const projId2 = await service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects')
+          .send({ name: 'A project', description: 'a description' })
+          .then(({ body }) => body.id));
+
+      // null and empty string descriptions won't be counted
+      const proj2 = await createTestProject(service, container, 'Proj with empty string description');
+      await service.login('alice', (asAlice) =>
+        asAlice.patch(`/v1/projects/${proj2}`)
+          .send({ description: '' }));
+
+      const proj3 = await createTestProject(service, container, 'Proj with null description');
+      await service.login('alice', (asAlice) =>
+        asAlice.patch(`/v1/projects/${proj3}`)
+          .send({ description: null }));
+
+      const res = await container.Analytics.getProjectsWithDescriptions();
+      res.should.eql([ { projectId: 1 }, { projectId: projId2 } ]);
     }));
   });
 
@@ -691,6 +749,9 @@ describe('analytics task queries', () => {
       await createTestUser(service, container, 'Collector1', 'formfill', 1);
 
       const res = await container.Analytics.previewMetrics();
+
+      // can't easily test this metric
+      delete res.system.uses_external_db;
 
       // everything in system filled in
       Object.values(res.system).forEach((metric) =>
@@ -750,6 +811,15 @@ describe('analytics task queries', () => {
             .send(testData.forms.simple2)
             .set('Content-Type', 'application/xml')));
 
+      // make forms closed and closing to make count > 0
+      await service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple')
+          .send({ state: 'closed' })
+          .expect(200)
+          .then(() => asAlice.patch('/v1/projects/1/forms/simple-geo')
+            .send({ state: 'closing' })
+            .expect(200)));
+
       const res = await container.Analytics.previewMetrics();
 
       // check everything is non-zero
@@ -797,6 +867,20 @@ describe('analytics task queries', () => {
 
       // check everything is non-zero
       Object.values(res.projects[0].submissions).forEach((metric) => metric.total.should.be.above(0));
+    }));
+
+    it('should fill in all project.other queries', testService(async (service, container) => {
+      await service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1')
+          .send({ description: 'test desc' }));
+
+      const res = await container.Analytics.previewMetrics();
+
+      // check everything is non-zero
+      Object.values(res.projects[0].other).forEach((metric) =>
+        (metric.total
+          ? metric.total.should.be.above(0)
+          : metric.should.be.above(0)));
     }));
 
     it('should be idempotent and not cross-polute project counts', testService(async (service, container) => {
