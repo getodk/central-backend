@@ -32,6 +32,18 @@ Finally, **system information and configuration** is available via a set of spec
 
 Here major and breaking changes to the API are listed by version.
 
+### ODK Central v1.5
+
+ODK Central v1.5 adds editable Project descriptions as well as more detailed information about Forms and Submissions when listing Projects (via the API and shown in new Project and Form lists on Frontend).
+
+**Added**:
+
+* New `description` field returned for each [Project](/reference/project-management/projects) that can be set or updated through `POST`/`PATCH`/`PUT` on `/projects/…`
+    * Note that for the `PUT` request, the Project's description must be included in the request. [Read more](/reference/project-management/projects/deep-updating-project-and-form-details).
+* [Form extended metadata](/reference/forms/individual-form/getting-form-details) now includes a `reviewStates` object of counts of Submissions with specific review states.
+    * e.g. `{ received: 12, edited: 5, hasIssues: 3 }`
+* New `?forms=true` option on [Project Listing](/reference/project-management/projects/listing-projects-with-nested-forms) that includes a `formList` field containing a list of extended Forms (and the review state counts described above) associated with that Project.
+
 ### ODK Central v1.4
 
 ODK Central v1.4 enables additional CSV export options and creates an API-manageable 30 day permanent purge system for deleted Forms. Previously, deleted Forms were made inaccessible but the data was not purged from the database.
