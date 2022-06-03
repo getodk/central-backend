@@ -212,6 +212,19 @@ describe('api: /projects', () => {
             return asAlice.get(`/v1/projects/${body.id}`).expect(200);
           }))));
 
+    it('should create the given project with a description', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects')
+          .set('Content-Type', 'application/json')
+          .send({ name: 'Test Project', description: 'Test Description' })
+          .expect(200)
+          .then(({ body }) => {
+            body.name.should.equal('Test Project');
+            body.description.should.equal('Test Description');
+            body.should.be.a.Project();
+            return asAlice.get(`/v1/projects/${body.id}`).expect(200);
+          }))));
+
     it('should create an audit log entry', testService((service, { Audits, Projects, one }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects')
@@ -364,11 +377,12 @@ describe('api: /projects', () => {
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1')
           .set('Content-Type', 'application/json')
-          .send({ name: 'New Test Name', archived: true })
+          .send({ name: 'New Test Name', archived: true, description: 'New Description' })
           .expect(200)
           .then(({ body }) => {
             body.should.be.a.Project();
             body.name.should.equal('New Test Name');
+            body.description.should.equal('New Description');
             body.archived.should.equal(true);
           })
           // paranoia:
@@ -376,6 +390,7 @@ describe('api: /projects', () => {
             .expect(200)
             .then(({ body }) => {
               body.name.should.equal('New Test Name');
+              body.description.should.equal('New Description');
               body.archived.should.equal(true);
             })))));
 
