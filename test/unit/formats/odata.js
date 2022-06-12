@@ -1,6 +1,7 @@
 const appRoot = require('app-root-path');
 const streamTest = require('streamtest').v2;
 const { identity } = require('ramda');
+const { selectFields } = require('../../../lib/formats/odata');
 const { serviceDocumentFor, edmxFor, rowStreamToOData, singleRowToOData } = require(appRoot + '/lib/formats/odata');
 const { fieldsFor } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
@@ -1056,7 +1057,62 @@ describe('odata message composition', () => {
             });
         });
       });
+      
     });
+  });
+
+  describe('select fields', () => {
+    it('should return all fields if $select not provided', () => {
+      return fieldsFor(testData.forms.simple)
+      .then((fields) => selectFields({},'Submissions')(fields)
+        .then((filteredFields) => {
+          filteredFields.length.should.equal(fields.length);
+        }));
+    });
+
+    it('should return only selected fields', () => {
+      return fieldsFor(testData.forms.simple)
+      .then(selectFields({$select:'name,age,meta/instanceid'}, 'Submissions'))
+      .then((filteredFields) => {
+          filteredFields.length.should.equal(4);
+      });
+    });
+
+    it('should throw property not found error', () => {
+      return fieldsFor(testData.forms.simple)
+      .then((fields) => {
+        (() => selectFields({$select: 'address'}, 'Submissions')(fields)).should.throw('Could not find a property named \'address\'');
+      });
+    });
+    
+    it('should not throw error if __id is requested for non-submissions table', () => {
+      return fieldsFor(testData.forms.simple)
+      .then((fields) => {
+        (() => selectFields({$select: '__id'}, 'Submissions.Children')(fields)).should.not.throw();
+      });
+    });
+
+    it('should not throw error if system properties are requested for submissions table', () => {
+      return fieldsFor(testData.forms.simple)
+      .then((fields) => {
+        (() => selectFields({$select: '__id, __system/status'}, 'Submissions')(fields)).should.not.throw();
+      });
+    });
+
+    it('should throw error if unknown system property is requested', () => {
+      return fieldsFor(testData.forms.simple)
+      .then((fields) => {
+        (() => selectFields({$select: '__system/etag'}, 'Submissions')(fields)).should.throw('Could not find a property named \'__system/etag\'');
+      });
+    });
+
+    it('should throw error if property of repeat is requested', () => {
+      return fieldsFor(testData.forms.doubleRepeat)
+      .then((fields) => {
+        (() => selectFields({$select: 'children/child/name'}, 'Submissions')(fields)).should.throw('The given OData select property \'children/child/name\' uses features not supported by this server.');
+      });
+    });
+
   });
 });
 

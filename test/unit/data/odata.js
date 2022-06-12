@@ -712,5 +712,22 @@ describe('submissionToOData', () => {
         }]);
       });
     }));
-});
 
+  it('should return only selected properties', () => {
+      const fields = [ 
+        new MockField({ path: '/meta', name: 'meta',  type: 'structure' }),
+        new MockField({ path: '/meta/instanceID', name: 'instanceID', type: 'string' }),
+        new MockField({ path: '/name', name: 'name', type: 'string' })
+      ];
+      const submission = mockSubmission('one', testData.instances.simple.one);
+      return submissionToOData(fields, 'Submissions', submission, {metadata:['__id', '__system/status']}).then((result) => {
+        result.should.eql([{
+          __id: 'one',
+          __system:{status: null},
+          meta: { instanceID: 'one' },
+          name: 'Alice'
+        }]);
+      });
+    });
+
+});
