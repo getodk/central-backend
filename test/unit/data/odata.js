@@ -720,7 +720,7 @@ describe('submissionToOData', () => {
         new MockField({ path: '/name', name: 'name', type: 'string' })
       ];
       const submission = mockSubmission('one', testData.instances.simple.one);
-      return submissionToOData(fields, 'Submissions', submission, {metadata:['__id', '__system/status']}).then((result) => {
+      return submissionToOData(fields, 'Submissions', submission, {metadata:{'__id':true, '__system/status':true}}).then((result) => {
         result.should.eql([{
           __id: 'one',
           __system:{status: null},
@@ -730,4 +730,23 @@ describe('submissionToOData', () => {
       });
     });
 
+  it('should return relevant IDs', () => {
+    const fields = [
+      new MockField({ path: '/children', name: 'children', type: 'structure' }),
+      new MockField({ path: '/children/child', name: 'child', type: 'repeat' })
+    ];
+    const submission = { instanceId: 'double', xml: testData.instances.doubleRepeat.double, def: {}, aux: { encryption: {}, attachment: {} } };
+    return submissionToOData(fields, 'Submissions.children.child', submission, { metadata: { '__id': true, '__Submissions-id': true } }).then((result) => {
+      result.should.eql([{
+        __id: '46ebf42ee83ddec5028c42b2c054402d1e700208',
+        '__Submissions-id': 'double'
+      }, {
+        __id: 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
+        '__Submissions-id': 'double'
+      }, {
+        __id: '8954b393f82c1833abb19be08a3d6cb382171f54',
+        '__Submissions-id': 'double'
+      }]);
+    });
+  });
 });

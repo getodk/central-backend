@@ -387,6 +387,115 @@ describe('api: /forms/:id.svc', () => {
                   body['@odata.nextLink'].should.equal('http://localhost:8989/v1/projects/1/forms/double%20repeat.svc/Submissions(%27uuid%3A17b09e96-4141-43f5-9a70-611eb0e8f6b4%27)/children/child?%24skip=1');
                 })
             ]))))));
+
+    it('should return a single row result with all properties', testService((service) =>
+      withSubmission(service, (asAlice) =>
+        asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')?$select=*")
+          .expect(200)
+          .then(({ body }) => {
+            // have to manually check and clear the date for exact match:
+            body.value[0].__system.submissionDate.should.be.an.isoDate();
+            delete body.value[0].__system.submissionDate;
+
+            body.should.eql({
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions',
+              value: [{
+                __id: "double",
+                __system: {
+                  // submissionDate is checked above!
+                  updatedAt: null,
+                  submitterId: '5',
+                  submitterName: 'Alice',
+                  attachmentsPresent: 0,
+                  attachmentsExpected: 0,
+                  status: null,
+                  reviewState: null,
+                  deviceId: 'testid',
+                  edits: 0,
+                  formVersion: '1.0'
+                },
+                children: {
+                  'child@odata.navigationLink': "Submissions('double')/children/child"
+                },
+                meta: { instanceID: "double" },
+                name: "Vick"
+              }]
+            });
+          }))));
+
+    it('should return a single row result with selected properties', testService((service) =>
+      withSubmission(service, (asAlice) =>
+        asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')?$select=__id,__system/submissionDate,__system/status,name,meta/instanceID,children/child")
+          .expect(200)
+          .then(({ body }) => {
+            // have to manually check and clear the date for exact match:
+            body.value[0].__system.submissionDate.should.be.an.isoDate();
+            delete body.value[0].__system.submissionDate;
+
+            body.should.eql({
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions',
+              value: [{
+                __id: "double",
+                __system: {
+                  // submissionDate is checked above!                
+                  status: null                
+                },
+                children: {
+                  'child@odata.navigationLink': "Submissions('double')/children/child"
+                },
+                meta: { instanceID: "double" },
+                name: "Vick"
+              }]
+            });
+          }))));
+
+    it('should return a single row result with all system properties', testService((service) =>
+      withSubmission(service, (asAlice) =>
+        asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')?$select=__system")
+          .expect(200)
+          .then(({ body }) => {
+            // have to manually check and clear the date for exact match:
+            body.value[0].__system.submissionDate.should.be.an.isoDate();
+            delete body.value[0].__system.submissionDate;
+
+            body.should.eql({
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions',
+              value: [{
+                __system: {
+                  // submissionDate is checked above!
+                  updatedAt: null,
+                  submitterId: '5',
+                  submitterName: 'Alice',
+                  attachmentsPresent: 0,
+                  attachmentsExpected: 0,
+                  status: null,
+                  reviewState: null,
+                  deviceId: 'testid',
+                  edits: 0,
+                  formVersion: '1.0'
+                }
+              }]
+            });
+          }))));
+
+    it('should return subtable results with selected properties', testService((service) =>
+      withSubmission(service, (asAlice) =>
+        asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?$select=name")
+          .expect(200)
+          .then(({ body }) => {
+            body.should.eql({
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
+              value: [{
+                  "name": "Alice"
+                }, {
+                  "name": "Pinkie Pie"
+                }, {
+                  "name": "Applejack"
+                }, {
+                  "name": "Spike"
+                }]
+            });
+          }))));
   });
 
   describe('/Submissions.xyz.* GET', () => {
@@ -1085,6 +1194,49 @@ describe('api: /forms/:id.svc', () => {
                 '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child'
               });
             })))));
+
+    it('should return toplevel rows with selected properties', testService((service) =>
+      withSubmissions(service, (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$select=__id,name')
+          .expect(200)
+          .then(({ body }) => {            
+            body.should.eql({
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+              value: [{
+                __id: "rthree",
+                name: "Chelsea"
+              }, {
+                __id: "rtwo",                
+                name: "Bob",                
+              }, {
+                __id: "rone",               
+                name: "Alice",               
+              }]
+            });
+          }))));
+
+    it('should return subtable results with selected properties', testService((service) =>
+      withSubmissions(service, (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$select=__id,__Submissions-id,name')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.eql({
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions.children.child',
+              value: [{
+                __id: '32809ae2b3dc404ea292205eb884b21fa4e9acc5',
+                '__Submissions-id': 'rthree',
+                name: 'Candace'
+              }, {
+                __id: '52eff9ea82550183880b9d64c20487642fa6e60c',
+                '__Submissions-id': 'rtwo',
+                name: 'Billy'
+              }, {
+                __id: '1291953ccbe2e5e866f7ab3fefa3036d649186d3',
+                '__Submissions-id': 'rtwo',
+                name: 'Blaine'
+              }]
+            });
+          }))));
   });
 
   describe('/draft.svc', () => {

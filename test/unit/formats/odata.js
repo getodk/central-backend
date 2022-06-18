@@ -3,7 +3,7 @@ const streamTest = require('streamtest').v2;
 const { identity } = require('ramda');
 const { selectFields } = require('../../../lib/formats/odata');
 const { serviceDocumentFor, edmxFor, rowStreamToOData, singleRowToOData } = require(appRoot + '/lib/formats/odata');
-const { fieldsFor } = require(appRoot + '/test/util/schema');
+const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
 // Helpers to deal with repeated system metadata generation.
@@ -1064,15 +1064,12 @@ describe('odata message composition', () => {
   describe('select fields', () => {
     it('should return all fields if $select not provided', () => {
       return fieldsFor(testData.forms.simple)
-      .then((fields) => selectFields({},'Submissions')(fields)
-        .then((filteredFields) => {
-          filteredFields.length.should.equal(fields.length);
-        }));
+      .then((fields) => selectFields({},'Submissions')(fields).length.should.equal(fields.length));
     });
 
     it('should return only selected fields', () => {
       return fieldsFor(testData.forms.simple)
-      .then(selectFields({$select:'name,age,meta/instanceid'}, 'Submissions'))
+      .then(selectFields({$select:'name,age,meta/instanceID'}, 'Submissions'))
       .then((filteredFields) => {
           filteredFields.length.should.equal(4);
       });
@@ -1113,6 +1110,22 @@ describe('odata message composition', () => {
       });
     });
 
+    it('should be able to select sanitized fields', () => {
+      const fields = [
+        new MockField({ path: '/meta', name: 'meta',  type: 'structure' }),
+        new MockField({ path: '/meta/$miles', name: '$miles',  type: 'decimal' }),
+        new MockField({ path: '/1car', name: '1car',  type: 'string' })
+      ];
+      selectFields({$select:'_1car,meta/__miles'}, 'Submissions')(fields).length.should.equal(3);
+    });
+
+    it('should be able to select properties of subtable', () => {
+      return fieldsFor(testData.forms.doubleRepeat)
+      .then(selectFields({$select:'name'}, 'Submissions.children.child'))
+      .then((filteredFields) => {
+          filteredFields.length.should.equal(3);
+      });
+    });
   });
 });
 
