@@ -3360,7 +3360,7 @@ Note that the `submissionDate` has a time component. This means that any compari
 
 Please see the [OData documentation](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) on `$filter` [operations](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinFilterOperations) and [functions](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinQueryFunctions) for more information.
 
-As of ODK Central v1.2, you can use `%24expand=&#42;` to expand all repeat repetitions. This is helpful if you'd rather get one nested JSON data payload of all hierarchical data, rather than retrieve each of repeat as a separate flat table with references.
+As of ODK Central v1.2, you can use `%24expand=*` to expand all repeat repetitions. This is helpful if you'd rather get one nested JSON data payload of all hierarchical data, rather than retrieve each of repeat as a separate flat table with references.
 
 The _nonstandard_ `$wkt` querystring parameter may be set to `true` to request that geospatial data is returned as a [Well-Known Text (WKT) string](https://en.wikipedia.org/wiki/Well-known_text) rather than a GeoJSON structure. This exists primarily to support Tableau, which cannot yet read GeoJSON, but you may find it useful as well depending on your mapping software. **Please note** that both GeoJSON and WKT follow a `(lon, lat, alt)` coördinate ordering rather than the ODK-proprietary `lat lon alt`. This is so that the values map neatly to `(x, y, z)`. GPS accuracy information is not a part of either standards specification, and so is presently omitted from OData output entirely. GeoJSON support may come in a future version.
 
@@ -3374,7 +3374,7 @@ As the vast majority of clients only support the JSON OData format, that is the 
     + `%24count`: `true` (boolean, optional) - If set to `true`, an `@odata.count` property will be added to the result indicating the total number of rows, ignoring the above paging parameters.
     + `%24wkt`: `true` (boolean, optional) - If set to `true`, geospatial data will be returned as Well-Known Text (WKT) strings rather than GeoJSON structures.
     + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
-    + `%24expand`: `&#42;` (string, optional) - Repetitions, which should get expanded. Currently, only `&#42` is implemented, which expands all repetitions.
+    + `%24expand`: `*` (string, optional) - Repetitions, which should get expanded. Currently, only `*` is implemented, which expands all repetitions.
 
 + Response 200 (application/json)
     + Body
