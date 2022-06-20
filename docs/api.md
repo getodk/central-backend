@@ -2148,7 +2148,7 @@ You can use an [OData-style `$filter` query](/reference/odata-endpoints/odata-fo
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
     + attachments: `true` (boolean, optional) - Set to false to exclude media attachments from the export.
-    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
     + groupPaths: `true` (boolean, optional) - Set to false to remove group path prefixes from field header names (eg `instanceID` instead of `meta-instanceID`). This behavior mimics a similar behavior in ODK Briefcase.
     + deletedFields: `false` (boolean, optional) - Set to true to restore all fields previously deleted from this form for this export. All known fields and data for those fields will be merged and exported.
     + splitSelectMultiples: `false` (boolean, optional) - Set to true to create a boolean column for every known select multiple option in the export. The option name is in the field header, and a `0` or a `1` will be present in each cell indicating whether that option was checked for that row. This behavior mimics a similar behavior in ODK Briefcase.
@@ -2179,7 +2179,7 @@ And so, for this `POST` version of the Submission CSV export endpoint, the passp
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
     + attachments: `true` (boolean, optional) - Set to false to exclude media attachments from the export.
-    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
     + groupPaths: `true` (boolean, optional) - Set to false to remove group path prefixes from field header names (eg `instanceID` instead of `meta-instanceID`). This behavior mimics a similar behavior in ODK Briefcase.
     + deletedFields: `false` (boolean, optional) - Set to true to restore all fields previously deleted from this form for this export. All known fields and data for those fields will be merged and exported.
     + splitSelectMultiples: `false` (boolean, optional) - Set to true to create a boolean column for every known select multiple option in the export. The option name is in the field header, and a `0` or a `1` will be present in each cell indicating whether that option was checked for that row. This behavior mimics a similar behavior in ODK Briefcase.
@@ -2211,7 +2211,7 @@ Please see the [above endpoint](/reference/submissions/submissions/exporting-for
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
-    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200
     + Body
@@ -2236,7 +2236,7 @@ As with [`POST` to `.csv.zip`](/reference/submissions/submissions/exporting-form
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
-    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the given OData query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200
     + Body
@@ -3373,7 +3373,7 @@ As the vast majority of clients only support the JSON OData format, that is the 
     + `%24top`: `5` (number, optional) - If supplied, only up to `$top` rows will be returned in the results.
     + `%24count`: `true` (boolean, optional) - If set to `true`, an `@odata.count` property will be added to the result indicating the total number of rows, ignoring the above paging parameters.
     + `%24wkt`: `true` (boolean, optional) - If set to `true`, geospatial data will be returned as Well-Known Text (WKT) strings rather than GeoJSON structures.
-    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
     + `%24expand`: `&#42;` (string, optional) - Repetitions, which should get expanded. Currently, only `&#42` is implemented, which expands all repetitions.
 
 + Response 200 (application/json)
@@ -3556,7 +3556,7 @@ Identical to [the non-Draft version](/reference/odata-endpoints/odata-form-servi
     + `%24top`: `5` (number, optional) - If supplied, only up to `$top` rows will be returned in the results.
     + `%24count`: `true` (boolean, optional) - If set to `true`, an `@odata.count` property will be added to the result indicating the total number of rows, ignoring the above paging parameters.
     + `%24wkt`: `true` (boolean, optional) - If set to `true`, geospatial data will be returned as Well-Known Text (WKT) strings rather than GeoJSON structures.
-    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `lte`, `eq`, `neq`, `gte`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
 
 + Response 200 (application/json)
     + Body
