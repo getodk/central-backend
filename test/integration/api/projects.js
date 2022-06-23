@@ -345,6 +345,22 @@ describe('api: /projects', () => {
             body.verbs.should.containDeep([ 'assignment.create', 'project.delete' ]);
             body.verbs.should.not.containDeep([ 'project.create' ]);
           }))));
+
+    it('should return verb information with extended metadata (dave)', testService((service) =>
+      service.login('dave', (asDave) =>
+        asDave.get('/v1/projects/1')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.verbs.should.eql([
+              'project.read',      // from role(s): formfill, viewer
+              'form.list',         // from role(s): formfill, viewer
+              'form.read',         // from role(s): formfill, viewer
+              'submission.read',   // from role(s): viewer
+              'submission.list',   // from role(s): viewer
+              'submission.create', // from role(s): formfill
+            ]);
+          }))));
   });
 
   describe('/:id PATCH', () => {
@@ -1219,8 +1235,7 @@ describe('api: /projects?forms=true', () => {
           body.length.should.equal(1);
           body[0].should.be.a.Project();
           const { formList, verbs } = body[0];
-          // verbs seems to have 1 more verb than it should - one is duplicated
-          verbs.length.should.be.greaterThan(40);
+          verbs.length.should.equal(40); // REVIEWER: master currently returns duplicate of 'submission.update'
           formList.length.should.equal(2);
           const form = formList[0];
           form.should.be.a.ExtendedForm();
@@ -1284,7 +1299,7 @@ describe('api: /projects?forms=true', () => {
             body.length.should.equal(2);
             // First project
             body[0].formList.length.should.equal(2);
-            body[0].verbs.length.should.be.greaterThan(25); // 26 for manager
+            body[0].verbs.length.should.equal(25); // REVIEWER: master currently returns duplicate of 'submission.update'
             // Second project
             body[1].formList.length.should.equal(1);
             body[1].verbs.length.should.be.lessThan(5); // 4 for data collector
@@ -1313,5 +1328,21 @@ describe('api: /projects?forms=true', () => {
             form.name.should.equal('Simple');
             form.reviewStates.received.should.equal(2);
           })))));
+
+    it('should return verbs for multiple roles', testService((service) =>
+      service.login('dave', (asDave) => asDave.get('/v1/projects?forms=true')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+          const { formList, verbs } = body[0];
+          verbs.should.eql([
+            'form.list',         // from role(s): formfill, viewer
+            'form.read',         // from role(s): formfill, viewer
+            'project.read',      // from role(s): formfill, viewer
+            'submission.create', // from role(s): formfill
+            'submission.list',   // from role(s): viewer
+            'submission.read',   // from role(s): viewer
+          ]);
+        }))));
   });
 });

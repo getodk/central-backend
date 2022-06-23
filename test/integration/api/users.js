@@ -18,8 +18,8 @@ describe('api: /users', () => {
           .expect(200)
           .expect(({ body }) => {
             body.forEach((user) => user.should.be.a.User());
-            body.map((user) => user.displayName).should.eql([ 'Alice', 'Bob', 'Chelsea' ]);
-            body.map((user) => user.email).should.eql([ 'alice@getodk.org', 'bob@getodk.org', 'chelsea@getodk.org' ]);
+            body.map((user) => user.displayName).should.eql([ 'Alice', 'Bob', 'Chelsea', 'Dave' ]);
+            body.map((user) => user.email).should.eql([ 'alice@getodk.org', 'bob@getodk.org', 'chelsea@getodk.org', 'dave@getodk.org' ]);
           }))));
 
     it('should search user display names if a query is given', testService((service) =>
@@ -44,7 +44,7 @@ describe('api: /users', () => {
           .then(() => asAlice.get('/v1/users?q=getodk')
             .expect(200)
             .then(({ body }) => {
-              body.length.should.equal(3);
+              body.length.should.equal(4);
               body.forEach((user) => user.should.be.a.User());
               body.map((user) => user.displayName).should.containDeep([ 'Alice', 'Bob', 'Chelsea' ]);
               body.map((user) => user.email).should.containDeep([ 'alice@getodk.org', 'bob@getodk.org', 'chelsea@getodk.org' ]);
@@ -55,11 +55,11 @@ describe('api: /users', () => {
         asAlice.get('/v1/users?q=chelsea getodk')
           .expect(200)
           .then(({ body }) => {
-            body.length.should.equal(3);
+            body.length.should.equal(4);
             body.forEach((user) => user.should.be.a.User());
             // bob always comes ahead of alice, since the email is shorter and so it's
             // technically more of a match.
-            body.map((user) => user.displayName).should.eql([ 'Chelsea', 'Bob', 'Alice' ]);
+            body.map((user) => user.displayName).should.eql([ 'Chelsea', 'Bob', 'Dave', 'Alice' ]);
           }))));
 
     it('should reject unauthed users even if they exactly match an email', testService((service) =>
