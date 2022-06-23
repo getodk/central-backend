@@ -350,8 +350,9 @@ describe('/projects/:id/assignments', () => {
         .then(([ roleId, bobId ]) => asBob.get('/v1/projects/1/assignments')
           .expect(200)
           .then(({ body }) => {
-            body.length.should.equal(1);
+            body.length.should.equal(3);
             body[0].should.eql({ roleId, actorId: bobId });
+            // dave also has 2 assignments to this project, not explicitly tested here
           })))));
   });
 
