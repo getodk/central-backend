@@ -46,6 +46,9 @@ First, create a database and user in Postgres. Either use the same settings as t
 ```sql
 CREATE USER jubilant WITH PASSWORD 'jubilant';
 CREATE DATABASE jubilant_test with owner=jubilant encoding=UTF8;
+\c jubilant_test;
+CREATE EXTENSION IF NOT EXISTS CITEXT;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE DATABASE jubilant with owner=jubilant encoding=UTF8;
 \c jubilant;
 CREATE EXTENSION IF NOT EXISTS CITEXT;
