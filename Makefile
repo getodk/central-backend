@@ -33,7 +33,7 @@ test-coverage: node_modules
 	node node_modules/.bin/nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --exit --recursive test
 
 lint:
-	node node_modules/.bin/eslint lib
+	node node_modules/.bin/eslint --cache lib
 
 run-multi: base
 	node node_modules/naught/lib/main.js start --worker-count 4 lib/bin/run-server.js
