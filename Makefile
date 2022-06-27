@@ -32,7 +32,7 @@ test-unit: node_modules
 test-coverage: node_modules
 	node node_modules/.bin/nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --exit --recursive test
 
-lint:
+lint: node_modules
 	node node_modules/.bin/eslint lib
 
 run-multi: base
