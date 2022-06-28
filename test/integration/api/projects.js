@@ -352,7 +352,7 @@ describe('api: /projects', () => {
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
-            body.verbs.should.eql([
+            body.verbs.should.deepEqualInAnyOrder([
               'project.read',      // from role(s): formfill, viewer
               'form.list',         // from role(s): formfill, viewer
               'form.read',         // from role(s): formfill, viewer
@@ -1335,7 +1335,7 @@ describe('api: /projects?forms=true', () => {
         .then(({ body }) => {
           body.length.should.equal(1);
           const { formList, verbs } = body[0];
-          verbs.should.eql([
+          verbs.should.deepEqualInAnyOrder([
             'form.list',         // from role(s): formfill, viewer
             'form.read',         // from role(s): formfill, viewer
             'project.read',      // from role(s): formfill, viewer
