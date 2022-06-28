@@ -49,10 +49,12 @@ CREATE DATABASE jubilant_test with owner=jubilant encoding=UTF8;
 \c jubilant_test;
 CREATE EXTENSION IF NOT EXISTS CITEXT;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 CREATE DATABASE jubilant with owner=jubilant encoding=UTF8;
 \c jubilant;
 CREATE EXTENSION IF NOT EXISTS CITEXT;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 ```
 
 ### Sending email
