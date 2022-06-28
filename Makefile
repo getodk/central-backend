@@ -1,7 +1,7 @@
 .PHONY: test
 default: base
 
-node_modules:
+node_modules: package.json
 	npm install
 
 migrations: node_modules
