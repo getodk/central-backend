@@ -5,10 +5,10 @@ node_modules:
 	npm install
 
 migrations: node_modules
-	node -e 'const { withDatabase, migrate } = require("./lib/model/migrate"); withDatabase(require("config").get("default.database"))(migrate);'
+	node --trace-warnings --unhandled-rejections=strict -e 'const { withDatabase, migrate } = require("./lib/model/migrate"); withDatabase(require("config").get("default.database"))(migrate);'
 
 check-migrations: node_modules
-	node -e 'const { withDatabase, checkMigrations } = require("./lib/model/migrate"); withDatabase(require("config").get("default.database"))(checkMigrations);'
+	node --trace-warnings --unhandled-rejections=strict -e 'const { withDatabase, checkMigrations } = require("./lib/model/migrate"); withDatabase(require("config").get("default.database"))(checkMigrations);'
 
 base: node_modules migrations check-migrations
 
