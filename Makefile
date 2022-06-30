@@ -4,13 +4,16 @@ default: base
 node_modules: package.json
 	npm install
 
-migrations: node_modules
+node_version: node_modules
+	node lib/bin/enforce-node-version.js
+
+migrations: node_version
 	node -e 'const { withDatabase, migrate } = require("./lib/model/migrate"); withDatabase(require("config").get("default.database"))(migrate);'
 
-check-migrations: node_modules
+check-migrations: node_version
 	node -e 'const { withDatabase, checkMigrations } = require("./lib/model/migrate"); withDatabase(require("config").get("default.database"))(checkMigrations);'
 
-base: node_modules migrations check-migrations
+base: node_version migrations check-migrations
 
 run: base
 	node lib/bin/run-server.js
@@ -18,21 +21,21 @@ run: base
 debug: base
 	node --debug --inspect lib/bin/run-server.js
 
-test: node_modules
+test: node_version
 	env BCRYPT=no node node_modules/mocha/bin/mocha --recursive --exit
-test-full: node_modules
+test-full: node_version
 	node node_modules/mocha/bin/mocha --recursive --exit
 
-test-integration: node_modules
+test-integration: node_version
 	node node_modules/mocha/bin/mocha --recursive test/integration --exit
 
-test-unit: node_modules
+test-unit: node_version
 	node node_modules/mocha/bin/mocha --recursive test/unit --exit
 
-test-coverage: node_modules
+test-coverage: node_version
 	node node_modules/.bin/nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --exit --recursive test
 
-lint: node_modules
+lint: node_version
 	node node_modules/.bin/eslint --cache lib
 
 run-multi: base
