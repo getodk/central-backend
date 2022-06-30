@@ -8,10 +8,10 @@ node_version: node_modules
 	node lib/bin/enforce-node-version.js
 
 migrations: node_version
-	node -e 'const { withDatabase, migrate } = require("./lib/model/migrate"); withDatabase(require("config").get("default.database"))(migrate);'
+	node lib/bin/run-migrations.js
 
 check-migrations: node_version
-	node -e 'const { withDatabase, checkMigrations } = require("./lib/model/migrate"); withDatabase(require("config").get("default.database"))(checkMigrations);'
+	node lib/bin/check-migrations.js
 
 base: node_version migrations check-migrations
 
