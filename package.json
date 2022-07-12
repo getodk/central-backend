@@ -35,7 +35,7 @@
     "prompt": "~1",
     "ramda": "~0",
     "sanitize-filename": "~1",
-    "slonik": "~23",
+    "slonik": "^23.6.1",
     "slonik-sql-tag-raw": "1.0.3",
     "tmp-promise": "~3",
     "uuid": "~3",
