@@ -49,13 +49,6 @@ test-coverage: node_version
 lint: node_version
 	node node_modules/.bin/eslint --cache lib
 
-.PHONY: run-multi
-run-multi: base
-	node node_modules/naught/lib/main.js start --worker-count 4 lib/bin/run-server.js
-.PHONY: stop-multi
-stop-multi:
-	node node_modules/naught/lib/main.js stop
-
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
 	docker run -d --name odk-postgres -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:9.6
