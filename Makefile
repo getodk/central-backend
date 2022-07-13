@@ -2,6 +2,7 @@ default: base
 
 node_modules: package.json
 	npm install
+	touch node_modules
 
 .PHONY: node_version
 node_version: node_modules
