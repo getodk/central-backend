@@ -1,0 +1,145 @@
+#!/bin/bash -eu
+set -o pipefail
+
+usage() {
+  this="$(basename "$0")"
+  cat <<EOF
+
+$(tput bold)NAME$(tput sgr0)
+	$this
+
+$(tput bold)SYONPSIS$(tput sgr0)
+	$(tput bold)$this$(tput sgr0) [options] [...command_string]
+
+$(tput bold)DESCRIPTION$(tput sgr0)
+	Run a command, and analyse the resulting PostgreSQL logs with pgBadger.
+
+$(tput bold)OPTIONS$(tput sgr0)
+	$(tput bold)--force-settings$(tput sgr0)
+		Forces changes to PostgreSQL settings.  If this option is not set, $this will prompt before making changes to PostgreSQL settings.
+	$(tput bold)--help$(tput sgr0)
+	$(tput bold)--usage$(tput sgr0)
+		Display this message.
+
+$(tput bold)EXAMPLES$(tput sgr0)
+	./$this make test
+
+$(tput bold)SEE ALSO$(tput sgr0)
+	https://github.com/darold/pgbadger
+
+EOF
+  exit "${1-}"
+}
+
+force_settings=false
+if [[ "${1-}" = --force-settings ]]; then
+  force_settings=true
+  shift
+fi
+
+if [[ "${1-}" = --help ]] || [[ "${1-}" = --usage ]]; then
+  usage 0
+elif [[ $# -lt 1 ]]; then
+  usage 1
+fi
+
+log() {
+  echo "[with-pgbadger] $*"
+}
+
+badger_date() {
+  date '+%Y-%m-%d %H:%M:%S'
+}
+
+if [[ -z "${POSTGRES_LOG_FILE-}" ]]; then
+  cat <<EOF
+
+  !!! POSTGRES_LOG_FILE NOT SET!
+  !!!
+  !!! pgbadger needs to know where your log file is in order to process it
+  !!!
+  !!! try again e.g.:
+  !!!
+  !!!     POSTGRES_LOG_FILE=/var/log/postgresql/postgresql-12-main.log $0 $*
+
+EOF
+  exit 1
+fi
+
+reportsDir='./.pgbadger'
+mkdir -p "$reportsDir"
+
+start="$(badger_date)"
+
+current_settings="$(psql -c 'SELECT name,setting FROM pg_settings' -P format=csv)"
+must_change_settings=false
+pg_check_setting() {
+  key="$1"
+  expected="$2"
+  current="$(grep -E "^$key\\b" <<<"$current_settings")"
+  if [[ "$current" != "$key,$expected" ]]; then
+    must_change_settings=true
+    log "Need to change postgres setting '$key' from '$(cut -d, -f2- <<<"$current")' to '$expected'..."
+  fi
+}
+pg_apply_setting() {
+  psql >/dev/null -c "ALTER SYSTEM SET $1 = $2"
+}
+
+log "Checking current postgres options..."
+# see: https://github.com/darold/pgbadger#postgresql-configuration
+# keep these settings in sync with pg_apply_setting() calls below
+# N.B. strings are quoted differently for pg_check_setting() vs pg_apply_setting()
+pg_check_setting log_min_duration_statement 0
+pg_check_setting log_checkpoints on
+pg_check_setting log_connections on
+pg_check_setting log_disconnections on
+pg_check_setting log_lock_waits on
+pg_check_setting log_temp_files 0
+pg_check_setting log_autovacuum_min_duration 0
+pg_check_setting log_error_verbosity default
+pg_check_setting log_duration off
+pg_check_setting log_statement 'none'
+pg_check_setting log_line_prefix '%m [%p] '
+
+if [[ "$must_change_settings" = "false" ]]; then
+  log "Postgres settings look OK."
+else
+  if [[ "$force_settings" != true ]]; then
+    read -rp "Apply postgres settings changes? (y/n) " confirm
+    case "$confirm" in
+      y) ;;
+      *) log "Postgres settings must be applied to continue.  Exiting script."; exit 1 ;;
+    esac
+  fi
+
+  log "Enabling required postgres options..."
+  # keep these settings in sync with pg_check_setting() calls above
+  # N.B. strings are quoted differently for pg_check_setting() vs pg_apply_setting()
+  pg_apply_setting log_min_duration_statement 0
+  pg_apply_setting log_checkpoints on
+  pg_apply_setting log_connections on
+  pg_apply_setting log_disconnections on
+  pg_apply_setting log_lock_waits on
+  pg_apply_setting log_temp_files 0
+  pg_apply_setting log_autovacuum_min_duration 0
+  pg_apply_setting log_error_verbosity default
+  pg_apply_setting log_duration off
+  pg_apply_setting log_statement "'none'"
+  pg_apply_setting log_line_prefix "'%m [%p] '"
+  psql >/dev/null -c 'SELECT pg_reload_conf()'
+fi
+
+log "Executing: $*"
+# TODO this expansion may not be quite correct - will probably fail with commands or args that include spaces
+"$@" || true # we still want to generate a report if there are test failures
+
+reportFile="$(date -Iseconds).html"
+reportPath="$reportsDir/$reportFile"
+
+log "Generating pgbadger report at $reportPath..."
+cd "$reportsDir"
+pgbadger -b "$start.000" -e "$(badger_date).999" -o "$reportFile" "$POSTGRES_LOG_FILE"
+
+echo
+log "Complete.  Report generated at: $reportPath"
