@@ -1086,7 +1086,18 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/edit')
             .expect(409)))));
 
-    it('should reject if the form is closing', testService((service, { run }) =>
+    it('should redirect to the edit_url for an open form', testService((service, { run }) =>
+      run(sql`update forms set "enketoId"='myenketoid'`)
+        .then(() => service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/edit')
+              .expect(302)
+              .then(({ text }) => { text.should.equal('Found. Redirecting to https://enketo/edit/url'); }))))));
+
+    it('should redirect to the edit_url for a closing form', testService((service, { run }) =>
       run(sql`update forms set "enketoId"='myenketoid'`)
         .then(() => service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/submissions')
@@ -1097,19 +1108,19 @@ describe('api: /forms/:id/submissions', () => {
               .send({ state: 'closing' })
               .expect(200))
             .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/edit')
-              .expect(409)
-              .then(({ body }) => {
-                body.code.should.equal(409.12);
-                /trying to edit a submission of a Form that is in Closing or Closed/.test(body.message).should.equal(true);
-              }))))));
+              .expect(302)
+              .then(({ text }) => { text.should.equal('Found. Redirecting to https://enketo/edit/url'); }))))));
 
-    it('should redirect to the edit_url', testService((service, { run }) =>
+    it('should redirect to the edit_url for a closed form', testService((service, { run }) =>
       run(sql`update forms set "enketoId"='myenketoid'`)
         .then(() => service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/submissions')
             .send(testData.instances.simple.one)
             .set('Content-Type', 'application/xml')
             .expect(200)
+            .then(() => asAlice.patch('/v1/projects/1/forms/simple')
+              .send({ state: 'closed' })
+              .expect(200))
             .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/edit')
               .expect(302)
               .then(({ text }) => { text.should.equal('Found. Redirecting to https://enketo/edit/url'); }))))));
