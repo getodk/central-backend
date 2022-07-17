@@ -707,6 +707,62 @@ describe('api: /submission', () => {
                 .expect(404)
             ]))))));
 
+    it('should save a submission for the draft of a closing form', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple')
+          .send({ state: 'closing' })
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+            .expect(201)
+            .then(({ text }) => {
+              text.should.match(/upload was successful/);
+            })
+            .then(() => Promise.all([
+              asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one')
+                .expect(200)
+                .then(({ body }) => {
+                  body.createdAt.should.be.a.recentIsoDate();
+                  should.not.exist(body.deviceId);
+                }),
+              asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one.xml')
+                .expect(200)
+                .then(({ text }) => { text.should.equal(testData.instances.simple.one); }),
+              asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+                .expect(404)
+            ]))))));
+
+    it('should save a submission for the draft of a closed form', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple')
+          .send({ state: 'closed' })
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+            .expect(201)
+            .then(({ text }) => {
+              text.should.match(/upload was successful/);
+            })
+            .then(() => Promise.all([
+              asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one')
+                .expect(200)
+                .then(({ body }) => {
+                  body.createdAt.should.be.a.recentIsoDate();
+                  should.not.exist(body.deviceId);
+                }),
+              asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one.xml')
+                .expect(200)
+                .then(({ text }) => { text.should.equal(testData.instances.simple.one); }),
+              asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+                .expect(404)
+            ]))))));
+
     it('should save client audit log attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
