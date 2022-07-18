@@ -5,6 +5,9 @@
   "engines": {
     "node": "14"
   },
+  "volta": {
+    "node": "14.17.6"
+  },
   "dependencies": {
     "@sentry/node": "~6",
     "archiver": "~5",
