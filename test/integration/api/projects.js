@@ -1235,7 +1235,7 @@ describe('api: /projects?forms=true', () => {
           body.length.should.equal(1);
           body[0].should.be.a.Project();
           const { formList, verbs } = body[0];
-          verbs.length.should.equal(40); // REVIEWER: master currently returns duplicate of 'submission.update'
+          verbs.length.should.equal(40);
           formList.length.should.equal(2);
           const form = formList[0];
           form.should.be.a.ExtendedForm();
@@ -1299,7 +1299,7 @@ describe('api: /projects?forms=true', () => {
             body.length.should.equal(2);
             // First project
             body[0].formList.length.should.equal(2);
-            body[0].verbs.length.should.equal(25); // REVIEWER: master currently returns duplicate of 'submission.update'
+            body[0].verbs.length.should.equal(25);
             // Second project
             body[1].formList.length.should.equal(1);
             body[1].verbs.length.should.be.lessThan(5); // 4 for data collector
