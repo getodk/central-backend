@@ -1263,6 +1263,32 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
             .expect(200)
             .then(({ body }) => { body.reviewState.should.equal('approved'); })))));
+
+    it('should accept for a closing form', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple')
+          .send({ state: 'closing' })
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.patch('/v1/projects/1/forms/simple/submissions/one')
+              .send({ reviewState: 'approved' })
+              .expect(200))))));
+
+    it('should accept for a closed form', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/1/forms/simple')
+          .send({ state: 'closed' })
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.patch('/v1/projects/1/forms/simple/submissions/one')
+              .send({ reviewState: 'approved' })
+              .expect(200))))));
   });
 
   describe('.csv.zip GET', () => {
