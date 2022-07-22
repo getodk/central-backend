@@ -346,21 +346,28 @@ describe('api: /projects', () => {
             body.verbs.should.not.containDeep([ 'project.create' ]);
           }))));
 
-    it('should return verb information with extended metadata (dave)', testService((service) =>
-      service.login('dave', (asDave) =>
-        asDave.get('/v1/projects/1')
-          .set('X-Extended-Metadata', 'true')
-          .expect(200)
-          .then(({ body }) => {
-            body.verbs.should.eqlInAnyOrder([
-              'project.read',      // from role(s): formfill, viewer
-              'form.list',         // from role(s): formfill, viewer
-              'form.read',         // from role(s): formfill, viewer
-              'submission.read',   // from role(s): viewer
-              'submission.list',   // from role(s): viewer
-              'submission.create', // from role(s): formfill
-            ]);
-          }))));
+    it('should return verb information with extended metadata (chelsea)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current').expect(200)
+            .then(({ body }) => body.id)
+            .then((chelseaId) => Promise.all([
+               asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`).expect(200),
+               asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`).expect(200),
+            ]))
+            .then(() => asChelsea.get('/v1/projects/1')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.verbs.should.eqlInAnyOrder([
+                  'project.read',      // from role(s): formfill, viewer
+                  'form.list',         // from role(s): formfill, viewer
+                  'form.read',         // from role(s): formfill, viewer
+                  'submission.read',   // from role(s): viewer
+                  'submission.list',   // from role(s): viewer
+                  'submission.create', // from role(s): formfill
+                ]);
+              }))))));
   });
 
   describe('/:id PATCH', () => {
@@ -1330,19 +1337,27 @@ describe('api: /projects?forms=true', () => {
           })))));
 
     it('should return verbs for multiple roles', testService((service) =>
-      service.login('dave', (asDave) => asDave.get('/v1/projects?forms=true')
-        .expect(200)
-        .then(({ body }) => {
-          body.length.should.equal(1);
-          const { formList, verbs } = body[0];
-          verbs.should.eqlInAnyOrder([
-            'form.list',         // from role(s): formfill, viewer
-            'form.read',         // from role(s): formfill, viewer
-            'project.read',      // from role(s): formfill, viewer
-            'submission.create', // from role(s): formfill
-            'submission.list',   // from role(s): viewer
-            'submission.read',   // from role(s): viewer
-          ]);
-        }))));
+      service.login('alice', (asAlice) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current').expect(200)
+            .then(({ body }) => body.id)
+            .then((chelseaId) => Promise.all([
+               asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`).expect(200),
+               asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`).expect(200),
+            ]))
+            .then(() => asChelsea.get('/v1/projects?forms=true')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(1);
+                const { formList, verbs } = body[0];
+                verbs.should.eqlInAnyOrder([
+                  'form.list',         // from role(s): formfill, viewer
+                  'form.read',         // from role(s): formfill, viewer
+                  'project.read',      // from role(s): formfill, viewer
+                  'submission.create', // from role(s): formfill
+                  'submission.list',   // from role(s): viewer
+                  'submission.read',   // from role(s): viewer
+                ]);
+              }))))));
   });
 });
