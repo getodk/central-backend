@@ -1464,7 +1464,7 @@ describe('api: /forms/:id/submissions', () => {
               done();
             }))))));
 
-    it('should return a zipfile with the relevant attachments', testService((service) =>
+    it.only('should return a zipfile with the relevant attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -1493,14 +1493,14 @@ describe('api: /forms/:id/submissions', () => {
 
                 // we also check the csv for the sake of verifying the attachments counts.
                 const csv = result['binaryType.csv'].split('\n');
-                csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+                csv[0].should.equal('ubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
                 csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,2,2,,,,0,');
                 csv.length.should.equal(3); // newline at end
 
                 done();
               })))))));
 
-    it('should filter attachments by the query', testService((service) =>
+    it.only('should filter attachments by the query', testService((service) =>
       service.login('alice', (asAlice) =>
         service.login('bob', (asBob) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
