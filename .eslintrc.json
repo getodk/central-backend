@@ -12,6 +12,7 @@
     "global-require": "off",
     "implicit-arrow-linebreak": "off",
     "import/newline-after-import": "off",
+    "import/no-extraneous-dependencies": "off",
     "import/order": "off",
     "lines-between-class-members": "off",
     "max-classes-per-file": "off",
@@ -22,6 +23,7 @@
     "no-multiple-empty-lines": "off",
     "no-nested-ternary": "off",
     "no-restricted-syntax": "off",
+    "no-shadow": "off",
     "no-underscore-dangle": "off",
     "nonblock-statement-body-position": "off",
     "object-curly-newline": [ "error", {
@@ -31,6 +33,7 @@
     "object-property-newline": "off",
     "operator-linebreak": "off",
     "padded-blocks": "off",
+    "prefer-destructuring": "off",
     "prefer-object-spread": "off",
     "prefer-template": "off",
     "space-infix-ops": "off",

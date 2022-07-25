@@ -30,10 +30,10 @@ debug: base
 	node --debug --inspect lib/bin/run-server.js
 
 .PHONY: test
-test: node_version
+test: lint
 	env BCRYPT=no mocha --recursive --exit
 .PHONY: test-full
-test-full: node_version
+test-full: lint
 	mocha --recursive --exit
 
 .PHONY: test-integration
