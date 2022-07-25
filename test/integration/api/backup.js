@@ -1,10 +1,4 @@
-const appRoot = require('app-root-path');
-const should = require('should');
-const { createReadStream, readFileSync } = require('fs');
-const { testService, testServiceFullTrx } = require('../setup');
-const testData = require('../../data/xml');
-const { zipStreamToFiles } = require('../../util/zip');
-const { exhaust } = require(appRoot + '/lib/worker/worker');
+const { testService } = require('../setup');
 
 
 describe('api: /backup', () => {
