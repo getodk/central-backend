@@ -81,9 +81,9 @@ describe('managed encryption', () => {
       Promise.all([ 'alpha', 'beta' ].map(generateManagedKey))
         .then((pairs) =>
           mapSequential(
-            pairs.map((private) => new Key({
-              public: stripPemEnvelope(Buffer.from(private.pubkey, 'base64')),
-              private,
+            pairs.map((priv) => new Key({
+              public: stripPemEnvelope(Buffer.from(priv.pubkey, 'base64')),
+              private: priv,
               managed: true
             }))
               .concat([ new Key({ public: 'test' }) ]),

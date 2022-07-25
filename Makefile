@@ -50,7 +50,7 @@ test-coverage: node_version
 
 .PHONY: lint
 lint: node_version
-	eslint --cache lib
+	eslint --cache .
 
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
