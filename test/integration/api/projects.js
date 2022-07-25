@@ -1360,4 +1360,39 @@ describe('api: /projects?forms=true', () => {
                 ]);
               }))))));
   });
+
+it('should return the correct projects with the correct verbs', testService((service) =>
+  service.login('alice', (asAlice) =>
+    service.login('chelsea', (asChelsea) => Promise.all([
+      asChelsea.get('/v1/users/current')
+        .expect(200)
+        .then(({ body }) => body.id),
+      asAlice.post('/v1/projects')
+        .send({ name: 'Another Project' })
+        .expect(200)
+        .then(({ body }) => body.id)
+    ])
+      .then(([chelseaId, projectId]) => Promise.all([
+        asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`)
+          .expect(200),
+        asAlice.post(`/v1/projects/1/assignments/app-user/${chelseaId}`)
+          .expect(200),
+        asAlice.post(`/v1/projects/${projectId}/assignments/app-user/${chelseaId}`)
+          .expect(200)
+      ]))
+      .then(() => asChelsea.get('/v1/projects?forms=true')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+          const project = body[0];
+          project.id.should.equal(1);
+          project.verbs.should.eqlInAnyOrder([
+            'project.read',     // from role(s): viewer
+            'form.list',        // from role(s): viewer
+            'form.read',        // from role(s): viewer, app-user
+            'submission.read',  // from role(s): viewer
+            'submission.list',  // from role(s): viewer
+            'submission.create' // from role(s): app-user
+          ]);
+        }))))));
 });
