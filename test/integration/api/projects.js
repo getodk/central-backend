@@ -345,6 +345,29 @@ describe('api: /projects', () => {
             body.verbs.should.containDeep([ 'assignment.create', 'project.delete' ]);
             body.verbs.should.not.containDeep([ 'project.create' ]);
           }))));
+
+    it('should return verb information with extended metadata (chelsea)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current').expect(200)
+            .then(({ body }) => body.id)
+            .then((chelseaId) => Promise.all([
+               asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`).expect(200),
+               asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`).expect(200),
+            ]))
+            .then(() => asChelsea.get('/v1/projects/1')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.verbs.should.eqlInAnyOrder([
+                  'project.read',      // from role(s): formfill, viewer
+                  'form.list',         // from role(s): formfill, viewer
+                  'form.read',         // from role(s): formfill, viewer
+                  'submission.read',   // from role(s): viewer
+                  'submission.list',   // from role(s): viewer
+                  'submission.create', // from role(s): formfill
+                ]);
+              }))))));
   });
 
   describe('/:id PATCH', () => {
@@ -1219,8 +1242,7 @@ describe('api: /projects?forms=true', () => {
           body.length.should.equal(1);
           body[0].should.be.a.Project();
           const { formList, verbs } = body[0];
-          // verbs seems to have 1 more verb than it should - one is duplicated
-          verbs.length.should.be.greaterThan(40);
+          verbs.length.should.equal(40);
           formList.length.should.equal(2);
           const form = formList[0];
           form.should.be.a.ExtendedForm();
@@ -1284,7 +1306,7 @@ describe('api: /projects?forms=true', () => {
             body.length.should.equal(2);
             // First project
             body[0].formList.length.should.equal(2);
-            body[0].verbs.length.should.be.greaterThan(25); // 26 for manager
+            body[0].verbs.length.should.equal(25);
             // Second project
             body[1].formList.length.should.equal(1);
             body[1].verbs.length.should.be.lessThan(5); // 4 for data collector
@@ -1313,5 +1335,64 @@ describe('api: /projects?forms=true', () => {
             form.name.should.equal('Simple');
             form.reviewStates.received.should.equal(2);
           })))));
+
+    it('should return verbs for multiple roles', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current').expect(200)
+            .then(({ body }) => body.id)
+            .then((chelseaId) => Promise.all([
+               asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`).expect(200),
+               asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`).expect(200),
+            ]))
+            .then(() => asChelsea.get('/v1/projects?forms=true')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(1);
+                const { formList, verbs } = body[0];
+                verbs.should.eqlInAnyOrder([
+                  'form.list',         // from role(s): formfill, viewer
+                  'form.read',         // from role(s): formfill, viewer
+                  'project.read',      // from role(s): formfill, viewer
+                  'submission.create', // from role(s): formfill
+                  'submission.list',   // from role(s): viewer
+                  'submission.read',   // from role(s): viewer
+                ]);
+              }))))));
   });
+
+it('should return the correct projects with the correct verbs', testService((service) =>
+  service.login('alice', (asAlice) =>
+    service.login('chelsea', (asChelsea) => Promise.all([
+      asChelsea.get('/v1/users/current')
+        .expect(200)
+        .then(({ body }) => body.id),
+      asAlice.post('/v1/projects')
+        .send({ name: 'Another Project' })
+        .expect(200)
+        .then(({ body }) => body.id)
+    ])
+      .then(([chelseaId, projectId]) => Promise.all([
+        asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`)
+          .expect(200),
+        asAlice.post(`/v1/projects/1/assignments/app-user/${chelseaId}`)
+          .expect(200),
+        asAlice.post(`/v1/projects/${projectId}/assignments/app-user/${chelseaId}`)
+          .expect(200)
+      ]))
+      .then(() => asChelsea.get('/v1/projects?forms=true')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+          const project = body[0];
+          project.id.should.equal(1);
+          project.verbs.should.eqlInAnyOrder([
+            'project.read',     // from role(s): viewer
+            'form.list',        // from role(s): viewer
+            'form.read',        // from role(s): viewer, app-user
+            'submission.read',  // from role(s): viewer
+            'submission.list',  // from role(s): viewer
+            'submission.create' // from role(s): app-user
+          ]);
+        }))))));
 });

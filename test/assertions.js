@@ -279,3 +279,10 @@ should.Assertion.add('EncryptedSimpleCsv', function() {
   csv[4].should.eql([ '' ]);
 });
 
+should.Assertion.add('eqlInAnyOrder', function(expectedUnsorted) {
+  this.params = { operator:'to be equal in any order' };
+
+  const actualSorted = [ ...this.obj ].sort();
+  const expectedSorted = [ ...expectedUnsorted ].sort();
+  actualSorted.should.eql(expectedSorted);
+});
