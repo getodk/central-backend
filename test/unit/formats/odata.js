@@ -1112,11 +1112,11 @@ describe('odata message composition', () => {
 
     it('should be able to select sanitized fields', () => {
       const fields = [
-        new MockField({ path: '/meta', name: 'meta',  type: 'structure' }),
-        new MockField({ path: '/meta/$miles', name: '$miles',  type: 'decimal' }),
+        new MockField({ path: '/$meta', name: '$meta',  type: 'structure' }),
+        new MockField({ path: '/$meta/$miles', name: '$miles',  type: 'decimal' }),
         new MockField({ path: '/1car', name: '1car',  type: 'string' })
       ];
-      selectFields({$select:'_1car,meta/__miles'}, 'Submissions')(fields).length.should.equal(3);
+      selectFields({$select:'_1car,__meta/__miles'}, 'Submissions')(fields).length.should.equal(3);
     });
 
     it('should be able to select properties of subtable', () => {
@@ -1124,6 +1124,14 @@ describe('odata message composition', () => {
       .then(selectFields({$select:'name'}, 'Submissions.children.child'))
       .then((filteredFields) => {
           filteredFields.length.should.equal(3);
+      });
+    });
+
+    it('should select group field as well if child field is requested', () => {
+      return fieldsFor(testData.forms.simple)
+      .then(selectFields({$select: 'meta/instanceID'}, 'Submissions'))
+      .then((filteredFields) => {
+        filteredFields.length.should.equal(2);
       });
     });
   });

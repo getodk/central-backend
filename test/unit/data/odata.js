@@ -1,6 +1,7 @@
 const appRoot = require('app-root-path');
 const { construct } = require('ramda');
 const { submissionToOData } = require(appRoot + '/lib/data/odata');
+const { selectFields } = require(appRoot + '/lib/formats/odata');
 const { MockField, fieldsFor } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
@@ -730,13 +731,13 @@ describe('submissionToOData', () => {
       });
     });
 
-  it('should return relevant IDs', () => {
+  it('should return all IDs if __id is requested', () => {
     const fields = [
       new MockField({ path: '/children', name: 'children', type: 'structure' }),
       new MockField({ path: '/children/child', name: 'child', type: 'repeat' })
     ];
     const submission = { instanceId: 'double', xml: testData.instances.doubleRepeat.double, def: {}, aux: { encryption: {}, attachment: {} } };
-    return submissionToOData(fields, 'Submissions.children.child', submission, { metadata: { '__id': true, '__Submissions-id': true } }).then((result) => {
+    return submissionToOData(fields, 'Submissions.children.child', submission, { metadata: { '__id': true} }).then((result) => {
       result.should.eql([{
         __id: '46ebf42ee83ddec5028c42b2c054402d1e700208',
         '__Submissions-id': 'double'
@@ -749,4 +750,46 @@ describe('submissionToOData', () => {
       }]);
     });
   });
+
+  it('should return second-order subtable results', () =>
+    fieldsFor(testData.forms.doubleRepeat)
+    .then(selectFields({$select:'name'}, 'Submissions.children.child.toys.toy'))
+    .then((fields) => {
+      const row = { instanceId: 'double', xml: testData.instances.doubleRepeat.double, def: {}, aux: { encryption: {}, attachment: {} } };
+      return submissionToOData(fields, 'Submissions.children.child.toys.toy', row, { metadata: { '__id': true} }).then((result) => {
+        result.should.eql([{
+          __id: 'a9058d7b2ed9557205ae53f5b1dc4224043eca2a',
+          '__Submissions-children-child-id': 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
+          name: 'Twilight Sparkle'
+        }, {
+          __id: '8d2dc7bd3e97a690c0813e646658e51038eb4144',
+          '__Submissions-children-child-id': 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
+          name: 'Pinkie Pie'
+        }, {
+          __id: 'b716dd8b79a4c9369d6b1e7a9c9d55ac18da1319',
+          '__Submissions-children-child-id': 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
+          name: 'Applejack'
+        }, {
+          __id: '52fbd613acc151ee1187026890f6246b35f69144',
+          '__Submissions-children-child-id': 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
+          name: 'Spike'
+        }, {
+          __id: '4a4a05249c8f992b0b3cc7dbe690b57cf18e8ea9',
+          '__Submissions-children-child-id': '8954b393f82c1833abb19be08a3d6cb382171f54',
+          name: 'Rainbow Dash'
+        }, {
+          __id: '00ae97cddc4804157e3a0b13ff9e30d86cfd1547',
+          '__Submissions-children-child-id': '8954b393f82c1833abb19be08a3d6cb382171f54',
+          name: 'Rarity'
+        }, {
+          __id: 'ecc1d831ae487ceef09ab7ccc0a021d3cab48988',
+          '__Submissions-children-child-id': '8954b393f82c1833abb19be08a3d6cb382171f54',
+          name: 'Fluttershy'
+        }, {
+          __id: 'd6539297765d97b951c6a63d7f70cafeb1741f8d',
+          '__Submissions-children-child-id': '8954b393f82c1833abb19be08a3d6cb382171f54',
+          name: 'Princess Luna'
+        }]);
+      });
+    }));
 });

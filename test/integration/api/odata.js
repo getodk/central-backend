@@ -480,20 +480,45 @@ describe('api: /forms/:id.svc', () => {
 
     it('should return subtable results with selected properties', testService((service) =>
       withSubmission(service, (asAlice) =>
-        asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?$select=name")
+        asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')/children/child('8954b393f82c1833abb19be08a3d6cb382171f54')/toys/toy?$select=name")
+          .expect(200)
+          .then(({ body }) => {
+            body.should.eql({
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child.toys.toy',
+              value: [{
+                  "name": "Rainbow Dash"
+                }, {
+                  "name": "Rarity"
+                }, {
+                  "name": "Fluttershy"
+                },{
+                  "name": "Princess Luna"
+                }]
+            });
+          }))));
+
+    it('should return all IDs if __id is selected', testService((service) =>
+      withSubmission(service, (asAlice) =>
+        asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')/children/child?$select=__id,name")
           .expect(200)
           .then(({ body }) => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
               value: [{
-                  "name": "Alice"
-                }, {
-                  "name": "Pinkie Pie"
-                }, {
-                  "name": "Applejack"
-                }, {
-                  "name": "Spike"
-                }]
+                "__Submissions-id": "double",
+                "__id": "46ebf42ee83ddec5028c42b2c054402d1e700208",
+                "name": "Alice",
+              },
+              {
+                "__Submissions-id": "double",
+                "__id": "b6e93a81a53eed0566e65e472d4a4b9ae383ee6d",
+                "name": "Bob",
+              },
+              {
+                "__Submissions-id": "double",
+                "__id": "8954b393f82c1833abb19be08a3d6cb382171f54",
+                "name": "Chelsea"
+              }]
             });
           }))));
   });
@@ -1217,7 +1242,7 @@ describe('api: /forms/:id.svc', () => {
 
     it('should return subtable results with selected properties', testService((service) =>
       withSubmissions(service, (asAlice) =>
-        asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$select=__id,__Submissions-id,name')
+        asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$select=__id,name')
           .expect(200)
           .then(({ body }) => {
             body.should.eql({
