@@ -2,7 +2,7 @@ const should = require('should');
 const appRoot = require('app-root-path');
 const { promisify } = require('util');
 const { DateTime, Duration } = require('luxon');
-const { sql } = require('slonik');
+const sql = require('postgres')();
 const { testContainerFullTrx, testContainer } = require('../setup');
 const { runner, checker, worker } = require(appRoot + '/lib/worker/worker');
 const { Audit } = require(appRoot + '/lib/model/frames');
@@ -292,7 +292,7 @@ select count(*) from audits where action='submission.attachment.update' and proc
       const hijacked = Object.create(container.__proto__);
       Object.assign(hijacked, container);
       hijacked.all = (q) => {
-        if (q.sql.startsWith('\nwith q as')) {
+        if (q.strings[0].match(/with q as/)) {
           if (failed) return container.all(q);
           failed = true;
           throw new Error('oh whoops!');
@@ -318,7 +318,7 @@ select count(*) from audits where action='submission.attachment.update' and proc
       const hijacked = Object.create(container.__proto__);
       Object.assign(hijacked, container);
       hijacked.all = (q) => {
-        if (q.sql.startsWith('\nwith q as')) {
+        if (q.strings[0].match(/with q as/)) {
           if (failed) return container.all(q);
           failed = true;
           return new Promise(async (_, reject) => { await millis(5); reject('not this time'); });
@@ -345,7 +345,7 @@ select count(*) from audits where action='submission.attachment.update' and proc
       const hijacked = Object.create(container.__proto__);
       Object.assign(hijacked, container);
       hijacked.all = (q) => {
-        if (q.sql.startsWith('\nwith q as')) checks++;
+        if (q.strings[0].match(/with q as/)) checks++;
         return container.all(q);
       };
       const jobMap = { 'submission.attachment.update': [ () => {

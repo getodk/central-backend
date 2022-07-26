@@ -1,5 +1,6 @@
 const should = require('should');
 const { DateTime } = require('luxon');
+const { reduceFragment } = require('./util/sql');
 
 // debugging things.
 global.tap = (x) => { console.log(x); return x; };
@@ -244,6 +245,11 @@ should.Assertion.add('Config', function() {
   this.obj.key.should.be.a.String();
   this.obj.value.should.be.an.Object();
   this.obj.setAt.should.be.an.isoDate();
+});
+
+should.Assertion.add('eqlQuery', function(val) {
+  this.params = { operator: 'to be an equivalent query fragment' };
+  reduceFragment(this.obj).should.eql(reduceFragment(val));
 });
 
 should.Assertion.add('SimpleCsv', function() {

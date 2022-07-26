@@ -1,7 +1,7 @@
 const should = require('should');
 const appRoot = require('app-root-path');
 const { createReadStream } = require('fs');
-const { sql } = require('slonik');
+const sql = require('postgres')();
 const { testService } = require('../setup');
 const testData = require(appRoot + '/test/data/xml.js');
 const worker = require(appRoot + '/lib/worker/submission.attachment.update');

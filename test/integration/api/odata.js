@@ -1,6 +1,6 @@
 const should = require('should');
 const { testService } = require('../setup');
-const { sql } = require('slonik');
+const sql = require('postgres')();
 const testData = require('../../data/xml');
 
 // NOTE: for the data output tests, we do not attempt to extensively determine if every

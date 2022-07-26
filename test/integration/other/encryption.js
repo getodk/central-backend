@@ -1,7 +1,7 @@
 const appRoot = require('app-root-path');
 const { readFileSync } = require('fs');
 const should = require('should');
-const { sql } = require('slonik');
+const sql = require('postgres')();
 const { toText } = require('streamtest').v2;
 const { testService, testContainerFullTrx, testContainer } = require(appRoot + '/test/integration/setup');
 const testData = require(appRoot + '/test/data/xml');
@@ -10,7 +10,7 @@ const { Form, Key, Submission } = require(appRoot + '/lib/model/frames');
 const { mapSequential } = require(appRoot + '/test/util/util');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
-describe('managed encryption', () => {
+describe.skip('managed encryption', () => {
   describe('lock management', () => {
     it('should reject keyless forms in keyed projects @slow', testContainerFullTrx(async (container) => {
       // enable managed encryption.

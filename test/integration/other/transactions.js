@@ -1,6 +1,6 @@
 const should = require('should');
 const appRoot = require('app-root-path');
-const { sql } = require('slonik');
+const sql = require('postgres')();
 const { testContainerFullTrx } = require(appRoot + '/test/integration/setup');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const testData = require('../../data/xml');
@@ -26,7 +26,7 @@ describe('transaction integration', () => {
 
       return injector({ db: {
         isTransacting: false,
-        transaction(cb) { return Promise.resolve(cb({ isTransacting: true })); }
+        begin(cb) { return Promise.resolve(cb({ isTransacting: true })); }
       } }, { Capybaras });
     };
 

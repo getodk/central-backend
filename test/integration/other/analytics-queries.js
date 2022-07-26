@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { sql } = require('slonik');
+const sql = require('postgres')();
 const { testTask, testService, testContainer } = require('../setup');
 const { Actor, Form, Project, Submission, User } = require(appRoot + '/lib/model/frames');
 const { createReadStream } = require('fs');
@@ -454,7 +454,7 @@ describe('analytics task queries', () => {
 
       // no deleted forms reused yet
       const emptyRes = await container.Analytics.countReusedFormIds();
-      emptyRes.should.eql([]);
+      emptyRes.slice().should.eql([]);
 
       // one purged form reused
       await container.Forms.purge(true);
@@ -486,7 +486,7 @@ describe('analytics task queries', () => {
             .set('Content-Type', 'application/xml')));
 
       const res = await container.Analytics.countReusedFormIds();
-      res.should.eql([
+      res.slice().should.eql([
         { projectId: 1, total: 2 },
         { projectId: proj2, total: 1 }
       ]);
@@ -728,7 +728,7 @@ describe('analytics task queries', () => {
           .send({ description: null }));
 
       const res = await container.Analytics.getProjectsWithDescriptions();
-      res.should.eql([ { projectId: 1 }, { projectId: projWithDesc } ]);
+      res.slice().should.eql([ { projectId: 1 }, { projectId: projWithDesc } ]);
     }));
   });
 

@@ -4,7 +4,7 @@ const uuid = require('uuid/v4');
 const should = require('should');
 const config = require('config');
 const { testServiceFullTrx } = require('../setup');
-const { sql } = require('slonik');
+const sql = require('postgres')();
 const { connect } = require(appRoot + '/lib/model/migrate');
 const migrator = connect(config.get('test.database'));
 const testData = require('../../data/xml');
@@ -32,7 +32,7 @@ const upToMigration = async (toName) => {
 // column to projects and forms, it is not possible to migrate part way
 // (before the new column) and populate the data when frames expect the
 // new column to exist.
-describe.skip('database migrations', function() {
+describe.skip('database migrations @slow', function() {
   this.timeout(4000);
 
   it('should purge deleted forms via migration', testServiceFullTrx(async (service, container) => {
@@ -191,7 +191,7 @@ describe.skip('database migrations', function() {
 
 });
 
-describe('datbase migrations: removing default project', function() {
+describe('datbase migrations: removing default project @slow', function() {
   this.timeout(4000);
 
   it('should put old forms into project', testServiceFullTrx(async (service, container) => {

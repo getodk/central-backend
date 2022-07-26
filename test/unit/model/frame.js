@@ -1,23 +1,21 @@
 const should = require('should');
 const appRoot = require('app-root-path');
-const { sql } = require('slonik');
+const sql = require('postgres')();
 const { Frame, table, readable, writable, into, aux, embedded } = require(appRoot + '/lib/model/frame');
 const Option = require(appRoot + '/lib/util/option');
 
 describe('Frame', () => {
   describe('definition', () => {
     it('should accept fields', () => { Frame.define('a', 'b').fields.should.eql([ 'a', 'b' ]); });
-    it('should create a fieldlist', () => { Frame.define('a', 'b').fieldlist.should.eql(sql`"a","b"`); });
     it('should note readables', () => {
       Frame.define('a', writable, readable, 'b', 'c', readable).def.readable.should.eql([ 'a', 'c' ]);
     });
     it('should note writables', () => {
       Frame.define('a', readable, writable, 'b', writable, 'c').def.writable.should.eql([ 'a', 'b' ]);
     });
-    it('should note insert fields and list', () => {
+    it('should note insert fields', () => {
       const Box = Frame.define('id', 'a', readable, writable, 'b', writable, 'c')
       Box.insertfields.should.eql([ 'a', 'b', 'c' ]);
-      Box.insertlist.should.eql(sql`"a","b","c"`);
     });
     it('should note hasCreatedAt and hasUpdatedAt', () => {
       const T = Frame.define('updatedAt');

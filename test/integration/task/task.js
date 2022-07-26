@@ -1,7 +1,7 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 const { testTask } = require('../setup');
-const { sql } = require('slonik');
+const sql = require('postgres')();
 const { writeFile, symlink } = require('fs');
 const { join } = require('path');
 const { exec } = require('child_process');

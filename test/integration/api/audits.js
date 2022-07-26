@@ -1,5 +1,5 @@
 const should = require('should');
-const { sql } = require('slonik');
+const sql = require('postgres')();
 const { plain } = require('../../util/util');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
@@ -326,10 +326,11 @@ describe('/audits', () => {
                 body[0].actee.xmlFormId.should.equal('simple');
               }))))));
 
+    const pad = x => ((x < 10) ? `0${x}` : x);
     it('should filter (inclusively) by start date', testService((service, { run }) =>
       Promise.all(
         [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-          .map((day) => run(sql`insert into audits ("loggedAt", action) values (${`2000-01-${day}T00:00Z`}, ${`test.${day}`})`))
+          .map((day) => run(sql`insert into audits ("loggedAt", action) values (${`2000-01-${pad(day)}T00:00Z`}, ${`test.${day}`})`))
       )
         .then(() => service.login('alice', (asAlice) =>
           asAlice.get('/v1/audits?start=2000-01-08Z')
@@ -349,7 +350,7 @@ describe('/audits', () => {
     it('should filter by start date+time', testService((service, { run }) =>
       Promise.all(
         [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-          .map((day) => run(sql`insert into audits ("loggedAt", action) values (${`2000-01-${day}T00:00Z`}, ${`test.${day}`})`))
+          .map((day) => run(sql`insert into audits ("loggedAt", action) values (${`2000-01-${pad(day)}T00:00Z`}, ${`test.${day}`})`))
       )
         .then(() => service.login('alice', (asAlice) =>
           asAlice.get('/v1/audits?start=2000-01-08T12:00Z')
@@ -368,7 +369,7 @@ describe('/audits', () => {
       Users.getByEmail('alice@getodk.org').then((o) => o.get())
         .then((alice) => Promise.all(
           [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-            .map((day) => run(sql`insert into audits ("loggedAt", action, "actorId", "acteeId") values (${`2000-01-${day}T00:00Z`}, ${`test.${day}`}, ${alice.actor.id}, ${alice.actor.acteeId})`))
+            .map((day) => run(sql`insert into audits ("loggedAt", action, "actorId", "acteeId") values (${`2000-01-${pad(day)}T00:00Z`}, ${`test.${day}`}, ${alice.actor.id}, ${alice.actor.acteeId})`))
         )
           .then(() => service.login('alice', (asAlice) =>
             asAlice.get('/v1/audits?start=2000-01-08T12:00Z')
@@ -391,7 +392,7 @@ describe('/audits', () => {
     it('should filter (inclusively) by end date', testService((service, { run }) =>
       Promise.all(
         [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-          .map((day) => run(sql`insert into audits ("loggedAt", action) values (${`2000-01-${day}T00:00Z`}, ${`test.${day}`})`))
+          .map((day) => run(sql`insert into audits ("loggedAt", action) values (${`2000-01-${pad(day)}T00:00Z`}, ${`test.${day}`})`))
       )
         .then(() => service.login('alice', (asAlice) =>
           asAlice.get('/v1/audits?end=2000-01-03Z')
@@ -410,7 +411,7 @@ describe('/audits', () => {
     it('should filter by end date+time', testService((service, { run }) =>
       Promise.all(
         [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-          .map((day) => run(sql`insert into audits ("loggedAt", action) values (${`2000-01-${day}T00:00Z`}, ${`test.${day}`})`))
+          .map((day) => run(sql`insert into audits ("loggedAt", action) values (${`2000-01-${pad(day)}T00:00Z`}, ${`test.${day}`})`))
       )
         .then(() => service.login('alice', (asAlice) =>
           asAlice.get('/v1/audits?end=2000-01-02T12:00Z')
@@ -428,7 +429,7 @@ describe('/audits', () => {
       Users.getByEmail('alice@getodk.org').then((o) => o.get())
         .then((alice) => Promise.all(
           [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-            .map((day) => run(sql`insert into audits ("loggedAt", action, "actorId", "acteeId") values (${`2000-01-${day}T00:00Z`}, ${`test.${day}`}, ${alice.actor.id}, ${alice.actor.acteeId})`))
+            .map((day) => run(sql`insert into audits ("loggedAt", action, "actorId", "acteeId") values (${`2000-01-${pad(day)}T00:00Z`}, ${`test.${day}`}, ${alice.actor.id}, ${alice.actor.acteeId})`))
         )
           .then(() => service.login('alice', (asAlice) =>
             asAlice.get('/v1/audits?end=2000-01-02T12:00Z')

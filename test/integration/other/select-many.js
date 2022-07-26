@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { sql } = require('slonik');
+const sql = require('postgres')();
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
@@ -32,7 +32,7 @@ describe('select many value processing', () => {
               .then(([ one, two ]) => [ id, one, two ]))
         ]))
         .then(([ values, [ formId, one, two ] ]) => {
-          values.should.eql([
+          values.slice().should.eql([
             { formId, submissionDefId: one, path: '/q1', value: 'a' },
             { formId, submissionDefId: one, path: '/q1', value: 'b' },
             { formId, submissionDefId: one, path: '/g1/q2', value: 'x' },
@@ -72,7 +72,7 @@ describe('select many value processing', () => {
               .then(([ one, two ]) => [ id, one, two ]))
         ]))
         .then(([ values, [ formId, one, one2 ] ]) => {
-          values.should.eql([
+          values.slice().should.eql([
             { formId, submissionDefId: one, path: '/q1', value: 'a' },
             { formId, submissionDefId: one, path: '/q1', value: 'b' },
             { formId, submissionDefId: one, path: '/g1/q2', value: 'x' },

@@ -4,7 +4,7 @@ const should = require('should');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
-const { sql } = require('slonik');
+const sql = require('postgres')();
 
 describe('api: /projects/:id/forms (drafts)', () => {
 

@@ -1,6 +1,6 @@
 const { createReadStream, readFileSync } = require('fs');
 const appPath = require('app-root-path');
-const { sql } = require('slonik');
+const sql = require('postgres')();
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { exhaust } = require(appPath + '/lib/worker/worker');

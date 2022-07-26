@@ -1,10 +1,10 @@
 const appRoot = require('app-root-path');
 const { merge } = require('ramda');
-const { sql } = require('slonik');
 const { readdirSync } = require('fs');
 const { join } = require('path');
 const request = require('supertest');
 const { run, task } = require(appRoot + '/lib/task/task');
+const { resolve, reject } = require(appRoot + '/lib/util/promise');
 
 // knex things.
 const config = require('config');
@@ -13,9 +13,9 @@ const migrator = connect(config.get('test.database'));
 const owner = config.get('test.database.user');
 after(() => { migrator.destroy(); });
 
-// slonik connection pool
-const { slonikPool } = require(appRoot + '/lib/external/slonik');
-const db = slonikPool(config.get('test.database'));
+// init postgres connection.
+const { postgres } = require(appRoot + '/lib/external/postgres');
+const db = postgres(config.get('test.database'));
 
 // set up our mailer.
 const env = config.get('default.env');
@@ -72,7 +72,6 @@ const initialize = () => migrator
   .raw('drop owned by current_user')
   .then(() => migrator.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
   .then(() => withDefaults({ db, bcrypt }).transacting(populate));
-const reinit = (f) => (x) => { initialize().then(() => f(x)); };
 
 before(initialize);
 
@@ -108,15 +107,17 @@ const augment = (service) => {
 
 const baseContainer = withDefaults({ db, mail, env, xlsform, google, bcrypt, enketo, Sentry, odkAnalytics });
 
+// helpers to clean up at the end of tests, used by runners below:
+const rollback = (f) => (x) => reject(() => f(x));
+const reinit = (f) => (x) => { initialize().then(() => f(x)); };
+
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
 // gets rolled back for a clean slate on the next test.
-const testService = (test) => () => new Promise((resolve, reject) => {
-  baseContainer.transacting((container) => {
-    const rollback = (f) => (x) => container.run(sql`rollback`).then(() => f(x));
-    return test(augment(request(service(container))), container).then(rollback(resolve), rollback(reject));
-  });//.catch(Promise.resolve.bind(Promise)); // TODO/SL probably restore
-});
+const testService = (test) => () =>
+  baseContainer.transacting((container) =>
+    test(augment(request(service(container))), container).then(rollback(resolve), rollback(reject))
+  ).catch((f) => f());
 
 // for some tests we explicitly need to make concurrent requests, in which case
 // the transaction butchering we do for testService will not work. for these cases,
@@ -127,12 +128,9 @@ const testServiceFullTrx = (test) => () => new Promise((resolve, reject) =>
 
 // for some tests we just want a container, without any of the webservice stuffs between.
 // this is that, with the same transaction trickery as a normal test.
-const testContainer = (test) => () => new Promise((resolve, reject) => {
-  baseContainer.transacting((container) => {
-    const rollback = (f) => (x) => container.run(sql`rollback`).then(() => f(x));
-    return test(container).then(rollback(resolve), rollback(reject));
-  });//.catch(Promise.resolve.bind(Promise));
-});
+const testContainer = (test) => () =>
+  baseContainer.transacting((container) => test(container).then(rollback(resolve), rollback(reject)))
+    .catch((f) => f());
 
 // complete the square of options:
 const testContainerFullTrx = (test) => () => new Promise((resolve, reject) =>
@@ -141,16 +139,19 @@ const testContainerFullTrx = (test) => () => new Promise((resolve, reject) =>
 // called to get a container context per task. ditto all // from testService.
 // here instead our weird hijack work involves injecting our own constructed
 // container into the task context so it just picks it up and uses it.
-const testTask = (test) => () => new Promise((resolve, reject) => {
+const testTask = (test) => () =>
   baseContainer.transacting((container) => {
     task._container = container.with({ task: true });
     const rollback = (f) => (x) => {
       delete task._container;
-      return container.run(sql`rollback`).then(() => f(x));
+      return reject(() => f(x));
     };
-    return test(task._container).then(rollback(resolve), rollback(reject));
-  });//.catch(Promise.resolve.bind(Promise));
-});
+    try {
+      return test(task._container).then(rollback(resolve), rollback(reject));
+    } catch(e) {
+      return rollback(reject)(e);
+    }
+  }).catch((f) => f());
 
 module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask };
 

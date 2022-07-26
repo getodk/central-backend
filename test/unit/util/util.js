@@ -50,6 +50,22 @@ describe('util/util', () => {
     });
   });
 
+  describe('objIsEmpty', () => {
+    const { objIsEmpty } = util;
+    it('should return true if the object is empty', () => {
+      objIsEmpty({}).should.equal(true);
+      class X { x() {} }
+      objIsEmpty(new X()).should.equal(true);
+    });
+    it('should return false if the object has things', () => {
+      objIsEmpty({ x: 42 }).should.equal(false);
+      class X {}
+      const x = new X();
+      x.y = 42;
+      objIsEmpty(x).should.equal(false);
+    });
+  });
+
   describe('blankStringToNull', () => {
     const { blankStringToNull } = util;
     it('should crush blank strings', () => {
