@@ -338,7 +338,7 @@ module.exports = {
   <h:head>
     <model>
       <instance>
-        <data id="form">
+        <data id="simpleEntity">
           <name/>
           <age/>
           <hometown/>
@@ -435,7 +435,7 @@ module.exports = {
       three: instance('selectMultiple', 'three', '<q1> b c</q1>')
     },
     simpleEntity: {
-      one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simple_entity" version="2">
+      one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="2">
       <meta>
         <instanceID>one</instanceID>
         <entities:entity dataset="people">
