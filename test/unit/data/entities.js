@@ -1,6 +1,7 @@
 const appRoot = require('app-root-path');
-const { getEntityDef, getEntityFromSub } = require(appRoot + '/lib/data/entities');
+const { getEntityDef, getEntityFromSub, getEntityUsingFields } = require(appRoot + '/lib/data/entities');
 const testData = require(appRoot + '/test/data/xml');
+const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const should = require('should');
 
 describe('entity parsing', () => {
@@ -137,6 +138,12 @@ describe('entity parsing', () => {
       const entityDef = await getEntityDef(testData.forms.simpleEntity);
       const fields = entityDef.mapping;
       const data = await getEntityFromSub(fields, testData.instances.simpleEntity.one);
+      data.should.eql({ label: 'Betty (94)', full_name: 'Betty', age: '94' });
+    });
+
+    it('should get entity props out of submission another way using fields', async () => {
+      const fields = await fieldsFor(testData.forms.simpleEntity);
+      const data = await getEntityUsingFields(fields, testData.instances.simpleEntity.one);
       data.should.eql({ label: 'Betty (94)', full_name: 'Betty', age: '94' });
     });
   });
