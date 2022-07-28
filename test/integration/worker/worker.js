@@ -3,16 +3,12 @@ const appRoot = require('app-root-path');
 const { promisify } = require('util');
 const { DateTime, Duration } = require('luxon');
 const { sql } = require('slonik');
-const { testContainerFullTrx, testContainer } = require('../setup');
+const { testContainerFullTrx, testContainer, reinitAfter } = require('../setup');
 const { runner, checker, worker } = require(appRoot + '/lib/worker/worker');
 const { Audit } = require(appRoot + '/lib/model/frames');
 const { insert } = require(appRoot + '/lib/util/db');
 
 describe('worker', () => {
-  describe('runner @slow', () => {
-    // we know reschedule is getting called at some point in these flows because
-    // these tests would hang otherwise.
-
     it('should return false and do nothing if no event is given', () => {
       let called = false;
       const reschedule = () => { called = true; };
@@ -33,6 +29,11 @@ describe('worker', () => {
       const container = { transacting() { return Promise.resolve(); } };
       runner(container, jobMap)({ action: 'test.event' }, done).should.equal(true);
     });
+
+  describe('runner @slow', () => {
+    // we know reschedule is getting called at some point in these flows because
+    // these tests would hang otherwise.
+    afterEach(reinitAfter);
 
     it('should pass the container and event details to the job', testContainerFullTrx(async (container) => {
       let sentineledContainer = container.with({ testSentinel: 108 });
@@ -227,6 +228,8 @@ describe('worker', () => {
 
   describe('worker', () => {
     const millis = (x) => new Promise((done) => { setTimeout(done, x); });
+
+    afterEach(reinitAfter);
 
     it('should run a full loop right away', testContainerFullTrx(async (container) => {
       const { Audits, Users } = container;

@@ -1,7 +1,7 @@
 const should = require('should');
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
-const { testContainerFullTrx } = require(appRoot + '/test/integration/setup');
+const { testContainerFullTrx, reinitAfter } = require(appRoot + '/test/integration/setup');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const testData = require('../../data/xml');
 const { Frame } = require(appRoot + '/lib/model/frame');
@@ -41,6 +41,8 @@ describe('transaction integration', () => {
 const sometime = (ms) => new Promise((done) => setTimeout(done, ms));
 
 describe('enketo worker transaction', () => {
+  afterEach(reinitAfter);
+
   it('should not allow a write conflict @slow', testContainerFullTrx(async (container) => {
     const { Audits, Forms, oneFirst } = container;
 

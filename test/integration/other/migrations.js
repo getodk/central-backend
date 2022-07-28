@@ -3,7 +3,7 @@ const appRoot = require('app-root-path');
 const uuid = require('uuid/v4');
 const should = require('should');
 const config = require('config');
-const { testServiceFullTrx } = require('../setup');
+const { testServiceFullTrx, reinitAfter } = require('../setup');
 const { sql } = require('slonik');
 const { connect } = require(appRoot + '/lib/model/migrate');
 const migrator = connect(config.get('test.database'));
@@ -34,6 +34,8 @@ const upToMigration = async (toName) => {
 // new column to exist.
 describe.skip('database migrations', function() {
   this.timeout(4000);
+
+  afterEach(reinitAfter);
 
   it('should purge deleted forms via migration', testServiceFullTrx(async (service, container) => {
     await upToMigration('20220121-01-form-cascade-delete.js');
@@ -193,6 +195,8 @@ describe.skip('database migrations', function() {
 
 describe('datbase migrations: removing default project', function() {
   this.timeout(4000);
+
+  afterEach(reinitAfter);
 
   it('should put old forms into project', testServiceFullTrx(async (service, container) => {
     // before 20181206-01-add-projects.js
