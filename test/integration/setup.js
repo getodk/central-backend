@@ -72,7 +72,6 @@ const initialize = () => migrator
   .raw('drop owned by current_user')
   .then(() => migrator.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
   .then(() => withDefaults({ db, bcrypt }).transacting(populate));
-const reinit = (f) => (x) => { initialize().then(() => f(x)); };
 function reinitAfter() {
   this.timeout(5000);
   return initialize();
