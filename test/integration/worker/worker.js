@@ -3,7 +3,7 @@ const appRoot = require('app-root-path');
 const { promisify } = require('util');
 const { DateTime, Duration } = require('luxon');
 const { sql } = require('slonik');
-const { testContainerFullTrx, testContainer } = require('../setup');
+const { withinFullTrxIt, testContainer } = require('../setup');
 const { runner, checker, worker } = require(appRoot + '/lib/worker/worker');
 const { Audit } = require(appRoot + '/lib/model/frames');
 const { insert } = require(appRoot + '/lib/util/db');
@@ -34,7 +34,7 @@ describe('worker', () => {
       runner(container, jobMap)({ action: 'test.event' }, done).should.equal(true);
     });
 
-    it('should pass the container and event details to the job', testContainerFullTrx(async (container) => {
+    withinFullTrxIt('should pass the container and event details to the job', async (container) => {
       let sentineledContainer = container.with({ testSentinel: 108 });
       let checked = false;
       const jobMap = { 'test.event': [ (c, e) => {
@@ -49,9 +49,9 @@ describe('worker', () => {
       const event = { id: -1, action: 'test.event', details: { x: 42 } };
       await promisify(runner(sentineledContainer, jobMap))(event);
       checked.should.equal(true);
-    }));
+    });
 
-    it('should run all matched jobs', testContainerFullTrx(async (container) => {
+    withinFullTrxIt('should run all matched jobs', async (container) => {
       let count = 0;
       const jobMap = { 'test.event': [
         () => Promise.resolve(count += 1),
@@ -61,9 +61,9 @@ describe('worker', () => {
       const event = { id: -1, action: 'test.event' };
       await promisify(runner(container, jobMap))(event);
       count.should.equal(2);
-    }));
+    });
 
-    it('should mark the event as processed after on job completion', testContainerFullTrx(async (container) => {
+    withinFullTrxIt('should mark the event as processed after on job completion', async (container) => {
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.create', alice.actor);
@@ -73,9 +73,9 @@ describe('worker', () => {
       await promisify(runner(container, jobMap))(event);
       const after = (await Audits.getLatestByAction('submission.attachment.create')).get();
       after.processed.should.be.a.recentDate();
-    }));
+    });
 
-    it('should log to Sentry if a worker goes wrong', testContainerFullTrx(async (container) => {
+    withinFullTrxIt('should log to Sentry if a worker goes wrong', async (container) => {
       let captured = null;
       const Sentry = { captureException(err) { captured = err; } };
       const hijackedContainer = container.with({ Sentry });
@@ -84,11 +84,11 @@ describe('worker', () => {
       const jobMap = { 'test.event': [ () => Promise.reject({ uh: 'oh' }) ] };
       await promisify(runner(hijackedContainer, jobMap))(event);
       captured.should.eql({ uh: 'oh' });
-    }));
+    });
 
     // ideally we'd test that the error gets written to stderr but i don't like
     // hijacking globals in tests.
-    it('should still survive and reschedule if Sentry goes wrong', testContainerFullTrx(async (container) => {
+    withinFullTrxIt('should still survive and reschedule if Sentry goes wrong', async (container) => {
       const Sentry = { captureException(err) { throw 'no sentry for you'; } };
       const hijackedContainer = container.with({ Sentry });
 
@@ -96,12 +96,12 @@ describe('worker', () => {
       const jobMap = { 'test.event': [ () => Promise.reject({ uh: 'oh' }) ] };
       await promisify(runner(hijackedContainer, jobMap))(event);
       // not hanging is the test here.
-    }));
+    });
 
     // we need to use a real event here that doesn't get auto-marked as processed, so
     // we can test that it is not indeed processed afterwards.
     // TODO: we should be able to not do this as of block 8.
-    it('should unclaim the event and mark failure in case of failure', testContainerFullTrx(async (container) => {
+    withinFullTrxIt('should unclaim the event and mark failure in case of failure', async (container) => {
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
@@ -114,7 +114,7 @@ describe('worker', () => {
       should.not.exist(after.processed);
       after.failures.should.equal(1);
       after.lastFailure.should.be.a.recentDate();
-    }));
+    });
   });
 
   // we use submission.attachment.update throughout all these tests as it is currently
@@ -228,7 +228,7 @@ describe('worker', () => {
   describe('worker', () => {
     const millis = (x) => new Promise((done) => { setTimeout(done, x); });
 
-    it('should run a full loop right away', testContainerFullTrx(async (container) => {
+    withinFullTrxIt('should run a full loop right away', async (container) => {
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
@@ -243,9 +243,9 @@ describe('worker', () => {
       cancel();
       await millis(20); // buffer so the next check lands before the database is wiped on return
       ran.should.equal(true);
-    }));
+    });
 
-    it('should run two full loops right away', testContainerFullTrx(async (container) => {
+    withinFullTrxIt('should run two full loops right away', async (container) => {
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
@@ -260,9 +260,9 @@ select count(*) from audits where action='submission.attachment.update' and proc
 
       cancel();
       await millis(20); // ditto above
-    }));
+    });
 
-    it('should run two full loops with an idle cycle in between', testContainerFullTrx(async (container) => {
+    withinFullTrxIt('should run two full loops with an idle cycle in between', async (container) => {
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
@@ -281,9 +281,9 @@ select count(*) from audits where action='submission.attachment.update' and proc
 
       cancel();
       await millis(20); // ditto above
-    }));
+    });
 
-    it('should restart if the check fails prequery', testContainerFullTrx(async (container) => {
+    withinFullTrxIt('should restart if the check fails prequery', async (container) => {
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
@@ -307,9 +307,9 @@ select count(*) from audits where action='submission.attachment.update' and proc
       cancel();
       await millis(20);
       failed.should.equal(true);
-    }));
+    });
 
-    it('should restart if the check fails in-query', testContainerFullTrx(async (container) => {
+    withinFullTrxIt('should restart if the check fails in-query', async (container) => {
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
@@ -333,9 +333,9 @@ select count(*) from audits where action='submission.attachment.update' and proc
       cancel();
       await millis(20);
       failed.should.equal(true);
-    }));
+    });
 
-    it('should restart if the process itself fails', testContainerFullTrx(async (container) => {
+    withinFullTrxIt('should restart if the process itself fails', async (container) => {
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
@@ -362,7 +362,7 @@ select count(*) from audits where action='submission.attachment.update' and proc
       cancel();
       await millis(20); // ditto above
       checks.should.equal(2);
-    }));
+    });
 
     // TODO: maybe someday test the watchdog loop too.
   });

@@ -3,7 +3,7 @@ const appRoot = require('app-root-path');
 const uuid = require('uuid/v4');
 const should = require('should');
 const config = require('config');
-const { testServiceFullTrx } = require('../setup');
+const { withServiceWithinFullTrx } = require('../setup');
 const { sql } = require('slonik');
 const { connect } = require(appRoot + '/lib/model/migrate');
 const migrator = connect(config.get('test.database'));
@@ -35,7 +35,7 @@ const upToMigration = async (toName) => {
 describe.skip('database migrations', function() {
   this.timeout(4000);
 
-  it('should purge deleted forms via migration', testServiceFullTrx(async (service, container) => {
+  withServiceWithinFullTrx('should purge deleted forms via migration', async (service, container) => {
     await upToMigration('20220121-01-form-cascade-delete.js');
 
     await populateUsers(container);
@@ -50,9 +50,9 @@ describe.skip('database migrations', function() {
 
     const count = await container.oneFirst(sql`select count(*) from forms`);
     count.should.equal(1); // only the withrepeat base test should exist
-  }));
+  });
 
-  it('should not purge blobs that are still referenced', testServiceFullTrx(async (service, container) => {
+  withServiceWithinFullTrx('should not purge blobs that are still referenced', async (service, container) => {
     // An earlier version of this migration [20220121-02-purge-deleted-forms.js]
     // failed because it tried to purge blobs that were still being used as
     // xlsBlobIds on active form definitons.
@@ -71,9 +71,9 @@ describe.skip('database migrations', function() {
 
     const count = await container.oneFirst(sql`select count(*) from blobs`);
     count.should.equal(1); // the xls blob should still exist
-  }));
+  });
 
-  it('should purge blobs of deleted forms', testServiceFullTrx(async (service, container) => {
+  withServiceWithinFullTrx('should purge blobs of deleted forms', async (service, container) => {
     // An earlier version of this migration [20220121-02-purge-deleted-forms.js]
     // failed because it tried to purge blobs that were still being used as
     // xlsBlobIds on active form definitons.
@@ -110,9 +110,9 @@ describe.skip('database migrations', function() {
 
     count = await container.oneFirst(sql`select count(*) from blobs`);
     count.should.equal(0); // blobs should all be purged
-  }));
+  });
 
-  it('should not purge certain form defs that are either published or active drafts', testServiceFullTrx(async (service, container) => {
+  withServiceWithinFullTrx('should not purge certain form defs that are either published or active drafts', async (service, container) => {
     // 20220209-01-purge-unneeded-drafts.js
     await upToMigration('20220121-02-purge-deleted-forms.js');
     await populateUsers(container);
@@ -153,9 +153,9 @@ describe.skip('database migrations', function() {
 
     const after = await container.oneFirst(sql`select count(*) from form_defs`);
     after.should.equal(before); // no defs purged
-  }));
+  });
 
-  it('should purge unneeded form draft defs', testServiceFullTrx(async (service, container) => {
+  withServiceWithinFullTrx('should purge unneeded form draft defs', async (service, container) => {
     // 20220209-01-purge-unneeded-drafts.js
     await upToMigration('20220121-02-purge-deleted-forms.js');
     await populateUsers(container);
@@ -187,14 +187,14 @@ describe.skip('database migrations', function() {
 
     const after = await container.oneFirst(sql`select count(*) from form_defs`);
     after.should.equal(before - 1); // one purged
-  }));
+  });
 
 });
 
 describe('datbase migrations: removing default project', function() {
   this.timeout(4000);
 
-  it('should put old forms into project', testServiceFullTrx(async (service, container) => {
+  withServiceWithinFullTrx('should put old forms into project', async (service, container) => {
     // before 20181206-01-add-projects.js
     await upToMigration('20181012-01-add-submissions-createdat-index.js');
 
@@ -216,14 +216,14 @@ describe('datbase migrations: removing default project', function() {
 
     const formCount = await container.oneFirst(sql`select count(*) from forms where "projectId"=${proj.id}`);
     formCount.should.equal(1);
-  }));
+  });
 
-  it('should not make a default project if no forms', testServiceFullTrx(async (service, container) => {
+  withServiceWithinFullTrx('should not make a default project if no forms', async (service, container) => {
     // up to and including this default project migration
     await upToMigration('20181206-01-add-projects.js');
 
     // check projects and forms
     const projCount = await container.oneFirst(sql`select count(*) from projects`);
     projCount.should.equal(0);
-  }));
+  });
 });

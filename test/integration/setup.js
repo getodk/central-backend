@@ -72,7 +72,6 @@ const initialize = () => migrator
   .raw('drop owned by current_user')
   .then(() => migrator.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
   .then(() => withDefaults({ db, bcrypt }).transacting(populate));
-const reinit = (f) => (x) => { initialize().then(() => f(x)); };
 
 before(initialize);
 
@@ -120,10 +119,13 @@ const testService = (test) => () => new Promise((resolve, reject) => {
 
 // for some tests we explicitly need to make concurrent requests, in which case
 // the transaction butchering we do for testService will not work. for these cases,
-// we offer testServiceFullTrx:
-const testServiceFullTrx = (test) => () => new Promise((resolve, reject) =>
-  test(augment(request(service(baseContainer))), baseContainer)
-    .then(reinit(resolve), reinit(reject)));
+// we offer withServiceWithinFullTrx:
+const withServiceWithinFullTrx = (title, testFn) => {
+  describe('(within full transaction, with service)', () => {
+    after(initialize);
+    it(title, () => testFn(augment(request(service(baseContainer))), baseContainer));
+  });
+};
 
 // for some tests we just want a container, without any of the webservice stuffs between.
 // this is that, with the same transaction trickery as a normal test.
@@ -135,8 +137,12 @@ const testContainer = (test) => () => new Promise((resolve, reject) => {
 });
 
 // complete the square of options:
-const testContainerFullTrx = (test) => () => new Promise((resolve, reject) =>
-  test(baseContainer).then(reinit(resolve), reinit(reject)));
+const withinFullTrxIt = (title, testFn) => {
+  describe('(within full transaction)', () => {
+    after(initialize);
+    it(title, () => testFn(baseContainer));
+  });
+};
 
 // called to get a container context per task. ditto all // from testService.
 // here instead our weird hijack work involves injecting our own constructed
@@ -152,5 +158,5 @@ const testTask = (test) => () => new Promise((resolve, reject) => {
   });//.catch(Promise.resolve.bind(Promise));
 });
 
-module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask };
+module.exports = { testService, withServiceWithinFullTrx, testContainer, withinFullTrxIt, testTask };
 

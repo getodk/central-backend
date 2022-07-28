@@ -3,7 +3,7 @@ const { readFileSync } = require('fs');
 const should = require('should');
 const { sql } = require('slonik');
 const { toText } = require('streamtest').v2;
-const { testService, testContainerFullTrx, testContainer } = require(appRoot + '/test/integration/setup');
+const { testService, withinFullTrxIt, testContainer } = require(appRoot + '/test/integration/setup');
 const testData = require(appRoot + '/test/data/xml');
 const { pZipStreamToFiles } = require(appRoot + '/test/util/zip');
 const { Form, Key, Submission } = require(appRoot + '/lib/model/frames');
@@ -12,7 +12,7 @@ const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('managed encryption', () => {
   describe('lock management', () => {
-    it('should reject keyless forms in keyed projects @slow', testContainerFullTrx(async (container) => {
+    withinFullTrxIt('should reject keyless forms in keyed projects @slow', async (container) => {
       // enable managed encryption.
       await container.transacting(({ Projects }) =>
         Projects.getById(1).then((o) => o.get())
@@ -30,9 +30,9 @@ describe('managed encryption', () => {
       );
 
       error.problemCode.should.equal(409.5);
-    }));
+    });
 
-    it('should reject forms created while project managed encryption is being enabled @slow', testContainerFullTrx(async (container) => {
+    withinFullTrxIt('should reject forms created while project managed encryption is being enabled @slow', async (container) => {
       // enable managed encryption but don't allow the transaction to close.
       let encReq;
       const unblock = await new Promise((resolve) => {
@@ -70,7 +70,7 @@ describe('managed encryption', () => {
 
       // now make sure we get the error we wanted.
       error.problemCode.should.equal(409.5);
-    }));
+    });
   });
 
   describe('decryptor', () => {

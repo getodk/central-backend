@@ -1,7 +1,7 @@
 const should = require('should');
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
-const { testContainerFullTrx } = require(appRoot + '/test/integration/setup');
+const { withinFullTrxIt } = require(appRoot + '/test/integration/setup');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const testData = require('../../data/xml');
 const { Frame } = require(appRoot + '/lib/model/frame');
@@ -41,7 +41,7 @@ describe('transaction integration', () => {
 const sometime = (ms) => new Promise((done) => setTimeout(done, ms));
 
 describe('enketo worker transaction', () => {
-  it('should not allow a write conflict @slow', testContainerFullTrx(async (container) => {
+  withinFullTrxIt('should not allow a write conflict @slow', async (container) => {
     const { Audits, Forms, oneFirst } = container;
 
     const simple = (await Forms.getByProjectAndXmlFormId(1, 'simple')).get();
@@ -66,6 +66,6 @@ describe('enketo worker transaction', () => {
 
     (await oneFirst(sql`select state from forms where "projectId"=1 and "xmlFormId"='simple'`))
       .should.equal('closed');
-  }));
+  });
 });
 
