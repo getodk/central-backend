@@ -1,11 +1,13 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 // eslint-disable-next-line import/no-dynamic-require
-const { getFormFields, sanitizeFieldsForOdata, SchemaStack, merge, expectedFormAttachments, injectPublicKey, addVersionSuffix, setVersion } = require(appRoot + '/lib/data/schema');
+const { getFormFields, getDataset, sanitizeFieldsForOdata, SchemaStack, merge, expectedFormAttachments, injectPublicKey, addVersionSuffix, setVersion } = require(appRoot + '/lib/data/schema');
 // eslint-disable-next-line import/no-dynamic-require
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 // eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
+const Problem = require(appRoot + '/lib/util/problem');
+const Option = require(appRoot + '/lib/util/option');
 
 describe('form schema', () => {
   describe('parsing', () => {
@@ -1790,6 +1792,64 @@ describe('form schema', () => {
     </input>
   </h:body>
 </h:html>`)));
+  });
+
+  describe('entities', () => {
+    it('should retrieve the name of a dataset defined in entity block', () => {
+      const xml = `
+      <?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model>
+            <instance>
+              <data id="simpleEntity">
+                <name/>
+                <age/>
+                <meta>
+                  <entities:entity entities:dataset="foo">
+                    <entities:create/>
+                    <entities:label/>
+                  </entities:entity>
+                </meta>
+              </data>
+            </instance>
+          </model>
+        </h:head>
+      </h:html>`;
+      return getDataset(xml).then((res) => {
+        res.should.eql('foo');
+      });
+    });
+
+    it('should return rejected promise if entity block is invalid (e.g. missing dataset)', () => {
+      const xml = `
+      <?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model>
+            <instance>
+              <data id="simpleEntity">
+                <name/>
+                <age/>
+                <meta>
+                  <entities:entity>
+                    <entities:create/>
+                    <entities:label/>
+                  </entities:entity>
+                </meta>
+              </data>
+            </instance>
+          </model>
+        </h:head>
+      </h:html>`;
+      // Problem.user.invalidEntityForm
+      return getDataset(xml).should.be.rejectedWith(Problem, { problemCode: 400.22 });
+    });
+
+    it('should run but find no dataset on non-entity forms', () =>
+      getDataset(testData.forms.simple).then((res) => {
+        res.should.equal(Option.none());
+      }));
   });
 });
 
