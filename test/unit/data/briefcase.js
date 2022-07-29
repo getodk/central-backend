@@ -60,7 +60,9 @@ describe('.csv.zip briefcase output @slow', () => {
       instance('three', '<name>Chelsea</name><age>38</age><hometown>San Francisco, CA</hometown>')
     ]);
 
-    callAndParse(inStream, formXml, 'mytestform', (result) => {
+    callAndParse(inStream, formXml, 'mytestform', (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -82,7 +84,7 @@ describe('.csv.zip briefcase output @slow', () => {
     }]);
 
     // not hanging is the assertion here:
-    callAndParse(inStream, testData.forms.simple, 'simple', () => { done(); });
+    callAndParse(inStream, testData.forms.simple, 'simple', (err) => { done(err); });
   });
 
   it('should attach submitter information if present', (done) => {
@@ -111,7 +113,9 @@ describe('.csv.zip briefcase output @slow', () => {
       withSubmitter(15, 'lito', instance('three', '<name>Chelsea</name><age>38</age><hometown>San Francisco, CA</hometown>'))
     ]);
 
-    callAndParse(inStream, formXml, 'mytestform', (result) => {
+    callAndParse(inStream, formXml, 'mytestform', (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -149,7 +153,9 @@ describe('.csv.zip briefcase output @slow', () => {
       withAttachments(3, 3, instance('three', '<name>Chelsea</name><age>38</age><hometown>San Francisco, CA</hometown>'))
     ]);
 
-    callAndParse(inStream, formXml, 'mytestform', (result) => {
+    callAndParse(inStream, formXml, 'mytestform', (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -186,7 +192,9 @@ describe('.csv.zip briefcase output @slow', () => {
       { ...instance('two', '<name>Bob</name><age>34</age><hometown>Portland, OR</hometown>'), reviewState: 'rejected' }
     ]);
 
-    callAndParse(inStream, formXml, 'mytestform', (result) => {
+    callAndParse(inStream, formXml, 'mytestform', (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -221,7 +229,9 @@ describe('.csv.zip briefcase output @slow', () => {
       { ...instance('one', 'missing'), xml: 'missing', deviceId: 'test device' }
     ]);
 
-    callAndParse(inStream, formXml, 'mytestform', (result) => {
+    callAndParse(inStream, formXml, 'mytestform', (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -255,7 +265,9 @@ describe('.csv.zip briefcase output @slow', () => {
     data.aux.edit.count = 3;
     const inStream = streamTest.fromObjects([ data ]);
 
-    callAndParse(inStream, formXml, 'mytestform', (result) => {
+    callAndParse(inStream, formXml, 'mytestform', (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -291,7 +303,9 @@ describe('.csv.zip briefcase output @slow', () => {
     two.aux.exports.formVersion = 'updated';
     const inStream = streamTest.fromObjects([ one, two ]);
 
-    callAndParse(inStream, formXml, 'mytestform', (result) => {
+    callAndParse(inStream, formXml, 'mytestform', (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -326,7 +340,9 @@ describe('.csv.zip briefcase output @slow', () => {
       instance('one', '<name>&#171;Alice&#187;</name><age>30</age><hometown>Seattle, WA</hometown>'),
     ]);
 
-    callAndParse(inStream, formXml, 'mytestform', (result) => {
+    callAndParse(inStream, formXml, 'mytestform', (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -362,7 +378,9 @@ describe('.csv.zip briefcase output @slow', () => {
       instance('three', '<name>Chelsea</name><age>38</age><location></location>')
     ]);
 
-    callAndParse(inStream, formXml, 'mytestform', (result) => {
+    callAndParse(inStream, formXml, 'mytestform', (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
 `SubmissionDate,name,age,location-Latitude,location-Longitude,location-Altitude,location-Accuracy,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -381,7 +399,9 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     fieldsFor(testData.forms.selectMultiple).then((fields) => {
-      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] })), (result) => {
+      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] })), (err, result) => {
+        if(err) return done(err);
+
         result.filenames.should.eql([ 'selectMultiple.csv' ]);
         result['selectMultiple.csv'].should.equal(
 `SubmissionDate,q1,q1/x,q1/y,q1/z,g1-q2,g1-q2/m,g1-q2/n,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -429,7 +449,9 @@ describe('.csv.zip briefcase output @slow', () => {
       instance('three', '<orx:meta><orx:instanceID>three</orx:instanceID></orx:meta><name>Chelsea</name><home><type>House</type><address><city>San Francisco, CA</city><street>99 Mission Ave</street></address></home>'),
     ]);
 
-    callAndParse(inStream, formXml, 'structuredform', (result) => {
+    callAndParse(inStream, formXml, 'structuredform', (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.eql([ 'structuredform.csv' ]);
       result['structuredform.csv'].should.equal(
 `SubmissionDate,meta-instanceID,name,home-type,home-address-street,home-address-city,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -478,7 +500,9 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     fieldsFor(formXml).then((fields) => {
-      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'structuredform', undefined, undefined, false, { groupPaths: false })), (result) => {
+      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'structuredform', undefined, undefined, false, { groupPaths: false })), (err, result) => {
+        if(err) return done(err);
+
         result.filenames.should.eql([ 'structuredform.csv' ]);
         result['structuredform.csv'].should.equal(
 `SubmissionDate,instanceID,name,type,street,city,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -498,7 +522,9 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     fieldsFor(testData.forms.selectMultiple).then((fields) => {
-      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] }, undefined, false, { groupPaths: false })), (result) => {
+      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] }, undefined, false, { groupPaths: false })), (err, result) => {
+        if(err) return done(err);
+
         result.filenames.should.eql([ 'selectMultiple.csv' ]);
         result['selectMultiple.csv'].should.equal(
 `SubmissionDate,q1,q1/x,q1/y,q1/z,q2,q2/m,q2/n,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -565,7 +591,9 @@ describe('.csv.zip briefcase output @slow', () => {
       instance('three', '<orx:meta><orx:instanceID>three</orx:instanceID></orx:meta><name>Chelsea</name><age>38</age><children><child><name>Candace</name><age>2</age></child></children>'),
     ]);
 
-    callAndParse(inStream, formXml, 'singlerepeat', (result) => {
+    callAndParse(inStream, formXml, 'singlerepeat', (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.containDeep([ 'singlerepeat.csv', 'singlerepeat-child.csv' ]);
       result['singlerepeat.csv'].should.equal(
 `SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -627,7 +655,9 @@ Candace,2,three,three/children/child[1]
     const inStream = streamTest.fromObjects(
       (new Array(127)).fill(null).map(_ => instance(uuid(), `<orx:meta><orx:instanceID>${uuid()}</orx:instanceID></orx:meta><name>${uuid()}</name><children><child><name>${uuid()}</name></child></children>`)));
 
-    callAndParse(inStream, formXml, 'singlerepeat', (result) => {
+    callAndParse(inStream, formXml, 'singlerepeat', (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.containDeep([ 'singlerepeat.csv', 'singlerepeat-child.csv' ]);
       result['singlerepeat.csv'].split('\n').length.should.equal(129);
       result['singlerepeat-child.csv'].split('\n').length.should.equal(129);
@@ -702,7 +732,9 @@ Candace,2,three,three/children/child[1]
       instance('three', '<orx:meta><orx:instanceID>three</orx:instanceID></orx:meta><name>Chelsea</name><age>38</age><children><child><name>Candace</name><toy><name>Millennium Falcon</name></toy><toy><name>X-Wing</name></toy><toy><name>Pod racer</name></toy><age>2</age></child></children>'),
     ]);
 
-    callAndParse(inStream, formXml, 'multirepeat', (result) => {
+    callAndParse(inStream, formXml, 'multirepeat', (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.containDeep([ 'multirepeat.csv', 'multirepeat-child.csv', 'multirepeat-toy.csv' ]);
       result['multirepeat.csv'].should.equal(
 `SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -762,7 +794,9 @@ Pod racer,three/children/child[1],three/children/child[1]/toy[3]
       instance('one', '<name>Alice</name><children><name>Bob</name></children><children><name>Chelsea</name></children><children-status>Living at home</children-status>')
     ]);
 
-    callAndParse(inStream, formXml, 'pathprefix', (result) => {
+    callAndParse(inStream, formXml, 'pathprefix', (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.containDeep([ 'pathprefix.csv', 'pathprefix-children.csv' ]);
       result['pathprefix.csv'].should.equal(
 `SubmissionDate,name,children-status,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -851,7 +885,9 @@ Chelsea,one,one/children[2]
       aux: { attachment: { present: 0, expected: 0 }, encryption: {}, edit: { count: 0 }, exports: { formVersion: '' } }
     }]);
 
-    callAndParse(inStream, formXml, 'all-data-types', (result) => {
+    callAndParse(inStream, formXml, 'all-data-types', (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.containDeep([ 'all-data-types.csv' ]);
       result['all-data-types.csv'].should.equal(
 `SubmissionDate,some_string,some_int,some_decimal,some_date,some_time,some_date_time,some_geopoint-Latitude,some_geopoint-Longitude,some_geopoint-Altitude,some_geopoint-Accuracy,some_geotrace,some_geoshape,some_barcode,meta-instanceID,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -978,7 +1014,9 @@ Chelsea,one,one/children[2]
       aux: { attachment: { present: 0, expected: 0 }, encryption: {}, edit: { count: 0 }, exports: { formVersion: '' } }
     }]);
 
-    callAndParse(inStream, formXml, 'nested-repeats', (result) => {
+    callAndParse(inStream, formXml, 'nested-repeats', (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.containDeep([ 'nested-repeats.csv', 'nested-repeats-g1.csv', 'nested-repeats-g2.csv', 'nested-repeats-g3.csv' ]);
       result['nested-repeats.csv'].should.equal(
 `SubmissionDate,meta-instanceID,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -1064,7 +1102,9 @@ some text 3.1.4,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]/g2[1],uuid:0a1b8
       instance('three', '<orx:meta><orx:instanceID>three</orx:instanceID></orx:meta><name>Chelsea</name><jobs><entry><name>Instantaneous Food</name></entry></jobs><friends><entry><name>Ferrence</name></entry><entry><name>Mick</name></entry></friends>'),
     ]);
 
-    callAndParse(inStream, formXml, 'ambiguous', (result) => {
+    callAndParse(inStream, formXml, 'ambiguous', (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.containDeep([ 'ambiguous.csv', 'ambiguous-entry~1.csv', 'ambiguous-entry~2.csv' ]);
       result['ambiguous.csv'].should.equal(
 `SubmissionDate,meta-instanceID,name,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion

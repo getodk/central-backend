@@ -13,7 +13,9 @@ describe('zipPart streamer', () => {
     const part = zipPart();
 
     let closed = false;
-    zipStreamToFiles(zipStreamFromParts(part), (result) => {
+    zipStreamToFiles(zipStreamFromParts(part), (err, result) => {
+      if(err) return done(err);
+
       closed = true;
       done();
     });
@@ -26,7 +28,7 @@ describe('zipPart streamer', () => {
   it('should close the archive successfully given no files', (done) => {
     const part = zipPart();
     // no assertions other than verifying that done is called.
-    zipStreamToFiles(zipStreamFromParts(part), () => done());
+    zipStreamToFiles(zipStreamFromParts(part), (err) => done(err));
     part.finalize();
   });
 
@@ -93,7 +95,9 @@ describe('zipPart streamer', () => {
     const part1 = zipPart();
     const part2 = zipPart();
 
-    zipStreamToFiles(zipStreamFromParts(part1, part2), (result) => {
+    zipStreamToFiles(zipStreamFromParts(part1, part2), (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.containDeep([
         'x/test1.file',
         'x/test2.file',
@@ -122,7 +126,9 @@ describe('zipPart streamer', () => {
     const part1 = zipPart();
     const part2 = zipPart();
 
-    zipStreamToFiles(zipStreamFromParts(part1, part2), (result) => {
+    zipStreamToFiles(zipStreamFromParts(part1, part2), (err, result) => {
+      if(err) return done(err);
+
       result.filenames.should.containDeep([ 'test1.file', 'test2.file' ]);
       result['test1.file'].should.equal('test static');
       result['test2.file'].should.equal('a!test!stream!');
