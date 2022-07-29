@@ -68,13 +68,19 @@ const populate = (container, [ head, ...tail ] = fixtures) =>
 //
 // this hook won't run if `test-unit` is called, as this directory is skipped
 // in that case.
+let timespent = 0;
 const initialize = () => migrator
   .raw('drop owned by current_user')
-  .then(() => migrator.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
+  .then(async () => {
+    let start = Date.now();
+    await migrator.migrate.latest({ directory: appRoot + '/lib/model/migrations' });
+    timespent += (Date.now() - start);
+  })
   .then(() => withDefaults({ db, bcrypt }).transacting(populate));
 const reinit = (f) => (x) => { initialize().then(() => f(x)); };
 
 before(initialize);
+after(() => console.log('@@@ timespent:', timespent));
 
 // augments a supertest object with a `.as(user, cb)` method, where user may be the
 // name of a fixture user or an object with email/password. the user will be logged
