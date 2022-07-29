@@ -62,12 +62,6 @@ describe('util/util', () => {
       (blankStringToNull(' ') === ' ').should.equal(true);
     });
   });
-
-  describe('decodeHtml', () => {
-    const { decodeHtml } = util;
-    it('should replace html entities', () => {
-      (decodeHtml('Crate &amp; Barrel &lt;empty&gt;')).should.equal('Crate & Barrel <empty>');
-    });
-  });
+  
 });
 
