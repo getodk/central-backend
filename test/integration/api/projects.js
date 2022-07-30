@@ -255,6 +255,20 @@ describe('api: /projects', () => {
           .then(({ body }) => {
             body.code.should.equal(400.11)}))));
 
+    it('should reject if id is too big', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/10000000000')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.22)}))));
+
+    it('should reject if id is too small', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/-10000000000')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.22)}))));
+
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/projects/1').expect(403))));
