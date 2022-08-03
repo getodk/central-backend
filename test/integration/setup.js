@@ -77,7 +77,7 @@ before(initialize);
 
 let mustReinitAfter;
 beforeEach(() => {
-  if(mustReinitAfter) throw new Error(`Failed to reinitalize after previous test: '${mustReinitAfter}'`);
+  if(mustReinitAfter) throw new Error(`Failed to reinitalize after previous test: '${mustReinitAfter}'.  You may need to increase your mocha timeout.`);
 });
 afterEach(async () => {
   if(mustReinitAfter) {
