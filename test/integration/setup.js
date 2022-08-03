@@ -77,7 +77,7 @@ before(initialize);
 
 let mustReinitAfter;
 beforeEach(() => {
-  if(mustReinitAfter) throw new Error('Previous test did not complete re-initialization.');
+  if(mustReinitAfter) throw new Error(`Failed to reinitalize after previous test: '${mustReinitAfter}'`);
 });
 afterEach(async () => {
   if(mustReinitAfter) {
@@ -131,8 +131,8 @@ const testService = (test) => () => new Promise((resolve, reject) => {
 // for some tests we explicitly need to make concurrent requests, in which case
 // the transaction butchering we do for testService will not work. for these cases,
 // we offer testServiceFullTrx:
-const testServiceFullTrx = (test) => () => {
-  mustReinitAfter = true;
+const testServiceFullTrx = (test) => function() {
+  mustReinitAfter = this.test.fullTitle();
   return test(augment(request(service(baseContainer))), baseContainer);
 };
 
@@ -146,8 +146,8 @@ const testContainer = (test) => () => new Promise((resolve, reject) => {
 });
 
 // complete the square of options:
-const testContainerFullTrx = (test) => () => {
-  mustReinitAfter = true;
+const testContainerFullTrx = (test) => function() {
+  mustReinitAfter = this.test.fullTitle();
   return test(baseContainer);
 };
 
