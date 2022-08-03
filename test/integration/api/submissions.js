@@ -15,7 +15,7 @@ const withSimpleIds = (deprecatedId, instanceId) => testData.instances.simple.on
 const withBinaryIds = (deprecatedId, instanceId) => testData.instances.binaryType.both
   .replace('both</instance', `${instanceId}</instanceID><deprecatedID>${deprecatedId}</deprecated`);
 
-describe.only('api: /submission', () => {
+describe('api: /submission', () => {
   describe('HEAD', () => {
     it('should return a 204 with no content', testService((service) =>
       service.head('/v1/projects/1/submission')
