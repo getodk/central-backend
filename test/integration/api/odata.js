@@ -183,7 +183,7 @@ describe('api: /forms/:id.svc', () => {
           .then(() => asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')")
             .expect(200)
             .then(({ body }) => {
-              body.value[0].__system.edits.should.equal(1);
+              body.value[0].__system.edits.should.equal(0);
             })))));
 
     it('should return a single encrypted frame (no formdata)', testService((service) =>
@@ -213,7 +213,7 @@ describe('api: /forms/:id.svc', () => {
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
-                    attachmentsExpected: 2,
+                    attachmentsExpected: 0,
                     status: 'missingEncryptedFormData',
                     reviewState: null,
                     deviceId: null,
@@ -253,8 +253,8 @@ describe('api: /forms/:id.svc', () => {
                     updatedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
-                    attachmentsPresent: 1,
-                    attachmentsExpected: 2,
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 0,
                     status: 'notDecrypted',
                     reviewState: null,
                     deviceId: null,
@@ -957,7 +957,7 @@ describe('api: /forms/:id.svc', () => {
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
-                    attachmentsExpected: 2,
+                    attachmentsExpected: 0,
                     status: 'missingEncryptedFormData',
                     reviewState: null,
                     deviceId: null,
@@ -972,7 +972,7 @@ describe('api: /forms/:id.svc', () => {
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
-                    attachmentsExpected: 2,
+                    attachmentsExpected: 0,
                     status: 'missingEncryptedFormData',
                     reviewState: null,
                     deviceId: null,
@@ -1021,8 +1021,8 @@ describe('api: /forms/:id.svc', () => {
                     updatedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
-                    attachmentsPresent: 1,
-                    attachmentsExpected: 2,
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 0,
                     status: 'notDecrypted',
                     reviewState: null,
                     deviceId: null,
@@ -1036,8 +1036,8 @@ describe('api: /forms/:id.svc', () => {
                     updatedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
-                    attachmentsPresent: 1,
-                    attachmentsExpected: 2,
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 0,
                     status: 'notDecrypted',
                     reviewState: null,
                     deviceId: null,

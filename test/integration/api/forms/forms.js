@@ -8,7 +8,7 @@ const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
-describe.skip('api: /projects/:id/forms (create, read, update)', () => {
+describe('api: /projects/:id/forms (create, read, update)', () => {
 
   ////////////////////////////////////////////////////////////////////////////////
   // FORM CREATION+IMPORT
