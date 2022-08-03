@@ -72,9 +72,19 @@ const initialize = () => migrator
   .raw('drop owned by current_user')
   .then(() => migrator.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
   .then(() => withDefaults({ db, bcrypt }).transacting(populate));
-const reinit = (f) => (x) => { initialize().then(() => f(x)); };
 
 before(initialize);
+
+let mustReinitAfter;
+beforeEach(() => {
+  if(mustReinitAfter) throw new Error(`Failed to reinitalize after previous test: '${mustReinitAfter}'.  You may need to increase your mocha timeout.`);
+});
+afterEach(async () => {
+  if(mustReinitAfter) {
+    await initialize();
+    mustReinitAfter = false;
+  }
+});
 
 // augments a supertest object with a `.as(user, cb)` method, where user may be the
 // name of a fixture user or an object with email/password. the user will be logged
@@ -121,9 +131,10 @@ const testService = (test) => () => new Promise((resolve, reject) => {
 // for some tests we explicitly need to make concurrent requests, in which case
 // the transaction butchering we do for testService will not work. for these cases,
 // we offer testServiceFullTrx:
-const testServiceFullTrx = (test) => () => new Promise((resolve, reject) =>
-  test(augment(request(service(baseContainer))), baseContainer)
-    .then(reinit(resolve), reinit(reject)));
+const testServiceFullTrx = (test) => function() {
+  mustReinitAfter = this.test.fullTitle();
+  return test(augment(request(service(baseContainer))), baseContainer);
+};
 
 // for some tests we just want a container, without any of the webservice stuffs between.
 // this is that, with the same transaction trickery as a normal test.
@@ -135,8 +146,10 @@ const testContainer = (test) => () => new Promise((resolve, reject) => {
 });
 
 // complete the square of options:
-const testContainerFullTrx = (test) => () => new Promise((resolve, reject) =>
-  test(baseContainer).then(reinit(resolve), reinit(reject)));
+const testContainerFullTrx = (test) => function() {
+  mustReinitAfter = this.test.fullTitle();
+  return test(baseContainer);
+};
 
 // called to get a container context per task. ditto all // from testService.
 // here instead our weird hijack work involves injecting our own constructed
