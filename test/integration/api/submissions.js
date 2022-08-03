@@ -859,7 +859,7 @@ describe.only('api: /submission', () => {
   });
 });
 
-describe.only('api: /forms/:id/submissions', () => {
+describe('api: /forms/:id/submissions', () => {
   describe('POST', () => {
     it('should return notfound if the form does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
