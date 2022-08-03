@@ -48,9 +48,16 @@ test-unit: node_version
 test-coverage: node_version
 	nyc -x "**/migrations/**" --reporter=lcov _mocha --exit --recursive test
 
-.PHONY: lint
+.PHONY: lint-main
+lint-main: node_version
+	eslint --cache --ignore-pattern /test/ --max-warnings 0 .
+
+.PHONY: lint-tests
 lint: node_version
-	eslint --cache .
+	eslint --cache ./test/
+
+.PHONY: lint
+lint: lint-tests lint-main
 
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
