@@ -10,7 +10,7 @@ const { Form, Key, Submission } = require(appRoot + '/lib/model/frames');
 const { mapSequential } = require(appRoot + '/test/util/util');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
-describe('managed encryption', () => {
+describe.only('managed encryption', () => {
   describe('lock management', () => {
     it('should reject keyless forms in keyed projects @slow', testContainerFullTrx(async (container) => {
       // enable managed encryption.
@@ -649,7 +649,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
                 csv[1].shift().should.be.an.recentIsoDate();
                 csv[1].pop().should.match(/^\[encrypted:........\]$/);
-                csv[1].should.eql([ '','','','two','5','Alice','0','1','missing encrypted form data','','','0' ]);
+                csv[1].should.eql([ '','','','two','5','Alice','0','0','missing encrypted form data','','','0' ]);
                 csv[2].shift().should.be.an.recentIsoDate();
                 csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0','' ]);
                 csv[3].should.eql([ '' ]);

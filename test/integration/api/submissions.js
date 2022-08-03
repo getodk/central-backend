@@ -15,7 +15,7 @@ const withSimpleIds = (deprecatedId, instanceId) => testData.instances.simple.on
 const withBinaryIds = (deprecatedId, instanceId) => testData.instances.binaryType.both
   .replace('both</instance', `${instanceId}</instanceID><deprecatedID>${deprecatedId}</deprecated`);
 
-describe('api: /submission', () => {
+describe.only('api: /submission', () => {
   describe('HEAD', () => {
     it('should return a 204 with no content', testService((service) =>
       service.head('/v1/projects/1/submission')
@@ -859,7 +859,7 @@ describe('api: /submission', () => {
   });
 });
 
-describe('api: /forms/:id/submissions', () => {
+describe.only('api: /forms/:id/submissions', () => {
   describe('POST', () => {
     it('should return notfound if the form does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -1486,7 +1486,7 @@ describe('api: /forms/:id/submissions', () => {
                 // we also check the csv for the sake of verifying the attachments counts.
                 const csv = result['binaryType.csv'].split('\n');
                 csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
-                csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,2,2,,,,0,');
+                csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,0,0,,,,0,');
                 csv.length.should.equal(3); // newline at end
               }))))));
 
