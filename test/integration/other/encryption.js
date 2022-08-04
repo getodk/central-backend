@@ -13,7 +13,7 @@ const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('managed encryption', () => {
   describe('lock management', () => {
-    it.skip('should reject keyless forms in keyed projects @slow', testContainerFullTrx(async (container) => {
+    it('should reject keyless forms in keyed projects @slow', testContainerFullTrx(async (container) => {
       // enable managed encryption.
       await container.transacting(({ Projects }) =>
         Projects.getById(1).then((o) => o.get())
@@ -27,13 +27,12 @@ describe('managed encryption', () => {
           Form.fromXml(testData.forms.simple2)
         ])
           .then(([ project, partial ]) => Forms.createNew(partial, project))
-          .catch((err) => { error = err; })
-      );
+      ).catch((err) => { error = err; });
 
       error.problemCode.should.equal(409.5);
     }));
 
-    it.skip('should reject forms created while project managed encryption is being enabled @slow', testContainerFullTrx(async (container) => {
+    it('should reject forms created while project managed encryption is being enabled @slow', testContainerFullTrx(async (container) => {
       // enable managed encryption but don't allow the transaction to close.
       let encReq;
       const unblock = await new Promise((resolve) => {
@@ -61,8 +60,8 @@ describe('managed encryption', () => {
           Form.fromXml(testData.forms.simple2)
         ])
           .then(([ project, partial ]) => Forms.createNew(partial, project))
-          .catch((err) => { error = err; })
-      );
+      )
+        .catch((err) => { error = err; });
 
       // now unblock the managed encryption commit and let it all flush through.
       unblock();
