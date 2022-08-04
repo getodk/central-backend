@@ -2,9 +2,6 @@ const should = require('should');
 const { DateTime } = require('luxon');
 const { reduceFragment } = require('./util/sql');
 
-// debugging things.
-global.tap = (x) => { console.log(x); return x; };
-
 should.Assertion.add('httpDate', function() {
   this.params = { operator: 'to be an HTTP date string' };
   DateTime.fromHTTP(this.obj).isValid.should.equal(true);
