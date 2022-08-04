@@ -1,25 +1,34 @@
 const should = require('should');
 const { EventEmitter } = require('events');
+// eslint-disable-next-line no-unused-vars
 const { Transform, Readable } = require('stream');
 const { createRequest, createResponse } = require('node-mocks-http');
 const streamTest = require('streamtest').v2;
+// eslint-disable-next-line no-unused-vars
 const { always, identity } = require('ramda');
 
 const appRoot = require('app-root-path');
+// eslint-disable-next-line import/no-dynamic-require
 const { endpointBase, defaultErrorWriter, Context, defaultResultWriter, openRosaPreprocessor, openRosaBefore, openRosaResultWriter, openRosaErrorWriter, odataPreprocessor, odataBefore } = require(appRoot + '/lib/http/endpoint');
+// eslint-disable-next-line import/no-dynamic-require
 const { PartialPipe } = require(appRoot + '/lib/util/stream');
+// eslint-disable-next-line import/no-dynamic-require
 const { noop } = require(appRoot + '/lib/util/util');
+// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
+// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
 const Option = require(appRoot + '/lib/util/option');
 
 const createModernResponse = () => {
   const result = createResponse({ eventEmitter: EventEmitter });
   // node-mocks-http does not have hasHeader yet.
+  // eslint-disable-next-line space-before-function-paren, func-names
   result.hasHeader = function(name) {
     return this.getHeader(name) != null;
   };
 
   // express adds this.
+  // eslint-disable-next-line space-before-function-paren, func-names
   result.status = function(code) {
     this.statusCode = code;
     return this;
@@ -83,6 +92,7 @@ describe('endpoints', () => {
   });
 
   describe('framework', () => {
+    // eslint-disable-next-line no-unused-vars
     const mockContainer = { with: (_ => mockContainer) };
 
     describe('preprocessors', () => {
@@ -124,6 +134,7 @@ describe('endpoints', () => {
       it('should fail the overall promise if a middleware preprocessor fails', () => {
         let failed = false;
         return endpointBase({ resultWriter: noop })(null, [
+          // eslint-disable-next-line arrow-body-style
           () => { return true; },
           () => Promise.reject(new Error('middleware failure'))
         ])(mockContainer)(createRequest(), createModernResponse(), (failure) => {
@@ -218,6 +229,7 @@ describe('endpoints', () => {
 
     describe('before handler', () => {
       it('should run after preprocessors and before the resource', () => {
+        // eslint-disable-next-line prefer-const
         let ran = [];
         const push = (str) => () => { ran.push(str); };
         return endpointBase({
@@ -256,6 +268,7 @@ describe('endpoints', () => {
 
       it('should fail the Promise if an unhandled exception is returned', () => {
         let failed = false;
+        // eslint-disable-next-line no-undef, no-unused-expressions
         return endpointBase({})(mockContainer)(() => { hello; })(createRequest(), createModernResponse(), (failure) => {
           failure.should.be.an.instanceof(ReferenceError);
           failed = true;
@@ -345,9 +358,13 @@ describe('endpoints', () => {
 
       it('should not initiate a transaction given a nonwrite POST', () => {
         let transacted = false;
+        // eslint-disable-next-line indent
           const container = {
+          // eslint-disable-next-line indent
             transacting(cb) { transacted = true; return cb(); },
+          // eslint-disable-next-line indent
             with() { return container; }
+        // eslint-disable-next-line indent
           };
 
         const request = {
@@ -447,27 +464,34 @@ describe('endpoints', () => {
     });
 
     it('should pipe through stream results', (done) => {
+      // eslint-disable-next-line no-unused-vars
       let result;
       const requestTest = streamTest.fromChunks();
+      // eslint-disable-next-line no-shadow
       const responseTest = streamTest.toText((_, result) => {
         result.should.equal('ateststream');
         done();
       });
+      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
       defaultResultWriter(streamTest.fromChunks([ 'a', 'test', 'stream' ]), requestTest, responseTest);
     });
 
     it('should pipeline PartialPipe results', (done) => {
+      // eslint-disable-next-line no-unused-vars
       let result;
       const requestTest = streamTest.fromChunks();
+      // eslint-disable-next-line no-shadow
       const responseTest = streamTest.toText((_, result) => {
         result.should.equal('a!test!stream!');
         done();
       });
+      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
 
       const resourceResult = PartialPipe.of(
         streamTest.fromChunks([ 'a', 'test', 'stream' ]),
+        // eslint-disable-next-line no-shadow
         new Transform({ transform(s, _, done) { done(null, s + '!'); } })
       );
 
@@ -475,19 +499,25 @@ describe('endpoints', () => {
     });
 
     it('should fail semigracefully on PartialPipe stream error', (done) => {
+      // eslint-disable-next-line one-var-declaration-per-line, no-unused-vars, one-var
       let result, trailers;
       const requestTest = streamTest.fromChunks();
+      // eslint-disable-next-line no-shadow
       const responseTest = streamTest.toText((_, result) => {
         trailers.should.eql({ Status: 'Error' });
+        // eslint-disable-next-line no-multi-spaces
         should.not.exist(result);                  // node v14
         (result === undefined).should.equal(true); // post node v14.??
         done();
       });
+      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.addTrailers = function(t) { trailers = t; };
+      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
 
       const resourceResult = PartialPipe.of(
         streamTest.fromChunks([ 'a', 'test', 'stream' ]),
+        // eslint-disable-next-line no-shadow
         new Transform({ transform(s, _, done) {
           if (s.length > 4) done(new Error('nope'));
           else done(null, s + '!');
@@ -501,11 +531,14 @@ describe('endpoints', () => {
     it('should call next on PartialPipe stream error', (done) => {
       const requestTest = streamTest.fromChunks();
       const responseTest = streamTest.toText(() => {});
+      // eslint-disable-next-line no-undef, space-before-function-paren, func-names
       responseTest.addTrailers = function(t) { trailers = t; };
+      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
 
       const resourceResult = PartialPipe.of(
         streamTest.fromChunks([ 'a', 'test', 'stream' ]),
+        // eslint-disable-next-line no-shadow
         new Transform({ transform(s, _, done) {
           if (s.length > 4) done(new Error('nope'));
           else done(null, s + '!');
@@ -521,6 +554,7 @@ describe('endpoints', () => {
     it('should not crash if the request is aborted but the stream is not endable', () => {
       const requestTest = new EventEmitter();
       const responseTest = streamTest.toText(() => {});
+      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
       const source = streamTest.fromChunks([ 'a', 'test', 'stream' ], 20);
       defaultResultWriter(source, requestTest, responseTest);
@@ -556,6 +590,7 @@ describe('endpoints', () => {
     });
 
     describe('resultWriter', () => {
+      // eslint-disable-next-line import/no-dynamic-require
       const { createdMessage } = require(appRoot + '/lib/formats/openrosa');
 
       it('should send the appropriate content with the appropriate header', () => {
@@ -573,6 +608,7 @@ describe('endpoints', () => {
         const response = createModernResponse();
         try {
           openRosaErrorWriter(new Error('test'), null, response);
+        // eslint-disable-next-line no-empty
         } catch (_) {}
 
         response.statusCode.should.equal(500);

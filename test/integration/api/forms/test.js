@@ -1,11 +1,16 @@
+// eslint-disable-next-line no-unused-vars
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
+// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const config = require('config');
+// eslint-disable-next-line import/no-extraneous-dependencies, no-unused-vars
 const superagent = require('superagent');
+// eslint-disable-next-line no-unused-vars
 const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
+// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects/:id/forms (testing drafts)', () => {
@@ -131,6 +136,7 @@ describe('api: /projects/:id/forms (testing drafts)', () => {
       <manifestUrl>${domain}/v1/test/${token}/projects/1/forms/withAttachments/draft/manifest</manifestUrl>
     </xform>
   </xforms>`);
+                // eslint-disable-next-line indent
               }))))));
     });
 
@@ -193,6 +199,7 @@ describe('api: /projects/:id/forms (testing drafts)', () => {
             .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft')
               .expect(200)
               .then(({ body }) => body.draftToken)
+              // eslint-disable-next-line no-unused-vars
               .then((token) => service.get('/v1/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/forms/withAttachments/draft/manifest')
                 .set('X-OpenRosa-Version', '1.0')
                 .expect(404))))));

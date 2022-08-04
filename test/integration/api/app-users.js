@@ -1,5 +1,7 @@
 const should = require('should');
+// eslint-disable-next-line no-unused-vars
 const { pipe } = require('ramda');
+// eslint-disable-next-line no-unused-vars
 const { DateTime } = require('luxon');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
@@ -38,6 +40,7 @@ describe('api: /projects/:id/app-users', () => {
             .send(testData.instances.simple.one)
             .expect(403)))));
 
+    // eslint-disable-next-line no-unused-vars
     it('should create a long session', testService((service, { one }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/app-users')
@@ -78,7 +81,7 @@ describe('api: /projects/:id/app-users', () => {
             .then(({ body }) => {
               body.map((fk) => fk.displayName).should.eql([ 'test 3', 'test 2', 'test 1' ]);
               body.forEach((fk) => {
-                fk.should.be.a.FieldKey()
+                fk.should.be.a.FieldKey();
                 fk.projectId.should.equal(1);
               });
             })))));
@@ -153,6 +156,7 @@ describe('api: /projects/:id/app-users', () => {
                   .set('X-Extended-Metadata', 'true')
                   .expect(200)
                   .then(({ body }) => {
+                    // eslint-disable-next-line no-shadow
                     body.forEach((fk) => fk.should.be.an.ExtendedFieldKey());
                     body[0].lastUsed.should.be.a.recentIsoDate();
                     should(body[1].lastUsed).equal(null);
@@ -210,6 +214,7 @@ describe('api: /projects/:id/app-users', () => {
         asAlice.post('/v1/projects')
           .send({ name: 'project 2' })
           .expect(200)
+          // eslint-disable-next-line no-unused-vars
           .then((project) => asAlice.post('/v1/projects/1/app-users')
             .send({ displayName: 'fktest' })
             .expect(200)

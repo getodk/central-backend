@@ -1,9 +1,12 @@
+// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const appRoot = require('app-root-path');
 const { createReadStream } = require('fs');
 const { sql } = require('slonik');
 const { testService } = require('../setup');
+// eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml.js');
+// eslint-disable-next-line import/no-dynamic-require
 const worker = require(appRoot + '/lib/worker/submission.attachment.update');
 
 describe('worker: submission.attachment.update', () => {

@@ -15,6 +15,7 @@ class ODKAnalytics {
     this.mockError = null;
   }
 
+  // eslint-disable-next-line no-unused-vars
   submit(xml) {
     if (this.mockError !== null) {
       return Promise.reject(this.mockError);

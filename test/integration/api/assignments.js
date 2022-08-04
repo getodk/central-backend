@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const { testService } = require('../setup');
 
@@ -46,10 +47,12 @@ describe('api: /projects/:id/assignments/forms', () => {
   // helper that verifies that some particular assignment exists as expected.
   const verify = (result, actorId, xmlFormId, roleId) => {
     result.some((assignment) => (assignment.actorId === actorId) && (assignment.xmlFormId === xmlFormId) &&
+      // eslint-disable-next-line eqeqeq
       (assignment.roleId == roleId)).should.equal(true);
   };
   const verifyExtended = (result, actorId, xmlFormId, roleId) => {
     result.some((assignment) => (assignment.actor.id === actorId) && (assignment.xmlFormId === xmlFormId) &&
+      // eslint-disable-next-line eqeqeq
       (assignment.roleId == roleId)).should.equal(true);
   };
 
@@ -100,6 +103,7 @@ describe('api: /projects/:id/assignments/forms', () => {
 
     it('should return filtered assignments on forms', testService((service) =>
       doAssigns(service, '/v1/projects/1/assignments/forms/app-user', '')
+        // eslint-disable-next-line no-unused-vars
         .then(({ chelsea, david, eleanor, appUserRoleId, managerRoleId, result }) => {
           result.length.should.equal(2);
 
@@ -109,6 +113,7 @@ describe('api: /projects/:id/assignments/forms', () => {
 
     it('should return filtered extended assignments on forms', testService((service) =>
       doAssigns(service, '/v1/projects/1/assignments/forms/app-user', true)
+        // eslint-disable-next-line no-unused-vars
         .then(({ chelsea, david, eleanor, appUserRoleId, managerRoleId, result }) => {
           result.length.should.equal(2);
 
@@ -142,16 +147,24 @@ describe('api: /assignments', () => {
         asAlice.get('/v1/assignments')
           .expect(200)
           .then(({ body }) => Promise.all([
+            // eslint-disable-next-line no-shadow, indent
               asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id),
+            // eslint-disable-next-line no-shadow, indent
               asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id)
+          // eslint-disable-next-line indent
             ]).then(([ actorId, roleId ]) => {
+            // eslint-disable-next-line indent
               body.length.should.equal(1);
+            // eslint-disable-next-line indent
               body[0].should.eql({ actorId, roleId });
+          // eslint-disable-next-line indent
             })))));
 
     it('should return assignments in extended metadata format if requested', testService((service) =>
       service.login('alice', (asAlice) => Promise.all([
+        // eslint-disable-next-line indent
           asAlice.get('/v1/assignments').set('X-Extended-Metadata', true).expect(200).then(({ body }) => body),
+        // eslint-disable-next-line indent
           asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id)
       ]).then(([ assignments, adminRoleId ]) => {
         assignments.length.should.equal(1);
@@ -190,6 +203,7 @@ describe('api: /assignments', () => {
 
     it('should return all assigned actors by numeric id', testService((service) =>
       service.login('alice', (asAlice) =>
+        // eslint-disable-next-line space-in-parens
         asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id )
           .then((adminRoleId) => asAlice.get('/v1/assignments/' + adminRoleId)
             .expect(200)
@@ -307,12 +321,16 @@ describe('api: /assignments', () => {
 
       it('should remove an assignment by role numeric id', testService((service) =>
         service.login('alice', (asAlice) => Promise.all([
+          // eslint-disable-next-line space-in-parens
           asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id ),
           asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
         ])
           .then(([ roleId, aliceId ]) => asAlice.delete(`/v1/assignments/${roleId}/${aliceId}`)
+            // eslint-disable-next-line indent
               .expect(200)
+          // eslint-disable-next-line indent
               // again, verify the self-demotion.
+            // eslint-disable-next-line indent
               .then(() => asAlice.get('/v1/assignments').expect(403))))));
 
       it('should log the action in the audit log', testService((service, { Audits, Users }) =>
@@ -411,8 +429,11 @@ describe('/projects/:id/assignments', () => {
     it('should not permit granting rights one does not have', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+          // eslint-disable-next-line indent
         .then((chelseaId) => service.login('bob', (asBob) =>
+            // eslint-disable-next-line indent
           asBob.post(`/v1/projects/1/assignments/admin/${chelseaId}`)
+              // eslint-disable-next-line indent
             .expect(403))))));
 
     it('should assign the actor by role system name', testService((service) =>
@@ -440,23 +461,41 @@ describe('/projects/:id/assignments', () => {
                 body.map((actor) => actor.displayName).should.eql([ 'Bob', 'Chelsea' ]);
               })))))));
 
+    // eslint-disable-next-line indent
       it('should log the action in the audit log', testService((service, { Audits, Projects, Users }) =>
+      // eslint-disable-next-line indent
         Users.getByEmail('chelsea@getodk.org')
+        // eslint-disable-next-line indent
           .then((maybeChelsea) => maybeChelsea.get())
+        // eslint-disable-next-line indent
           .then((chelsea) => service.login('alice', (asAlice) =>
+          // eslint-disable-next-line indent
             asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id)
+            // eslint-disable-next-line indent
               .then((adminRoleId) => asAlice.post(`/v1/projects/1/assignments/${adminRoleId}/${chelsea.actor.id}`)
+              // eslint-disable-next-line indent
                 .expect(200)
+              // eslint-disable-next-line indent
                 .then(() => Promise.all([
+                // eslint-disable-next-line indent
                   Projects.getById(1).then((x) => x.get()),
+                // eslint-disable-next-line indent
                   Users.getByEmail('alice@getodk.org').then((maybeAlice) => maybeAlice.get()),
+                // eslint-disable-next-line indent
                   Audits.getLatestByAction('user.assignment.create')
+              // eslint-disable-next-line indent
                 ]))
+              // eslint-disable-next-line indent
                 .then(([ project, alice, audit ]) => {
+                // eslint-disable-next-line indent
                   audit.isDefined().should.equal(true);
+                // eslint-disable-next-line indent
                   audit.get().actorId.should.equal(alice.actor.id);
+                // eslint-disable-next-line indent
                   audit.get().acteeId.should.equal(chelsea.actor.acteeId);
+                // eslint-disable-next-line indent
                   audit.get().details.should.eql({ roleId: adminRoleId, grantedActeeId: project.acteeId });
+              // eslint-disable-next-line indent
                 }))))));
   });
 
@@ -505,23 +544,41 @@ describe('/projects/:id/assignments', () => {
                 .expect(200)
                 .then(({ body }) => { body.length.should.equal(0); })))))));
 
+    // eslint-disable-next-line indent
       it('should log the action in the audit log', testService((service, { Audits, Projects, Users }) =>
+      // eslint-disable-next-line indent
         Users.getByEmail('bob@getodk.org')
+        // eslint-disable-next-line indent
           .then((maybeBob) => maybeBob.get())
+        // eslint-disable-next-line indent
           .then((bob) => service.login('alice', (asAlice) =>
+          // eslint-disable-next-line indent
             asAlice.get('/v1/roles/manager').expect(200).then(({ body }) => body.id)
+            // eslint-disable-next-line indent
               .then((managerRoleId) => asAlice.delete(`/v1/projects/1/assignments/${managerRoleId}/${bob.actor.id}`)
+              // eslint-disable-next-line indent
                 .expect(200)
+              // eslint-disable-next-line indent
                 .then(() => Promise.all([
+                // eslint-disable-next-line indent
                   Projects.getById(1).then((x) => x.get()),
+                // eslint-disable-next-line indent
                   Users.getByEmail('alice@getodk.org').then((x) => x.get()),
+                // eslint-disable-next-line indent
                   Audits.getLatestByAction('user.assignment.delete')
+              // eslint-disable-next-line indent
                 ]))
+              // eslint-disable-next-line indent
                 .then(([ project, alice, audit ]) => {
+                // eslint-disable-next-line indent
                   audit.isDefined().should.equal(true);
+                // eslint-disable-next-line indent
                   audit.get().actorId.should.equal(alice.actor.id);
+                // eslint-disable-next-line indent
                   audit.get().acteeId.should.equal(bob.actor.acteeId);
+                // eslint-disable-next-line indent
                   audit.get().details.should.eql({ roleId: managerRoleId, revokedActeeId: project.acteeId });
+              // eslint-disable-next-line indent
                 }))))));
   });
 });

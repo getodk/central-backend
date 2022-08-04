@@ -4,8 +4,11 @@ const { promisify } = require('util');
 const { DateTime, Duration } = require('luxon');
 const { sql } = require('slonik');
 const { testContainerFullTrx, testContainer } = require('../setup');
+// eslint-disable-next-line import/no-dynamic-require
 const { runner, checker, worker } = require(appRoot + '/lib/worker/worker');
+// eslint-disable-next-line import/no-dynamic-require
 const { Audit } = require(appRoot + '/lib/model/frames');
+// eslint-disable-next-line import/no-dynamic-require
 const { insert } = require(appRoot + '/lib/util/db');
 
 describe('worker', () => {
@@ -15,6 +18,7 @@ describe('worker', () => {
 
     it('should return false and do nothing if no event is given', () => {
       let called = false;
+      // eslint-disable-next-line no-unused-vars
       const reschedule = () => { called = true; };
       runner({})(null, called).should.equal(false);
       called.should.equal(false);
@@ -22,6 +26,7 @@ describe('worker', () => {
 
     it('should return false and do nothing if no jobs match the event', () => {
       let called = false;
+      // eslint-disable-next-line no-unused-vars
       const reschedule = () => { called = true; };
       const event = { action: 'test.event' };
       runner({}, { other: [ () => Promise.resolve(42) ] })(event, called).should.equal(false);
@@ -35,12 +40,14 @@ describe('worker', () => {
     });
 
     it('should pass the container and event details to the job', testContainerFullTrx(async (container) => {
+      // eslint-disable-next-line prefer-const
       let sentineledContainer = container.with({ testSentinel: 108 });
       let checked = false;
       const jobMap = { 'test.event': [ (c, e) => {
         c.testSentinel.should.equal(108);
         c.isTransacting.should.equal(true);
         c.should.not.equal(container);
+        // eslint-disable-next-line no-use-before-define
         e.should.equal(event);
         checked = true;
         return Promise.resolve();
@@ -54,7 +61,9 @@ describe('worker', () => {
     it('should run all matched jobs', testContainerFullTrx(async (container) => {
       let count = 0;
       const jobMap = { 'test.event': [
+        // eslint-disable-next-line no-return-assign
         () => Promise.resolve(count += 1),
+        // eslint-disable-next-line no-return-assign
         () => Promise.resolve(count += 1)
       ] };
 
@@ -81,6 +90,7 @@ describe('worker', () => {
       const hijackedContainer = container.with({ Sentry });
 
       const event = { id: -1, action: 'test.event', failures: 0 };
+      // eslint-disable-next-line prefer-promise-reject-errors
       const jobMap = { 'test.event': [ () => Promise.reject({ uh: 'oh' }) ] };
       await promisify(runner(hijackedContainer, jobMap))(event);
       captured.should.eql({ uh: 'oh' });
@@ -89,10 +99,12 @@ describe('worker', () => {
     // ideally we'd test that the error gets written to stderr but i don't like
     // hijacking globals in tests.
     it('should still survive and reschedule if Sentry goes wrong', testContainerFullTrx(async (container) => {
+      // eslint-disable-next-line no-throw-literal, no-unused-vars
       const Sentry = { captureException(err) { throw 'no sentry for you'; } };
       const hijackedContainer = container.with({ Sentry });
 
       const event = { id: -1, action: 'test.event', failures: 0 };
+      // eslint-disable-next-line prefer-promise-reject-errors
       const jobMap = { 'test.event': [ () => Promise.reject({ uh: 'oh' }) ] };
       await promisify(runner(hijackedContainer, jobMap))(event);
       // not hanging is the test here.
@@ -107,6 +119,7 @@ describe('worker', () => {
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
       const event = (await Audits.getLatestByAction('submission.attachment.update')).get();
 
+      // eslint-disable-next-line prefer-promise-reject-errors
       const jobMap = { 'submission.attachment.update': [ () => Promise.reject({ uh: 'oh' }) ] };
       await promisify(runner(container, jobMap))(event);
       const after = (await Audits.getLatestByAction('submission.attachment.update')).get();
@@ -237,7 +250,9 @@ describe('worker', () => {
       const jobMap = { 'submission.attachment.update': [ () => { ran = true; return Promise.resolve(); } ] };
       const cancel = worker(container, jobMap);
 
+      // eslint-disable-next-line no-await-in-loop
       while ((await Audits.getLatestByAction('submission.attachment.update')).get().processed == null)
+        // eslint-disable-next-line no-await-in-loop
         await millis(20);
 
       cancel();
@@ -254,8 +269,10 @@ describe('worker', () => {
       const jobMap = { 'submission.attachment.update': [ () => Promise.resolve() ] };
       const cancel = worker(container, jobMap);
 
+      // eslint-disable-next-line no-await-in-loop
       while ((await container.oneFirst(sql`
 select count(*) from audits where action='submission.attachment.update' and processed is null`)) > 0)
+        // eslint-disable-next-line no-await-in-loop
         await millis(40);
 
       cancel();
@@ -270,13 +287,17 @@ select count(*) from audits where action='submission.attachment.update' and proc
       const jobMap = { 'submission.attachment.update': [ () => Promise.resolve() ] };
       const cancel = worker(container, jobMap, 50);
 
+      // eslint-disable-next-line no-await-in-loop
       while ((await container.oneFirst(sql`
 select count(*) from audits where action='submission.attachment.update' and processed is null`)) > 0)
+        // eslint-disable-next-line no-await-in-loop
         await millis(40);
 
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
+      // eslint-disable-next-line no-await-in-loop
       while ((await container.oneFirst(sql`
 select count(*) from audits where action='submission.attachment.update' and processed is null`)) > 0)
+        // eslint-disable-next-line no-await-in-loop
         await millis(40);
 
       cancel();
@@ -289,6 +310,7 @@ select count(*) from audits where action='submission.attachment.update' and proc
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
 
       let failed;
+      // eslint-disable-next-line no-proto
       const hijacked = Object.create(container.__proto__);
       Object.assign(hijacked, container);
       hijacked.all = (q) => {
@@ -301,7 +323,9 @@ select count(*) from audits where action='submission.attachment.update' and proc
       const jobMap = { 'submission.attachment.update': [ () => Promise.resolve() ] };
       const cancel = worker(hijacked, jobMap, 10);
 
+      // eslint-disable-next-line no-await-in-loop
       while ((await Audits.getLatestByAction('submission.attachment.update')).get().processed == null)
+        // eslint-disable-next-line no-await-in-loop
         await millis(20);
 
       cancel();
@@ -315,19 +339,23 @@ select count(*) from audits where action='submission.attachment.update' and proc
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
 
       let failed;
+      // eslint-disable-next-line no-proto
       const hijacked = Object.create(container.__proto__);
       Object.assign(hijacked, container);
       hijacked.all = (q) => {
         if (q.sql.startsWith('\nwith q as')) {
           if (failed) return container.all(q);
           failed = true;
+          // eslint-disable-next-line prefer-promise-reject-errors, no-async-promise-executor
           return new Promise(async (_, reject) => { await millis(5); reject('not this time'); });
         }
       };
       const jobMap = { 'submission.attachment.update': [ () => Promise.resolve() ] };
       const cancel = worker(hijacked, jobMap, 10);
 
+      // eslint-disable-next-line no-await-in-loop
       while ((await Audits.getLatestByAction('submission.attachment.update')).get().processed == null)
+        // eslint-disable-next-line no-await-in-loop
         await millis(20);
 
       cancel();
@@ -342,9 +370,11 @@ select count(*) from audits where action='submission.attachment.update' and proc
 
       let failed;
       let checks = 0;
+      // eslint-disable-next-line no-proto
       const hijacked = Object.create(container.__proto__);
       Object.assign(hijacked, container);
       hijacked.all = (q) => {
+        // eslint-disable-next-line no-plusplus
         if (q.sql.startsWith('\nwith q as')) checks++;
         return container.all(q);
       };
@@ -356,7 +386,9 @@ select count(*) from audits where action='submission.attachment.update' and proc
       } ] };
       const cancel = worker(hijacked, jobMap);
 
+      // eslint-disable-next-line no-await-in-loop
       while ((await Audits.getLatestByAction('submission.attachment.update')).get().lastFailure == null)
+        // eslint-disable-next-line no-await-in-loop
         await millis(40);
 
       cancel();

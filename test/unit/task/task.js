@@ -1,6 +1,8 @@
 const appRoot = require('app-root-path');
 const should = require('should');
+// eslint-disable-next-line import/no-dynamic-require
 const { resolve } = require(appRoot + '/lib/util/promise');
+// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
 const { task, run } = require(appRoot + '/lib/task/task');
 
 describe('task harness', () => {
@@ -36,13 +38,14 @@ describe('task harness', () => {
       const outer = task.withContainer((container) => () => {
         // hijack the destroy func:
         const origDestroy = container.db.destroy;
+        // eslint-disable-next-line no-param-reassign
         container.db.destroy = () => {
           torndown = true;
           origDestroy.call(container.db);
         };
         return task.withContainer(() => () => {
           torndown.should.equal(false);
-          return resolve(true)
+          return resolve(true);
         })().then(() => torndown.should.equal(false));
       });
       return outer().then(() => torndown.should.equal(true));

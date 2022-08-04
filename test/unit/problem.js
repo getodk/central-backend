@@ -1,5 +1,7 @@
 const appRoot = require('app-root-path');
+// eslint-disable-next-line no-unused-vars
 const should = require('should');
+// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
 
 // we aren't going to test the many problem types here, only the basic infrastructure.

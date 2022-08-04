@@ -2,10 +2,12 @@ const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const should = require('should');
 const config = require('config');
+// eslint-disable-next-line import/no-extraneous-dependencies
 const superagent = require('superagent');
 const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
+// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects/:id/forms (create, read, update)', () => {
@@ -600,25 +602,45 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                 body.submissions.should.equal(0);
               })))));
 
+      // eslint-disable-next-line indent
     it('should return the correct enketoId', testService((service, container) =>
+        // eslint-disable-next-line indent
       service.login('alice', (asAlice) =>
+          // eslint-disable-next-line indent
         asAlice.post('/v1/projects/1/forms?publish=true')
+            // eslint-disable-next-line indent
           .set('Content-Type', 'application/xml')
+            // eslint-disable-next-line indent
           .send(testData.forms.simple2)
+            // eslint-disable-next-line indent
           .expect(200)
+            // eslint-disable-next-line indent
           .then(() => exhaust(container))
+            // eslint-disable-next-line indent
           .then(() => {
+              // eslint-disable-next-line indent
             global.enketoToken = '::ijklmnop';
+              // eslint-disable-next-line indent
             return asAlice.post('/v1/projects/1/forms/simple2/draft')
+                // eslint-disable-next-line indent
               .expect(200)
+                // eslint-disable-next-line indent
               .then(() => exhaust(container))
+                // eslint-disable-next-line indent
               .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+                  // eslint-disable-next-line indent
                 .set('X-Extended-Metadata', true)
+                  // eslint-disable-next-line indent
                 .expect(200)
+                  // eslint-disable-next-line indent
                 .then(({ body }) => {
+                    // eslint-disable-next-line indent
                   body.enketoId.should.equal('::abcdefgh');
+                    // eslint-disable-next-line indent
                   body.enketoOnceId.should.equal('::::abcdefgh');
+                  // eslint-disable-next-line indent
                 }));
+            // eslint-disable-next-line indent
           }))));
     });
 
@@ -806,6 +828,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                 .expect(200)
                 .then(({ body }) => {
                   body[0].updatedAt.should.be.a.recentIsoDate();
+                  // eslint-disable-next-line no-param-reassign
                   delete body[0].updatedAt;
 
                   body.should.eql([
@@ -888,6 +911,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                 .expect(200))
               .then(() => service.login('chelsea', (asChelsea) =>
                 asChelsea.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+                  // eslint-disable-next-line indent
                 .expect(403))))));
 
         it('should reject notfound if the file does not exist', testService((service) =>
@@ -993,10 +1017,15 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple')).then((o) => o.get()),
             Audits.getLatestByAction('form.update').then((o) => o.get())
           ])
+            // eslint-disable-next-line indent
           .then(([ alice, form, log ]) => {
+              // eslint-disable-next-line indent
             log.actorId.should.equal(alice.actor.id);
+              // eslint-disable-next-line indent
             log.acteeId.should.equal(form.acteeId);
+              // eslint-disable-next-line indent
             log.details.should.eql({ data: { state: 'closing' } });
+            // eslint-disable-next-line indent
           })))));
   });
 });

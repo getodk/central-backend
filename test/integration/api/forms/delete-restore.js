@@ -1,11 +1,17 @@
+// eslint-disable-next-line no-unused-vars
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
+// eslint-disable-next-line no-unused-vars
 const should = require('should');
+// eslint-disable-next-line no-unused-vars
 const config = require('config');
+// eslint-disable-next-line import/no-extraneous-dependencies, no-unused-vars
 const superagent = require('superagent');
+// eslint-disable-next-line no-unused-vars
 const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
+// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects/:id/forms (delete, restore)', () => {
@@ -36,9 +42,13 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
               Users.getByEmail('alice@getodk.org').then((o) => o.get()),
               Audits.getLatestByAction('form.delete').then((o) => o.get())
             ])
+              // eslint-disable-next-line indent
             .then(([ alice, log ]) => {
+                // eslint-disable-next-line indent
               log.actorId.should.equal(alice.actor.id);
+                // eslint-disable-next-line indent
               log.acteeId.should.equal(form.acteeId);
+              // eslint-disable-next-line indent
             }))))));
 
     it('should not return associated assignments for a deleted form', testService((service) =>
@@ -122,9 +132,13 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
             Forms.getByProjectAndXmlFormId(1, 'simple').then((o) => o.get()),
             Audits.getLatestByAction('form.restore').then((o) => o.get())
           ])
+            // eslint-disable-next-line indent
           .then(([ alice, form, log ]) => {
+              // eslint-disable-next-line indent
             log.actorId.should.equal(alice.actor.id);
+              // eslint-disable-next-line indent
             log.acteeId.should.equal(form.acteeId);
+            // eslint-disable-next-line indent
           })))));
 
     it('should restore a specific form by numeric id when multiple trashed forms share the same xmlFormId', testService((service) =>
@@ -145,6 +159,7 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
         asAlice.post('/v1/projects/1/forms/1/restore')
           .expect(404))));
 
+    // eslint-disable-next-line no-unused-vars
     it('should fail to restore a form when another active form with the same form id exists', testService((service, { Audits }) =>
       service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1/forms/simple')
@@ -179,6 +194,7 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
 
       it('should restore public link submission access', testService((service) =>
         service.login('alice', (asAlice) =>
+          // eslint-disable-next-line quotes
           asAlice.post(`/v1/projects/1/forms/simple/public-links`)
             .send({ displayName: 'test public link' })
             .then(({ body }) => Promise.resolve(body.token))
@@ -201,9 +217,11 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
 
       it('should restore app user submission access', testService((service) =>
         service.login('alice', (asAlice) =>
+          // eslint-disable-next-line quotes
           asAlice.post(`/v1/projects/1/app-users`)
             .send({ displayName: 'test app user' })
             .then(({ body }) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${body.id}`)
+              // eslint-disable-next-line indent
                 .expect(200)
               .then(() => service.post(`/v1/key/${body.token}/projects/1/forms/simple/submissions`)
                 .send(testData.instances.simple.one)
@@ -232,7 +250,9 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
               .expect(200))
             .then(() => asAlice.delete('/v1/projects/1/forms/simple')
               .expect(200))
+            // eslint-disable-next-line indent
               .then(() => asAlice.get('/v1/projects/1/forms/simple/assignments')
+              // eslint-disable-next-line indent
                 .expect(404)))));
     });
   });

@@ -1,12 +1,20 @@
+// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
+// eslint-disable-next-line import/no-dynamic-require
 const { testContainerFullTrx } = require(appRoot + '/test/integration/setup');
+// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
+// eslint-disable-next-line no-unused-vars
 const testData = require('../../data/xml');
+// eslint-disable-next-line import/no-dynamic-require
 const { Frame } = require(appRoot + '/lib/model/frame');
-const { injector } = require(appRoot + '/lib/model/container')
+// eslint-disable-next-line import/no-dynamic-require
+const { injector } = require(appRoot + '/lib/model/container');
+// eslint-disable-next-line import/no-dynamic-require
 const { endpointBase } = require(appRoot + '/lib/http/endpoint');
+// eslint-disable-next-line import/no-dynamic-require
 const { noop } = require(appRoot + '/lib/util/util');
 
 describe('transaction integration', () => {
@@ -17,6 +25,7 @@ describe('transaction integration', () => {
     // just to be completely sure.
     const getContainer = () => {
       const Capybaras = {
+        // eslint-disable-next-line no-unused-vars
         create: (capybara) => ({ db }) => {
           db.isTransacting.should.equal(true);
           queryRun = true;
@@ -32,7 +41,7 @@ describe('transaction integration', () => {
 
     return endpointBase({ resultWriter: noop })(getContainer())(({ Capybaras }) =>
       Capybaras.create(new Frame({ id: 42 }))
-    )({ method: 'POST' })
+    )({ method: 'POST' }) // eslint-disable-line function-paren-newline
       .then(() => { queryRun.should.equal(true); });
   });
 });
@@ -50,8 +59,10 @@ describe('enketo worker transaction', () => {
     let flush;
     global.enketoWait = (f) => { flush = f; };
     const workerTicket = exhaust(container);
+    // eslint-disable-next-line no-await-in-loop
     while (flush == null) await sometime(50);
 
+    // eslint-disable-next-line no-unused-vars
     const updateTicket = Forms.update(simple, { state: 'closed' });
 
     // now we wait to see if we have deadlocked, which we want.

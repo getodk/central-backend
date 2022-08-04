@@ -1,7 +1,10 @@
 const appRoot = require('app-root-path');
+// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const { testTask } = require('../setup');
+// eslint-disable-next-line import/no-dynamic-require
 const { getOrNotFound } = require(appRoot + '/lib/util/promise');
+// eslint-disable-next-line import/no-dynamic-require
 const { getConfiguration, setConfiguration } = require(appRoot + '/lib/task/config');
 
 describe('task: config', () => {

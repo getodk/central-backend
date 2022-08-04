@@ -4,6 +4,7 @@ const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { QueryOptions } = require('../../../lib/util/db');
+// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects', () => {
@@ -103,9 +104,11 @@ describe('api: /projects', () => {
 
     it('should return extended metadata if requested', testService((service) =>
       service.login('alice', (asAlice) => Promise.all([
+        // eslint-disable-next-line quotes
         asAlice.post(`/v1/projects/1/app-users`)
           .send({ displayName: 'test 1' })
           .expect(200),
+        // eslint-disable-next-line quotes
         asAlice.post(`/v1/projects/1/app-users`)
           .send({ displayName: 'test 2' })
           .expect(200),
@@ -225,6 +228,7 @@ describe('api: /projects', () => {
             return asAlice.get(`/v1/projects/${body.id}`).expect(200);
           }))));
 
+    // eslint-disable-next-line no-unused-vars
     it('should create an audit log entry', testService((service, { Audits, Projects, one }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects')
@@ -253,6 +257,7 @@ describe('api: /projects', () => {
         asAlice.get('/v1/projects/1a')
           .expect(400)
           .then(({ body }) => {
+            // eslint-disable-next-line semi, brace-style, block-spacing
             body.code.should.equal(400.11)}))));
 
     it('should reject if id is too big', testService((service) =>
@@ -260,6 +265,7 @@ describe('api: /projects', () => {
         asAlice.get('/v1/projects/10000000000')
           .expect(400)
           .then(({ body }) => {
+            // eslint-disable-next-line semi, brace-style, block-spacing
             body.code.should.equal(400.22)}))));
 
     it('should reject if id is too small', testService((service) =>
@@ -267,6 +273,7 @@ describe('api: /projects', () => {
         asAlice.get('/v1/projects/-10000000000')
           .expect(400)
           .then(({ body }) => {
+            // eslint-disable-next-line semi, brace-style, block-spacing
             body.code.should.equal(400.22)}))));
 
     it('should reject unless the user can read', testService((service) =>
@@ -315,11 +322,13 @@ describe('api: /projects', () => {
     it('should not count deleted app users', testService((service) =>
       service.login('alice', (asAlice) =>
         Promise.all([
+          // eslint-disable-next-line quotes
           asAlice.post(`/v1/projects/1/app-users`)
             .send({ displayName: 'test 1' })
             .expect(200)
             .then(({ body }) => asAlice.delete(`/v1/projects/1/app-users/${body.id}`)
               .expect(200)),
+          // eslint-disable-next-line quotes
           asAlice.post(`/v1/projects/1/app-users`)
             .send({ displayName: 'test 2' })
             .expect(200)
@@ -366,7 +375,9 @@ describe('api: /projects', () => {
           asChelsea.get('/v1/users/current').expect(200)
             .then(({ body }) => body.id)
             .then((chelseaId) => Promise.all([
+              // eslint-disable-next-line indent
                asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`).expect(200),
+              // eslint-disable-next-line indent
                asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`).expect(200),
             ]))
             .then(() => asChelsea.get('/v1/projects/1')
@@ -374,10 +385,15 @@ describe('api: /projects', () => {
               .expect(200)
               .then(({ body }) => {
                 body.verbs.should.eqlInAnyOrder([
+                  // eslint-disable-next-line no-multi-spaces
                   'project.read',      // from role(s): formfill, viewer
+                  // eslint-disable-next-line no-multi-spaces
                   'form.list',         // from role(s): formfill, viewer
+                  // eslint-disable-next-line no-multi-spaces
                   'form.read',         // from role(s): formfill, viewer
+                  // eslint-disable-next-line no-multi-spaces
                   'submission.read',   // from role(s): viewer
+                  // eslint-disable-next-line no-multi-spaces
                   'submission.list',   // from role(s): viewer
                   'submission.create', // from role(s): formfill
                 ]);
@@ -476,6 +492,7 @@ describe('api: /projects', () => {
       service.login('chelsea', (asChelsea) =>
         asChelsea.delete('/v1/projects/1').expect(403))));
 
+    // eslint-disable-next-line no-unused-vars
     it('should delete the project', testService((service, { Audit, Project }) =>
       service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1')
@@ -536,13 +553,17 @@ describe('api: /projects', () => {
             asAlice.get('/v1/projects/1/forms/simple.xml')
               .expect(200)
               .then(({ text }) => {
+                // eslint-disable-next-line no-useless-escape
                 text.should.match(/<data id="simple" version="\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
+                // eslint-disable-next-line no-useless-escape
                 text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
               }),
             asAlice.get('/v1/projects/1/forms/withrepeat.xml')
               .expect(200)
               .then(({ text }) => {
+                // eslint-disable-next-line no-useless-escape
                 text.should.match(/<data id="withrepeat" orx:version="1.0\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
+                // eslint-disable-next-line no-useless-escape
                 text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
               })
           ])))));
@@ -574,13 +595,17 @@ describe('api: /projects', () => {
             asAlice.get('/v1/projects/1/forms/simple.xml')
               .expect(200)
               .then(({ text }) => {
+                // eslint-disable-next-line no-useless-escape
                 text.should.match(/<data id="simple" version="\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
+                // eslint-disable-next-line no-useless-escape
                 text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
               }),
             asAlice.get('/v1/projects/1/forms/simple/draft.xml')
               .expect(200)
               .then(({ text }) => {
+                // eslint-disable-next-line no-useless-escape
                 text.should.match(/<data id="simple" version="\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
+                // eslint-disable-next-line no-useless-escape
                 text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
               })
           ])))));
@@ -597,7 +622,9 @@ describe('api: /projects', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xml')
             .expect(200)
             .then(({ text }) => {
+              // eslint-disable-next-line no-useless-escape
               text.should.match(/<data id="simple2" version="2\.1\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
+              // eslint-disable-next-line no-useless-escape
               text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
             })))));
 
@@ -1088,6 +1115,7 @@ describe('api: /projects', () => {
             .expect(200),
           asBob.post(`/v1/projects/1/forms/withrepeat/assignments/manager/${fk.id}`)
             .expect(200),
+          // eslint-disable-next-line quotes
           asBob.post(`/v1/projects/1/forms?publish=true`)
             .send(testData.forms.simple2)
             .set('Content-Type', 'application/xml')
@@ -1125,6 +1153,7 @@ describe('api: /projects', () => {
                 .then(({ body }) => { body.should.eql([]); })
             ])))))));
 
+    // eslint-disable-next-line no-unused-vars
     it('should not delete public link assignments', testService((service, container) =>
       service.login('bob', (asBob) => asBob.post('/v1/projects/1/forms/simple/public-links')
         .send({ displayName: 'test link' })
@@ -1177,6 +1206,7 @@ describe('api: /projects', () => {
               asBob.get('/v1/roles/app-user').expect(200).then(({ body }) => body.id),
               Actors.getById(fk.id).then((o) => o.get()),
               Projects.getById(1).then((o) => o.get())
+                // eslint-disable-next-line no-multi-spaces
                 .then((project) => Forms.getByProjectAndXmlFormId(project.id,  'simple')).then((o) => o.get()),
               Audits.getLatestByAction('field_key.assignment.delete').then((o) => o.get())
             ]))
@@ -1356,57 +1386,99 @@ describe('api: /projects?forms=true', () => {
           asChelsea.get('/v1/users/current').expect(200)
             .then(({ body }) => body.id)
             .then((chelseaId) => Promise.all([
+              // eslint-disable-next-line indent
                asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`).expect(200),
+              // eslint-disable-next-line indent
                asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`).expect(200),
             ]))
             .then(() => asChelsea.get('/v1/projects?forms=true')
               .expect(200)
               .then(({ body }) => {
                 body.length.should.equal(1);
+                // eslint-disable-next-line no-unused-vars
                 const { formList, verbs } = body[0];
                 verbs.should.eqlInAnyOrder([
+                  // eslint-disable-next-line no-multi-spaces
                   'form.list',         // from role(s): formfill, viewer
+                  // eslint-disable-next-line no-multi-spaces
                   'form.read',         // from role(s): formfill, viewer
+                  // eslint-disable-next-line no-multi-spaces
                   'project.read',      // from role(s): formfill, viewer
                   'submission.create', // from role(s): formfill
+                  // eslint-disable-next-line no-multi-spaces
                   'submission.list',   // from role(s): viewer
+                  // eslint-disable-next-line no-multi-spaces
                   'submission.read',   // from role(s): viewer
                 ]);
               }))))));
   });
 
+  // eslint-disable-next-line indent
 it('should return the correct projects with the correct verbs', testService((service) =>
+    // eslint-disable-next-line indent
   service.login('alice', (asAlice) =>
+      // eslint-disable-next-line indent
     service.login('chelsea', (asChelsea) => Promise.all([
+        // eslint-disable-next-line indent
       asChelsea.get('/v1/users/current')
+          // eslint-disable-next-line indent
         .expect(200)
+          // eslint-disable-next-line indent
         .then(({ body }) => body.id),
+        // eslint-disable-next-line indent
       asAlice.post('/v1/projects')
+          // eslint-disable-next-line indent
         .send({ name: 'Another Project' })
+          // eslint-disable-next-line indent
         .expect(200)
+          // eslint-disable-next-line indent
         .then(({ body }) => body.id)
+      // eslint-disable-next-line indent
     ])
+        // eslint-disable-next-line indent
       .then(([chelseaId, projectId]) => Promise.all([
+          // eslint-disable-next-line indent
         asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`)
+            // eslint-disable-next-line indent
           .expect(200),
+          // eslint-disable-next-line indent
         asAlice.post(`/v1/projects/1/assignments/app-user/${chelseaId}`)
+            // eslint-disable-next-line indent
           .expect(200),
+          // eslint-disable-next-line indent
         asAlice.post(`/v1/projects/${projectId}/assignments/app-user/${chelseaId}`)
+            // eslint-disable-next-line indent
           .expect(200)
+        // eslint-disable-next-line indent
       ]))
+        // eslint-disable-next-line indent
       .then(() => asChelsea.get('/v1/projects?forms=true')
+          // eslint-disable-next-line indent
         .expect(200)
+          // eslint-disable-next-line indent
         .then(({ body }) => {
+            // eslint-disable-next-line indent
           body.length.should.equal(1);
+            // eslint-disable-next-line indent
           const project = body[0];
+            // eslint-disable-next-line indent
           project.id.should.equal(1);
+            // eslint-disable-next-line indent
           project.verbs.should.eqlInAnyOrder([
+              // eslint-disable-next-line no-multi-spaces, indent
             'project.read',     // from role(s): viewer
+              // eslint-disable-next-line no-multi-spaces, indent
             'form.list',        // from role(s): viewer
+              // eslint-disable-next-line no-multi-spaces, indent
             'form.read',        // from role(s): viewer, app-user
+              // eslint-disable-next-line no-multi-spaces, indent
             'submission.read',  // from role(s): viewer
+              // eslint-disable-next-line no-multi-spaces, indent
             'submission.list',  // from role(s): viewer
+              // eslint-disable-next-line indent
             'submission.create' // from role(s): app-user
+            // eslint-disable-next-line indent
           ]);
+          // eslint-disable-next-line indent
         }))))));
 });

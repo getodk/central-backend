@@ -1,5 +1,7 @@
 const should = require('should');
+// eslint-disable-next-line no-unused-vars
 const { pipe } = require('ramda');
+// eslint-disable-next-line no-unused-vars
 const { DateTime } = require('luxon');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
@@ -76,6 +78,7 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
             .expect(200)
             .then(({ body }) => {
               body.map((link) => link.displayName).should.eql([ 'test 3', 'test 2', 'test 1' ]);
+              // eslint-disable-next-line semi
               body.forEach((link) => { link.should.be.a.PublicLink() });
               body[1].once.should.equal(true);
             })))));
@@ -84,6 +87,7 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
       service.login('alice', (asAlice) => Promise.all([
         asAlice.post('/v1/projects/1/forms/simple/public-links').send({ displayName: 'test 1' }).expect(200)
           .then(() => asAlice.post('/v1/projects/1/forms/simple/public-links').send({ displayName: 'test 2' }).expect(200)),
+        // eslint-disable-next-line quotes
         asAlice.post(`/v1/projects/1/forms/withrepeat/public-links`).send({ displayName: 'test 3' }).expect(200)
       ])
         .then(() => asAlice.get('/v1/projects/1/forms/simple/public-links')

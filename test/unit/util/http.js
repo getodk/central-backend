@@ -1,7 +1,10 @@
 const should = require('should');
 const appRoot = require('app-root-path');
+// eslint-disable-next-line import/no-dynamic-require
 const http = require(appRoot + '/lib/util/http');
+// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
 const Problem = require(appRoot + '/lib/util/problem');
+// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
 const Option = require(appRoot + '/lib/util/option');
 
 describe('util/http', () => {
@@ -63,12 +66,13 @@ describe('util/http', () => {
     });
 
     it('should not subserialize plain objects within an array', () => {
-      serialize([{ a: 1 }, { b: 2, c: 3 }]).should.eql([{ a: 1 }, { b: 2, c: 3 }])
+      serialize([{ a: 1 }, { b: 2, c: 3 }]).should.eql([{ a: 1 }, { b: 2, c: 3 }]);
     });
   });
 
   describe('format response helpers', () => {
     const { contentType, xml, atom, json } = http;
+    // eslint-disable-next-line semi, space-before-function-paren, object-shorthand, func-names
     const mockResponse = () => ({ type: function(value) { this.contentType = value } });
     it('should ultimately return the result', () => {
       contentType()(42)(null, mockResponse()).should.equal(42);

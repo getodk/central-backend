@@ -1,14 +1,22 @@
 const should = require('should');
+// eslint-disable-next-line no-unused-vars
 const { createRequest, createResponse } = require('node-mocks-http');
 
 const appRoot = require('app-root-path');
+// eslint-disable-next-line import/no-dynamic-require
 const preprocessors = require(appRoot + '/lib/http/preprocessors');
+// eslint-disable-next-line import/no-dynamic-require
 const { Context } = require(appRoot + '/lib/http/endpoint');
+// eslint-disable-next-line import/no-dynamic-require
 const { Session, User, Actor } = require(appRoot + '/lib/model/frames');
+// eslint-disable-next-line import/no-dynamic-require
 const { by } = require(appRoot + '/lib/model/query/auth');
+// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
+// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
 
+// eslint-disable-next-line import/no-dynamic-require
 const bcrypt = require(appRoot + '/lib/util/crypto').password(require('bcrypt'));
 
 describe('preprocessors', () => {
@@ -193,6 +201,7 @@ describe('preprocessors', () => {
           { Auth, Sessions: mockSessions('alohomora') },
           new Context(
             createRequest({ method: 'GET', headers: {
+              // eslint-disable-next-line quote-props
               'Authorization': 'Bearer abc',
               'X-Forwarded-Proto': 'https',
               Cookie: '__Host-session=alohomora'
@@ -202,6 +211,7 @@ describe('preprocessors', () => {
         )).catch((err) => {
           err.problemCode.should.equal(401.2);
           caught = true;
+        // eslint-disable-next-line no-unused-vars
         }).then((context) => {
           caught.should.equal(true);
         });
@@ -215,6 +225,7 @@ describe('preprocessors', () => {
             createRequest({
               method: 'GET',
               headers: {
+                // eslint-disable-next-line quote-props
                 'Authorization': 'Bearer abc',
                 'X-Forwarded-Proto': 'https',
                 Cookie: '__Host-session=alohomora'
@@ -226,6 +237,7 @@ describe('preprocessors', () => {
         )).catch((err) => {
           err.problemCode.should.equal(401.2);
           caught = true;
+        // eslint-disable-next-line no-unused-vars
         }).then((context) => {
           caught.should.equal(true);
         });

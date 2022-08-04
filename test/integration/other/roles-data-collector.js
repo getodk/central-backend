@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');

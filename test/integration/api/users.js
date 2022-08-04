@@ -177,6 +177,7 @@ describe('api: /users', () => {
               log.actorId.should.equal(alice.actor.id);
               log.acteeId.should.equal(david.actor.acteeId);
               log.details.data.actorId.should.be.a.Number();
+              // eslint-disable-next-line no-param-reassign
               delete log.details.data.actorId;
               log.details.should.eql({
                 data: {
@@ -363,6 +364,7 @@ describe('api: /users', () => {
           .expect(200)
           .then(({ body }) => asAlice.get(`/v1/users/${body.id}`)
             .expect(200)
+            // eslint-disable-next-line no-shadow
             .then(({ body }) => {
               body.should.be.a.User();
               body.email.should.equal('alice@getodk.org');
@@ -477,10 +479,15 @@ describe('api: /users', () => {
               Users.getByEmail('alice@getodk.org').then((o) => o.get()),
               Audits.getLatestByAction('user.update').then((o) => o.get())
             ])
+              // eslint-disable-next-line indent
           .then(([ alice, log ]) => {
+                // eslint-disable-next-line indent
             log.actorId.should.equal(alice.actor.id);
+                // eslint-disable-next-line indent
             log.acteeId.should.equal(chelsea.actor.acteeId);
+                // eslint-disable-next-line indent
             log.details.should.eql({ data: { displayName: 'cool chelsea' } });
+              // eslint-disable-next-line indent
           }))))));
   });
 
@@ -491,12 +498,15 @@ describe('api: /users', () => {
           .expect(200)
           .then(({ body }) => service.login('chelsea', (asChelsea) =>
             asChelsea.put(`/v1/users/${body.id}/password`)
+              // eslint-disable-next-line quote-props
               .send({ old: 'alice', 'new': 'chelsea' })
               .expect(403))))));
 
     it('should reject if the user does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
+        // eslint-disable-next-line quotes
         asAlice.put(`/v1/users/9999/password`)
+          // eslint-disable-next-line quote-props
           .send({ old: 'alice', 'new': 'chelsea' })
           .expect(404))));
 
@@ -505,6 +515,7 @@ describe('api: /users', () => {
         asAlice.get('/v1/users/current')
           .expect(200)
           .then(({ body }) => asAlice.put(`/v1/users/${body.id}/password`)
+            // eslint-disable-next-line quote-props
             .send({ old: 'notalice', 'new': 'newpassword' })
             .expect(401)))));
 
@@ -513,6 +524,7 @@ describe('api: /users', () => {
         asAlice.get('/v1/users/current')
           .expect(200)
           .then(({ body }) => asAlice.put(`/v1/users/${body.id}/password`)
+            // eslint-disable-next-line quote-props
             .send({ old: 'alice', 'new': 'newpassword' })
             .expect(200))
           .then(({ body }) => {

@@ -1,11 +1,14 @@
+// eslint-disable-next-line no-unused-vars
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const should = require('should');
 const config = require('config');
+// eslint-disable-next-line import/no-extraneous-dependencies, no-unused-vars
 const superagent = require('superagent');
 const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
+// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects/:id/forms (listing forms)', () => {
@@ -76,6 +79,7 @@ describe('api: /projects/:id/forms (listing forms)', () => {
 
     it('should list soft-deleted forms including extended metadata and submissions', testService((service) =>
       service.login('alice', (asAlice) =>
+        // eslint-disable-next-line indent
          asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'application/xml')
@@ -98,11 +102,13 @@ describe('api: /projects/:id/forms (listing forms)', () => {
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
+            // eslint-disable-next-line no-prototype-builtins
             body.forEach((form) => form.hasOwnProperty('deletedAt').should.be.false());
           })
           .then(() => asAlice.get('/v1/projects/1/forms')
             .expect(200)
             .then(({ body }) => {
+              // eslint-disable-next-line no-prototype-builtins
               body.forEach((form) => form.hasOwnProperty('deletedAt').should.be.false());
             })))));
   });
@@ -184,6 +190,7 @@ describe('api: /projects/:id/forms (listing forms)', () => {
             // Collect is particular about this:
             headers['content-type'].should.equal('text/xml; charset=utf-8');
 
+            // eslint-disable-next-line no-unused-vars
             const domain = config.get('default.env.domain');
             text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <xforms xmlns="http://openrosa.org/xforms/xformsList">
@@ -286,6 +293,7 @@ describe('api: /projects/:id/forms (listing forms)', () => {
           .set('Content-Type', 'application/xml')
           .expect(200)
           .then(() => asAlice.get('/v1/projects/1/formList')
+            // eslint-disable-next-line indent
               .set('X-OpenRosa-Version', '1.0')
             .expect(200)
             .then(({ text }) => {

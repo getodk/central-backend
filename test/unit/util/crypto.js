@@ -3,7 +3,9 @@ const { readFileSync } = require('fs');
 const should = require('should');
 const streamTest = require('streamtest').v2;
 const bcrypt = require('bcrypt');
+// eslint-disable-next-line import/no-dynamic-require
 const crypto = require(appRoot + '/lib/util/crypto');
+// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
 const Problem = require(appRoot + '/lib/util/problem');
 
 describe('util/crypto', () => {
@@ -155,8 +157,11 @@ describe('util/crypto', () => {
         const aesKey = Buffer.from('3TJoHf74zHbDwG3Ta+bcvfUr50C6yF/astfu+CdSnQU=', 'base64');
 
         const ivs = getSubmissionIvs(instanceId, aesKey);
+        // eslint-disable-next-line space-in-parens
         ivs( 0).equals(Buffer.from('39bbb0890f3222269da68b172146477a', 'hex')).should.equal(true);
+        // eslint-disable-next-line space-in-parens
         ivs( 1).equals(Buffer.from('39bcb0890f3222269da68b172146477a', 'hex')).should.equal(true);
+        // eslint-disable-next-line space-in-parens
         ivs( 8).equals(Buffer.from('39bcb18a103323279ea68b172146477a', 'hex')).should.equal(true);
         ivs(15).equals(Buffer.from('39bcb18a103323279ea78c182247487b', 'hex')).should.equal(true);
         ivs(23).equals(Buffer.from('3abdb28b113424289ea78c182247487b', 'hex')).should.equal(true);
@@ -169,6 +174,7 @@ describe('util/crypto', () => {
       const instanceId = 'uuid:99b303d9-6494-477b-a30d-d8aae8867335';
       const encAesKey = Buffer.from('iyEB1LAlvVE8uaW0HuhLhzwcLceIukqfgusDNdDEE2FFxVtUtSI3FiOuNxhgI/Zbgnaabh/vqeZ3yLXwv0f66pAbN0n8kM9f84VJR18fdUp6doOz7o8IQD7gc3ZfbRXweab/NxnahfYa9ij0Kax1LTKS05Oodk2MewkzwfBhdbf/CfiBP1HSskDio40jdW5f04GkqZsFCPUluF2DfMnwYCo0wdwf2m8o+lSNR+vrFeEYG7LtGE4X90pVrQnJHwFWHGjSwJpg/USn5skBioDKUCv/Dva9xJ+JXUz+QSg6LOuP+SDxsrmf36WKrnE8kWfN4oaBdmIwFSStkLH9foNXUw==', 'base64');
       const ciphertext = Buffer.from('kMhJdk0mZOqvlxndUO3v4+UPvfYoc+bbkPmF3QmhoP7lP/QjHbzqw/IfZxQ54D328eCc4V6jtbrjeAXV+m1cWsCGGLW5KwTAxBjPBXzsZrUeY0RISVJ1g9BJoXfSRAjYMrFYOM907BFUIYYxMqpVWGy1lo8ljqY+Sgq1VphkQk/TQGgOVYFALHDLOYnLKuLHvwBLQQwK3lje8CwNlf/b2rY9qfGC4P1emoiP+YzkLp8eH6x/HfMvRIFoZEaom1i5s3SU4WVwe2Tno4jKD69ojMlQN6VKB7DK4xaRSs2C7zfDm63n1WCyyOAj8mASIFhb3sc3hD56HTJFUV/TH3UVlzP7oPm/Mm7nEcU3+HdSSwm3I1qFYhsXfVRym41IlbC4Twf660/kUZrugA7Zqd5K9Un3lOVTzYowaF+m5OIOO56wff3zPBxeOVjANDKR7V6/', 'base64');
+      // eslint-disable-next-line quotes
       const plaintext = `<?xml version='1.0' ?><data id="encrypted" version="working3" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa"><meta><instanceID>uuid:99b303d9-6494-477b-a30d-d8aae8867335</instanceID></meta><name>bob</name><age>30</age><file>1561432532482.jpg</file></data>`;
 
       it('should successfully decrypt data syncronously @slow', () => {
@@ -187,6 +193,7 @@ describe('util/crypto', () => {
         // except the last chunk which we split into two chunks of 8 bytes just
         // to try to trip up the debufferer.
         const chunks = [];
+        // eslint-disable-next-line no-plusplus
         for (let i = 0; i < 18; i++) { chunks.push(ciphertext.subarray(i * 16, (i + 1) * 16)); }
         chunks.push(ciphertext.subarray(288, 328));
         chunks.push(ciphertext.subarray(328, 336));
@@ -206,6 +213,7 @@ describe('util/crypto', () => {
         const ivs = getSubmissionIvs(instanceId, aesKey);
 
         const chunks = [];
+        // eslint-disable-next-line no-plusplus
         for (let i = 0; i < 20; i++) { chunks.push(ciphertext.subarray(i * 16, (i + 1) * 16)); }
         chunks.push(ciphertext.subarray(320, 332));
         chunks.push(ciphertext.subarray(332, 336));

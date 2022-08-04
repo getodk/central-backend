@@ -1,12 +1,16 @@
 const appRoot = require('app-root-path');
 const { promisify } = require('util');
+// eslint-disable-next-line no-unused-vars
 const { stat, readdir, readFile, writeFile, createWriteStream } = require('fs');
 const { join } = require('path');
+// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const tmp = require('tmp');
 const archiver = require('archiver');
 const { testTask } = require('../setup');
+// eslint-disable-next-line import/no-dynamic-require
 const { generateManagedKey } = require(appRoot + '/lib/util/crypto');
+// eslint-disable-next-line import/no-dynamic-require
 const { encryptToArchive, decryptFromArchive } = require(appRoot + '/lib/task/fs');
 
 describe('task: fs', () => {
@@ -49,6 +53,7 @@ describe('task: fs', () => {
 
     it('should fail gracefully given a random archive', testTask(() => new Promise((resolve) =>
       tmp.dir((_, dirpath) =>
+        // eslint-disable-next-line no-shadow
         tmp.file((_, filepath) => {
           const archive = archiver('zip', { zlib: { level: 9 } });
 
@@ -56,7 +61,7 @@ describe('task: fs', () => {
             decryptFromArchive(filepath, dirpath)
               .should.be.rejected()
               .then(resolve))
-          ), 5);
+          ), 5); // eslint-disable-line function-paren-newline
 
           archive.pipe(createWriteStream(filepath));
           archive.append('some file', { name: 'file.txt' });

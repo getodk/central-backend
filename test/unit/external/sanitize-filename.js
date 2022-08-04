@@ -76,6 +76,7 @@ const cases = [
 
 describe('external: sanitize-filename', () => {
   it('replaces only problematic input', () => {
+    // eslint-disable-next-line no-unused-vars
     for (const [ title, input, expectedOutput ] of cases)
       sanitize(input).should.eql(expectedOutput);
   });

@@ -2,6 +2,7 @@ const appRoot = require('app-root-path');
 const { ceil } = Math;
 const { createPublicKey, publicEncrypt, createHash, randomBytes, createCipheriv } = require('crypto');
 const { RSA_NO_PADDING } = require('crypto').constants;
+// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
 const { injectPemEnvelope, getSubmissionIvs } = require(appRoot + '/lib/util/crypto');
 
 
@@ -11,6 +12,7 @@ const { injectPemEnvelope, getSubmissionIvs } = require(appRoot + '/lib/util/cry
 // parse our public key and reformulate it into a proper PEM format
 // to inflate into a real public key (grumble grumble grumble).
 const extractPubkey = (xml) =>
+  // eslint-disable-next-line no-useless-escape, no-use-before-define
   makePubkey(/base64RsaPublicKey="([a-zA-Z0-9+\/]{392})"/.exec(xml)[1]);
 
 const makePubkey = (b64) => {
@@ -18,6 +20,7 @@ const makePubkey = (b64) => {
   return createPublicKey(Buffer.from(pem, 'utf8'));
 };
 
+// eslint-disable-next-line arrow-body-style
 const extractVersion = (xml) => {
   return /version="([^"]+)"/.exec(xml)[1];
 };
@@ -36,11 +39,14 @@ const extractVersion = (xml) => {
 const counter = Buffer.allocUnsafe(4);
 const mgf1 = (seed, out) => {
   const iters = ceil(out.length / 32);
+  // eslint-disable-next-line no-plusplus
   for (let i = 0; i < iters; i++) {
     counter.writeInt32BE(i);
+    // eslint-disable-next-line newline-per-chained-call
     createHash('sha256').update(seed).update(counter).digest().copy(out, i * 32);
   }
 };
+// eslint-disable-next-line no-param-reassign, no-bitwise, no-plusplus
 const xor = (x, y) => { for (let i = 0; i < x.length; i++) y[i] ^= x[i]; };
 const padOaep = (payload) => {
   // formulate data block and seed:
@@ -94,6 +100,7 @@ const encryptInstance = (pubkey, version, instance, files = {}) => {
   const encFiles = {};
   let filesXml = '';
   const filenames = Object.keys(files);
+  // eslint-disable-next-line no-plusplus
   for (let idx = 0; idx < filenames.length; idx++) {
     const filename = filenames[idx];
     filesXml += `<media><file>${filename}</file></media>`;
@@ -133,6 +140,7 @@ const sendEncrypted = (svc, version, pubkey) => async (instance, files = {}) => 
     .send(encInstance).expect(200);
 
   for (const filename of Object.keys(encFiles))
+    // eslint-disable-next-line no-await-in-loop
     await svc.post(`/v1/projects/1/forms/${xmlFormId}/submissions/${instanceId}/attachments/${filename}`)
       .send(encFiles[filename]).expect(200);
 };

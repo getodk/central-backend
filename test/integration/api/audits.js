@@ -158,6 +158,7 @@ describe('/audits', () => {
               should.not.exist(body[0].actor);
             })))));
 
+    // eslint-disable-next-line no-unused-vars
     it('should page data', testService((service, SubmissionDef) =>
       service.login('alice', (asAlice) =>
         submitThree(asAlice)
@@ -472,6 +473,7 @@ describe('/audits', () => {
               body[2].action.should.equal('user.session.create');
             })))));
 
+    // eslint-disable-next-line no-unused-vars
     it('should log and return notes if given', testService((service, { run }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
@@ -514,6 +516,7 @@ describe('/audits', () => {
               purgedActee.details.xmlFormId.should.equal('simple');
             }))));
 
+      // eslint-disable-next-line no-unused-vars
       it('should get the deletedAt date of a deleted form', testService((service, { Projects, Forms, Users, Audits }) =>
         service.login('alice', (asAlice) =>
           asAlice.delete('/v1/projects/1/forms/simple')
@@ -524,6 +527,7 @@ describe('/audits', () => {
               deletedActee.deletedAt.should.be.a.recentIsoDate();
             }))));
 
+      // eslint-disable-next-line no-unused-vars
       it('should get the deletedAt date of a deleted user', testService((service, { Projects, Forms, Users, Audits }) =>
         service.login('alice', (asAlice) =>
           Users.getByEmail('chelsea@getodk.org').then((o) => o.get())
@@ -536,6 +540,7 @@ describe('/audits', () => {
               deletedActee.deletedAt.should.be.a.recentIsoDate();
             }))));
 
+      // eslint-disable-next-line no-unused-vars
       it('should get the deletedAt date of a deleted project', testService((service, { Projects, Forms, Users, Audits }) =>
         service.login('alice', (asAlice) =>
           asAlice.delete('/v1/projects/1')
@@ -547,8 +552,10 @@ describe('/audits', () => {
               deletedActee.deletedAt.should.be.a.recentIsoDate();
             }))));
 
+      // eslint-disable-next-line no-unused-vars
       it('should get the deletedAt date of a deleted app user', testService((service, { Projects, Forms, Users, Audits }) =>
         service.login('alice', (asAlice) =>
+          // eslint-disable-next-line quotes
           asAlice.post(`/v1/projects/1/app-users`)
             .send({ displayName: 'App User Name' })
             .then(({ body }) => body)
@@ -561,8 +568,10 @@ describe('/audits', () => {
               deletedActee.deletedAt.should.be.a.recentIsoDate();
             }))));
 
+      // eslint-disable-next-line no-unused-vars
       it('should get the deletedAt date of a deleted public link', testService((service, { Projects, Forms, Users, Audits }) =>
         service.login('alice', (asAlice) =>
+          // eslint-disable-next-line quotes
           asAlice.post(`/v1/projects/1/forms/simple/public-links`)
             .send({ displayName: 'Public Link Name' })
             .then(({ body }) => body)

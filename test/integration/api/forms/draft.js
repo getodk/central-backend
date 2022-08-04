@@ -3,6 +3,7 @@ const appRoot = require('app-root-path');
 const should = require('should');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
+// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const { sql } = require('slonik');
 
@@ -75,6 +76,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
                     .expect(200))
                   .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+                    // eslint-disable-next-line no-shadow
                     .then(({ body }) => {
                       body.draftToken.should.be.a.token();
                       body.draftToken.should.not.equal(draftToken);
@@ -153,6 +155,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   .expect(200)
                   .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
                     .expect(200)
+                    // eslint-disable-next-line no-shadow
                     .then(({ body }) => {
                       body.draftToken.should.equal(draftToken);
                     }));
@@ -444,6 +447,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
               .expect(200)
               .then(({ body }) => {
                 body[0].updatedAt.should.be.a.recentIsoDate();
+                // eslint-disable-next-line no-param-reassign
                 delete body[0].updatedAt;
                 body.should.eql([
                   { name: 'goodone.csv', type: 'file', exists: true },
@@ -475,6 +479,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
               .expect(200)
               .then(({ body }) => {
                 body[0].updatedAt.should.be.a.recentIsoDate();
+                // eslint-disable-next-line no-param-reassign
                 delete body[0].updatedAt;
                 body.should.eql([
                   { name: 'goodone.csv', type: 'file', exists: true },
@@ -789,8 +794,11 @@ describe('api: /projects/:id/forms (drafts)', () => {
             .expect(200)
             .then(() => asAlice.delete('/v1/projects/1/forms/simple2/draft')
               .expect(409))
+            // eslint-disable-next-line indent
               .then(({ body }) => {
+              // eslint-disable-next-line indent
                 body.code.should.equal(409.7);
+            // eslint-disable-next-line indent
               }))));
 
       it('should create a new draft token after delete', testService((service) =>
@@ -808,6 +816,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
                     .expect(200))
                   .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+                    // eslint-disable-next-line no-shadow
                     .then(({ body }) => {
                       body.draftToken.should.be.a.token();
                       body.draftToken.should.not.equal(draftToken);
@@ -937,6 +946,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
               .expect(200)
               .then(({ body }) => {
                 body[0].updatedAt.should.be.a.recentIsoDate();
+                // eslint-disable-next-line no-param-reassign
                 delete body[0].updatedAt;
                 body.should.eql([
                   { name: 'goodone.csv', type: 'file', exists: true },
@@ -965,6 +975,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 // if we see the issue.
 
                 if (body[0].action === 'form.update.draft.set')
+                  // eslint-disable-next-line no-param-reassign
                   [ body[1], body[0] ] = [ body[0], body[1] ];
 
                 body.length.should.equal(3);
@@ -1134,34 +1145,62 @@ describe('api: /projects/:id/forms (drafts)', () => {
                       .then((attachment) => [ form, attachment ])),
                   Audits.getLatestByAction('form.attachment.update').then((o) => o.get())
                 ])
+                  // eslint-disable-next-line indent
                 .then(([ alice, [ form, attachment ], log ]) => {
+                    // eslint-disable-next-line indent
                   log.actorId.should.equal(alice.actor.id);
+                    // eslint-disable-next-line indent
                   log.acteeId.should.equal(form.acteeId);
+                    // eslint-disable-next-line indent
                   log.details.should.eql({
+                      // eslint-disable-next-line indent
                     formDefId: form.draftDefId,
+                      // eslint-disable-next-line indent
                     name: attachment.name,
+                      // eslint-disable-next-line indent
                     oldBlobId: null,
+                      // eslint-disable-next-line indent
                     newBlobId: attachment.blobId
+                    // eslint-disable-next-line indent
                   });
 
+                    // eslint-disable-next-line indent
                   return asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+                      // eslint-disable-next-line indent
                     .send('replaced,csv\n3,4')
+                      // eslint-disable-next-line indent
                     .set('Content-Type', 'text/csv')
+                      // eslint-disable-next-line indent
                     .expect(200)
+                      // eslint-disable-next-line indent
                     .then(() => Promise.all([
+                        // eslint-disable-next-line indent
                       FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then((o) => o.get()),
+                        // eslint-disable-next-line indent
                       Audits.getLatestByAction('form.attachment.update').then((o) => o.get())
+                      // eslint-disable-next-line indent
                     ]))
+                      // eslint-disable-next-line indent
                     .then(([ attachment2, log2 ]) => {
+                        // eslint-disable-next-line indent
                       log2.actorId.should.equal(alice.actor.id);
+                        // eslint-disable-next-line indent
                       log2.acteeId.should.equal(form.acteeId);
+                        // eslint-disable-next-line indent
                       log2.details.should.eql({
+                          // eslint-disable-next-line indent
                         formDefId: form.draftDefId,
+                          // eslint-disable-next-line indent
                         name: attachment.name,
+                          // eslint-disable-next-line indent
                         oldBlobId: attachment.blobId,
+                          // eslint-disable-next-line indent
                         newBlobId: attachment2.blobId
+                        // eslint-disable-next-line indent
                       });
+                      // eslint-disable-next-line indent
                     });
+                  // eslint-disable-next-line indent
                 }))))));
       });
 
@@ -1184,6 +1223,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 .expect(200)
                 .then(() => service.login('chelsea', (asChelsea) =>
                   asChelsea.delete('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+                    // eslint-disable-next-line indent
                   .expect(403)))))));
 
         it('should reject notfound if the file does not exist', testService((service) =>

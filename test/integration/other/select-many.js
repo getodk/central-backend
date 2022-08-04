@@ -1,8 +1,10 @@
 const appRoot = require('app-root-path');
+// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
+// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('select many value processing', () => {

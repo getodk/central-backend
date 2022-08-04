@@ -1,8 +1,11 @@
 const appRoot = require('app-root-path');
+// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const { sql } = require('slonik');
 const { testTask } = require('../setup');
+// eslint-disable-next-line import/no-dynamic-require
 const { reapSessions } = require(appRoot + '/lib/task/reap-sessions');
+// eslint-disable-next-line import/no-dynamic-require
 const { Actor } = require(appRoot + '/lib/model/frames');
 
 describe('task: reap-sessions', () => {

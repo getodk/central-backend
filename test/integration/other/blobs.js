@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-unused-vars
 const { createReadStream, readFileSync } = require('fs');
 const appPath = require('app-root-path');
 const { sql } = require('slonik');

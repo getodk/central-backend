@@ -1,8 +1,12 @@
 const appRoot = require('app-root-path');
+// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const streamTest = require('streamtest').v2;
+// eslint-disable-next-line import/no-dynamic-require
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
+// eslint-disable-next-line import/no-dynamic-require
 const { streamAttachments } = require(appRoot + '/lib/data/attachments');
+// eslint-disable-next-line import/no-dynamic-require
 const { zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 
 describe('.zip attachments streaming', () => {
@@ -13,10 +17,13 @@ describe('.zip attachments streaming', () => {
       { row: { instanceId: 'subtwo', name: 'thirdfile.ext', content: 'this is my third file' } }
     ]);
     zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream)), (err, result) => {
+      // eslint-disable-next-line keyword-spacing
       if(err) return done(err);
 
       result.filenames.should.eql([
+        // eslint-disable-next-line no-trailing-spaces
         'media/firstfile.ext', 
+        // eslint-disable-next-line no-trailing-spaces
         'media/secondfile.ext', 
         'media/thirdfile.ext'
       ]);
@@ -36,6 +43,7 @@ describe('.zip attachments streaming', () => {
       { row: { instanceId: 'subone', name: './.secondfile.ext', content: 'this is my duplicate second file' } },
     ]);
     zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream)), (err, result) => {
+      // eslint-disable-next-line keyword-spacing
       if(err) return done(err);
 
       result.filenames.should.eql([
@@ -53,6 +61,7 @@ describe('.zip attachments streaming', () => {
       { row: { instanceId: 'subone', name: 'firstfile.ext.enc', content: 'this is my first file' } }
     ]);
     zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream)), (err, result) => {
+      // eslint-disable-next-line keyword-spacing
       if(err) return done(err);
 
       result.filenames.should.eql([ 'media/firstfile.ext.enc' ]);
@@ -65,6 +74,7 @@ describe('.zip attachments streaming', () => {
       { row: { instanceId: 'subone', name: 'firstfile.ext.enc', content: 'this is my first file' } }
     ]);
     zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream, () => {})), (err, result) => {
+      // eslint-disable-next-line keyword-spacing
       if(err) return done(err);
 
       result.filenames.should.eql([ 'media/firstfile.ext' ]);

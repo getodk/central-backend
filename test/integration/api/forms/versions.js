@@ -1,11 +1,15 @@
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const should = require('should');
+// eslint-disable-next-line no-unused-vars
 const config = require('config');
+// eslint-disable-next-line import/no-extraneous-dependencies
 const superagent = require('superagent');
+// eslint-disable-next-line no-unused-vars
 const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
+// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects/:id/forms (versions)', () => {
@@ -350,12 +354,13 @@ describe('api: /projects/:id/forms (versions)', () => {
                 .expect(200)
                 .then(({ body }) => {
                   body[0].updatedAt.should.be.a.recentIsoDate();
+                  // eslint-disable-next-line no-param-reassign
                   delete body[0].updatedAt;
 
                   body.should.eql([
                     { name: 'goodone.csv', type: 'file', exists: true },
                     { name: 'goodtwo.mp3', type: 'audio', exists: false }
-                  ])
+                  ]);
                 })))));
 
         it('should return an attachment', testService((service) =>

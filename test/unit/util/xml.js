@@ -1,9 +1,13 @@
 const appRoot = require('app-root-path');
+// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const streamTest = require('streamtest').v2;
 const { Readable } = require('stream');
+// eslint-disable-next-line no-unused-vars
 const { always, identity } = require('ramda');
+// eslint-disable-next-line import/no-dynamic-require
 const { traverseXml, Traversal, applyTraversal, findOne, findAll, and, root, node, hasAttr, getAll, attr, text, tree, stripNamespacesFromPath } = require(appRoot + '/lib/util/xml');
+// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
 
 const forever = () => forever;
@@ -49,6 +53,7 @@ describe('util/xml', () => {
         const mockTraverserB = (e, x, y) => { eventsB.push([ e, x, y ]); return mockTraverserB; };
         return traverseXml('<root><child id="test"/>sometext</root>', [ mockTraverserA, mockTraverserB ])
           .then(() => {
+            // eslint-disable-next-line no-undef
             expected = [
               [ 'open', 'root', {} ],
               [ 'open', 'child', { id: 'test' } ],
@@ -56,20 +61,26 @@ describe('util/xml', () => {
               [ 'text', 'sometext', undefined ],
               [ 'close', undefined, undefined ]
             ];
+            // eslint-disable-next-line no-undef
             eventsA.should.eql(expected);
+            // eslint-disable-next-line no-undef
             eventsB.should.eql(expected);
           });
       });
 
       it('should give the Optioned results returned by each traverser', () => {
+        // eslint-disable-next-line no-unused-vars, no-confusing-arrow
         const mtA = (e, x, y) => (e === 'open') ? x : mtA;
+        // eslint-disable-next-line no-unused-vars, no-confusing-arrow
         const mtB = (e, x, y) => (e === 'text') ? x : mtB;
         return traverseXml('<root><child id="test"/>sometext</root>', [ mtA, mtB ])
           .then((results) => { results.should.eql([ Option.of('root'), Option.of('sometext') ]); });
       });
 
       it('should stop parsing early if every traverser has returned', () => {
+        // eslint-disable-next-line no-unused-vars, no-confusing-arrow
         const mtA = (e, x, y) => (e === 'open') ? x : mtA;
+        // eslint-disable-next-line no-confusing-arrow
         const mtB = (e, x, y) => ((e === 'open') && (x === 'child')) ? y : mtB;
 
         // we set up a stream that never sends a second chunk or ends; if the early
@@ -81,6 +92,7 @@ describe('util/xml', () => {
       });
 
       it('should return Option.none for traversers that never return', () => {
+        // eslint-disable-next-line no-unused-vars, no-confusing-arrow
         const mtA = (e, x, y) => (e === 'open') ? x : mtA;
         const mtB = () => mtB;
         return traverseXml('<root><child id="test"/>sometext</root>', [ mtA, mtB ])
@@ -88,6 +100,7 @@ describe('util/xml', () => {
       });
 
       it('should translate exceptions into rejections (static text)', () => {
+        // eslint-disable-next-line semi, no-unused-vars
         const tf = (e, x, y) => { throw new Error('oops') };
         return traverseXml('<root><child id="test"/>sometext</root>', [ tf ])
           .should.be.rejected()
@@ -95,6 +108,7 @@ describe('util/xml', () => {
       });
 
       it('should translate exceptions into rejections (stream)', () => {
+        // eslint-disable-next-line semi, no-unused-vars
         const tf = (e, x, y) => { throw new Error('oops') };
         const stream = streamTest.fromChunks([ '<root/>' ]);
         return traverseXml(stream, [ tf ])
@@ -177,13 +191,14 @@ describe('util/xml', () => {
 
     describe('applyTraversal', () => {
       it('should pass tagname and attrs to filters on open', () => {
+        // eslint-disable-next-line one-var-declaration-per-line, one-var
         let x, y;
         const mockFilter = (inx, iny) => { x = inx; y = iny; };
         applyTraversal(
           [ mockFilter, always(true) ],
           forever,
           [ new Traversal(0, 0) ],
-          false, 'open', 'tag', 'attrs');
+          false, 'open', 'tag', 'attrs'); // eslint-disable-line function-paren-newline
         x.should.equal('tag');
         y.should.equal('attrs');
       });
@@ -200,7 +215,7 @@ describe('util/xml', () => {
           [ always(true), always(true) ],
           forever,
           [ new Traversal(0, 0), new Traversal(1, 0), new Traversal(2, 0, forever) ],
-          false, 'open');
+          false, 'open'); // eslint-disable-line function-paren-newline
         result[0].re.should.equal(1);
         result[0].im.should.equal(0);
         result[1].re.should.equal(2);
@@ -214,7 +229,7 @@ describe('util/xml', () => {
           [ always(false), always(false), always(false) ],
           forever,
           [ new Traversal(1, 0), new Traversal(2, 0) ],
-          false, 'open');
+          false, 'open'); // eslint-disable-line function-paren-newline
         result[0].re.should.equal(1);
         result[0].im.should.equal(1);
         result[1].re.should.equal(2);
@@ -226,7 +241,7 @@ describe('util/xml', () => {
           [ always(true), always(true), always(true) ],
           forever,
           [ new Traversal(1, 1) ],
-          false, 'open');
+          false, 'open'); // eslint-disable-line function-paren-newline
         result[0].re.should.equal(1);
         result[0].im.should.equal(2);
       });
@@ -236,7 +251,7 @@ describe('util/xml', () => {
           [ always(false), always(false), always(false) ],
           forever,
           [ new Traversal(3, 0, forever) ],
-          false, 'open');
+          false, 'open'); // eslint-disable-line function-paren-newline
         result[0].re.should.equal(4);
         result[0].im.should.equal(0);
       });
@@ -246,7 +261,7 @@ describe('util/xml', () => {
           [ always(false), always(false), always(false) ],
           forever,
           [ new Traversal(3, 0, forever), new Traversal(1, 0), new Traversal(2, 3) ],
-          false, 'close');
+          false, 'close'); // eslint-disable-line function-paren-newline
         result.length.should.equal(2);
         result[0].re.should.equal(2);
         result[0].im.should.equal(0);
@@ -255,8 +270,10 @@ describe('util/xml', () => {
       });
 
       it('should filter out invalid traversals', () => {
+        // eslint-disable-next-line space-in-parens
         applyTraversal( [ always(false) ], forever, [ new Traversal(0, 0) ], false, 'open')
           .length.should.equal(0);
+        // eslint-disable-next-line space-in-parens
         applyTraversal( [ always(true) ], forever, [ new Traversal(0, 0) ], false, 'close')
           .length.should.equal(0);
       });
@@ -267,7 +284,7 @@ describe('util/xml', () => {
           [ always(false), always(true) ],
           ((...args) => innerArgs.push(args)),
           [ new Traversal(1, 0) ],
-          false, 'open', 'tag', 'attrs');
+          false, 'open', 'tag', 'attrs'); // eslint-disable-line function-paren-newline
         innerArgs.should.eql([ [ 'open', 'tag', 'attrs' ] ]);
       });
 
@@ -276,7 +293,7 @@ describe('util/xml', () => {
           [ always(false), always(true) ],
           always('test'),
           [ new Traversal(1, 0, always('hello')) ],
-          false, 'open');
+          false, 'open'); // eslint-disable-line function-paren-newline
         result[0].data.should.equal('test');
       });
 
@@ -285,7 +302,7 @@ describe('util/xml', () => {
           [ always(false), always(true) ],
           always('test'),
           [ new Traversal(2, 0, always('hello')) ],
-          false, 'open');
+          false, 'open'); // eslint-disable-line function-paren-newline
         result[0].data.should.equal('hello');
       });
 
@@ -294,7 +311,7 @@ describe('util/xml', () => {
           [ always(false), always(true) ],
           always('test'),
           [ new Traversal(2, 0, always('hello')) ],
-          false, 'close');
+          false, 'close'); // eslint-disable-line function-paren-newline
         result[0].data.should.equal('hello');
       });
     });
@@ -429,6 +446,7 @@ describe('util/xml', () => {
 
         it('should pass events to traversers', () => {
           const called = [];
+          // eslint-disable-next-line semi
           const traverser = (name) => (e, x, y) => { called.push([ name, e, x, y ]) };
           getAll([ traverser('first'), traverser('second') ])('open', 'html', { attr: 'hi' });
           called.should.eql([
@@ -464,7 +482,7 @@ describe('util/xml', () => {
         });
 
         it('should spin until it gets the right event', () => {
-          attr('id')('text')('close')('open', null, { id: 'success' }).should.eql(Option.of('success'))
+          attr('id')('text')('close')('open', null, { id: 'success' }).should.eql(Option.of('success'));
         });
       });
 

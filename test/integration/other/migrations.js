@@ -1,37 +1,47 @@
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const uuid = require('uuid/v4');
+// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const config = require('config');
 const { testServiceFullTrx } = require('../setup');
 const { sql } = require('slonik');
+// eslint-disable-next-line import/no-dynamic-require
 const { connect } = require(appRoot + '/lib/model/migrate');
 const migrator = connect(config.get('test.database'));
 const testData = require('../../data/xml');
+// eslint-disable-next-line import/extensions
 const populateUsers = require('../fixtures/01-users.js');
+// eslint-disable-next-line import/extensions
 const populateForms = require('../fixtures/02-forms.js');
 
 
 const upToMigration = async (toName) => {
   await migrator.raw('drop owned by current_user');
+  // eslint-disable-next-line no-constant-condition
   while (true) {
+    // eslint-disable-next-line no-await-in-loop
     await migrator.migrate.up({ directory: appRoot + '/lib/model/migrations' });
+    // eslint-disable-next-line no-await-in-loop
     const migrations = await migrator.migrate.list({ directory: appRoot + '/lib/model/migrations' });
     const applied = migrations[0];
     const remaining = migrations[1];
     if (toName === applied[applied.length - 1]) break;
     if (remaining.length === 0) {
+      // eslint-disable-next-line quotes, no-console
       console.log("Could not find migration", toName);
       break;
     }
   }
-}
+};
 
+// eslint-disable-next-line no-trailing-spaces
 // NOTE/TODO: figure out something else here D: 
 // Skipping these migrations because after adding a new description
 // column to projects and forms, it is not possible to migrate part way
 // (before the new column) and populate the data when frames expect the
 // new column to exist.
+// eslint-disable-next-line space-before-function-paren, func-names
 describe.skip('database migrations', function() {
   this.timeout(4000);
 
@@ -40,6 +50,7 @@ describe.skip('database migrations', function() {
 
     await populateUsers(container);
     await populateForms(container);
+    // eslint-disable-next-line no-trailing-spaces
     
     await service.login('alice', (asAlice) =>
       asAlice.delete('/v1/projects/1/forms/simple')
@@ -191,6 +202,7 @@ describe.skip('database migrations', function() {
 
 });
 
+// eslint-disable-next-line space-before-function-paren, func-names
 describe('datbase migrations: removing default project', function() {
   this.timeout(4000);
 

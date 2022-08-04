@@ -4,53 +4,67 @@ const { sql } = require('slonik');
 const { readdirSync } = require('fs');
 const { join } = require('path');
 const request = require('supertest');
+// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
 const { run, task } = require(appRoot + '/lib/task/task');
 
 // knex things.
 const config = require('config');
+// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
 const { connect, migrate } = require(appRoot + '/lib/model/migrate');
 const migrator = connect(config.get('test.database'));
+// eslint-disable-next-line no-unused-vars
 const owner = config.get('test.database.user');
 after(() => { migrator.destroy(); });
 
 // slonik connection pool
+// eslint-disable-next-line import/no-dynamic-require
 const { slonikPool } = require(appRoot + '/lib/external/slonik');
 const db = slonikPool(config.get('test.database'));
 
 // set up our mailer.
 const env = config.get('default.env');
+// eslint-disable-next-line import/no-dynamic-require
 const { mailer } = require(appRoot + '/lib/external/mail');
 const mailConfig = config.get('test.email');
 const mail = mailer(merge(mailConfig, env));
 if (mailConfig.transport !== 'json')
+  // eslint-disable-next-line no-console
   console.error('WARNING: some tests will not work except with a JSON email transport configuration.');
 
 // set up our xlsform-api mock.
+// eslint-disable-next-line import/no-dynamic-require
 const xlsform = require(appRoot + '/test/util/xlsform');
 
 // set up our google mock.
+// eslint-disable-next-line import/no-dynamic-require
 const googler = require(appRoot + '/lib/external/google');
 const realGoogle = googler(config.get('default.external.google'));
 const google = require('../util/google-mock')(realGoogle);
 
 // set up our sentry mock.
+// eslint-disable-next-line import/no-dynamic-require
 const Sentry = require(appRoot + '/lib/external/sentry').init();
 
 // set up our bcrypt module; possibly mock or not based on params.
 const _bcrypt = (process.env.BCRYPT === 'no')
   ? require('../util/bcrypt-mock')
   : require('bcrypt');
+// eslint-disable-next-line import/no-dynamic-require
 const bcrypt = require(appRoot + '/lib/util/crypto').password(_bcrypt);
 
 // set up our enketo mock.
+// eslint-disable-next-line import/no-dynamic-require
 const enketo = require(appRoot + '/test/util/enketo');
 
 // set up odk analytics mock.
+// eslint-disable-next-line import/no-dynamic-require
 const { ODKAnalytics } = require(appRoot + '/test/util/odk-analytics-mock');
 const odkAnalytics = new ODKAnalytics();
 
 // application things.
+// eslint-disable-next-line import/no-dynamic-require
 const { withDefaults } = require(appRoot + '/lib/model/container');
+// eslint-disable-next-line import/no-dynamic-require
 const service = require(appRoot + '/lib/http/service');
 
 // get all our fixture scripts, and set up a function that runs them all.
@@ -59,6 +73,7 @@ const fixtures = readdirSync(appRoot + '/test/integration/fixtures')
   .map((name) => join(appRoot.toString(), '/test/integration/fixtures', /^([^.]+)\.js$/i.exec(name)[1]))
   .sort()
   .map(require);
+// eslint-disable-next-line no-confusing-arrow
 const populate = (container, [ head, ...tail ] = fixtures) =>
   (tail.length === 0) ? head(container) : head(container).then(() => populate(container, tail));
 
@@ -77,9 +92,11 @@ before(initialize);
 
 let mustReinitAfter;
 beforeEach(() => {
+  // eslint-disable-next-line keyword-spacing
   if(mustReinitAfter) throw new Error(`Failed to reinitalize after previous test: '${mustReinitAfter}'.  You may need to increase your mocha timeout.`);
 });
 afterEach(async () => {
+  // eslint-disable-next-line keyword-spacing
   if(mustReinitAfter) {
     await initialize();
     mustReinitAfter = false;
@@ -100,7 +117,9 @@ const authProxy = (token) => ({
     return (...args) => method.apply(target, args).set('Authorization', `Bearer ${token}`);
   }
 });
+// eslint-disable-next-line no-shadow
 const augment = (service) => {
+  // eslint-disable-next-line space-before-function-paren, func-names, no-param-reassign
   service.login = function(user, test) {
     const credentials = (typeof user === 'string')
       ? { email: `${user}@getodk.org`, password: user }
@@ -131,6 +150,7 @@ const testService = (test) => () => new Promise((resolve, reject) => {
 // for some tests we explicitly need to make concurrent requests, in which case
 // the transaction butchering we do for testService will not work. for these cases,
 // we offer testServiceFullTrx:
+// eslint-disable-next-line space-before-function-paren, func-names
 const testServiceFullTrx = (test) => function() {
   mustReinitAfter = this.test.fullTitle();
   return test(augment(request(service(baseContainer))), baseContainer);
@@ -146,6 +166,7 @@ const testContainer = (test) => () => new Promise((resolve, reject) => {
 });
 
 // complete the square of options:
+// eslint-disable-next-line space-before-function-paren, func-names
 const testContainerFullTrx = (test) => function() {
   mustReinitAfter = this.test.fullTitle();
   return test(baseContainer);
