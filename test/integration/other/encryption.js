@@ -6,13 +6,14 @@ const { toText } = require('streamtest').v2;
 const { testService, testContainerFullTrx, testContainer } = require(appRoot + '/test/integration/setup');
 const testData = require(appRoot + '/test/data/xml');
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
+const { reduceFragment } = require(appRoot + '/test/util/sql');
 const { Form, Key, Submission } = require(appRoot + '/lib/model/frames');
 const { mapSequential } = require(appRoot + '/test/util/util');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
-describe.skip('managed encryption', () => {
+describe('managed encryption', () => {
   describe('lock management', () => {
-    it('should reject keyless forms in keyed projects @slow', testContainerFullTrx(async (container) => {
+    it.skip('should reject keyless forms in keyed projects @slow', testContainerFullTrx(async (container) => {
       // enable managed encryption.
       await container.transacting(({ Projects }) =>
         Projects.getById(1).then((o) => o.get())
@@ -32,7 +33,7 @@ describe.skip('managed encryption', () => {
       error.problemCode.should.equal(409.5);
     }));
 
-    it('should reject forms created while project managed encryption is being enabled @slow', testContainerFullTrx(async (container) => {
+    it.skip('should reject forms created while project managed encryption is being enabled @slow', testContainerFullTrx(async (container) => {
       // enable managed encryption but don't allow the transaction to close.
       let encReq;
       const unblock = await new Promise((resolve) => {
@@ -128,13 +129,13 @@ describe.skip('managed encryption', () => {
 
       // hijack the run routine.
       const results = [];
-      const db = { query: (x) => { results.push(x); return Promise.resolve(); } };
+      const db = (_, q) => { results.push(...reduceFragment(q).parameters); return Promise.resolve(); };
       const hijacked = container.with({ db });
 
       return Submission.fromXml(xml)
         .then((partial) => hijacked.SubmissionAttachments.create(partial, {}, []))
         .then(() => {
-          results[0].values.should.eql([
+          results.should.eql([
             null, null, 'zulu.file', 0, false,
             null, null, 'alpha.file', 1, false,
             null, null, 'bravo.file', 2, false,

@@ -1,4 +1,5 @@
 const should = require('should');
+const { Readable } = require('stream');
 const { queryModuleBuilder, injector, withDefaults } = require('../../../lib/model/container');
 const streamTest = require('streamtest').v2;
 
@@ -33,13 +34,10 @@ describe('container', () => {
           result.message.should.equal('Key (id)=(42) already exists.');
         }));
 
-    it('should wrap returned streams with promises', (done) => {
+    it('should not wrap returned streams with promises', () => {
       queryModuleBuilder({ f: () => () => streamTest.fromObjects([ {} ]) })
         .f()
-        .then((result) => {
-          // the fact that .then() does not crash is really the point here.
-          done();
-        });
+        .should.be.an.instanceOf(Readable);
     });
 
     it('should provide database context to query modules', (done) => {

@@ -767,7 +767,7 @@ describe('api: /submission', () => {
   });
 });
 
-describe.skip('api: /forms/:id/submissions', () => {
+describe('api: /forms/:id/submissions', () => {
   describe('POST', () => {
     it('should return notfound if the form does not exist', testService((service) =>
       service.login('alice', (asAlice) =>

@@ -28,7 +28,7 @@ const withAttachments = (present, expected, row) => ({ ...row, aux: { ...row.aux
 
 const callAndParse = (inStream, formXml, xmlFormId, callback) => {
   fieldsFor(formXml).then((fields) => {
-    zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, xmlFormId)), callback);
+    zipStreamToFiles(zipStreamFromParts(() => streamBriefcaseCsvs(inStream, fields, xmlFormId)), callback);
   });
 };
 
@@ -381,7 +381,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     fieldsFor(testData.forms.selectMultiple).then((fields) => {
-      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] })), (result) => {
+      zipStreamToFiles(zipStreamFromParts(() => streamBriefcaseCsvs(inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] })), (result) => {
         result.filenames.should.eql([ 'selectMultiple.csv' ]);
         result['selectMultiple.csv'].should.equal(
 `SubmissionDate,q1,q1/x,q1/y,q1/z,g1-q2,g1-q2/m,g1-q2/n,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -478,7 +478,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     fieldsFor(formXml).then((fields) => {
-      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'structuredform', undefined, undefined, false, { groupPaths: false })), (result) => {
+      zipStreamToFiles(zipStreamFromParts(() => streamBriefcaseCsvs(inStream, fields, 'structuredform', undefined, undefined, false, { groupPaths: false })), (result) => {
         result.filenames.should.eql([ 'structuredform.csv' ]);
         result['structuredform.csv'].should.equal(
 `SubmissionDate,instanceID,name,type,street,city,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
@@ -498,7 +498,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     fieldsFor(testData.forms.selectMultiple).then((fields) => {
-      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] }, undefined, false, { groupPaths: false })), (result) => {
+      zipStreamToFiles(zipStreamFromParts(() => streamBriefcaseCsvs(inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] }, undefined, false, { groupPaths: false })), (result) => {
         result.filenames.should.eql([ 'selectMultiple.csv' ]);
         result['selectMultiple.csv'].should.equal(
 `SubmissionDate,q1,q1/x,q1/y,q1/z,q2,q2/m,q2/n,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
