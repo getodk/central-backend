@@ -53,7 +53,7 @@ lint-main: node_version
 	eslint --cache --ignore-pattern /test/ --max-warnings 0 .
 
 .PHONY: lint-tests
-lint: node_version
+lint-tests: node_version
 	eslint --cache ./test/
 
 .PHONY: lint
