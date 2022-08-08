@@ -141,7 +141,6 @@ describe('odata message composition', () => {
       </EnumType>
     </Schema>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.my_awesome_form_">`);
-    // eslint-disable-next-line indent
       }));
 
     it('should yield all the correct data types', () =>
@@ -298,7 +297,6 @@ describe('odata message composition', () => {
     </Schema>
   </edmx:DataServices>
 </edmx:Edmx>`);
-    // eslint-disable-next-line indent
       }));
 
     it('should appropriately name repeat-parent join ids', () => fieldsFor(testData.forms.doubleRepeat).then((fields) => {
@@ -381,9 +379,7 @@ describe('odata message composition', () => {
             </repeat>
           </h:body>
         </h:html>`).then((fields) => {
-      // eslint-disable-next-line indent
           const edmx = edmxFor('pathprefix', fields);
-      // eslint-disable-next-line indent
           edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
 <edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
   <edmx:DataServices>
@@ -428,7 +424,6 @@ describe('odata message composition', () => {
         <Property Name="name" Type="Edm.String"/>
       </EntityType>
       <EntityContainer Name="pathprefix">`);
-    // eslint-disable-next-line indent
         }));
 
     it('should not be fooled by nested groups closing one after the other', () => fieldsFor(`<?xml version="1.0"?>
@@ -462,9 +457,7 @@ describe('odata message composition', () => {
             </input>
           </h:body>
         </h:html>`).then((fields) => {
-      // eslint-disable-next-line indent
           const edmx = edmxFor('form', fields);
-      // eslint-disable-next-line indent
           edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
 <edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
   <edmx:DataServices>
@@ -507,7 +500,6 @@ describe('odata message composition', () => {
       <ComplexType Name="outer.inner">
         <Property Name="q1" Type="Edm.String"/>
       </ComplexType>`);
-    // eslint-disable-next-line indent
         }));
   });
 

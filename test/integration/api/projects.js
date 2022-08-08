@@ -374,9 +374,7 @@ describe('api: /projects', () => {
           asChelsea.get('/v1/users/current').expect(200)
             .then(({ body }) => body.id)
             .then((chelseaId) => Promise.all([
-              // eslint-disable-next-line indent
                asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`).expect(200),
-              // eslint-disable-next-line indent
                asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`).expect(200),
             ]))
             .then(() => asChelsea.get('/v1/projects/1')
@@ -1383,9 +1381,7 @@ describe('api: /projects?forms=true', () => {
           asChelsea.get('/v1/users/current').expect(200)
             .then(({ body }) => body.id)
             .then((chelseaId) => Promise.all([
-              // eslint-disable-next-line indent
                asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`).expect(200),
-              // eslint-disable-next-line indent
                asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`).expect(200),
             ]))
             .then(() => asChelsea.get('/v1/projects?forms=true')
@@ -1409,57 +1405,31 @@ describe('api: /projects?forms=true', () => {
               }))))));
   });
 
-  // eslint-disable-next-line indent
 it('should return the correct projects with the correct verbs', testService((service) =>
-    // eslint-disable-next-line indent
   service.login('alice', (asAlice) =>
-      // eslint-disable-next-line indent
     service.login('chelsea', (asChelsea) => Promise.all([
-        // eslint-disable-next-line indent
       asChelsea.get('/v1/users/current')
-          // eslint-disable-next-line indent
         .expect(200)
-          // eslint-disable-next-line indent
         .then(({ body }) => body.id),
-        // eslint-disable-next-line indent
       asAlice.post('/v1/projects')
-          // eslint-disable-next-line indent
         .send({ name: 'Another Project' })
-          // eslint-disable-next-line indent
         .expect(200)
-          // eslint-disable-next-line indent
         .then(({ body }) => body.id)
-      // eslint-disable-next-line indent
     ])
-        // eslint-disable-next-line indent
       .then(([chelseaId, projectId]) => Promise.all([
-          // eslint-disable-next-line indent
         asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`)
-            // eslint-disable-next-line indent
           .expect(200),
-          // eslint-disable-next-line indent
         asAlice.post(`/v1/projects/1/assignments/app-user/${chelseaId}`)
-            // eslint-disable-next-line indent
           .expect(200),
-          // eslint-disable-next-line indent
         asAlice.post(`/v1/projects/${projectId}/assignments/app-user/${chelseaId}`)
-            // eslint-disable-next-line indent
           .expect(200)
-        // eslint-disable-next-line indent
       ]))
-        // eslint-disable-next-line indent
       .then(() => asChelsea.get('/v1/projects?forms=true')
-          // eslint-disable-next-line indent
         .expect(200)
-          // eslint-disable-next-line indent
         .then(({ body }) => {
-            // eslint-disable-next-line indent
           body.length.should.equal(1);
-            // eslint-disable-next-line indent
           const project = body[0];
-            // eslint-disable-next-line indent
           project.id.should.equal(1);
-            // eslint-disable-next-line indent
           project.verbs.should.eqlInAnyOrder([
               // eslint-disable-next-line no-multi-spaces
               'project.read',     // from role(s): viewer
@@ -1471,10 +1441,7 @@ it('should return the correct projects with the correct verbs', testService((ser
               'submission.read',  // from role(s): viewer
               // eslint-disable-next-line no-multi-spaces
               'submission.list',  // from role(s): viewer
-              // eslint-disable-next-line indent
             'submission.create' // from role(s): app-user
-            // eslint-disable-next-line indent
           ]);
-          // eslint-disable-next-line indent
         }))))));
 });

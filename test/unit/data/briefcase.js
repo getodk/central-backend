@@ -69,7 +69,6 @@ describe('.csv.zip briefcase output @slow', () => {
 
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
-        // eslint-disable-next-line indent
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-01-01T00:00:00.000Z,Alice,30,"Seattle, WA",one,,,0,0,,,,0,version
 2018-01-01T00:00:00.000Z,Bob,34,"Portland, OR",two,,,0,0,,,,0,version
@@ -124,7 +123,6 @@ describe('.csv.zip briefcase output @slow', () => {
 
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
-        // eslint-disable-next-line indent
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-01-01T00:00:00.000Z,Alice,30,"Seattle, WA",one,4,daniela,0,0,,,,0,version
 2018-01-01T00:00:00.000Z,Bob,34,"Portland, OR",two,8,hernando,0,0,,,,0,version
@@ -166,7 +164,6 @@ describe('.csv.zip briefcase output @slow', () => {
 
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
-        // eslint-disable-next-line indent
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-01-01T00:00:00.000Z,Alice,30,"Seattle, WA",one,,,2,4,,,,0,version
 2018-01-01T00:00:00.000Z,Bob,34,"Portland, OR",two,,,1,4,,,,0,version
@@ -207,7 +204,6 @@ describe('.csv.zip briefcase output @slow', () => {
 
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
-        // eslint-disable-next-line indent
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-01-01T00:00:00.000Z,,,,one,,,0,0,missing encrypted form data,,,0,version
 2018-01-01T00:00:00.000Z,Bob,34,"Portland, OR",two,,,0,0,,rejected,,0,version
@@ -246,7 +242,6 @@ describe('.csv.zip briefcase output @slow', () => {
 
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
-        // eslint-disable-next-line indent
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-01-01T00:00:00.000Z,,,,one,,,0,0,missing encrypted form data,,test device,0,version
 `); // eslint-disable-line function-paren-newline
@@ -284,7 +279,6 @@ describe('.csv.zip briefcase output @slow', () => {
 
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
-        // eslint-disable-next-line indent
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-01-01T00:00:00.000Z,,,,one,,,0,0,,,,3,version
 `); // eslint-disable-line function-paren-newline
@@ -324,7 +318,6 @@ describe('.csv.zip briefcase output @slow', () => {
 
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
-        // eslint-disable-next-line indent
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-01-01T00:00:00.000Z,,,,one,,,0,0,,,,0,original
 2018-01-01T00:00:00.000Z,,,,two,,,0,0,,,,0,updated
@@ -363,7 +356,6 @@ describe('.csv.zip briefcase output @slow', () => {
 
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
-        // eslint-disable-next-line indent
 `SubmissionDate,name,age,hometown,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-01-01T00:00:00.000Z,\xABAlice\xBB,30,"Seattle, WA",one,,,0,0,,,,0,version
 `); // eslint-disable-line function-paren-newline
@@ -403,7 +395,6 @@ describe('.csv.zip briefcase output @slow', () => {
 
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
-        // eslint-disable-next-line indent
 `SubmissionDate,name,age,location-Latitude,location-Longitude,location-Altitude,location-Accuracy,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-01-01T00:00:00.000Z,Alice,30,47.649434,-122.347737,26.8,3.14,one,,,0,0,,,,0,version
 2018-01-01T00:00:00.000Z,Bob,34,47.599115,-122.331753,10,,two,,,0,0,,,,0,version
@@ -426,7 +417,6 @@ describe('.csv.zip briefcase output @slow', () => {
 
         result.filenames.should.eql([ 'selectMultiple.csv' ]);
         result['selectMultiple.csv'].should.equal(
-          // eslint-disable-next-line indent
 `SubmissionDate,q1,q1/x,q1/y,q1/z,g1-q2,g1-q2/m,g1-q2/n,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-01-01T00:00:00.000Z,a b,0,0,0,x y z,0,0,one,,,0,0,,,,0,version
 2018-01-01T00:00:00.000Z,b,0,0,0,m x,1,0,two,,,0,0,,,,0,version
@@ -478,7 +468,6 @@ describe('.csv.zip briefcase output @slow', () => {
 
       result.filenames.should.eql([ 'structuredform.csv' ]);
       result['structuredform.csv'].should.equal(
-        // eslint-disable-next-line indent
 `SubmissionDate,meta-instanceID,name,home-type,home-address-street,home-address-city,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-01-01T00:00:00.000Z,one,Alice,Apartment,101 Pike St,"Seattle, WA",one,,,0,0,,,,0,version
 2018-01-01T00:00:00.000Z,two,Bob,Condo,20 Broadway,"Portland, OR",two,,,0,0,,,,0,version
@@ -531,13 +520,11 @@ describe('.csv.zip briefcase output @slow', () => {
 
         result.filenames.should.eql([ 'structuredform.csv' ]);
         result['structuredform.csv'].should.equal(
-          // eslint-disable-next-line indent
 `SubmissionDate,instanceID,name,type,street,city,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-01-01T00:00:00.000Z,one,Alice,Apartment,101 Pike St,"Seattle, WA",one,,,0,0,,,,0,version
 2018-01-01T00:00:00.000Z,two,Bob,Condo,20 Broadway,"Portland, OR",two,,,0,0,,,,0,version
 2018-01-01T00:00:00.000Z,three,Chelsea,House,99 Mission Ave,"San Francisco, CA",three,,,0,0,,,,0,version
 `); // eslint-disable-line function-paren-newline
-        // eslint-disable-next-line indent
       done();
       });
     });
@@ -556,7 +543,6 @@ describe('.csv.zip briefcase output @slow', () => {
 
         result.filenames.should.eql([ 'selectMultiple.csv' ]);
         result['selectMultiple.csv'].should.equal(
-          // eslint-disable-next-line indent
 `SubmissionDate,q1,q1/x,q1/y,q1/z,q2,q2/m,q2/n,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-01-01T00:00:00.000Z,a b,0,0,0,x y z,0,0,one,,,0,0,,,,0,version
 2018-01-01T00:00:00.000Z,b,0,0,0,m x,1,0,two,,,0,0,,,,0,version
@@ -627,14 +613,12 @@ describe('.csv.zip briefcase output @slow', () => {
 
       result.filenames.should.containDeep([ 'singlerepeat.csv', 'singlerepeat-child.csv' ]);
       result['singlerepeat.csv'].should.equal(
-        // eslint-disable-next-line indent
 `SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-01-01T00:00:00.000Z,one,Alice,30,one,,,0,0,,,,0,version
 2018-01-01T00:00:00.000Z,two,Bob,34,two,,,0,0,,,,0,version
 2018-01-01T00:00:00.000Z,three,Chelsea,38,three,,,0,0,,,,0,version
 `); // eslint-disable-line function-paren-newline
       result['singlerepeat-child.csv'].should.equal(
-        // eslint-disable-next-line indent
 `name,age,PARENT_KEY,KEY
 Billy,4,two,two/children/child[1]
 Blaine,6,two,two/children/child[2]
@@ -772,14 +756,12 @@ Candace,2,three,three/children/child[1]
 
       result.filenames.should.containDeep([ 'multirepeat.csv', 'multirepeat-child.csv', 'multirepeat-toy.csv' ]);
       result['multirepeat.csv'].should.equal(
-        // eslint-disable-next-line indent
 `SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-01-01T00:00:00.000Z,one,Alice,30,one,,,0,0,,,,0,version
 2018-01-01T00:00:00.000Z,two,Bob,34,two,,,0,0,,,,0,version
 2018-01-01T00:00:00.000Z,three,Chelsea,38,three,,,0,0,,,,0,version
 `); // eslint-disable-line function-paren-newline
       result['multirepeat-child.csv'].should.equal(
-        // eslint-disable-next-line indent
 `name,age,PARENT_KEY,KEY
 Billy,4,two,two/children/child[1]
 Blaine,6,two,two/children/child[2]
@@ -787,7 +769,6 @@ Baker,7,two,two/children/child[3]
 Candace,2,three,three/children/child[1]
 `); // eslint-disable-line function-paren-newline
       result['multirepeat-toy.csv'].should.equal(
-        // eslint-disable-next-line indent
 `name,PARENT_KEY,KEY
 R2-D2,two/children/child[1],two/children/child[1]/toy[1]
 BB-8,two/children/child[2],two/children/child[2]/toy[1]
@@ -838,12 +819,10 @@ Pod racer,three/children/child[1],three/children/child[1]/toy[3]
 
       result.filenames.should.containDeep([ 'pathprefix.csv', 'pathprefix-children.csv' ]);
       result['pathprefix.csv'].should.equal(
-        // eslint-disable-next-line indent
 `SubmissionDate,name,children-status,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-01-01T00:00:00.000Z,Alice,Living at home,one,,,0,0,,,,0,version
 `); // eslint-disable-line function-paren-newline
       result['pathprefix-children.csv'].should.equal(
-        // eslint-disable-next-line indent
 `name,PARENT_KEY,KEY
 Bob,one,one/children[1]
 Chelsea,one,one/children[2]
@@ -932,7 +911,6 @@ Chelsea,one,one/children[2]
 
       result.filenames.should.containDeep([ 'all-data-types.csv' ]);
       result['all-data-types.csv'].should.equal(
-        // eslint-disable-next-line indent
 `SubmissionDate,some_string,some_int,some_decimal,some_date,some_time,some_date_time,some_geopoint-Latitude,some_geopoint-Longitude,some_geopoint-Altitude,some_geopoint-Accuracy,some_geotrace,some_geoshape,some_barcode,meta-instanceID,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-04-26T08:58:20.525Z,Hola,123,123.456,2018-04-26,08:56:00.000Z,2018-04-26T08:56:00.000Z,43.3149254,-1.9869671,71.80000305175781,15.478,43.314926 -1.9869713 71.80000305175781 10.0;43.3149258 -1.9869694 71.80000305175781 10.0;43.3149258 -1.9869694 71.80000305175781 10.0;,43.31513313655808 -1.9863833114504814 0.0 0.0;43.31552832470026 -1.987161487340927 0.0 0.0;43.315044828733015 -1.9877894595265388 0.0 0.0;43.31459255404834 -1.9869402050971987 0.0 0.0;43.31513313655808 -1.9863833114504814 0.0 0.0;,000049499094,uuid:39f3dd36-161e-45cb-a1a4-395831d253a7,uuid:39f3dd36-161e-45cb-a1a4-395831d253a7,,,0,0,,,,0,
 `); // eslint-disable-line function-paren-newline
@@ -1063,19 +1041,16 @@ Chelsea,one,one/children[2]
 
       result.filenames.should.containDeep([ 'nested-repeats.csv', 'nested-repeats-g1.csv', 'nested-repeats-g2.csv', 'nested-repeats-g3.csv' ]);
       result['nested-repeats.csv'].should.equal(
-        // eslint-disable-next-line indent
 `SubmissionDate,meta-instanceID,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-02-01T11:35:19.178Z,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b,,,0,0,,,,0,
 `); // eslint-disable-line function-paren-newline
       result['nested-repeats-g1.csv'].should.equal(
-        // eslint-disable-next-line indent
 `t1,PARENT_KEY,KEY
 some text 1,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[1]
 some text 2,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[2]
 some text 3,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]
 `); // eslint-disable-line function-paren-newline
       result['nested-repeats-g2.csv'].should.equal(
-        // eslint-disable-next-line indent
 `t2,PARENT_KEY,KEY
 some text 1.1,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[1],uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[1]/g2[1]
 some text 1.2,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[1],uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[1]/g2[2]
@@ -1083,7 +1058,6 @@ some text 2.1,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[2],uuid:0a1b861f-a5fd
 some text 3.1,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3],uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]/g2[1]
 `); // eslint-disable-line function-paren-newline
       result['nested-repeats-g3.csv'].should.equal(
-        // eslint-disable-next-line indent
 `t3,PARENT_KEY,KEY
 some text 1.1.1,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[1]/g2[1],uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[1]/g2[1]/g3[1]
 some text 3.1.1,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]/g2[1],uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]/g2[1]/g3[1]
@@ -1156,21 +1130,18 @@ some text 3.1.4,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]/g2[1],uuid:0a1b8
 
       result.filenames.should.containDeep([ 'ambiguous.csv', 'ambiguous-entry~1.csv', 'ambiguous-entry~2.csv' ]);
       result['ambiguous.csv'].should.equal(
-        // eslint-disable-next-line indent
 `SubmissionDate,meta-instanceID,name,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
 2018-01-01T00:00:00.000Z,one,Alice,one,,,0,0,,,,0,version
 2018-01-01T00:00:00.000Z,two,Bob,two,,,0,0,,,,0,version
 2018-01-01T00:00:00.000Z,three,Chelsea,three,,,0,0,,,,0,version
 `); // eslint-disable-line function-paren-newline
       result['ambiguous-entry~1.csv'].should.equal(
-        // eslint-disable-next-line indent
 `name,PARENT_KEY,KEY
 Bobs Hardware,two,two/jobs/entry[1]
 Local Coffee,two,two/jobs/entry[2]
 Instantaneous Food,three,three/jobs/entry[1]
 `); // eslint-disable-line function-paren-newline
       result['ambiguous-entry~2.csv'].should.equal(
-        // eslint-disable-next-line indent
 `name,PARENT_KEY,KEY
 Nasrin,two,two/friends/entry[1]
 Ferrence,three,three/friends/entry[1]

@@ -353,13 +353,9 @@ describe('endpoints', () => {
 
       it('should not initiate a transaction given a nonwrite POST', () => {
         let transacted = false;
-        // eslint-disable-next-line indent
           const container = {
-          // eslint-disable-next-line indent
             transacting(cb) { transacted = true; return cb(); },
-          // eslint-disable-next-line indent
             with() { return container; }
-        // eslint-disable-next-line indent
           };
 
         const request = {

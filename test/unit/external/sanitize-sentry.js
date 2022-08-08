@@ -42,7 +42,6 @@ const cases = [
   ],
   // Authorization header
   [
-    // eslint-disable-next-line indent
    {
       cookies: {},
       data: '{}',

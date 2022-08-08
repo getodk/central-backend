@@ -97,48 +97,30 @@ describe('managed encryption', () => {
               .concat([ new Key({ public: 'test' }) ]),
             Keys.create
           )
-            // eslint-disable-next-line indent
           .then((keys) => Keys.getDecryptor({ [keys[0].id]: 'alpha', [keys[1].id]: 'beta', [keys[2].id]: 'charlie' })
-              // eslint-disable-next-line indent
             .then((decryptor) => new Promise((done) => {
               // create alpha decrypt stream:
-                // eslint-disable-next-line indent
               const encAlpha = encryptInstance(makePubkey(keys[0].public), '', testData.instances.simple.one);
-                // eslint-disable-next-line indent
               const clearAlpha = decryptor(encAlpha.encInstance, keys[0].id, encAlpha.encAeskey.toString('base64'),
-                  // eslint-disable-next-line indent
                 'one', 0);
 
-                // eslint-disable-next-line indent
               // create beta decrypt stream:
-                // eslint-disable-next-line indent
               const encBeta = encryptInstance(makePubkey(keys[1].public), '', testData.instances.simple.two);
-                // eslint-disable-next-line indent
               const clearBeta = decryptor(encBeta.encInstance, keys[1].id, encBeta.encAeskey.toString('base64'),
-                  // eslint-disable-next-line indent
                 'two', 0);
 
-                // eslint-disable-next-line indent
               // verify no charlie:
-                // eslint-disable-next-line indent
               (decryptor(null, keys[2].id) === null).should.equal(true);
 
-                // eslint-disable-next-line indent
               clearAlpha.pipe(toText((_, textAlpha) => {
-                  // eslint-disable-next-line indent
                 textAlpha.should.equal(testData.instances.simple.one);
 
                   // eslint-disable-next-line no-shadow
                   clearBeta.pipe(toText((_, textBeta) => {
-                    // eslint-disable-next-line indent
                   textBeta.should.equal(testData.instances.simple.two);
-                    // eslint-disable-next-line indent
                   done();
-                  // eslint-disable-next-line indent
                 }));
-                // eslint-disable-next-line indent
               }));
-              // eslint-disable-next-line indent
             }))))));
   });
 
@@ -166,7 +148,6 @@ describe('managed encryption', () => {
             null, null, 'alpha.file', 1, false,
             null, null, 'bravo.file', 2, false,
             null, null, 'submission.xml.enc', 3, null
-          // eslint-disable-next-line indent
             ]);
         });
     }));
@@ -282,9 +263,7 @@ describe('managed encryption', () => {
             .then(({ body }) => body[0].id))
           // eslint-disable-next-line quotes
           .then((keyId) => pZipStreamToFiles(asAlice.post(`/v1/projects/1/forms/simple/submissions.csv.zip`)
-            // eslint-disable-next-line indent
               .send(`${keyId}=supersecret`)
-            // eslint-disable-next-line indent
               .set('Content-Type', 'application/x-www-form-urlencoded'))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
@@ -313,13 +292,9 @@ describe('managed encryption', () => {
           ]))
           // eslint-disable-next-line quotes
           .then(([ keyId, session ]) => pZipStreamToFiles(service.post(`/v1/projects/1/forms/simple/submissions.csv.zip`)
-            // eslint-disable-next-line indent
               .send(`${keyId}=supersecret&__csrf=${session.csrf}`)
-            // eslint-disable-next-line indent
               .set('Cookie', `__Host-session=${session.token}`)
-            // eslint-disable-next-line indent
               .set('X-Forwarded-Proto', 'https')
-            // eslint-disable-next-line indent
               .set('Content-Type', 'application/x-www-form-urlencoded'))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
@@ -342,7 +317,6 @@ describe('managed encryption', () => {
             .then(({ body }) => body[0].id))
           // eslint-disable-next-line quotes
           .then((keyId) => pZipStreamToFiles(asAlice.post(`/v1/projects/1/forms/simple/submissions.csv.zip`)
-            // eslint-disable-next-line indent
               .send({ [keyId]: 'supersecret' }))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
@@ -381,24 +355,15 @@ describe('managed encryption', () => {
             .expect(200)
             .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
             .then((send) => send(testData.instances.simple.one, { 'testfile.jpg.enc': 'hello this is a suffixed file' }))
-            // eslint-disable-next-line indent
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
-              // eslint-disable-next-line indent
             .expect(200)
-              // eslint-disable-next-line indent
             .then(({ body }) => body[0].id))
-            // eslint-disable-next-line indent
           .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
-              // eslint-disable-next-line indent
             .then((result) => {
-                // eslint-disable-next-line indent
               result.filenames.length.should.equal(2);
-                // eslint-disable-next-line indent
               result.filenames.should.containDeep([ 'simple.csv', 'media/testfile.jpg' ]);
 
-                // eslint-disable-next-line indent
               result['media/testfile.jpg'].should.equal('hello this is a suffixed file');
-              // eslint-disable-next-line indent
             }))))));
 
     it('should decrypt client audit log attachments', testService((service, container) =>

@@ -864,7 +864,6 @@ describe('analytics task queries', () => {
     }));
 
     it('should fill in all project.submissions queries', testService(async (service, container) => {
-      // eslint-disable-next-line indent
      // submission states
       for (const state of ['approved', 'rejected', 'hasIssues', 'edited']) {
         // eslint-disable-next-line no-await-in-loop

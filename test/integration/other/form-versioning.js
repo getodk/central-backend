@@ -57,19 +57,12 @@ describe('form forward versioning', () => {
           Form.fromXml(newXml),
           Forms.getByProjectAndXmlFormId(1, 'simple').then(force)
         ])
-          // eslint-disable-next-line indent
         .then(([ partial, form ]) => Forms.createVersion(partial, form, true))
-          // eslint-disable-next-line indent
         .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions')
-            // eslint-disable-next-line indent
           .expect(200)
-            // eslint-disable-next-line indent
           .then(({ body }) => {
-              // eslint-disable-next-line indent
             body.length.should.equal(3);
-              // eslint-disable-next-line indent
             body.map((row) => row.instanceId).should.eql([ 'three', 'two', 'one' ]);
-            // eslint-disable-next-line indent
           }))))));
 
   const withAttachmentsMatching = testData.forms.withAttachments

@@ -77,7 +77,6 @@ describe('api: /forms/:id.svc', () => {
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/projects/1/forms/simple.svc/$metadata')
-          // eslint-disable-next-line indent
         .expect(403)
           .then(({ headers, text }) => {
             headers['content-type'].should.equal('text/xml; charset=utf-8');
@@ -722,7 +721,6 @@ describe('api: /forms/:id.svc', () => {
                       reviewState: null,
                       deviceId: null,
                       edits: 0,
-                      // eslint-disable-next-line indent
                     formVersion: '1.0'
                     },
                     // eslint-disable-next-line quotes
@@ -939,13 +937,9 @@ describe('api: /forms/:id.svc', () => {
               .send(testData.instances.withrepeat.three)
               .set('Content-Type', 'text/xml')
               .expect(200))
-            // eslint-disable-next-line indent
              .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
-              // eslint-disable-next-line indent
                .send(testData.instances.simple.one)
-              // eslint-disable-next-line indent
                .set('Content-Type', 'text/xml')
-              // eslint-disable-next-line indent
                .expect(200))
             .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$count=true&$top=1&$skip=1')
               .expect(200)
@@ -969,11 +963,8 @@ describe('api: /forms/:id.svc', () => {
               .set('Content-Type', 'text/xml')
               .expect(200))
             .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
-              // eslint-disable-next-line indent
                .send(testData.instances.simple.one)
-              // eslint-disable-next-line indent
                .set('Content-Type', 'text/xml')
-              // eslint-disable-next-line indent
                .expect(200))
             .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$count=true&$filter=__system/submitterId eq 5')
               .expect(200)
@@ -996,13 +987,9 @@ describe('api: /forms/:id.svc', () => {
               .send(testData.instances.withrepeat.three)
               .set('Content-Type', 'text/xml')
               .expect(200))
-            // eslint-disable-next-line indent
              .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
-              // eslint-disable-next-line indent
                .send(testData.instances.simple.one)
-              // eslint-disable-next-line indent
                .set('Content-Type', 'text/xml')
-              // eslint-disable-next-line indent
                .expect(200))
             .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$count=true&$filter=__system/submitterId eq 5&$top=1&$skip=1')
               .expect(200)

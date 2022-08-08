@@ -479,15 +479,10 @@ describe('api: /users', () => {
               Users.getByEmail('alice@getodk.org').then((o) => o.get()),
               Audits.getLatestByAction('user.update').then((o) => o.get())
             ])
-              // eslint-disable-next-line indent
           .then(([ alice, log ]) => {
-                // eslint-disable-next-line indent
             log.actorId.should.equal(alice.actor.id);
-                // eslint-disable-next-line indent
             log.acteeId.should.equal(chelsea.actor.acteeId);
-                // eslint-disable-next-line indent
             log.details.should.eql({ data: { displayName: 'cool chelsea' } });
-              // eslint-disable-next-line indent
           }))))));
   });
 

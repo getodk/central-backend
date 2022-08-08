@@ -1512,17 +1512,11 @@ describe('api: /forms/:id/submissions', () => {
                 .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
                 .expect(201))
               .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip?$filter=__system/submitterId eq 5'))
-                // eslint-disable-next-line indent
                   .then((result) => {
-                  // eslint-disable-next-line indent
                     result.filenames.should.eql([
-                    // eslint-disable-next-line indent
                       'binaryType.csv',
-                    // eslint-disable-next-line indent
                       'media/my_file1.mp4'
-                  // eslint-disable-next-line indent
                     ]);
-                // eslint-disable-next-line indent
                   })))))));
 
     it('should list the original submitted form version per submission', testService((service) =>
@@ -1546,7 +1540,6 @@ describe('api: /forms/:id/submissions', () => {
             .attach('xml_submission_file', Buffer.from(testData.instances.simple.one
               .replace('id="simple"', 'id="simple" version="updated"')
               .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2')),
-            // eslint-disable-next-line indent
               { filename: 'data.xml' })
             .expect(201))
           .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
@@ -1710,15 +1703,10 @@ describe('api: /forms/:id/submissions', () => {
             .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
             .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
             .expect(201))
-          // eslint-disable-next-line indent
             .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip?attachments=false')
-            // eslint-disable-next-line indent
               .expect(200)
-            // eslint-disable-next-line indent
               .then(({ headers }) => {
-              // eslint-disable-next-line indent
                 headers['content-disposition'].should.equal('attachment; filename="binaryType.csv.zip"; filename*=UTF-8\'\'binaryType.csv.zip');
-            // eslint-disable-next-line indent
               })))));
 
     it('should omit group paths if ?groupPaths=false is given', testService((service) =>
@@ -2331,23 +2319,14 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     it('should not log the action in the audit log', testService((service) =>
       service.login('alice', (asAlice) =>
-        // eslint-disable-next-line indent
          asAlice.post('/v1/projects/1/forms/simple/draft')
-          // eslint-disable-next-line indent
            .expect(200)
-          // eslint-disable-next-line indent
            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip')
-            // eslint-disable-next-line indent
              .expect(200))
-          // eslint-disable-next-line indent
            .then(() => asAlice.get('/v1/audits?action=form.submission.export')
-            // eslint-disable-next-line indent
              .expect(200)
-            // eslint-disable-next-line indent
              .then(({ body }) => {
-              // eslint-disable-next-line indent
                body.length.should.equal(0);
-            // eslint-disable-next-line indent
              })))));
 
     it('should split select multiple values submitted over /test/ if ?splitSelectMultiples=true', testService((service, container) =>
@@ -3666,7 +3645,6 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then((form) => Submissions.getAnyDefByFormAndInstanceId(form.id, 'both', false)
             .then((o) => o.get())
             .then((def) => SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4')
-              // eslint-disable-next-line indent
             .then((o) => o.get())
               .then((oldAttachment) => asAlice.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
                 .set('Content-Type', 'video/mp4')
@@ -3927,35 +3905,20 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .send({ name: 'project two' })
             .expect(200)
             .then(({ body }) => body.id)
-            // eslint-disable-next-line indent
           .then((projectId) => asAlice.post(`/v1/projects/${projectId}/forms?publish=true`)
-              // eslint-disable-next-line indent
             .send(testData.forms.simple)
-              // eslint-disable-next-line indent
             .expect(200)
-              // eslint-disable-next-line indent
             .then(() => asAlice.post(`/v1/projects/${projectId}/forms/simple/submissions`)
-                // eslint-disable-next-line indent
               .send(testData.instances.simple.one)
-                // eslint-disable-next-line indent
               .set('Content-Type', 'text/xml')
-                // eslint-disable-next-line indent
               .expect(200))
-              // eslint-disable-next-line indent
             .then(() => Promise.all([
-                // eslint-disable-next-line indent
               asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions/one')
-                  // eslint-disable-next-line indent
                 .expect(200)
-                  // eslint-disable-next-line indent
                 .then(({ body }) => { body.instanceName.should.equal('custom name'); }),
-                // eslint-disable-next-line indent
               asAlice.get(`/v1/projects/${projectId}/forms/simple/submissions/one/versions/one`)
-                  // eslint-disable-next-line indent
                 .expect(200)
-                  // eslint-disable-next-line indent
                 .then(({ body }) => { should(body.instanceName).equal(null); })
-              // eslint-disable-next-line indent
             ])))))));
   });
 });

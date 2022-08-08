@@ -143,11 +143,8 @@ describe('stream utils', () => {
       PartialPipe.of(fromObjects([ 4, 8, 15, 16, 23, 42 ]), doubler())
         .with(doubler())
         .with(toObjects((e, result) => {
-          // eslint-disable-next-line indent
             result.should.eql([ 16, 32, 60, 64, 92, 168 ]);
-          // eslint-disable-next-line indent
             done();
-        // eslint-disable-next-line indent
           })
         ).pipeline(noop)); // eslint-disable-line function-paren-newline
 
