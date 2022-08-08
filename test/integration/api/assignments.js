@@ -143,9 +143,9 @@ describe('api: /assignments', () => {
         asAlice.get('/v1/assignments')
           .expect(200)
           .then(({ body }) => Promise.all([
-            // eslint-disable-next-line no-shadow, indent
+            // eslint-disable-next-line no-shadow
               asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id),
-            // eslint-disable-next-line no-shadow, indent
+            // eslint-disable-next-line no-shadow
               asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id)
           // eslint-disable-next-line indent
             ]).then(([ actorId, roleId ]) => {

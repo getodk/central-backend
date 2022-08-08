@@ -22,7 +22,7 @@ describe('task: analytics', () => {
 
   it('should not compute analytics if analytics sent recently', testTask(({ Configs, Audits }) =>
     Configs.set('analytics', { enabled: true })
-      // eslint-disable-next-line object-curly-spacing, indent
+      // eslint-disable-next-line object-curly-spacing
     .then(() => Audits.log(null, 'analytics', null, {test: 'test', success: true})
         // eslint-disable-next-line indent
       .then(() => runAnalytics()
@@ -48,7 +48,7 @@ describe('task: analytics', () => {
 
   it('should resend analytics if last attempt failed', testTask(({ Configs, Audits }) =>
     Configs.set('analytics', { enabled: true })
-      // eslint-disable-next-line object-curly-spacing, indent
+      // eslint-disable-next-line object-curly-spacing
     .then(() => Audits.log(null, 'analytics', null, {test: 'test', success: false})
         // eslint-disable-next-line indent
       .then(() => runAnalytics()
@@ -70,7 +70,7 @@ describe('task: analytics', () => {
       .then((au) => {
           // eslint-disable-next-line indent
         au.details.success.should.equal(true);
-          // eslint-disable-next-line prefer-destructuring, indent
+          // eslint-disable-next-line prefer-destructuring
         const report = au.details.report;
           // eslint-disable-next-line indent
         report.config.email.should.equal('test@getodk.org');
@@ -93,7 +93,7 @@ describe('task: analytics', () => {
 
   it('should log request errors', testTask(({ Configs, Audits, odkAnalytics }) =>
     Configs.set('analytics', { enabled: true, email: 'test@getodk.org' })
-      // eslint-disable-next-line space-in-parens, object-curly-spacing, indent
+      // eslint-disable-next-line space-in-parens, object-curly-spacing
     .then(odkAnalytics.setError({ testError: 'foo'} ))
       // eslint-disable-next-line indent
     .then(() => runAnalytics()
@@ -109,7 +109,7 @@ describe('task: analytics', () => {
       .then((au) => {
           // eslint-disable-next-line indent
         au.details.success.should.equal(false);
-          // eslint-disable-next-line object-curly-spacing, indent
+          // eslint-disable-next-line object-curly-spacing
         au.details.error.should.eql({ testError: 'foo'});
         // eslint-disable-next-line indent
       }))));

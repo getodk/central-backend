@@ -38,7 +38,7 @@ describe('task: purge deleted forms', () => {
       .then((form) => Forms.del(form.get())
         // eslint-disable-next-line indent
       .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat'))
-        // eslint-disable-next-line no-shadow, indent
+        // eslint-disable-next-line no-shadow
       .then((form) => Forms.del(form.get())
           // eslint-disable-next-line indent
       .then(() => purgeForms(true))
@@ -78,7 +78,7 @@ describe('task: purge deleted forms', () => {
       .then((form) => Forms.del(form.get())
         // eslint-disable-next-line indent
       .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat'))
-        // eslint-disable-next-line no-shadow, indent
+        // eslint-disable-next-line no-shadow
       .then((form) => Forms.del(form.get())
           // eslint-disable-next-line indent
       .then(() => purgeForms(true, 1))
@@ -119,7 +119,7 @@ describe('task: purge deleted forms', () => {
         .then((form) => Forms.del(form.get())
           // eslint-disable-next-line indent
         .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat'))
-          // eslint-disable-next-line no-shadow, indent
+          // eslint-disable-next-line no-shadow
         .then((form) => Forms.del(form.get())
             // eslint-disable-next-line indent
         .then(() => purgeForms(true, 1, 1))
@@ -135,7 +135,7 @@ describe('task: purge deleted forms', () => {
         .then((form) => Forms.del(form.get())
           // eslint-disable-next-line indent
         .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat'))
-          // eslint-disable-next-line no-shadow, indent
+          // eslint-disable-next-line no-shadow
         .then((form) => Forms.del(form.get())
             // eslint-disable-next-line indent
         .then(() => purgeForms(true, 1, 2))
@@ -154,7 +154,7 @@ describe('task: purge deleted forms', () => {
       .then((form) => Forms.del(form.get())
           // eslint-disable-next-line indent
       .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat'))
-          // eslint-disable-next-line no-shadow, indent
+          // eslint-disable-next-line no-shadow
       .then((form) => Forms.del(form.get())
             // eslint-disable-next-line indent
       .then(() => purgeForms(true, null, 1))
@@ -173,7 +173,7 @@ describe('task: purge deleted forms', () => {
       .then((form) => Forms.del(form.get())
           // eslint-disable-next-line indent
       .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat'))
-          // eslint-disable-next-line no-shadow, indent
+          // eslint-disable-next-line no-shadow
       .then((form) => Forms.del(form.get())
             // eslint-disable-next-line indent
       .then(() => purgeForms(true, null, 2))

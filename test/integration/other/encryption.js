@@ -128,7 +128,7 @@ describe('managed encryption', () => {
                   // eslint-disable-next-line indent
                 textAlpha.should.equal(testData.instances.simple.one);
 
-                  // eslint-disable-next-line no-shadow, indent
+                  // eslint-disable-next-line no-shadow
                 clearBeta.pipe(toText((_, textBeta) => {
                     // eslint-disable-next-line indent
                   textBeta.should.equal(testData.instances.simple.two);
