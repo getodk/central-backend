@@ -17,12 +17,18 @@ describe('worker', () => {
     // these tests would hang otherwise.
 
     it('should return false and do nothing if no event is given', () => {
-      runner({})(null, false).should.equal(false);
+      let called = false;
+      const reschedule = () => { called = true; };
+      runner({})(null, reschedule).should.equal(false);
+      called.should.equal(false);
     });
 
     it('should return false and do nothing if no jobs match the event', () => {
+      let called = false;
+      const reschedule = () => { called = true; };
       const event = { action: 'test.event' };
-      runner({}, { other: [ () => Promise.resolve(42) ] })(event, false).should.equal(false);
+      runner({}, { other: [ () => Promise.resolve(42) ] })(event, reschedule).should.equal(false);
+      called.should.equal(false);
     });
 
     it('should return true if a job is matched', (done) => {
