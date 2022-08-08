@@ -1462,15 +1462,15 @@ it('should return the correct projects with the correct verbs', testService((ser
             // eslint-disable-next-line indent
           project.verbs.should.eqlInAnyOrder([
               // eslint-disable-next-line no-multi-spaces
-            'project.read',     // from role(s): viewer
+              'project.read',     // from role(s): viewer
               // eslint-disable-next-line no-multi-spaces
-            'form.list',        // from role(s): viewer
+              'form.list',        // from role(s): viewer
               // eslint-disable-next-line no-multi-spaces
-            'form.read',        // from role(s): viewer, app-user
+              'form.read',        // from role(s): viewer, app-user
               // eslint-disable-next-line no-multi-spaces
-            'submission.read',  // from role(s): viewer
+              'submission.read',  // from role(s): viewer
               // eslint-disable-next-line no-multi-spaces
-            'submission.list',  // from role(s): viewer
+              'submission.list',  // from role(s): viewer
               // eslint-disable-next-line indent
             'submission.create' // from role(s): app-user
             // eslint-disable-next-line indent

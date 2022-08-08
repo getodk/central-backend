@@ -23,7 +23,7 @@ describe('task: analytics', () => {
   it('should not compute analytics if analytics sent recently', testTask(({ Configs, Audits }) =>
     Configs.set('analytics', { enabled: true })
       // eslint-disable-next-line object-curly-spacing
-    .then(() => Audits.log(null, 'analytics', null, {test: 'test', success: true})
+      .then(() => Audits.log(null, 'analytics', null, {test: 'test', success: true})
         // eslint-disable-next-line indent
       .then(() => runAnalytics()
           // eslint-disable-next-line indent
@@ -49,7 +49,7 @@ describe('task: analytics', () => {
   it('should resend analytics if last attempt failed', testTask(({ Configs, Audits }) =>
     Configs.set('analytics', { enabled: true })
       // eslint-disable-next-line object-curly-spacing
-    .then(() => Audits.log(null, 'analytics', null, {test: 'test', success: false})
+      .then(() => Audits.log(null, 'analytics', null, {test: 'test', success: false})
         // eslint-disable-next-line indent
       .then(() => runAnalytics()
           // eslint-disable-next-line indent
@@ -71,7 +71,7 @@ describe('task: analytics', () => {
           // eslint-disable-next-line indent
         au.details.success.should.equal(true);
           // eslint-disable-next-line prefer-destructuring
-        const report = au.details.report;
+          const report = au.details.report;
           // eslint-disable-next-line indent
         report.config.email.should.equal('test@getodk.org');
           // eslint-disable-next-line indent
@@ -94,7 +94,7 @@ describe('task: analytics', () => {
   it('should log request errors', testTask(({ Configs, Audits, odkAnalytics }) =>
     Configs.set('analytics', { enabled: true, email: 'test@getodk.org' })
       // eslint-disable-next-line space-in-parens, object-curly-spacing
-    .then(odkAnalytics.setError({ testError: 'foo'} ))
+      .then(odkAnalytics.setError({ testError: 'foo'} ))
       // eslint-disable-next-line indent
     .then(() => runAnalytics()
         // eslint-disable-next-line indent
@@ -110,7 +110,7 @@ describe('task: analytics', () => {
           // eslint-disable-next-line indent
         au.details.success.should.equal(false);
           // eslint-disable-next-line object-curly-spacing
-        au.details.error.should.eql({ testError: 'foo'});
+          au.details.error.should.eql({ testError: 'foo'});
         // eslint-disable-next-line indent
       }))));
 });

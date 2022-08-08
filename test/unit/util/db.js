@@ -216,7 +216,7 @@ describe('util/db', () => {
       // eslint-disable-next-line func-call-spacing, no-spaced-func
       unjoiner(T, U)
       // eslint-disable-next-line no-unexpected-multiline
-        ({ 'frames!x': 3, 'frames!y': 4, z: 5 })
+      ({ 'frames!x': 3, 'frames!y': 4, z: 5 })
         .should.eql(new T({ x: 3, y: 4 }, { extra: new U({ z: 5 }) }));
     });
 
