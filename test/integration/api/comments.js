@@ -35,6 +35,10 @@ describe('api: /submissions/:id/comments', () => {
           .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions/one/comments')
             .send({ body: 'new comment here' })
             .expect(200))
+            .then(({ body }) => {
+              body.should.be.a.Comment();
+              body.body.should.equal('new comment here');
+            })
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/comments')
             .expect(200)
             .then(({ body }) => {
