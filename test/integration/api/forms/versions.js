@@ -1,10 +1,8 @@
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const should = require('should');
-const config = require('config');
 // eslint-disable-next-line import/no-extraneous-dependencies
 const superagent = require('superagent');
-const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
 // eslint-disable-next-line import/no-dynamic-require

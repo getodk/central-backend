@@ -1,8 +1,7 @@
 const appRoot = require('app-root-path');
 const { promisify } = require('util');
-const { stat, readdir, readFile, writeFile, createWriteStream } = require('fs');
+const { readdir, readFile, writeFile, createWriteStream } = require('fs');
 const { join } = require('path');
-const should = require('should');
 const tmp = require('tmp');
 const archiver = require('archiver');
 const { testTask } = require('../setup');

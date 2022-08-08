@@ -1,6 +1,4 @@
 const should = require('should');
-const { pipe } = require('ramda');
-const { DateTime } = require('luxon');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 
@@ -38,7 +36,7 @@ describe('api: /projects/:id/app-users', () => {
             .send(testData.instances.simple.one)
             .expect(403)))));
 
-    it('should create a long session', testService((service, { one }) =>
+    it('should create a long session', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/app-users')
           .send({ displayName: 'test1' })
@@ -211,7 +209,7 @@ describe('api: /projects/:id/app-users', () => {
         asAlice.post('/v1/projects')
           .send({ name: 'project 2' })
           .expect(200)
-          .then((project) => asAlice.post('/v1/projects/1/app-users')
+          .then(() => asAlice.post('/v1/projects/1/app-users')
             .send({ displayName: 'fktest' })
             .expect(200)
             .then(({ body }) => asAlice.delete(`/v1/projects/2/app-users/${body.id}`)

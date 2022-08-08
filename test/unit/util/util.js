@@ -1,4 +1,3 @@
-const should = require('should');
 const util = require('../../../lib/util/util');
 
 describe('util/util', () => {

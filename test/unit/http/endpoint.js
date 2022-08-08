@@ -1,9 +1,9 @@
 const should = require('should');
 const { EventEmitter } = require('events');
-const { Transform, Readable } = require('stream');
+const { Transform } = require('stream');
 const { createRequest, createResponse } = require('node-mocks-http');
 const streamTest = require('streamtest').v2;
-const { always, identity } = require('ramda');
+const { always } = require('ramda');
 
 const appRoot = require('app-root-path');
 // eslint-disable-next-line import/no-dynamic-require
@@ -14,8 +14,6 @@ const { PartialPipe } = require(appRoot + '/lib/util/stream');
 const { noop } = require(appRoot + '/lib/util/util');
 // eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
-// eslint-disable-next-line import/no-dynamic-require
-const Option = require(appRoot + '/lib/util/option');
 
 const createModernResponse = () => {
   const result = createResponse({ eventEmitter: EventEmitter });
@@ -90,7 +88,7 @@ describe('endpoints', () => {
   });
 
   describe('framework', () => {
-    const mockContainer = { with: (_ => mockContainer) };
+    const mockContainer = { with: (() => mockContainer) };
 
     describe('preprocessors', () => {
       it('should run the format preprocessor', () => {
@@ -461,7 +459,6 @@ describe('endpoints', () => {
     });
 
     it('should pipe through stream results', (done) => {
-      let result;
       const requestTest = streamTest.fromChunks();
       // eslint-disable-next-line no-shadow
       const responseTest = streamTest.toText((_, result) => {
@@ -474,7 +471,6 @@ describe('endpoints', () => {
     });
 
     it('should pipeline PartialPipe results', (done) => {
-      let result;
       const requestTest = streamTest.fromChunks();
       // eslint-disable-next-line no-shadow
       const responseTest = streamTest.toText((_, result) => {
@@ -494,8 +490,7 @@ describe('endpoints', () => {
     });
 
     it('should fail semigracefully on PartialPipe stream error', (done) => {
-      // eslint-disable-next-line one-var-declaration-per-line, one-var
-      let result, trailers;
+      let trailers;
       const requestTest = streamTest.fromChunks();
       // eslint-disable-next-line no-shadow
       const responseTest = streamTest.toText((_, result) => {

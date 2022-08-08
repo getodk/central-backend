@@ -3,11 +3,9 @@ const should = require('should');
 const { testTask } = require('../setup');
 // eslint-disable-next-line import/no-dynamic-require
 const { runAnalytics } = require(appRoot + '/lib/task/analytics');
-// eslint-disable-next-line import/no-dynamic-require
-const { setConfiguration } = require(appRoot + '/lib/task/config');
 
 describe('task: analytics', () => {
-  it('should not compute analytics if not enabled', testTask(({ Configs }) =>
+  it('should not compute analytics if not enabled', testTask(() =>
     runAnalytics()
       .then((res) => {
         res.sent.should.equal(false);
@@ -37,7 +35,7 @@ describe('task: analytics', () => {
           // eslint-disable-next-line indent
         })))));
 
-  it('should send analytics if enabled and time to send', testTask(({ Configs, Audits, odkAnalytics }) =>
+  it('should send analytics if enabled and time to send', testTask(({ Configs }) =>
     Configs.set('analytics', { enabled: true, email: 'test@getodk.org' })
       // eslint-disable-next-line indent
     .then(() => runAnalytics()
@@ -61,7 +59,7 @@ describe('task: analytics', () => {
           // eslint-disable-next-line indent
         })))));
 
-  it('should log event and full report if analytics sent successfully', testTask(({ Configs, Audits, odkAnalytics }) =>
+  it('should log event and full report if analytics sent successfully', testTask(({ Configs, Audits }) =>
     // eslint-disable-next-line quotes
     Configs.set('analytics', { email: 'test@getodk.org', organization: "ODK", enabled: true })
       // eslint-disable-next-line indent

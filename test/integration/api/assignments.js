@@ -1,4 +1,3 @@
-const should = require('should');
 const { testService } = require('../setup');
 
 describe('api: /projects/:id/assignments/forms', () => {
@@ -102,7 +101,7 @@ describe('api: /projects/:id/assignments/forms', () => {
 
     it('should return filtered assignments on forms', testService((service) =>
       doAssigns(service, '/v1/projects/1/assignments/forms/app-user', '')
-        .then(({ chelsea, david, eleanor, appUserRoleId, managerRoleId, result }) => {
+        .then(({ david, eleanor, appUserRoleId, result }) => {
           result.length.should.equal(2);
 
           verify(result, david.id, 'simple', appUserRoleId);
@@ -111,7 +110,7 @@ describe('api: /projects/:id/assignments/forms', () => {
 
     it('should return filtered extended assignments on forms', testService((service) =>
       doAssigns(service, '/v1/projects/1/assignments/forms/app-user', true)
-        .then(({ chelsea, david, eleanor, appUserRoleId, managerRoleId, result }) => {
+        .then(({ david, eleanor, appUserRoleId, result }) => {
           result.length.should.equal(2);
 
           for (const assignment of result) assignment.actor.should.be.an.Actor();

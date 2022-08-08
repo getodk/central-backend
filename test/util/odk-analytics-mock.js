@@ -15,7 +15,7 @@ class ODKAnalytics {
     this.mockError = null;
   }
 
-  submit(xml) {
+  submit() {
     if (this.mockError !== null) {
       return Promise.reject(this.mockError);
     }

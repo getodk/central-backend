@@ -1,11 +1,9 @@
-const should = require('should');
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
 // eslint-disable-next-line import/no-dynamic-require
 const { testContainerFullTrx } = require(appRoot + '/test/integration/setup');
 // eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
-const testData = require('../../data/xml');
 // eslint-disable-next-line import/no-dynamic-require
 const { Frame } = require(appRoot + '/lib/model/frame');
 // eslint-disable-next-line import/no-dynamic-require
@@ -23,7 +21,7 @@ describe('transaction integration', () => {
     // just to be completely sure.
     const getContainer = () => {
       const Capybaras = {
-        create: (capybara) => ({ db }) => {
+        create: () => ({ db }) => {
           db.isTransacting.should.equal(true);
           queryRun = true;
           return Promise.resolve(true);
@@ -59,7 +57,7 @@ describe('enketo worker transaction', () => {
     // eslint-disable-next-line no-await-in-loop
     while (flush == null) await sometime(50);
 
-    const updateTicket = Forms.update(simple, { state: 'closed' });
+    Forms.update(simple, { state: 'closed' });
 
     // now we wait to see if we have deadlocked, which we want.
     await sometime(400);

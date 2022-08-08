@@ -154,7 +154,7 @@ describe('api: /submission', () => {
               .then(({ text }) => { text.should.equal(testData.instances.simple.one); })
           ])))));
 
-    it('should accept a submission for an old form version', testService((service, { Submissions, Forms, one }) =>
+    it('should accept a submission for an old form version', testService((service, { Submissions, one }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/draft')
           .expect(200)
@@ -1318,7 +1318,7 @@ describe('api: /forms/:id/submissions', () => {
 <h:body><input ref="/data/q1"><label>Q1</label></input><input ref="/data/q2"><label>Q2</label></input><input ref="/data/q3"><label>Q3</label></input><input ref="/data/q4"><label>Q4</label></input><input ref="/data/q5"><label>Q5</label></input><input ref="/data/q6"><label>Q6</label></input><input ref="/data/q7"><label>Q7</label></input><input ref="/data/q8"><label>Q8</label></input><input ref="/data/q9"><label>Q9</label></input><input ref="/data/q10"><label>Q10</label></input><input ref="/data/q11"><label>Q11</label></input><input ref="/data/q12"><label>Q12</label></input><input ref="/data/q13"><label>Q13</label></input><input ref="/data/q14"><label>Q14</label></input><input ref="/data/q15"><label>Q15</label></input><input ref="/data/q16"><label>Q16</label></input><input ref="/data/q17"><label>Q17</label></input><input ref="/data/q18"><label>Q18</label></input><input ref="/data/q19"><label>Q19</label></input><input ref="/data/q20"><label>Q20</label></input><input ref="/data/q21"><label>Q21</label></input><group ref="/data/repeat"><label>Repeat</label><repeat nodeset="/data/repeat"><input ref="/data/repeat/q22"><label>Q22</label></input><input ref="/data/repeat/q23"><label>Q23</label></input><input ref="/data/repeat/q24"><label>Q24</label></input><input ref="/data/repeat/q25"><label>Q25</label></input><input ref="/data/repeat/q26"><label>Q26</label></input><input ref="/data/repeat/q27"><label>Q27</label></input><input ref="/data/repeat/q28"><label>Q28</label></input><input ref="/data/repeat/q29"><label>Q29</label></input><input ref="/data/repeat/q30"><label>Q30</label></input><input ref="/data/repeat/q31"><label>Q31</label></input><input ref="/data/repeat/q32"><label>Q32</label></input><input ref="/data/repeat/q33"><label>Q33</label></input><input ref="/data/repeat/q34"><label>Q34</label></input><input ref="/data/repeat/q35"><label>Q35</label></input><input ref="/data/repeat/q36"><label>Q36</label></input><input ref="/data/repeat/q37"><label>Q37</label></input><input ref="/data/repeat/q38"><label>Q38</label></input><input ref="/data/repeat/q39"><label>Q39</label></input><input ref="/data/repeat/q40"><label>Q40</label></input><input ref="/data/repeat/q41"><label>Q41</label></input></repeat></group><input ref="/data/q42"><label>Q42</label></input><input ref="/data/q43"><label>Q43</label></input><input ref="/data/q44"><label>Q44</label></input><input ref="/data/q45"><label>Q45</label></input><input ref="/data/q46"><label>Q46</label></input><input ref="/data/q47"><label>Q47</label></input><input ref="/data/q48"><label>Q48</label></input><input ref="/data/q49"><label>Q49</label></input><input ref="/data/q50"><label>Q50</label></input></h:body></h:html>`)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => Promise.all((new Array(50)).fill(null).map(_ =>
+          .then(() => Promise.all((new Array(50)).fill(null).map(() =>
             asAlice.post('/v1/projects/1/forms/single-repeat-1-instance-10qs/submissions')
               .send(`<data id="single-repeat-1-instance-10qs">
   <meta><instanceID>${uuid()}</instanceID></meta>
@@ -1585,7 +1585,7 @@ describe('api: /forms/:id/submissions', () => {
                 .should.equal(',a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0,');
             })))));
 
-    it('should omit multiples it does not know about', testService((service, container) =>
+    it('should omit multiples it does not know about', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -1822,7 +1822,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then(() => container.oneFirst(sql`select count(*) from client_audits`)
             .then((count) => { count.should.equal(8); })))));
 
-    it('should return adhoc-processed consolidated client audit log attachments', testService((service, container) =>
+    it('should return adhoc-processed consolidated client audit log attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -1859,7 +1859,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 `);
             })))));
 
-    it('should return consolidated client audit log filtered by user', testService((service, container) =>
+    it('should return consolidated client audit log filtered by user', testService((service) =>
       service.login('alice', (asAlice) =>
         service.login('bob', (asBob) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
@@ -1894,7 +1894,7 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
 
               }))))));
 
-    it('should return consolidated client audit log filtered by review state', testService((service, container) =>
+    it('should return consolidated client audit log filtered by review state', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -3672,7 +3672,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 .set('Content-Type', 'video/mp4')
                 .send('testvideo2')
                 .expect(200)
-                .then((attachment) => Promise.all([
+                .then(() => Promise.all([
                   asAlice.get('/v1/users/current').expect(200),
                   SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4').then((o) => o.get()),
                   Audits.getLatestByAction('submission.attachment.update')
@@ -3836,7 +3836,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then(() => service.login('chelsea', (asChelsea) =>
             asChelsea.get('/v1/projects/1/forms/simple/submissions/one/versions').expect(403))))));
 
-    it('should return submission details', testService((service, { all }) =>
+    it('should return submission details', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one.replace(/<\/meta>/, '<orx:instanceName>custom name</orx:instanceName></meta>'))

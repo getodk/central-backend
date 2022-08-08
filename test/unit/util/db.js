@@ -1,5 +1,4 @@
 const appRoot = require('app-root-path');
-const should = require('should');
 const { sql } = require('slonik');
 // eslint-disable-next-line import/no-dynamic-require
 const { Frame, table, into } = require(appRoot + '/lib/model/frame');
@@ -238,7 +237,7 @@ describe('util/db', () => {
     const U = Frame.define(into('extra'), 'a', 'b');
     // eslint-disable-next-line no-extra-semi
     function noop() { return Promise.resolve({}); };
-    noop.map = (f) => (x) => x;
+    noop.map = () => (x) => x;
 
     it('should provide the appropriate arguments when not extended', () => {
       let run = false;

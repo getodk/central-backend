@@ -1,6 +1,5 @@
 const appPath = require('app-root-path');
 const should = require('should');
-const { pick } = require('ramda');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 // eslint-disable-next-line import/no-dynamic-require
@@ -10,7 +9,7 @@ describe('form forward versioning', () => {
   const force = (x) => x.get();
   const newXml = testData.forms.simple.replace('id="simple"', 'id="simple" version="two"');
 
-  it('should create a new def and update the version', testService((_, { Projects, Forms }) =>
+  it('should create a new def and update the version', testService((_, { Forms }) =>
     Promise.all([
       Form.fromXml(newXml),
       Forms.getByProjectAndXmlFormId(1, 'simple').then(force)
@@ -24,7 +23,7 @@ describe('form forward versioning', () => {
         newForm.def.sha.should.equal('5a31610cb649ccd2482709664e2a6268df66112f');
       })));
 
-  it('should create a new draft def and not update the current version', testService((_, { Projects, Forms }) =>
+  it('should create a new draft def and not update the current version', testService((_, { Forms }) =>
     Promise.all([
       Form.fromXml(newXml),
       Forms.getByProjectAndXmlFormId(1, 'simple').then(force)
@@ -40,7 +39,7 @@ describe('form forward versioning', () => {
           newForm.draftDefId.should.not.equal(newForm.def.id);
         }))));
 
-  it('should preserve submissions', testService((service, { Projects, Forms }) =>
+  it('should preserve submissions', testService((service, { Forms }) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms/simple/submissions')
         .send(testData.instances.simple.one)

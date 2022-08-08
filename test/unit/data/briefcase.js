@@ -1,7 +1,5 @@
 const appRoot = require('app-root-path');
-const should = require('should');
 const uuid = require('uuid/v4');
-const { construct } = require('ramda');
 const streamTest = require('streamtest').v2;
 // eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
@@ -688,7 +686,7 @@ Candace,2,three,three/children/child[1]
       </h:html>`;
 
     const inStream = streamTest.fromObjects(
-      (new Array(127)).fill(null).map(_ => instance(uuid(), `<orx:meta><orx:instanceID>${uuid()}</orx:instanceID></orx:meta><name>${uuid()}</name><children><child><name>${uuid()}</name></child></children>`))); // eslint-disable-line function-paren-newline
+      (new Array(127)).fill(null).map(() => instance(uuid(), `<orx:meta><orx:instanceID>${uuid()}</orx:instanceID></orx:meta><name>${uuid()}</name><children><child><name>${uuid()}</name></child></children>`))); // eslint-disable-line function-paren-newline
 
     callAndParse(inStream, formXml, 'singlerepeat', (err, result) => {
       // eslint-disable-next-line keyword-spacing

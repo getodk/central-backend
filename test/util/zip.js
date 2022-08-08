@@ -1,4 +1,3 @@
-const should = require('should');
 const tmp = require('tmp');
 const yauzl = require('yauzl');
 const { createWriteStream } = require('fs');

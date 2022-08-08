@@ -2,10 +2,6 @@ const should = require('should');
 const appRoot = require('app-root-path');
 // eslint-disable-next-line import/no-dynamic-require
 const http = require(appRoot + '/lib/util/http');
-// eslint-disable-next-line import/no-dynamic-require
-const Problem = require(appRoot + '/lib/util/problem');
-// eslint-disable-next-line import/no-dynamic-require
-const Option = require(appRoot + '/lib/util/option');
 
 describe('util/http', () => {
   describe('isTrue', () => {

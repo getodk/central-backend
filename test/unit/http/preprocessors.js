@@ -1,5 +1,5 @@
 const should = require('should');
-const { createRequest, createResponse } = require('node-mocks-http');
+const { createRequest } = require('node-mocks-http');
 
 const appRoot = require('app-root-path');
 // eslint-disable-next-line import/no-dynamic-require
@@ -210,7 +210,7 @@ describe('preprocessors', () => {
         )).catch((err) => {
           err.problemCode.should.equal(401.2);
           caught = true;
-        }).then((context) => {
+        }).then(() => {
           caught.should.equal(true);
         });
       });
@@ -235,7 +235,7 @@ describe('preprocessors', () => {
         )).catch((err) => {
           err.problemCode.should.equal(401.2);
           caught = true;
-        }).then((context) => {
+        }).then(() => {
           caught.should.equal(true);
         });
       });

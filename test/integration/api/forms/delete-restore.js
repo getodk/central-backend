@@ -1,14 +1,5 @@
-const { readFileSync } = require('fs');
-const appRoot = require('app-root-path');
-const should = require('should');
-const config = require('config');
-// eslint-disable-next-line import/no-extraneous-dependencies
-const superagent = require('superagent');
-const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
-// eslint-disable-next-line import/no-dynamic-require
-const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects/:id/forms (delete, restore)', () => {
 
@@ -155,7 +146,7 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
         asAlice.post('/v1/projects/1/forms/1/restore')
           .expect(404))));
 
-    it('should fail to restore a form when another active form with the same form id exists', testService((service, { Audits }) =>
+    it('should fail to restore a form when another active form with the same form id exists', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1/forms/simple')
           .expect(200)

@@ -1,9 +1,7 @@
 const appRoot = require('app-root-path');
-const should = require('should');
 const { sql } = require('slonik');
-const { testTask, testService, testContainer } = require('../setup');
+const { testService, testContainer } = require('../setup');
 // eslint-disable-next-line import/no-dynamic-require
-const { Actor, Form, Project, Submission, User } = require(appRoot + '/lib/model/frames');
 const { createReadStream } = require('fs');
 const testData = require('../../data/xml');
 
@@ -926,7 +924,7 @@ describe('analytics task queries', () => {
 
     it('should be idempotent and not cross-polute project counts', testService(async (service, container) => {
       const proj1 = await createTestProject(service, container, 'New Proj 1');
-      const formId1 = await createTestForm(service, container, testData.forms.simple, proj1);
+      await createTestForm(service, container, testData.forms.simple, proj1);
 
       // approved submission in original project
       await submitToForm(service, 'alice', 1, 'simple', simpleInstance('aaa'));

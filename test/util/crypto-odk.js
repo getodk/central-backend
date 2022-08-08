@@ -3,7 +3,7 @@ const { ceil } = Math;
 const { createPublicKey, publicEncrypt, createHash, randomBytes, createCipheriv } = require('crypto');
 const { RSA_NO_PADDING } = require('crypto').constants;
 // eslint-disable-next-line import/no-dynamic-require
-const { injectPemEnvelope, getSubmissionIvs } = require(appRoot + '/lib/util/crypto');
+const { getSubmissionIvs } = require(appRoot + '/lib/util/crypto');
 
 
 // here we implement some of the weirdo custom encryption things we need to

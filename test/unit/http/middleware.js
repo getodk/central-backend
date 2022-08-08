@@ -1,15 +1,10 @@
-const should = require('should');
-const { createRequest, createResponse } = require('node-mocks-http');
+const { createRequest } = require('node-mocks-http');
 
 const appRoot = require('app-root-path');
 // eslint-disable-next-line import/no-dynamic-require
 const middleware = require(appRoot + '/lib/http/middleware');
 // eslint-disable-next-line import/no-dynamic-require
-const Problem = require(appRoot + '/lib/util/problem');
-// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
-// eslint-disable-next-line import/no-dynamic-require
-const { hashPassword } = require(appRoot + '/lib/util/crypto');
 
 describe('middleware', () => {
   describe('versionParser', () => {

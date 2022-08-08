@@ -1,5 +1,4 @@
 const appRoot = require('app-root-path');
-const should = require('should');
 const streamTest = require('streamtest').v2;
 // eslint-disable-next-line import/no-dynamic-require
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');

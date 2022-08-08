@@ -1,5 +1,4 @@
 const appRoot = require('app-root-path');
-const should = require('should');
 const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');

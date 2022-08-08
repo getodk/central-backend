@@ -228,7 +228,7 @@ describe('api: /projects', () => {
             return asAlice.get(`/v1/projects/${body.id}`).expect(200);
           }))));
 
-    it('should create an audit log entry', testService((service, { Audits, Projects, one }) =>
+    it('should create an audit log entry', testService((service, { Audits, one }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects')
           .set('Content-Type', 'application/json')
@@ -491,7 +491,7 @@ describe('api: /projects', () => {
       service.login('chelsea', (asChelsea) =>
         asChelsea.delete('/v1/projects/1').expect(403))));
 
-    it('should delete the project', testService((service, { Audit, Project }) =>
+    it('should delete the project', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1')
           .expect(200)
@@ -1151,7 +1151,7 @@ describe('api: /projects', () => {
                 .then(({ body }) => { body.should.eql([]); })
             ])))))));
 
-    it('should not delete public link assignments', testService((service, container) =>
+    it('should not delete public link assignments', testService((service) =>
       service.login('bob', (asBob) => asBob.post('/v1/projects/1/forms/simple/public-links')
         .send({ displayName: 'test link' })
         .expect(200)
@@ -1392,7 +1392,7 @@ describe('api: /projects?forms=true', () => {
               .expect(200)
               .then(({ body }) => {
                 body.length.should.equal(1);
-                const { formList, verbs } = body[0];
+                const { verbs } = body[0];
                 verbs.should.eqlInAnyOrder([
                   // eslint-disable-next-line no-multi-spaces
                   'form.list',         // from role(s): formfill, viewer

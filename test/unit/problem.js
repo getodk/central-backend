@@ -1,5 +1,4 @@
 const appRoot = require('app-root-path');
-const should = require('should');
 // eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
 

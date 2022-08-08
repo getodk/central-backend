@@ -1,5 +1,4 @@
 const appRoot = require('app-root-path');
-const { construct } = require('ramda');
 // eslint-disable-next-line import/no-dynamic-require
 const { submissionToOData } = require(appRoot + '/lib/data/odata');
 // eslint-disable-next-line import/no-dynamic-require

@@ -17,18 +17,12 @@ describe('worker', () => {
     // these tests would hang otherwise.
 
     it('should return false and do nothing if no event is given', () => {
-      let called = false;
-      const reschedule = () => { called = true; };
-      runner({})(null, called).should.equal(false);
-      called.should.equal(false);
+      runner({})(null, false).should.equal(false);
     });
 
     it('should return false and do nothing if no jobs match the event', () => {
-      let called = false;
-      const reschedule = () => { called = true; };
       const event = { action: 'test.event' };
-      runner({}, { other: [ () => Promise.resolve(42) ] })(event, called).should.equal(false);
-      called.should.equal(false);
+      runner({}, { other: [ () => Promise.resolve(42) ] })(event, false).should.equal(false);
     });
 
     it('should return true if a job is matched', (done) => {
@@ -98,7 +92,7 @@ describe('worker', () => {
     // hijacking globals in tests.
     it('should still survive and reschedule if Sentry goes wrong', testContainerFullTrx(async (container) => {
       // eslint-disable-next-line no-throw-literal
-      const Sentry = { captureException(err) { throw 'no sentry for you'; } };
+      const Sentry = { captureException() { throw 'no sentry for you'; } };
       const hijackedContainer = container.with({ Sentry });
 
       const event = { id: -1, action: 'test.event', failures: 0 };

@@ -1,4 +1,3 @@
-const should = require('should');
 const { testService } = require('../setup');
 const { sql } = require('slonik');
 const testData = require('../../data/xml');
@@ -93,7 +92,7 @@ describe('api: /forms/:id.svc', () => {
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/projects/1/forms/simple.svc/$metadata')
           .expect(200)
-          .then(({ text, headers }) => {
+          .then(({ text }) => {
             text.should.startWith('<?xml version="1.0" encoding="UTF-8"?>\n<edmx:Edmx');
           }))));
   });
@@ -1248,7 +1247,7 @@ describe('api: /forms/:id.svc', () => {
             .expect(200)
             .then(() => asAlice.get('/v1/projects/1/forms/simple.svc/$metadata')
               .expect(200)
-              .then(({ text, headers }) => {
+              .then(({ text }) => {
                 text.should.startWith('<?xml version="1.0" encoding="UTF-8"?>\n<edmx:Edmx');
               })))));
 

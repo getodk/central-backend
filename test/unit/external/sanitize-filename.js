@@ -76,7 +76,7 @@ const cases = [
 
 describe('external: sanitize-filename', () => {
   it('replaces only problematic input', () => {
-    for (const [ title, input, expectedOutput ] of cases)
+    for (const [ , input, expectedOutput ] of cases)
       sanitize(input).should.eql(expectedOutput);
   });
 });

@@ -1,6 +1,6 @@
 require('should');
 const appRoot = require('app-root-path');
-const { always, construct, filter, compose } = require('ramda');
+const { filter } = require('ramda');
 const { toObjects } = require('streamtest').v2;
 // eslint-disable-next-line import/no-dynamic-require
 const { submissionXmlToFieldStream, getSelectMultipleResponses, _hashedTree, _diffObj, _diffArray, diffSubmissions, _symbols } = require(appRoot + '/lib/data/submission');
@@ -283,7 +283,7 @@ describe('diffing', () => {
   });
 
   describe('_diffArray', () => {
-    const { keys, subhash, subhashes, score } = _symbols;
+    const { keys, subhashes } = _symbols;
 
     it('should not see any difference between empty arrays', () => {
       const x = []; x[subhashes] = [];

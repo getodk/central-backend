@@ -50,7 +50,7 @@ describe('(libs/FP) Option type', () => {
     });
     // eslint-disable-next-line quotes
     it("Can be filtered to nothing", () => {
-      o.filter(_ => false).should.equal(Option.of(null));
+      o.filter(() => false).should.equal(Option.of(null));
     });
     // eslint-disable-next-line quotes
     describe("Getting its value", () => {
@@ -101,7 +101,7 @@ describe('(libs/FP) Option type', () => {
     });
     // eslint-disable-next-line quotes
     it("Can only be filtered to nothing", () => {
-      o.filter(_ => true).should.equal(Option.of(null));
+      o.filter(() => true).should.equal(Option.of(null));
     });
     // eslint-disable-next-line quotes
     describe("Getting its value", () => {
@@ -129,7 +129,7 @@ describe('(libs/FP) Option type', () => {
     // eslint-disable-next-line quotes
     it("Does nothing ifDefined", () => {
       let called = false;
-      o.ifDefined((x) => { called = true; });
+      o.ifDefined(() => { called = true; });
       called.should.equal(false);
     });
     // eslint-disable-next-line quotes
