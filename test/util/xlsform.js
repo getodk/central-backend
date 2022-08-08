@@ -1,5 +1,6 @@
 const appRoot = require('app-root-path');
 const digest = require('digest-stream');
+// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
 const testData = require('../data/xml');
 

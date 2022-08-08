@@ -6,7 +6,9 @@ const { createReadStream, readFileSync } = require('fs');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { pZipStreamToFiles } = require('../../util/zip');
+// eslint-disable-next-line import/no-dynamic-require
 const { Form } = require(appRoot + '/lib/model/frames');
+// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 // utilities used for versioning instances
@@ -152,7 +154,7 @@ describe('api: /submission', () => {
               .then(({ text }) => { text.should.equal(testData.instances.simple.one); })
           ])))));
 
-    it('should accept a submission for an old form version', testService((service, { Submissions, Forms, one }) =>
+    it('should accept a submission for an old form version', testService((service, { Submissions, one }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/draft')
           .expect(200)
@@ -1316,7 +1318,7 @@ describe('api: /forms/:id/submissions', () => {
 <h:body><input ref="/data/q1"><label>Q1</label></input><input ref="/data/q2"><label>Q2</label></input><input ref="/data/q3"><label>Q3</label></input><input ref="/data/q4"><label>Q4</label></input><input ref="/data/q5"><label>Q5</label></input><input ref="/data/q6"><label>Q6</label></input><input ref="/data/q7"><label>Q7</label></input><input ref="/data/q8"><label>Q8</label></input><input ref="/data/q9"><label>Q9</label></input><input ref="/data/q10"><label>Q10</label></input><input ref="/data/q11"><label>Q11</label></input><input ref="/data/q12"><label>Q12</label></input><input ref="/data/q13"><label>Q13</label></input><input ref="/data/q14"><label>Q14</label></input><input ref="/data/q15"><label>Q15</label></input><input ref="/data/q16"><label>Q16</label></input><input ref="/data/q17"><label>Q17</label></input><input ref="/data/q18"><label>Q18</label></input><input ref="/data/q19"><label>Q19</label></input><input ref="/data/q20"><label>Q20</label></input><input ref="/data/q21"><label>Q21</label></input><group ref="/data/repeat"><label>Repeat</label><repeat nodeset="/data/repeat"><input ref="/data/repeat/q22"><label>Q22</label></input><input ref="/data/repeat/q23"><label>Q23</label></input><input ref="/data/repeat/q24"><label>Q24</label></input><input ref="/data/repeat/q25"><label>Q25</label></input><input ref="/data/repeat/q26"><label>Q26</label></input><input ref="/data/repeat/q27"><label>Q27</label></input><input ref="/data/repeat/q28"><label>Q28</label></input><input ref="/data/repeat/q29"><label>Q29</label></input><input ref="/data/repeat/q30"><label>Q30</label></input><input ref="/data/repeat/q31"><label>Q31</label></input><input ref="/data/repeat/q32"><label>Q32</label></input><input ref="/data/repeat/q33"><label>Q33</label></input><input ref="/data/repeat/q34"><label>Q34</label></input><input ref="/data/repeat/q35"><label>Q35</label></input><input ref="/data/repeat/q36"><label>Q36</label></input><input ref="/data/repeat/q37"><label>Q37</label></input><input ref="/data/repeat/q38"><label>Q38</label></input><input ref="/data/repeat/q39"><label>Q39</label></input><input ref="/data/repeat/q40"><label>Q40</label></input><input ref="/data/repeat/q41"><label>Q41</label></input></repeat></group><input ref="/data/q42"><label>Q42</label></input><input ref="/data/q43"><label>Q43</label></input><input ref="/data/q44"><label>Q44</label></input><input ref="/data/q45"><label>Q45</label></input><input ref="/data/q46"><label>Q46</label></input><input ref="/data/q47"><label>Q47</label></input><input ref="/data/q48"><label>Q48</label></input><input ref="/data/q49"><label>Q49</label></input><input ref="/data/q50"><label>Q50</label></input></h:body></h:html>`)
           .set('Content-Type', 'text/xml')
           .expect(200)
-          .then(() => Promise.all((new Array(50)).fill(null).map(_ =>
+          .then(() => Promise.all((new Array(50)).fill(null).map(() =>
             asAlice.post('/v1/projects/1/forms/single-repeat-1-instance-10qs/submissions')
               .send(`<data id="single-repeat-1-instance-10qs">
   <meta><instanceID>${uuid()}</instanceID></meta>
@@ -1359,8 +1361,10 @@ describe('api: /forms/:id/submissions', () => {
             csv.length.should.equal(4); // header + 2 data rows + newline
             csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
             csv[1].shift().should.be.an.recentIsoDate();
+            // eslint-disable-next-line comma-spacing
             csv[1].should.eql([ 'two','Bob','34','two','5','Alice','0','0','','','','0','' ]);
             csv[2].shift().should.be.an.recentIsoDate();
+            // eslint-disable-next-line comma-spacing
             csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0','' ]);
             csv[3].should.eql([ '' ]);
           })))));
@@ -1508,12 +1512,12 @@ describe('api: /forms/:id/submissions', () => {
                 .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
                 .expect(201))
               .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip?$filter=__system/submitterId eq 5'))
-                  .then((result) => {
-                    result.filenames.should.eql([
-                      'binaryType.csv',
-                      'media/my_file1.mp4'
-                    ]);
-                  })))))));
+                .then((result) => {
+                  result.filenames.should.eql([
+                    'binaryType.csv',
+                    'media/my_file1.mp4'
+                  ]);
+                })))))));
 
     it('should list the original submitted form version per submission', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -1536,7 +1540,7 @@ describe('api: /forms/:id/submissions', () => {
             .attach('xml_submission_file', Buffer.from(testData.instances.simple.one
               .replace('id="simple"', 'id="simple" version="updated"')
               .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2')),
-              { filename: 'data.xml' })
+            { filename: 'data.xml' })
             .expect(201))
           .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
             .send(testData.instances.simple.three.replace('id="simple"', 'id="simple" version="updated"'))
@@ -1574,7 +1578,7 @@ describe('api: /forms/:id/submissions', () => {
                 .should.equal(',a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0,');
             })))));
 
-    it('should omit multiples it does not know about', testService((service, container) =>
+    it('should omit multiples it does not know about', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -1699,11 +1703,11 @@ describe('api: /forms/:id/submissions', () => {
             .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
             .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
             .expect(201))
-            .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip?attachments=false')
-              .expect(200)
-              .then(({ headers }) => {
-                headers['content-disposition'].should.equal('attachment; filename="binaryType.csv.zip"; filename*=UTF-8\'\'binaryType.csv.zip');
-              })))));
+          .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip?attachments=false')
+            .expect(200)
+            .then(({ headers }) => {
+              headers['content-disposition'].should.equal('attachment; filename="binaryType.csv.zip"; filename*=UTF-8\'\'binaryType.csv.zip');
+            })))));
 
     it('should omit group paths if ?groupPaths=false is given', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -1806,7 +1810,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then(() => container.oneFirst(sql`select count(*) from client_audits`)
             .then((count) => { count.should.equal(8); })))));
 
-    it('should return adhoc-processed consolidated client audit log attachments', testService((service, container) =>
+    it('should return adhoc-processed consolidated client audit log attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -1843,7 +1847,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 `);
             })))));
 
-    it('should return consolidated client audit log filtered by user', testService((service, container) =>
+    it('should return consolidated client audit log filtered by user', testService((service) =>
       service.login('alice', (asAlice) =>
         service.login('bob', (asBob) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
@@ -1878,7 +1882,7 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
 
               }))))));
 
-    it('should return consolidated client audit log filtered by review state', testService((service, container) =>
+    it('should return consolidated client audit log filtered by review state', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -2175,6 +2179,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then(() => exhaust(container))
           .then(() => asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv?splitSelectMultiples=true')
             .expect(200)
+            // eslint-disable-next-line no-multi-spaces
             .then(({ text }) =>  {
               const lines = text.split('\n');
               lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
@@ -2232,6 +2237,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 csv.length.should.equal(3); // header + data row + newline
                 csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
                 csv[1].shift().should.be.an.recentIsoDate();
+                // eslint-disable-next-line comma-spacing
                 csv[1].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0','' ]);
               }))))));
 
@@ -2313,15 +2319,15 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     it('should not log the action in the audit log', testService((service) =>
       service.login('alice', (asAlice) =>
-         asAlice.post('/v1/projects/1/forms/simple/draft')
-           .expect(200)
-           .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip')
-             .expect(200))
-           .then(() => asAlice.get('/v1/audits?action=form.submission.export')
-             .expect(200)
-             .then(({ body }) => {
-               body.length.should.equal(0);
-             })))));
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip')
+            .expect(200))
+          .then(() => asAlice.get('/v1/audits?action=form.submission.export')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(0);
+            })))));
 
     it('should split select multiple values submitted over /test/ if ?splitSelectMultiples=true', testService((service, container) =>
       service.login('alice', (asAlice) =>
@@ -2542,6 +2548,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then(() => Promise.all([
             Forms.getByProjectAndXmlFormId(1, 'encrypted').then((o) => o.get()),
             Form.fromXml(testData.forms.encrypted
+              // eslint-disable-next-line no-useless-escape
               .replace(/PublicKey="[a-z0-9+\/]+"/i, 'PublicKey="keytwo"')
               .replace('working3', 'working4'))
           ]))
@@ -2575,6 +2582,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then(() => Promise.all([
             Forms.getByProjectAndXmlFormId(1, 'encrypted').then((o) => o.get()),
             Form.fromXml(testData.forms.encrypted
+              // eslint-disable-next-line no-useless-escape
               .replace(/PublicKey="[a-z0-9+\/]+"/i, 'PublicKey="keytwo"')
               .replace('working3', 'working4'))
           ]))
@@ -3306,6 +3314,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .set('Content-Type', 'text/xml')
           .expect(200)
           .then(() => asAlice.put('/v1/projects/1/forms/simple/submissions/one')
+            // eslint-disable-next-line comma-spacing
             .send(withSimpleIds('one', 'two').replace('<name>Alice</name>','<name>Angela</name>'))
             .set('Content-Type', 'text/xml')
             .expect(200))
@@ -3313,19 +3322,28 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200)
             .then(({ body }) => {
               const expected = {
+                // eslint-disable-next-line quote-props
                 'two': [
                   {
+                    // eslint-disable-next-line quotes, quote-props
                     "new": "two",
+                    // eslint-disable-next-line quotes, quote-props
                     "old": "one",
+                    // eslint-disable-next-line quotes, quote-props
                     "path": [ "meta", "instanceID" ]
                   },
                   {
+                    // eslint-disable-next-line quotes, quote-props
                     "new": "one",
+                    // eslint-disable-next-line quotes, quote-props
                     "path": [ "meta", "deprecatedID" ]
                   },
                   {
+                    // eslint-disable-next-line quotes, quote-props
                     "new": "Angela",
+                    // eslint-disable-next-line quotes, quote-props
                     "old": "Alice",
+                    // eslint-disable-next-line quotes, quote-props
                     "path": [ "name" ]
                   }
                 ]
@@ -3627,12 +3645,12 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then((form) => Submissions.getAnyDefByFormAndInstanceId(form.id, 'both', false)
             .then((o) => o.get())
             .then((def) => SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4')
-            .then((o) => o.get())
+              .then((o) => o.get())
               .then((oldAttachment) => asAlice.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
                 .set('Content-Type', 'video/mp4')
                 .send('testvideo2')
                 .expect(200)
-                .then((attachment) => Promise.all([
+                .then(() => Promise.all([
                   asAlice.get('/v1/users/current').expect(200),
                   SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4').then((o) => o.get()),
                   Audits.getLatestByAction('submission.attachment.update')
@@ -3697,6 +3715,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                   .expect(404)
                   .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments')
                     .expect(200)
+                    // eslint-disable-next-line no-multi-spaces
                     .then(({ body }) =>  {
                       body.should.eql([
                         { name: 'here_is_file2.jpg', exists: false },
@@ -3795,7 +3814,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then(() => service.login('chelsea', (asChelsea) =>
             asChelsea.get('/v1/projects/1/forms/simple/submissions/one/versions').expect(403))))));
 
-    it('should return submission details', testService((service, { all }) =>
+    it('should return submission details', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one.replace(/<\/meta>/, '<orx:instanceName>custom name</orx:instanceName></meta>'))
@@ -3886,21 +3905,21 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .send({ name: 'project two' })
             .expect(200)
             .then(({ body }) => body.id)
-          .then((projectId) => asAlice.post(`/v1/projects/${projectId}/forms?publish=true`)
-            .send(testData.forms.simple)
-            .expect(200)
-            .then(() => asAlice.post(`/v1/projects/${projectId}/forms/simple/submissions`)
-              .send(testData.instances.simple.one)
-              .set('Content-Type', 'text/xml')
-              .expect(200))
-            .then(() => Promise.all([
-              asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions/one')
-                .expect(200)
-                .then(({ body }) => { body.instanceName.should.equal('custom name'); }),
-              asAlice.get(`/v1/projects/${projectId}/forms/simple/submissions/one/versions/one`)
-                .expect(200)
-                .then(({ body }) => { should(body.instanceName).equal(null); })
-            ])))))));
+            .then((projectId) => asAlice.post(`/v1/projects/${projectId}/forms?publish=true`)
+              .send(testData.forms.simple)
+              .expect(200)
+              .then(() => asAlice.post(`/v1/projects/${projectId}/forms/simple/submissions`)
+                .send(testData.instances.simple.one)
+                .set('Content-Type', 'text/xml')
+                .expect(200))
+              .then(() => Promise.all([
+                asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions/one')
+                  .expect(200)
+                  .then(({ body }) => { body.instanceName.should.equal('custom name'); }),
+                asAlice.get(`/v1/projects/${projectId}/forms/simple/submissions/one/versions/one`)
+                  .expect(200)
+                  .then(({ body }) => { should(body.instanceName).equal(null); })
+              ])))))));
   });
 });
 

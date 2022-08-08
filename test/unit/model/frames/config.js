@@ -1,5 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
+// eslint-disable-next-line import/no-dynamic-require
 const { Config } = require(appRoot + '/lib/model/frames');
 const { plain } = require('../../../util/util');
 
