@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - checkout
-      - run: node lib/bin/check-file-headers.js
+      - run: make check-file-headers
       - run: npm ci
       - run: node lib/bin/create-docker-databases.js
       - run: make test-full
