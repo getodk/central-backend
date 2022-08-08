@@ -1,9 +1,7 @@
 const appRoot = require('app-root-path');
 const { promisify } = require('util');
-// eslint-disable-next-line no-unused-vars
 const { stat, readdir, readFile, writeFile, createWriteStream } = require('fs');
 const { join } = require('path');
-// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const tmp = require('tmp');
 const archiver = require('archiver');

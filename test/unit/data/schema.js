@@ -4,7 +4,7 @@ const should = require('should');
 const { getFormFields, sanitizeFieldsForOdata, SchemaStack, merge, expectedFormAttachments, injectPublicKey, addVersionSuffix, setVersion } = require(appRoot + '/lib/data/schema');
 // eslint-disable-next-line import/no-dynamic-require
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
-// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
+// eslint-disable-next-line import/no-dynamic-require
 const { toTraversable } = require(appRoot + '/lib/util/xml');
 // eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');

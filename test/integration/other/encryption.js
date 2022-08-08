@@ -1,6 +1,5 @@
 const appRoot = require('app-root-path');
 const { readFileSync } = require('fs');
-// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const { sql } = require('slonik');
 const { toText } = require('streamtest').v2;
@@ -424,7 +423,6 @@ describe('managed encryption', () => {
             where action='submission.attachment.update' and processed is not null and failures = 0`)
             .then((count) => { count.should.equal(4); })))));
 
-    // eslint-disable-next-line no-unused-vars
     it('should decrypt client audit log attachments', testService((service, container) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
@@ -561,7 +559,6 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 csv[4].should.eql([ '' ]);
               }))))));
 
-    // eslint-disable-next-line no-unused-vars
     it('should handle mixed[plaintext/encrypted] formdata (not decrypting)', testService((service, { Project, FormPartial }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
@@ -654,7 +651,6 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               csv[4].should.eql([ '' ]);
             })))));
 
-    // eslint-disable-next-line no-unused-vars
     it('should handle mixed [plaintext/missing-encrypted-xml] formdata (decrypting)', testService((service, { Project, FormPartial }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
@@ -691,7 +687,6 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 csv[3].should.eql([ '' ]);
               }))))));
 
-    // eslint-disable-next-line no-unused-vars
     it('should handle mixed [plaintext/missing-encrypted-xml] formdata (not decrypting)', testService((service, { Project, FormPartial }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')

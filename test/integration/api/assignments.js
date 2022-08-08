@@ -1,4 +1,3 @@
-// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const { testService } = require('../setup');
 
@@ -103,7 +102,6 @@ describe('api: /projects/:id/assignments/forms', () => {
 
     it('should return filtered assignments on forms', testService((service) =>
       doAssigns(service, '/v1/projects/1/assignments/forms/app-user', '')
-        // eslint-disable-next-line no-unused-vars
         .then(({ chelsea, david, eleanor, appUserRoleId, managerRoleId, result }) => {
           result.length.should.equal(2);
 
@@ -113,7 +111,6 @@ describe('api: /projects/:id/assignments/forms', () => {
 
     it('should return filtered extended assignments on forms', testService((service) =>
       doAssigns(service, '/v1/projects/1/assignments/forms/app-user', true)
-        // eslint-disable-next-line no-unused-vars
         .then(({ chelsea, david, eleanor, appUserRoleId, managerRoleId, result }) => {
           result.length.should.equal(2);
 

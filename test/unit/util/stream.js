@@ -1,15 +1,14 @@
 require('should');
 const appPath = require('app-root-path');
 const { Transform } = require('stream');
-// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
+// eslint-disable-next-line import/no-dynamic-require
 const { mapStreamToPromises, consumeAndBuffer, pipethrough, pipethroughAndBuffer, splitStream, PartialPipe } = require(appPath + '/lib/util/stream');
-// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
+// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appPath + '/lib/util/option');
 const { fromObjects, toObjects } = require('streamtest').v2;
 
 describe('stream utils', () => {
   describe('consumeAndBuffer', () => {
-    // eslint-disable-next-line no-unused-vars
     const consumer = (stop) => (stream) => new Promise((resolve, reject) => {
       let result = '';
       stream.on('data', (x) => {
@@ -46,7 +45,6 @@ describe('stream utils', () => {
   });
 
   describe('pipethrough', () => {
-    // eslint-disable-next-line no-unused-vars
     const doubler = (resolve, reject) => {
       let result = '';
       return new Transform({

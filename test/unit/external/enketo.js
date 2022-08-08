@@ -1,7 +1,6 @@
 const appRoot = require('app-root-path');
 const nock = require('nock');
 const querystring = require('querystring');
-// eslint-disable-next-line no-unused-vars
 const should = require('should');
 // eslint-disable-next-line import/no-dynamic-require
 const enketo_ = require(appRoot + '/lib/external/enketo');

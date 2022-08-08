@@ -50,7 +50,6 @@ describe('(libs/FP) Option type', () => {
     });
     // eslint-disable-next-line quotes
     it("Can be filtered to nothing", () => {
-      // eslint-disable-next-line no-unused-vars
       o.filter(_ => false).should.equal(Option.of(null));
     });
     // eslint-disable-next-line quotes
@@ -102,7 +101,6 @@ describe('(libs/FP) Option type', () => {
     });
     // eslint-disable-next-line quotes
     it("Can only be filtered to nothing", () => {
-      // eslint-disable-next-line no-unused-vars
       o.filter(_ => true).should.equal(Option.of(null));
     });
     // eslint-disable-next-line quotes
@@ -131,7 +129,6 @@ describe('(libs/FP) Option type', () => {
     // eslint-disable-next-line quotes
     it("Does nothing ifDefined", () => {
       let called = false;
-      // eslint-disable-next-line no-unused-vars
       o.ifDefined((x) => { called = true; });
       called.should.equal(false);
     });

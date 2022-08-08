@@ -1,7 +1,6 @@
 const appRoot = require('app-root-path');
-// eslint-disable-next-line no-unused-vars
 const should = require('should');
-// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
+// eslint-disable-next-line import/no-dynamic-require
 const { buildSubmission, convertObjectToXml, metaWithUuidXml, metricsTemplate } = require(appRoot + '/lib/data/analytics');
 // eslint-disable-next-line import/no-dynamic-require
 const { Submission } = require(appRoot + '/lib/model/frames');

@@ -1,9 +1,7 @@
 const appRoot = require('app-root-path');
-// eslint-disable-next-line no-unused-vars
 const should = require('should');
-// eslint-disable-next-line no-unused-vars
 const { map, sortBy } = require('ramda');
-// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
+// eslint-disable-next-line import/no-dynamic-require
 const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { testService } = require('../setup');
 

@@ -1,5 +1,4 @@
 const appRoot = require('app-root-path');
-// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const { testTask } = require('../setup');
 const { sql } = require('slonik');
@@ -7,7 +6,7 @@ const { writeFile, symlink } = require('fs');
 const { join } = require('path');
 const { exec } = require('child_process');
 const { identity } = require('ramda');
-// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
+// eslint-disable-next-line import/no-dynamic-require
 const { task, auditing, emailing, run } = require(appRoot + '/lib/task/task');
 // eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
@@ -101,7 +100,6 @@ describe('task: emailing', () => {
 
   it('should send an email on task failure', testTask(() =>
     emailing('backupFailed', Promise.reject(Problem.user.missingParameter({ field: 'test' })))
-      // eslint-disable-next-line no-unused-vars
       .then(identity, (err) => {
         const email = global.inbox.pop();
         email.to.should.eql([{ address: 'no-reply@getodk.org', name: '' }]);

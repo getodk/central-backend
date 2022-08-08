@@ -1,4 +1,3 @@
-// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const { testService } = require('../setup');
 const { sql } = require('slonik');
@@ -94,7 +93,6 @@ describe('api: /forms/:id.svc', () => {
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/projects/1/forms/simple.svc/$metadata')
           .expect(200)
-          // eslint-disable-next-line no-unused-vars
           .then(({ text, headers }) => {
             text.should.startWith('<?xml version="1.0" encoding="UTF-8"?>\n<edmx:Edmx');
           }))));
@@ -1250,7 +1248,6 @@ describe('api: /forms/:id.svc', () => {
             .expect(200)
             .then(() => asAlice.get('/v1/projects/1/forms/simple.svc/$metadata')
               .expect(200)
-              // eslint-disable-next-line no-unused-vars
               .then(({ text, headers }) => {
                 text.should.startWith('<?xml version="1.0" encoding="UTF-8"?>\n<edmx:Edmx');
               })))));

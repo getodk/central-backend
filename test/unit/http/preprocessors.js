@@ -1,5 +1,4 @@
 const should = require('should');
-// eslint-disable-next-line no-unused-vars
 const { createRequest, createResponse } = require('node-mocks-http');
 
 const appRoot = require('app-root-path');
@@ -211,7 +210,6 @@ describe('preprocessors', () => {
         )).catch((err) => {
           err.problemCode.should.equal(401.2);
           caught = true;
-        // eslint-disable-next-line no-unused-vars
         }).then((context) => {
           caught.should.equal(true);
         });
@@ -237,7 +235,6 @@ describe('preprocessors', () => {
         )).catch((err) => {
           err.problemCode.should.equal(401.2);
           caught = true;
-        // eslint-disable-next-line no-unused-vars
         }).then((context) => {
           caught.should.equal(true);
         });

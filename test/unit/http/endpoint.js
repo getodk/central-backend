@@ -1,10 +1,8 @@
 const should = require('should');
 const { EventEmitter } = require('events');
-// eslint-disable-next-line no-unused-vars
 const { Transform, Readable } = require('stream');
 const { createRequest, createResponse } = require('node-mocks-http');
 const streamTest = require('streamtest').v2;
-// eslint-disable-next-line no-unused-vars
 const { always, identity } = require('ramda');
 
 const appRoot = require('app-root-path');
@@ -16,7 +14,7 @@ const { PartialPipe } = require(appRoot + '/lib/util/stream');
 const { noop } = require(appRoot + '/lib/util/util');
 // eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
-// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
+// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
 
 const createModernResponse = () => {
@@ -92,7 +90,6 @@ describe('endpoints', () => {
   });
 
   describe('framework', () => {
-    // eslint-disable-next-line no-unused-vars
     const mockContainer = { with: (_ => mockContainer) };
 
     describe('preprocessors', () => {
@@ -464,7 +461,6 @@ describe('endpoints', () => {
     });
 
     it('should pipe through stream results', (done) => {
-      // eslint-disable-next-line no-unused-vars
       let result;
       const requestTest = streamTest.fromChunks();
       // eslint-disable-next-line no-shadow
@@ -478,7 +474,6 @@ describe('endpoints', () => {
     });
 
     it('should pipeline PartialPipe results', (done) => {
-      // eslint-disable-next-line no-unused-vars
       let result;
       const requestTest = streamTest.fromChunks();
       // eslint-disable-next-line no-shadow
@@ -499,7 +494,7 @@ describe('endpoints', () => {
     });
 
     it('should fail semigracefully on PartialPipe stream error', (done) => {
-      // eslint-disable-next-line one-var-declaration-per-line, no-unused-vars, one-var
+      // eslint-disable-next-line one-var-declaration-per-line, one-var
       let result, trailers;
       const requestTest = streamTest.fromChunks();
       // eslint-disable-next-line no-shadow

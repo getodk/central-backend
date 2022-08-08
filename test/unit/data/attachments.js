@@ -1,5 +1,4 @@
 const appRoot = require('app-root-path');
-// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const streamTest = require('streamtest').v2;
 // eslint-disable-next-line import/no-dynamic-require

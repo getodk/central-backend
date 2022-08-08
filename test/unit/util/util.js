@@ -1,4 +1,3 @@
-// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const util = require('../../../lib/util/util');
 

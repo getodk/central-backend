@@ -228,7 +228,6 @@ describe('api: /projects', () => {
             return asAlice.get(`/v1/projects/${body.id}`).expect(200);
           }))));
 
-    // eslint-disable-next-line no-unused-vars
     it('should create an audit log entry', testService((service, { Audits, Projects, one }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects')
@@ -492,7 +491,6 @@ describe('api: /projects', () => {
       service.login('chelsea', (asChelsea) =>
         asChelsea.delete('/v1/projects/1').expect(403))));
 
-    // eslint-disable-next-line no-unused-vars
     it('should delete the project', testService((service, { Audit, Project }) =>
       service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1')
@@ -1153,7 +1151,6 @@ describe('api: /projects', () => {
                 .then(({ body }) => { body.should.eql([]); })
             ])))))));
 
-    // eslint-disable-next-line no-unused-vars
     it('should not delete public link assignments', testService((service, container) =>
       service.login('bob', (asBob) => asBob.post('/v1/projects/1/forms/simple/public-links')
         .send({ displayName: 'test link' })
@@ -1395,7 +1392,6 @@ describe('api: /projects?forms=true', () => {
               .expect(200)
               .then(({ body }) => {
                 body.length.should.equal(1);
-                // eslint-disable-next-line no-unused-vars
                 const { formList, verbs } = body[0];
                 verbs.should.eqlInAnyOrder([
                   // eslint-disable-next-line no-multi-spaces

@@ -1,11 +1,10 @@
 const appRoot = require('app-root-path');
-// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const { createWriteStream } = require('fs');
 const { Transform, Readable } = require('stream');
 // eslint-disable-next-line import/no-dynamic-require
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
-// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
+// eslint-disable-next-line import/no-dynamic-require
 const { streamAttachments } = require(appRoot + '/lib/data/attachments');
 // eslint-disable-next-line import/no-dynamic-require
 const { PartialPipe } = require(appRoot + '/lib/util/stream');
@@ -18,7 +17,6 @@ describe('zipPart streamer', () => {
     const part = zipPart();
 
     let closed = false;
-    // eslint-disable-next-line no-unused-vars
     zipStreamToFiles(zipStreamFromParts(part), (err, result) => {
       // eslint-disable-next-line keyword-spacing
       if(err) return done(err);
@@ -55,7 +53,6 @@ describe('zipPart streamer', () => {
   it('should call the given callback only when the file has been added', (done) => {
     const part = zipPart();
     const file = new Readable({ read() {} });
-    // eslint-disable-next-line no-unused-vars
     const archive = zipStreamFromParts(part);
 
     let pushedAll = false;

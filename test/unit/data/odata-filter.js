@@ -9,7 +9,6 @@
 
 const appRoot = require('app-root-path');
 const assert = require('assert');
-// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const { sql } = require('slonik');
 // eslint-disable-next-line import/no-dynamic-require

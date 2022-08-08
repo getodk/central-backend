@@ -1,17 +1,13 @@
-// eslint-disable-next-line no-unused-vars
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
-// eslint-disable-next-line no-unused-vars
 const should = require('should');
-// eslint-disable-next-line no-unused-vars
 const config = require('config');
-// eslint-disable-next-line import/no-extraneous-dependencies, no-unused-vars
+// eslint-disable-next-line import/no-extraneous-dependencies
 const superagent = require('superagent');
-// eslint-disable-next-line no-unused-vars
 const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
-// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
+// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects/:id/forms (delete, restore)', () => {
@@ -159,7 +155,6 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
         asAlice.post('/v1/projects/1/forms/1/restore')
           .expect(404))));
 
-    // eslint-disable-next-line no-unused-vars
     it('should fail to restore a form when another active form with the same form id exists', testService((service, { Audits }) =>
       service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1/forms/simple')

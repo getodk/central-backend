@@ -21,7 +21,6 @@ module.exports = ({ Assignments, Users, Projects, bcrypt }) => {
     .then(() => withPasswords)
     // eslint-disable-next-line no-shadow
     .then((users) => mapSequential(users, Users.create))
-    // eslint-disable-next-line no-unused-vars
     .then(([ alice, bob, chelsea ]) => Promise.all([
       Assignments.grantSystem(alice.actor, 'admin', '*'),
       Projects.getById(1).then((project) => Assignments.grantSystem(bob.actor, 'manager', project.get()))

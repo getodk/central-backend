@@ -1,6 +1,5 @@
 const appRoot = require('app-root-path');
 const streamTest = require('streamtest').v2;
-// eslint-disable-next-line no-unused-vars
 const { identity } = require('ramda');
 // eslint-disable-next-line import/no-dynamic-require
 const { serviceDocumentFor, edmxFor, rowStreamToOData, singleRowToOData } = require(appRoot + '/lib/formats/odata');

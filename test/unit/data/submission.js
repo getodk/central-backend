@@ -1,6 +1,5 @@
 require('should');
 const appRoot = require('app-root-path');
-// eslint-disable-next-line no-unused-vars
 const { always, construct, filter, compose } = require('ramda');
 const { toObjects } = require('streamtest').v2;
 // eslint-disable-next-line import/no-dynamic-require
@@ -284,7 +283,6 @@ describe('diffing', () => {
   });
 
   describe('_diffArray', () => {
-    // eslint-disable-next-line no-unused-vars
     const { keys, subhash, subhashes, score } = _symbols;
 
     it('should not see any difference between empty arrays', () => {

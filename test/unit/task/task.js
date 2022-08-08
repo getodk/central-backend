@@ -2,7 +2,7 @@ const appRoot = require('app-root-path');
 const should = require('should');
 // eslint-disable-next-line import/no-dynamic-require
 const { resolve } = require(appRoot + '/lib/util/promise');
-// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
+// eslint-disable-next-line import/no-dynamic-require
 const { task, run } = require(appRoot + '/lib/task/task');
 
 describe('task harness', () => {

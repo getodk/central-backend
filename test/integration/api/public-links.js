@@ -1,7 +1,5 @@
 const should = require('should');
-// eslint-disable-next-line no-unused-vars
 const { pipe } = require('ramda');
-// eslint-disable-next-line no-unused-vars
 const { DateTime } = require('luxon');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');

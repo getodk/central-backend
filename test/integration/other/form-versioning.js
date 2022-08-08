@@ -1,6 +1,5 @@
 const appPath = require('app-root-path');
 const should = require('should');
-// eslint-disable-next-line no-unused-vars
 const { pick } = require('ramda');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
@@ -11,7 +10,6 @@ describe('form forward versioning', () => {
   const force = (x) => x.get();
   const newXml = testData.forms.simple.replace('id="simple"', 'id="simple" version="two"');
 
-  // eslint-disable-next-line no-unused-vars
   it('should create a new def and update the version', testService((_, { Projects, Forms }) =>
     Promise.all([
       Form.fromXml(newXml),
@@ -26,7 +24,6 @@ describe('form forward versioning', () => {
         newForm.def.sha.should.equal('5a31610cb649ccd2482709664e2a6268df66112f');
       })));
 
-  // eslint-disable-next-line no-unused-vars
   it('should create a new draft def and not update the current version', testService((_, { Projects, Forms }) =>
     Promise.all([
       Form.fromXml(newXml),
@@ -43,7 +40,6 @@ describe('form forward versioning', () => {
           newForm.draftDefId.should.not.equal(newForm.def.id);
         }))));
 
-  // eslint-disable-next-line no-unused-vars
   it('should preserve submissions', testService((service, { Projects, Forms }) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms/simple/submissions')

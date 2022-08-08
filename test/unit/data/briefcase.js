@@ -1,8 +1,6 @@
 const appRoot = require('app-root-path');
-// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const uuid = require('uuid/v4');
-// eslint-disable-next-line no-unused-vars
 const { construct } = require('ramda');
 const streamTest = require('streamtest').v2;
 // eslint-disable-next-line import/no-dynamic-require
@@ -690,7 +688,6 @@ Candace,2,three,three/children/child[1]
       </h:html>`;
 
     const inStream = streamTest.fromObjects(
-      // eslint-disable-next-line no-unused-vars
       (new Array(127)).fill(null).map(_ => instance(uuid(), `<orx:meta><orx:instanceID>${uuid()}</orx:instanceID></orx:meta><name>${uuid()}</name><children><child><name>${uuid()}</name></child></children>`))); // eslint-disable-line function-paren-newline
 
     callAndParse(inStream, formXml, 'singlerepeat', (err, result) => {

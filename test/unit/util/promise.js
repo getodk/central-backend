@@ -1,9 +1,7 @@
-// eslint-disable-next-line no-unused-vars
 const should = require('should');
-// eslint-disable-next-line no-unused-vars
 const { identity } = require('ramda');
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
+// eslint-disable-next-line import/no-dynamic-require
 const { resolve, getOrElse, getOrReject, getOrNotFound, timebound } = require(appRoot + '/lib/util/promise');
 // eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
@@ -46,7 +44,7 @@ describe('getOr', () => {
 
 describe('timebound @slow', () => {
   it('should not reject if the promise resolves', (done) => {
-    // eslint-disable-next-line no-unused-vars, one-var-declaration-per-line, one-var
+    // eslint-disable-next-line one-var-declaration-per-line, one-var
     let pass, fail, passed = false, failed = false;
     // eslint-disable-next-line no-shadow
     const promise = new Promise((resolve, reject) => { pass = resolve; fail = reject; });
@@ -62,7 +60,7 @@ describe('timebound @slow', () => {
   });
 
   it('should resolve with the correct value', (done) => {
-    // eslint-disable-next-line no-unused-vars, one-var-declaration-per-line, one-var
+    // eslint-disable-next-line one-var-declaration-per-line, one-var
     let pass, fail, passedWith;
     // eslint-disable-next-line no-shadow
     const promise = new Promise((resolve, reject) => { pass = resolve; fail = reject; });
@@ -84,7 +82,7 @@ describe('timebound @slow', () => {
   });
 
   it('should not resolve if the timebound passes', (done) => {
-    // eslint-disable-next-line no-unused-vars, one-var-declaration-per-line, one-var
+    // eslint-disable-next-line one-var-declaration-per-line, one-var
     let pass, fail, passed = false, failed = false;
     // eslint-disable-next-line no-shadow
     const promise = new Promise((resolve, reject) => { pass = resolve; fail = reject; });

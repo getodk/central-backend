@@ -1,9 +1,7 @@
 const appRoot = require('app-root-path');
-// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const streamTest = require('streamtest').v2;
 const { Readable } = require('stream');
-// eslint-disable-next-line no-unused-vars
 const { always, identity } = require('ramda');
 // eslint-disable-next-line import/no-dynamic-require
 const { traverseXml, Traversal, applyTraversal, findOne, findAll, and, root, node, hasAttr, getAll, attr, text, tree, stripNamespacesFromPath } = require(appRoot + '/lib/util/xml');
@@ -69,16 +67,16 @@ describe('util/xml', () => {
       });
 
       it('should give the Optioned results returned by each traverser', () => {
-        // eslint-disable-next-line no-unused-vars, no-confusing-arrow
+        // eslint-disable-next-line no-confusing-arrow
         const mtA = (e, x, y) => (e === 'open') ? x : mtA;
-        // eslint-disable-next-line no-unused-vars, no-confusing-arrow
+        // eslint-disable-next-line no-confusing-arrow
         const mtB = (e, x, y) => (e === 'text') ? x : mtB;
         return traverseXml('<root><child id="test"/>sometext</root>', [ mtA, mtB ])
           .then((results) => { results.should.eql([ Option.of('root'), Option.of('sometext') ]); });
       });
 
       it('should stop parsing early if every traverser has returned', () => {
-        // eslint-disable-next-line no-unused-vars, no-confusing-arrow
+        // eslint-disable-next-line no-confusing-arrow
         const mtA = (e, x, y) => (e === 'open') ? x : mtA;
         // eslint-disable-next-line no-confusing-arrow
         const mtB = (e, x, y) => ((e === 'open') && (x === 'child')) ? y : mtB;
@@ -92,7 +90,7 @@ describe('util/xml', () => {
       });
 
       it('should return Option.none for traversers that never return', () => {
-        // eslint-disable-next-line no-unused-vars, no-confusing-arrow
+        // eslint-disable-next-line no-confusing-arrow
         const mtA = (e, x, y) => (e === 'open') ? x : mtA;
         const mtB = () => mtB;
         return traverseXml('<root><child id="test"/>sometext</root>', [ mtA, mtB ])
@@ -100,7 +98,7 @@ describe('util/xml', () => {
       });
 
       it('should translate exceptions into rejections (static text)', () => {
-        // eslint-disable-next-line semi, no-unused-vars
+        // eslint-disable-next-line semi
         const tf = (e, x, y) => { throw new Error('oops') };
         return traverseXml('<root><child id="test"/>sometext</root>', [ tf ])
           .should.be.rejected()
@@ -108,7 +106,7 @@ describe('util/xml', () => {
       });
 
       it('should translate exceptions into rejections (stream)', () => {
-        // eslint-disable-next-line semi, no-unused-vars
+        // eslint-disable-next-line semi
         const tf = (e, x, y) => { throw new Error('oops') };
         const stream = streamTest.fromChunks([ '<root/>' ]);
         return traverseXml(stream, [ tf ])

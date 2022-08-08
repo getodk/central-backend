@@ -119,7 +119,6 @@ describe('query module form purge', () => {
           .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="3"'))
           .set('Content-Type', 'application/xml')
           .expect(200))
-        // eslint-disable-next-line no-unused-vars
         .then((form) => asAlice.delete('/v1/projects/1/forms/simple')
           .expect(200))
         .then(() => container.Forms.purge(true)) // force all deleted forms to be purged

@@ -1,14 +1,13 @@
-// eslint-disable-next-line no-unused-vars
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const should = require('should');
 const config = require('config');
-// eslint-disable-next-line import/no-extraneous-dependencies, no-unused-vars
+// eslint-disable-next-line import/no-extraneous-dependencies
 const superagent = require('superagent');
 const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
-// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
+// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects/:id/forms (listing forms)', () => {
@@ -190,7 +189,6 @@ describe('api: /projects/:id/forms (listing forms)', () => {
             // Collect is particular about this:
             headers['content-type'].should.equal('text/xml; charset=utf-8');
 
-            // eslint-disable-next-line no-unused-vars
             const domain = config.get('default.env.domain');
             text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <xforms xmlns="http://openrosa.org/xforms/xformsList">

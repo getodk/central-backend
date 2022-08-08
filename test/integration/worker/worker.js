@@ -18,7 +18,6 @@ describe('worker', () => {
 
     it('should return false and do nothing if no event is given', () => {
       let called = false;
-      // eslint-disable-next-line no-unused-vars
       const reschedule = () => { called = true; };
       runner({})(null, called).should.equal(false);
       called.should.equal(false);
@@ -26,7 +25,6 @@ describe('worker', () => {
 
     it('should return false and do nothing if no jobs match the event', () => {
       let called = false;
-      // eslint-disable-next-line no-unused-vars
       const reschedule = () => { called = true; };
       const event = { action: 'test.event' };
       runner({}, { other: [ () => Promise.resolve(42) ] })(event, called).should.equal(false);
@@ -99,7 +97,7 @@ describe('worker', () => {
     // ideally we'd test that the error gets written to stderr but i don't like
     // hijacking globals in tests.
     it('should still survive and reschedule if Sentry goes wrong', testContainerFullTrx(async (container) => {
-      // eslint-disable-next-line no-throw-literal, no-unused-vars
+      // eslint-disable-next-line no-throw-literal
       const Sentry = { captureException(err) { throw 'no sentry for you'; } };
       const hijackedContainer = container.with({ Sentry });
 

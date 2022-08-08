@@ -4,15 +4,14 @@ const { sql } = require('slonik');
 const { readdirSync } = require('fs');
 const { join } = require('path');
 const request = require('supertest');
-// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
+// eslint-disable-next-line import/no-dynamic-require
 const { run, task } = require(appRoot + '/lib/task/task');
 
 // knex things.
 const config = require('config');
-// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
+// eslint-disable-next-line import/no-dynamic-require
 const { connect, migrate } = require(appRoot + '/lib/model/migrate');
 const migrator = connect(config.get('test.database'));
-// eslint-disable-next-line no-unused-vars
 const owner = config.get('test.database.user');
 after(() => { migrator.destroy(); });
 

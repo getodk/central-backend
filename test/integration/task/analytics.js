@@ -3,11 +3,10 @@ const should = require('should');
 const { testTask } = require('../setup');
 // eslint-disable-next-line import/no-dynamic-require
 const { runAnalytics } = require(appRoot + '/lib/task/analytics');
-// eslint-disable-next-line import/no-dynamic-require, no-unused-vars
+// eslint-disable-next-line import/no-dynamic-require
 const { setConfiguration } = require(appRoot + '/lib/task/config');
 
 describe('task: analytics', () => {
-  // eslint-disable-next-line no-unused-vars
   it('should not compute analytics if not enabled', testTask(({ Configs }) =>
     runAnalytics()
       .then((res) => {
@@ -38,7 +37,6 @@ describe('task: analytics', () => {
           // eslint-disable-next-line indent
         })))));
 
-  // eslint-disable-next-line no-unused-vars
   it('should send analytics if enabled and time to send', testTask(({ Configs, Audits, odkAnalytics }) =>
     Configs.set('analytics', { enabled: true, email: 'test@getodk.org' })
       // eslint-disable-next-line indent
@@ -63,7 +61,6 @@ describe('task: analytics', () => {
           // eslint-disable-next-line indent
         })))));
 
-  // eslint-disable-next-line no-unused-vars
   it('should log event and full report if analytics sent successfully', testTask(({ Configs, Audits, odkAnalytics }) =>
     // eslint-disable-next-line quotes
     Configs.set('analytics', { email: 'test@getodk.org', organization: "ODK", enabled: true })

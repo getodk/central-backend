@@ -36,7 +36,6 @@ describe('container', () => {
     it('should wrap returned streams with promises', (done) => {
       queryModuleBuilder({ f: () => () => streamTest.fromObjects([ {} ]) })
         .f()
-        // eslint-disable-next-line no-unused-vars
         .then((result) => {
           // the fact that .then() does not crash is really the point here.
           done();
@@ -55,7 +54,6 @@ describe('container', () => {
 
     it('should provide own context to query modules', (done) => {
       const module = {
-        // eslint-disable-next-line no-unused-vars
         proc1: (x) => ({ injected }) => injected.proc2(3),
         proc2: (y) => () => Promise.resolve(y * 2)
       };

@@ -1,4 +1,3 @@
-// eslint-disable-next-line no-unused-vars
 const should = require('should');
 const appRoot = require('app-root-path');
 const { createReadStream } = require('fs');
