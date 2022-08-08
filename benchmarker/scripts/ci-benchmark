@@ -1,0 +1,62 @@
+#!/bin/bash -eu
+set -o pipefail
+
+serverUrl="http://localhost:8383"
+userEmail="x@example.com"
+userPassword="secret1234"
+
+log() {
+  echo "[ci-benchmark] $*"
+}
+
+fail_job() {
+  log 'Job failed.'
+  exit 1
+}
+
+make base
+
+node ./lib/bin/cli.js user-create  -u "$userEmail" -p "$userPassword"
+node ./lib/bin/cli.js user-promote -u "$userEmail"
+
+make run >backend.log 2>&1 &
+
+cd benchmarker
+npm ci
+
+log 'Waiting for backend to start...'
+timeout 30 bash -c "while ! curl -s -o /dev/null $serverUrl; do sleep 1; done"
+log 'Backend started!'
+
+node index.js -s "$serverUrl" -P "$userPassword" -L /tmp/benchmarker-logs
+
+if ! curl -s -o /dev/null "$serverUrl"; then
+  log 'Backend died.'
+  fail_job
+fi
+
+responseLog="$(mktemp)"
+requestBody='{"email":"'"$userEmail"'","password":"'"$userPassword"'"}'
+loginStatus="$(curl -s -o "$responseLog" -w '%{http_code}' \
+  --header 'Content-Type: application/json' --data "$requestBody" \
+  "$serverUrl/v1/sessions"
+)"
+if [[ "$loginStatus" = "200" ]]; then
+  log 'Backend survived; job should pass.'
+else
+  log 'Backend behaving badly:'
+  log "$(cat "$responseLog")"
+  fail_job
+fi
+
+log 'Checking open DB query count...'
+(cd .. && node lib/bin/check-open-db-queries.js)
+
+# TODO upload results to getodk.cloud for graphing.  Include:
+#
+# * key metrics (for graphing against other branches)
+#   * throughput
+#   * average response time
+#   * response time range (quickest, slowest)
+#   * did export response sizes vary?
+# * individual response timings (to see if e.g. response times degrade over time)
