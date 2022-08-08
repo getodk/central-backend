@@ -29,10 +29,10 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
               Users.getByEmail('alice@getodk.org').then((o) => o.get()),
               Audits.getLatestByAction('form.delete').then((o) => o.get())
             ])
-            .then(([ alice, log ]) => {
-              log.actorId.should.equal(alice.actor.id);
-              log.acteeId.should.equal(form.acteeId);
-            }))))));
+              .then(([ alice, log ]) => {
+                log.actorId.should.equal(alice.actor.id);
+                log.acteeId.should.equal(form.acteeId);
+              }))))));
 
     it('should not return associated assignments for a deleted form', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -115,10 +115,10 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
             Forms.getByProjectAndXmlFormId(1, 'simple').then((o) => o.get()),
             Audits.getLatestByAction('form.restore').then((o) => o.get())
           ])
-          .then(([ alice, form, log ]) => {
-            log.actorId.should.equal(alice.actor.id);
-            log.acteeId.should.equal(form.acteeId);
-          })))));
+            .then(([ alice, form, log ]) => {
+              log.actorId.should.equal(alice.actor.id);
+              log.acteeId.should.equal(form.acteeId);
+            })))));
 
     it('should restore a specific form by numeric id when multiple trashed forms share the same xmlFormId', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -199,7 +199,7 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
           asAlice.post(`/v1/projects/1/app-users`)
             .send({ displayName: 'test app user' })
             .then(({ body }) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${body.id}`)
-                .expect(200)
+              .expect(200)
               .then(() => service.post(`/v1/key/${body.token}/projects/1/forms/simple/submissions`)
                 .send(testData.instances.simple.one)
                 .set('Content-Type', 'application/xml')
@@ -227,8 +227,8 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
               .expect(200))
             .then(() => asAlice.delete('/v1/projects/1/forms/simple')
               .expect(200))
-              .then(() => asAlice.get('/v1/projects/1/forms/simple/assignments')
-                .expect(404)))));
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/assignments')
+              .expect(404)))));
     });
   });
 });

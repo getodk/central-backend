@@ -97,31 +97,31 @@ describe('managed encryption', () => {
               .concat([ new Key({ public: 'test' }) ]),
             Keys.create
           )
-          .then((keys) => Keys.getDecryptor({ [keys[0].id]: 'alpha', [keys[1].id]: 'beta', [keys[2].id]: 'charlie' })
-            .then((decryptor) => new Promise((done) => {
+            .then((keys) => Keys.getDecryptor({ [keys[0].id]: 'alpha', [keys[1].id]: 'beta', [keys[2].id]: 'charlie' })
+              .then((decryptor) => new Promise((done) => {
               // create alpha decrypt stream:
-              const encAlpha = encryptInstance(makePubkey(keys[0].public), '', testData.instances.simple.one);
-              const clearAlpha = decryptor(encAlpha.encInstance, keys[0].id, encAlpha.encAeskey.toString('base64'),
-                'one', 0);
+                const encAlpha = encryptInstance(makePubkey(keys[0].public), '', testData.instances.simple.one);
+                const clearAlpha = decryptor(encAlpha.encInstance, keys[0].id, encAlpha.encAeskey.toString('base64'),
+                  'one', 0);
 
-              // create beta decrypt stream:
-              const encBeta = encryptInstance(makePubkey(keys[1].public), '', testData.instances.simple.two);
-              const clearBeta = decryptor(encBeta.encInstance, keys[1].id, encBeta.encAeskey.toString('base64'),
-                'two', 0);
+                // create beta decrypt stream:
+                const encBeta = encryptInstance(makePubkey(keys[1].public), '', testData.instances.simple.two);
+                const clearBeta = decryptor(encBeta.encInstance, keys[1].id, encBeta.encAeskey.toString('base64'),
+                  'two', 0);
 
-              // verify no charlie:
-              (decryptor(null, keys[2].id) === null).should.equal(true);
+                // verify no charlie:
+                (decryptor(null, keys[2].id) === null).should.equal(true);
 
-              clearAlpha.pipe(toText((_, textAlpha) => {
-                textAlpha.should.equal(testData.instances.simple.one);
+                clearAlpha.pipe(toText((_, textAlpha) => {
+                  textAlpha.should.equal(testData.instances.simple.one);
 
                   // eslint-disable-next-line no-shadow
                   clearBeta.pipe(toText((_, textBeta) => {
-                  textBeta.should.equal(testData.instances.simple.two);
-                  done();
+                    textBeta.should.equal(testData.instances.simple.two);
+                    done();
+                  }));
                 }));
-              }));
-            }))))));
+              }))))));
   });
 
   describe('encrypted submission attachment parsing', () => {
@@ -148,7 +148,7 @@ describe('managed encryption', () => {
             null, null, 'alpha.file', 1, false,
             null, null, 'bravo.file', 2, false,
             null, null, 'submission.xml.enc', 3, null
-            ]);
+          ]);
         });
     }));
   });
@@ -263,8 +263,8 @@ describe('managed encryption', () => {
             .then(({ body }) => body[0].id))
           // eslint-disable-next-line quotes
           .then((keyId) => pZipStreamToFiles(asAlice.post(`/v1/projects/1/forms/simple/submissions.csv.zip`)
-              .send(`${keyId}=supersecret`)
-              .set('Content-Type', 'application/x-www-form-urlencoded'))
+            .send(`${keyId}=supersecret`)
+            .set('Content-Type', 'application/x-www-form-urlencoded'))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
               result['simple.csv'].should.be.an.EncryptedSimpleCsv();
@@ -292,10 +292,10 @@ describe('managed encryption', () => {
           ]))
           // eslint-disable-next-line quotes
           .then(([ keyId, session ]) => pZipStreamToFiles(service.post(`/v1/projects/1/forms/simple/submissions.csv.zip`)
-              .send(`${keyId}=supersecret&__csrf=${session.csrf}`)
-              .set('Cookie', `__Host-session=${session.token}`)
-              .set('X-Forwarded-Proto', 'https')
-              .set('Content-Type', 'application/x-www-form-urlencoded'))
+            .send(`${keyId}=supersecret&__csrf=${session.csrf}`)
+            .set('Cookie', `__Host-session=${session.token}`)
+            .set('X-Forwarded-Proto', 'https')
+            .set('Content-Type', 'application/x-www-form-urlencoded'))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
               result['simple.csv'].should.be.an.EncryptedSimpleCsv();
@@ -317,7 +317,7 @@ describe('managed encryption', () => {
             .then(({ body }) => body[0].id))
           // eslint-disable-next-line quotes
           .then((keyId) => pZipStreamToFiles(asAlice.post(`/v1/projects/1/forms/simple/submissions.csv.zip`)
-              .send({ [keyId]: 'supersecret' }))
+            .send({ [keyId]: 'supersecret' }))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
               result['simple.csv'].should.be.an.EncryptedSimpleCsv();
@@ -355,16 +355,16 @@ describe('managed encryption', () => {
             .expect(200)
             .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
             .then((send) => send(testData.instances.simple.one, { 'testfile.jpg.enc': 'hello this is a suffixed file' }))
-          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
-            .expect(200)
-            .then(({ body }) => body[0].id))
-          .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
-            .then((result) => {
-              result.filenames.length.should.equal(2);
-              result.filenames.should.containDeep([ 'simple.csv', 'media/testfile.jpg' ]);
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
+              .expect(200)
+              .then(({ body }) => body[0].id))
+            .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
+              .then((result) => {
+                result.filenames.length.should.equal(2);
+                result.filenames.should.containDeep([ 'simple.csv', 'media/testfile.jpg' ]);
 
-              result['media/testfile.jpg'].should.equal('hello this is a suffixed file');
-            }))))));
+                result['media/testfile.jpg'].should.equal('hello this is a suffixed file');
+              }))))));
 
     it('should decrypt client audit log attachments', testService((service, container) =>
       service.login('alice', (asAlice) =>

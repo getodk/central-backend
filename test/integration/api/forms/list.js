@@ -72,7 +72,7 @@ describe('api: /projects/:id/forms (listing forms)', () => {
 
     it('should list soft-deleted forms including extended metadata and submissions', testService((service) =>
       service.login('alice', (asAlice) =>
-         asAlice.post('/v1/projects/1/forms/simple/submissions')
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'application/xml')
           .expect(200)
@@ -283,7 +283,7 @@ describe('api: /projects/:id/forms (listing forms)', () => {
           .set('Content-Type', 'application/xml')
           .expect(200)
           .then(() => asAlice.get('/v1/projects/1/formList')
-              .set('X-OpenRosa-Version', '1.0')
+            .set('X-OpenRosa-Version', '1.0')
             .expect(200)
             .then(({ text }) => {
               text.includes('simple2').should.equal(false);

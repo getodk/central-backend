@@ -353,10 +353,10 @@ describe('endpoints', () => {
 
       it('should not initiate a transaction given a nonwrite POST', () => {
         let transacted = false;
-          const container = {
-            transacting(cb) { transacted = true; return cb(); },
-            with() { return container; }
-          };
+        const container = {
+          transacting(cb) { transacted = true; return cb(); },
+          with() { return container; }
+        };
 
         const request = {
           method: 'POST',

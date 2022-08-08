@@ -147,15 +147,15 @@ describe('api: /assignments', () => {
             asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id),
             // eslint-disable-next-line no-shadow
             asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id)
-            ]).then(([ actorId, roleId ]) => {
-              body.length.should.equal(1);
-              body[0].should.eql({ actorId, roleId });
-            })))));
+          ]).then(([ actorId, roleId ]) => {
+            body.length.should.equal(1);
+            body[0].should.eql({ actorId, roleId });
+          })))));
 
     it('should return assignments in extended metadata format if requested', testService((service) =>
       service.login('alice', (asAlice) => Promise.all([
-          asAlice.get('/v1/assignments').set('X-Extended-Metadata', true).expect(200).then(({ body }) => body),
-          asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id)
+        asAlice.get('/v1/assignments').set('X-Extended-Metadata', true).expect(200).then(({ body }) => body),
+        asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id)
       ]).then(([ assignments, adminRoleId ]) => {
         assignments.length.should.equal(1);
         Object.keys(assignments[0]).should.eql([ 'actorId', 'roleId', 'actor' ]);
@@ -316,9 +316,9 @@ describe('api: /assignments', () => {
           asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
         ])
           .then(([ roleId, aliceId ]) => asAlice.delete(`/v1/assignments/${roleId}/${aliceId}`)
-              .expect(200)
-              // again, verify the self-demotion.
-              .then(() => asAlice.get('/v1/assignments').expect(403))))));
+            .expect(200)
+          // again, verify the self-demotion.
+            .then(() => asAlice.get('/v1/assignments').expect(403))))));
 
       it('should log the action in the audit log', testService((service, { Audits, Users }) =>
         Users.getByEmail('alice@getodk.org')
@@ -416,9 +416,9 @@ describe('/projects/:id/assignments', () => {
     it('should not permit granting rights one does not have', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/users/current').expect(200).then(({ body }) => body.id)
-        .then((chelseaId) => service.login('bob', (asBob) =>
-          asBob.post(`/v1/projects/1/assignments/admin/${chelseaId}`)
-            .expect(403))))));
+          .then((chelseaId) => service.login('bob', (asBob) =>
+            asBob.post(`/v1/projects/1/assignments/admin/${chelseaId}`)
+              .expect(403))))));
 
     it('should assign the actor by role system name', testService((service) =>
       service.login('bob', (asBob) => service.login('chelsea', (asChelsea) =>
@@ -445,24 +445,24 @@ describe('/projects/:id/assignments', () => {
                 body.map((actor) => actor.displayName).should.eql([ 'Bob', 'Chelsea' ]);
               })))))));
 
-      it('should log the action in the audit log', testService((service, { Audits, Projects, Users }) =>
-        Users.getByEmail('chelsea@getodk.org')
-          .then((maybeChelsea) => maybeChelsea.get())
-          .then((chelsea) => service.login('alice', (asAlice) =>
-            asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id)
-              .then((adminRoleId) => asAlice.post(`/v1/projects/1/assignments/${adminRoleId}/${chelsea.actor.id}`)
-                .expect(200)
-                .then(() => Promise.all([
-                  Projects.getById(1).then((x) => x.get()),
-                  Users.getByEmail('alice@getodk.org').then((maybeAlice) => maybeAlice.get()),
-                  Audits.getLatestByAction('user.assignment.create')
-                ]))
-                .then(([ project, alice, audit ]) => {
-                  audit.isDefined().should.equal(true);
-                  audit.get().actorId.should.equal(alice.actor.id);
-                  audit.get().acteeId.should.equal(chelsea.actor.acteeId);
-                  audit.get().details.should.eql({ roleId: adminRoleId, grantedActeeId: project.acteeId });
-                }))))));
+    it('should log the action in the audit log', testService((service, { Audits, Projects, Users }) =>
+      Users.getByEmail('chelsea@getodk.org')
+        .then((maybeChelsea) => maybeChelsea.get())
+        .then((chelsea) => service.login('alice', (asAlice) =>
+          asAlice.get('/v1/roles/admin').expect(200).then(({ body }) => body.id)
+            .then((adminRoleId) => asAlice.post(`/v1/projects/1/assignments/${adminRoleId}/${chelsea.actor.id}`)
+              .expect(200)
+              .then(() => Promise.all([
+                Projects.getById(1).then((x) => x.get()),
+                Users.getByEmail('alice@getodk.org').then((maybeAlice) => maybeAlice.get()),
+                Audits.getLatestByAction('user.assignment.create')
+              ]))
+              .then(([ project, alice, audit ]) => {
+                audit.isDefined().should.equal(true);
+                audit.get().actorId.should.equal(alice.actor.id);
+                audit.get().acteeId.should.equal(chelsea.actor.acteeId);
+                audit.get().details.should.eql({ roleId: adminRoleId, grantedActeeId: project.acteeId });
+              }))))));
   });
 
   describe('/:roleId/:actorId DELETE', () => {
@@ -510,24 +510,24 @@ describe('/projects/:id/assignments', () => {
                 .expect(200)
                 .then(({ body }) => { body.length.should.equal(0); })))))));
 
-      it('should log the action in the audit log', testService((service, { Audits, Projects, Users }) =>
-        Users.getByEmail('bob@getodk.org')
-          .then((maybeBob) => maybeBob.get())
-          .then((bob) => service.login('alice', (asAlice) =>
-            asAlice.get('/v1/roles/manager').expect(200).then(({ body }) => body.id)
-              .then((managerRoleId) => asAlice.delete(`/v1/projects/1/assignments/${managerRoleId}/${bob.actor.id}`)
-                .expect(200)
-                .then(() => Promise.all([
-                  Projects.getById(1).then((x) => x.get()),
-                  Users.getByEmail('alice@getodk.org').then((x) => x.get()),
-                  Audits.getLatestByAction('user.assignment.delete')
-                ]))
-                .then(([ project, alice, audit ]) => {
-                  audit.isDefined().should.equal(true);
-                  audit.get().actorId.should.equal(alice.actor.id);
-                  audit.get().acteeId.should.equal(bob.actor.acteeId);
-                  audit.get().details.should.eql({ roleId: managerRoleId, revokedActeeId: project.acteeId });
-                }))))));
+    it('should log the action in the audit log', testService((service, { Audits, Projects, Users }) =>
+      Users.getByEmail('bob@getodk.org')
+        .then((maybeBob) => maybeBob.get())
+        .then((bob) => service.login('alice', (asAlice) =>
+          asAlice.get('/v1/roles/manager').expect(200).then(({ body }) => body.id)
+            .then((managerRoleId) => asAlice.delete(`/v1/projects/1/assignments/${managerRoleId}/${bob.actor.id}`)
+              .expect(200)
+              .then(() => Promise.all([
+                Projects.getById(1).then((x) => x.get()),
+                Users.getByEmail('alice@getodk.org').then((x) => x.get()),
+                Audits.getLatestByAction('user.assignment.delete')
+              ]))
+              .then(([ project, alice, audit ]) => {
+                audit.isDefined().should.equal(true);
+                audit.get().actorId.should.equal(alice.actor.id);
+                audit.get().acteeId.should.equal(bob.actor.acteeId);
+                audit.get().details.should.eql({ roleId: managerRoleId, revokedActeeId: project.acteeId });
+              }))))));
   });
 });
 

@@ -374,8 +374,8 @@ describe('api: /projects', () => {
           asChelsea.get('/v1/users/current').expect(200)
             .then(({ body }) => body.id)
             .then((chelseaId) => Promise.all([
-               asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`).expect(200),
-               asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`).expect(200),
+              asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`).expect(200),
+              asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`).expect(200),
             ]))
             .then(() => asChelsea.get('/v1/projects/1')
               .set('X-Extended-Metadata', 'true')
@@ -1381,8 +1381,8 @@ describe('api: /projects?forms=true', () => {
           asChelsea.get('/v1/users/current').expect(200)
             .then(({ body }) => body.id)
             .then((chelseaId) => Promise.all([
-               asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`).expect(200),
-               asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`).expect(200),
+              asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`).expect(200),
+              asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`).expect(200),
             ]))
             .then(() => asChelsea.get('/v1/projects?forms=true')
               .expect(200)
@@ -1405,32 +1405,32 @@ describe('api: /projects?forms=true', () => {
               }))))));
   });
 
-it('should return the correct projects with the correct verbs', testService((service) =>
-  service.login('alice', (asAlice) =>
-    service.login('chelsea', (asChelsea) => Promise.all([
-      asChelsea.get('/v1/users/current')
-        .expect(200)
-        .then(({ body }) => body.id),
-      asAlice.post('/v1/projects')
-        .send({ name: 'Another Project' })
-        .expect(200)
-        .then(({ body }) => body.id)
-    ])
-      .then(([chelseaId, projectId]) => Promise.all([
-        asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`)
-          .expect(200),
-        asAlice.post(`/v1/projects/1/assignments/app-user/${chelseaId}`)
-          .expect(200),
-        asAlice.post(`/v1/projects/${projectId}/assignments/app-user/${chelseaId}`)
+  it('should return the correct projects with the correct verbs', testService((service) =>
+    service.login('alice', (asAlice) =>
+      service.login('chelsea', (asChelsea) => Promise.all([
+        asChelsea.get('/v1/users/current')
           .expect(200)
-      ]))
-      .then(() => asChelsea.get('/v1/projects?forms=true')
-        .expect(200)
-        .then(({ body }) => {
-          body.length.should.equal(1);
-          const project = body[0];
-          project.id.should.equal(1);
-          project.verbs.should.eqlInAnyOrder([
+          .then(({ body }) => body.id),
+        asAlice.post('/v1/projects')
+          .send({ name: 'Another Project' })
+          .expect(200)
+          .then(({ body }) => body.id)
+      ])
+        .then(([chelseaId, projectId]) => Promise.all([
+          asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`)
+            .expect(200),
+          asAlice.post(`/v1/projects/1/assignments/app-user/${chelseaId}`)
+            .expect(200),
+          asAlice.post(`/v1/projects/${projectId}/assignments/app-user/${chelseaId}`)
+            .expect(200)
+        ]))
+        .then(() => asChelsea.get('/v1/projects?forms=true')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            const project = body[0];
+            project.id.should.equal(1);
+            project.verbs.should.eqlInAnyOrder([
               // eslint-disable-next-line no-multi-spaces
               'project.read',     // from role(s): viewer
               // eslint-disable-next-line no-multi-spaces
@@ -1441,7 +1441,7 @@ it('should return the correct projects with the correct verbs', testService((ser
               'submission.read',  // from role(s): viewer
               // eslint-disable-next-line no-multi-spaces
               'submission.list',  // from role(s): viewer
-            'submission.create' // from role(s): app-user
-          ]);
-        }))))));
+              'submission.create' // from role(s): app-user
+            ]);
+          }))))));
 });

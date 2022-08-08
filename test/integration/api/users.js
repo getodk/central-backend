@@ -479,11 +479,11 @@ describe('api: /users', () => {
               Users.getByEmail('alice@getodk.org').then((o) => o.get()),
               Audits.getLatestByAction('user.update').then((o) => o.get())
             ])
-          .then(([ alice, log ]) => {
-            log.actorId.should.equal(alice.actor.id);
-            log.acteeId.should.equal(chelsea.actor.acteeId);
-            log.details.should.eql({ data: { displayName: 'cool chelsea' } });
-          }))))));
+              .then(([ alice, log ]) => {
+                log.actorId.should.equal(alice.actor.id);
+                log.acteeId.should.equal(chelsea.actor.acteeId);
+                log.details.should.eql({ data: { displayName: 'cool chelsea' } });
+              }))))));
   });
 
   describe('/users/:id/password PUT', () => {

@@ -1512,12 +1512,12 @@ describe('api: /forms/:id/submissions', () => {
                 .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
                 .expect(201))
               .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip?$filter=__system/submitterId eq 5'))
-                  .then((result) => {
-                    result.filenames.should.eql([
-                      'binaryType.csv',
-                      'media/my_file1.mp4'
-                    ]);
-                  })))))));
+                .then((result) => {
+                  result.filenames.should.eql([
+                    'binaryType.csv',
+                    'media/my_file1.mp4'
+                  ]);
+                })))))));
 
     it('should list the original submitted form version per submission', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -1540,7 +1540,7 @@ describe('api: /forms/:id/submissions', () => {
             .attach('xml_submission_file', Buffer.from(testData.instances.simple.one
               .replace('id="simple"', 'id="simple" version="updated"')
               .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2')),
-              { filename: 'data.xml' })
+            { filename: 'data.xml' })
             .expect(201))
           .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
             .send(testData.instances.simple.three.replace('id="simple"', 'id="simple" version="updated"'))
@@ -1703,11 +1703,11 @@ describe('api: /forms/:id/submissions', () => {
             .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
             .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
             .expect(201))
-            .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip?attachments=false')
-              .expect(200)
-              .then(({ headers }) => {
-                headers['content-disposition'].should.equal('attachment; filename="binaryType.csv.zip"; filename*=UTF-8\'\'binaryType.csv.zip');
-              })))));
+          .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip?attachments=false')
+            .expect(200)
+            .then(({ headers }) => {
+              headers['content-disposition'].should.equal('attachment; filename="binaryType.csv.zip"; filename*=UTF-8\'\'binaryType.csv.zip');
+            })))));
 
     it('should omit group paths if ?groupPaths=false is given', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -2319,15 +2319,15 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     it('should not log the action in the audit log', testService((service) =>
       service.login('alice', (asAlice) =>
-         asAlice.post('/v1/projects/1/forms/simple/draft')
-           .expect(200)
-           .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip')
-             .expect(200))
-           .then(() => asAlice.get('/v1/audits?action=form.submission.export')
-             .expect(200)
-             .then(({ body }) => {
-               body.length.should.equal(0);
-             })))));
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip')
+            .expect(200))
+          .then(() => asAlice.get('/v1/audits?action=form.submission.export')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(0);
+            })))));
 
     it('should split select multiple values submitted over /test/ if ?splitSelectMultiples=true', testService((service, container) =>
       service.login('alice', (asAlice) =>
@@ -3645,7 +3645,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then((form) => Submissions.getAnyDefByFormAndInstanceId(form.id, 'both', false)
             .then((o) => o.get())
             .then((def) => SubmissionAttachments.getBySubmissionDefIdAndName(def.id, 'my_file1.mp4')
-            .then((o) => o.get())
+              .then((o) => o.get())
               .then((oldAttachment) => asAlice.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
                 .set('Content-Type', 'video/mp4')
                 .send('testvideo2')
@@ -3905,21 +3905,21 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .send({ name: 'project two' })
             .expect(200)
             .then(({ body }) => body.id)
-          .then((projectId) => asAlice.post(`/v1/projects/${projectId}/forms?publish=true`)
-            .send(testData.forms.simple)
-            .expect(200)
-            .then(() => asAlice.post(`/v1/projects/${projectId}/forms/simple/submissions`)
-              .send(testData.instances.simple.one)
-              .set('Content-Type', 'text/xml')
-              .expect(200))
-            .then(() => Promise.all([
-              asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions/one')
-                .expect(200)
-                .then(({ body }) => { body.instanceName.should.equal('custom name'); }),
-              asAlice.get(`/v1/projects/${projectId}/forms/simple/submissions/one/versions/one`)
-                .expect(200)
-                .then(({ body }) => { should(body.instanceName).equal(null); })
-            ])))))));
+            .then((projectId) => asAlice.post(`/v1/projects/${projectId}/forms?publish=true`)
+              .send(testData.forms.simple)
+              .expect(200)
+              .then(() => asAlice.post(`/v1/projects/${projectId}/forms/simple/submissions`)
+                .send(testData.instances.simple.one)
+                .set('Content-Type', 'text/xml')
+                .expect(200))
+              .then(() => Promise.all([
+                asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions/one')
+                  .expect(200)
+                  .then(({ body }) => { body.instanceName.should.equal('custom name'); }),
+                asAlice.get(`/v1/projects/${projectId}/forms/simple/submissions/one/versions/one`)
+                  .expect(200)
+                  .then(({ body }) => { should(body.instanceName).equal(null); })
+              ])))))));
   });
 });
 

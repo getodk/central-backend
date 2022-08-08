@@ -143,9 +143,9 @@ describe('stream utils', () => {
       PartialPipe.of(fromObjects([ 4, 8, 15, 16, 23, 42 ]), doubler())
         .with(doubler())
         .with(toObjects((e, result) => {
-            result.should.eql([ 16, 32, 60, 64, 92, 168 ]);
-            done();
-          })
+          result.should.eql([ 16, 32, 60, 64, 92, 168 ]);
+          done();
+        })
         ).pipeline(noop)); // eslint-disable-line function-paren-newline
 
     it('should not callback if there is no error', (done) => {

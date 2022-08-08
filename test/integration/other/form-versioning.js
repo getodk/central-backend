@@ -57,13 +57,13 @@ describe('form forward versioning', () => {
           Form.fromXml(newXml),
           Forms.getByProjectAndXmlFormId(1, 'simple').then(force)
         ])
-        .then(([ partial, form ]) => Forms.createVersion(partial, form, true))
-        .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions')
-          .expect(200)
-          .then(({ body }) => {
-            body.length.should.equal(3);
-            body.map((row) => row.instanceId).should.eql([ 'three', 'two', 'one' ]);
-          }))))));
+          .then(([ partial, form ]) => Forms.createVersion(partial, form, true))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(3);
+              body.map((row) => row.instanceId).should.eql([ 'three', 'two', 'one' ]);
+            }))))));
 
   const withAttachmentsMatching = testData.forms.withAttachments
     .replace('id="withAttachments"', 'id="withAttachments" version="two"');

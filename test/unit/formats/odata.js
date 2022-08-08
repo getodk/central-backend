@@ -141,7 +141,7 @@ describe('odata message composition', () => {
       </EnumType>
     </Schema>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.my_awesome_form_">`);
-      }));
+    }));
 
     it('should yield all the correct data types', () =>
       fieldsFor(`<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
@@ -297,7 +297,7 @@ describe('odata message composition', () => {
     </Schema>
   </edmx:DataServices>
 </edmx:Edmx>`);
-      }));
+    }));
 
     it('should appropriately name repeat-parent join ids', () => fieldsFor(testData.forms.doubleRepeat).then((fields) => {
       edmxFor('double', fields).includes(`<EntityType Name="Submissions.children.child.toys.toy">
@@ -379,8 +379,8 @@ describe('odata message composition', () => {
             </repeat>
           </h:body>
         </h:html>`).then((fields) => {
-          const edmx = edmxFor('pathprefix', fields);
-          edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
+      const edmx = edmxFor('pathprefix', fields);
+      edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
 <edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
   <edmx:DataServices>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
@@ -424,7 +424,7 @@ describe('odata message composition', () => {
         <Property Name="name" Type="Edm.String"/>
       </EntityType>
       <EntityContainer Name="pathprefix">`);
-        }));
+    }));
 
     it('should not be fooled by nested groups closing one after the other', () => fieldsFor(`<?xml version="1.0"?>
         <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
@@ -457,8 +457,8 @@ describe('odata message composition', () => {
             </input>
           </h:body>
         </h:html>`).then((fields) => {
-          const edmx = edmxFor('form', fields);
-          edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
+      const edmx = edmxFor('form', fields);
+      edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
 <edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
   <edmx:DataServices>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
@@ -500,7 +500,7 @@ describe('odata message composition', () => {
       <ComplexType Name="outer.inner">
         <Property Name="q1" Type="Edm.String"/>
       </ComplexType>`);
-        }));
+    }));
   });
 
   describe('rowstream conversion', () => {

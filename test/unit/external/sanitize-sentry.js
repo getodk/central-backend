@@ -42,7 +42,7 @@ const cases = [
   ],
   // Authorization header
   [
-   {
+    {
       cookies: {},
       data: '{}',
       headers: {

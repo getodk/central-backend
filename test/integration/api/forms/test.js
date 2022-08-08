@@ -125,7 +125,7 @@ describe('api: /projects/:id/forms (testing drafts)', () => {
       <manifestUrl>${domain}/v1/test/${token}/projects/1/forms/withAttachments/draft/manifest</manifestUrl>
     </xform>
   </xforms>`);
-              }))))));
+                }))))));
     });
 
     describe('/manifest GET', () => {
