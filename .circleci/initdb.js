@@ -14,6 +14,7 @@ const knex = require('knex');
   const dbjt = knex({ client: 'pg', connection: { host: 'localhost', user: 'postgres', database: 'jubilant_test', password: 'odktest' } });
   await dbjt.raw('create extension citext;');
   await dbjt.raw('create extension pg_trgm;');
+  await dbjt.raw('create extension uuid-ossp;');
   dbjt.destroy();
 })();
 
