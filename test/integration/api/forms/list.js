@@ -397,7 +397,7 @@ describe('api: /projects/:id/forms (listing forms)', () => {
     it.only('should encode html entities in the response', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.simple.replace('<h:title>Simple</h:title>', '<h:title>Crate &amp; Barrel</h:title>').replace('id="simple"','id="htmlEntities"'))
+          .send(testData.forms.simple.replace('<h:title>Simple</h:title>', '<h:title>Crate &amp; Barrel</h:title>').replace('id="simple"', 'id="htmlEntities"'))
           .set('Content-Type', 'application/xml')
           .expect(200)
           .then(() => asAlice.get('/v1/projects/1/formList')
@@ -405,7 +405,7 @@ describe('api: /projects/:id/forms (listing forms)', () => {
             .expect(200)
             .then(({ text }) => {
               text.should.containEql('<name>Crate &amp; Barrel</name>');
-              text.should.not.containEql('<name>Crate &amp;amp; Barrel</name>');              
+              text.should.not.containEql('<name>Crate &amp;amp; Barrel</name>');
             })))));
   });
 });
