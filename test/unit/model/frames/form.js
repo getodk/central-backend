@@ -76,6 +76,13 @@ describe('Form', () => {
         partial.aux.key.isDefined().should.equal(false);
       });
     });
+
+    it('should decode form title', () => {
+      const xml = '<html><head><title>Crate &amp; Barrel</title><model><instance><data id="mycoolform"><field/></data></instance></model></head></html>';
+      return Form.fromXml(xml).then((partial) => {
+        partial.name.should.equal('Crate & Barrel');
+      });
+    });
   });
 });
 

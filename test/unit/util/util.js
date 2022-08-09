@@ -62,5 +62,6 @@ describe('util/util', () => {
       (blankStringToNull(' ') === ' ').should.equal(true);
     });
   });
+
 });
 
