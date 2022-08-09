@@ -8,7 +8,7 @@ const { Dataset } = require(appRoot + '/lib/model/frames/dataset');
 
 describe('datasets', () => {
     describe('create', () => {
-      it.only('should create a dataset', testService((_, { Datasets }) => {
+      it('should create a dataset', testService((_, { Datasets }) => {
 
         const ds = new Dataset({ name: 'people', projectId: 1 });
 
