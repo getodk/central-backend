@@ -1,6 +1,7 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { map, sortBy } = require('ramda');
+const { map } = require('ramda');
+// eslint-disable-next-line import/no-dynamic-require
 const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { testService } = require('../setup');
 
@@ -185,6 +186,7 @@ describe('api: /config', () => {
               .expect(200)
               .then(({ body }) => {
                 body.setAt.should.be.an.isoDate();
+                // eslint-disable-next-line no-param-reassign
                 delete body.setAt;
                 body.should.eql({ type: 'google' });
               })))));
@@ -295,6 +297,7 @@ describe('api: /config', () => {
               .set('Authorization', `Bearer ${body.token}`)
               .send({ code: 'sad google' })
               .expect(400)
+              // eslint-disable-next-line no-shadow
               .then(({ body }) => {
                 body.code.should.equal(400.9);
                 body.details.reason.should.match(/sad google/);

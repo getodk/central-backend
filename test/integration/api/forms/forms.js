@@ -2,10 +2,12 @@ const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const should = require('should');
 const config = require('config');
+// eslint-disable-next-line import/no-extraneous-dependencies
 const superagent = require('superagent');
 const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
+// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects/:id/forms (create, read, update)', () => {
@@ -600,26 +602,26 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                 body.submissions.should.equal(0);
               })))));
 
-    it('should return the correct enketoId', testService((service, container) =>
-      service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms?publish=true')
-          .set('Content-Type', 'application/xml')
-          .send(testData.forms.simple2)
-          .expect(200)
-          .then(() => exhaust(container))
-          .then(() => {
-            global.enketoToken = '::ijklmnop';
-            return asAlice.post('/v1/projects/1/forms/simple2/draft')
-              .expect(200)
-              .then(() => exhaust(container))
-              .then(() => asAlice.get('/v1/projects/1/forms/simple2')
-                .set('X-Extended-Metadata', true)
+      it('should return the correct enketoId', testService((service, container) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.simple2)
+            .expect(200)
+            .then(() => exhaust(container))
+            .then(() => {
+              global.enketoToken = '::ijklmnop';
+              return asAlice.post('/v1/projects/1/forms/simple2/draft')
                 .expect(200)
-                .then(({ body }) => {
-                  body.enketoId.should.equal('::abcdefgh');
-                  body.enketoOnceId.should.equal('::::abcdefgh');
-                }));
-          }))));
+                .then(() => exhaust(container))
+                .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+                  .set('X-Extended-Metadata', true)
+                  .expect(200)
+                  .then(({ body }) => {
+                    body.enketoId.should.equal('::abcdefgh');
+                    body.enketoOnceId.should.equal('::::abcdefgh');
+                  }));
+            }))));
     });
 
     ////////////////////////////////////////
@@ -806,6 +808,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                 .expect(200)
                 .then(({ body }) => {
                   body[0].updatedAt.should.be.a.recentIsoDate();
+                  // eslint-disable-next-line no-param-reassign
                   delete body[0].updatedAt;
 
                   body.should.eql([
@@ -888,7 +891,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                 .expect(200))
               .then(() => service.login('chelsea', (asChelsea) =>
                 asChelsea.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
-                .expect(403))))));
+                  .expect(403))))));
 
         it('should reject notfound if the file does not exist', testService((service) =>
           service.login('alice', (asAlice) =>
@@ -993,10 +996,10 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple')).then((o) => o.get()),
             Audits.getLatestByAction('form.update').then((o) => o.get())
           ])
-          .then(([ alice, form, log ]) => {
-            log.actorId.should.equal(alice.actor.id);
-            log.acteeId.should.equal(form.acteeId);
-            log.details.should.eql({ data: { state: 'closing' } });
-          })))));
+            .then(([ alice, form, log ]) => {
+              log.actorId.should.equal(alice.actor.id);
+              log.acteeId.should.equal(form.acteeId);
+              log.details.should.eql({ data: { state: 'closing' } });
+            })))));
   });
 });

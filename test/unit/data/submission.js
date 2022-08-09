@@ -1,9 +1,12 @@
 require('should');
 const appRoot = require('app-root-path');
-const { always, construct, filter, compose } = require('ramda');
+const { filter } = require('ramda');
 const { toObjects } = require('streamtest').v2;
+// eslint-disable-next-line import/no-dynamic-require
 const { submissionXmlToFieldStream, getSelectMultipleResponses, _hashedTree, _diffObj, _diffArray, diffSubmissions, _symbols } = require(appRoot + '/lib/data/submission');
+// eslint-disable-next-line import/no-dynamic-require
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
+// eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
 
 describe('submission field streamer', () => {
@@ -92,7 +95,7 @@ describe('diffing', () => {
     it('should return a data tree with decorated subhashes', () =>
       structuralFieldsFor(testData.forms.simple).then((structurals) => {
         const tree = _hashedTree(structurals, testData.instances.simple.one);
-        tree.should.eql({ meta: { instanceID: 'one' }, name: 'Alice', age: '30' })
+        tree.should.eql({ meta: { instanceID: 'one' }, name: 'Alice', age: '30' });
         tree[subhash].should.equal('hrH0KkBn4CaWtrlvSSufP1ZahC4=');
         tree.meta[subhash].should.equal('UHcB81zlJZQME6hp4n+ZVmVZEL8=');
       }));
@@ -139,19 +142,28 @@ describe('diffing', () => {
       structuralFieldsFor(testData.forms.doubleRepeat).then((structurals) => {
         const tree = _hashedTree(structurals, testData.instances.doubleRepeat.double);
         tree.should.eql({
+          // eslint-disable-next-line quotes
           "orx:meta": { "orx:instanceID": "double" },
+          // eslint-disable-next-line quotes
           name: "Vick",
           children: { child: [
+            // eslint-disable-next-line quotes
             { name: "Alice" },
+            // eslint-disable-next-line quotes
             { name: "Bob",
               toys: { toy: [
+                // eslint-disable-next-line quotes
                 { name: "Twilight Sparkle" }, { name: "Pinkie Pie" }, { name: "Applejack" }, { name: "Spike" }
               ] }
+            // eslint-disable-next-line object-curly-newline
             },
+            // eslint-disable-next-line quotes
             { name: "Chelsea",
               toys: { toy: [
+                // eslint-disable-next-line quotes
                 { name: "Rainbow Dash" }, { name: "Rarity" }, { name: "Fluttershy" }, { name: "Princess Luna" }
               ] }
+            // eslint-disable-next-line object-curly-newline
             }
           ] }
         });
@@ -199,10 +211,14 @@ describe('diffing', () => {
         new MockField({ order: 3, name: 'person', path: '/person', type: 'repeat' })
       ];
       _hashedTree(fields, xml).should.eql({
+        // eslint-disable-next-line quotes
         meta: { instanceID: "" },
         person: [
+          // eslint-disable-next-line quotes
           { name: "Amy" },
+          // eslint-disable-next-line quotes
           { name: "Beth" },
+          // eslint-disable-next-line quotes
           { name: "Chase" }
         ]
       });
@@ -259,6 +275,7 @@ describe('diffing', () => {
         .should.eql([{ new: 2, path: [ 'a', 'x' ] }]);
 
       const x = [ 1, 2 ]; x[subhash] = 'abc'; x[subhashes] = [ 1, 2 ];
+      // eslint-disable-next-line no-multi-spaces
       const y = [ 2 ];    y[subhash] = 'xyz'; y[subhashes] = [ 2 ];
       _diffObj({ a: x, [keys]: [ 'a' ] }, { a: y, [keys]: [ 'a' ] }, [])
         .should.eql([{ old: 1, path: [[ 'a', 0 ]] }]);
@@ -266,7 +283,7 @@ describe('diffing', () => {
   });
 
   describe('_diffArray', () => {
-    const { keys, subhash, subhashes, score } = _symbols;
+    const { keys, subhashes } = _symbols;
 
     it('should not see any difference between empty arrays', () => {
       const x = []; x[subhashes] = [];
@@ -301,6 +318,7 @@ describe('diffing', () => {
         .should.eql([{ old: 1, new: 2, path: [ 'data', [ 'repeat', 1 ], 'a' ] }]);
     });
 
+    // eslint-disable-next-line quotes
     it(`should diff mixed changes (x y => x')`, () => {
       const x = [ 'a', { a: 1, [keys]: [ 'a' ] }, { b: 1, [keys]: [ 'b' ] }, 'c' ];
       x[subhashes] = [ 1, 2, 3, 4 ];
@@ -314,6 +332,7 @@ describe('diffing', () => {
       ]);
     });
 
+    // eslint-disable-next-line quotes
     it(`should diff mixed changes (x y => y')`, () => {
       const x = [ 'a', { a: 1, x: 'a', [keys]: [ 'a', 'x' ] }, { b: 1, x: 'b', [keys]: [ 'b', 'x' ] }, 'c' ];
       x[subhashes] = [ 1, 2, 3, 4 ];
@@ -327,6 +346,7 @@ describe('diffing', () => {
       ]);
     });
 
+    // eslint-disable-next-line quotes
     it(`should diff mixed changes (x => x' y)`, () => {
       const x = [ 'a', { a: 1, [keys]: [ 'a' ] }, 'c' ];
       x[subhashes] = [ 1, 2, 3 ];
@@ -340,6 +360,7 @@ describe('diffing', () => {
       ]);
     });
 
+    // eslint-disable-next-line quotes
     it(`should diff mixed changes (y => x y')`, () => {
       const x = [ 'a', { b: 1, x: 'b', [keys]: [ 'b', 'x' ] }, 'c' ];
       x[subhashes] = [ 1, 2, 3 ];
@@ -375,6 +396,7 @@ describe('diffing', () => {
     it('should return diff with missing fields', () =>
       structuralFieldsFor(testData.forms.simple).then((fields) => {
         const diff = diffSubmissions(fields, [
+          // eslint-disable-next-line comma-spacing
           { instanceId: 'one', xml: testData.instances.simple.one.replace('<age>30</age>','') },
           { instanceId: 'one', xml: testData.instances.simple.one }
         ]);
@@ -386,6 +408,7 @@ describe('diffing', () => {
       structuralFieldsFor(testData.forms.withrepeat).then((fields) => {
         const diff = diffSubmissions(fields, [
           { instanceId: 'three', xml: testData.instances.withrepeat.three },
+          // eslint-disable-next-line comma-spacing
           { instanceId: 'three', xml: testData.instances.withrepeat.three.replace('<children><child><name>Candace</name><age>2</age></child></children>','') }
         ]);
         const expected = [{
@@ -567,7 +590,9 @@ describe('diffing', () => {
         </group>
     </h:body>
 </h:html>`;
+      // eslint-disable-next-line quotes
       const newer = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="indexed-repeat-nested"><my-repeat><uuid>2b19075a-0db2-4560-8c1e-b40e7c878f79</uuid><my-nested-repeat><Parent>2b19075a-0db2-4560-8c1e-b40e7c878f79</Parent></my-nested-repeat></my-repeat><meta><instanceID>uuid:b27d98e4-e759-4843-ad97-3a0358f1eaf1</instanceID><deprecatedID>uuid:49cb8f10-6ee2-4e34-9009-e0e8a084c2e3</deprecatedID></meta></data>`;
+      // eslint-disable-next-line quotes
       const older = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="indexed-repeat-nested"><my-repeat><uuid>2dd99095-56aa-4504-bcbb-d6531d6ec73b</uuid><my-nested-repeat><Parent>2dd99095-56aa-4504-bcbb-d6531d6ec73b</Parent></my-nested-repeat><my-nested-repeat><Parent>3e4e8b15-222b-418c-8e20-ab57f9853505</Parent></my-nested-repeat><my-nested-repeat><Parent>3e4e8b15-222b-418c-8e20-ab57f9853505</Parent></my-nested-repeat></my-repeat><my-repeat><uuid>57a5c37f-7ec9-41af-ba90-c084b9d9fcee</uuid><my-nested-repeat><Parent>57a5c37f-7ec9-41af-ba90-c084b9d9fcee</Parent></my-nested-repeat></my-repeat><meta><instanceID>uuid:49cb8f10-6ee2-4e34-9009-e0e8a084c2e3</instanceID></meta></data>`;
 
       return structuralFieldsFor(formXml).then((fields) => {
@@ -620,6 +645,7 @@ describe('diffing', () => {
           { instanceId: 'john', xml: newer },
           { instanceId: 'jon', xml: older }
         ]).should.eql({
+          // eslint-disable-next-line quote-props
           'john': [{ old: 'jon', new: 'john', path: [ 'meta', 'instanceID'] }]
         });
       }));

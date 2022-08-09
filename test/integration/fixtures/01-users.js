@@ -1,5 +1,7 @@
 const appRoot = require('app-root-path');
+// eslint-disable-next-line import/no-dynamic-require
 const { User, Actor, Project } = require(appRoot + '/lib/model/frames');
+// eslint-disable-next-line import/no-dynamic-require
 const { mapSequential } = require(appRoot + '/test/util/util');
 
 module.exports = ({ Assignments, Users, Projects, bcrypt }) => {
@@ -17,8 +19,9 @@ module.exports = ({ Assignments, Users, Projects, bcrypt }) => {
 
   return Projects.create(proj)
     .then(() => withPasswords)
+    // eslint-disable-next-line no-shadow
     .then((users) => mapSequential(users, Users.create))
-    .then(([ alice, bob, chelsea ]) => Promise.all([
+    .then(([ alice, bob ]) => Promise.all([
       Assignments.grantSystem(alice.actor, 'admin', '*'),
       Projects.getById(1).then((project) => Assignments.grantSystem(bob.actor, 'manager', project.get()))
     ]));

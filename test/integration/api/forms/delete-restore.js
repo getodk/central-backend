@@ -1,12 +1,5 @@
-const { readFileSync } = require('fs');
-const appRoot = require('app-root-path');
-const should = require('should');
-const config = require('config');
-const superagent = require('superagent');
-const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
-const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects/:id/forms (delete, restore)', () => {
 
@@ -36,10 +29,10 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
               Users.getByEmail('alice@getodk.org').then((o) => o.get()),
               Audits.getLatestByAction('form.delete').then((o) => o.get())
             ])
-            .then(([ alice, log ]) => {
-              log.actorId.should.equal(alice.actor.id);
-              log.acteeId.should.equal(form.acteeId);
-            }))))));
+              .then(([ alice, log ]) => {
+                log.actorId.should.equal(alice.actor.id);
+                log.acteeId.should.equal(form.acteeId);
+              }))))));
 
     it('should not return associated assignments for a deleted form', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -122,10 +115,10 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
             Forms.getByProjectAndXmlFormId(1, 'simple').then((o) => o.get()),
             Audits.getLatestByAction('form.restore').then((o) => o.get())
           ])
-          .then(([ alice, form, log ]) => {
-            log.actorId.should.equal(alice.actor.id);
-            log.acteeId.should.equal(form.acteeId);
-          })))));
+            .then(([ alice, form, log ]) => {
+              log.actorId.should.equal(alice.actor.id);
+              log.acteeId.should.equal(form.acteeId);
+            })))));
 
     it('should restore a specific form by numeric id when multiple trashed forms share the same xmlFormId', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -145,7 +138,7 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
         asAlice.post('/v1/projects/1/forms/1/restore')
           .expect(404))));
 
-    it('should fail to restore a form when another active form with the same form id exists', testService((service, { Audits }) =>
+    it('should fail to restore a form when another active form with the same form id exists', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1/forms/simple')
           .expect(200)
@@ -179,6 +172,7 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
 
       it('should restore public link submission access', testService((service) =>
         service.login('alice', (asAlice) =>
+          // eslint-disable-next-line quotes
           asAlice.post(`/v1/projects/1/forms/simple/public-links`)
             .send({ displayName: 'test public link' })
             .then(({ body }) => Promise.resolve(body.token))
@@ -201,10 +195,11 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
 
       it('should restore app user submission access', testService((service) =>
         service.login('alice', (asAlice) =>
+          // eslint-disable-next-line quotes
           asAlice.post(`/v1/projects/1/app-users`)
             .send({ displayName: 'test app user' })
             .then(({ body }) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${body.id}`)
-                .expect(200)
+              .expect(200)
               .then(() => service.post(`/v1/key/${body.token}/projects/1/forms/simple/submissions`)
                 .send(testData.instances.simple.one)
                 .set('Content-Type', 'application/xml')
@@ -232,8 +227,8 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
               .expect(200))
             .then(() => asAlice.delete('/v1/projects/1/forms/simple')
               .expect(200))
-              .then(() => asAlice.get('/v1/projects/1/forms/simple/assignments')
-                .expect(404)))));
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/assignments')
+              .expect(404)))));
     });
   });
 });

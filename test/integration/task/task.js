@@ -1,12 +1,13 @@
 const appRoot = require('app-root-path');
-const should = require('should');
 const { testTask } = require('../setup');
 const { sql } = require('slonik');
 const { writeFile, symlink } = require('fs');
 const { join } = require('path');
 const { exec } = require('child_process');
 const { identity } = require('ramda');
-const { task, auditing, emailing, run } = require(appRoot + '/lib/task/task');
+// eslint-disable-next-line import/no-dynamic-require
+const { auditing, emailing } = require(appRoot + '/lib/task/task');
+// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
 const tmp = require('tmp');
 
@@ -30,6 +31,7 @@ describe('task: runner', () => {
   }));
 
   it('should print success object to stdout', () => runScript(success)
+    // eslint-disable-next-line quotes
     .then(([ , stdout ]) => stdout.should.equal(`'{"test":"result"}'\n`)));
 
   it('should print failure details to stderr and exit nonzero', () => runScript(failure)
@@ -53,6 +55,7 @@ describe('task: auditing', () => {
     it('should fault but passthrough on log failure', testTask(({ Audits }) => {
       // hijack Audit.log to crash. new container is made for each test so we don't have
       // to restore a working one.
+      // eslint-disable-next-line prefer-promise-reject-errors, no-param-reassign
       Audits.log = () => Promise.reject(false);
       return auditing('testAction', Promise.resolve(true))
         .then((result) => {
@@ -76,7 +79,9 @@ describe('task: auditing', () => {
 
     it('should fault but passthrough on log failure', testTask(({ Audits }) => {
       // ditto above.
+      // eslint-disable-next-line no-param-reassign
       Audits.log = () => Promise.reject(Problem.user.missingParameter({ field: 'test' }));
+      // eslint-disable-next-line prefer-promise-reject-errors
       return auditing('testAction', Promise.reject(true))
         .then(identity, (result) => {
           // too difficult to test stderr output.
@@ -94,7 +99,7 @@ describe('task: emailing', () => {
 
   it('should send an email on task failure', testTask(() =>
     emailing('backupFailed', Promise.reject(Problem.user.missingParameter({ field: 'test' })))
-      .then(identity, (err) => {
+      .then(identity, () => {
         const email = global.inbox.pop();
         email.to.should.eql([{ address: 'no-reply@getodk.org', name: '' }]);
         email.subject.should.equal('ODK Central backup failed');

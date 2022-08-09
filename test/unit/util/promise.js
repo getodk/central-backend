@@ -1,8 +1,9 @@
-const should = require('should');
-const { identity } = require('ramda');
 const appRoot = require('app-root-path');
-const { resolve, getOrElse, getOrReject, getOrNotFound, timebound } = require(appRoot + '/lib/util/promise');
+// eslint-disable-next-line import/no-dynamic-require
+const { getOrElse, getOrReject, getOrNotFound, timebound } = require(appRoot + '/lib/util/promise');
+// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
+// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
 
 describe('getOr', () => {
@@ -41,8 +42,10 @@ describe('getOr', () => {
 
 describe('timebound @slow', () => {
   it('should not reject if the promise resolves', (done) => {
-    let pass, fail, passed = false, failed = false;
-    const promise = new Promise((resolve, reject) => { pass = resolve; fail = reject; });
+    // eslint-disable-next-line one-var-declaration-per-line, one-var
+    let pass, passed = false, failed = false;
+    // eslint-disable-next-line no-shadow
+    const promise = new Promise((resolve) => { pass = resolve; });
     timebound(promise, 0.2)
       .then(() => { passed = true; }, () => { failed = true; });
 
@@ -55,8 +58,10 @@ describe('timebound @slow', () => {
   });
 
   it('should resolve with the correct value', (done) => {
-    let pass, fail, passedWith;
-    const promise = new Promise((resolve, reject) => { pass = resolve; fail = reject; });
+    // eslint-disable-next-line one-var-declaration-per-line, one-var
+    let pass, passedWith;
+    // eslint-disable-next-line no-shadow
+    const promise = new Promise((resolve) => { pass = resolve; });
     timebound(promise, 0.2).then((x) => { passedWith = x; });
 
     pass(42);
@@ -75,8 +80,10 @@ describe('timebound @slow', () => {
   });
 
   it('should not resolve if the timebound passes', (done) => {
-    let pass, fail, passed = false, failed = false;
-    const promise = new Promise((resolve, reject) => { pass = resolve; fail = reject; });
+    // eslint-disable-next-line one-var-declaration-per-line, one-var
+    let pass, passed = false, failed = false;
+    // eslint-disable-next-line no-shadow
+    const promise = new Promise((resolve) => { pass = resolve; });
     timebound(promise, 0.1)
       .then(() => { passed = true; }, () => { failed = true; });
 

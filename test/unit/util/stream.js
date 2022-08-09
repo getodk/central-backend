@@ -1,13 +1,13 @@
 require('should');
 const appPath = require('app-root-path');
 const { Transform } = require('stream');
-const { mapStreamToPromises, consumeAndBuffer, pipethrough, pipethroughAndBuffer, splitStream, PartialPipe } = require(appPath + '/lib/util/stream');
-const Option = require(appPath + '/lib/util/option');
+// eslint-disable-next-line import/no-dynamic-require
+const { consumeAndBuffer, pipethrough, pipethroughAndBuffer, splitStream, PartialPipe } = require(appPath + '/lib/util/stream');
 const { fromObjects, toObjects } = require('streamtest').v2;
 
 describe('stream utils', () => {
   describe('consumeAndBuffer', () => {
-    const consumer = (stop) => (stream) => new Promise((resolve, reject) => {
+    const consumer = (stop) => (stream) => new Promise((resolve) => {
       let result = '';
       stream.on('data', (x) => {
         if (x === stop) resolve(result);
@@ -34,6 +34,7 @@ describe('stream utils', () => {
 
     it('should reject if any stream rejects', () => {
       const fail = (stream) => new Promise((_, reject) => {
+        // eslint-disable-next-line prefer-promise-reject-errors
         stream.on('data', (x) => { if (x === 'three') reject(false); });
       });
       return consumeAndBuffer(fromObjects([ 'one', 'two', 'three' ]), consumer('two'), fail)
@@ -42,7 +43,7 @@ describe('stream utils', () => {
   });
 
   describe('pipethrough', () => {
-    const doubler = (resolve, reject) => {
+    const doubler = (resolve) => {
       let result = '';
       return new Transform({
         objectMode: true,
@@ -75,6 +76,7 @@ describe('stream utils', () => {
     it('should reject if any stream rejects', () => {
       const failer = (_, reject) => new Transform({
         objectMode: true,
+        // eslint-disable-next-line no-shadow
         transform(x, _, done) {
           if (x === 'twotwo') reject(false);
           else done(null, x);
@@ -141,10 +143,10 @@ describe('stream utils', () => {
       PartialPipe.of(fromObjects([ 4, 8, 15, 16, 23, 42 ]), doubler())
         .with(doubler())
         .with(toObjects((e, result) => {
-            result.should.eql([ 16, 32, 60, 64, 92, 168 ]);
-            done();
-          })
-        ).pipeline(noop));
+          result.should.eql([ 16, 32, 60, 64, 92, 168 ]);
+          done();
+        })
+        ).pipeline(noop)); // eslint-disable-line function-paren-newline
 
     it('should not callback if there is no error', (done) => {
       let cb = false;
@@ -163,6 +165,7 @@ describe('stream utils', () => {
     it('should callback if there is an error', (done) => {
       const raiser = () => new Transform({
         objectMode: true,
+        // eslint-disable-next-line no-unused-expressions, no-shadow
         transform(x, _, done) { (x > 20) ? done(new Error('whoops')) : done(null, x * 2); }
       });
 
