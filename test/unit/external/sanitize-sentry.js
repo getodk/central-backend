@@ -1,5 +1,6 @@
 require('should');
 const appRoot = require('app-root-path');
+// eslint-disable-next-line import/no-dynamic-require
 const { sanitizeEventRequest, isSensitiveEndpoint, filterTokenFromUrl } = require(appRoot + '/lib/external/sentry');
 
 // These cases are based on real requests!
@@ -41,7 +42,7 @@ const cases = [
   ],
   // Authorization header
   [
-   {
+    {
       cookies: {},
       data: '{}',
       headers: {
@@ -233,6 +234,7 @@ const cases = [
       query_string: '%24top=250&%24skip=0&%24count=true&%24wkt=true&%24filter=__system%2FsubmitterId+eq+48+and+__system%2FreviewState+eq+null',
       url: 'http://localhost/v1/projects/3/forms/odata-fake-planets.svc/Submissions?%24top=250&%24skip=0&%24count=true&%24wkt=true&%24filter=__system%2FsubmitterId+eq+48+and+__system%2FreviewState+eq+null'
     }
+    // eslint-disable-next-line comma-style
     ,
     {
       cookies: null,
@@ -297,6 +299,7 @@ const cases = [
       query_string: null,
       url: 'http://localhost/v1/projects/5/submission'
     }
+    // eslint-disable-next-line comma-style
     ,
     {
       cookies: null,
@@ -320,6 +323,7 @@ const cases = [
         'sec-fetch-site': 'same-origin',
         'sec-fetch-mode': 'cors',
         'sec-fetch-dest': 'empty',
+        // eslint-disable-next-line key-spacing
         referer:  null,
         'accept-encoding': 'gzip, deflate, br',
         'accept-language': 'en-US,en;q=0.9',
@@ -540,7 +544,7 @@ const filteredTokenUrls = [
   ['/v1/test/DRAFT_TOKEN/projects/3/forms/draft/submission', '/v1/test/[FILTERED]/projects/3/forms/draft/submission'],
   ['/v1/projects/2/forms/test/attachments', '/v1/projects/2/forms/test/attachments'], // the form ID is 'test' but doesn't get filtered
   ['/v1/key/PUBLIC_ACCESS_KEY/projects/5/formList?formID=form_id&st=PUBLIC_ACCESS_KEY', '/v1/key/[FILTERED]/projects/5/formList?formID=form_id&st=PUBLIC_ACCESS_KEY'] // query string removal is not in the filtering step
-]
+];
 
 describe('external: sanitize-sentry', () => {
   it('removes sensitive data from request objects ', () => {
@@ -551,12 +555,14 @@ describe('external: sanitize-sentry', () => {
 
   it('identifies sensitive URLs ', () => {
     for (const [method, url] of sensitiveEndpoints) {
+      // eslint-disable-next-line object-curly-spacing
       isSensitiveEndpoint({url, method}).should.equal(true);
     }
   });
 
   it('identifies non-sensitive URLs ', () => {
     for (const [method, url] of nonSensitiveEndpoints) {
+      // eslint-disable-next-line object-curly-spacing
       isSensitiveEndpoint({url, method}).should.equal(false);
     }
   });

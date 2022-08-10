@@ -1,8 +1,10 @@
 const appRoot = require('app-root-path');
 const streamTest = require('streamtest').v2;
-const { identity } = require('ramda');
+// eslint-disable-next-line import/no-dynamic-require
 const { serviceDocumentFor, edmxFor, rowStreamToOData, singleRowToOData } = require(appRoot + '/lib/formats/odata');
+// eslint-disable-next-line import/no-dynamic-require
 const { fieldsFor } = require(appRoot + '/test/util/schema');
+// eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
 
 // Helpers to deal with repeated system metadata generation.
@@ -38,7 +40,7 @@ describe('odata message composition', () => {
     });
 
     it('should return the root table in all cases', () => {
-      const doc = serviceDocumentFor([], 'http://localhost:8989', '/forms/simple.svc')
+      const doc = serviceDocumentFor([], 'http://localhost:8989', '/forms/simple.svc');
       doc.should.eql({
         '@odata.context': 'http://localhost:8989/forms/simple.svc/$metadata',
         value: [{ name: 'Submissions', kind: 'EntitySet', url: 'Submissions' }]
@@ -139,7 +141,7 @@ describe('odata message composition', () => {
       </EnumType>
     </Schema>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.my_awesome_form_">`);
-      }));
+    }));
 
     it('should yield all the correct data types', () =>
       fieldsFor(`<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
@@ -295,7 +297,7 @@ describe('odata message composition', () => {
     </Schema>
   </edmx:DataServices>
 </edmx:Edmx>`);
-      }));
+    }));
 
     it('should appropriately name repeat-parent join ids', () => fieldsFor(testData.forms.doubleRepeat).then((fields) => {
       edmxFor('double', fields).includes(`<EntityType Name="Submissions.children.child.toys.toy">
@@ -377,8 +379,8 @@ describe('odata message composition', () => {
             </repeat>
           </h:body>
         </h:html>`).then((fields) => {
-          const edmx = edmxFor('pathprefix', fields);
-          edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
+      const edmx = edmxFor('pathprefix', fields);
+      edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
 <edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
   <edmx:DataServices>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
@@ -422,7 +424,7 @@ describe('odata message composition', () => {
         <Property Name="name" Type="Edm.String"/>
       </EntityType>
       <EntityContainer Name="pathprefix">`);
-        }));
+    }));
 
     it('should not be fooled by nested groups closing one after the other', () => fieldsFor(`<?xml version="1.0"?>
         <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
@@ -455,8 +457,8 @@ describe('odata message composition', () => {
             </input>
           </h:body>
         </h:html>`).then((fields) => {
-          const edmx = edmxFor('form', fields);
-          edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
+      const edmx = edmxFor('form', fields);
+      edmx.should.startWith(`<?xml version="1.0" encoding="UTF-8"?>
 <edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
   <edmx:DataServices>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.submission">
@@ -498,7 +500,7 @@ describe('odata message composition', () => {
       <ComplexType Name="outer.inner">
         <Property Name="q1" Type="Edm.String"/>
       </ComplexType>`);
-        }));
+    }));
   });
 
   describe('rowstream conversion', () => {
@@ -563,6 +565,7 @@ describe('odata message composition', () => {
           .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=7', query, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             const resultObj = JSON.parse(result);
+            // eslint-disable-next-line no-undef
             should.not.exist(resultObj['@odata.nextLink']);
             done();
           })));
@@ -814,6 +817,7 @@ describe('odata message composition', () => {
 
   describe('single submission output', () => {
     describe('table verification', () => {
+      // eslint-disable-next-line arrow-body-style
       it('should reject with not found if the toplevel table is wrong', () => {
         return fieldsFor(testData.forms.simple).then((fields) => {
           const submission = mockSubmission('one', testData.instances.simple.one);
@@ -821,14 +825,15 @@ describe('odata message composition', () => {
         }).should.be.rejected();
       });
 
+      // eslint-disable-next-line arrow-body-style
       it('should reject with not found if a subtable is wrong', () => {
         return fieldsFor(testData.forms.withrepeat).then((fields) => {
           const submission = mockSubmission('one', testData.instances.withrepeat.one);
           return singleRowToOData(fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('one')/children/child/nonexistent", {});
-            
         }).should.be.rejected();
       });
 
+      // eslint-disable-next-line arrow-body-style
       it('should pass if the toplevel table is correct', () => {
         return fieldsFor(testData.forms.simple).then((fields) => {
           const submission = mockSubmission('one', testData.instances.simple.one);
@@ -837,6 +842,7 @@ describe('odata message composition', () => {
         });
       });
 
+      // eslint-disable-next-line arrow-body-style
       it('should pass if the subtable is correct', () => {
         return fieldsFor(testData.forms.withrepeat).then((fields) => {
           const submission = mockSubmission('one', testData.instances.withrepeat.one);
@@ -847,39 +853,44 @@ describe('odata message composition', () => {
     });
 
     describe('metadata generation', () => {
+      // eslint-disable-next-line arrow-body-style
       it('should provide the correct context url for the toplevel table', () => {
         return fieldsFor(testData.forms.simple).then((fields) => {
           const submission = mockSubmission('one', testData.instances.simple.one);
           return singleRowToOData(fields, submission, 'http://localhost:8989', "/simple.svc/Submissions('one')", {})
             .then(JSON.parse)
             .then((result) => {
-              result['@odata.context'].should.equal('http://localhost:8989/simple.svc/$metadata#Submissions')
+              result['@odata.context'].should.equal('http://localhost:8989/simple.svc/$metadata#Submissions');
             });
         });
       });
 
+      // eslint-disable-next-line arrow-body-style
       it('should provide the correct context url for a subtable', () => {
         return fieldsFor(testData.forms.withrepeat).then((fields) => {
           const submission = mockSubmission('one', testData.instances.withrepeat.one);
           return singleRowToOData(fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('one')/children/child", {})
             .then(JSON.parse)
             .then((result) => {
-              result['@odata.context'].should.equal('http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child')
+              result['@odata.context'].should.equal('http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child');
             });
         });
       });
 
+      // eslint-disable-next-line arrow-body-style
       it('should provide no nextUrl if the final row is accounted for', () => {
         return fieldsFor(testData.forms.withrepeat).then((fields) => {
           const submission = mockSubmission('two', testData.instances.withrepeat.two);
           return singleRowToOData(fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child", {})
             .then(JSON.parse)
             .then((result) => {
+              // eslint-disable-next-line no-undef
               should.not.exist(result['@odata.nextLink']);
             });
         });
       });
 
+      // eslint-disable-next-line arrow-body-style
       it('should provide the correct nextUrl if rows remain', () => {
         return fieldsFor(testData.forms.withrepeat).then((fields) => {
           const submission = mockSubmission('two', testData.instances.withrepeat.two);
@@ -892,6 +903,7 @@ describe('odata message composition', () => {
         });
       });
 
+      // eslint-disable-next-line arrow-body-style
       it('should retain other parameters when giving the nextUrl', () => {
         return fieldsFor(testData.forms.withrepeat).then((fields) => {
           const submission = mockSubmission('two', testData.instances.withrepeat.two);
@@ -904,6 +916,7 @@ describe('odata message composition', () => {
         });
       });
 
+      // eslint-disable-next-line arrow-body-style
       it('should provide the row count if requested', () => {
         return fieldsFor(testData.forms.withrepeat).then((fields) => {
           const submission = mockSubmission('two', testData.instances.withrepeat.two);
@@ -916,6 +929,7 @@ describe('odata message composition', () => {
         });
       });
 
+      // eslint-disable-next-line arrow-body-style
       it('should provide the full row count even if windowed', () => {
         return fieldsFor(testData.forms.withrepeat).then((fields) => {
           const submission = mockSubmission('two', testData.instances.withrepeat.two);
@@ -930,6 +944,7 @@ describe('odata message composition', () => {
     });
 
     describe('row data output', () => {
+      // eslint-disable-next-line arrow-body-style
       it('should output single instance data', () => {
         return fieldsFor(testData.forms.doubleRepeat).then((fields) => {
           const submission = mockSubmission('double', testData.instances.doubleRepeat.double);
@@ -952,6 +967,7 @@ describe('odata message composition', () => {
         });
       });
 
+      // eslint-disable-next-line arrow-body-style
       it('should filter to a single subinstance', () => {
         return fieldsFor(testData.forms.doubleRepeat).then((fields) => {
           const submission = mockSubmission('double', testData.instances.doubleRepeat.double);
@@ -982,6 +998,7 @@ describe('odata message composition', () => {
         });
       });
 
+      // eslint-disable-next-line arrow-body-style
       it('should limit subtable data', () => {
         return fieldsFor(testData.forms.doubleRepeat).then((fields) => {
           const submission = mockSubmission('double', testData.instances.doubleRepeat.double);
@@ -1006,6 +1023,7 @@ describe('odata message composition', () => {
         });
       });
 
+      // eslint-disable-next-line arrow-body-style
       it('should offset subtable data', () => {
         return fieldsFor(testData.forms.doubleRepeat).then((fields) => {
           const submission = mockSubmission('double', testData.instances.doubleRepeat.double);
@@ -1033,6 +1051,7 @@ describe('odata message composition', () => {
         });
       });
 
+      // eslint-disable-next-line arrow-body-style
       it('should limit and offset subtable data', () => {
         return fieldsFor(testData.forms.doubleRepeat).then((fields) => {
           const submission = mockSubmission('double', testData.instances.doubleRepeat.double);

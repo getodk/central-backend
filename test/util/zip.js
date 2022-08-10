@@ -1,4 +1,3 @@
-const should = require('should');
 const tmp = require('tmp');
 const yauzl = require('yauzl');
 const { createWriteStream } = require('fs');
@@ -15,16 +14,20 @@ const streamTest = require('streamtest').v2;
 // }
 const zipStreamToFiles = (zipStream, callback) => {
   tmp.file((err, tmpfile) => {
+    // eslint-disable-next-line keyword-spacing
     if(err) return callback(err);
 
     const writeStream = createWriteStream(tmpfile);
     zipStream.pipe(writeStream);
     zipStream.on('end', () => {
       setTimeout(() => {
+        // eslint-disable-next-line no-shadow
         yauzl.open(tmpfile, { autoClose: false }, (err, zipfile) => {
+          // eslint-disable-next-line keyword-spacing
           if(err) return callback(err);
 
           const result = { filenames: [] };
+          // eslint-disable-next-line prefer-const
           let entries = [];
           let completed = 0;
 
@@ -36,10 +39,14 @@ const zipStreamToFiles = (zipStream, callback) => {
             } else {
               entries.forEach((entry) => {
                 result.filenames.push(entry.fileName);
+                // eslint-disable-next-line no-shadow
                 zipfile.openReadStream(entry, (err, resultStream) => {
+                  // eslint-disable-next-line keyword-spacing
                   if(err) return callback(err);
 
+                  // eslint-disable-next-line no-shadow
                   resultStream.pipe(streamTest.toText((err, contents) => {
+                    // eslint-disable-next-line keyword-spacing
                     if(err) return callback(err);
 
                     result[entry.fileName] = contents;
@@ -59,6 +66,7 @@ const zipStreamToFiles = (zipStream, callback) => {
   });
 };
 
+// eslint-disable-next-line no-confusing-arrow
 const pZipStreamToFiles = (zipStream) => new Promise((resolve, reject) => zipStreamToFiles(zipStream, (err, result) => err ? reject(err) : resolve(result)));
 
 module.exports = { zipStreamToFiles, pZipStreamToFiles };

@@ -1,11 +1,11 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 const { testTask } = require('../setup');
+// eslint-disable-next-line import/no-dynamic-require
 const { runAnalytics } = require(appRoot + '/lib/task/analytics');
-const { setConfiguration } = require(appRoot + '/lib/task/config');
 
 describe('task: analytics', () => {
-  it('should not compute analytics if not enabled', testTask(({ Configs }) =>
+  it('should not compute analytics if not enabled', testTask(() =>
     runAnalytics()
       .then((res) => {
         res.sent.should.equal(false);
@@ -22,56 +22,62 @@ describe('task: analytics', () => {
 
   it('should not compute analytics if analytics sent recently', testTask(({ Configs, Audits }) =>
     Configs.set('analytics', { enabled: true })
-    .then(() => Audits.log(null, 'analytics', null, {test: 'test', success: true})
-      .then(() => runAnalytics()
-        .then((res) => {
-          res.sent.should.equal(false);
-          res.message.includes('Analytics sent recently').should.equal(true);
-        })))));
+      // eslint-disable-next-line object-curly-spacing
+      .then(() => Audits.log(null, 'analytics', null, {test: 'test', success: true})
+        .then(() => runAnalytics()
+          .then((res) => {
+            res.sent.should.equal(false);
+            res.message.includes('Analytics sent recently').should.equal(true);
+          })))));
 
-  it('should send analytics if enabled and time to send', testTask(({ Configs, Audits, odkAnalytics }) =>
+  it('should send analytics if enabled and time to send', testTask(({ Configs }) =>
     Configs.set('analytics', { enabled: true, email: 'test@getodk.org' })
-    .then(() => runAnalytics()
-      .then((res) => {
-        res.sent.should.equal(true);
-      }))));
-
-  it('should resend analytics if last attempt failed', testTask(({ Configs, Audits }) =>
-    Configs.set('analytics', { enabled: true })
-    .then(() => Audits.log(null, 'analytics', null, {test: 'test', success: false})
       .then(() => runAnalytics()
         .then((res) => {
           res.sent.should.equal(true);
-        })))));
+        }))));
 
-  it('should log event and full report if analytics sent successfully', testTask(({ Configs, Audits, odkAnalytics }) =>
+  it('should resend analytics if last attempt failed', testTask(({ Configs, Audits }) =>
+    Configs.set('analytics', { enabled: true })
+      // eslint-disable-next-line object-curly-spacing
+      .then(() => Audits.log(null, 'analytics', null, {test: 'test', success: false})
+        .then(() => runAnalytics()
+          .then((res) => {
+            res.sent.should.equal(true);
+          })))));
+
+  it('should log event and full report if analytics sent successfully', testTask(({ Configs, Audits }) =>
+    // eslint-disable-next-line quotes
     Configs.set('analytics', { email: 'test@getodk.org', organization: "ODK", enabled: true })
-    .then(() => runAnalytics())
-    .then(() => Audits.getLatestByAction('analytics').then((o) => o.get())
-      .then((au) => {
-        au.details.success.should.equal(true);
-        const report = au.details.report;
-        report.config.email.should.equal('test@getodk.org');
-        report.config.organization.should.equal('ODK');
-        should.exist(report.system);
-        should.exist(report.system.num_admins.recent);
-        should.exist(report.projects);
-        should.exist(report.projects[0].users);
-        should.exist(report.projects[0].forms);
-        should.exist(report.projects[0].submissions);
-      }))));
+      .then(() => runAnalytics())
+      .then(() => Audits.getLatestByAction('analytics').then((o) => o.get())
+        .then((au) => {
+          au.details.success.should.equal(true);
+          // eslint-disable-next-line prefer-destructuring
+          const report = au.details.report;
+          report.config.email.should.equal('test@getodk.org');
+          report.config.organization.should.equal('ODK');
+          should.exist(report.system);
+          should.exist(report.system.num_admins.recent);
+          should.exist(report.projects);
+          should.exist(report.projects[0].users);
+          should.exist(report.projects[0].forms);
+          should.exist(report.projects[0].submissions);
+        }))));
 
   it('should log request errors', testTask(({ Configs, Audits, odkAnalytics }) =>
     Configs.set('analytics', { enabled: true, email: 'test@getodk.org' })
-    .then(odkAnalytics.setError({ testError: 'foo'} ))
-    .then(() => runAnalytics()
-      .then((res) => {
-        res.sent.should.equal(false);
-      }))
-    .then(() => Audits.getLatestByAction('analytics').then((o) => o.get())
-      .then((au) => {
-        au.details.success.should.equal(false);
-        au.details.error.should.eql({ testError: 'foo'});
-      }))));
+      // eslint-disable-next-line space-in-parens, object-curly-spacing
+      .then(odkAnalytics.setError({ testError: 'foo'} ))
+      .then(() => runAnalytics()
+        .then((res) => {
+          res.sent.should.equal(false);
+        }))
+      .then(() => Audits.getLatestByAction('analytics').then((o) => o.get())
+        .then((au) => {
+          au.details.success.should.equal(false);
+          // eslint-disable-next-line object-curly-spacing
+          au.details.error.should.eql({ testError: 'foo'});
+        }))));
 });
 

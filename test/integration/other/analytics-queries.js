@@ -1,8 +1,7 @@
 const appRoot = require('app-root-path');
-const should = require('should');
 const { sql } = require('slonik');
-const { testTask, testService, testContainer } = require('../setup');
-const { Actor, Form, Project, Submission, User } = require(appRoot + '/lib/model/frames');
+const { testService, testContainer } = require('../setup');
+// eslint-disable-next-line import/no-dynamic-require
 const { createReadStream } = require('fs');
 const testData = require('../../data/xml');
 
@@ -52,6 +51,7 @@ const createTestUser = (service, container, name, role, projectId, recent = true
       .then(({ body }) => ((role === 'admin')
         ? asAlice.post(`/v1/assignments/admin/${body.id}`)
         : asAlice.post(`/v1/projects/${projectId}/assignments/${role}/${body.id}`))
+        // eslint-disable-next-line no-confusing-arrow
         .then(() => (recent)
           ? container.Audits.log(body, 'dummy.action', null, 'a recent activity')
           : Promise.resolve())));
@@ -119,11 +119,13 @@ describe('analytics task queries', () => {
       res.total.should.equal(4);
     }));
 
+    // eslint-disable-next-line no-multi-spaces
     it('should count encrypted projects',  testService(async (service, container) => {
       // encrypted project that has recent activity
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one);
 
       await service.login('alice', (asAlice) =>
+        // eslint-disable-next-line quotes
         asAlice.post(`/v1/projects/1/key`)
           .send({ passphrase: 'supersecret', hint: 'it is a secret' }));
 
@@ -197,6 +199,7 @@ describe('analytics task queries', () => {
     it('should determine whether backups are enabled', testContainer(async ({ Analytics, Configs }) => {
       let res = await Analytics.backupsEnabled();
       res.backups_configured.should.equal(0);
+      // eslint-disable-next-line object-curly-spacing
       await Configs.set('backups.main', {detail: 'dummy'});
       res = await Analytics.backupsEnabled();
       res.backups_configured.should.equal(1);
@@ -219,6 +222,7 @@ describe('analytics task queries', () => {
     it('should calculate number of managers per project', testService(async (service, container) => {
       // default project has 1 manager already (bob) with no activity
       await createTestUser(service, container, 'Manager1', 'manager', 1);
+      // eslint-disable-next-line no-trailing-spaces
       
       // compute metrics
       const res = await container.Analytics.countUsersPerRole();
@@ -229,6 +233,7 @@ describe('analytics task queries', () => {
         if (!(id in projects)) {
           projects[id] = {};
         }
+        // eslint-disable-next-line object-curly-spacing
         projects[id][row.system] = {recent: row.recent, total: row.total};
       }
 
@@ -249,6 +254,7 @@ describe('analytics task queries', () => {
         if (!(id in projects)) {
           projects[id] = {};
         }
+        // eslint-disable-next-line object-curly-spacing
         projects[id][row.system] = {recent: row.recent, total: row.total};
       }
 
@@ -269,6 +275,7 @@ describe('analytics task queries', () => {
         if (!(id in projects)) {
           projects[id] = {};
         }
+        // eslint-disable-next-line object-curly-spacing
         projects[id][row.system] = {recent: row.recent, total: row.total};
       }
 
@@ -328,6 +335,7 @@ describe('analytics task queries', () => {
       await submitToForm(service, 'alice', projId, xmlFormId, testData.instances.simple.one);
 
       const res = await container.Analytics.countForms();
+      // eslint-disable-next-line no-trailing-spaces
       
       const projects = {};
       for (const row of res) {
@@ -335,6 +343,7 @@ describe('analytics task queries', () => {
         if (!(id in projects)) {
           projects[id] = {};
         }
+        // eslint-disable-next-line object-curly-spacing
         projects[id] = {recent: row.recent, total: row.total};
       }
 
@@ -368,6 +377,7 @@ describe('analytics task queries', () => {
         if (!(id in projects)) {
           projects[id] = {};
         }
+        // eslint-disable-next-line object-curly-spacing
         projects[id] = {recent: row.audit_recent, total: row.audit_total};
       }
 
@@ -388,6 +398,7 @@ describe('analytics task queries', () => {
         if (!(id in projects)) {
           projects[id] = {};
         }
+        // eslint-disable-next-line object-curly-spacing
         projects[id] = {recent: row.geo_recent, total: row.geo_total};
       }
 
@@ -407,6 +418,7 @@ describe('analytics task queries', () => {
         if (!(id in projects)) {
           projects[id] = {};
         }
+        // eslint-disable-next-line object-curly-spacing
         projects[id] = {recent: row.recent, total: row.total};
       }
 
@@ -527,6 +539,7 @@ describe('analytics task queries', () => {
         if (!(id in projects)) {
           projects[id] = {};
         }
+        // eslint-disable-next-line object-curly-spacing
         projects[id][row.reviewState] = {recent: row.recent, total: row.total};
       }
 
@@ -556,6 +569,7 @@ describe('analytics task queries', () => {
         if (!(id in projects)) {
           projects[id] = {};
         }
+        // eslint-disable-next-line object-curly-spacing
         projects[id][row.reviewState] = {recent: row.recent, total: row.total};
       }
 
@@ -584,6 +598,7 @@ describe('analytics task queries', () => {
         if (!(id in projects)) {
           projects[id] = {};
         }
+        // eslint-disable-next-line object-curly-spacing
         projects[id][row.reviewState] = {recent: row.recent, total: row.total};
       }
 
@@ -612,6 +627,7 @@ describe('analytics task queries', () => {
         if (!(id in projects)) {
           projects[id] = {};
         }
+        // eslint-disable-next-line object-curly-spacing
         projects[id][row.reviewState] = {recent: row.recent, total: row.total};
       }
 
@@ -646,6 +662,7 @@ describe('analytics task queries', () => {
     it('should calculate submissions that have comments', testService(async (service, container) => {
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one);
       await service.login('alice', (asAlice) =>
+        // eslint-disable-next-line quotes
         asAlice.post(`/v1/projects/1/forms/simple/submissions/one/comments`)
           .send({ body: 'new comment here' }));
 
@@ -653,6 +670,7 @@ describe('analytics task queries', () => {
       await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.two);
       await service.login('alice', (asAlice) =>
+        // eslint-disable-next-line quotes
         asAlice.post(`/v1/projects/1/forms/simple/submissions/two/comments`)
           .send({ body: 'new comment here' }));
 
@@ -732,16 +750,19 @@ describe('analytics task queries', () => {
     }));
   });
 
+  // eslint-disable-next-line space-before-function-paren, func-names
   describe('combined analytics', function() {
     // increasing timeouts on this set of tests
     this.timeout(4000);
 
     it('should combine system level queries', testService(async (service, container) => {
       // backups
+      // eslint-disable-next-line object-curly-spacing
       await container.Configs.set('backups.main', {detail: 'dummy'});
 
       // encrypting a project
       await service.login('alice', (asAlice) =>
+        // eslint-disable-next-line quotes
         asAlice.post(`/v1/projects/1/key`)
           .send({ passphrase: 'supersecret', hint: 'it is a secret' }));
 
@@ -808,6 +829,7 @@ describe('analytics task queries', () => {
       // form with audit
       await createTestForm(service, container, testData.forms.clientAudits, 1);
       await service.login('alice', (asAlice) =>
+        // eslint-disable-next-line quotes
         asAlice.post(`/v1/projects/1/submission`)
           .set('X-OpenRosa-Version', '1.0')
           .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
@@ -842,9 +864,11 @@ describe('analytics task queries', () => {
     }));
 
     it('should fill in all project.submissions queries', testService(async (service, container) => {
-     // submission states
+      // submission states
       for (const state of ['approved', 'rejected', 'hasIssues', 'edited']) {
+        // eslint-disable-next-line no-await-in-loop
         await submitToForm(service, 'alice', 1, 'simple', simpleInstance(state));
+        // eslint-disable-next-line no-await-in-loop
         await service.login('alice', (asAlice) =>
           asAlice.patch(`/v1/projects/1/forms/simple/submissions/${state}`)
             .send({ reviewState: state }));
@@ -853,6 +877,7 @@ describe('analytics task queries', () => {
       // with edits
       await submitToForm(service, 'alice', 1, 'simple', simpleInstance('v1'));
       await service.login('alice', (asAlice) =>
+        // eslint-disable-next-line quotes
         asAlice.post(`/v1/projects/1/submission`)
           .set('X-OpenRosa-Version', '1.0')
           .attach('xml_submission_file', Buffer.from(withSimpleIds('v1', 'v2').replace('Alice', 'Alyssa')), { filename: 'data.xml' }));
@@ -860,6 +885,7 @@ describe('analytics task queries', () => {
       // comments
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one, 'device1');
       await service.login('alice', (asAlice) =>
+        // eslint-disable-next-line quotes
         asAlice.post(`/v1/projects/1/forms/simple/submissions/one/comments`)
           .send({ body: 'new comment here' }));
 
@@ -897,7 +923,7 @@ describe('analytics task queries', () => {
 
     it('should be idempotent and not cross-polute project counts', testService(async (service, container) => {
       const proj1 = await createTestProject(service, container, 'New Proj 1');
-      const formId1 = await createTestForm(service, container, testData.forms.simple, proj1);
+      await createTestForm(service, container, testData.forms.simple, proj1);
 
       // approved submission in original project
       await submitToForm(service, 'alice', 1, 'simple', simpleInstance('aaa'));
@@ -923,6 +949,7 @@ describe('analytics task queries', () => {
 
   describe('latest analytics audit log utility', () => {
     it('should find recently created analytics audit log', testService(async (service, container) => {
+      // eslint-disable-next-line object-curly-spacing
       await container.Audits.log(null, 'analytics', null, {test: 'foo', success: true});
       const res = await container.Analytics.getLatestAudit().then((o) => o.get());
       res.details.test.should.equal('foo');
@@ -936,6 +963,7 @@ describe('analytics task queries', () => {
     }));
 
     it('should not return analytics audit log more than 30 days prior', testService(async (service, container) => {
+      // eslint-disable-next-line object-curly-spacing
       await container.Audits.log(null, 'analytics', null, {test: 'foo', success: true});
       // make all analytics audits so far in the distant past
       await container.all(sql`update audits set "loggedAt" = '1999-1-1' where action = 'analytics'`);
