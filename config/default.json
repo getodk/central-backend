@@ -17,7 +17,10 @@
       "host": "localhost",
       "port": 5000
     },
-    "enketo": {},
+    "enketo": {
+      "url": "http://localhost:8005/-",
+      "apiKey": "enketorules"
+    },
     "env": {
       "domain": "http://localhost:8989",
       "sysadminAccount": "no-reply@getodk.org"
@@ -31,7 +34,7 @@
       "analytics": {
         "url": "https://data.getodk.cloud/v1/key/eOZ7S4bzyUW!g1PF6dIXsnSqktRuewzLTpmc6ipBtRq$LDfIMTUKswCexvE0UwJ9/projects/1/submission",
         "formId": "odk-analytics",
-        "version": "2022.02.23.01"
+        "version": "2022.05.26.01"
       }
     }
   },

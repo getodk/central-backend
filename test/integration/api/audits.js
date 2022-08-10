@@ -158,7 +158,7 @@ describe('/audits', () => {
               should.not.exist(body[0].actor);
             })))));
 
-    it('should page data', testService((service, SubmissionDef) =>
+    it('should page data', testService((service) =>
       service.login('alice', (asAlice) =>
         submitThree(asAlice)
           .then(() => asAlice.get('/v1/audits?offset=1&limit=1')
@@ -472,7 +472,7 @@ describe('/audits', () => {
               body[2].action.should.equal('user.session.create');
             })))));
 
-    it('should log and return notes if given', testService((service, { run }) =>
+    it('should log and return notes if given', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -514,7 +514,7 @@ describe('/audits', () => {
               purgedActee.details.xmlFormId.should.equal('simple');
             }))));
 
-      it('should get the deletedAt date of a deleted form', testService((service, { Projects, Forms, Users, Audits }) =>
+      it('should get the deletedAt date of a deleted form', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.delete('/v1/projects/1/forms/simple')
             .then(() => asAlice.get('/v1/audits').set('X-Extended-Metadata', true))
@@ -524,7 +524,7 @@ describe('/audits', () => {
               deletedActee.deletedAt.should.be.a.recentIsoDate();
             }))));
 
-      it('should get the deletedAt date of a deleted user', testService((service, { Projects, Forms, Users, Audits }) =>
+      it('should get the deletedAt date of a deleted user', testService((service, { Users }) =>
         service.login('alice', (asAlice) =>
           Users.getByEmail('chelsea@getodk.org').then((o) => o.get())
             .then((chelsea) => asAlice.delete('/v1/users/' + chelsea.actorId)
@@ -536,7 +536,7 @@ describe('/audits', () => {
               deletedActee.deletedAt.should.be.a.recentIsoDate();
             }))));
 
-      it('should get the deletedAt date of a deleted project', testService((service, { Projects, Forms, Users, Audits }) =>
+      it('should get the deletedAt date of a deleted project', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.delete('/v1/projects/1')
             .expect(200)
@@ -547,8 +547,9 @@ describe('/audits', () => {
               deletedActee.deletedAt.should.be.a.recentIsoDate();
             }))));
 
-      it('should get the deletedAt date of a deleted app user', testService((service, { Projects, Forms, Users, Audits }) =>
+      it('should get the deletedAt date of a deleted app user', testService((service) =>
         service.login('alice', (asAlice) =>
+          // eslint-disable-next-line quotes
           asAlice.post(`/v1/projects/1/app-users`)
             .send({ displayName: 'App User Name' })
             .then(({ body }) => body)
@@ -561,8 +562,9 @@ describe('/audits', () => {
               deletedActee.deletedAt.should.be.a.recentIsoDate();
             }))));
 
-      it('should get the deletedAt date of a deleted public link', testService((service, { Projects, Forms, Users, Audits }) =>
+      it('should get the deletedAt date of a deleted public link', testService((service) =>
         service.login('alice', (asAlice) =>
+          // eslint-disable-next-line quotes
           asAlice.post(`/v1/projects/1/forms/simple/public-links`)
             .send({ displayName: 'Public Link Name' })
             .then(({ body }) => body)

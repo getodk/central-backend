@@ -1,8 +1,11 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 const { testTask } = require('../setup');
+// eslint-disable-next-line import/no-dynamic-require
 const { getOrNotFound } = require(appRoot + '/lib/util/promise');
+// eslint-disable-next-line import/no-dynamic-require
 const { createUser, promoteUser, setUserPassword } = require(appRoot + '/lib/task/account');
+// eslint-disable-next-line import/no-dynamic-require
 const { User } = require(appRoot + '/lib/model/frames');
 
 describe('task: accounts', () => {
@@ -17,7 +20,7 @@ describe('task: accounts', () => {
 
     it('should log an audit entry', testTask(({ Audits, Users }) =>
       createUser('testuser@getodk.org', 'aoeuidhtns')
-        .then((result) => Promise.all([
+        .then(() => Promise.all([
           Users.getByEmail('testuser@getodk.org').then((o) => o.get()),
           Audits.getLatestByAction('user.create').then((o) => o.get())
         ]))
@@ -35,7 +38,7 @@ describe('task: accounts', () => {
         .then((verified) => verified.should.equal(true))));
 
 
-    it('should complain if the password is too short', testTask(({ Users, bcrypt }) =>
+    it('should complain if the password is too short', testTask(() =>
       createUser('testuser@getodk.org', 'short')
         .catch((problem) => problem.problemCode.should.equal(400.21))));
   });
@@ -52,6 +55,7 @@ describe('task: accounts', () => {
             .then(() => Users.getByEmail('testuser@getodk.org')
               .then(getOrNotFound)
               .then((user) => Auth.can(user.actor, 'user.create', User.species))
+              // eslint-disable-next-line no-shadow
               .then((allowed) => allowed.should.equal(true)));
         })));
 
@@ -78,7 +82,7 @@ describe('task: accounts', () => {
         .then((user) => bcrypt.verify('aoeuidhtns', user.password))
         .then((verified) => verified.should.equal(true))));
 
-    it('should complain about a password that is too short', testTask(({ Users, bcrypt }) =>
+    it('should complain about a password that is too short', testTask(({ Users }) =>
       Users.create(User.fromApi({ email: 'testuser@getodk.org', displayName: 'test user' }))
         .then(() => setUserPassword('testuser@getodk.org', 'aoeu'))
         .catch((problem) => problem.problemCode.should.equal(400.21))));

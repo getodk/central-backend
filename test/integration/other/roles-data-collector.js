@@ -1,4 +1,3 @@
-const should = require('should');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 

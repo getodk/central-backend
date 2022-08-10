@@ -1,8 +1,9 @@
 const appRoot = require('app-root-path');
 const nock = require('nock');
 const querystring = require('querystring');
-const should = require('should');
+// eslint-disable-next-line import/no-dynamic-require
 const enketo_ = require(appRoot + '/lib/external/enketo');
+// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
 
 describe('external/enketo', () => {
@@ -19,6 +20,7 @@ describe('external/enketo', () => {
     it('should send a properly constructed request to Enketo', () => {
       enketoNock
         .post('/enketoPath/api/v2/survey')
+        // eslint-disable-next-line space-before-function-paren, func-names
         .reply(201, function(uri, requestBody) {
           const base64Auth = Buffer.from('enketoApiKey:').toString('base64');
           const expectedQueryString = querystring.stringify({ server_url: openRosaUrl, form_id: xmlFormId });
@@ -34,6 +36,7 @@ describe('external/enketo', () => {
       enketoNock
         .post('/enketoPath/api/v2/survey')
         .reply(201, { url: 'http://enke.to/::stuvwxyz', code: 201 });
+      // eslint-disable-next-line no-trailing-spaces
       
       return enketo.create(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
         .then((result) => result.should.equal('::stuvwxyz'));
@@ -43,6 +46,7 @@ describe('external/enketo', () => {
       enketoNock
         .post('/enketoPath/api/v2/survey/single/once')
         .reply(201, { single_once_url: 'http://enke.to/single/::stuvwxyz', code: 201 });
+      // eslint-disable-next-line no-trailing-spaces
       
       return enketo.createOnceToken(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
         .then((result) => result.should.equal('::stuvwxyz'));
@@ -52,6 +56,7 @@ describe('external/enketo', () => {
       enketoNock
         .post('/enketoPath/api/v2/survey')
         .reply(201, 'no json for you!');
+      // eslint-disable-next-line no-trailing-spaces
       
       return enketo.create(openRosaUrl, xmlFormId, null)
         .should.be.rejectedWith(Problem.internal.enketoUnexpectedResponse('invalid JSON'));
@@ -61,6 +66,7 @@ describe('external/enketo', () => {
       enketoNock
         .post('/enketoPath/api/v2/survey')
         .reply(201, { url: 'http://enke.to/$$', code: 201 });
+      // eslint-disable-next-line no-trailing-spaces
       
       return enketo.create(openRosaUrl, xmlFormId, null)
         .should.be.rejectedWith(Problem.internal.enketoUnexpectedResponse('Could not parse token from enketo response url: http://enke.to/$$'));
@@ -70,6 +76,7 @@ describe('external/enketo', () => {
       enketoNock
         .post('/enketoPath/api/v2/survey')
         .reply(204, {});
+      // eslint-disable-next-line no-trailing-spaces
       
       return enketo.create(openRosaUrl, xmlFormId, null)
         .should.be.rejectedWith(Problem.internal.enketoUnexpectedResponse('wrong status code'));
@@ -81,6 +88,7 @@ describe('external/enketo', () => {
       let run = false;
       enketoNock
         .post('/enketoPath/api/v2/instance')
+        // eslint-disable-next-line space-before-function-paren, func-names
         .reply(201, function(uri, requestBody) {
           run = true;
           const base64Auth = Buffer.from('enketoApiKey:').toString('base64');

@@ -4,6 +4,7 @@ const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { QueryOptions } = require('../../../lib/util/db');
+// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects', () => {
@@ -59,6 +60,20 @@ describe('api: /projects', () => {
                 body[0].name.should.equal('Default Project');
               }))))));
 
+    it('should return the correct project verbs when multiply assigned', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+          .then((aliceId) => asAlice.post('/v1/projects/1/assignments/manager/' + aliceId)
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.verbs.length.should.be.greaterThan(39);
+                body.should.be.a.Project();
+                body.name.should.equal('Default Project');
+              }))))));
+
     it('should order projects appropriately', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects')
@@ -89,9 +104,11 @@ describe('api: /projects', () => {
 
     it('should return extended metadata if requested', testService((service) =>
       service.login('alice', (asAlice) => Promise.all([
+        // eslint-disable-next-line quotes
         asAlice.post(`/v1/projects/1/app-users`)
           .send({ displayName: 'test 1' })
           .expect(200),
+        // eslint-disable-next-line quotes
         asAlice.post(`/v1/projects/1/app-users`)
           .send({ displayName: 'test 2' })
           .expect(200),
@@ -198,7 +215,20 @@ describe('api: /projects', () => {
             return asAlice.get(`/v1/projects/${body.id}`).expect(200);
           }))));
 
-    it('should create an audit log entry', testService((service, { Audits, Projects, one }) =>
+    it('should create the given project with a description', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects')
+          .set('Content-Type', 'application/json')
+          .send({ name: 'Test Project', description: 'Test Description' })
+          .expect(200)
+          .then(({ body }) => {
+            body.name.should.equal('Test Project');
+            body.description.should.equal('Test Description');
+            body.should.be.a.Project();
+            return asAlice.get(`/v1/projects/${body.id}`).expect(200);
+          }))));
+
+    it('should create an audit log entry', testService((service, { Audits, one }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects')
           .set('Content-Type', 'application/json')
@@ -226,7 +256,24 @@ describe('api: /projects', () => {
         asAlice.get('/v1/projects/1a')
           .expect(400)
           .then(({ body }) => {
+            // eslint-disable-next-line semi, brace-style, block-spacing
             body.code.should.equal(400.11)}))));
+
+    it('should reject if id is too big', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/10000000000')
+          .expect(400)
+          .then(({ body }) => {
+            // eslint-disable-next-line semi, brace-style, block-spacing
+            body.code.should.equal(400.22)}))));
+
+    it('should reject if id is too small', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/-10000000000')
+          .expect(400)
+          .then(({ body }) => {
+            // eslint-disable-next-line semi, brace-style, block-spacing
+            body.code.should.equal(400.22)}))));
 
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -274,11 +321,13 @@ describe('api: /projects', () => {
     it('should not count deleted app users', testService((service) =>
       service.login('alice', (asAlice) =>
         Promise.all([
+          // eslint-disable-next-line quotes
           asAlice.post(`/v1/projects/1/app-users`)
             .send({ displayName: 'test 1' })
             .expect(200)
             .then(({ body }) => asAlice.delete(`/v1/projects/1/app-users/${body.id}`)
               .expect(200)),
+          // eslint-disable-next-line quotes
           asAlice.post(`/v1/projects/1/app-users`)
             .send({ displayName: 'test 2' })
             .expect(200)
@@ -318,6 +367,34 @@ describe('api: /projects', () => {
             body.verbs.should.containDeep([ 'assignment.create', 'project.delete' ]);
             body.verbs.should.not.containDeep([ 'project.create' ]);
           }))));
+
+    it('should return verb information with extended metadata (chelsea)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current').expect(200)
+            .then(({ body }) => body.id)
+            .then((chelseaId) => Promise.all([
+              asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`).expect(200),
+              asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`).expect(200),
+            ]))
+            .then(() => asChelsea.get('/v1/projects/1')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.verbs.should.eqlInAnyOrder([
+                  // eslint-disable-next-line no-multi-spaces
+                  'project.read',      // from role(s): formfill, viewer
+                  // eslint-disable-next-line no-multi-spaces
+                  'form.list',         // from role(s): formfill, viewer
+                  // eslint-disable-next-line no-multi-spaces
+                  'form.read',         // from role(s): formfill, viewer
+                  // eslint-disable-next-line no-multi-spaces
+                  'submission.read',   // from role(s): viewer
+                  // eslint-disable-next-line no-multi-spaces
+                  'submission.list',   // from role(s): viewer
+                  'submission.create', // from role(s): formfill
+                ]);
+              }))))));
   });
 
   describe('/:id PATCH', () => {
@@ -350,11 +427,12 @@ describe('api: /projects', () => {
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1')
           .set('Content-Type', 'application/json')
-          .send({ name: 'New Test Name', archived: true })
+          .send({ name: 'New Test Name', archived: true, description: 'New Description' })
           .expect(200)
           .then(({ body }) => {
             body.should.be.a.Project();
             body.name.should.equal('New Test Name');
+            body.description.should.equal('New Description');
             body.archived.should.equal(true);
           })
           // paranoia:
@@ -362,6 +440,7 @@ describe('api: /projects', () => {
             .expect(200)
             .then(({ body }) => {
               body.name.should.equal('New Test Name');
+              body.description.should.equal('New Description');
               body.archived.should.equal(true);
             })))));
 
@@ -410,7 +489,7 @@ describe('api: /projects', () => {
       service.login('chelsea', (asChelsea) =>
         asChelsea.delete('/v1/projects/1').expect(403))));
 
-    it('should delete the project', testService((service, { Audit, Project }) =>
+    it('should delete the project', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1')
           .expect(200)
@@ -470,13 +549,17 @@ describe('api: /projects', () => {
             asAlice.get('/v1/projects/1/forms/simple.xml')
               .expect(200)
               .then(({ text }) => {
+                // eslint-disable-next-line no-useless-escape
                 text.should.match(/<data id="simple" version="\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
+                // eslint-disable-next-line no-useless-escape
                 text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
               }),
             asAlice.get('/v1/projects/1/forms/withrepeat.xml')
               .expect(200)
               .then(({ text }) => {
+                // eslint-disable-next-line no-useless-escape
                 text.should.match(/<data id="withrepeat" orx:version="1.0\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
+                // eslint-disable-next-line no-useless-escape
                 text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
               })
           ])))));
@@ -508,13 +591,17 @@ describe('api: /projects', () => {
             asAlice.get('/v1/projects/1/forms/simple.xml')
               .expect(200)
               .then(({ text }) => {
+                // eslint-disable-next-line no-useless-escape
                 text.should.match(/<data id="simple" version="\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
+                // eslint-disable-next-line no-useless-escape
                 text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
               }),
             asAlice.get('/v1/projects/1/forms/simple/draft.xml')
               .expect(200)
               .then(({ text }) => {
+                // eslint-disable-next-line no-useless-escape
                 text.should.match(/<data id="simple" version="\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
+                // eslint-disable-next-line no-useless-escape
                 text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
               })
           ])))));
@@ -531,7 +618,9 @@ describe('api: /projects', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xml')
             .expect(200)
             .then(({ text }) => {
+              // eslint-disable-next-line no-useless-escape
               text.should.match(/<data id="simple2" version="2\.1\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
+              // eslint-disable-next-line no-useless-escape
               text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
             })))));
 
@@ -1022,6 +1111,7 @@ describe('api: /projects', () => {
             .expect(200),
           asBob.post(`/v1/projects/1/forms/withrepeat/assignments/manager/${fk.id}`)
             .expect(200),
+          // eslint-disable-next-line quotes
           asBob.post(`/v1/projects/1/forms?publish=true`)
             .send(testData.forms.simple2)
             .set('Content-Type', 'application/xml')
@@ -1059,7 +1149,7 @@ describe('api: /projects', () => {
                 .then(({ body }) => { body.should.eql([]); })
             ])))))));
 
-    it('should not delete public link assignments', testService((service, container) =>
+    it('should not delete public link assignments', testService((service) =>
       service.login('bob', (asBob) => asBob.post('/v1/projects/1/forms/simple/public-links')
         .send({ displayName: 'test link' })
         .expect(200)
@@ -1111,6 +1201,7 @@ describe('api: /projects', () => {
               asBob.get('/v1/roles/app-user').expect(200).then(({ body }) => body.id),
               Actors.getById(fk.id).then((o) => o.get()),
               Projects.getById(1).then((o) => o.get())
+                // eslint-disable-next-line no-multi-spaces
                 .then((project) => Forms.getByProjectAndXmlFormId(project.id,  'simple')).then((o) => o.get()),
               Audits.getLatestByAction('field_key.assignment.delete').then((o) => o.get())
             ]))
@@ -1183,13 +1274,16 @@ describe('api: /projects', () => {
 
 describe('api: /projects?forms=true', () => {
   describe('GET', () => {
-    it('should return projects with nested extended forms', testService((service) =>
+    it('should return projects with verbs and nested extended forms', testService((service) =>
       service.login('alice', (asAlice) => asAlice.get('/v1/projects?forms=true')
         .expect(200)
         .then(({ body }) => {
           body.length.should.equal(1);
           body[0].should.be.a.Project();
-          const form = body[0].formList[0];
+          const { formList, verbs } = body[0];
+          verbs.length.should.equal(40);
+          formList.length.should.equal(2);
+          const form = formList[0];
           form.should.be.a.ExtendedForm();
           form.name.should.equal('Simple');
           form.reviewStates.received.should.equal(0);
@@ -1249,9 +1343,105 @@ describe('api: /projects?forms=true', () => {
           .expect(200)
           .then(({ body }) => {
             body.length.should.equal(2);
+            // First project
             body[0].formList.length.should.equal(2);
+            body[0].verbs.length.should.equal(25);
+            // Second project
             body[1].formList.length.should.equal(1);
+            body[1].verbs.length.should.be.lessThan(5); // 4 for data collector
             body[1].formList[0].name.should.equal('Simple 2');
           }))))));
+
+    it('should set project data from formList even on non-extended projects', testService((service) =>
+      service.login('alice', (asAlice) => asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200))
+        .then(() => asAlice.get('/v1/projects?forms=true')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            const project = body[0];
+            project.should.be.a.Project();
+            project.forms.should.equal(2);
+            should.exist(project.lastSubmission);
+            const form = body[0].formList[0];
+            form.should.be.a.ExtendedForm();
+            form.name.should.equal('Simple');
+            form.reviewStates.received.should.equal(2);
+          })))));
+
+    it('should return verbs for multiple roles', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current').expect(200)
+            .then(({ body }) => body.id)
+            .then((chelseaId) => Promise.all([
+              asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`).expect(200),
+              asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`).expect(200),
+            ]))
+            .then(() => asChelsea.get('/v1/projects?forms=true')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(1);
+                const { verbs } = body[0];
+                verbs.should.eqlInAnyOrder([
+                  // eslint-disable-next-line no-multi-spaces
+                  'form.list',         // from role(s): formfill, viewer
+                  // eslint-disable-next-line no-multi-spaces
+                  'form.read',         // from role(s): formfill, viewer
+                  // eslint-disable-next-line no-multi-spaces
+                  'project.read',      // from role(s): formfill, viewer
+                  'submission.create', // from role(s): formfill
+                  // eslint-disable-next-line no-multi-spaces
+                  'submission.list',   // from role(s): viewer
+                  // eslint-disable-next-line no-multi-spaces
+                  'submission.read',   // from role(s): viewer
+                ]);
+              }))))));
   });
+
+  it('should return the correct projects with the correct verbs', testService((service) =>
+    service.login('alice', (asAlice) =>
+      service.login('chelsea', (asChelsea) => Promise.all([
+        asChelsea.get('/v1/users/current')
+          .expect(200)
+          .then(({ body }) => body.id),
+        asAlice.post('/v1/projects')
+          .send({ name: 'Another Project' })
+          .expect(200)
+          .then(({ body }) => body.id)
+      ])
+        .then(([chelseaId, projectId]) => Promise.all([
+          asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`)
+            .expect(200),
+          asAlice.post(`/v1/projects/1/assignments/app-user/${chelseaId}`)
+            .expect(200),
+          asAlice.post(`/v1/projects/${projectId}/assignments/app-user/${chelseaId}`)
+            .expect(200)
+        ]))
+        .then(() => asChelsea.get('/v1/projects?forms=true')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            const project = body[0];
+            project.id.should.equal(1);
+            project.verbs.should.eqlInAnyOrder([
+              // eslint-disable-next-line no-multi-spaces
+              'project.read',     // from role(s): viewer
+              // eslint-disable-next-line no-multi-spaces
+              'form.list',        // from role(s): viewer
+              // eslint-disable-next-line no-multi-spaces
+              'form.read',        // from role(s): viewer, app-user
+              // eslint-disable-next-line no-multi-spaces
+              'submission.read',  // from role(s): viewer
+              // eslint-disable-next-line no-multi-spaces
+              'submission.list',  // from role(s): viewer
+              'submission.create' // from role(s): app-user
+            ]);
+          }))))));
 });

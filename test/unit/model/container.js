@@ -36,7 +36,7 @@ describe('container', () => {
     it('should wrap returned streams with promises', (done) => {
       queryModuleBuilder({ f: () => () => streamTest.fromObjects([ {} ]) })
         .f()
-        .then((result) => {
+        .then(() => {
           // the fact that .then() does not crash is really the point here.
           done();
         });
@@ -54,7 +54,7 @@ describe('container', () => {
 
     it('should provide own context to query modules', (done) => {
       const module = {
-        proc1: (x) => ({ injected }) => injected.proc2(3),
+        proc1: () => ({ injected }) => injected.proc2(3),
         proc2: (y) => () => Promise.resolve(y * 2)
       };
       const { injected } = injector({ db: 7 }, { injected: module });

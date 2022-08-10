@@ -1,9 +1,12 @@
 const appRoot = require('app-root-path');
-const should = require('should');
 const { sql } = require('slonik');
+// eslint-disable-next-line import/no-dynamic-require
 const { Frame, table, into } = require(appRoot + '/lib/model/frame');
+// eslint-disable-next-line import/no-dynamic-require
 const util = require(appRoot + '/lib/util/db');
+// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
+// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
 
 describe('util/db', () => {
@@ -72,6 +75,17 @@ describe('util/db', () => {
         ssl: { rejectUnauthorized: false }
       });
       result.should.throw();
+    });
+
+    it('should allow (but ignore) maximumPoolSize', () => {
+      const result = connectionString({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz',
+        maximumPoolSize: 42
+      });
+      result.should.equal('postgres://bar:baz@localhost/foo');
     });
 
     it('should throw for an unsupported option', () => {
@@ -160,6 +174,22 @@ describe('util/db', () => {
       result.should.throw();
     });
 
+    it('should allow (but ignore) maximumPoolSize', () => {
+      const result = connectionObject({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz',
+        maximumPoolSize: 42
+      });
+      result.should.eql({
+        host: 'localhost',
+        database: 'foo',
+        user: 'bar',
+        password: 'baz'
+      });
+    });
+
     it('should throw for an unsupported option', () => {
       const result = () => connectionObject({
         host: 'localhost',
@@ -174,6 +204,7 @@ describe('util/db', () => {
 
   describe('unjoiner', () => {
     const { unjoiner } = util;
+    // eslint-disable-next-line no-multi-spaces
     const T = Frame.define(table('frames'), 'x',  'y');
     const U = Frame.define(into('extra'), 'z');
     it('should generate fields', () => {
@@ -182,8 +213,10 @@ describe('util/db', () => {
     });
 
     it('should unjoin data', () => {
+      // eslint-disable-next-line func-call-spacing, no-spaced-func
       unjoiner(T, U)
-        ({ 'frames!x': 3, 'frames!y': 4, z: 5 })
+      // eslint-disable-next-line no-unexpected-multiline
+      ({ 'frames!x': 3, 'frames!y': 4, z: 5 })
         .should.eql(new T({ x: 3, y: 4 }, { extra: new U({ z: 5 }) }));
     });
 
@@ -199,10 +232,12 @@ describe('util/db', () => {
 
   describe('extender', () => {
     const { extender, QueryOptions } = util;
+    // eslint-disable-next-line no-multi-spaces
     const T = Frame.define(table('frames'), 'x',  'y');
     const U = Frame.define(into('extra'), 'a', 'b');
+    // eslint-disable-next-line no-extra-semi
     function noop() { return Promise.resolve({}); };
-    noop.map = (f) => (x) => x;
+    noop.map = () => (x) => x;
 
     it('should provide the appropriate arguments when not extended', () => {
       let run = false;
@@ -231,6 +266,7 @@ describe('util/db', () => {
     });
 
     it('should unjoin nonextended fields', () => {
+      // eslint-disable-next-line no-extra-semi
       function run() { return Promise.resolve({ 'frames!x': 3, 'frames!y': 4 }); };
       run.map = (f) => (x) => f(x);
       return extender(T)(U)(noop)(run, QueryOptions.none)
@@ -238,6 +274,7 @@ describe('util/db', () => {
     });
 
     it('should unjoin extended fields', () => {
+      // eslint-disable-next-line no-extra-semi
       function run() { return Promise.resolve({ 'frames!x': 3, 'frames!y': 4, a: 5 }); };
       run.map = (f) => (x) => f(x);
       return extender(T)(U)(noop)(run, QueryOptions.extended)
@@ -401,6 +438,7 @@ returning *`);
     const { postgresErrorToProblem } = util;
     const after = (times, f) => {
       let count = 0;
+      // eslint-disable-next-line no-plusplus, no-confusing-arrow
       return () => (++count === times) ? f() : null;
     };
 
