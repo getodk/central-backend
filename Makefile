@@ -50,7 +50,7 @@ test-coverage: node_version
 
 .PHONY: lint
 lint: node_version
-	eslint --cache --max-warnings 0 .
+	eslint --ignore-pattern benchmarker --cache --max-warnings 0 .
 
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
