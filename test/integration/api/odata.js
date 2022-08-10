@@ -1,6 +1,7 @@
 const { testService } = require('../setup');
 const { sql } = require('slonik');
 const testData = require('../../data/xml');
+const { dissocPath } = require('ramda');
 
 // NOTE: for the data output tests, we do not attempt to extensively determine if every
 // internal case is covered; there are already two layers of tests below these, at
@@ -8,7 +9,7 @@ const testData = require('../../data/xml');
 // that we have plumbed the relevant input to those layers correctly, and have applied
 // the appropriate higher-level logics (notfound, notauthorized, etc.)
 
-describe('api: /forms/:id.svc', () => {
+describe.only('api: /forms/:id.svc', () => {
   describe('GET', () => {
     it('should reject unless the form exists', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -403,12 +404,12 @@ describe('api: /forms/:id.svc', () => {
           .then(({ body }) => {
             // have to manually check and clear the date for exact match:
             body.value[0].__system.submissionDate.should.be.an.isoDate();
-            delete body.value[0].__system.submissionDate;
+            const bodyWithoutSubmissionDate = dissocPath(['value', 0, '__system', 'submissionDate'], body);
 
-            body.should.eql({
+            bodyWithoutSubmissionDate.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions',
               value: [{
-                __id: "double",
+                __id: 'double',
                 __system: {
                   // submissionDate is checked above!
                   updatedAt: null,
@@ -425,8 +426,8 @@ describe('api: /forms/:id.svc', () => {
                 children: {
                   'child@odata.navigationLink': "Submissions('double')/children/child"
                 },
-                meta: { instanceID: "double" },
-                name: "Vick"
+                meta: { instanceID: 'double' },
+                name: 'Vick'
               }]
             });
           }))));
@@ -438,21 +439,21 @@ describe('api: /forms/:id.svc', () => {
           .then(({ body }) => {
             // have to manually check and clear the date for exact match:
             body.value[0].__system.submissionDate.should.be.an.isoDate();
-            delete body.value[0].__system.submissionDate;
+            const bodyWithoutSubmissionDate = dissocPath(['value', 0, '__system', 'submissionDate'], body);
 
-            body.should.eql({
+            bodyWithoutSubmissionDate.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions',
               value: [{
-                __id: "double",
+                __id: 'double',
                 __system: {
-                  // submissionDate is checked above!                
-                  status: null                
+                  // submissionDate is checked above!
+                  status: null
                 },
                 children: {
                   'child@odata.navigationLink': "Submissions('double')/children/child"
                 },
-                meta: { instanceID: "double" },
-                name: "Vick"
+                meta: { instanceID: 'double' },
+                name: 'Vick'
               }]
             });
           }))));
@@ -464,9 +465,9 @@ describe('api: /forms/:id.svc', () => {
           .then(({ body }) => {
             // have to manually check and clear the date for exact match:
             body.value[0].__system.submissionDate.should.be.an.isoDate();
-            delete body.value[0].__system.submissionDate;
+            const bodyWithoutSubmissionDate = dissocPath(['value', 0, '__system', 'submissionDate'], body);
 
-            body.should.eql({
+            bodyWithoutSubmissionDate.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions',
               value: [{
                 __system: {
@@ -494,14 +495,14 @@ describe('api: /forms/:id.svc', () => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child.toys.toy',
               value: [{
-                  "name": "Rainbow Dash"
-                }, {
-                  "name": "Rarity"
-                }, {
-                  "name": "Fluttershy"
-                },{
-                  "name": "Princess Luna"
-                }]
+                name: 'Rainbow Dash'
+              }, {
+                name: 'Rarity'
+              }, {
+                name: 'Fluttershy'
+              }, {
+                name: 'Princess Luna'
+              }]
             });
           }))));
 
@@ -513,19 +514,19 @@ describe('api: /forms/:id.svc', () => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
               value: [{
-                "__Submissions-id": "double",
-                "__id": "46ebf42ee83ddec5028c42b2c054402d1e700208",
-                "name": "Alice",
+                '__Submissions-id': 'double',
+                __id: '46ebf42ee83ddec5028c42b2c054402d1e700208',
+                name: 'Alice',
               },
               {
-                "__Submissions-id": "double",
-                "__id": "b6e93a81a53eed0566e65e472d4a4b9ae383ee6d",
-                "name": "Bob",
+                '__Submissions-id': 'double',
+                __id: 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
+                name: 'Bob',
               },
               {
-                "__Submissions-id": "double",
-                "__id": "8954b393f82c1833abb19be08a3d6cb382171f54",
-                "name": "Chelsea"
+                '__Submissions-id': 'double',
+                __id: '8954b393f82c1833abb19be08a3d6cb382171f54',
+                name: 'Chelsea'
               }]
             });
           }))));
@@ -1304,18 +1305,18 @@ describe('api: /forms/:id.svc', () => {
       withSubmissions(service, (asAlice) =>
         asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$select=__id,name')
           .expect(200)
-          .then(({ body }) => {            
+          .then(({ body }) => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
               value: [{
-                __id: "rthree",
-                name: "Chelsea"
+                __id: 'rthree',
+                name: 'Chelsea'
               }, {
-                __id: "rtwo",                
-                name: "Bob",                
+                __id: 'rtwo',
+                name: 'Bob',
               }, {
-                __id: "rone",               
-                name: "Alice",               
+                __id: 'rone',
+                name: 'Alice',
               }]
             });
           }))));
