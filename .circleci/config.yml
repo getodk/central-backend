@@ -14,4 +14,5 @@ jobs:
       - run: npm ci
       - run: node .circleci/initdb.js
       - run: make test-full
-
+      - run: node ./lib/bin/cli.js user-create -u x@example.com -p secret
+      - run: cd benchmarker && npm ci && node index.js
