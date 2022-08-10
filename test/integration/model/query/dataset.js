@@ -1,8 +1,10 @@
+/* eslint-disable import/no-dynamic-require */
 const appRoot = require('app-root-path');
 const { Form } = require('../../../../lib/model/frames');
 const { testService } = require(appRoot + '/test/integration/setup');
 const { Dataset } = require(appRoot + '/lib/model/frames/dataset');
 const testData = require(appRoot + '/test/data/xml');
+/* eslint-disable import/no-dynamic-require */
 
 // This is temporary integration test.
 // should be deleted before merging into `master` branch
