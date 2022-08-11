@@ -14,4 +14,4 @@ echo 'Backend started!'
 
 cd benchmarker
 npm ci
-node index.js -s http://localhost:8383 -P secret1234
+node index.js -s http://localhost:8383 -P secret1234 -L /tmp/benchmarker-logs

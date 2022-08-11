@@ -22,18 +22,19 @@ program
     .option('-t, --throughput <throughput>', 'Target throughput (in samples per "throughput period")', 50)
     .option('-p, --throughput-period <throughput-period>', 'Throughput period (in milliseconds)', 1_000)
     .option('-d, --test-duration <test-duration>', 'Test duration (in milliseconds)', 30_000)
+    .option('-L, --log-directory <log-directory>', 'Log output directory (this should be an empty or non-existent directory)')
 //    .option('-S, --test-in-series',   'Allow connecting to server in series', false)
 //    .option('-P, --test-in-parallel', 'Allow connecting to server in parallel', true)
 //    .option('-n, --submission-count <n>', 'Number of form submissions to generate', 5)
 //    .option('-x, --export-count <x>',     'Number of exports', 5)
     ;
 program.parse();
-const { serverUrl, userEmail, userPassword, formPath, throughput, throughputPeriod, testDuration } = program.opts();
+const { serverUrl, userEmail, userPassword, formPath, throughput, throughputPeriod, testDuration, logDirectory } = program.opts();
 
 log(`Using form: ${formPath}`);
 log(`Connecting to ${serverUrl} with user ${userEmail}...`);
 
-const logPath = `./logs/${new Date().toISOString()}`;
+const logPath = logDirectory || `./logs/${new Date().toISOString()}`;
 
 let bearerToken;
 
