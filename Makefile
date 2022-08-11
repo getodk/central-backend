@@ -56,7 +56,7 @@ lint: node_version
 run-docker-postgres: stop-docker-postgres
 	docker run -d --name odk-postgres -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:9.6
 	sleep 5
-	node .circleci/initdb.js
+	node .circleci/initdb-dev.js
 
 .PHONY: stop-docker-postgres
 stop-docker-postgres:
