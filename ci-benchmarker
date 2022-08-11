@@ -3,7 +3,8 @@ set -o pipefail
 
 make base
 
-node ./lib/bin/cli.js user-create -u x@example.com -p secret1234
+node ./lib/bin/cli.js user-create  -u x@example.com -p secret1234
+node ./lib/bin/cli.js user-promote -u x@example.com
 
 make run &
 backend_pid="$!"
