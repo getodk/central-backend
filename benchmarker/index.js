@@ -143,7 +143,7 @@ function doBenchmark(name, throughput, throughputPeriod, testDuration, fn) {
         log.report('     Successes:', successes.length);
         log.report('      Failures:', fails.length);
         log.report('Response times:');
-        log.report('          mean:', _.mean(successes), 'ms');
+        log.report('          mean:', durationForHumans(_.mean(successes)));
         log.report('           min:', _. min(successes), 'ms');
         log.report('           max:', _. max(successes), 'ms');
         log.report('Response sizes:');
