@@ -104,7 +104,7 @@ function doBenchmark(name, throughput, throughputPeriod, testDuration, fn) {
           sizes.push(resSize);
           results[n] = 'ok';
         } catch(err) {
-          fails.push({ n, err });
+          fails.push({ n, err:{ message:err.message, stack:err.stack } });
           results[n] = 'fail';
         }
       };
