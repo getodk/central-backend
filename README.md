@@ -55,6 +55,14 @@ CREATE EXTENSION IF NOT EXISTS CITEXT;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 ```
 
+### Creating a admin user
+
+With Central running (e.g. `make run` in another terminal window) use the command line interface to create a user and promote them to an admin role. The same commands can be used to create additional users.
+
+`node lib/bin/cli.js -u <email> user-create` (will prompt for password)
+`node lib/bin/cli.js -u <email> user-promote`
+
+
 ### Sending email
 
 It isn't necessary to actually send email when working on this code. The default email configuration (see `config/default.json`) uses the `json` transport (as does the test configuration), in which case emails are printed to the local server log and delivery is not attempted.
