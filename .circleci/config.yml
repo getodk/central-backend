@@ -15,4 +15,7 @@ jobs:
       - run: node .circleci/initdb.js
       - run: make base
       - run: node ./lib/bin/cli.js user-create -u x@example.com -p secret1234
+      - run: make run & backend_pid="$!"
+      - run: echo 'Sleeping... (TODO: should wait for backend to be available)' && sleep 10 && echo 'Woke up!'
       - run: cd benchmarker && npm ci && node index.js -s http://localhost:8383 -P secret1234
+      - run: kill "$backend_pid"
