@@ -6,7 +6,9 @@ const { getFormFields, getDataset, sanitizeFieldsForOdata, SchemaStack, merge, e
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 // eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
+// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
+// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
 
 describe('form schema', () => {
@@ -1843,7 +1845,7 @@ describe('form schema', () => {
         </h:head>
       </h:html>`;
       // Problem.user.invalidEntityForm
-      return getDataset(xml).should.be.rejectedWith(Problem, { problemCode: 400.22 });
+      return getDataset(xml).should.be.rejectedWith(Problem, { problemCode: 400.23 });
     });
 
     it('should run but find no dataset on non-entity forms', () =>

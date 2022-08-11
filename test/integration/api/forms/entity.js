@@ -18,5 +18,5 @@ describe('api: /projects/:id/forms (entity-handling)', () => {
             body.should.be.a.Form();
             body.xmlFormId.should.equal('simpleEntity');
           }))));
-	});
+  });
 });
