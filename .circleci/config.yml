@@ -18,4 +18,4 @@ jobs:
       - run: make run & backend_pid="$!"
       - run: echo 'Sleeping... (TODO: should wait for backend to be available)' && sleep 10 && echo 'Woke up!'
       - run: cd benchmarker && npm ci && node index.js -s http://localhost:8383 -P secret1234
-      - run: kill "$backend_pid"
+      - run: kill "$backend_pid" # TODO this might not get killed if benchmarker fails
