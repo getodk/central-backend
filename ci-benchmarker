@@ -19,4 +19,5 @@ npm ci
 node index.js -s http://localhost:8383 -P secret1234
 
 # this might not get killed if benchmarker fails
-kill "$backend_pid"
+#kill "$backend_pid"
+# test to see if the child process is killed anyway
