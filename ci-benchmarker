@@ -8,9 +8,9 @@ node ./lib/bin/cli.js user-promote -u x@example.com
 
 make run &
 
-echo 'Sleeping... (TODO: should wait for backend to be available)'
-sleep 10
-echo 'Woke up!'
+echo 'Waiting for backend to start...'
+timeout 30 bash -c 'while ! curl -s -o /dev/null localhost:8383; do sleep 1; done'
+echo 'Backend started!'
 
 cd benchmarker
 npm ci
