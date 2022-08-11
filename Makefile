@@ -33,6 +33,9 @@ test: lint
 .PHONY: test-full
 test-full: lint
 	npx mocha --recursive --exit
+.PHONY: test-ci
+test-ci: lint
+	npx mocha --recursive --exit --reporter mocha-junit-reporter
 
 .PHONY: test-integration
 test-integration: node_version
