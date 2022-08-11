@@ -14,5 +14,5 @@ jobs:
       - run: npm ci
       - run: node .circleci/initdb.js
       - run: make base
-      - run: node ./lib/bin/cli.js user-create -u x@example.com -p secret
-      - run: cd benchmarker && npm ci && node index.js -s http://localhost:8383
+      - run: node ./lib/bin/cli.js user-create -u x@example.com -p secret1234
+      - run: cd benchmarker && npm ci && node index.js -s http://localhost:8383 -P secret1234
