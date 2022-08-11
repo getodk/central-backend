@@ -1,0 +1,21 @@
+#!/bin/bash -eux
+set -o pipefail
+
+make base
+
+node ./lib/bin/cli.js user-create -u x@example.com -p secret1234
+
+make run &
+backend_pid="$!"
+echo "Got backend pid: $backend_pid"
+
+echo 'Sleeping... (TODO: should wait for backend to be available)'
+sleep 10
+echo 'Woke up!'
+
+cd benchmarker
+npm ci
+node index.js -s http://localhost:8383 -P secret1234
+
+# this might not get killed if benchmarker fails
+kill "$backend_pid"
