@@ -15,4 +15,6 @@ jobs:
       - run: npm ci
       - run: node lib/bin/create-docker-databases.js
       - run: make test-full
-
+      - run: ./ci-benchmarker
+      - store_artifacts:
+          path: /tmp/benchmarker-logs
