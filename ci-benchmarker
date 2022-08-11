@@ -1,0 +1,17 @@
+#!/bin/bash -eux
+set -o pipefail
+
+make base
+
+node ./lib/bin/cli.js user-create  -u x@example.com -p secret1234
+node ./lib/bin/cli.js user-promote -u x@example.com
+
+make run &
+
+echo 'Waiting for backend to start...'
+timeout 30 bash -c 'while ! curl -s -o /dev/null localhost:8383; do sleep 1; done'
+echo 'Backend started!'
+
+cd benchmarker
+npm ci
+node index.js -s http://localhost:8383 -P secret1234 -L /tmp/benchmarker-logs
