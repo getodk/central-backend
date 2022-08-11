@@ -316,6 +316,6 @@ function exportZipWithDataAndMedia(n, projectId, formId) {
 }
 
 function durationForHumans(ms) {
-  if(ms > 1000) return Math.floor(ms / 1000) + 's';
+  if(ms > 1000) return (ms / 1000).toFixed(1) + 's';
   return ms + 'ms';
 }
