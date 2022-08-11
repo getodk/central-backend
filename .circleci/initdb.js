@@ -12,9 +12,13 @@ const knex = require('knex');
   await dbmain.raw(`select pg_reload_conf();`);*/
   dbmain.destroy();
 
-  const dbjt = knex({ client: 'pg', connection: { host: 'localhost', user: 'postgres', database: 'jubilant_test', password: 'odktest' } });
+  await createExtensions({ host: 'localhost', user: 'postgres', database: 'jubilant',      password: 'odktest' })
+  await createExtensions({ host: 'localhost', user: 'postgres', database: 'jubilant_test', password: 'odktest' })
+})();
+
+async function createExtensions(connection) {
+  const dbjt = knex({ client: 'pg', connection });
   await dbjt.raw('create extension citext;');
   await dbjt.raw('create extension pg_trgm;');
   dbjt.destroy();
-})();
-
+}
