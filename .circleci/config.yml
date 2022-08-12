@@ -13,6 +13,7 @@ jobs:
       - checkout
       - run: npm ci
       - run: node .circleci/initdb.js
+      - run: make test-all
       - run: ./ci-benchmarker
       - store_artifacts:
           path: /tmp/benchmarker-logs
