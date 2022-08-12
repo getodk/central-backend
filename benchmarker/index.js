@@ -98,14 +98,14 @@ function doBenchmark(name, throughput, throughputPeriod, testDuration, minimumSu
         const n = iterationCount++;
         try {
           const start = Date.now();
-          const resSize = await fn(n);
+          const size = await fn(n);
           const time = Date.now() - start;
           successes.push(time);
-          sizes.push(resSize);
-          results[n] = 'ok';
+          sizes.push(size);
+          results[n] = { success:true, time, size };
         } catch(err) {
-          fails.push({ n, err:{ message:err.message, stack:err.stack } });
-          results[n] = 'fail';
+          fails.push(err.message);
+          results[n] = { success:false, err:{ message:err.message, stack:err.stack } };
         }
       };
 
@@ -137,10 +137,7 @@ function doBenchmark(name, throughput, throughputPeriod, testDuration, minimumSu
           }
         });
 
-        fs.writeFileSync(`${logPath}/${name}.extras.log.json`, JSON.stringify({
-          results,
-          fails,
-        }, null, 2));
+        fs.writeFileSync(`${logPath}/${name}.extras.log.json`, JSON.stringify(results, null, 2));
 
         const successPercent = 100 * successes.length / iterationCount;
 
@@ -159,37 +156,14 @@ function doBenchmark(name, throughput, throughputPeriod, testDuration, minimumSu
         log.report('               min:', _. min(sizes), 'b');
         log.report('               max:', _. max(sizes), 'b');
         if(fails.length) log.report('            Errors:');
-        [ ...new Set(fails.map(f => f.err.message)) ].map(m => log.report(`              * ${m.replace(/\n/g, '\\n')}`));
+        [ ...new Set(fails) ].map(m => log.report(`              * ${m.replace(/\n/g, '\\n')}`));
         log.report('--------------------------');
 
-        if(_.min(sizes) !== _.max(sizes)) {
-          log.report('!!!');
-          log.report('!!!');
-          log.report('!!! VARIATION IN RESPONSE SIZES MAY INDICATE SERIOUS ERRORS SERVER-SIDE!');
-          log.report('!!!');
-          log.report('!!!');
-          log.report('--------------------------');
-          if(_.min(sizes) !== _.max(sizes)) process.exit(1);
-        }
+        if(_.min(sizes) !== _.max(sizes)) reportFatalError('VARIATION IN RESPONSE SIZES MAY INDICATE SERIOUS ERRORS SERVER-SIDE');
 
-        if(successPercent < minimumSuccessThreshold) {
-          log.report('!!!');
-          log.report('!!!');
-          log.report('!!! MINIMUM SUCCESS THRESHOLD WAS NOT MET!');
-          log.report('!!!');
-          log.report('!!!');
-          log.report('--------------------------');
-          process.exit(1);
-        }
+        if(successPercent < minimumSuccessThreshold) reportFatalError('MINIMUM SUCCESS THRESHOLD WAS NOT MET');
 
-        if(fails.length) {
-          log.report('!!!');
-          log.report('!!!');
-          log.report('!!! REQUEST FAILURES MAY AFFECT SUBSEQUENT BENCHMARKS!');
-          log.report('!!!');
-          log.report('!!!');
-          log.report('--------------------------');
-        }
+        if(fails.length) reportWarning('REQUEST FAILURES MAY AFFECT SUBSEQUENT BENCHMARKS');
 
         resolve();
       }, +testDuration);
@@ -197,6 +171,20 @@ function doBenchmark(name, throughput, throughputPeriod, testDuration, minimumSu
       reject(err);
     }
   });
+}
+
+function reportFatalError(message) {
+  reportWarning(message);
+  process.exit(1);
+}
+
+function reportWarning(message) {
+  log.report('!!!');
+  log.report('!!!');
+  log.report(`!!! ${message}!`);
+  log.report('!!!');
+  log.report('!!!');
+  log.report('--------------------------');
 }
 
 async function time(sectionTitle, fn) {
