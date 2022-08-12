@@ -560,12 +560,14 @@ describe('api: /forms/:id.svc', () => {
             });
           }))));
 
-    it('should limit and offset toplevel rows', testService((service) =>
+    it.only('should limit and offset toplevel rows', testService((service) =>
       withSubmissions(service, (asAlice) =>
         // eslint-disable-next-line quotes
         asAlice.get("/v1/projects/1/forms/withrepeat.svc/Submissions?$top=1&$skip=1")
           .expect(200)
-          .then(({ body }) => {
+          .then((res) => {
+            console.log('res:', JSON.stringify(res));
+            const { body } = res;
             body.value[0].__system.submissionDate.should.be.an.isoDate();
             // eslint-disable-next-line no-param-reassign
             delete body.value[0].__system.submissionDate;
