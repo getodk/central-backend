@@ -142,7 +142,7 @@ function doBenchmark(name, throughput, throughputPeriod, testDuration, minimumSu
           fails,
         }, null, 2));
 
-        const successPercent = (successes.length / iterationCount);
+        const successPercent = 100 * successes.length / iterationCount;
 
         log.report('--------------------------');
         log.report('              Test:', name);
