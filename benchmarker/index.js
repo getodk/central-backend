@@ -72,7 +72,7 @@ async function benchmark() {
 //  const projectId = 545;
 //  const formId = '250_questions';
 
-  await doBenchmark('exportZipWithDataAndMedia', 10, 3_000, 60_000, 0, n => exportZipWithDataAndMedia(n, projectId, formId));
+  await doBenchmark('exportZipWithDataAndMedia', 10, 3_000, 60_000, 10, n => exportZipWithDataAndMedia(n, projectId, formId));
 
   log.info(`Check for extra logs at ${logPath}`);
 
