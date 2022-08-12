@@ -61,7 +61,7 @@ async function benchmark() {
 
   log.info('Setup complete.  Starting benchmarks...');
 
-  await doBenchmark('randomSubmission', throughput, throughputPeriod, testDuration, n => randomSubmission(n, projectId, formId));
+  await doBenchmark('randomSubmission', throughput, throughputPeriod, testDuration, 100, n => randomSubmission(n, projectId, formId));
 
   // TODO should work out a more scientific sleep duration
   const backgroundJobPause = 20_000;
@@ -72,17 +72,17 @@ async function benchmark() {
 //  const projectId = 545;
 //  const formId = '250_questions';
 
-  await doBenchmark('exportZipWithDataAndMedia', 10, 3_000, 60_000, n => exportZipWithDataAndMedia(n, projectId, formId));
+  await doBenchmark('exportZipWithDataAndMedia', 10, 3_000, 60_000, 0, n => exportZipWithDataAndMedia(n, projectId, formId));
 
   log.info(`Check for extra logs at ${logPath}`);
 
   log.info('Complete.');
 }
 
-function doBenchmark(name, throughput, throughputPeriod, testDuration, fn) {
+function doBenchmark(name, throughput, throughputPeriod, testDuration, minimumSuccessThreshold, fn) {
   log.info('Starting benchmark:', name);
-  log.info('        throughput:', throughput);
-  log.info('  throughputPeriod:', throughputPeriod);
+  log.info('        throughput:', throughput, 'per period');
+  log.info('  throughputPeriod:', throughputPeriod, 'ms');
   log.info('      testDuration:', durationForHumans(testDuration));
   log.info('-------------------------------');
   return new Promise((resolve, reject) => {
@@ -137,22 +137,50 @@ function doBenchmark(name, throughput, throughputPeriod, testDuration, fn) {
           }
         });
 
+        fs.writeFileSync(`${logPath}/${name}.extras.log.json`, JSON.stringify({
+          results,
+          fails,
+        }, null, 2));
+
+        const successPercent = (successes.length / iterationCount);
+
         log.report('--------------------------');
-        log.report('          Test:', name);
-        log.report(' Test duration:', testDuration);
-        log.report('Total requests:', iterationCount);
-        log.report('     Successes:', successes.length);
-        log.report('      Failures:', fails.length);
-        log.report('Response times:');
-        log.report('          mean:', durationForHumans(_.mean(successes)));
-        log.report('           min:', _. min(successes), 'ms');
-        log.report('           max:', _. max(successes), 'ms');
-        log.report('Response sizes:');
-        log.report('           min:', _. min(sizes), 'b');
-        log.report('           max:', _. max(sizes), 'b');
-        if(fails.length) log.report('        Errors:');
+        log.report('              Test:', name);
+        log.report('     Test duration:', testDuration);
+        log.report('    Total requests:', iterationCount);
+        log.report('Success % required:', `${minimumSuccessThreshold}%`);
+        log.report('         Successes:', successes.length, `(${successPercent.toFixed(0)}%)`);
+        log.report('          Failures:', fails.length);
+        log.report('    Response times:');
+        log.report('              mean:', durationForHumans(_.mean(successes)));
+        log.report('               min:', _. min(successes), 'ms');
+        log.report('               max:', _. max(successes), 'ms');
+        log.report('    Response sizes:');
+        log.report('               min:', _. min(sizes), 'b');
+        log.report('               max:', _. max(sizes), 'b');
+        if(fails.length) log.report('            Errors:');
         [ ...new Set(fails.map(f => f.err.message)) ].map(m => log.report(`              * ${m.replace(/\n/g, '\\n')}`));
         log.report('--------------------------');
+
+        if(_.min(sizes) !== _.max(sizes)) {
+          log.report('!!!');
+          log.report('!!!');
+          log.report('!!! VARIATION IN RESPONSE SIZES MAY INDICATE SERIOUS ERRORS SERVER-SIDE!');
+          log.report('!!!');
+          log.report('!!!');
+          log.report('--------------------------');
+          if(_.min(sizes) !== _.max(sizes)) process.exit(1);
+        }
+
+        if(successPercent < minimumSuccessThreshold) {
+          log.report('!!!');
+          log.report('!!!');
+          log.report('!!! MINIMUM SUCCESS THRESHOLD WAS NOT MET!');
+          log.report('!!!');
+          log.report('!!!');
+          log.report('--------------------------');
+          process.exit(1);
+        }
 
         if(fails.length) {
           log.report('!!!');
@@ -162,22 +190,6 @@ function doBenchmark(name, throughput, throughputPeriod, testDuration, fn) {
           log.report('!!!');
           log.report('--------------------------');
         }
-
-        if(_.min(sizes) !== _.max(sizes)) {
-          log.report('!!!');
-          log.report('!!!');
-          log.report('!!! VARIATION IN RESPONSE SIZES MAY INDICATE SERIOUS ERRORS SERVER-SIDE!');
-          log.report('!!!');
-          log.report('!!!');
-          log.report('--------------------------');
-        }
-
-        fs.writeFileSync(`${logPath}/${name}.extras.log.json`, JSON.stringify({
-          results,
-          fails,
-        }, null, 2));
-
-        if(_.min(sizes) !== _.max(sizes)) process.exit(69);
 
         resolve();
       }, +testDuration);
