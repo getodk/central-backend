@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": "14"
+    "node": "16"
   },
   "volta": {
-    "node": "14.19.3"
+    "node": "16.13.2",
+    "yarn": "1.22.15"
   },
   "dependencies": {
     "@sentry/node": "~6",
@@ -35,6 +36,8 @@
     "odata-v4-parser": "~0.1",
     "pg": "~8",
     "pg-query-stream": "~4",
+    "postgres": "^3.2.4",
+    "postgres-bridge": "^1.14.0",
     "prompt": "~1",
     "ramda": "~0",
     "sanitize-filename": "~1",
