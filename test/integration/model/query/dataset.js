@@ -11,7 +11,7 @@ const testData = require(appRoot + '/test/data/xml');
 
 describe('datasets', () => {
   describe('create', () => {
-    it.only('should create a dataset', testService(async (service, { Datasets }) => {
+    it('should create a dataset', testService(async (service, { Datasets, Forms }) => {
 
       const ds = new Dataset({ name: 'people', projectId: 1 });
 
@@ -45,16 +45,19 @@ describe('datasets', () => {
           .expect(200));
       // .then(() => asAlice.get('/v1/projects/1/forms/simpleModified')));
 
+      // Get the Form w/ formDefId of this newly created form
+      const modifiedForm = await Forms.getByProjectAndXmlFormId(1, 'simpleModified').then((f) => f.get());
+
       // Let's merge dataset with the newly created form
-      const newFields = fields.map(f => f.with({ formDefId: 3 }));
+      const newFields = fields.map(f => f.with({ formDefId: modifiedForm.currentDefId }));
       await Datasets.createOrMerge(ds, newFields);
 
       // Make sure we have just 2 properties in dataset but each property is mapped to 2 fields
       await Datasets.getById(datasetId)
         .then(result => {
           result.properties.map(p => p.name).should.be.eql(['p1', 'p2']);
-          result.properties[0].fields.map(f => f.formDefId).should.be.eql([1, 3]);
-          result.properties[1].fields.map(f => f.formDefId).should.be.eql([1, 3]);
+          result.properties[0].fields.map(f => f.formDefId).should.be.eql([1, modifiedForm.currentDefId]);
+          result.properties[1].fields.map(f => f.formDefId).should.be.eql([1, modifiedForm.currentDefId]);
         });
     }));
   });
