@@ -36,8 +36,6 @@
     "odata-v4-parser": "~0.1",
     "pg": "~8",
     "pg-query-stream": "~4",
-    "postgres": "^3.2.4",
-    "postgres-bridge": "^1.14.0",
     "prompt": "~1",
     "ramda": "~0",
     "sanitize-filename": "~1",
