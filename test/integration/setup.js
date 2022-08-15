@@ -135,13 +135,13 @@ const augment = (service) => {
 ////////////////////////////////////////////////////////////////////////////////
 // FINAL TEST WRAPPERS
 
-const baseContainer = withDefaults({ db, mail, env, xlsform, google, bcrypt, enketo, Sentry, odkAnalytics });
+const baseContainer = () => withDefaults({ db, mail, env, xlsform, google, bcrypt, enketo, Sentry, odkAnalytics });
 
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
 // gets rolled back for a clean slate on the next test.
 const testService = (test) => () => new Promise((resolve, reject) => {
-  baseContainer.transacting((container) => {
+  baseContainer().transacting((container) => {
     const rollback = (f) => (x) => container.run(sql`rollback`).then(() => f(x));
     return test(augment(request(service(container))), container).then(rollback(resolve), rollback(reject));
   });//.catch(Promise.resolve.bind(Promise)); // TODO/SL probably restore
@@ -153,13 +153,13 @@ const testService = (test) => () => new Promise((resolve, reject) => {
 // eslint-disable-next-line space-before-function-paren, func-names
 const testServiceFullTrx = (test) => function() {
   mustReinitAfter = this.test.fullTitle();
-  return test(augment(request(service(baseContainer))), baseContainer);
+  return test(augment(request(service(baseContainer()))), baseContainer());
 };
 
 // for some tests we just want a container, without any of the webservice stuffs between.
 // this is that, with the same transaction trickery as a normal test.
 const testContainer = (test) => () => new Promise((resolve, reject) => {
-  baseContainer.transacting((container) => {
+  baseContainer().transacting((container) => {
     const rollback = (f) => (x) => container.run(sql`rollback`).then(() => f(x));
     return test(container).then(rollback(resolve), rollback(reject));
   });//.catch(Promise.resolve.bind(Promise));
@@ -169,14 +169,14 @@ const testContainer = (test) => () => new Promise((resolve, reject) => {
 // eslint-disable-next-line space-before-function-paren, func-names
 const testContainerFullTrx = (test) => function() {
   mustReinitAfter = this.test.fullTitle();
-  return test(baseContainer);
+  return test(baseContainer());
 };
 
 // called to get a container context per task. ditto all // from testService.
 // here instead our weird hijack work involves injecting our own constructed
 // container into the task context so it just picks it up and uses it.
 const testTask = (test) => () => new Promise((resolve, reject) => {
-  baseContainer.transacting((container) => {
+  baseContainer().transacting((container) => {
     task._container = container.with({ task: true });
     const rollback = (f) => (x) => {
       delete task._container;
