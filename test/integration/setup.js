@@ -17,7 +17,7 @@ after(() => { migrator.destroy(); });
 // slonik connection pool
 // eslint-disable-next-line import/no-dynamic-require
 const { slonikPool } = require(appRoot + '/lib/external/slonik');
-const db = slonikPool(config.get('test.database'));
+let db;
 
 // set up our mailer.
 const env = config.get('default.env');
@@ -84,6 +84,8 @@ const populate = (container, [ head, ...tail ] = fixtures) =>
 const initialize = () => migrator
   .raw('drop owned by current_user')
   .then(() => migrator.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
+  .then(() => slonikPool(config.get('test.database')))
+  .then(pool => { db = pool; })
   .then(() => withDefaults({ db, bcrypt }).transacting(populate));
 
 before(initialize);
