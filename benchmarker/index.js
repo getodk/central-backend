@@ -5,7 +5,7 @@ import { v4 as uuid } from 'uuid';
 import { basename } from 'node:path';
 import { program } from 'commander';
 
-const _log = (...args) => console.log('[benchmarker]', new Date().toTimeString().substring(0, 8), ...args);
+const _log = (...args) => console.log(`[${new Date().toISOString()}]`, '[benchmarker]', ...args);
 const log  = (...args) => true  && _log('INFO',   ...args);
 log.debug  = (...args) => false && _log('DEBUG',  ...args);
 log.info   = log;
