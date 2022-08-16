@@ -11,10 +11,8 @@ jobs:
 
     steps:
       - checkout
-      - run: node lib/bin/check-file-headers.js
       - run: npm ci
-      - run: node lib/bin/create-docker-databases.js
-      - run: make test-full
+      - run: node .circleci/initdb.js
       - run: ./ci-benchmarker
       - store_artifacts:
           path: /tmp/benchmarker-logs
