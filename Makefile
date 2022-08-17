@@ -54,9 +54,7 @@ lint: node_version
 
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
-	docker run -d --name odk-postgres -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:9.6
-	sleep 5
-	node lib/bin/create-docker-databases.js
+	docker start odk-postgres || (docker run -d --name odk-postgres -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:9.6 && sleep 5 && node lib/bin/create-docker-databases.js)
 
 .PHONY: stop-docker-postgres
 stop-docker-postgres:
