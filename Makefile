@@ -1,5 +1,3 @@
-export PATH := ./node_modules/.bin:$(PATH)
-
 default: base
 
 node_modules: package.json
@@ -31,26 +29,26 @@ debug: base
 
 .PHONY: test
 test: lint
-	env BCRYPT=no mocha --recursive --exit
+	env BCRYPT=no npx mocha --recursive --exit
 .PHONY: test-full
 test-full: lint
-	mocha --recursive --exit
+	npx mocha --recursive --exit
 
 .PHONY: test-integration
 test-integration: node_version
-	mocha --recursive test/integration --exit
+	npx mocha --recursive test/integration --exit
 
 .PHONY: test-unit
 test-unit: node_version
-	mocha --recursive test/unit --exit
+	npx mocha --recursive test/unit --exit
 
 .PHONY: test-coverage
 test-coverage: node_version
-	nyc -x "**/migrations/**" --reporter=lcov _mocha --exit --recursive test
+	npx nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --exit --recursive test
 
 .PHONY: lint
 lint: node_version
-	eslint --cache --max-warnings 0 .
+	npx eslint --cache --max-warnings 0 .
 
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
