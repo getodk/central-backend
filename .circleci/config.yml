@@ -12,6 +12,6 @@ jobs:
     steps:
       - checkout
       - run: npm ci
-      - run: node .circleci/initdb.js
+      - run: node lib/bin/create-docker-databases.js
       - run: make test-full
 
