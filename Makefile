@@ -61,4 +61,7 @@ run-docker-postgres: stop-docker-postgres
 .PHONY: stop-docker-postgres
 stop-docker-postgres:
 	docker stop odk-postgres || true
+
+.PHONY: rm-docker-postgres
+rm-docker-postgres: stop-docker-postgres
 	docker rm odk-postgres || true
