@@ -13,6 +13,6 @@ jobs:
       - checkout
       - run: node lib/bin/check-file-headers.js
       - run: npm ci
-      - run: node .circleci/initdb.js
+      - run: node lib/bin/create-docker-databases.js
       - run: make test-full
 
