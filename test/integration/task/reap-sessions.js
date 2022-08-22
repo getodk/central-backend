@@ -1,8 +1,9 @@
 const appRoot = require('app-root-path');
-const should = require('should');
 const sql = require('postgres')();
 const { testTask } = require('../setup');
+// eslint-disable-next-line import/no-dynamic-require
 const { reapSessions } = require(appRoot + '/lib/task/reap-sessions');
+// eslint-disable-next-line import/no-dynamic-require
 const { Actor } = require(appRoot + '/lib/model/frames');
 
 describe('task: reap-sessions', () => {

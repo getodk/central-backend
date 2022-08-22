@@ -52,7 +52,7 @@ describe('container', () => {
 
     it('should provide own context to query modules', (done) => {
       const module = {
-        proc1: (x) => ({ injected }) => injected.proc2(3),
+        proc1: () => ({ injected }) => injected.proc2(3),
         proc2: (y) => () => Promise.resolve(y * 2)
       };
       const { injected } = injector({ db: 7 }, { injected: module });

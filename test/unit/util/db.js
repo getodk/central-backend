@@ -1,9 +1,12 @@
 const appRoot = require('app-root-path');
-const should = require('should');
 const sql = require('postgres')();
+// eslint-disable-next-line import/no-dynamic-require
 const { Frame, table, into } = require(appRoot + '/lib/model/frame');
+// eslint-disable-next-line import/no-dynamic-require
 const util = require(appRoot + '/lib/util/db');
+// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
+// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
 
 describe('util/db', () => {
@@ -201,6 +204,7 @@ describe('util/db', () => {
 
   describe('unjoiner', () => {
     const { unjoiner } = util;
+    // eslint-disable-next-line no-multi-spaces
     const T = Frame.define(table('frames'), 'x',  'y');
     const U = Frame.define(into('extra'), 'z');
     it('should generate fields', () => {
@@ -209,8 +213,10 @@ describe('util/db', () => {
     });
 
     it('should unjoin data', () => {
+      // eslint-disable-next-line func-call-spacing, no-spaced-func
       unjoiner(T, U)
-        ({ 'frames!x': 3, 'frames!y': 4, z: 5 })
+      // eslint-disable-next-line no-unexpected-multiline
+      ({ 'frames!x': 3, 'frames!y': 4, z: 5 })
         .should.eql(new T({ x: 3, y: 4 }, { extra: new U({ z: 5 }) }));
     });
 
@@ -226,10 +232,12 @@ describe('util/db', () => {
 
   describe('extender', () => {
     const { extender, QueryOptions } = util;
+    // eslint-disable-next-line no-multi-spaces
     const T = Frame.define(table('frames'), 'x',  'y');
     const U = Frame.define(into('extra'), 'a', 'b');
+    // eslint-disable-next-line no-extra-semi
     function noop() { return Promise.resolve({}); };
-    noop.map = (f) => (x) => x;
+    noop.map = () => (x) => x;
 
     it('should provide the appropriate arguments when not extended', () => {
       let run = false;
@@ -258,6 +266,7 @@ describe('util/db', () => {
     });
 
     it('should unjoin nonextended fields', () => {
+      // eslint-disable-next-line no-extra-semi
       function run() { return Promise.resolve({ 'frames!x': 3, 'frames!y': 4 }); };
       run.map = (f) => (x) => f(x);
       return extender(T)(U)(noop)(run, QueryOptions.none)
@@ -265,6 +274,7 @@ describe('util/db', () => {
     });
 
     it('should unjoin extended fields', () => {
+      // eslint-disable-next-line no-extra-semi
       function run() { return Promise.resolve({ 'frames!x': 3, 'frames!y': 4, a: 5 }); };
       run.map = (f) => (x) => f(x);
       return extender(T)(U)(noop)(run, QueryOptions.extended)
@@ -278,19 +288,22 @@ describe('util/db', () => {
 
     it('should formulate a basic response based on data', () => {
       insert(new T({ x: 2, y: 3 })).should.eqlQuery(
-        sql`insert into "frames" ${sql({ x: 2, y: 3 })} returning *`);
+        sql`insert into "frames" ${sql({ x: 2, y: 3 })} returning *`
+      );
     });
 
     it('should deal with strange data input types', () => {
       insert(new T({ x: { test: true }, y: undefined, z: new Date('2000-01-01') }))
         .should.eqlQuery(
-          sql`insert into "frames" ("x","y","z")values(${{ test: true }},${null},${new Date('2000-01-01T00:00:00.000Z')}) returning *`);
+          sql`insert into "frames" ("x","y","z")values(${{ test: true }},${null},${new Date('2000-01-01T00:00:00.000Z')}) returning *`
+        );
     });
 
     it('should automatically insert into createdAt if expected', () => {
       const U = Frame.define(table('cats'), 'createdAt', 'updatedAt');
       insert(new U()).should.eqlQuery(
-        sql`insert into "cats" ("createdAt")values(${sql`clock_timestamp()`}) returning *`);
+        sql`insert into "cats" ("createdAt")values(${sql`clock_timestamp()`}) returning *`
+      );
     });
   });
 
@@ -304,13 +317,15 @@ describe('util/db', () => {
 
     it('should insert all data', () => {
       insertMany([ new T({ x: 2 }), new T({ y: 3 }) ]).should.eqlQuery(
-        sql`insert into "dogs" ("x","y")values(${2},${null}),(${null},${3})`);
+        sql`insert into "dogs" ("x","y")values(${2},${null}),(${null},${3})`
+      );
     });
 
     it('should insert createdAt and strange values', () => {
       const U = Frame.define(table('dogs'), 'x', 'createdAt');
       insertMany([ new U({ x: new Date('2000-01-01') }), new U() ]).should.eqlQuery(
-        sql`insert into "dogs" ("x","createdAt")values(${new Date('2000-01-01T00:00:00.000Z')},${sql`clock_timestamp()`}),(${null},${sql`clock_timestamp()`})`);
+        sql`insert into "dogs" ("x","createdAt")values(${new Date('2000-01-01T00:00:00.000Z')},${sql`clock_timestamp()`}),(${null},${sql`clock_timestamp()`})`
+      );
     });
   });
 
@@ -432,6 +447,7 @@ returning *`);
     const { postgresErrorToProblem } = util;
     const after = (times, f) => {
       let count = 0;
+      // eslint-disable-next-line no-plusplus, no-confusing-arrow
       return () => (++count === times) ? f() : null;
     };
 

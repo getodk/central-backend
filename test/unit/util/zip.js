@@ -1,10 +1,11 @@
 const appRoot = require('app-root-path');
-const should = require('should');
 const { createWriteStream } = require('fs');
 const { Transform, Readable } = require('stream');
+// eslint-disable-next-line import/no-dynamic-require
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
-const { streamAttachments } = require(appRoot + '/lib/data/attachments');
+// eslint-disable-next-line import/no-dynamic-require
 const { PartialPipe } = require(appRoot + '/lib/util/stream');
+// eslint-disable-next-line import/no-dynamic-require
 const { zipPart, zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 const { fromChunks } = require('streamtest').v2;
 
@@ -13,7 +14,10 @@ describe('zipPart streamer', () => {
     const part = zipPart();
 
     let closed = false;
-    zipStreamToFiles(zipStreamFromParts(() => part), (result) => {
+    zipStreamToFiles(zipStreamFromParts(() => part), (err) => {
+      // eslint-disable-next-line keyword-spacing
+      if(err) return done(err);
+
       closed = true;
       done();
     });
@@ -26,7 +30,7 @@ describe('zipPart streamer', () => {
   it('should close the archive successfully given no files', (done) => {
     const part = zipPart();
     // no assertions other than verifying that done is called.
-    zipStreamToFiles(zipStreamFromParts(() => part), () => done());
+    zipStreamToFiles(zipStreamFromParts(() => part), (err) => done(err));
     part.finalize();
   });
 
@@ -46,7 +50,7 @@ describe('zipPart streamer', () => {
   it('should call the given callback only when the file has been added', (done) => {
     const part = zipPart();
     const file = new Readable({ read() {} });
-    const archive = zipStreamFromParts(() => part);
+    zipStreamFromParts(() => part);
 
     let pushedAll = false;
     part.append(file, { name: 'file' }, () => {
@@ -72,6 +76,7 @@ describe('zipPart streamer', () => {
       // despite the fact that 2 gets closed before 1 below, we still expect 1 to
       // be called back first because it was appended to the archive first, and
       // the archive works serially.
+      // eslint-disable-next-line no-use-before-define
       calls.should.eql([ 1, 2 ]);
       done();
     });
@@ -93,7 +98,10 @@ describe('zipPart streamer', () => {
     const part1 = zipPart();
     const part2 = zipPart();
 
-    zipStreamToFiles(zipStreamFromParts(() => part1, () => part2), (result) => {
+    zipStreamToFiles(zipStreamFromParts(() => part1, () => part2), (err, result) => {
+      // eslint-disable-next-line keyword-spacing
+      if(err) return done(err);
+
       result.filenames.should.containDeep([
         'x/test1.file',
         'x/test2.file',
@@ -122,7 +130,10 @@ describe('zipPart streamer', () => {
     const part1 = zipPart();
     const part2 = zipPart();
 
-    zipStreamToFiles(zipStreamFromParts(() => part1, () => part2), (result) => {
+    zipStreamToFiles(zipStreamFromParts(() => part1, () => part2), (err, result) => {
+      // eslint-disable-next-line keyword-spacing
+      if(err) return done(err);
+
       result.filenames.should.containDeep([ 'test1.file', 'test2.file' ]);
       result['test1.file'].should.equal('test static');
       result['test2.file'].should.equal('a!test!stream!');
@@ -135,7 +146,8 @@ describe('zipPart streamer', () => {
     part2.append(
       PartialPipe.of(
         fromChunks([ 'a', 'test', 'stream' ]),
-        new Transform({ transform(b, _, done) { done(null, b + '!'); } })),
+        // eslint-disable-next-line no-shadow
+        new Transform({ transform(b, _, done) { done(null, b + '!'); } })), // eslint-disable-line function-paren-newline
       { name: 'test2.file' }
     );
     part2.finalize();
@@ -160,11 +172,13 @@ describe('zipPart streamer', () => {
     part2.append(
       PartialPipe.of(
         fromChunks([ 'a', 'test', 'stream' ]),
+        // eslint-disable-next-line no-shadow
         new Transform({ transform(b, _, done) {
           if (b.length > 4) done(new Error('whoops'));
           else done(null, b + '!');
         } }),
-        new Transform({ transform(b, _, done) { done(null, b); } })),
+        // eslint-disable-next-line no-shadow
+        new Transform({ transform(b, _, done) { done(null, b); } })), // eslint-disable-line function-paren-newline
       { name: 'test2.file' }
     );
     part2.finalize();
@@ -186,10 +200,11 @@ describe('zipPart streamer', () => {
     part2.append(
       PartialPipe.of(
         fromChunks([ 'a', 'test', 'stream' ]),
+        // eslint-disable-next-line no-shadow
         new Transform({ transform(b, _, done) {
           if (b.length > 4) done(new Error('whoops'));
           else done(null, b + '!');
-        } })),
+        } })), // eslint-disable-line function-paren-newline
       { name: 'test2.file' }
     );
     part2.finalize();

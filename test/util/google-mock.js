@@ -9,6 +9,7 @@ module.exports = (google) => ({
     generateAuthUrl: (options) => google.auth.generateAuthUrl(options),
     getToken: (code) => ((code === 'happy google')
       ? Promise.resolve({ tokens: { code } })
+      // eslint-disable-next-line prefer-promise-reject-errors
       : Promise.reject({ response: { data: { code } } })) // this is the format their errors take.
   }
 });

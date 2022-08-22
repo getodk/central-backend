@@ -1,7 +1,8 @@
 const should = require('should');
 const appRoot = require('app-root-path');
-const sql = require('postgres')();
+// eslint-disable-next-line import/no-dynamic-require
 const { Frame, table, readable, writable, into, aux, embedded } = require(appRoot + '/lib/model/frame');
+// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
 
 describe('Frame', () => {
@@ -14,7 +15,7 @@ describe('Frame', () => {
       Frame.define('a', readable, writable, 'b', writable, 'c').def.writable.should.eql([ 'a', 'b' ]);
     });
     it('should note insert fields', () => {
-      const Box = Frame.define('id', 'a', readable, writable, 'b', writable, 'c')
+      const Box = Frame.define('id', 'a', readable, writable, 'b', writable, 'c');
       Box.insertfields.should.eql([ 'a', 'b', 'c' ]);
     });
     it('should note hasCreatedAt and hasUpdatedAt', () => {
@@ -40,6 +41,7 @@ describe('Frame', () => {
   describe('instance', () => {
     it('should be immutable', () => {
       should.throws(() => {
+        // eslint-disable-next-line lines-around-directive, strict
         'use strict';
         (new Frame()).x = 42;
       });
@@ -66,7 +68,7 @@ describe('Frame', () => {
       const Box = Frame.define('w', readable, 'x', readable, 'z', readable);
       (new Box(
         { w: 1, x: 2, y: 3, z: 4 },
-        { a: new Box({ w: 5 }, { b: new Box({ x: 6 }), c: new Frame({ z: 7 }) }) })
+        { a: new Box({ w: 5 }, { b: new Box({ x: 6 }), c: new Frame({ z: 7 }) }) }) // eslint-disable-line function-paren-newline
       ).forApi().should.eql({ w: 5, x: 6, z: 4 });
     });
 
@@ -74,7 +76,7 @@ describe('Frame', () => {
       const Box = Frame.define('w', readable, 'x', readable, 'z', readable);
       (new Box(
         { w: 1, x: 2, y: 3, z: 4 },
-        { a: Option.of(new Box({ w: 5 }, { b: new Box({ x: 6 }), c: Option.none() })) })
+        { a: Option.of(new Box({ w: 5 }, { b: new Box({ x: 6 }), c: Option.none() })) }) // eslint-disable-line function-paren-newline
       ).forApi().should.eql({ w: 5, x: 6, z: 4 });
     });
 
@@ -99,7 +101,7 @@ describe('Frame', () => {
       const Inner = Frame.define(into('inner'), 'y', writable);
       const Box = Frame.define('w', writable, 'x', writable, 'y', 'z', aux(Inner));
 
-      const inflated = Box.fromApi({ x: 2, y: 3, z: 4 })
+      const inflated = Box.fromApi({ x: 2, y: 3, z: 4 });
       inflated.should.eql(new Box({ x: 2 }));
       inflated.aux.inner.should.eql(new Inner({ y: 3 }));
     });

@@ -1,12 +1,6 @@
-const { readFileSync } = require('fs');
-const appRoot = require('app-root-path');
-const should = require('should');
 const config = require('config');
-const superagent = require('superagent');
-const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
-const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects/:id/forms (testing drafts)', () => {
 
@@ -131,7 +125,7 @@ describe('api: /projects/:id/forms (testing drafts)', () => {
       <manifestUrl>${domain}/v1/test/${token}/projects/1/forms/withAttachments/draft/manifest</manifestUrl>
     </xform>
   </xforms>`);
-              }))))));
+                }))))));
     });
 
     describe('/manifest GET', () => {
@@ -193,7 +187,7 @@ describe('api: /projects/:id/forms (testing drafts)', () => {
             .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft')
               .expect(200)
               .then(({ body }) => body.draftToken)
-              .then((token) => service.get('/v1/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/forms/withAttachments/draft/manifest')
+              .then(() => service.get('/v1/test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/forms/withAttachments/draft/manifest')
                 .set('X-OpenRosa-Version', '1.0')
                 .expect(404))))));
 

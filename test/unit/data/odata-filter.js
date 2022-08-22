@@ -9,8 +9,8 @@
 
 const appRoot = require('app-root-path');
 const assert = require('assert');
-const should = require('should');
 const sql = require('postgres')();
+// eslint-disable-next-line import/no-dynamic-require
 const { odataFilter } = require(appRoot + '/lib/data/odata-filter');
 
 describe('OData filter query transformer', () => {

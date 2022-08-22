@@ -1,5 +1,3 @@
-export PATH := ./node_modules/.bin:$(PATH)
-
 default: base
 
 node_modules: package.json
@@ -30,35 +28,36 @@ debug: base
 	node --debug --inspect lib/bin/run-server.js
 
 .PHONY: test
-test: node_version
-	env BCRYPT=no mocha --recursive --exit
+test: lint
+	env BCRYPT=no npx mocha --recursive --exit
 .PHONY: test-full
-test-full: node_version
-	mocha --recursive --exit
+test-full: lint
+	npx mocha --recursive --exit
 
 .PHONY: test-integration
 test-integration: node_version
-	mocha --recursive test/integration --exit
+	npx mocha --recursive test/integration --exit
 
 .PHONY: test-unit
 test-unit: node_version
-	mocha --recursive test/unit --exit
+	npx mocha --recursive test/unit --exit
 
 .PHONY: test-coverage
 test-coverage: node_version
-	nyc -x "**/migrations/**" --reporter=lcov _mocha --exit --recursive test
+	npx nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --exit --recursive test
 
 .PHONY: lint
 lint: node_version
-	eslint --cache lib
+	npx eslint --cache --max-warnings 0 .
 
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
-	docker run -d --name odk-postgres -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:9.6
-	sleep 5
-	node .circleci/initdb.js
+	docker start odk-postgres || (docker run -d --name odk-postgres -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:9.6 && sleep 5 && node lib/bin/create-docker-databases.js)
 
 .PHONY: stop-docker-postgres
 stop-docker-postgres:
 	docker stop odk-postgres || true
+
+.PHONY: rm-docker-postgres
+rm-docker-postgres: stop-docker-postgres
 	docker rm odk-postgres || true

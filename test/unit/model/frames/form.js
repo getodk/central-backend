@@ -1,5 +1,5 @@
-const should = require('should');
 const appRoot = require('app-root-path');
+// eslint-disable-next-line import/no-dynamic-require
 const { Form, Key } = require(appRoot + '/lib/model/frames');
 
 describe('Form', () => {
@@ -74,6 +74,13 @@ describe('Form', () => {
       const xml = '<html><head><model><instance><data id="mycoolform"><field/></data></instance><submission method="form-data-post" action="mywebsite.com"/></model></head></html>';
       return Form.fromXml(xml).then((partial) => {
         partial.aux.key.isDefined().should.equal(false);
+      });
+    });
+
+    it('should decode form title', () => {
+      const xml = '<html><head><title>Crate &amp; Barrel</title><model><instance><data id="mycoolform"><field/></data></instance></model></head></html>';
+      return Form.fromXml(xml).then((partial) => {
+        partial.name.should.equal('Crate & Barrel');
       });
     });
   });

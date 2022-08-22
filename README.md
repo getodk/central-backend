@@ -38,21 +38,31 @@ To run the server, run `make run` from the repository root. Once started, the se
 
 You can also run `make debug` to run the server with a standard node inspector port running (use your favorite tool, or visit [`about:inspect`](chrome://inspect) in Chrome to attach breakpoints and step through statements).
 
-
 ### Setting up the database manually
 
 First, create a database and user in Postgres. Either use the same settings as the [default configuration file](config/default.json), or update your local configuration file to match the settings you choose. For example:
 
 ```sql
 CREATE USER jubilant WITH PASSWORD 'jubilant';
-CREATE DATABASE jubilant_test with owner=jubilant encoding=UTF8;
+CREATE DATABASE jubilant_test WITH OWNER=jubilant ENCODING=UTF8;
 \c jubilant_test;
 CREATE EXTENSION IF NOT EXISTS CITEXT;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE DATABASE jubilant with owner=jubilant encoding=UTF8;
+CREATE DATABASE jubilant WITH OWNER=jubilant ENCODING=UTF8;
 \c jubilant;
 CREATE EXTENSION IF NOT EXISTS CITEXT;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
+```
+
+If you are using Docker, you may find it easiest to run the database in Docker by running `make run-docker-postgres`.
+
+### Creating an admin user
+
+With Central running (e.g. `make run` in another terminal window) use the command line interface to create a user and promote them to an admin role. The same commands can be used to create additional users.
+
+```bash
+node lib/bin/cli.js -u SOME_EMAIL user-create # will prompt for password
+node lib/bin/cli.js -u SOME_EMAIL user-promote
 ```
 
 ### Sending email

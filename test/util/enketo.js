@@ -1,8 +1,9 @@
 const appRoot = require('app-root-path');
 const { call } = require('ramda');
+// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
 
-const _create = (prefix) => (openRosaUrl, xmlFormId, authToken) => new Promise((resolve, reject) => {
+const _create = (prefix) => (openRosaUrl) => new Promise((resolve, reject) => {
   const state = global.enketoPreviewTest;
   global.enketoPreviewTest = null;
   const token = global.enketoToken || `${prefix}abcdefgh`;
@@ -22,8 +23,7 @@ const _create = (prefix) => (openRosaUrl, xmlFormId, authToken) => new Promise((
   });
 });
 
-const edit = (openRosaUrl, domain, form, logicalId, submissionDef, attachments, token) => new Promise((resolve, reject) => {
-  const state = global.enketoEditTest;
+const edit = (openRosaUrl, domain, form, logicalId, submissionDef, attachments, token) => new Promise((resolve) => {
   global.enketoEditTest = null;
   global.enketoEditData = { openRosaUrl, domain, form, logicalId, submissionDef, attachments, token };
   resolve('https://enketo/edit/url');

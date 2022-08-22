@@ -3,6 +3,7 @@ const appRoot = require('app-root-path');
 const should = require('should');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
+// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const sql = require('postgres')();
 
@@ -75,6 +76,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
                     .expect(200))
                   .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+                    // eslint-disable-next-line no-shadow
                     .then(({ body }) => {
                       body.draftToken.should.be.a.token();
                       body.draftToken.should.not.equal(draftToken);
@@ -153,6 +155,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   .expect(200)
                   .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
                     .expect(200)
+                    // eslint-disable-next-line no-shadow
                     .then(({ body }) => {
                       body.draftToken.should.equal(draftToken);
                     }));
@@ -444,6 +447,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
               .expect(200)
               .then(({ body }) => {
                 body[0].updatedAt.should.be.a.recentIsoDate();
+                // eslint-disable-next-line no-param-reassign
                 delete body[0].updatedAt;
                 body.should.eql([
                   { name: 'goodone.csv', type: 'file', exists: true },
@@ -475,6 +479,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
               .expect(200)
               .then(({ body }) => {
                 body[0].updatedAt.should.be.a.recentIsoDate();
+                // eslint-disable-next-line no-param-reassign
                 delete body[0].updatedAt;
                 body.should.eql([
                   { name: 'goodone.csv', type: 'file', exists: true },
@@ -789,9 +794,9 @@ describe('api: /projects/:id/forms (drafts)', () => {
             .expect(200)
             .then(() => asAlice.delete('/v1/projects/1/forms/simple2/draft')
               .expect(409))
-              .then(({ body }) => {
-                body.code.should.equal(409.7);
-              }))));
+            .then(({ body }) => {
+              body.code.should.equal(409.7);
+            }))));
 
       it('should create a new draft token after delete', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -808,6 +813,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
                     .expect(200))
                   .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+                    // eslint-disable-next-line no-shadow
                     .then(({ body }) => {
                       body.draftToken.should.be.a.token();
                       body.draftToken.should.not.equal(draftToken);
@@ -937,6 +943,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
               .expect(200)
               .then(({ body }) => {
                 body[0].updatedAt.should.be.a.recentIsoDate();
+                // eslint-disable-next-line no-param-reassign
                 delete body[0].updatedAt;
                 body.should.eql([
                   { name: 'goodone.csv', type: 'file', exists: true },
@@ -965,6 +972,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 // if we see the issue.
 
                 if (body[0].action === 'form.update.draft.set')
+                  // eslint-disable-next-line no-param-reassign
                   [ body[1], body[0] ] = [ body[0], body[1] ];
 
                 body.length.should.equal(3);
@@ -1134,35 +1142,35 @@ describe('api: /projects/:id/forms (drafts)', () => {
                       .then((attachment) => [ form, attachment ])),
                   Audits.getLatestByAction('form.attachment.update').then((o) => o.get())
                 ])
-                .then(([ alice, [ form, attachment ], log ]) => {
-                  log.actorId.should.equal(alice.actor.id);
-                  log.acteeId.should.equal(form.acteeId);
-                  log.details.should.eql({
-                    formDefId: form.draftDefId,
-                    name: attachment.name,
-                    oldBlobId: null,
-                    newBlobId: attachment.blobId
-                  });
-
-                  return asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
-                    .send('replaced,csv\n3,4')
-                    .set('Content-Type', 'text/csv')
-                    .expect(200)
-                    .then(() => Promise.all([
-                      FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then((o) => o.get()),
-                      Audits.getLatestByAction('form.attachment.update').then((o) => o.get())
-                    ]))
-                    .then(([ attachment2, log2 ]) => {
-                      log2.actorId.should.equal(alice.actor.id);
-                      log2.acteeId.should.equal(form.acteeId);
-                      log2.details.should.eql({
-                        formDefId: form.draftDefId,
-                        name: attachment.name,
-                        oldBlobId: attachment.blobId,
-                        newBlobId: attachment2.blobId
-                      });
+                  .then(([ alice, [ form, attachment ], log ]) => {
+                    log.actorId.should.equal(alice.actor.id);
+                    log.acteeId.should.equal(form.acteeId);
+                    log.details.should.eql({
+                      formDefId: form.draftDefId,
+                      name: attachment.name,
+                      oldBlobId: null,
+                      newBlobId: attachment.blobId
                     });
-                }))))));
+
+                    return asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+                      .send('replaced,csv\n3,4')
+                      .set('Content-Type', 'text/csv')
+                      .expect(200)
+                      .then(() => Promise.all([
+                        FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then((o) => o.get()),
+                        Audits.getLatestByAction('form.attachment.update').then((o) => o.get())
+                      ]))
+                      .then(([ attachment2, log2 ]) => {
+                        log2.actorId.should.equal(alice.actor.id);
+                        log2.acteeId.should.equal(form.acteeId);
+                        log2.details.should.eql({
+                          formDefId: form.draftDefId,
+                          name: attachment.name,
+                          oldBlobId: attachment.blobId,
+                          newBlobId: attachment2.blobId
+                        });
+                      });
+                  }))))));
       });
 
       // these tests mostly necessarily depend on /:name POST:
@@ -1184,7 +1192,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 .expect(200)
                 .then(() => service.login('chelsea', (asChelsea) =>
                   asChelsea.delete('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
-                  .expect(403)))))));
+                    .expect(403)))))));
 
         it('should reject notfound if the file does not exist', testService((service) =>
           service.login('alice', (asAlice) =>

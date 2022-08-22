@@ -1,4 +1,4 @@
-const { createReadStream, readFileSync } = require('fs');
+const { readFileSync } = require('fs');
 const appPath = require('app-root-path');
 const sql = require('postgres')();
 const testData = require('../../data/xml');
