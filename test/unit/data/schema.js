@@ -1819,7 +1819,38 @@ describe('form schema', () => {
         </h:head>
       </h:html>`;
       return getDataset(xml).then((res) => {
-        res.should.eql('foo');
+        res.get().should.eql('foo');
+      });
+    });
+
+    it('should find dataset name even if other fields are in meta block before entity block', () => {
+      const xml = `
+      <?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:entities="http://www.opendatakit.org/xforms">
+          <h:head>
+              <h:title>Foo Registration 2</h:title>
+              <model odk:xforms-version="1.0.0">
+                  <instance>
+                      <data id="foo_registration_2" version="2022072702">
+                          <bbb/>
+                          <ccc/>
+                          <meta>
+                              <instanceID/>
+                              <instanceName/>
+                              <entities:entity entities:dataset="bar">
+                                  <entities:create/>
+                                  <entities:label/>
+                              </entities:entity>
+                          </meta>
+                      </data>
+                  </instance>
+                  <bind nodeset="/data/bbb" type="string" entities:save_to="b"/>
+                </model>
+          </h:head>
+      </h:html>`;
+      // Problem.user.invalidEntityForm
+      return getDataset(xml).then((res) => {
+        res.get().should.eql('bar');
       });
     });
 
@@ -1851,6 +1882,14 @@ describe('form schema', () => {
     it('should run but find no dataset on non-entity forms', () =>
       getDataset(testData.forms.simple).then((res) => {
         res.should.equal(Option.none());
+      }));
+
+    it('should extract entity properties from form field bindings', () =>
+      getFormFields(testData.forms.simpleEntity).then((res) => {
+        // name->name, age->age, hometown->(not stored in entity)
+        res[0].propertyName.should.equal('name');
+        res[1].propertyName.should.equal('age');
+        should.not.exist(res[2].propertyName);
       }));
   });
 });
