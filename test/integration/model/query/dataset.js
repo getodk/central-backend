@@ -61,4 +61,27 @@ describe('datasets', () => {
         });
     }));
   });
+
+  describe('get fields', () => {
+    it('should get the fields for a specific form def (needed for parsing a submission)', testService(async (service, { Datasets }) => {
+
+      const ds = new Dataset({ name: 'people', projectId: 1 });
+      const fields = [
+        new Form.Field({ formDefId: 1, path: '/name' }, { propertyName: 'p1' }),
+        new Form.Field({ formDefId: 1, path: '/age' }, { propertyName: 'p2' })
+      ];
+
+      // Create dataset
+      await Datasets.createOrMerge(ds, fields);
+
+      // Get the fields for a particular form defintion
+      const subFields = await Datasets.getFieldsByFormDefId(1);
+      subFields.length.should.equal(2);
+      const mapping = subFields.map((f) => ({ path: f.path, propertyName: f.propertyName }));
+      mapping.should.eql([
+        { path: '/name', propertyName: 'p1' },
+        { path: '/age', propertyName: 'p2' }
+      ]);
+    }));
+  });
 });
