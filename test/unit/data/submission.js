@@ -3,7 +3,7 @@ const appRoot = require('app-root-path');
 const { filter } = require('ramda');
 const { toObjects } = require('streamtest').v2;
 // eslint-disable-next-line import/no-dynamic-require
-const { submissionXmlToFieldStream, getSelectMultipleResponses, _hashedTree, _diffObj, _diffArray, diffSubmissions, _symbols } = require(appRoot + '/lib/data/submission');
+const { submissionXmlToFieldStream, getSelectMultipleResponses, getEntity, _hashedTree, _diffObj, _diffArray, diffSubmissions, _symbols } = require(appRoot + '/lib/data/submission');
 // eslint-disable-next-line import/no-dynamic-require
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 // eslint-disable-next-line import/no-dynamic-require
@@ -80,6 +80,20 @@ describe('getSelectMultipleResponses', () => {
       .then((result) => {
         result.should.eql({
           '/q1': new Set([ 'b', 'c' ])
+        });
+      }));
+});
+
+describe('getEntity', () => {
+  it('should return filled in entity props', () =>
+    fieldsFor(testData.forms.simpleEntity)
+      .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
+      .then((fields) => getEntity(fields, testData.instances.simpleEntity.one))
+      .then((result) => {
+        result.should.eql({
+          name: 'Alice',
+          age: '88',
+          label: 'Alice (88)'
         });
       }));
 });
