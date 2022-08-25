@@ -8,6 +8,32 @@ describe('api: /projects/:id/forms (entity-handling)', () => {
   ////////////////////////////////////////////////////////////////////////////////
 
   describe('parse form def to get entity def', () => {
+    it('should return a Problem if the entity xml is invalid (e.g. missing dataset name)', testService((service) => {
+      const xml = `
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model>
+            <instance>
+              <data id="noDatasetName">
+                <meta>
+                <entities:entity>
+                  <entities:create/>
+                  <entities:label/>
+                </entities:entity>
+                </meta>
+              </data>
+            </instance>
+          </model>
+        </h:head>
+      </h:html>`;
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(xml)
+          .set('Content-Type', 'text/xml')
+          .expect(400)
+          .then(({ body }) => { body.code.should.equal(400.23); }));
+    }));
+
     it('should return the created form upon success', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
@@ -19,59 +45,7 @@ describe('api: /projects/:id/forms (entity-handling)', () => {
             body.xmlFormId.should.equal('simpleEntity');
           }))));
 
-    it('should fail when entity form is invalid', testService((service) => {
-      const xml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
-      <h:head>
-        <model>
-          <instance>
-            <data id="nobinds">
-              <name/>
-              <age/>
-              <meta>
-                <entities:entity>
-                </entities:entity>
-              </meta>
-            </data>
-          </instance>
-        </model>
-      </h:head>
-    </h:html>`;
-      return service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
-          .send(xml)
-          .set('Content-Type', 'text/xml')
-          .expect(400)
-          .then(({ body }) => { body.code.should.equal(400.23); }));
-    }));
-
-
-    // TODO fix entity/dataset parsing (it is passing even though entity tag is empty)
-    it.skip('should fail when entity form is invalid in another way', testService((service) => {
-      const xml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
-      <h:head>
-        <model>
-          <instance>
-            <data id="nobinds">
-              <name/>
-              <age/>
-              <meta>
-                <entities:entity/>
-              </meta>
-            </data>
-          </instance>
-        </model>
-      </h:head>
-    </h:html>`;
-      return service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
-          .send(xml)
-          .set('Content-Type', 'text/xml')
-          .expect(400)
-          .then(({ body }) => { body.code.should.equal(400.23); }));
-    }));
-
-    // TODO: fix Datasets.createOrMerge when no dataset property fields to use.
-    it.skip('should parse dataset information even when there are no binds', testService((service) => {
+    it('should accept entity form and save dataset with no binds', testService((service) => {
       const xml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
       <h:head>
         <h:title>nobinds</h:title>
