@@ -28,7 +28,7 @@ describe('datasets', () => {
         .then(result => {
           result.length.should.be.eql(1);
           result[0].projectId.should.be.eql(1);
-          return result[0].datasetId;
+          return result[0].id;
         });
 
       // Get dataset by ID
