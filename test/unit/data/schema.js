@@ -1848,35 +1848,75 @@ describe('form schema', () => {
                 </model>
           </h:head>
       </h:html>`;
-      // Problem.user.invalidEntityForm
-      return getDataset(xml).then((res) => {
+      getDataset(xml).then((res) => {
         res.get().should.eql('bar');
       });
     });
 
-    it('should return rejected promise if entity block is invalid (e.g. missing dataset)', () => {
-      const xml = `
-      <?xml version="1.0"?>
-      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
-        <h:head>
-          <model>
-            <instance>
-              <data id="simpleEntity">
-                <name/>
-                <age/>
-                <meta>
-                  <entities:entity>
-                    <entities:create/>
-                    <entities:label/>
-                  </entities:entity>
-                </meta>
-              </data>
-            </instance>
-          </model>
-        </h:head>
-      </h:html>`;
-      // Problem.user.invalidEntityForm
-      return getDataset(xml).should.be.rejectedWith(Problem, { problemCode: 400.23 });
+    describe('invalid entity xml', () => {
+      it('should return rejected promise if entity block is invalid (e.g. missing dataset)', () => {
+        const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+          <h:head>
+            <model>
+              <instance>
+                <data id="simpleEntity">
+                  <name/>
+                  <age/>
+                  <meta>
+                    <entities:entity>
+                      <entities:create/>
+                      <entities:label/>
+                    </entities:entity>
+                  </meta>
+                </data>
+              </instance>
+            </model>
+          </h:head>
+        </h:html>`;
+        // Problem.user.invalidEntityForm
+        return getDataset(xml).should.be.rejectedWith(Problem, { problemCode: 400.23 });
+      });
+
+      it('should return rejected promise if entity block is empty', () => {
+        const xml = `
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+          <h:head>
+            <model>
+              <instance>
+                <data id="emptyEntities">
+                  <meta>
+                    <entities:entity>
+                    </entities:entity>
+                  </meta>
+                </data>
+              </instance>
+            </model>
+          </h:head>
+        </h:html>`;
+        return getDataset(xml).should.be.rejectedWith(Problem, { problemCode: 400.23 });
+      });
+
+      it('should fail when entity form is invalid in another way', () => {
+        const xml = `
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+          <h:head>
+            <model>
+              <instance>
+                <data id="nobinds">
+                  <name/>
+                  <age/>
+                  <meta>
+                    <entities:entity/>
+                  </meta>
+                </data>
+              </instance>
+            </model>
+          </h:head>
+        </h:html>`;
+        return getDataset(xml).should.be.rejectedWith(Problem, { problemCode: 400.23 });
+      });
     });
 
     it('should run but find no dataset on non-entity forms', () =>
@@ -1885,11 +1925,16 @@ describe('form schema', () => {
       }));
 
     it('should extract entity properties from form field bindings', () =>
-      getFormFields(testData.forms.simpleEntity).then((res) => {
-        // name->name, age->age, hometown->(not stored in entity)
-        res[0].propertyName.should.equal('name');
-        res[1].propertyName.should.equal('age');
-        should.not.exist(res[2].propertyName);
+      getFormFields(testData.forms.simpleEntity).then((fields) => {
+        // Check form field -> dataset property mappings
+        fields[0].propertyName.should.equal('name');
+        fields[0].path.should.equal('/name');
+
+        fields[1].propertyName.should.equal('age');
+        fields[1].path.should.equal('/age');
+
+        fields[2].path.should.equal('/hometown');
+        should.not.exist(fields[2].propertyName);
       }));
   });
 });
