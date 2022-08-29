@@ -11,8 +11,6 @@ const { task } = require(appRoot + '/lib/task/task');
 const config = require('config');
 // eslint-disable-next-line import/no-dynamic-require
 const { connect } = require(appRoot + '/lib/model/migrate');
-const migrator = connect(config.get('test.database'));
-after(() => { migrator.destroy(); });
 
 // slonik connection pool
 // eslint-disable-next-line import/no-dynamic-require
@@ -81,10 +79,17 @@ const populate = (container, [ head, ...tail ] = fixtures) =>
 //
 // this hook won't run if `test-unit` is called, as this directory is skipped
 // in that case.
-const initialize = () => migrator
-  .raw('drop owned by current_user')
-  .then(() => migrator.migrate.latest({ directory: appRoot + '/lib/model/migrations' }))
-  .then(() => withDefaults({ db, bcrypt }).transacting(populate));
+const initialize = async () => {
+  const migrator = connect(config.get('test.database'));
+  try {
+    await migrator.raw('drop owned by current_user');
+    await migrator.migrate.latest({ directory: appRoot + '/lib/model/migrations' });
+  } finally {
+    await migrator.destroy();
+  }
+
+  return withDefaults({ db, bcrypt }).transacting(populate);
+};
 
 before(initialize);
 
