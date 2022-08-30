@@ -43,6 +43,7 @@ describe('api: /projects/:id/forms (entity-handling)', () => {
           .then(({ body }) => {
             body.should.be.a.Form();
             body.xmlFormId.should.equal('simpleEntity');
+            body.managesEntities.should.equal(true);
           }))));
 
     it('should accept entity form and save dataset with no binds', testService((service) => {
@@ -84,7 +85,12 @@ describe('api: /projects/:id/forms (entity-handling)', () => {
           .set('Content-Type', 'application/xml')
           .expect(200)
           .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
-            .expect(200)));
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/draft')
+              .expect(200)
+              .then(({ body }) => {
+                body.managesEntities.should.equal(true);
+              }))));
 
       // Get all datasets by projectId
       const datasetId = await Datasets.getAllByProjectId(1)
