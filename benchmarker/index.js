@@ -146,7 +146,7 @@ function doBenchmark(name, throughput, throughputPeriod, testDuration, minimumSu
         log.report('     Test duration:', testDuration);
         log.report('    Total requests:', iterationCount);
         log.report('Success % required:', `${minimumSuccessThreshold}%`);
-        log.report('         Successes:', successes.length, `(${successPercent.toFixed(0)}%)`);
+        log.report('         Successes:', successes.length, `(${Math.floor(successPercent)}%)`);
         log.report('        Throughput:', (1000 * successes.length / testDuration).toFixed(1), 'reqs/s');
         log.report('          Failures:', fails.length);
         log.report('    Response times:');
