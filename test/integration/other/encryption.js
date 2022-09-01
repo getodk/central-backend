@@ -15,7 +15,7 @@ const { mapSequential } = require(appRoot + '/test/util/util');
 // eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
-describe('managed encryption', () => {
+describe.skip('managed encryption', () => {
   describe('lock management', () => {
     it('should reject keyless forms in keyed projects @slow', testContainerFullTrx(async (container) => {
       // enable managed encryption.

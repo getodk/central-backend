@@ -100,7 +100,7 @@ describe('project viewer role', () => {
       .set('Content-Type', 'text/xml')
       .expect(403))));
 
-  it('should be able to download submissions', testService(withSubmissions(viewer((asViewer) =>
+  it.skip('should be able to download submissions', testService(withSubmissions(viewer((asViewer) =>
     asViewer.get('/v1/projects/1/forms/simple/submissions.csv.zip')
       .expect(200)))));
 
