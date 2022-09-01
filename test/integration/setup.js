@@ -1,5 +1,5 @@
 const appRoot = require('app-root-path');
-const { merge } = require('ramda');
+const { mergeRight } = require('ramda');
 const { sql } = require('slonik');
 const { readdirSync } = require('fs');
 const { join } = require('path');
@@ -22,7 +22,7 @@ const env = config.get('default.env');
 // eslint-disable-next-line import/no-dynamic-require
 const { mailer } = require(appRoot + '/lib/external/mail');
 const mailConfig = config.get('test.email');
-const mail = mailer(merge(mailConfig, env));
+const mail = mailer(mergeRight(mailConfig, env));
 if (mailConfig.transport !== 'json')
   // eslint-disable-next-line no-console
   console.error('WARNING: some tests will not work except with a JSON email transport configuration.');
