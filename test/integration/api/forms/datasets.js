@@ -47,9 +47,9 @@ describe('api: /projects/:id/forms (entity-handling)', () => {
             return asAlice.get('/v1/projects/1/forms/simpleEntity/draft')
               .set('X-Extended-Metadata', 'true')
               .expect(200)
-              .then(({ body }) => {
-                body.should.be.a.Form();
-                body.hasDataset.should.equal(true);
+              .then(({ body: getBody }) => {
+                getBody.should.be.a.Form();
+                getBody.hasDataset.should.equal(true);
               });
           }))));
 
