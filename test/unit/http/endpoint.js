@@ -85,6 +85,16 @@ describe('endpoints', () => {
       });
       defaultErrorWriter(Problem.user.insufficientRights(), request, response);
     });
+
+    it('should not throw if given a null error', (done) => {
+      const response = createModernResponse();
+      response.on('end', () => {
+        response.statusCode.should.equal(500);
+        response._getData().message.should.equal('Completely unhandled exception: undefined');
+        done();
+      });
+      defaultErrorWriter(null, null, response);
+    });
   });
 
   describe('framework', () => {
