@@ -1269,6 +1269,24 @@ describe('api: /projects', () => {
                 .then((o) => { o.isDefined().should.equal(false); })
             ])))))));
   });
+
+  describe('/:id/datasets GET', () => {
+    it('should return the datasets of Default project', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => 
+          asAlice.get('/v1/projects/1/datasets')
+          .expect(200)
+          .then(({ body }) => {
+            body.map(({id, ...d}) => d).should.eql([
+              {name: 'people', projectId: 1, revisionNumber: 0}
+            ]);
+          }))
+        )));      
+  });
 });
 
 
