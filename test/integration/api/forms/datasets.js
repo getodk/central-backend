@@ -49,7 +49,7 @@ describe('api: /projects/:id/forms (entity-handling)', () => {
               .expect(200)
               .then(({ body: getBody }) => {
                 getBody.should.be.a.Form();
-                getBody.hasDataset.should.equal(true);
+                getBody.entityRelated.should.equal(true);
               });
           }))));
 
@@ -97,7 +97,7 @@ describe('api: /projects/:id/forms (entity-handling)', () => {
               .set('X-Extended-Metadata', 'true')
               .expect(200)
               .then(({ body }) => {
-                body.hasDataset.should.equal(true);
+                body.entityRelated.should.equal(true);
               }))));
 
       // Get all datasets by projectId
