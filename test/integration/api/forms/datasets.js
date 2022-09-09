@@ -112,3 +112,24 @@ describe('api: /projects/:id/forms (entity-handling)', () => {
     }));
   });
 });
+
+describe('api: /projects/:id/forms/draft/dataset', () => {
+  it('should return all properties of dataset', testService(async (service, { Datasets }) => {
+    // Upload a form and then create a new draft version
+    await service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/draft/dataset')
+          .expect(200)
+          .then(({ body }) => {            
+            body.should.be.eql([
+              {
+                datasetName: 'people',
+                properties: ['name', 'age']
+              }
+            ]);
+          })));
+  }));
+});
