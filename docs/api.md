@@ -26,11 +26,17 @@ Forms and their submissions are also accessible through two **open standards spe
 * The [OpenRosa](https://docs.getodk.org/openrosa/) standard allows standard integration with tools like the [ODK Collect](https://docs.getodk.org/collect-intro/) mobile data collection app, or various other compatible tools like [Enketo](https://enketo.org/). It allows them to see the forms available on the server, and to send new submissions to them.
 * The [OData](http://odata.org/) standard allows data to be shared between platforms for analysis and reporting. Tools like [Microsoft Power BI](https://powerbi.microsoft.com/en-us/) and [Tableau](https://public.tableau.com/en-us/s/) are examples of clients that consume the standard OData format and provide advanced features beyond what we offer. If you are looking for a straightforward JSON output of your data, or you are considering building a visualization or reporting tool, this is your best option.
 
-Finally, **system information and configuration** is available via a set of specialized resources. Currently, you may set the Backups configuration, set the Usage Reporting configuration, and retrieve Server Audit Logs.
+Finally, **system information and configuration** is available via a set of specialized resources. Currently, you may set the set the Usage Reporting configuration and retrieve Server Audit Logs.
 
 ## Changelog
 
 Here major and breaking changes to the API are listed by version.
+
+### ODK Central v1.5.3
+
+**Removed**:
+
+* It is no longer possible to initiate a new backups configuration (`POST /v1/config/backups/initiate`) or to verify one (`POST /v1/config/backups/verify`). However, if there is an existing configuration, it is still possible to get it or terminate it. If the existing configuration is terminated, it will not be possible to set up a new configuration. Note that it is still possible to download a [Direct Backup](/reference/system-endpoints/direct-backup). For more information about this change, please see [this topic](https://forum.getodk.org/t/backups-to-google-drive-from-central-will-stop-working-after-oct-3/38895) in the ODK Forum.
 
 ### ODK Central v1.5
 
@@ -763,7 +769,7 @@ Given a `roleId`, which may be a numeric ID or a string role `system` name, and 
 
 # Group Project Management
 
-Apart from staff users ("Web Users" in the Central management interface) and some site-wide configuration details like backups, all of ODK Central's objects (Forms, Submissions, App Users) are partitioned by Project, and available only as subresources below the main Projects resource.
+Apart from staff users ("Web Users" in the Central management interface) and some site-wide configuration details like Usage Reporting, all of ODK Central's objects (Forms, Submissions, App Users) are partitioned by Project, and available only as subresources below the main Projects resource.
 
 ## Projects [/v1/projects]
 
@@ -3594,11 +3600,13 @@ Identical to [the non-Draft version](/reference/odata-endpoints/odata-form-servi
 
 # Group System Endpoints
 
-There are some resources available for getting or setting system information and configuration. You can [set the Backups configuration](/reference/system-endpoints/backups-configuration) for the server, [set the Usage Reporting configuration](/reference/system-endpoints/usage-reporting-configuration), or you can [retrieve the Server Audit Logs](/reference/system-endpoints/server-audit-logs).
+There are some resources available for getting or setting system information and configuration. You can [set the Usage Reporting configuration](/reference/system-endpoints/usage-reporting-configuration) for the server, or you can [retrieve the Server Audit Logs](/reference/system-endpoints/server-audit-logs). If backups were configured using an earlier version of ODK Central, you can also [get the current configuration](/reference/system-endpoints/backups-configuration) or terminate it.
 
 ## Backups Configuration [/v1/config/backups]
 
-This resource does not conform to REST standards, as it has a multi-step initialization process and is essentially a singleton object: only one backup may be configured at a time.
+Earlier versions of ODK Central allowed users to configure backups to Google Drive. It is [no longer possible](https://forum.getodk.org/t/backups-to-google-drive-from-central-will-stop-working-after-oct-3/38895) to configure backups, but if backups were configured using an earlier version of ODK Central, you can get the current configuration or terminate it. The backups configuration is essentially a singleton object: there can be only one backups configuration at a time.
+
+Even though it is no longer to possible to set up a new backups configuration, you can still download a [Direct Backup](/reference/system-endpoints/direct-backup).
 
 ### Getting the current configuration [GET]
 
@@ -3630,54 +3638,11 @@ Deleting the backups configuration will permanently remove it, stopping it from 
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-### Initiating a new backup configuration [POST /v1/config/backups/initiate]
-
-This is the first of two steps required to initialize a new backup configuration.
-
-While the administrative interface packaged with ODK Central requires a backup to be terminated before a new one may be set up, the API has no such limitation. Should the initialization process succeed (with a `POST /v1/config/backups/verify` as [documented below](/reference/system-endpoints/backups-configuration/completing-a-new-backup-configuration)), the existing backup will be overwritten with the new configuration.
-
-All ODK Central backups are encrypted before they are sent to Google Drive for storage. If a `passphrase` is not provided with this request, encryption will still occur with a `""` empty string passphrase.
-
-To complete the backup configuration, it is necessary to use the Google OAuth URL returned by this endpoint and have a human interactively undergo the Google OAuth process to authorize ODK Central to send files to their account. Because of the way we have set the OAuth structure up, it is not necessary for each installation of the server to provision its own Google Developer key.
-
-+ Request (application/json)
-    + Attributes
-        + passphrase: `super.secret` (string, optional) - The passphrase to use in encrypting the backup data. If no passphrase is provided, backups are still encrypted but with a `""` empty string passphrase.
-
-+ Response 200 (application/json)
-    + Attributes
-        + token: `DS9aOoudH3kGw3a$tkCf9SGa3gvM41sbuZ$2IpVTrc!OBbKjrB03JPXA0Csn1lVF` (string, required) - The Session Bearer Token to be used in authenticating the follow-up `/verify` request.
-        + url: `https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive.file&response_type=code&client_id=660095633112-h7bhsjenhp1agd0c4v3cmqk6bccgkdu0.apps.googleusercontent.com&redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob` (string, required) - The Google OAuth URL to send the human user to in order to allow access to their Google Drive account for storing backups.
-
-+ Response 403 (application/json)
-    + Attributes (Error 403)
-
-### Completing a new backup configuration [POST /v1/config/backups/verify]
-
-This is the second of two steps required to initialize a new backup configuration. As noted in step 1 above, if a backup already exists and this request succeeds, it will be overwritten with the new configuration.
-
-This endpoint has two requirements, both relating to [step 1](/reference/system-endpoints/backups-configuration/initiating-a-new-backup-configuration):
-
-* It _must_ be called via Session Bearer Token auth (`Authorization: Bearer {token}`), with the token provided in the response to step 1. Attempting to authenticate as any other `Actor` will fail.
-* It needs to be provided with the verification `code` the user receives at the end of their Google OAuth process.
-
-If these two things are present and correct, and Google can be reached to verify the code, the new backups will be configured.
-
-+ Request (application/json)
-    + Attributes
-        + code: `4/AACdfD3bBxUAI-zlkLodGmUh_IC4zT6-j8EJ7jr7IFF7Nm4RH_S7RHs` (string, required) - The code the user receives at the end of the OAuth authorization process. Typically, it begins with the text `4/AA`.
-
-+ Response 200 (application/json)
-    + Attributes (Success)
-
-+ Response 403 (application/json)
-    + Attributes (Error 403)
-
 ## Direct Backup [/v1/backup]
 
 _(introduced: version 1.1)_
 
-ODK Central offers HTTP endpoints that will immediately perform a backup on the system database and send that encrypted backup as the response. You can `POST` with an encryption passphrase, or `GET` if you have encryption [already configured](/reference/system-endpoints/backups-configuration) to use the passphrase you configured then.
+ODK Central offers HTTP endpoints that will immediately perform a backup on the system database and send that encrypted backup as the response. You can `POST` with an encryption passphrase. If backups to Google Drive were [configured](/reference/system-endpoints/backups-configuration) using an earlier version of ODK Central, you can also `GET` to use the passphrase you configured then.
 
 Note that performing the backup takes a great deal of time, during which the request will be held open. Both of these endpoints trickle junk data every five seconds while that processing is occurring to prevent the request from timing out. Depending on how much data you have, it can take many minutes for the data stream to speed up to a full transfer rate.
 

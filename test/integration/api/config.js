@@ -221,7 +221,7 @@ describe('api: /config', () => {
                 }))))));
     });
 
-    describe('/initiate POST', () => {
+    describe.skip('/initiate POST', () => {
       it('should reject if the user cannot set config', testService((service) =>
         service.login('chelsea', (asChelsea) =>
           asChelsea.post('/v1/config/backups/initiate').expect(403))));
@@ -242,7 +242,7 @@ describe('api: /config', () => {
             .expect(200))));
     });
 
-    describe('/verify POST', () => {
+    describe.skip('/verify POST', () => {
       it('should reject if the user cannot set config', testService((service) =>
         service.login('chelsea', (asChelsea) =>
           asChelsea.post('/v1/config/backups/verify').expect(403))));
