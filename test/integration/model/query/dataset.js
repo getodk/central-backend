@@ -13,7 +13,7 @@ describe('datasets', () => {
   describe('create', () => {
     it('should create a dataset', testService(async (service, { Datasets, Forms }) => {
 
-      const ds = new Dataset({ name: 'people', projectId: 1 });
+      const ds = new Dataset({ name: 'people', projectId: 1 }, { formDefId: 1 });
 
       const fields = [
         new Form.Field({ formDefId: 1, path: '/name' }, { propertyName: 'p1' }),
@@ -65,7 +65,7 @@ describe('datasets', () => {
   describe('get fields', () => {
     it('should get the fields for a specific form def (needed for parsing a submission)', testService(async (service, { Datasets }) => {
 
-      const ds = new Dataset({ name: 'people', projectId: 1 });
+      const ds = new Dataset({ name: 'people', projectId: 1 }, { formDefId: 1 });
       const fields = [
         new Form.Field({ formDefId: 1, path: '/name' }, { propertyName: 'p1' }),
         new Form.Field({ formDefId: 1, path: '/age' }, { propertyName: 'p2' })
