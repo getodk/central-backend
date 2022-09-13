@@ -113,8 +113,9 @@ describe('api: /projects/:id/forms (entity-handling)', () => {
   });
 });
 
-describe('api: /projects/:id/forms/draft/dataset', () => {
-  it('should return all properties of dataset', testService(async (service, { Datasets }) => {
+describe.only('api: /projects/:id/forms/draft/dataset', () => {
+
+  it('should return all properties of dataset', testService(async (service) => {
     // Upload a form and then create a new draft version
     await service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms')
@@ -123,7 +124,7 @@ describe('api: /projects/:id/forms/draft/dataset', () => {
         .expect(200)
         .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/draft/dataset')
           .expect(200)
-          .then(({ body }) => {            
+          .then(({ body }) => {
             body.should.be.eql([
               {
                 datasetName: 'people',
@@ -132,4 +133,62 @@ describe('api: /projects/:id/forms/draft/dataset', () => {
             ]);
           })));
   }));
+
+  it('should return nothing if dataset and all properties already exist', testService(async (service) => {
+    // Upload a form and then create a new draft version
+    await service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity.replace(/simpleEntity/, 'simpleEntity2'))
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity2/draft/dataset')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([
+              ]);
+            }))));
+  }));
+
+  it('should return properties delta only', testService(async (service) => {
+    // Upload a form and then create a new draft version
+    await service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity
+            .replace(/simpleEntity/, 'simpleEntity2')
+            .replace(/saveto="name"/, 'saveto="firstName"'))
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity2/draft/dataset')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([{
+                datasetName: 'people',
+                properties: ['firstName']
+              }]);
+            }))));
+  }));
+
+  it('should return dataset name only if no property mapping is defined', testService(async (service) => {
+    // Upload a form and then create a new draft version
+    await service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simpleEntity.replace(/entities:saveto="\w+"/g, ''))
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/draft/dataset')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.eql([{
+              datasetName: 'people',
+              properties: []
+            }]);
+          })));
+  }));
+
 });
