@@ -113,7 +113,7 @@ describe('api: /projects/:id/forms (entity-handling)', () => {
   });
 });
 
-describe.only('api: /projects/:id/forms/draft/dataset', () => {
+describe('api: /projects/:id/forms/draft/dataset', () => {
 
   it('should return all properties of dataset', testService(async (service) => {
     // Upload a form and then create a new draft version
@@ -128,6 +128,7 @@ describe.only('api: /projects/:id/forms/draft/dataset', () => {
             body.should.be.eql([
               {
                 datasetName: 'people',
+                datasetStatus: 'Draft',
                 properties: ['name', 'age']
               }
             ]);
@@ -169,6 +170,7 @@ describe.only('api: /projects/:id/forms/draft/dataset', () => {
             .then(({ body }) => {
               body.should.be.eql([{
                 datasetName: 'people',
+                datasetStatus: 'Published',
                 properties: ['firstName']
               }]);
             }))));
@@ -186,6 +188,7 @@ describe.only('api: /projects/:id/forms/draft/dataset', () => {
           .then(({ body }) => {
             body.should.be.eql([{
               datasetName: 'people',
+              datasetStatus: 'Draft',
               properties: []
             }]);
           })));
