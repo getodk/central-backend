@@ -94,6 +94,7 @@ function doBenchmark(name, throughput, throughputPeriod, testDuration, minimumSu
       const sleepyTime = +throughputPeriod / +throughput;
 
       let iterationCount = 0;
+      let completedIterations = 0;
       const iterate = async () => {
         const n = iterationCount++;
         try {
@@ -106,6 +107,8 @@ function doBenchmark(name, throughput, throughputPeriod, testDuration, minimumSu
         } catch(err) {
           fails.push(err.message);
           results[n] = { success:false, err:{ message:err.message, stack:err.stack } };
+        } finally {
+          ++completedIterations;
         }
       };
 
@@ -128,7 +131,7 @@ function doBenchmark(name, throughput, throughputPeriod, testDuration, minimumSu
             if(Date.now() > maxDrainTimeout) {
               log.info('Drain timeout exceeded.');
               return resolve();
-            } else if(results.length >= iterationCount) {
+            } else if(completedIterations >= iterationCount) {
               log.info('All connections have completed.');
               return resolve();
             }
