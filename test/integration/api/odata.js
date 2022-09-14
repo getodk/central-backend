@@ -9,7 +9,7 @@ const { dissocPath } = require('ramda');
 // that we have plumbed the relevant input to those layers correctly, and have applied
 // the appropriate higher-level logics (notfound, notauthorized, etc.)
 
-describe.only('api: /forms/:id.svc', () => {
+describe('api: /forms/:id.svc', () => {
   describe('GET', () => {
     it('should reject unless the form exists', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -506,7 +506,7 @@ describe.only('api: /forms/:id.svc', () => {
             });
           }))));
 
-    it('should return all IDs if __id is selected', testService((service) =>
+    it('should not return parent IDs if __id is selected', testService((service) =>
       withSubmission(service, (asAlice) =>
         asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')/children/child?$select=__id,name")
           .expect(200)
@@ -514,17 +514,14 @@ describe.only('api: /forms/:id.svc', () => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
               value: [{
-                '__Submissions-id': 'double',
                 __id: '46ebf42ee83ddec5028c42b2c054402d1e700208',
                 name: 'Alice',
               },
               {
-                '__Submissions-id': 'double',
                 __id: 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
                 name: 'Bob',
               },
               {
-                '__Submissions-id': 'double',
                 __id: '8954b393f82c1833abb19be08a3d6cb382171f54',
                 name: 'Chelsea'
               }]
@@ -1330,15 +1327,12 @@ describe.only('api: /forms/:id.svc', () => {
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions.children.child',
               value: [{
                 __id: '32809ae2b3dc404ea292205eb884b21fa4e9acc5',
-                '__Submissions-id': 'rthree',
                 name: 'Candace'
               }, {
                 __id: '52eff9ea82550183880b9d64c20487642fa6e60c',
-                '__Submissions-id': 'rtwo',
                 name: 'Billy'
               }, {
                 __id: '1291953ccbe2e5e866f7ab3fefa3036d649186d3',
-                '__Submissions-id': 'rtwo',
                 name: 'Blaine'
               }]
             });
