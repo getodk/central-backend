@@ -97,16 +97,17 @@ function doBenchmark(name, throughput, throughputPeriod, testDuration, minimumSu
       let completedIterations = 0;
       const iterate = async () => {
         const n = iterationCount++;
+        const started = Date.now();
         try {
-          const start = Date.now();
           const size = await fn(n);
-          const time = Date.now() - start;
+          const finished = Date.now();
+          const time = finished - started;
           successes.push(time);
           sizes.push(size);
-          results[n] = { success:true, time, size };
+          results[n] = { started:started, finished, success:true, time, size };
         } catch(err) {
           fails.push(err.message);
-          results[n] = { success:false, err:{ message:err.message, stack:err.stack } };
+          results[n] = { success:false, started, finished:Date.now(), err:{ message:err.message, stack:err.stack } };
         } finally {
           ++completedIterations;
         }
