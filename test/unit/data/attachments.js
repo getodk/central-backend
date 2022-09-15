@@ -12,7 +12,7 @@ describe('.zip attachments streaming', () => {
       { row: { instanceId: 'subone', name: 'secondfile.ext', content: 'this is my second file' } },
       { row: { instanceId: 'subtwo', name: 'thirdfile.ext', content: 'this is my third file' } }
     ]);
-    zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream)), (err, result) => {
+    zipStreamToFiles(zipStreamFromParts(() => streamAttachments(inStream)), (err, result) => {
       if(err) return done(err);
 
       result.filenames.should.eql([
@@ -35,7 +35,7 @@ describe('.zip attachments streaming', () => {
       { row: { instanceId: 'subone', name: '../secondfile.ext', content: 'this is my second file' } },
       { row: { instanceId: 'subone', name: './.secondfile.ext', content: 'this is my duplicate second file' } },
     ]);
-    zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream)), (err, result) => {
+    zipStreamToFiles(zipStreamFromParts(() => streamAttachments(inStream)), (err, result) => {
       if(err) return done(err);
 
       result.filenames.should.eql([
@@ -52,7 +52,7 @@ describe('.zip attachments streaming', () => {
     const inStream = streamTest.fromObjects([
       { row: { instanceId: 'subone', name: 'firstfile.ext.enc', content: 'this is my first file' } }
     ]);
-    zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream)), (err, result) => {
+    zipStreamToFiles(zipStreamFromParts(() => streamAttachments(inStream)), (err, result) => {
       if(err) return done(err);
 
       result.filenames.should.eql([ 'media/firstfile.ext.enc' ]);
@@ -64,7 +64,7 @@ describe('.zip attachments streaming', () => {
     const inStream = streamTest.fromObjects([
       { row: { instanceId: 'subone', name: 'firstfile.ext.enc', content: 'this is my first file' } }
     ]);
-    zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream, () => {})), (err, result) => {
+    zipStreamToFiles(zipStreamFromParts(() => streamAttachments(inStream, () => {})), (err, result) => {
       if(err) return done(err);
 
       result.filenames.should.eql([ 'media/firstfile.ext' ]);

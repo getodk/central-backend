@@ -28,7 +28,7 @@ const withAttachments = (present, expected, row) => ({ ...row, aux: { ...row.aux
 
 const callAndParse = (inStream, formXml, xmlFormId, callback) => {
   fieldsFor(formXml).then((fields) => {
-    zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, xmlFormId)), callback);
+    zipStreamToFiles(zipStreamFromParts(() => streamBriefcaseCsvs(inStream, fields, xmlFormId)), callback);
   });
 };
 
@@ -399,7 +399,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     fieldsFor(testData.forms.selectMultiple).then((fields) => {
-      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] })), (err, result) => {
+      zipStreamToFiles(zipStreamFromParts(() => streamBriefcaseCsvs(inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] })), (err, result) => {
         if(err) return done(err);
 
         result.filenames.should.eql([ 'selectMultiple.csv' ]);
@@ -500,7 +500,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     fieldsFor(formXml).then((fields) => {
-      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'structuredform', undefined, undefined, false, { groupPaths: false })), (err, result) => {
+      zipStreamToFiles(zipStreamFromParts(() => streamBriefcaseCsvs(inStream, fields, 'structuredform', undefined, undefined, false, { groupPaths: false })), (err, result) => {
         if(err) return done(err);
 
         result.filenames.should.eql([ 'structuredform.csv' ]);
@@ -522,7 +522,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     fieldsFor(testData.forms.selectMultiple).then((fields) => {
-      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] }, undefined, false, { groupPaths: false })), (err, result) => {
+      zipStreamToFiles(zipStreamFromParts(() => streamBriefcaseCsvs(inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] }, undefined, false, { groupPaths: false })), (err, result) => {
         if(err) return done(err);
 
         result.filenames.should.eql([ 'selectMultiple.csv' ]);
