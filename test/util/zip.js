@@ -14,31 +14,38 @@ const streamTest = require('streamtest').v2;
 //      …
 // }
 const zipStreamToFiles = (zipStream, callback) => {
-  tmp.file((_, tmpfile) => {
+  tmp.file((err, tmpfile) => {
+    if(err) return callback(err);
+
     const writeStream = createWriteStream(tmpfile);
     zipStream.pipe(writeStream);
     zipStream.on('end', () => {
       setTimeout(() => {
-        yauzl.open(tmpfile, { autoClose: false }, (_, zipfile) => {
+        yauzl.open(tmpfile, { autoClose: false }, (err, zipfile) => {
+          if(err) return callback(err);
+
           const result = { filenames: [] };
           let entries = [];
           let completed = 0;
 
-          should.exist(zipfile);
           zipfile.on('entry', (entry) => entries.push(entry));
           zipfile.on('end', () => {
             if (entries.length === 0) {
-              callback(result);
+              callback(null, result);
               zipfile.close();
             } else {
               entries.forEach((entry) => {
                 result.filenames.push(entry.fileName);
-                zipfile.openReadStream(entry, (_, resultStream) => {
-                  resultStream.pipe(streamTest.toText((_, contents) => {
+                zipfile.openReadStream(entry, (err, resultStream) => {
+                  if(err) return callback(err);
+
+                  resultStream.pipe(streamTest.toText((err, contents) => {
+                    if(err) return callback(err);
+
                     result[entry.fileName] = contents;
                     completed += 1;
                     if (completed === entries.length) {
-                      callback(result);
+                      callback(null, result);
                       zipfile.close();
                     }
                   }));
@@ -52,7 +59,7 @@ const zipStreamToFiles = (zipStream, callback) => {
   });
 };
 
-const pZipStreamToFiles = (zipStream) => new Promise((resolve) => zipStreamToFiles(zipStream, resolve));
+const pZipStreamToFiles = (zipStream) => new Promise((resolve, reject) => zipStreamToFiles(zipStream, (err, result) => err ? reject(err) : resolve(result)));
 
 module.exports = { zipStreamToFiles, pZipStreamToFiles };
 
