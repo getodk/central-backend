@@ -42,17 +42,18 @@
     "yauzl": "~2.9"
   },
   "devDependencies": {
+    "@sinonjs/fake-timers": "^9.1.2",
     "app-root-path": "~2",
     "eslint": "~8",
     "eslint-config-airbnb-base": "~14",
     "eslint-plugin-import": "~2.25",
     "mocha": "~9",
     "nock": "~12",
-    "nyc": "~15",
     "node-mocks-http": "~1.6",
+    "nyc": "~15",
     "should": "~13",
-    "supertest": "~3",
     "streamtest": "~1.2",
+    "supertest": "~3",
     "tmp": "~0.2"
   }
 }
