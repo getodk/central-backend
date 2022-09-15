@@ -5,7 +5,7 @@ const { sql } = require('slonik');
 const { toText } = require('streamtest').v2;
 const { testService, testContainerFullTrx, testContainer } = require(appRoot + '/test/integration/setup');
 const testData = require(appRoot + '/test/data/xml');
-const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
+const { pZipStreamToFiles } = require(appRoot + '/test/util/zip');
 const { Form, Key, Submission } = require(appRoot + '/lib/model/frames');
 const { mapSequential } = require(appRoot + '/test/util/util');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
@@ -212,12 +212,11 @@ describe('managed encryption', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then((keyId) => new Promise((done) =>
-            zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`), (result) => {
+          .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
+            .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
               result['simple.csv'].should.be.an.EncryptedSimpleCsv();
-              done();
-            }))))));
+            })))));
 
     it('should decrypt to CSV successfully as a direct root table', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -251,14 +250,13 @@ describe('managed encryption', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then((keyId) => new Promise((done) =>
-            zipStreamToFiles(asAlice.post(`/v1/projects/1/forms/simple/submissions.csv.zip`)
+          .then((keyId) => pZipStreamToFiles(asAlice.post(`/v1/projects/1/forms/simple/submissions.csv.zip`)
               .send(`${keyId}=supersecret`)
-              .set('Content-Type', 'application/x-www-form-urlencoded'), (result) => {
+              .set('Content-Type', 'application/x-www-form-urlencoded'))
+            .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
               result['simple.csv'].should.be.an.EncryptedSimpleCsv();
-              done();
-            }))))));
+            })))));
 
     it('should decrypt over cookie auth with passphrases provided via url-encoded POST body', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -280,16 +278,15 @@ describe('managed encryption', () => {
               .expect(200)
               .then(({ body }) => body)
           ]))
-          .then(([ keyId, session ]) => new Promise((done) =>
-            zipStreamToFiles(service.post(`/v1/projects/1/forms/simple/submissions.csv.zip`)
+          .then(([ keyId, session ]) => pZipStreamToFiles(service.post(`/v1/projects/1/forms/simple/submissions.csv.zip`)
               .send(`${keyId}=supersecret&__csrf=${session.csrf}`)
               .set('Cookie', `__Host-session=${session.token}`)
               .set('X-Forwarded-Proto', 'https')
-              .set('Content-Type', 'application/x-www-form-urlencoded'), (result) => {
+              .set('Content-Type', 'application/x-www-form-urlencoded'))
+            .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
               result['simple.csv'].should.be.an.EncryptedSimpleCsv();
-              done();
-            }))))));
+            })))));
 
     it('should decrypt with passphrases provide via JSON POST body', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -305,13 +302,12 @@ describe('managed encryption', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then((keyId) => new Promise((done) =>
-            zipStreamToFiles(asAlice.post(`/v1/projects/1/forms/simple/submissions.csv.zip`)
-              .send({ [keyId]: 'supersecret' }), (result) => {
+          .then((keyId) => pZipStreamToFiles(asAlice.post(`/v1/projects/1/forms/simple/submissions.csv.zip`)
+              .send({ [keyId]: 'supersecret' }))
+            .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
               result['simple.csv'].should.be.an.EncryptedSimpleCsv();
-              done();
-            }))))));
+            })))));
 
     it('should decrypt attached files successfully', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -326,16 +322,15 @@ describe('managed encryption', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then((keyId) => new Promise((done) =>
-            zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`), (result) => {
+          .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
+            .then((result) => {
               result.filenames.length.should.equal(4);
               result.filenames.should.containDeep([ 'simple.csv', 'media/alpha', 'media/beta', 'media/charlie' ]);
 
               result['media/alpha'].should.equal('hello this is file alpha');
               result['media/beta'].should.equal('and beta');
               result['media/charlie'].should.equal('file charlie is right here');
-              done();
-            }))))));
+            })))));
 
     it('should strip .enc suffix from decrypted attachments', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -349,14 +344,13 @@ describe('managed encryption', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then((keyId) => new Promise((done) =>
-            zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`), (result) => {
+          .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
+            .then((result) => {
               result.filenames.length.should.equal(2);
               result.filenames.should.containDeep([ 'simple.csv', 'media/testfile.jpg' ]);
 
               result['media/testfile.jpg'].should.equal('hello this is a suffixed file');
-              done();
-            })))))));
+            }))))));
 
     it('should decrypt client audit log attachments', testService((service, container) =>
       service.login('alice', (asAlice) =>
@@ -396,8 +390,8 @@ describe('managed encryption', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then((keyId) => new Promise((done) =>
-            zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/audits/submissions.csv.zip?${keyId}=supersecret`), (result) => {
+          .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/audits/submissions.csv.zip?${keyId}=supersecret`))
+            .then((result) => {
               result.filenames.should.containDeep([
                 'audits.csv',
                 'media/audit.csv',
@@ -415,9 +409,7 @@ two,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
 two,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
 two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 `);
-
-              done();
-            }))))));
+            })))));
 
     it('should handle mixed [plaintext/encrypted] attachments (not decrypting)', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -439,14 +431,13 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200)
             .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
             .then((send) => send(testData.instances.binaryType.two, { 'here_is_file2.jpg': 'file two you cant see' })))
-          .then(() => new Promise((done) =>
-            zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/binaryType/submissions.csv.zip`), (result) => {
+          .then(() => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/binaryType/submissions.csv.zip`))
+            .then((result) => {
               result.filenames.length.should.equal(2);
               result.filenames.should.containDeep([ 'binaryType.csv', 'media/my_file1.mp4' ]);
 
               result['media/my_file1.mp4'].should.equal('this is file one');
-              done();
-            }))))));
+            })))));
 
     it('should handle mixed [plaintext/encrypted] attachments (decrypting)', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -471,15 +462,14 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then((keyId) => new Promise((done) =>
-            zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/binaryType/submissions.csv.zip?${keyId}=supersecret`), (result) => {
+          .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/binaryType/submissions.csv.zip?${keyId}=supersecret`))
+            .then((result) => {
               result.filenames.length.should.equal(3);
               result.filenames.should.containDeep([ 'binaryType.csv', 'media/my_file1.mp4', 'media/here_is_file2.jpg' ]);
 
               result['media/my_file1.mp4'].should.equal('this is file one');
               result['media/here_is_file2.jpg'].should.equal('file two you can see');
-              done();
-            }))))));
+            })))));
 
     it('should handle mixed[plaintext/encrypted] formdata (decrypting)', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -498,8 +488,8 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
               .expect(200)
               .then(({ body }) => body[0].id))
-            .then((keyId) => new Promise((done) =>
-              zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`), (result) => {
+            .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
+              .then((result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
                 const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
                 csv.length.should.equal(5); // header + 3 data rows + newline
@@ -513,8 +503,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 csv[3].shift().should.be.an.recentIsoDate();
                 csv[3].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0','' ]);
                 csv[4].should.eql([ '' ]);
-                done();
-              })))))));
+              }))))));
 
     it('should handle mixed[plaintext/encrypted] formdata (not decrypting)', testService((service, { Project, FormPartial }) =>
       service.login('alice', (asAlice) =>
@@ -530,8 +519,8 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
               .then((send) => send(testData.instances.simple.two)
                 .then(() => send(testData.instances.simple.three))))
-            .then(() => new Promise((done) =>
-              zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip`), (result) => {
+            .then(() => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip`))
+              .then((result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
 
                 const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
@@ -546,8 +535,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 csv[3].shift().should.be.an.recentIsoDate();
                 csv[3].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0','' ]);
                 csv[4].should.eql([ '' ]);
-                done();
-              })))))));
+              }))))));
 
     // we have to sort of cheat at this to get two different managed keys in effect.
     it('should handle mixed[managedA/managedB] formdata (decrypting)', testService((service, { Forms, Projects }) =>
@@ -585,8 +573,8 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body.map((key) => key.id)))
-          .then((keyIds) => new Promise((done) =>
-            zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyIds[1]}=supersecret&${keyIds[0]}=superdupersecret`), (result) => {
+          .then((keyIds) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyIds[1]}=supersecret&${keyIds[0]}=superdupersecret`))
+            .then((result) => {
               const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
               csv.length.should.equal(5); // header + 3 data rows + newline
               csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
@@ -600,8 +588,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               csv[3].pop().should.match(/^\[encrypted:........\]$/);
               csv[3].should.eql([ 'one','Alice','30','one','5','Alice','1','1','','','','0' ]);
               csv[4].should.eql([ '' ]);
-              done();
-            }))))));
+            })))));
 
     it('should handle mixed [plaintext/missing-encrypted-xml] formdata (decrypting)', testService((service, { Project, FormPartial }) =>
       service.login('alice', (asAlice) =>
@@ -622,8 +609,8 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
               .expect(200)
               .then(({ body }) => body[0].id))
-            .then((keyId) => new Promise((done) =>
-              zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`), (result) => {
+            .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
+              .then((result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
 
                 const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
@@ -635,8 +622,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 csv[2].shift().should.be.an.recentIsoDate();
                 csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0','' ]);
                 csv[3].should.eql([ '' ]);
-                done();
-              })))))));
+              }))))));
 
     it('should handle mixed [plaintext/missing-encrypted-xml] formdata (not decrypting)', testService((service, { Project, FormPartial }) =>
       service.login('alice', (asAlice) =>
@@ -654,8 +640,8 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 .send(envelope)
                 .set('Content-Type', 'text/xml')
                 .expect(200)))
-            .then(() => new Promise((done) =>
-              zipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip`), (result) => {
+            .then(() => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip`))
+              .then((result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
 
                 const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
@@ -667,8 +653,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 csv[2].shift().should.be.an.recentIsoDate();
                 csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0','' ]);
                 csv[3].should.eql([ '' ]);
-                done();
-              })))))));
+              }))))));
   });
 });
 

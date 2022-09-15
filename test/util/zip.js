@@ -52,5 +52,7 @@ const zipStreamToFiles = (zipStream, callback) => {
   });
 };
 
-module.exports = { zipStreamToFiles };
+const pZipStreamToFiles = (zipStream) => new Promise((resolve) => zipStreamToFiles(zipStream, resolve));
+
+module.exports = { zipStreamToFiles, pZipStreamToFiles };
 
