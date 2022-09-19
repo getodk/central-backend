@@ -90,11 +90,10 @@ describe('getEntity', () => {
       .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
       .then((fields) => getEntity(fields, testData.instances.simpleEntity.one))
       .then((result) => {
-        result.should.eql({
-          name: 'Alice',
-          age: '88',
-          label: 'Alice (88)'
-        });
+        result.name.should.equal('Alice');
+        result.age.should.equal('88');
+        result.label.should.equal('Alice (88)');
+        result.uuid.should.be.a.uuid();
       }));
 });
 
