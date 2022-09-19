@@ -6,6 +6,8 @@ const testData = require('../../data/xml');
 const { getEntity } = require(appRoot + '/lib/data/submission');
 // eslint-disable-next-line import/no-dynamic-require
 const { Entity } = require(appRoot + '/lib/model/frames');
+// eslint-disable-next-line import/no-dynamic-require
+const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 
 describe('entities, etc.', () => {
@@ -69,4 +71,38 @@ describe('entities, etc.', () => {
     const res = await all(sql`select * from entities`);
     res[0].label.should.equal('Alice (88)');
   }));
+
+  it('should write out some csv stuff from worker', testService((service, container) =>
+    service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200))
+        .then(() => asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200))
+        .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one
+            .replace('one', 'two')
+            .replace('Alice', 'Beth')
+            .replace('Alice', 'Beth'))
+          .set('Content-Type', 'application/xml')
+          .expect(200))
+        .then(() => asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two')
+          .send({ reviewState: 'approved' })
+          .expect(200))
+        .then(() => exhaust(container))
+        .then(() => asAlice.get('/v1/projects/1/datasets/1/download')
+          .then(({ text }) => {
+            // eslint-disable-next-line no-console
+            //console.log(text);
+            const csv = text.split('\n');
+            csv[0].includes('name,label,name,age').should.equal(true);
+            csv[1].includes('Alice (88),Alice,88').should.equal(true);
+            csv[2].includes('Beth (88),Beth,88').should.equal(true);
+          })))));
 });
