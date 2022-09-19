@@ -3364,6 +3364,11 @@ As of ODK Central v1.2, you can use `%24expand=*` to expand all repeat repetitio
 
 The _nonstandard_ `$wkt` querystring parameter may be set to `true` to request that geospatial data is returned as a [Well-Known Text (WKT) string](https://en.wikipedia.org/wiki/Well-known_text) rather than a GeoJSON structure. This exists primarily to support Tableau, which cannot yet read GeoJSON, but you may find it useful as well depending on your mapping software. **Please note** that both GeoJSON and WKT follow a `(lon, lat, alt)` coördinate ordering rather than the ODK-proprietary `lat lon alt`. This is so that the values map neatly to `(x, y, z)`. GPS accuracy information is not a part of either standards specification, and so is presently omitted from OData output entirely. GeoJSON support may come in a future version.
 
+As of ODK Central v1.5.3, `$select` query parameter is supported with some limitations:
++ `$select` and `$expand` can't be used together.
++ Child properties of repeat can't be requested in `$select`
++ Requesting complex type to get all fields of that type is only supported for `__system`
+
 As the vast majority of clients only support the JSON OData format, that is the only format ODK Central offers.
 
 + Parameters
@@ -3375,6 +3380,7 @@ As the vast majority of clients only support the JSON OData format, that is the 
     + `%24wkt`: `true` (boolean, optional) - If set to `true`, geospatial data will be returned as Well-Known Text (WKT) strings rather than GeoJSON structures.
     + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
     + `%24expand`: `*` (string, optional) - Repetitions, which should get expanded. Currently, only `*` is implemented, which expands all repetitions.
+    + `%24$select`: `__id, age, name, meta/instanceID` (string, optional) - If provided, will return only selected fields. 
 
 + Response 200 (application/json)
     + Body
