@@ -35,13 +35,14 @@
     "prompt": "~1",
     "ramda": "~0",
     "sanitize-filename": "~1",
-    "slonik": "~23",
+    "slonik": "npm:@getodk/slonik@23.6.0-1",
     "slonik-sql-tag-raw": "1.0.3",
     "tmp-promise": "~3",
     "uuid": "~3",
     "yauzl": "~2.9"
   },
   "devDependencies": {
+    "@sinonjs/fake-timers": "^9.1.2",
     "app-root-path": "~2",
     "eslint": "~8",
     "eslint-config-airbnb-base": "~14",
