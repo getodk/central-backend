@@ -36,7 +36,7 @@ Here major and breaking changes to the API are listed by version.
 
 **Removed**:
 
-* It is no longer possible to initiate a new backups configuration (`POST /v1/config/backups/initiate`) or to verify one (`POST /v1/config/backups/verify`). However, if there is an existing configuration, it is still possible to get it or terminate it. If the existing configuration is terminated, it will not be possible to set up a new configuration. Note that it is still possible to download a [Direct Backup](/reference/system-endpoints/direct-backup). For more information about this change, please see [this topic](https://forum.getodk.org/t/backups-to-google-drive-from-central-will-stop-working-after-oct-3/38895) in the ODK Forum.
+* It is no longer possible to initiate a new backups configuration (`POST /v1/config/backups/initiate`) or to verify one (`POST /v1/config/backups/verify`). However, for now, if there is an existing configuration, it is still possible to get it or terminate it. If the existing configuration is terminated, it will not be possible to set up a new configuration. Note that it is still possible to download a [Direct Backup](/reference/system-endpoints/direct-backup). For more information about this change, please see [this topic](https://forum.getodk.org/t/backups-to-google-drive-from-central-will-stop-working-after-jan-31st/38895) in the ODK Forum.
 
 ### ODK Central v1.5
 
@@ -3604,9 +3604,9 @@ There are some resources available for getting or setting system information and
 
 ## Backups Configuration [/v1/config/backups]
 
-Earlier versions of ODK Central allowed users to configure backups to Google Drive. It is [no longer possible](https://forum.getodk.org/t/backups-to-google-drive-from-central-will-stop-working-after-oct-3/38895) to configure backups, but if backups were configured using an earlier version of ODK Central, you can get the current configuration or terminate it. The backups configuration is essentially a singleton object: there can be only one backups configuration at a time.
+Earlier versions of ODK Central allowed users to configure backups to Google Drive, but it is no longer possible to do so. If backups were configured using an earlier version of ODK Central, you can get the current configuration or terminate it. On January 31, 2023, backups to Google Drive will stop working entirely, and we will remove the endpoints to get the current configuration or terminate it. Although backups to Google Drive will stop working, it will still be possible to download a [Direct Backup](/reference/system-endpoints/direct-backup). For more information about these changes, please see [this topic](https://forum.getodk.org/t/backups-to-google-drive-from-central-will-stop-working-after-jan-31st/38895) in the ODK Forum.
 
-Even though it is no longer to possible to set up a new backups configuration, you can still download a [Direct Backup](/reference/system-endpoints/direct-backup).
+The backups configuration is essentially a singleton object: there can be only one backups configuration at a time.
 
 ### Getting the current configuration [GET]
 
