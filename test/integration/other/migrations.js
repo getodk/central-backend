@@ -3,15 +3,13 @@ const appRoot = require('app-root-path');
 const uuid = require('uuid/v4');
 const should = require('should');
 const config = require('config');
-const { testContainerFullTrx, testServiceFullTrx } = require('../setup');
+const { testServiceFullTrx } = require('../setup');
 const { sql } = require('slonik');
 const { connect } = require(appRoot + '/lib/model/migrate');
 const migrator = connect(config.get('test.database'));
 const testData = require('../../data/xml');
 const populateUsers = require('../fixtures/01-users.js');
 const populateForms = require('../fixtures/02-forms.js');
-// eslint-disable-next-line import/no-dynamic-require
-const { Actor, Config } = require(appRoot + '/lib/model/frames');
 
 
 const upToMigration = async (toName) => {
@@ -228,79 +226,4 @@ describe('datbase migrations: removing default project', function() {
     const projCount = await container.oneFirst(sql`select count(*) from projects`);
     projCount.should.equal(0);
   }));
-});
-
-describe('database migrations: 20220908-01-remove-google-backups', () => {
-  // eslint-disable-next-line space-before-function-paren, func-names
-  beforeEach(function() {
-    this.timeout(10000);
-    return upToMigration('20220309-01-add-project-description.js');
-  });
-
-  describe('initbkup role', () => {
-    it('deletes the role that grants backup.verify', testContainerFullTrx(async ({ all }) => {
-      const getRoles = () => all(sql`select * from roles where verbs @> '["backup.verify"]'`);
-      const rolesBefore = await getRoles();
-      rolesBefore.length.should.equal(1);
-      rolesBefore[0].system.should.equal('initbkup');
-      await migrator.migrate.up({ directory: appRoot + '/lib/model/migrations' });
-      const rolesAfter = await getRoles();
-      rolesAfter.length.should.equal(0);
-    }));
-
-    it('does not delete other roles', testContainerFullTrx(async ({ oneFirst }) => {
-      const countBefore = await oneFirst(sql`select count(*) from roles`);
-      countBefore.should.equal(9);
-      await migrator.migrate.up({ directory: appRoot + '/lib/model/migrations' });
-      const countAfter = await oneFirst(sql`select count(*) from roles`);
-      countAfter.should.equal(8);
-    }));
-  });
-
-  describe('backup creation token', () => {
-    const createToken = async ({ Actors, Assignments, Sessions }) => {
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 1);
-      const actor = await Actors.create(new Actor({
-        type: 'singleUse',
-        displayName: 'Backup creation token',
-        expiresAt,
-        meta: {
-          keys: { some: 'data' }
-        }
-      }));
-      await Assignments.grantSystem(actor, 'initbkup', Config.species);
-      await Sessions.create(actor);
-      return actor.id;
-    };
-
-    it('consumes a token', testContainerFullTrx(async (container) => {
-      const actorId = await createToken(container);
-      const count = () => container.one(sql`select
-        (select count(*) from actors where id = ${actorId} and "deletedAt" is not null) as "deletedActors",
-        (select count(*) from assignments where "actorId" = ${actorId}) as assignments,
-        (select count(*) from sessions where "actorId" = ${actorId}) as sessions`);
-      const countsBefore = await count();
-      countsBefore.should.eql({ deletedActors: 0, assignments: 1, sessions: 1 });
-      await migrator.migrate.up({ directory: appRoot + '/lib/model/migrations' });
-      const countsAfter = await count();
-      countsAfter.should.eql({ deletedActors: 1, assignments: 0, sessions: 0 });
-    }));
-
-    it('does not modify other actor data', testServiceFullTrx(async (service, container) => {
-      await populateUsers(container);
-      return service.login('alice', async () => {
-        const count = () => container.one(sql`select
-          (select count(*) from actors where "deletedAt" is not null) as "deletedActors",
-          (select count(*) from assignments) as assignments,
-          (select count(*) from sessions) as sessions`);
-        const countsBefore = await count();
-        countsBefore.should.eql({ deletedActors: 0, assignments: 2, sessions: 1 });
-        await createToken(container);
-        await migrator.migrate.up({ directory: appRoot + '/lib/model/migrations' });
-        const countsAfter = await count();
-        countsAfter.should.eql({ deletedActors: 1, assignments: 2, sessions: 1 });
-      });
-    }));
-  });
 });
