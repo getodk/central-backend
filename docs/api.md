@@ -26,7 +26,7 @@ Forms and their submissions are also accessible through two **open standards spe
 * The [OpenRosa](https://docs.getodk.org/openrosa/) standard allows standard integration with tools like the [ODK Collect](https://docs.getodk.org/collect-intro/) mobile data collection app, or various other compatible tools like [Enketo](https://enketo.org/). It allows them to see the forms available on the server, and to send new submissions to them.
 * The [OData](http://odata.org/) standard allows data to be shared between platforms for analysis and reporting. Tools like [Microsoft Power BI](https://powerbi.microsoft.com/en-us/) and [Tableau](https://public.tableau.com/en-us/s/) are examples of clients that consume the standard OData format and provide advanced features beyond what we offer. If you are looking for a straightforward JSON output of your data, or you are considering building a visualization or reporting tool, this is your best option.
 
-Finally, **system information and configuration** is available via a set of specialized resources. Currently, you may set the set the Usage Reporting configuration and retrieve Server Audit Logs.
+Finally, **system information and configuration** is available via a set of specialized resources. Currently, you may set the Usage Reporting configuration and retrieve Server Audit Logs.
 
 ## Changelog
 
