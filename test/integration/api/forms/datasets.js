@@ -122,7 +122,7 @@ describe('api: /projects/:id/forms/draft/dataset', () => {
         .send(testData.forms.simpleEntity)
         .set('Content-Type', 'application/xml')
         .expect(200)
-        .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/draft/dataset')
+        .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/draft/dataset-diff')
           .expect(200)
           .then(({ body }) => {
             body.should.be.eql([
@@ -138,7 +138,7 @@ describe('api: /projects/:id/forms/draft/dataset', () => {
           })));
   }));
 
-  it('should return nothing if dataset and all properties already exist', testService(async (service) => {
+  it('should return all properties with isNew to be false', testService(async (service) => {
     // Upload a form and then create a new draft version
     await service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms?publish=true')
@@ -148,7 +148,7 @@ describe('api: /projects/:id/forms/draft/dataset', () => {
         .then(() => asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.simpleEntity.replace(/simpleEntity/, 'simpleEntity2'))
           .expect(200)
-          .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity2/draft/dataset')
+          .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity2/draft/dataset-diff')
             .expect(200)
             .then(({ body }) => {
               body.should.be.eql([
@@ -170,7 +170,7 @@ describe('api: /projects/:id/forms/draft/dataset', () => {
             }))));
   }));
 
-  it('should return properties delta only', testService(async (service) => {
+  it('should return all properties with appropriate value of isNew', testService(async (service) => {
     // Upload a form and then create a new draft version
     await service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms?publish=true')
@@ -182,7 +182,7 @@ describe('api: /projects/:id/forms/draft/dataset', () => {
             .replace(/simpleEntity/, 'simpleEntity2')
             .replace(/saveto="name"/, 'saveto="firstName"'))
           .expect(200)
-          .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity2/draft/dataset')
+          .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity2/draft/dataset-diff')
             .expect(200)
             .then(({ body }) => {
               body.should.be.eql([{
@@ -203,7 +203,7 @@ describe('api: /projects/:id/forms/draft/dataset', () => {
         .send(testData.forms.simpleEntity.replace(/entities:saveto="\w+"/g, ''))
         .set('Content-Type', 'application/xml')
         .expect(200)
-        .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/draft/dataset')
+        .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/draft/dataset-diff')
           .expect(200)
           .then(({ body }) => {
             body.should.be.eql([{
