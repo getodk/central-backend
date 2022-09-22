@@ -127,9 +127,12 @@ describe('api: /projects/:id/forms/draft/dataset', () => {
           .then(({ body }) => {
             body.should.be.eql([
               {
-                datasetName: 'people',
-                datasetStatus: 'Draft',
-                properties: ['name', 'age']
+                name: 'people',
+                isNew: true,
+                properties: [
+                  { name: 'age', isNew: true },
+                  { name: 'name', isNew: true }
+                ]
               }
             ]);
           })));
@@ -149,6 +152,20 @@ describe('api: /projects/:id/forms/draft/dataset', () => {
             .expect(200)
             .then(({ body }) => {
               body.should.be.eql([
+                {
+                  name: 'people',
+                  isNew: false,
+                  properties: [
+                    {
+                      name: 'age',
+                      isNew: false
+                    },
+                    {
+                      name: 'name',
+                      isNew: false
+                    }
+                  ]
+                }
               ]);
             }))));
   }));
@@ -169,9 +186,12 @@ describe('api: /projects/:id/forms/draft/dataset', () => {
             .expect(200)
             .then(({ body }) => {
               body.should.be.eql([{
-                datasetName: 'people',
-                datasetStatus: 'Published',
-                properties: ['firstName']
+                name: 'people',
+                isNew: false,
+                properties: [
+                  { name: 'age', isNew: false },
+                  { name: 'firstName', isNew: true }
+                ]
               }]);
             }))));
   }));
@@ -187,8 +207,8 @@ describe('api: /projects/:id/forms/draft/dataset', () => {
           .expect(200)
           .then(({ body }) => {
             body.should.be.eql([{
-              datasetName: 'people',
-              datasetStatus: 'Draft',
+              name: 'people',
+              isNew: true,
               properties: []
             }]);
           })));
