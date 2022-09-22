@@ -1,6 +1,7 @@
 const appRoot = require('app-root-path');
-const should = require('should');
-const { buildSubmission, convertObjectToXml, metaWithUuidXml, metricsTemplate } = require(appRoot + '/lib/data/analytics');
+// eslint-disable-next-line import/no-dynamic-require
+const { buildSubmission, convertObjectToXml, metaWithUuidXml } = require(appRoot + '/lib/data/analytics');
+// eslint-disable-next-line import/no-dynamic-require
 const { Submission } = require(appRoot + '/lib/model/frames');
 
 const data = {
@@ -21,6 +22,7 @@ const data = {
 
 describe('analytics data', () => {
   it('should convert metrics report object to submission xml', () => {
+    // eslint-disable-next-line quotes
     const expected = "<system><num_admins><recent>11</recent><total>22</total></num_admins></system><projects><id>123</id><users><num_managers><recent>2</recent><total>2</total></num_managers></users></projects><projects><id>456</id><users><num_managers><recent>3</recent><total>3</total></num_managers></users></projects>";
     const xml = convertObjectToXml(data);
     xml.should.equal(expected);
@@ -64,6 +66,7 @@ describe('analytics data', () => {
   it('should build xml with full config info', () => {
     const formId = 'the-form-id';
     const formVersion = '123';
+    // eslint-disable-next-line quotes
     const config = { email: 'test@getodk.org', organization: "ODK" };
     const simpleData = { num_admins: 1 };
     const xml = buildSubmission(formId, formVersion, simpleData, config);

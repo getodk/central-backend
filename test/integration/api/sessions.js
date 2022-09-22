@@ -113,6 +113,7 @@ describe('api: /sessions', () => {
         .send({ email: 'alice@getodk.org', password: 'alice' })
         .expect(200)
         .then(({ body }) => {
+          // eslint-disable-next-line prefer-destructuring
           const token = body.token;
           return service.login('chelsea', (asChelsea) =>
             asChelsea.delete('/v1/sessions/' + token).expect(403));
@@ -123,6 +124,7 @@ describe('api: /sessions', () => {
         .send({ email: 'alice@getodk.org', password: 'alice' })
         .expect(200)
         .then(({ body }) => {
+          // eslint-disable-next-line prefer-destructuring
           const token = body.token;
           return service.delete('/v1/sessions/' + token)
             .set('Authorization', 'Bearer ' + token)
@@ -151,6 +153,7 @@ describe('api: /sessions', () => {
         .send({ email: 'chelsea@getodk.org', password: 'chelsea' })
         .expect(200)
         .then(({ body }) => {
+          // eslint-disable-next-line prefer-destructuring
           const token = body.token;
           return service.delete('/v1/sessions/' + token)
             .set('Authorization', 'Bearer ' + token)
@@ -196,6 +199,7 @@ describe('api: /sessions', () => {
         .send({ email: 'alice@getodk.org', password: 'alice' })
         .expect(200)
         .then(({ body }) => {
+          // eslint-disable-next-line prefer-destructuring
           const token = body.token;
           return service.delete('/v1/sessions/' + token)
             .set('Authorization', 'Bearer ' + token)

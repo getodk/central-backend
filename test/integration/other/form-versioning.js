@@ -1,19 +1,20 @@
 const appPath = require('app-root-path');
 const should = require('should');
-const { pick } = require('ramda');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
+// eslint-disable-next-line import/no-dynamic-require
 const { Blob, Form } = require(appPath + '/lib/model/frames');
 
 describe('form forward versioning', () => {
   const force = (x) => x.get();
   const newXml = testData.forms.simple.replace('id="simple"', 'id="simple" version="two"');
 
-  it('should create a new def and update the version', testService((_, { Projects, Forms }) =>
+  it('should create a new def and update the version', testService((_, { Forms }) =>
     Promise.all([
       Form.fromXml(newXml),
       Forms.getByProjectAndXmlFormId(1, 'simple').then(force)
     ])
+      // eslint-disable-next-line no-multi-spaces
       .then(([ partial, oldForm ]) =>  Forms.createVersion(partial, oldForm, true))
       .then(() => Forms.getByProjectAndXmlFormId(1, 'simple', true)).then(force)
       .then((newForm) => {
@@ -22,7 +23,7 @@ describe('form forward versioning', () => {
         newForm.def.sha.should.equal('5a31610cb649ccd2482709664e2a6268df66112f');
       })));
 
-  it('should create a new draft def and not update the current version', testService((_, { Projects, Forms }) =>
+  it('should create a new draft def and not update the current version', testService((_, { Forms }) =>
     Promise.all([
       Form.fromXml(newXml),
       Forms.getByProjectAndXmlFormId(1, 'simple').then(force)
@@ -38,7 +39,7 @@ describe('form forward versioning', () => {
           newForm.draftDefId.should.not.equal(newForm.def.id);
         }))));
 
-  it('should preserve submissions', testService((service, { Projects, Forms }) =>
+  it('should preserve submissions', testService((service, { Forms }) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms/simple/submissions')
         .send(testData.instances.simple.one)
@@ -56,13 +57,13 @@ describe('form forward versioning', () => {
           Form.fromXml(newXml),
           Forms.getByProjectAndXmlFormId(1, 'simple').then(force)
         ])
-        .then(([ partial, form ]) => Forms.createVersion(partial, form, true))
-        .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions')
-          .expect(200)
-          .then(({ body }) => {
-            body.length.should.equal(3);
-            body.map((row) => row.instanceId).should.eql([ 'three', 'two', 'one' ]);
-          }))))));
+          .then(([ partial, form ]) => Forms.createVersion(partial, form, true))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(3);
+              body.map((row) => row.instanceId).should.eql([ 'three', 'two', 'one' ]);
+            }))))));
 
   const withAttachmentsMatching = testData.forms.withAttachments
     .replace('id="withAttachments"', 'id="withAttachments" version="two"');
@@ -77,9 +78,11 @@ describe('form forward versioning', () => {
           .map((name) => FormAttachments.getByFormDefIdAndName(savedForm.def.id, name)
             .then(force)
             .then((attachment) => FormAttachments.update(savedForm, attachment, blobId)))
-        )
+        ) // eslint-disable-line function-paren-newline
           .then(() => Form.fromXml(withAttachmentsMatching))
+          // eslint-disable-next-line no-shadow
           .then((partial) => Forms.createVersion(partial, savedForm, true))
+          // eslint-disable-next-line newline-per-chained-call
           .then(() => Forms.getByProjectAndXmlFormId(1, 'withAttachments')).then(force)
           .then((finalForm) => FormAttachments.getAllByFormDefId(finalForm.currentDefId)
             .then((attachments) => {
@@ -109,9 +112,10 @@ describe('form forward versioning', () => {
           .map((name) => FormAttachments.getByFormDefIdAndName(savedForm.def.id, name)
             .then(force)
             .then((attachment) => FormAttachments.update(savedForm, attachment, blobId)))
-        )
+        ) // eslint-disable-line function-paren-newline
           .then(() => Form.fromXml(withAttachmentsNonmatching))
           .then((partial2) => Forms.createVersion(partial2, savedForm, true))
+          // eslint-disable-next-line newline-per-chained-call
           .then(() => Forms.getByProjectAndXmlFormId(1, 'withAttachments')).then(force)
           .then((finalForm) => FormAttachments.getAllByFormDefId(finalForm.currentDefId)
             .then((attachments) => {

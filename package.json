@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=12"
+    "node": "16"
+  },
+  "volta": {
+    "node": "16.17.0"
   },
   "dependencies": {
     "@sentry/node": "~6",
@@ -35,25 +38,25 @@
     "prompt": "~1",
     "ramda": "~0",
     "sanitize-filename": "~1",
-    "slonik": "npm:@getodk/slonik@23.6.0-1",
+    "slonik": "23.6.2",
     "slonik-sql-tag-raw": "1.0.3",
     "tmp-promise": "~3",
     "uuid": "~3",
-    "yauzl": "~2.9"
+    "yauzl": "~2.10"
   },
   "devDependencies": {
-    "@sinonjs/fake-timers": "^9.1.2",
     "app-root-path": "~2",
-    "eslint": "~8",
+    "eslint": "~7",
     "eslint-config-airbnb-base": "~14",
     "eslint-plugin-import": "~2.25",
-    "mocha": "~9",
+    "mocha": "~10",
     "nock": "~12",
-    "nyc": "~15",
     "node-mocks-http": "~1.6",
+    "nyc": "~15",
+    "semver": "^7.3.7",
     "should": "~13",
-    "supertest": "~3",
     "streamtest": "~1.2",
+    "supertest": "~3",
     "tmp": "~0.2"
   }
 }

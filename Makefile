@@ -1,50 +1,63 @@
-.PHONY: test
 default: base
 
-node_modules:
+node_modules: package.json
 	npm install
+	touch node_modules
 
-migrations: node_modules
-	node -e 'const { withDatabase, migrate } = require("./lib/model/migrate"); withDatabase(require("config").get("default.database"))(migrate);'
+.PHONY: node_version
+node_version: node_modules
+	node lib/bin/enforce-node-version.js
 
-check-migrations: node_modules
-	node -e 'const { withDatabase, checkMigrations } = require("./lib/model/migrate"); withDatabase(require("config").get("default.database"))(checkMigrations);'
+.PHONY: migrations
+migrations: node_version
+	node lib/bin/run-migrations.js
 
-base: node_modules migrations check-migrations
+.PHONY: check-migrations
+check-migrations: node_version
+	node lib/bin/check-migrations.js
 
+.PHONY: base
+base: node_version migrations check-migrations
+
+.PHONY: run
 run: base
 	node lib/bin/run-server.js
 
+.PHONY: debug
 debug: base
 	node --debug --inspect lib/bin/run-server.js
 
-test: node_modules
-	env BCRYPT=no node node_modules/mocha/bin/mocha --recursive --exit
-test-full: node_modules
-	node node_modules/mocha/bin/mocha --recursive --exit
+.PHONY: test
+test: lint
+	env BCRYPT=no npx mocha --recursive --exit
+.PHONY: test-full
+test-full: lint
+	npx mocha --recursive --exit
 
-test-integration: node_modules
-	node node_modules/mocha/bin/mocha --recursive test/integration --exit
+.PHONY: test-integration
+test-integration: node_version
+	npx mocha --recursive test/integration --exit
 
-test-unit: node_modules
-	node node_modules/mocha/bin/mocha --recursive test/unit --exit
+.PHONY: test-unit
+test-unit: node_version
+	npx mocha --recursive test/unit --exit
 
-test-coverage: node_modules
-	node node_modules/.bin/nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --exit --recursive test
+.PHONY: test-coverage
+test-coverage: node_version
+	npx nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --exit --recursive test
 
-lint:
-	node node_modules/.bin/eslint lib
+.PHONY: lint
+lint: node_version
+	npx eslint --cache --max-warnings 0 .
 
-run-multi: base
-	node node_modules/naught/lib/main.js start --worker-count 4 lib/bin/run-server.js
-stop-multi:
-	node node_modules/naught/lib/main.js stop
-
+.PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
-	docker run -d --name odk-postgres -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:9.6
-	sleep 5
-	node .circleci/initdb.js
+	docker start odk-postgres || (docker run -d --name odk-postgres -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:9.6 && sleep 5 && node lib/bin/create-docker-databases.js)
 
+.PHONY: stop-docker-postgres
 stop-docker-postgres:
 	docker stop odk-postgres || true
+
+.PHONY: rm-docker-postgres
+rm-docker-postgres: stop-docker-postgres
 	docker rm odk-postgres || true

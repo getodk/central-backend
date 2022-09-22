@@ -1,6 +1,4 @@
 const should = require('should');
-const { pipe } = require('ramda');
-const { DateTime } = require('luxon');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 
@@ -38,7 +36,7 @@ describe('api: /projects/:id/app-users', () => {
             .send(testData.instances.simple.one)
             .expect(403)))));
 
-    it('should create a long session', testService((service, { one }) =>
+    it('should create a long session', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/app-users')
           .send({ displayName: 'test1' })
@@ -78,7 +76,7 @@ describe('api: /projects/:id/app-users', () => {
             .then(({ body }) => {
               body.map((fk) => fk.displayName).should.eql([ 'test 3', 'test 2', 'test 1' ]);
               body.forEach((fk) => {
-                fk.should.be.a.FieldKey()
+                fk.should.be.a.FieldKey();
                 fk.projectId.should.equal(1);
               });
             })))));
@@ -153,6 +151,7 @@ describe('api: /projects/:id/app-users', () => {
                   .set('X-Extended-Metadata', 'true')
                   .expect(200)
                   .then(({ body }) => {
+                    // eslint-disable-next-line no-shadow
                     body.forEach((fk) => fk.should.be.an.ExtendedFieldKey());
                     body[0].lastUsed.should.be.a.recentIsoDate();
                     should(body[1].lastUsed).equal(null);
@@ -210,7 +209,7 @@ describe('api: /projects/:id/app-users', () => {
         asAlice.post('/v1/projects')
           .send({ name: 'project 2' })
           .expect(200)
-          .then((project) => asAlice.post('/v1/projects/1/app-users')
+          .then(() => asAlice.post('/v1/projects/1/app-users')
             .send({ displayName: 'fktest' })
             .expect(200)
             .then(({ body }) => asAlice.delete(`/v1/projects/2/app-users/${body.id}`)

@@ -1,4 +1,3 @@
-const should = require('should');
 const tmp = require('tmp');
 const yauzl = require('yauzl');
 const { createWriteStream } = require('fs');
@@ -14,31 +13,46 @@ const streamTest = require('streamtest').v2;
 //      …
 // }
 const zipStreamToFiles = (zipStream, callback) => {
-  tmp.file((_, tmpfile) => {
+  tmp.file((err, tmpfile) => {
+    // eslint-disable-next-line keyword-spacing
+    if(err) return callback(err);
+
     const writeStream = createWriteStream(tmpfile);
     zipStream.pipe(writeStream);
     zipStream.on('end', () => {
       setTimeout(() => {
-        yauzl.open(tmpfile, { autoClose: false }, (_, zipfile) => {
+        // eslint-disable-next-line no-shadow
+        yauzl.open(tmpfile, { autoClose: false }, (err, zipfile) => {
+          // eslint-disable-next-line keyword-spacing
+          if(err) return callback(err);
+
           const result = { filenames: [] };
+          // eslint-disable-next-line prefer-const
           let entries = [];
           let completed = 0;
 
-          should.exist(zipfile);
           zipfile.on('entry', (entry) => entries.push(entry));
           zipfile.on('end', () => {
             if (entries.length === 0) {
-              callback(result);
+              callback(null, result);
               zipfile.close();
             } else {
               entries.forEach((entry) => {
                 result.filenames.push(entry.fileName);
-                zipfile.openReadStream(entry, (_, resultStream) => {
-                  resultStream.pipe(streamTest.toText((_, contents) => {
+                // eslint-disable-next-line no-shadow
+                zipfile.openReadStream(entry, (err, resultStream) => {
+                  // eslint-disable-next-line keyword-spacing
+                  if(err) return callback(err);
+
+                  // eslint-disable-next-line no-shadow
+                  resultStream.pipe(streamTest.toText((err, contents) => {
+                    // eslint-disable-next-line keyword-spacing
+                    if(err) return callback(err);
+
                     result[entry.fileName] = contents;
                     completed += 1;
                     if (completed === entries.length) {
-                      callback(result);
+                      callback(null, result);
                       zipfile.close();
                     }
                   }));
@@ -52,5 +66,8 @@ const zipStreamToFiles = (zipStream, callback) => {
   });
 };
 
-module.exports = { zipStreamToFiles };
+// eslint-disable-next-line no-confusing-arrow
+const pZipStreamToFiles = (zipStream) => new Promise((resolve, reject) => zipStreamToFiles(zipStream, (err, result) => err ? reject(err) : resolve(result)));
+
+module.exports = { zipStreamToFiles, pZipStreamToFiles };
 

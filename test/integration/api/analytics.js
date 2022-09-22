@@ -1,7 +1,3 @@
-const appRoot = require('app-root-path');
-const should = require('should');
-const { map, sortBy } = require('ramda');
-const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { testService } = require('../setup');
 
 describe('api: /analytics/preview', () => {

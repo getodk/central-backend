@@ -1,7 +1,9 @@
 const appRoot = require('app-root-path');
-const { construct } = require('ramda');
+// eslint-disable-next-line import/no-dynamic-require
 const { submissionToOData } = require(appRoot + '/lib/data/odata');
+// eslint-disable-next-line import/no-dynamic-require
 const { MockField, fieldsFor } = require(appRoot + '/test/util/schema');
+// eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
 
 const __system = {

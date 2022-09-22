@@ -1,4 +1,3 @@
-const should = require('should');
 const util = require('../../../lib/util/util');
 
 describe('util/util', () => {
@@ -32,6 +31,7 @@ describe('util/util', () => {
     });
 
     it('should actually remove the keys', () => {
+      // eslint-disable-next-line no-prototype-builtins
       without([ 'b' ], { a: 1, b: 2 }).hasOwnProperty('b').should.equal(false);
     });
 
@@ -62,5 +62,6 @@ describe('util/util', () => {
       (blankStringToNull(' ') === ' ').should.equal(true);
     });
   });
+
 });
 
