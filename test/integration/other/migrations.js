@@ -5,21 +5,22 @@ const config = require('config');
 const { testServiceFullTrx } = require('../setup');
 const { sql } = require('slonik');
 // eslint-disable-next-line import/no-dynamic-require
-const { connect } = require(appRoot + '/lib/model/migrate');
-const migrator = connect(config.get('test.database'));
+const { withDatabase } = require(appRoot + '/lib/model/migrate');
 const testData = require('../../data/xml');
 const populateUsers = require('../fixtures/01-users');
 const populateForms = require('../fixtures/02-forms');
 
 
-const upToMigration = async (toName) => {
+const withTestDatabase = withDatabase(config.get('test.database'));
+const migrationsDir = appRoot + '/lib/model/migrations';
+const upToMigration = (toName) => withTestDatabase(async (migrator) => {
   await migrator.raw('drop owned by current_user');
   // eslint-disable-next-line no-constant-condition
   while (true) {
     // eslint-disable-next-line no-await-in-loop
-    await migrator.migrate.up({ directory: appRoot + '/lib/model/migrations' });
+    await migrator.migrate.up({ directory: migrationsDir });
     // eslint-disable-next-line no-await-in-loop
-    const migrations = await migrator.migrate.list({ directory: appRoot + '/lib/model/migrations' });
+    const migrations = await migrator.migrate.list({ directory: migrationsDir });
     const applied = migrations[0];
     const remaining = migrations[1];
     if (toName === applied[applied.length - 1]) break;
@@ -29,7 +30,9 @@ const upToMigration = async (toName) => {
       break;
     }
   }
-};
+});
+const up = () => withTestDatabase((migrator) =>
+  migrator.migrate.up({ directory: migrationsDir }));
 
 // NOTE/TODO: figure out something else here D:
 // Skipping these migrations because after adding a new description
@@ -51,7 +54,7 @@ describe.skip('database migrations', function() {
         .expect(200));
 
     // running migration 20220121-02-purge-deleted-forms.js
-    await migrator.migrate.up({ directory: appRoot + '/lib/model/migrations' });
+    await up();
 
     const count = await container.oneFirst(sql`select count(*) from forms`);
     count.should.equal(1); // only the withrepeat base test should exist
@@ -72,7 +75,7 @@ describe.skip('database migrations', function() {
         .expect(200));
 
     // running migration 20220121-02-purge-deleted-forms.js
-    await migrator.migrate.up({ directory: appRoot + '/lib/model/migrations' });
+    await up();
 
     const count = await container.oneFirst(sql`select count(*) from blobs`);
     count.should.equal(1); // the xls blob should still exist
@@ -111,7 +114,7 @@ describe.skip('database migrations', function() {
     count.should.equal(3); // xls blob and two file blobs
 
     // running migration 20220121-02-purge-deleted-forms.js
-    await migrator.migrate.up({ directory: appRoot + '/lib/model/migrations' });
+    await up();
 
     count = await container.oneFirst(sql`select count(*) from blobs`);
     count.should.equal(0); // blobs should all be purged
@@ -154,7 +157,7 @@ describe.skip('database migrations', function() {
     before.should.equal(7);
 
     // running migration 20220209-01-purge-unneeded-drafts.js
-    await migrator.migrate.up({ directory: appRoot + '/lib/model/migrations' });
+    await up();
 
     const after = await container.oneFirst(sql`select count(*) from form_defs`);
     after.should.equal(before); // no defs purged
@@ -188,7 +191,7 @@ describe.skip('database migrations', function() {
     before.should.equal(4);
 
     // running migration 20220209-01-purge-unneeded-drafts.js
-    await migrator.migrate.up({ directory: appRoot + '/lib/model/migrations' });
+    await up();
 
     const after = await container.oneFirst(sql`select count(*) from form_defs`);
     after.should.equal(before - 1); // one purged
@@ -211,7 +214,7 @@ describe('datbase migrations: removing default project', function() {
       values (${formActeeId}, 'A Form', '123', '<xml></xml>', '1')`);
 
     // running migration 20181206-01-add-projects.js
-    await migrator.migrate.up({ directory: appRoot + '/lib/model/migrations' });
+    await up();
 
     // check projects and forms
     const projects = await container.all(sql`select * from projects`);
