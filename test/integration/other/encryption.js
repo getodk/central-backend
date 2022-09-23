@@ -261,8 +261,7 @@ describe('managed encryption', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          // eslint-disable-next-line quotes
-          .then((keyId) => pZipStreamToFiles(asAlice.post(`/v1/projects/1/forms/simple/submissions.csv.zip`)
+          .then((keyId) => pZipStreamToFiles(asAlice.post('/v1/projects/1/forms/simple/submissions.csv.zip')
             .send(`${keyId}=supersecret`)
             .set('Content-Type', 'application/x-www-form-urlencoded'))
             .then((result) => {
@@ -290,8 +289,7 @@ describe('managed encryption', () => {
               .expect(200)
               .then(({ body }) => body)
           ]))
-          // eslint-disable-next-line quotes
-          .then(([ keyId, session ]) => pZipStreamToFiles(service.post(`/v1/projects/1/forms/simple/submissions.csv.zip`)
+          .then(([ keyId, session ]) => pZipStreamToFiles(service.post('/v1/projects/1/forms/simple/submissions.csv.zip')
             .send(`${keyId}=supersecret&__csrf=${session.csrf}`)
             .set('Cookie', `__Host-session=${session.token}`)
             .set('X-Forwarded-Proto', 'https')
@@ -315,8 +313,7 @@ describe('managed encryption', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          // eslint-disable-next-line quotes
-          .then((keyId) => pZipStreamToFiles(asAlice.post(`/v1/projects/1/forms/simple/submissions.csv.zip`)
+          .then((keyId) => pZipStreamToFiles(asAlice.post('/v1/projects/1/forms/simple/submissions.csv.zip')
             .send({ [keyId]: 'supersecret' }))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
@@ -445,8 +442,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200)
             .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
             .then((send) => send(testData.instances.binaryType.two, { 'here_is_file2.jpg': 'file two you cant see' })))
-          // eslint-disable-next-line quotes
-          .then(() => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/binaryType/submissions.csv.zip`))
+          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'))
             .then((result) => {
               result.filenames.length.should.equal(2);
               result.filenames.should.containDeep([ 'binaryType.csv', 'media/my_file1.mp4' ]);
@@ -537,8 +533,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
               .then((send) => send(testData.instances.simple.two)
                 .then(() => send(testData.instances.simple.three))))
-            // eslint-disable-next-line quotes
-            .then(() => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip`))
+            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
 
@@ -667,8 +662,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 .send(envelope)
                 .set('Content-Type', 'text/xml')
                 .expect(200)))
-            // eslint-disable-next-line quotes
-            .then(() => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip`))
+            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
 

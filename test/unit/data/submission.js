@@ -142,26 +142,19 @@ describe('diffing', () => {
       structuralFieldsFor(testData.forms.doubleRepeat).then((structurals) => {
         const tree = _hashedTree(structurals, testData.instances.doubleRepeat.double);
         tree.should.eql({
-          // eslint-disable-next-line quotes
-          "orx:meta": { "orx:instanceID": "double" },
-          // eslint-disable-next-line quotes
-          name: "Vick",
+          'orx:meta': { 'orx:instanceID': 'double' },
+          name: 'Vick',
           children: { child: [
-            // eslint-disable-next-line quotes
-            { name: "Alice" },
-            // eslint-disable-next-line quotes
-            { name: "Bob",
+            { name: 'Alice' },
+            { name: 'Bob',
               toys: { toy: [
-                // eslint-disable-next-line quotes
-                { name: "Twilight Sparkle" }, { name: "Pinkie Pie" }, { name: "Applejack" }, { name: "Spike" }
+                { name: 'Twilight Sparkle' }, { name: 'Pinkie Pie' }, { name: 'Applejack' }, { name: 'Spike' }
               ] }
             // eslint-disable-next-line object-curly-newline
             },
-            // eslint-disable-next-line quotes
-            { name: "Chelsea",
+            { name: 'Chelsea',
               toys: { toy: [
-                // eslint-disable-next-line quotes
-                { name: "Rainbow Dash" }, { name: "Rarity" }, { name: "Fluttershy" }, { name: "Princess Luna" }
+                { name: 'Rainbow Dash' }, { name: 'Rarity' }, { name: 'Fluttershy' }, { name: 'Princess Luna' }
               ] }
             // eslint-disable-next-line object-curly-newline
             }
@@ -211,15 +204,11 @@ describe('diffing', () => {
         new MockField({ order: 3, name: 'person', path: '/person', type: 'repeat' })
       ];
       _hashedTree(fields, xml).should.eql({
-        // eslint-disable-next-line quotes
-        meta: { instanceID: "" },
+        meta: { instanceID: '' },
         person: [
-          // eslint-disable-next-line quotes
-          { name: "Amy" },
-          // eslint-disable-next-line quotes
-          { name: "Beth" },
-          // eslint-disable-next-line quotes
-          { name: "Chase" }
+          { name: 'Amy' },
+          { name: 'Beth' },
+          { name: 'Chase' }
         ]
       });
     });
@@ -318,8 +307,7 @@ describe('diffing', () => {
         .should.eql([{ old: 1, new: 2, path: [ 'data', [ 'repeat', 1 ], 'a' ] }]);
     });
 
-    // eslint-disable-next-line quotes
-    it(`should diff mixed changes (x y => x')`, () => {
+    it("should diff mixed changes (x y => x')", () => {
       const x = [ 'a', { a: 1, [keys]: [ 'a' ] }, { b: 1, [keys]: [ 'b' ] }, 'c' ];
       x[subhashes] = [ 1, 2, 3, 4 ];
 
@@ -332,8 +320,7 @@ describe('diffing', () => {
       ]);
     });
 
-    // eslint-disable-next-line quotes
-    it(`should diff mixed changes (x y => y')`, () => {
+    it("should diff mixed changes (x y => y')", () => {
       const x = [ 'a', { a: 1, x: 'a', [keys]: [ 'a', 'x' ] }, { b: 1, x: 'b', [keys]: [ 'b', 'x' ] }, 'c' ];
       x[subhashes] = [ 1, 2, 3, 4 ];
 
@@ -346,8 +333,7 @@ describe('diffing', () => {
       ]);
     });
 
-    // eslint-disable-next-line quotes
-    it(`should diff mixed changes (x => x' y)`, () => {
+    it("should diff mixed changes (x => x' y)", () => {
       const x = [ 'a', { a: 1, [keys]: [ 'a' ] }, 'c' ];
       x[subhashes] = [ 1, 2, 3 ];
 
@@ -360,8 +346,7 @@ describe('diffing', () => {
       ]);
     });
 
-    // eslint-disable-next-line quotes
-    it(`should diff mixed changes (y => x y')`, () => {
+    it("should diff mixed changes (y => x y')", () => {
       const x = [ 'a', { b: 1, x: 'b', [keys]: [ 'b', 'x' ] }, 'c' ];
       x[subhashes] = [ 1, 2, 3 ];
 
@@ -590,10 +575,8 @@ describe('diffing', () => {
         </group>
     </h:body>
 </h:html>`;
-      // eslint-disable-next-line quotes
-      const newer = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="indexed-repeat-nested"><my-repeat><uuid>2b19075a-0db2-4560-8c1e-b40e7c878f79</uuid><my-nested-repeat><Parent>2b19075a-0db2-4560-8c1e-b40e7c878f79</Parent></my-nested-repeat></my-repeat><meta><instanceID>uuid:b27d98e4-e759-4843-ad97-3a0358f1eaf1</instanceID><deprecatedID>uuid:49cb8f10-6ee2-4e34-9009-e0e8a084c2e3</deprecatedID></meta></data>`;
-      // eslint-disable-next-line quotes
-      const older = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="indexed-repeat-nested"><my-repeat><uuid>2dd99095-56aa-4504-bcbb-d6531d6ec73b</uuid><my-nested-repeat><Parent>2dd99095-56aa-4504-bcbb-d6531d6ec73b</Parent></my-nested-repeat><my-nested-repeat><Parent>3e4e8b15-222b-418c-8e20-ab57f9853505</Parent></my-nested-repeat><my-nested-repeat><Parent>3e4e8b15-222b-418c-8e20-ab57f9853505</Parent></my-nested-repeat></my-repeat><my-repeat><uuid>57a5c37f-7ec9-41af-ba90-c084b9d9fcee</uuid><my-nested-repeat><Parent>57a5c37f-7ec9-41af-ba90-c084b9d9fcee</Parent></my-nested-repeat></my-repeat><meta><instanceID>uuid:49cb8f10-6ee2-4e34-9009-e0e8a084c2e3</instanceID></meta></data>`;
+      const newer = '<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="indexed-repeat-nested"><my-repeat><uuid>2b19075a-0db2-4560-8c1e-b40e7c878f79</uuid><my-nested-repeat><Parent>2b19075a-0db2-4560-8c1e-b40e7c878f79</Parent></my-nested-repeat></my-repeat><meta><instanceID>uuid:b27d98e4-e759-4843-ad97-3a0358f1eaf1</instanceID><deprecatedID>uuid:49cb8f10-6ee2-4e34-9009-e0e8a084c2e3</deprecatedID></meta></data>';
+      const older = '<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="indexed-repeat-nested"><my-repeat><uuid>2dd99095-56aa-4504-bcbb-d6531d6ec73b</uuid><my-nested-repeat><Parent>2dd99095-56aa-4504-bcbb-d6531d6ec73b</Parent></my-nested-repeat><my-nested-repeat><Parent>3e4e8b15-222b-418c-8e20-ab57f9853505</Parent></my-nested-repeat><my-nested-repeat><Parent>3e4e8b15-222b-418c-8e20-ab57f9853505</Parent></my-nested-repeat></my-repeat><my-repeat><uuid>57a5c37f-7ec9-41af-ba90-c084b9d9fcee</uuid><my-nested-repeat><Parent>57a5c37f-7ec9-41af-ba90-c084b9d9fcee</Parent></my-nested-repeat></my-repeat><meta><instanceID>uuid:49cb8f10-6ee2-4e34-9009-e0e8a084c2e3</instanceID></meta></data>';
 
       return structuralFieldsFor(formXml).then((fields) => {
         diffSubmissions(fields, [
@@ -645,8 +628,7 @@ describe('diffing', () => {
           { instanceId: 'john', xml: newer },
           { instanceId: 'jon', xml: older }
         ]).should.eql({
-          // eslint-disable-next-line quote-props
-          'john': [{ old: 'jon', new: 'john', path: [ 'meta', 'instanceID'] }]
+          john: [{ old: 'jon', new: 'john', path: [ 'meta', 'instanceID'] }]
         });
       }));
   });

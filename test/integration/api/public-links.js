@@ -83,8 +83,7 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
       service.login('alice', (asAlice) => Promise.all([
         asAlice.post('/v1/projects/1/forms/simple/public-links').send({ displayName: 'test 1' }).expect(200)
           .then(() => asAlice.post('/v1/projects/1/forms/simple/public-links').send({ displayName: 'test 2' }).expect(200)),
-        // eslint-disable-next-line quotes
-        asAlice.post(`/v1/projects/1/forms/withrepeat/public-links`).send({ displayName: 'test 3' }).expect(200)
+        asAlice.post('/v1/projects/1/forms/withrepeat/public-links').send({ displayName: 'test 3' }).expect(200)
       ])
         .then(() => asAlice.get('/v1/projects/1/forms/simple/public-links')
           .expect(200)

@@ -493,16 +493,13 @@ describe('api: /users', () => {
           .expect(200)
           .then(({ body }) => service.login('chelsea', (asChelsea) =>
             asChelsea.put(`/v1/users/${body.id}/password`)
-              // eslint-disable-next-line quote-props
-              .send({ old: 'alice', 'new': 'chelsea' })
+              .send({ old: 'alice', new: 'chelsea' })
               .expect(403))))));
 
     it('should reject if the user does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
-        // eslint-disable-next-line quotes
-        asAlice.put(`/v1/users/9999/password`)
-          // eslint-disable-next-line quote-props
-          .send({ old: 'alice', 'new': 'chelsea' })
+        asAlice.put('/v1/users/9999/password')
+          .send({ old: 'alice', new: 'chelsea' })
           .expect(404))));
 
     it('should reject if the old password is not correct', testService((service) =>
@@ -510,8 +507,7 @@ describe('api: /users', () => {
         asAlice.get('/v1/users/current')
           .expect(200)
           .then(({ body }) => asAlice.put(`/v1/users/${body.id}/password`)
-            // eslint-disable-next-line quote-props
-            .send({ old: 'notalice', 'new': 'newpassword' })
+            .send({ old: 'notalice', new: 'newpassword' })
             .expect(401)))));
 
     it('should change the password', testService((service) =>
@@ -519,8 +515,7 @@ describe('api: /users', () => {
         asAlice.get('/v1/users/current')
           .expect(200)
           .then(({ body }) => asAlice.put(`/v1/users/${body.id}/password`)
-            // eslint-disable-next-line quote-props
-            .send({ old: 'alice', 'new': 'newpassword' })
+            .send({ old: 'alice', new: 'newpassword' })
             .expect(200))
           .then(({ body }) => {
             body.success.should.equal(true);
