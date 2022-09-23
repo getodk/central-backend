@@ -8,10 +8,8 @@ const { sql } = require('slonik');
 const { connect } = require(appRoot + '/lib/model/migrate');
 const migrator = connect(config.get('test.database'));
 const testData = require('../../data/xml');
-// eslint-disable-next-line import/extensions
-const populateUsers = require('../fixtures/01-users.js');
-// eslint-disable-next-line import/extensions
-const populateForms = require('../fixtures/02-forms.js');
+const populateUsers = require('../fixtures/01-users');
+const populateForms = require('../fixtures/02-forms');
 
 
 const upToMigration = async (toName) => {
@@ -26,15 +24,14 @@ const upToMigration = async (toName) => {
     const remaining = migrations[1];
     if (toName === applied[applied.length - 1]) break;
     if (remaining.length === 0) {
-      // eslint-disable-next-line quotes, no-console
-      console.log("Could not find migration", toName);
+      // eslint-disable-next-line no-console
+      console.log('Could not find migration', toName);
       break;
     }
   }
 };
 
-// eslint-disable-next-line no-trailing-spaces
-// NOTE/TODO: figure out something else here D: 
+// NOTE/TODO: figure out something else here D:
 // Skipping these migrations because after adding a new description
 // column to projects and forms, it is not possible to migrate part way
 // (before the new column) and populate the data when frames expect the
@@ -48,8 +45,7 @@ describe.skip('database migrations', function() {
 
     await populateUsers(container);
     await populateForms(container);
-    // eslint-disable-next-line no-trailing-spaces
-    
+
     await service.login('alice', (asAlice) =>
       asAlice.delete('/v1/projects/1/forms/simple')
         .expect(200));
