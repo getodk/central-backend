@@ -402,10 +402,8 @@ module.exports = {
 </data>`
     },
     clientAudits: {
-      // eslint-disable-next-line quotes
-      one: `<data id="audits"><meta><instanceID>one</instanceID><audit>audit.csv</audit></meta><name>Alice</name><age>30</age></data>`,
-      // eslint-disable-next-line quotes
-      two: `<data id="audits"><meta><instanceID>two</instanceID><audit>log.csv</audit></meta><name>Bob</name><age>34</age></data>`
+      one: '<data id="audits"><meta><instanceID>one</instanceID><audit>audit.csv</audit></meta><name>Alice</name><age>30</age></data>',
+      two: '<data id="audits"><meta><instanceID>two</instanceID><audit>log.csv</audit></meta><name>Bob</name><age>34</age></data>'
     },
     selectMultiple: {
       one: instance('selectMultiple', 'one', '<q1>a b</q1><g1><q2>x y z</q2>'),

@@ -26,8 +26,8 @@ const upToMigration = async (toName) => {
     const remaining = migrations[1];
     if (toName === applied[applied.length - 1]) break;
     if (remaining.length === 0) {
-      // eslint-disable-next-line quotes, no-console
-      console.log("Could not find migration", toName);
+      // eslint-disable-next-line no-console
+      console.log('Could not find migration', toName);
       break;
     }
   }

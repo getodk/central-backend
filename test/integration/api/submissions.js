@@ -3322,29 +3322,20 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200)
             .then(({ body }) => {
               const expected = {
-                // eslint-disable-next-line quote-props
-                'two': [
+                two: [
                   {
-                    // eslint-disable-next-line quotes, quote-props
-                    "new": "two",
-                    // eslint-disable-next-line quotes, quote-props
-                    "old": "one",
-                    // eslint-disable-next-line quotes, quote-props
-                    "path": [ "meta", "instanceID" ]
+                    new: 'two',
+                    old: 'one',
+                    path: [ 'meta', 'instanceID' ]
                   },
                   {
-                    // eslint-disable-next-line quotes, quote-props
-                    "new": "one",
-                    // eslint-disable-next-line quotes, quote-props
-                    "path": [ "meta", "deprecatedID" ]
+                    new: 'one',
+                    path: [ 'meta', 'deprecatedID' ]
                   },
                   {
-                    // eslint-disable-next-line quotes, quote-props
-                    "new": "Angela",
-                    // eslint-disable-next-line quotes, quote-props
-                    "old": "Alice",
-                    // eslint-disable-next-line quotes, quote-props
-                    "path": [ "name" ]
+                    new: 'Angela',
+                    old: 'Alice',
+                    path: [ 'name' ]
                   }
                 ]
               };

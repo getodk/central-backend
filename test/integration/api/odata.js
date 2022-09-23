@@ -96,8 +96,7 @@ describe('api: /forms/:id.svc', () => {
           }))));
   });
 
-  // eslint-disable-next-line quotes
-  describe("/Submissions(id)/… GET", () => {
+  describe('/Submissions(id)/… GET', () => {
     it('should reject unless the form exists', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get("/v1/projects/1/forms/nonexistent.svc/Submissions('xyz')").expect(404))));
@@ -135,8 +134,7 @@ describe('api: /forms/:id.svc', () => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions',
               value: [{
-                // eslint-disable-next-line quotes
-                __id: "double",
+                __id: 'double',
                 __system: {
                   // submissionDate is checked above!
                   updatedAt: null,
@@ -153,10 +151,8 @@ describe('api: /forms/:id.svc', () => {
                 children: {
                   'child@odata.navigationLink': "Submissions('double')/children/child"
                 },
-                // eslint-disable-next-line quotes
-                meta: { instanceID: "double" },
-                // eslint-disable-next-line quotes
-                name: "Vick"
+                meta: { instanceID: 'double' },
+                name: 'Vick'
               }]
             });
           }))));
@@ -308,8 +304,7 @@ describe('api: /forms/:id.svc', () => {
           .then(({ body }) => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
-              // eslint-disable-next-line quotes
-              '@odata.nextLink': "http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/Submissions(%27double%27)/children/child?%24skip=2",
+              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/Submissions(%27double%27)/children/child?%24skip=2',
               value: [{
                 __id: 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
                 '__Submissions-id': 'double',
@@ -328,8 +323,7 @@ describe('api: /forms/:id.svc', () => {
           .then(({ body }) => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
-              // eslint-disable-next-line quotes
-              '@odata.nextLink': "http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/Submissions(%27double%27)/children/child?%24count=true&%24skip=0",
+              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/Submissions(%27double%27)/children/child?%24count=true&%24skip=0',
               '@odata.count': 3,
               value: []
             });
@@ -400,8 +394,7 @@ describe('api: /forms/:id.svc', () => {
   describe('/Submissions.xyz.* GET', () => {
     it('should reject unless the form exists', testService((service) =>
       service.login('alice', (asAlice) =>
-        // eslint-disable-next-line quotes
-        asAlice.get("/v1/projects/1/forms/nonexistent.svc/Submissions").expect(404))));
+        asAlice.get('/v1/projects/1/forms/nonexistent.svc/Submissions').expect(404))));
 
     it('should reject unless the form is published', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -414,8 +407,7 @@ describe('api: /forms/:id.svc', () => {
 
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
-        // eslint-disable-next-line quotes
-        asChelsea.get("/v1/projects/1/forms/simple.svc/Submissions").expect(403))));
+        asChelsea.get('/v1/projects/1/forms/simple.svc/Submissions').expect(403))));
 
     const withSubmissions = (service, callback) =>
       service.login('alice', (asAlice) =>
@@ -447,15 +439,12 @@ describe('api: /forms/:id.svc', () => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
               value: [{
-                // eslint-disable-next-line quotes
-                __id: "rthree",
+                __id: 'rthree',
                 __system: {
                   // submissionDate is checked above,
                   updatedAt: null,
-                  // eslint-disable-next-line quotes
-                  submitterId: "5",
-                  // eslint-disable-next-line quotes
-                  submitterName: "Alice",
+                  submitterId: '5',
+                  submitterName: 'Alice',
                   attachmentsPresent: 0,
                   attachmentsExpected: 0,
                   status: null,
@@ -464,24 +453,19 @@ describe('api: /forms/:id.svc', () => {
                   edits: 0,
                   formVersion: '1.0'
                 },
-                // eslint-disable-next-line quotes
-                meta: { instanceID: "rthree" },
-                // eslint-disable-next-line quotes
-                name: "Chelsea",
+                meta: { instanceID: 'rthree' },
+                name: 'Chelsea',
                 age: 38,
                 children: {
                   'child@odata.navigationLink': "Submissions('rthree')/children/child"
                 }
               }, {
-                // eslint-disable-next-line quotes
-                __id: "rtwo",
+                __id: 'rtwo',
                 __system: {
                   // submissionDate is checked above,
                   updatedAt: null,
-                  // eslint-disable-next-line quotes
-                  submitterId: "5",
-                  // eslint-disable-next-line quotes
-                  submitterName: "Alice",
+                  submitterId: '5',
+                  submitterName: 'Alice',
                   attachmentsPresent: 0,
                   attachmentsExpected: 0,
                   status: null,
@@ -490,24 +474,19 @@ describe('api: /forms/:id.svc', () => {
                   edits: 0,
                   formVersion: '1.0'
                 },
-                // eslint-disable-next-line quotes
-                meta: { instanceID: "rtwo" },
-                // eslint-disable-next-line quotes
-                name: "Bob",
+                meta: { instanceID: 'rtwo' },
+                name: 'Bob',
                 age: 34,
                 children: {
                   'child@odata.navigationLink': "Submissions('rtwo')/children/child"
                 }
               }, {
-                // eslint-disable-next-line quotes
-                __id: "rone",
+                __id: 'rone',
                 __system: {
                   // submissionDate is checked above,
                   updatedAt: null,
-                  // eslint-disable-next-line quotes
-                  submitterId: "5",
-                  // eslint-disable-next-line quotes
-                  submitterName: "Alice",
+                  submitterId: '5',
+                  submitterName: 'Alice',
                   attachmentsPresent: 0,
                   attachmentsExpected: 0,
                   status: null,
@@ -516,10 +495,8 @@ describe('api: /forms/:id.svc', () => {
                   edits: 0,
                   formVersion: '1.0'
                 },
-                // eslint-disable-next-line quotes
-                meta: { instanceID: "rone" },
-                // eslint-disable-next-line quotes
-                name: "Alice",
+                meta: { instanceID: 'rone' },
+                name: 'Alice',
                 age: 30,
                 children: {}
               }]
@@ -562,8 +539,7 @@ describe('api: /forms/:id.svc', () => {
 
     it('should limit and offset toplevel rows', testService((service) =>
       withSubmissions(service, (asAlice) =>
-        // eslint-disable-next-line quotes
-        asAlice.get("/v1/projects/1/forms/withrepeat.svc/Submissions?$top=1&$skip=1")
+        asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$top=1&$skip=1')
           .expect(200)
           .then(({ body }) => {
             body.value[0].__system.submissionDate.should.be.an.isoDate();
@@ -572,18 +548,14 @@ describe('api: /forms/:id.svc', () => {
 
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
-              // eslint-disable-next-line quotes
-              '@odata.nextLink': "http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24skip=2",
+              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24skip=2',
               value: [{
-                // eslint-disable-next-line quotes
-                __id: "rtwo",
+                __id: 'rtwo',
                 __system: {
                   // submissionDate is checked above,
                   updatedAt: null,
-                  // eslint-disable-next-line quotes
-                  submitterId: "5",
-                  // eslint-disable-next-line quotes
-                  submitterName: "Alice",
+                  submitterId: '5',
+                  submitterName: 'Alice',
                   attachmentsPresent: 0,
                   attachmentsExpected: 0,
                   status: null,
@@ -592,10 +564,8 @@ describe('api: /forms/:id.svc', () => {
                   edits: 0,
                   formVersion: '1.0'
                 },
-                // eslint-disable-next-line quotes
-                meta: { instanceID: "rtwo" },
-                // eslint-disable-next-line quotes
-                name: "Bob",
+                meta: { instanceID: 'rtwo' },
+                name: 'Bob',
                 age: 34,
                 children: {
                   'child@odata.navigationLink': "Submissions('rtwo')/children/child"
@@ -606,8 +576,7 @@ describe('api: /forms/:id.svc', () => {
 
     it('should provide toplevel row count if requested', testService((service) =>
       withSubmissions(service, (asAlice) =>
-        // eslint-disable-next-line quotes
-        asAlice.get("/v1/projects/1/forms/withrepeat.svc/Submissions?$top=1&$count=true")
+        asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$top=1&$count=true')
           .expect(200)
           .then(({ body }) => {
             body.value[0].__system.submissionDate.should.be.an.isoDate();
@@ -616,19 +585,15 @@ describe('api: /forms/:id.svc', () => {
 
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
-              // eslint-disable-next-line quotes
-              '@odata.nextLink': "http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24count=true&%24skip=1",
+              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24count=true&%24skip=1',
               '@odata.count': 3,
               value: [{
-                // eslint-disable-next-line quotes
-                __id: "rthree",
+                __id: 'rthree',
                 __system: {
                   // submissionDate is checked above,
                   updatedAt: null,
-                  // eslint-disable-next-line quotes
-                  submitterId: "5",
-                  // eslint-disable-next-line quotes
-                  submitterName: "Alice",
+                  submitterId: '5',
+                  submitterName: 'Alice',
                   attachmentsPresent: 0,
                   attachmentsExpected: 0,
                   status: null,
@@ -637,10 +602,8 @@ describe('api: /forms/:id.svc', () => {
                   edits: 0,
                   formVersion: '1.0'
                 },
-                // eslint-disable-next-line quotes
-                meta: { instanceID: "rthree" },
-                // eslint-disable-next-line quotes
-                name: "Chelsea",
+                meta: { instanceID: 'rthree' },
+                name: 'Chelsea',
                 age: 38,
                 children: {
                   'child@odata.navigationLink': "Submissions('rthree')/children/child"
@@ -680,15 +643,12 @@ describe('api: /forms/:id.svc', () => {
                 body.should.eql({
                   '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
                   value: [{
-                    // eslint-disable-next-line quotes
-                    __id: "rthree",
+                    __id: 'rthree',
                     __system: {
                       // submissionDate is checked above,
                       updatedAt: null,
-                      // eslint-disable-next-line quotes
-                      submitterId: "5",
-                      // eslint-disable-next-line quotes
-                      submitterName: "Alice",
+                      submitterId: '5',
+                      submitterName: 'Alice',
                       attachmentsPresent: 0,
                       attachmentsExpected: 0,
                       status: null,
@@ -697,24 +657,19 @@ describe('api: /forms/:id.svc', () => {
                       edits: 0,
                       formVersion: '1.0'
                     },
-                    // eslint-disable-next-line quotes
-                    meta: { instanceID: "rthree" },
-                    // eslint-disable-next-line quotes
-                    name: "Chelsea",
+                    meta: { instanceID: 'rthree' },
+                    name: 'Chelsea',
                     age: 38,
                     children: {
                       'child@odata.navigationLink': "Submissions('rthree')/children/child"
                     }
                   }, {
-                    // eslint-disable-next-line quotes
-                    __id: "rone",
+                    __id: 'rone',
                     __system: {
                       // submissionDate is checked above,
                       updatedAt: null,
-                      // eslint-disable-next-line quotes
-                      submitterId: "5",
-                      // eslint-disable-next-line quotes
-                      submitterName: "Alice",
+                      submitterId: '5',
+                      submitterName: 'Alice',
                       attachmentsPresent: 0,
                       attachmentsExpected: 0,
                       status: null,
@@ -723,10 +678,8 @@ describe('api: /forms/:id.svc', () => {
                       edits: 0,
                       formVersion: '1.0'
                     },
-                    // eslint-disable-next-line quotes
-                    meta: { instanceID: "rone" },
-                    // eslint-disable-next-line quotes
-                    name: "Alice",
+                    meta: { instanceID: 'rone' },
+                    name: 'Alice',
                     age: 30,
                     children: {}
                   }]
@@ -750,16 +703,12 @@ describe('api: /forms/:id.svc', () => {
               body.should.eql({
                 '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
                 value: [{
-                  // eslint-disable-next-line quotes
-                  __id: "rone",
+                  __id: 'rone',
                   __system: {
-                    // eslint-disable-next-line quotes
-                    submissionDate: "2010-06-01T00:00:00.000Z",
+                    submissionDate: '2010-06-01T00:00:00.000Z',
                     updatedAt: null,
-                    // eslint-disable-next-line quotes
-                    submitterId: "5",
-                    // eslint-disable-next-line quotes
-                    submitterName: "Alice",
+                    submitterId: '5',
+                    submitterName: 'Alice',
                     attachmentsPresent: 0,
                     attachmentsExpected: 0,
                     status: null,
@@ -768,10 +717,8 @@ describe('api: /forms/:id.svc', () => {
                     edits: 0,
                     formVersion: '1.0'
                   },
-                  // eslint-disable-next-line quotes
-                  meta: { instanceID: "rone" },
-                  // eslint-disable-next-line quotes
-                  name: "Alice",
+                  meta: { instanceID: 'rone' },
+                  name: 'Alice',
                   age: 30,
                   children: {}
                 }]
@@ -795,16 +742,12 @@ describe('api: /forms/:id.svc', () => {
               body.should.eql({
                 '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
                 value: [{
-                  // eslint-disable-next-line quotes
-                  __id: "rone",
+                  __id: 'rone',
                   __system: {
-                    // eslint-disable-next-line quotes
-                    submissionDate: "2010-06-01T00:00:00.000Z",
+                    submissionDate: '2010-06-01T00:00:00.000Z',
                     updatedAt: null,
-                    // eslint-disable-next-line quotes
-                    submitterId: "5",
-                    // eslint-disable-next-line quotes
-                    submitterName: "Alice",
+                    submitterId: '5',
+                    submitterName: 'Alice',
                     attachmentsPresent: 0,
                     attachmentsExpected: 0,
                     status: null,
@@ -813,10 +756,8 @@ describe('api: /forms/:id.svc', () => {
                     edits: 0,
                     formVersion: '1.0'
                   },
-                  // eslint-disable-next-line quotes
-                  meta: { instanceID: "rone" },
-                  // eslint-disable-next-line quotes
-                  name: "Alice",
+                  meta: { instanceID: 'rone' },
+                  name: 'Alice',
                   age: 30,
                   children: {}
                 }]
@@ -895,13 +836,10 @@ describe('api: /forms/:id.svc', () => {
               body.should.eql({
                 '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
                 value: [{
-                  // eslint-disable-next-line quotes
-                  __id: "rtwo",
+                  __id: 'rtwo',
                   __system: {
-                    // eslint-disable-next-line quotes
-                    submitterId: "5",
-                    // eslint-disable-next-line quotes
-                    submitterName: "Alice",
+                    submitterId: '5',
+                    submitterName: 'Alice',
                     attachmentsPresent: 0,
                     attachmentsExpected: 0,
                     status: null,
@@ -910,10 +848,8 @@ describe('api: /forms/:id.svc', () => {
                     edits: 0,
                     formVersion: '1.0'
                   },
-                  // eslint-disable-next-line quotes
-                  meta: { instanceID: "rtwo" },
-                  // eslint-disable-next-line quotes
-                  name: "Bob",
+                  meta: { instanceID: 'rtwo' },
+                  name: 'Bob',
                   age: 34,
                   children: {
                     'child@odata.navigationLink': "Submissions('rtwo')/children/child"
@@ -1127,14 +1063,12 @@ describe('api: /forms/:id.svc', () => {
 
     it('should limit and offset subtable results', testService((service) =>
       withSubmissions(service, (asAlice) =>
-        // eslint-disable-next-line quotes
-        asAlice.get("/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=1&$skip=1")
+        asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=1&$skip=1')
           .expect(200)
           .then(({ body }) => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions.children.child',
-              // eslint-disable-next-line quotes
-              '@odata.nextLink': "http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24skip=2",
+              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24skip=2',
               value: [{
                 __id: '52eff9ea82550183880b9d64c20487642fa6e60c',
                 '__Submissions-id': 'rtwo',
@@ -1156,8 +1090,7 @@ describe('api: /forms/:id.svc', () => {
               '<encryptedXmlFile>x</encryptedXmlFile><base64EncryptedKey>y</base64EncryptedKey></data>'))
             .set('Content-Type', 'text/xml')
             .expect(200))
-          // eslint-disable-next-line quotes
-          .then(() => asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions.children.child")
+          .then(() => asAlice.get('/v1/projects/1/forms/doubleRepeat.svc/Submissions.children.child')
             .expect(200)
             .then(({ body }) => {
               body.should.eql({
@@ -1284,8 +1217,7 @@ describe('api: /forms/:id.svc', () => {
                 body.should.eql({
                   '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat/draft.svc/$metadata#Submissions',
                   value: [{
-                    // eslint-disable-next-line quotes
-                    __id: "double",
+                    __id: 'double',
                     __system: {
                       // submissionDate is checked above!
                       updatedAt: null,
@@ -1302,10 +1234,8 @@ describe('api: /forms/:id.svc', () => {
                     children: {
                       'child@odata.navigationLink': "Submissions('double')/children/child"
                     },
-                    // eslint-disable-next-line quotes
-                    meta: { instanceID: "double" },
-                    // eslint-disable-next-line quotes
-                    name: "Vick"
+                    meta: { instanceID: 'double' },
+                    name: 'Vick'
                   }]
                 });
               })))));
@@ -1332,16 +1262,14 @@ describe('api: /forms/:id.svc', () => {
     describe('/Submissions.xyz', () => {
       it('should reject unless the draft exists', testService((service) =>
         service.login('alice', (asAlice) =>
-          // eslint-disable-next-line quotes
-          asAlice.get("/v1/projects/1/forms/simple/draft.svc/Submissions").expect(404))));
+          asAlice.get('/v1/projects/1/forms/simple/draft.svc/Submissions').expect(404))));
 
       it('should reject unless the user can read', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .expect(200)
             .then(() => service.login('chelsea', (asChelsea) =>
-              // eslint-disable-next-line quotes
-              asChelsea.get("/v1/projects/1/forms/simple/draft.svc/Submissions").expect(403))))));
+              asChelsea.get('/v1/projects/1/forms/simple/draft.svc/Submissions').expect(403))))));
 
       it('should return toplevel rows', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -1371,15 +1299,12 @@ describe('api: /forms/:id.svc', () => {
                 body.should.eql({
                   '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat/draft.svc/$metadata#Submissions',
                   value: [{
-                    // eslint-disable-next-line quotes
-                    __id: "rthree",
+                    __id: 'rthree',
                     __system: {
                       // submissionDate is checked above,
                       updatedAt: null,
-                      // eslint-disable-next-line quotes
-                      submitterId: "5",
-                      // eslint-disable-next-line quotes
-                      submitterName: "Alice",
+                      submitterId: '5',
+                      submitterName: 'Alice',
                       attachmentsPresent: 0,
                       attachmentsExpected: 0,
                       status: null,
@@ -1388,24 +1313,19 @@ describe('api: /forms/:id.svc', () => {
                       edits: 0,
                       formVersion: '1.0'
                     },
-                    // eslint-disable-next-line quotes
-                    meta: { instanceID: "rthree" },
-                    // eslint-disable-next-line quotes
-                    name: "Chelsea",
+                    meta: { instanceID: 'rthree' },
+                    name: 'Chelsea',
                     age: 38,
                     children: {
                       'child@odata.navigationLink': "Submissions('rthree')/children/child"
                     }
                   }, {
-                    // eslint-disable-next-line quotes
-                    __id: "rtwo",
+                    __id: 'rtwo',
                     __system: {
                       // submissionDate is checked above,
                       updatedAt: null,
-                      // eslint-disable-next-line quotes
-                      submitterId: "5",
-                      // eslint-disable-next-line quotes
-                      submitterName: "Alice",
+                      submitterId: '5',
+                      submitterName: 'Alice',
                       attachmentsPresent: 0,
                       attachmentsExpected: 0,
                       status: null,
@@ -1414,24 +1334,19 @@ describe('api: /forms/:id.svc', () => {
                       edits: 0,
                       formVersion: '1.0'
                     },
-                    // eslint-disable-next-line quotes
-                    meta: { instanceID: "rtwo" },
-                    // eslint-disable-next-line quotes
-                    name: "Bob",
+                    meta: { instanceID: 'rtwo' },
+                    name: 'Bob',
                     age: 34,
                     children: {
                       'child@odata.navigationLink': "Submissions('rtwo')/children/child"
                     }
                   }, {
-                    // eslint-disable-next-line quotes
-                    __id: "rone",
+                    __id: 'rone',
                     __system: {
                       // submissionDate is checked above,
                       updatedAt: null,
-                      // eslint-disable-next-line quotes
-                      submitterId: "5",
-                      // eslint-disable-next-line quotes
-                      submitterName: "Alice",
+                      submitterId: '5',
+                      submitterName: 'Alice',
                       attachmentsPresent: 0,
                       attachmentsExpected: 0,
                       status: null,
@@ -1440,10 +1355,8 @@ describe('api: /forms/:id.svc', () => {
                       edits: 0,
                       formVersion: '1.0'
                     },
-                    // eslint-disable-next-line quotes
-                    meta: { instanceID: "rone" },
-                    // eslint-disable-next-line quotes
-                    name: "Alice",
+                    meta: { instanceID: 'rone' },
+                    name: 'Alice',
                     age: 30,
                     children: {}
                   }]
@@ -1464,8 +1377,7 @@ describe('api: /forms/:id.svc', () => {
               .expect(200))
             .then(() => asAlice.post('/v1/projects/1/forms/doubleRepeat/draft')
               .expect(200))
-            // eslint-disable-next-line quotes
-            .then(() => asAlice.get("/v1/projects/1/forms/doubleRepeat/draft.svc/Submissions")
+            .then(() => asAlice.get('/v1/projects/1/forms/doubleRepeat/draft.svc/Submissions')
               .expect(200)
               .then(({ body }) => {
                 body.should.eql({

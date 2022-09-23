@@ -47,8 +47,7 @@ describe('task: analytics', () => {
           })))));
 
   it('should log event and full report if analytics sent successfully', testTask(({ Configs, Audits }) =>
-    // eslint-disable-next-line quotes
-    Configs.set('analytics', { email: 'test@getodk.org', organization: "ODK", enabled: true })
+    Configs.set('analytics', { email: 'test@getodk.org', organization: 'ODK', enabled: true })
       .then(() => runAnalytics())
       .then(() => Audits.getLatestByAction('analytics').then((o) => o.get())
         .then((au) => {

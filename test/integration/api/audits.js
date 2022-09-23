@@ -549,8 +549,7 @@ describe('/audits', () => {
 
       it('should get the deletedAt date of a deleted app user', testService((service) =>
         service.login('alice', (asAlice) =>
-          // eslint-disable-next-line quotes
-          asAlice.post(`/v1/projects/1/app-users`)
+          asAlice.post('/v1/projects/1/app-users')
             .send({ displayName: 'App User Name' })
             .then(({ body }) => body)
             .then((appUser) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${appUser.id}`)
@@ -564,8 +563,7 @@ describe('/audits', () => {
 
       it('should get the deletedAt date of a deleted public link', testService((service) =>
         service.login('alice', (asAlice) =>
-          // eslint-disable-next-line quotes
-          asAlice.post(`/v1/projects/1/forms/simple/public-links`)
+          asAlice.post('/v1/projects/1/forms/simple/public-links')
             .send({ displayName: 'Public Link Name' })
             .then(({ body }) => body)
             .then((link) => asAlice.delete('/v1/projects/1/forms/simple/public-links/' + link.id))
