@@ -61,3 +61,7 @@ stop-docker-postgres:
 .PHONY: rm-docker-postgres
 rm-docker-postgres: stop-docker-postgres
 	docker rm odk-postgres || true
+
+.PHONY: check-file-headers
+check-file-headers:
+	git ls-files | node lib/bin/check-file-headers.js
