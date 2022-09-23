@@ -439,7 +439,7 @@ module.exports = {
       one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
       <meta>
         <instanceID>one</instanceID>
-        <entities:entity dataset="people">
+        <entities:entity entities:dataset="people">
           <entities:id>uuid:12345678-1234-1234-1234-123456789abc</entities:id>
           <entities:label>Alice (88)</entities:label>
           <entities:create/>
