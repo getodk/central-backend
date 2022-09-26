@@ -12,8 +12,8 @@ const { getSubmissionIvs } = require(appRoot + '/lib/util/crypto');
 // parse our public key and reformulate it into a proper PEM format
 // to inflate into a real public key (grumble grumble grumble).
 const extractPubkey = (xml) =>
-  // eslint-disable-next-line no-useless-escape, no-use-before-define
-  makePubkey(/base64RsaPublicKey="([a-zA-Z0-9+\/]{392})"/.exec(xml)[1]);
+  // eslint-disable-next-line no-use-before-define
+  makePubkey(/base64RsaPublicKey="([a-zA-Z0-9+/]{392})"/.exec(xml)[1]);
 
 const makePubkey = (b64) => {
   const pem = `-----BEGIN PUBLIC KEY-----\n${b64}\n-----END PUBLIC KEY-----`;
