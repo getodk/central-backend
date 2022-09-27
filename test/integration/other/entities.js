@@ -30,6 +30,7 @@ describe('entities, etc.', () => {
     const entity = await Entities.processSubmissionDef(subDef.id);
     entity.uuid.should.equal('uuid:12345678-1234-1234-1234-123456789abc');
     entity.label.should.equal('Alice (88)');
+    entity.createdBy.should.equal(5); // submitter ID of Alice
     entity.def.data.should.eql({ name: 'Alice', age: '88' });
 
     const { count } = await one(sql`select count(*) from entities`);
