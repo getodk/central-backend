@@ -214,4 +214,17 @@ describe('api: /projects/:id/forms/draft/dataset', () => {
           })));
   }));
 
+  it('should return empty array if there is no dataset defined', testService(async (service) => {
+    // Upload a form and then create a new draft version
+    await service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simple.replace(/simple/, 'simple2'))
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft/dataset-diff')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.eql([]);
+          })));
+  }));
 });
