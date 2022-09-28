@@ -1149,7 +1149,9 @@ describe('api: /projects/:id/forms (drafts)', () => {
                       formDefId: form.draftDefId,
                       name: attachment.name,
                       oldBlobId: null,
-                      newBlobId: attachment.blobId
+                      newBlobId: attachment.blobId,
+                      oldDatasetId: null,
+                      newDatasetId: attachment.datasetId
                     });
 
                     return asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
@@ -1167,7 +1169,9 @@ describe('api: /projects/:id/forms (drafts)', () => {
                           formDefId: form.draftDefId,
                           name: attachment.name,
                           oldBlobId: attachment.blobId,
-                          newBlobId: attachment2.blobId
+                          newBlobId: attachment2.blobId,
+                          oldDatasetId: attachment.datasetId,
+                          newDatasetId: attachment2.datasetId
                         });
                       });
                   }))))));
@@ -1248,7 +1252,9 @@ describe('api: /projects/:id/forms (drafts)', () => {
                         formDefId: form.draftDefId,
                         name: 'goodone.csv',
                         oldBlobId: attachment.blobId,
-                        newBlobId: null
+                        newBlobId: null,
+                        oldDatasetId: attachment.datasetId,
+                        newDatasetId: null
                       });
                     }))))));
 
