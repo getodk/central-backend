@@ -125,8 +125,7 @@ describe('analytics task queries', () => {
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one);
 
       await service.login('alice', (asAlice) =>
-        // eslint-disable-next-line quotes
-        asAlice.post(`/v1/projects/1/key`)
+        asAlice.post('/v1/projects/1/key')
           .send({ passphrase: 'supersecret', hint: 'it is a secret' }));
 
       // encrypted project with no recent activity
@@ -662,16 +661,14 @@ describe('analytics task queries', () => {
     it('should calculate submissions that have comments', testService(async (service, container) => {
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one);
       await service.login('alice', (asAlice) =>
-        // eslint-disable-next-line quotes
-        asAlice.post(`/v1/projects/1/forms/simple/submissions/one/comments`)
+        asAlice.post('/v1/projects/1/forms/simple/submissions/one/comments')
           .send({ body: 'new comment here' }));
 
       // make all submissions so far in the past
       await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.two);
       await service.login('alice', (asAlice) =>
-        // eslint-disable-next-line quotes
-        asAlice.post(`/v1/projects/1/forms/simple/submissions/two/comments`)
+        asAlice.post('/v1/projects/1/forms/simple/submissions/two/comments')
           .send({ body: 'new comment here' }));
 
       const res = await container.Analytics.countSubmissionsComments();
@@ -762,8 +759,7 @@ describe('analytics task queries', () => {
 
       // encrypting a project
       await service.login('alice', (asAlice) =>
-        // eslint-disable-next-line quotes
-        asAlice.post(`/v1/projects/1/key`)
+        asAlice.post('/v1/projects/1/key')
           .send({ passphrase: 'supersecret', hint: 'it is a secret' }));
 
       // creating and archiving a project
@@ -829,8 +825,7 @@ describe('analytics task queries', () => {
       // form with audit
       await createTestForm(service, container, testData.forms.clientAudits, 1);
       await service.login('alice', (asAlice) =>
-        // eslint-disable-next-line quotes
-        asAlice.post(`/v1/projects/1/submission`)
+        asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
           .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
           .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' }));
@@ -877,16 +872,14 @@ describe('analytics task queries', () => {
       // with edits
       await submitToForm(service, 'alice', 1, 'simple', simpleInstance('v1'));
       await service.login('alice', (asAlice) =>
-        // eslint-disable-next-line quotes
-        asAlice.post(`/v1/projects/1/submission`)
+        asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
           .attach('xml_submission_file', Buffer.from(withSimpleIds('v1', 'v2').replace('Alice', 'Alyssa')), { filename: 'data.xml' }));
 
       // comments
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one, 'device1');
       await service.login('alice', (asAlice) =>
-        // eslint-disable-next-line quotes
-        asAlice.post(`/v1/projects/1/forms/simple/submissions/one/comments`)
+        asAlice.post('/v1/projects/1/forms/simple/submissions/one/comments')
           .send({ body: 'new comment here' }));
 
       // public link

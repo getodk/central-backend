@@ -172,8 +172,7 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
 
       it('should restore public link submission access', testService((service) =>
         service.login('alice', (asAlice) =>
-          // eslint-disable-next-line quotes
-          asAlice.post(`/v1/projects/1/forms/simple/public-links`)
+          asAlice.post('/v1/projects/1/forms/simple/public-links')
             .send({ displayName: 'test public link' })
             .then(({ body }) => Promise.resolve(body.token))
             .then((token) => service.post(`/v1/key/${token}/projects/1/forms/simple/submissions`)
@@ -195,8 +194,7 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
 
       it('should restore app user submission access', testService((service) =>
         service.login('alice', (asAlice) =>
-          // eslint-disable-next-line quotes
-          asAlice.post(`/v1/projects/1/app-users`)
+          asAlice.post('/v1/projects/1/app-users')
             .send({ displayName: 'test app user' })
             .then(({ body }) => asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${body.id}`)
               .expect(200)

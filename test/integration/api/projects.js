@@ -104,12 +104,10 @@ describe('api: /projects', () => {
 
     it('should return extended metadata if requested', testService((service) =>
       service.login('alice', (asAlice) => Promise.all([
-        // eslint-disable-next-line quotes
-        asAlice.post(`/v1/projects/1/app-users`)
+        asAlice.post('/v1/projects/1/app-users')
           .send({ displayName: 'test 1' })
           .expect(200),
-        // eslint-disable-next-line quotes
-        asAlice.post(`/v1/projects/1/app-users`)
+        asAlice.post('/v1/projects/1/app-users')
           .send({ displayName: 'test 2' })
           .expect(200),
         asAlice.post('/v1/projects/1/forms/simple/submissions')
@@ -256,24 +254,24 @@ describe('api: /projects', () => {
         asAlice.get('/v1/projects/1a')
           .expect(400)
           .then(({ body }) => {
-            // eslint-disable-next-line semi, brace-style, block-spacing
-            body.code.should.equal(400.11)}))));
+            body.code.should.equal(400.11);
+          }))));
 
     it('should reject if id is too big', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/projects/10000000000')
           .expect(400)
           .then(({ body }) => {
-            // eslint-disable-next-line semi, brace-style, block-spacing
-            body.code.should.equal(400.22)}))));
+            body.code.should.equal(400.22);
+          }))));
 
     it('should reject if id is too small', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/projects/-10000000000')
           .expect(400)
           .then(({ body }) => {
-            // eslint-disable-next-line semi, brace-style, block-spacing
-            body.code.should.equal(400.22)}))));
+            body.code.should.equal(400.22);
+          }))));
 
     it('should reject unless the user can read', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -321,14 +319,12 @@ describe('api: /projects', () => {
     it('should not count deleted app users', testService((service) =>
       service.login('alice', (asAlice) =>
         Promise.all([
-          // eslint-disable-next-line quotes
-          asAlice.post(`/v1/projects/1/app-users`)
+          asAlice.post('/v1/projects/1/app-users')
             .send({ displayName: 'test 1' })
             .expect(200)
             .then(({ body }) => asAlice.delete(`/v1/projects/1/app-users/${body.id}`)
               .expect(200)),
-          // eslint-disable-next-line quotes
-          asAlice.post(`/v1/projects/1/app-users`)
+          asAlice.post('/v1/projects/1/app-users')
             .send({ displayName: 'test 2' })
             .expect(200)
         ])
@@ -1111,8 +1107,7 @@ describe('api: /projects', () => {
             .expect(200),
           asBob.post(`/v1/projects/1/forms/withrepeat/assignments/manager/${fk.id}`)
             .expect(200),
-          // eslint-disable-next-line quotes
-          asBob.post(`/v1/projects/1/forms?publish=true`)
+          asBob.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.simple2)
             .set('Content-Type', 'application/xml')
             .expect(200)
