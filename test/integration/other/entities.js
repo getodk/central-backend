@@ -31,7 +31,7 @@ describe('entities, etc.', () => {
     entity.uuid.should.equal('uuid:12345678-1234-1234-1234-123456789abc');
     entity.label.should.equal('Alice (88)');
     entity.createdBy.should.equal(5); // submitter ID of Alice
-    entity.def.data.should.eql({ name: 'Alice', age: '88' });
+    entity.def.data.should.eql({ first_name: 'Alice', age: '88' });
 
     const { count } = await one(sql`select count(*) from entities`);
     count.should.equal(1);
@@ -67,7 +67,7 @@ describe('entities, etc.', () => {
             // eslint-disable-next-line no-console
             //console.log(text);
             const csv = text.split('\n');
-            csv[0].includes('name,label,name,age').should.equal(true);
+            csv[0].includes('name,label,first_name,age').should.equal(true);
             csv[1].includes('Alice (88),Alice,88').should.equal(true);
             csv[2].includes('Beth (88),Beth,88').should.equal(true);
           })))));

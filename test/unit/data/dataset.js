@@ -176,7 +176,7 @@ describe('parsing dataset from entity block', () => {
   it('should extract entity properties from form field bindings', () =>
     getFormFields(testData.forms.simpleEntity).then((fields) => {
       // Check form field -> dataset property mappings
-      fields[0].propertyName.should.equal('name');
+      fields[0].propertyName.should.equal('first_name');
       fields[0].path.should.equal('/name');
 
       fields[1].propertyName.should.equal('age');

@@ -14,7 +14,7 @@ describe('getEntity', () => {
       .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
       .then((fields) => getEntity(fields, testData.instances.simpleEntity.one))
       .then((result) => {
-        result.data.should.eql({ name: 'Alice', age: '88' });
+        result.data.should.eql({ first_name: 'Alice', age: '88' });
         result.system.should.eql({
           id: 'uuid:12345678-1234-1234-1234-123456789abc',
           label: 'Alice (88)',

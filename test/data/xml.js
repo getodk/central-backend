@@ -343,15 +343,14 @@ module.exports = {
           <age/>
           <hometown/>
           <meta>
-            <entities:entity entities:dataset="people">
+            <entities:entity dataset="people" create="">
               <entities:id/>
-              <entities:create/>
               <entities:label/>
             </entities:entity>
           </meta>
         </data>
       </instance>
-      <bind nodeset="/data/name" type="string" entities:saveto="name"/>
+      <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
       <bind nodeset="/data/age" type="int" entities:saveto="age"/>
       <bind nodeset="/data/hometown" type="string"/>
     </model>

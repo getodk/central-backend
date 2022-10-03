@@ -7,7 +7,7 @@ describe('api: /projects/:id/forms (entity-handling)', () => {
   // FORM CREATION RELATED TO ENTITIES
   ////////////////////////////////////////////////////////////////////////////////
 
-  describe('parse form def to get entity def', () => {
+  describe('parse form to get dataset info', () => {
     it('should return a Problem if the entity xml is invalid (e.g. missing dataset name)', testService((service) => {
       const xml = `
       <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
@@ -17,8 +17,6 @@ describe('api: /projects/:id/forms (entity-handling)', () => {
               <data id="noDatasetName">
                 <meta>
                 <entities:entity>
-                  <entities:create/>
-                  <entities:label/>
                 </entities:entity>
                 </meta>
               </data>
@@ -31,8 +29,22 @@ describe('api: /projects/:id/forms (entity-handling)', () => {
           .send(xml)
           .set('Content-Type', 'text/xml')
           .expect(400)
-          .then(({ body }) => { body.code.should.equal(400.25); }));
+          .then(({ body }) => {
+            body.code.should.equal(400.25);
+            body.details.reason.should.equal('Dataset name is empty.');
+          }));
     }));
+
+    it('should return a Problem if the savetos reference invalid properties', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity.replace('first_name', 'name'))
+          .set('Content-Type', 'text/xml')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.23);
+            body.details.reason.should.equal('Invalid Dataset property.');
+          }))));
 
     it('should return the created form upon success', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -158,7 +170,7 @@ describe('api: /projects/:id/forms/draft/dataset', () => {
                 isNew: true,
                 properties: [
                   { name: 'age', isNew: true },
-                  { name: 'name', isNew: true }
+                  { name: 'first_name', isNew: true }
                 ]
               }
             ]);
@@ -188,7 +200,7 @@ describe('api: /projects/:id/forms/draft/dataset', () => {
                       isNew: false
                     },
                     {
-                      name: 'name',
+                      name: 'first_name',
                       isNew: false
                     }
                   ]
@@ -207,7 +219,7 @@ describe('api: /projects/:id/forms/draft/dataset', () => {
         .then(() => asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.simpleEntity
             .replace(/simpleEntity/, 'simpleEntity2')
-            .replace(/saveto="name"/, 'saveto="firstName"'))
+            .replace(/saveto="first_name"/, 'saveto="lastName"'))
           .expect(200)
           .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity2/draft/dataset-diff')
             .expect(200)
@@ -217,7 +229,7 @@ describe('api: /projects/:id/forms/draft/dataset', () => {
                 isNew: false,
                 properties: [
                   { name: 'age', isNew: false },
-                  { name: 'firstName', isNew: true }
+                  { name: 'lastName', isNew: true }
                 ]
               }]);
             }))));
