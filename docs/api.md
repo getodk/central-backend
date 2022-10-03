@@ -3380,7 +3380,7 @@ As the vast majority of clients only support the JSON OData format, that is the 
     + `%24wkt`: `true` (boolean, optional) - If set to `true`, geospatial data will be returned as Well-Known Text (WKT) strings rather than GeoJSON structures.
     + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
     + `%24expand`: `*` (string, optional) - Repetitions, which should get expanded. Currently, only `*` is implemented, which expands all repetitions.
-    + `%24$select`: `__id, age, name, meta/instanceID` (string, optional) - If provided, will return only selected fields. 
+    + `%24select`: `__id, age, name, meta/instanceID` (string, optional) - If provided, will return only selected fields. 
 
 + Response 200 (application/json)
     + Body
