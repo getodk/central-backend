@@ -1,9 +1,9 @@
 const appRoot = require('app-root-path');
 const streamTest = require('streamtest').v2;
 // eslint-disable-next-line import/no-dynamic-require
-const { serviceDocumentFor, edmxFor, rowStreamToOData, singleRowToOData } = require(appRoot + '/lib/formats/odata');
+const { serviceDocumentFor, edmxFor, rowStreamToOData, singleRowToOData, selectFields } = require(appRoot + '/lib/formats/odata');
 // eslint-disable-next-line import/no-dynamic-require
-const { fieldsFor } = require(appRoot + '/test/util/schema');
+const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 // eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
 
@@ -1075,7 +1075,65 @@ describe('odata message composition', () => {
             });
         });
       });
+
     });
+  });
+
+  describe('select fields', () => {
+    it('should return all fields if $select not provided', () => fieldsFor(testData.forms.simple)
+      .then((fields) => selectFields({}, 'Submissions')(fields).length.should.equal(fields.length)));
+
+    it('should return only selected fields', () => fieldsFor(testData.forms.simple)
+      .then(selectFields({ $select: 'name,age,meta/instanceID' }, 'Submissions'))
+      .then((filteredFields) => {
+        filteredFields.length.should.equal(4);
+      }));
+
+    it('should throw property not found error', () => fieldsFor(testData.forms.simple)
+      .then((fields) => {
+        (() => selectFields({ $select: 'address' }, 'Submissions')(fields)).should.throw('Could not find a property named \'address\'');
+      }));
+
+    it('should not throw error if __id is requested for non-submissions table', () => fieldsFor(testData.forms.simple)
+      .then((fields) => {
+        (() => selectFields({ $select: '__id' }, 'Submissions.Children')(fields)).should.not.throw();
+      }));
+
+    it('should not throw error if system properties are requested for submissions table', () => fieldsFor(testData.forms.simple)
+      .then((fields) => {
+        (() => selectFields({ $select: '__id, __system/status' }, 'Submissions')(fields)).should.not.throw();
+      }));
+
+    it('should throw error if unknown system property is requested', () => fieldsFor(testData.forms.simple)
+      .then((fields) => {
+        (() => selectFields({ $select: '__system/etag' }, 'Submissions')(fields)).should.throw('Could not find a property named \'__system/etag\'');
+      }));
+
+    it('should throw error if property of repeat is requested', () => fieldsFor(testData.forms.doubleRepeat)
+      .then((fields) => {
+        (() => selectFields({ $select: 'children/child/name' }, 'Submissions')(fields)).should.throw('The given OData select property \'children/child/name\' uses features not supported by this server.');
+      }));
+
+    it('should be able to select sanitized fields', () => {
+      const fields = [
+        new MockField({ path: '/$meta', name: '$meta', type: 'structure' }),
+        new MockField({ path: '/$meta/$miles', name: '$miles', type: 'decimal' }),
+        new MockField({ path: '/1car', name: '1car', type: 'string' })
+      ];
+      selectFields({ $select: '_1car,__meta/__miles' }, 'Submissions')(fields).length.should.equal(3);
+    });
+
+    it('should be able to select properties of subtable', () => fieldsFor(testData.forms.doubleRepeat)
+      .then(selectFields({ $select: 'name' }, 'Submissions.children.child'))
+      .then((filteredFields) => {
+        filteredFields.length.should.equal(3);
+      }));
+
+    it('should select group field as well if child field is requested', () => fieldsFor(testData.forms.simple)
+      .then(selectFields({ $select: 'meta/instanceID' }, 'Submissions'))
+      .then((filteredFields) => {
+        filteredFields.length.should.equal(2);
+      }));
   });
 });
 

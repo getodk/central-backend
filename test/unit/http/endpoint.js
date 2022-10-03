@@ -677,6 +677,12 @@ describe('endpoints', () => {
         const request = createRequest({ url: '/odata.svc?$top=50&$expand=*', headers: { 'OData-MaxVersion': '4.0', accept: 'application/json' } });
         should.not.exist(odataPreprocessor('json')(null, new Context(request), request));
       });
+
+      it('should reject requests if both $select and $expand are present', () => {
+        const request = createRequest({ url: '/odata.svc?$expand=*&$select=__id' });
+        return odataPreprocessor('json')(null, new Context(request), request)
+          .should.be.rejectedWith(Problem, { problemCode: 501.11 });
+      });
     });
 
     describe('before', () => {
