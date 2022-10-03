@@ -341,7 +341,7 @@ describe('api: /projects', () => {
               body.appUsers.should.equal(1);
             })))));
 
-    it('should not return verb information unless extended metata is requested', testService((service) =>
+    it('should not return verb information unless extended meta data is requested', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/projects/1')
           .expect(200)
@@ -355,7 +355,7 @@ describe('api: /projects', () => {
           .then(({ body }) => {
             body.verbs.should.be.an.Array();
             body.verbs.length.should.be.greaterThan(39);
-            body.verbs.should.containDeep([ 'user.password.invalidate', 'project.delete' ]);
+            body.verbs.should.containDeep([ 'user.password.invalidate', 'dataset.create' ]);
           }))));
 
     it('should return verb information with extended metadata (bob)', testService((service) =>
@@ -365,12 +365,34 @@ describe('api: /projects', () => {
           .expect(200)
           .then(({ body }) => {
             body.verbs.should.be.an.Array();
-            body.verbs.length.should.be.lessThan(26);
-            body.verbs.should.containDeep([ 'assignment.create', 'project.delete' ]);
-            body.verbs.should.not.containDeep([ 'project.create' ]);
+            body.verbs.length.should.be.lessThan(30);
+            body.verbs.should.containDeep([ 'assignment.create', 'project.delete', 'dataset.list' ]);
+            body.verbs.should.not.containDeep([ 'project.create', 'dataset.create' ]);
           }))));
 
-    it('should return verb information with extended metadata (chelsea)', testService((service) =>
+    it('should return verb information with extended metadata (data collector only)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current').expect(200)
+            .then(({ body }) => body.id)
+            .then((chelseaId) => asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`)
+              .expect(200))
+            .then(() => asChelsea.get('/v1/projects/1')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.verbs.should.eqlInAnyOrder([
+                  // eslint-disable-next-line no-multi-spaces
+                  'project.read',      // from role(s): formfill, viewer
+                  // eslint-disable-next-line no-multi-spaces
+                  'form.list',         // from role(s): formfill, viewer
+                  // eslint-disable-next-line no-multi-spaces
+                  'form.read',         // from role(s): formfill, viewer
+                  'submission.create', // from role(s): formfill
+                ]);
+              }))))));
+
+    it('should return verb information with extended metadata (chelsea with two roles)', testService((service) =>
       service.login('alice', (asAlice) =>
         service.login('chelsea', (asChelsea) =>
           asChelsea.get('/v1/users/current').expect(200)
@@ -395,6 +417,10 @@ describe('api: /projects', () => {
                   // eslint-disable-next-line no-multi-spaces
                   'submission.list',   // from role(s): viewer
                   'submission.create', // from role(s): formfill
+                  // eslint-disable-next-line no-multi-spaces
+                  'dataset.list',      // from role(s): viewer
+                  // eslint-disable-next-line no-multi-spaces
+                  'dataset.read',      // from role(s): viewer
                 ]);
               }))))));
   });
