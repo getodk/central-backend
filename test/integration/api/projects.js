@@ -295,6 +295,7 @@ describe('api: /projects', () => {
           .then(({ body }) => {
             body.should.be.an.ExtendedProject();
             body.forms.should.equal(2);
+            body.datasets.should.equal(0);
             should.not.exist(body.lastSubmission);
           })
           .then(() => Promise.all([
@@ -307,12 +308,17 @@ describe('api: /projects', () => {
               .set('Content-Type', 'application/xml')
               .expect(200)
           ]))
+          .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200))
           .then(() => asAlice.get('/v1/projects/1')
             .set('X-Extended-Metadata', 'true')
             .expect(200)
             .then(({ body }) => {
               body.should.be.an.ExtendedProject();
-              body.forms.should.equal(2);
+              body.forms.should.equal(3);
+              body.datasets.should.equal(1);
               body.lastSubmission.should.be.a.recentIsoDate();
             })))));
 
