@@ -1336,7 +1336,7 @@ describe('api: /projects', () => {
 });
 
 
-describe('api: /projects?forms=true', () => {
+describe('api: /projects', () => {
   describe('GET', () => {
     it('should return projects with verbs and nested extended forms', testService((service) =>
       service.login('alice', (asAlice) => asAlice.get('/v1/projects?forms=true')
@@ -1345,7 +1345,7 @@ describe('api: /projects?forms=true', () => {
           body.length.should.equal(1);
           body[0].should.be.a.Project();
           const { formList, verbs } = body[0];
-          verbs.length.should.equal(40);
+          verbs.length.should.equal(44);
           formList.length.should.equal(2);
           const form = formList[0];
           form.should.be.a.ExtendedForm();
@@ -1409,7 +1409,7 @@ describe('api: /projects?forms=true', () => {
             body.length.should.equal(2);
             // First project
             body[0].formList.length.should.equal(2);
-            body[0].verbs.length.should.equal(25);
+            body[0].verbs.length.should.equal(29);
             // Second project
             body[1].formList.length.should.equal(1);
             body[1].verbs.length.should.be.lessThan(5); // 4 for data collector
@@ -1465,6 +1465,10 @@ describe('api: /projects?forms=true', () => {
                   'submission.list',   // from role(s): viewer
                   // eslint-disable-next-line no-multi-spaces
                   'submission.read',   // from role(s): viewer
+                  // eslint-disable-next-line no-multi-spaces
+                  'dataset.list',     // from role(s): viewer
+                  // eslint-disable-next-line no-multi-spaces
+                  'dataset.read'      // from role(s): viewer
                 ]);
               }))))));
   });
@@ -1505,7 +1509,11 @@ describe('api: /projects?forms=true', () => {
               'submission.read',  // from role(s): viewer
               // eslint-disable-next-line no-multi-spaces
               'submission.list',  // from role(s): viewer
-              'submission.create' // from role(s): app-user
+              'submission.create', // from role(s): app-user
+              // eslint-disable-next-line no-multi-spaces
+              'dataset.list',  // from role(s): viewer
+              // eslint-disable-next-line no-multi-spaces
+              'dataset.read'   // from role(s): viewer
             ]);
           }))))));
 });
