@@ -50,7 +50,7 @@ else
 fi
 
 log 'Checking open DB query count...'
-(cd .. && node lib/bin/check-open-db-queries.js)
+timeout 120 bash -c "cd ..; while ! node lib/bin/check-open-db-queries.js; do sleep 1; done"
 
 # TODO upload results to getodk.cloud for graphing.  Include:
 #
