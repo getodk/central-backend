@@ -79,7 +79,7 @@ describe('projects/:id/forms/:formId/draft/attachment/:name PATCH', () => {
   </manifest>`);
           })))));
 
-  it('should override blob and link dataset', testService((service) =>
+  it('should override blob and link dataset', testService((service, { Audits }) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms')
         .send(testData.forms.withAttachments)
@@ -94,6 +94,19 @@ describe('projects/:id/forms/:formId/draft/attachment/:name PATCH', () => {
         .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
           .send({ dataset: true })
           .expect(200))
+        .then(() => Audits.getLatestByAction('form.attachment.update')
+          .then(getOrNotFound)
+          .then(({ details }) => {
+            const { formDefId, ...attachment } = details;
+            formDefId.should.not.be.null();
+            attachment.should.be.eql({
+              name: 'goodone.csv',
+              oldBlobId: 1,
+              newBlobId: null,
+              oldDatasetId: null,
+              newDatasetId: 1
+            });
+          }))
         .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
           .expect(200))
         .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
