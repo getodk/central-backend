@@ -3,6 +3,7 @@ const testData = require('../../data/xml');
 const config = require('config');
 const { Form } = require('../../../lib/model/frames');
 const { getOrNotFound } = require('../../../lib/util/promise');
+const { omit } = require('ramda');
 
 // TODO merge with test/integration/api/forms/dataset.js
 
@@ -54,7 +55,13 @@ describe('projects/:id/forms/:formId/draft/attachment/:name PATCH', () => {
           .send(testData.forms.simpleEntity.replace(/people/, 'goodone')))
         .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
           .send({ dataset: true })
-          .expect(200))
+          .expect(200)
+          .then(({ body }) => omit(['updatedAt'], body).should.be.eql({
+            name: 'goodone.csv',
+            type: 'file',
+            blobExists: false,
+            datasetExists: true
+          })))
         .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
           .expect(200))
         .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
@@ -79,7 +86,7 @@ describe('projects/:id/forms/:formId/draft/attachment/:name PATCH', () => {
   </manifest>`);
           })))));
 
-  it('should override blob and link dataset', testService((service, { Audits }) =>
+  it('should override blob and link dataset', testService((service, { Forms, FormAttachments, Audits, Datasets }) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms')
         .send(testData.forms.withAttachments)
@@ -91,30 +98,34 @@ describe('projects/:id/forms/:formId/draft/attachment/:name PATCH', () => {
           .send('test,csv\n1,2')
           .set('Content-Type', 'text/csv')
           .expect(200))
-        .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
-          .send({ dataset: true })
-          .expect(200))
-        .then(() => Audits.getLatestByAction('form.attachment.update')
-          .then(getOrNotFound)
-          .then(({ details }) => {
-            const { formDefId, ...attachment } = details;
-            formDefId.should.not.be.null();
-            attachment.should.be.eql({
-              name: 'goodone.csv',
-              oldBlobId: 1,
-              newBlobId: null,
-              oldDatasetId: null,
-              newDatasetId: 1
-            });
-          }))
-        .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
-          .expect(200))
-        .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
-          .set('X-OpenRosa-Version', '1.0')
-          .expect(200)
-          .then(({ text }) => {
-            const domain = config.get('default.env.domain');
-            text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+        .then(() => Promise.all([
+          Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then(getOrNotFound),
+          Datasets.getByProjectAndName(1, 'goodone').then(getOrNotFound)
+        ]))
+        .then(([form, dataset]) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then(getOrNotFound)
+          .then(attachment => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .send({ dataset: true })
+            .expect(200)
+            .then(() => Audits.getLatestByAction('form.attachment.update').then(getOrNotFound)
+              .then(({ details }) => {
+                const { formDefId, ...attachmentDetails } = details;
+                formDefId.should.not.be.null();
+                attachmentDetails.should.be.eql({
+                  name: 'goodone.csv',
+                  oldBlobId: attachment.blobId,
+                  newBlobId: null,
+                  oldDatasetId: null,
+                  newDatasetId: dataset.id
+                });
+              })))
+          .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+            .set('X-OpenRosa-Version', '1.0')
+            .expect(200)
+            .then(({ text }) => {
+              const domain = config.get('default.env.domain');
+              text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
     <mediaFile>
       <filename>goodone.csv</filename>
@@ -122,7 +133,7 @@ describe('projects/:id/forms/:formId/draft/attachment/:name PATCH', () => {
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
     </mediaFile>
   </manifest>`);
-          })))));
+            }))))));
 
   it('should unlink dataset from the form', testService((service) =>
     service.login('alice', (asAlice) =>
