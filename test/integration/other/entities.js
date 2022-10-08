@@ -64,7 +64,7 @@ describe('entities, etc.', () => {
     const subDef = await Submissions.getCurrentDefByIds(1, 'simpleEntity', 'one', false).then((s) => s.get());
 
     const entity = await Entities.processSubmissionDef(subDef.id);
-    entity.uuid.should.equal('uuid:12345678-1234-1234-1234-123456789abc');
+    entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
     entity.label.should.equal('Alice (88)');
     entity.createdBy.should.equal(5); // submitter ID of Alice
     entity.def.data.should.eql({ first_name: 'Alice', age: '88' });
@@ -91,7 +91,7 @@ describe('entities, etc.', () => {
             .replace('one', 'two')
             .replace('Alice', 'Beth')
             .replace('Alice', 'Beth')
-            .replace('12345678-1234-1234-1234-123456789abc', '12345678-1234-1234-1234-123456789xyz'))
+            .replace('12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789def'))
           .set('Content-Type', 'application/xml')
           .expect(200))
         .then(() => asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two')
@@ -122,8 +122,7 @@ describe('entities, etc.', () => {
 
       // first time making entity from submission
       const subDef = await Submissions.getCurrentDefByIds(1, 'simpleEntity', 'one', false).then((s) => s.get());
-      const entity = await Entities.processSubmissionDef(subDef.id);
-      entity.uuid.should.equal('uuid:12345678-1234-1234-1234-123456789abc');
+      await Entities.processSubmissionDef(subDef.id);
 
       // forcing the reprocessing of entity
       const err = await Entities.processSubmissionDef(subDef.id).should.be.rejected();
