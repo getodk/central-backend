@@ -35,22 +35,22 @@ if ! curl -s -o /dev/null "$serverUrl"; then
   fail_job
 fi
 
-log 'Checking open DB query count...'
-timeout 120 bash -c "cd ..; while ! node lib/bin/check-open-db-queries.js; do sleep 1; done"
-
-log 'Checking backend is serving requests...'
 responseLog="$(mktemp)"
 requestBody='{"email":"'"$userEmail"'","password":"'"$userPassword"'"}'
 loginStatus="$(curl -s -o "$responseLog" -w '%{http_code}' \
   --header 'Content-Type: application/json' --data "$requestBody" \
   "$serverUrl/v1/sessions"
 )"
-if [[ "$loginStatus" != "200" ]]; then
+if [[ "$loginStatus" = "200" ]]; then
+  log 'Backend survived; job should pass.'
+else
   log 'Backend behaving badly:'
   log "$(cat "$responseLog")"
   fail_job
 fi
-log 'Backend survived; job passed.'
+
+log 'Checking open DB query count...'
+timeout 120 bash -c "cd ..; while ! node lib/bin/check-open-db-queries.js; do sleep 1; done"
 
 # TODO upload results to getodk.cloud for graphing.  Include:
 #
