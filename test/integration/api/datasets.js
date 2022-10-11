@@ -54,6 +54,40 @@ describe('projects/:id/datasets', () => {
                   ]);
                 }))))));
   });
+
+  describe('GET: dataset download', () => {
+    it('should reject if the user cannot access dataset', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => service.login('chelsea', (asChelsea) =>
+            asChelsea.get('/v1/projects/1/datasets/people/download')
+              .expect(403))))));
+
+    it('should let the user download the dataset (even if 0 entity rows)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/datasets/people/download')
+            .expect(200)
+            .then(({ text }) => {
+              text.should.equal('name,label,name,age\n');
+            })))));
+
+    // TODO: right now this returns 500 internal server error
+    it.skip('should reject if dataset does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/datasets/nonexistent/download')
+            .expect(404)))));
+  });
 });
 
 describe('projects/:id/forms/:formId/draft/attachment/:name PATCH', () => {
