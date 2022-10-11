@@ -355,7 +355,7 @@ describe('api: /projects', () => {
           .then(({ body }) => {
             body.verbs.should.be.an.Array();
             body.verbs.length.should.be.greaterThan(39);
-            body.verbs.should.containDeep([ 'user.password.invalidate', 'dataset.create' ]);
+            body.verbs.should.containDeep([ 'user.password.invalidate' ]);
           }))));
 
     it('should return verb information with extended metadata (bob)', testService((service) =>
@@ -367,7 +367,7 @@ describe('api: /projects', () => {
             body.verbs.should.be.an.Array();
             body.verbs.length.should.be.lessThan(30);
             body.verbs.should.containDeep([ 'assignment.create', 'project.delete', 'dataset.list' ]);
-            body.verbs.should.not.containDeep([ 'project.create', 'dataset.create' ]);
+            body.verbs.should.not.containDeep([ 'project.create' ]);
           }))));
 
     it('should return verb information with extended metadata (data collector only)', testService((service) =>
@@ -1345,7 +1345,7 @@ describe('api: /projects', () => {
           body.length.should.equal(1);
           body[0].should.be.a.Project();
           const { formList, verbs } = body[0];
-          verbs.length.should.equal(44);
+          verbs.length.should.equal(42);
           formList.length.should.equal(2);
           const form = formList[0];
           form.should.be.a.ExtendedForm();
@@ -1409,7 +1409,7 @@ describe('api: /projects', () => {
             body.length.should.equal(2);
             // First project
             body[0].formList.length.should.equal(2);
-            body[0].verbs.length.should.equal(29);
+            body[0].verbs.length.should.equal(27);
             // Second project
             body[1].formList.length.should.equal(1);
             body[1].verbs.length.should.be.lessThan(5); // 4 for data collector
