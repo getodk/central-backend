@@ -5,10 +5,7 @@ const FakeTimers = require('@sinonjs/fake-timers');
 const { slonikPool } = require('../../../lib/external/slonik');
 const { queryFuncs } = require('../../../lib/util/db');
 
-// REVIEW: these tests are now skipped, as the mocking no longer works.
-// The tests pass fine if mocha is run without a timeout, and the fake
-// sleeps are replaced with real ones.
-describe.skip('db.stream()', () => {
+describe('db.stream()', () => {
   let db;
   let pool;
 
@@ -33,7 +30,12 @@ describe.skip('db.stream()', () => {
       await clock.tickAsync(60 * 1000);
     };
 
-    beforeEach(() => { clock = FakeTimers.install({ shouldClearNativeTimers: true }); });
+    beforeEach(() => {
+      clock = FakeTimers.install({
+        shouldClearNativeTimers: true,
+        toFake: ['setTimeout', 'clearTimeout'],
+      });
+    });
     afterEach(() => clock?.uninstall());
 
     it('should time out after 2 mins if no activity at all', async () => {
