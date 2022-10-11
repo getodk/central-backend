@@ -30,7 +30,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - run: npm ci
+    - run: npm ci --legacy-peer-deps
     - run: node lib/bin/create-docker-databases.js
     - name: Benchmark
       timeout-minutes: 10
