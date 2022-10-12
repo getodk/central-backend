@@ -416,8 +416,8 @@ describe('api: /projects/:id/forms (drafts)', () => {
               .expect(200)
               .then(({ body }) => {
                 body.should.eql([
-                  { name: 'goodone.csv', type: 'file', exists: false },
-                  { name: 'goodtwo.mp3', type: 'audio', exists: false }
+                  { name: 'goodone.csv', type: 'file', blobExists: false, datasetExists: false },
+                  { name: 'goodtwo.mp3', type: 'audio', blobExists: false, datasetExists: false }
                 ]);
               })))));
 
@@ -450,8 +450,8 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 // eslint-disable-next-line no-param-reassign
                 delete body[0].updatedAt;
                 body.should.eql([
-                  { name: 'goodone.csv', type: 'file', exists: true },
-                  { name: 'greattwo.mp3', type: 'audio', exists: false }
+                  { name: 'goodone.csv', type: 'file', blobExists: true, datasetExists: false },
+                  { name: 'greattwo.mp3', type: 'audio', blobExists: false, datasetExists: false }
                 ]);
               })))));
 
@@ -482,8 +482,8 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 // eslint-disable-next-line no-param-reassign
                 delete body[0].updatedAt;
                 body.should.eql([
-                  { name: 'goodone.csv', type: 'file', exists: true },
-                  { name: 'greattwo.mp3', type: 'audio', exists: false }
+                  { name: 'goodone.csv', type: 'file', blobExists: true, datasetExists: false },
+                  { name: 'greattwo.mp3', type: 'audio', blobExists: false, datasetExists: false }
                 ]);
               })))));
 
@@ -946,8 +946,8 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 // eslint-disable-next-line no-param-reassign
                 delete body[0].updatedAt;
                 body.should.eql([
-                  { name: 'goodone.csv', type: 'file', exists: true },
-                  { name: 'goodtwo.mp3', type: 'audio', exists: false }
+                  { name: 'goodone.csv', type: 'file', blobExists: true, datasetExists: false },
+                  { name: 'goodtwo.mp3', type: 'audio', blobExists: false, datasetExists: false }
                 ]);
               })))));
 
@@ -1149,7 +1149,9 @@ describe('api: /projects/:id/forms (drafts)', () => {
                       formDefId: form.draftDefId,
                       name: attachment.name,
                       oldBlobId: null,
-                      newBlobId: attachment.blobId
+                      newBlobId: attachment.blobId,
+                      oldDatasetId: null,
+                      newDatasetId: attachment.datasetId
                     });
 
                     return asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
@@ -1167,7 +1169,9 @@ describe('api: /projects/:id/forms (drafts)', () => {
                           formDefId: form.draftDefId,
                           name: attachment.name,
                           oldBlobId: attachment.blobId,
-                          newBlobId: attachment2.blobId
+                          newBlobId: attachment2.blobId,
+                          oldDatasetId: attachment.datasetId,
+                          newDatasetId: attachment2.datasetId
                         });
                       });
                   }))))));
@@ -1248,7 +1252,9 @@ describe('api: /projects/:id/forms (drafts)', () => {
                         formDefId: form.draftDefId,
                         name: 'goodone.csv',
                         oldBlobId: attachment.blobId,
-                        newBlobId: null
+                        newBlobId: null,
+                        oldDatasetId: attachment.datasetId,
+                        newDatasetId: null
                       });
                     }))))));
 
