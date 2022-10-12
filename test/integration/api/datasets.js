@@ -225,6 +225,6 @@ describe('Check only blobId or datasetId is set', () => {
         .then(([form, dataset]) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then(getOrNotFound)
           .then((attachment) => FormAttachments.update(form, attachment, 1, dataset.id)
             .catch(error => {
-              error.problemCode.should.be.equal(501.11);
+              error.constraint.should.be.equal('check_blobId_or_datasetId_is_null');
             }))))));
 });
