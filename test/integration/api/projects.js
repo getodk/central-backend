@@ -295,6 +295,7 @@ describe('api: /projects', () => {
           .then(({ body }) => {
             body.should.be.an.ExtendedProject();
             body.forms.should.equal(2);
+            body.datasets.should.equal(0);
             should.not.exist(body.lastSubmission);
           })
           .then(() => Promise.all([
@@ -307,12 +308,17 @@ describe('api: /projects', () => {
               .set('Content-Type', 'application/xml')
               .expect(200)
           ]))
+          .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200))
           .then(() => asAlice.get('/v1/projects/1')
             .set('X-Extended-Metadata', 'true')
             .expect(200)
             .then(({ body }) => {
               body.should.be.an.ExtendedProject();
-              body.forms.should.equal(2);
+              body.forms.should.equal(3);
+              body.datasets.should.equal(1);
               body.lastSubmission.should.be.a.recentIsoDate();
             })))));
 
@@ -335,7 +341,7 @@ describe('api: /projects', () => {
               body.appUsers.should.equal(1);
             })))));
 
-    it('should not return verb information unless extended metata is requested', testService((service) =>
+    it('should not return verb information unless extended meta data is requested', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/projects/1')
           .expect(200)
@@ -359,12 +365,34 @@ describe('api: /projects', () => {
           .expect(200)
           .then(({ body }) => {
             body.verbs.should.be.an.Array();
-            body.verbs.length.should.be.lessThan(26);
-            body.verbs.should.containDeep([ 'assignment.create', 'project.delete' ]);
+            body.verbs.length.should.be.lessThan(28);
+            body.verbs.should.containDeep([ 'assignment.create', 'project.delete', 'dataset.list' ]);
             body.verbs.should.not.containDeep([ 'project.create' ]);
           }))));
 
-    it('should return verb information with extended metadata (chelsea)', testService((service) =>
+    it('should return verb information with extended metadata (data collector only)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('chelsea', (asChelsea) =>
+          asChelsea.get('/v1/users/current').expect(200)
+            .then(({ body }) => body.id)
+            .then((chelseaId) => asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`)
+              .expect(200))
+            .then(() => asChelsea.get('/v1/projects/1')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.verbs.should.eqlInAnyOrder([
+                  // eslint-disable-next-line no-multi-spaces
+                  'project.read',      // from role(s): formfill
+                  // eslint-disable-next-line no-multi-spaces
+                  'form.list',         // from role(s): formfill
+                  // eslint-disable-next-line no-multi-spaces
+                  'form.read',         // from role(s): formfill
+                  'submission.create', // from role(s): formfill
+                ]);
+              }))))));
+
+    it('should return verb information with extended metadata (chelsea with two roles)', testService((service) =>
       service.login('alice', (asAlice) =>
         service.login('chelsea', (asChelsea) =>
           asChelsea.get('/v1/users/current').expect(200)
@@ -389,6 +417,10 @@ describe('api: /projects', () => {
                   // eslint-disable-next-line no-multi-spaces
                   'submission.list',   // from role(s): viewer
                   'submission.create', // from role(s): formfill
+                  // eslint-disable-next-line no-multi-spaces
+                  'dataset.list',      // from role(s): viewer
+                  // eslint-disable-next-line no-multi-spaces
+                  'entity.list',      // from role(s): viewer
                 ]);
               }))))));
   });
@@ -1304,7 +1336,7 @@ describe('api: /projects', () => {
 });
 
 
-describe('api: /projects?forms=true', () => {
+describe('api: /projects', () => {
   describe('GET', () => {
     it('should return projects with verbs and nested extended forms', testService((service) =>
       service.login('alice', (asAlice) => asAlice.get('/v1/projects?forms=true')
@@ -1313,7 +1345,7 @@ describe('api: /projects?forms=true', () => {
           body.length.should.equal(1);
           body[0].should.be.a.Project();
           const { formList, verbs } = body[0];
-          verbs.length.should.equal(40);
+          verbs.length.should.equal(42);
           formList.length.should.equal(2);
           const form = formList[0];
           form.should.be.a.ExtendedForm();
@@ -1377,7 +1409,7 @@ describe('api: /projects?forms=true', () => {
             body.length.should.equal(2);
             // First project
             body[0].formList.length.should.equal(2);
-            body[0].verbs.length.should.equal(25);
+            body[0].verbs.length.should.equal(27);
             // Second project
             body[1].formList.length.should.equal(1);
             body[1].verbs.length.should.be.lessThan(5); // 4 for data collector
@@ -1433,6 +1465,10 @@ describe('api: /projects?forms=true', () => {
                   'submission.list',   // from role(s): viewer
                   // eslint-disable-next-line no-multi-spaces
                   'submission.read',   // from role(s): viewer
+                  // eslint-disable-next-line no-multi-spaces
+                  'dataset.list',     // from role(s): viewer
+                  // eslint-disable-next-line no-multi-spaces
+                  'entity.list'      // from role(s): viewer
                 ]);
               }))))));
   });
@@ -1473,7 +1509,11 @@ describe('api: /projects?forms=true', () => {
               'submission.read',  // from role(s): viewer
               // eslint-disable-next-line no-multi-spaces
               'submission.list',  // from role(s): viewer
-              'submission.create' // from role(s): app-user
+              'submission.create', // from role(s): app-user
+              // eslint-disable-next-line no-multi-spaces
+              'dataset.list',  // from role(s): viewer
+              // eslint-disable-next-line no-multi-spaces
+              'entity.list'   // from role(s): viewer
             ]);
           }))))));
 });

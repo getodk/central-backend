@@ -7,41 +7,87 @@ const { omit } = require('ramda');
 
 // TODO merge with test/integration/api/forms/dataset.js
 
-describe('projects/:id/datasets GET', () => {
-  it('should return the datasets of Default project', testService((service) =>
-    service.login('alice', (asAlice) =>
-      asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.simpleEntity)
-        .set('Content-Type', 'application/xml')
-        .expect(200)
-        .then(() =>
-          asAlice.get('/v1/projects/1/datasets')
-            .expect(200)
-            .then(({ body }) => {
-              body.map(({ id, ...d }) => d).should.eql([
-                { name: 'people', projectId: 1, revisionNumber: 0 }
-              ]);
-            })))));
+describe('projects/:id/datasets', () => {
+  describe('GET', () => {
+    it('should reject if the user cannot list datasets', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => service.login('chelsea', (asChelsea) =>
+            asChelsea.get('/v1/projects/1/datasets')
+              .expect(403))))));
 
-  it('should not return draft datasets', testService((service) =>
-    service.login('alice', (asAlice) =>
-      asAlice.post('/v1/projects/1/forms')
-        .send(testData.forms.simpleEntity)
-        .set('Content-Type', 'application/xml')
-        .expect(200)
-        .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.simpleEntity
-            .replace(/simpleEntity/, 'simpleEntity2')
-            .replace(/people/, 'student'))
+    it('should return the datasets of Default project', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
           .expect(200)
           .then(() =>
             asAlice.get('/v1/projects/1/datasets')
               .expect(200)
               .then(({ body }) => {
                 body.map(({ id, ...d }) => d).should.eql([
-                  { name: 'student', projectId: 1, revisionNumber: 0 }
+                  { name: 'people', projectId: 1, revisionNumber: 0 }
                 ]);
-              }))))));
+              })))));
+
+    it('should not return draft datasets', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity
+              .replace(/simpleEntity/, 'simpleEntity2')
+              .replace(/people/, 'student'))
+            .expect(200)
+            .then(() =>
+              asAlice.get('/v1/projects/1/datasets')
+                .expect(200)
+                .then(({ body }) => {
+                  body.map(({ id, ...d }) => d).should.eql([
+                    { name: 'student', projectId: 1, revisionNumber: 0 }
+                  ]);
+                }))))));
+  });
+
+  describe('GET: dataset download', () => {
+    it('should reject if the user cannot access dataset', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => service.login('chelsea', (asChelsea) =>
+            asChelsea.get('/v1/projects/1/datasets/people/download')
+              .expect(403))))));
+
+    it('should let the user download the dataset (even if 0 entity rows)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/datasets/people/download')
+            .expect(200)
+            .then(({ text }) => {
+              text.should.equal('name,label,name,age\n');
+            })))));
+
+    // TODO: right now this returns 500 internal server error
+    it.skip('should reject if dataset does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/datasets/nonexistent/download')
+            .expect(404)))));
+  });
 });
 
 describe('projects/:id/forms/:formId/draft/attachment/:name PATCH', () => {
