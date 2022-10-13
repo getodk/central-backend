@@ -85,6 +85,16 @@ describe('endpoints', () => {
       });
       defaultErrorWriter(Problem.user.insufficientRights(), request, response);
     });
+
+    it('should not throw if given a null error', (done) => {
+      const response = createModernResponse();
+      response.on('end', () => {
+        response.statusCode.should.equal(500);
+        response._getData().message.should.equal('Completely unhandled exception: undefined');
+        done();
+      });
+      defaultErrorWriter(null, null, response);
+    });
   });
 
   describe('framework', () => {
@@ -666,6 +676,12 @@ describe('endpoints', () => {
       it('should allow appropriate requests through', () => {
         const request = createRequest({ url: '/odata.svc?$top=50&$expand=*', headers: { 'OData-MaxVersion': '4.0', accept: 'application/json' } });
         should.not.exist(odataPreprocessor('json')(null, new Context(request), request));
+      });
+
+      it('should reject requests if both $select and $expand are present', () => {
+        const request = createRequest({ url: '/odata.svc?$expand=*&$select=__id' });
+        return odataPreprocessor('json')(null, new Context(request), request)
+          .should.be.rejectedWith(Problem, { problemCode: 501.11 });
       });
     });
 

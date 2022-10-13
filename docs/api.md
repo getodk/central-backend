@@ -32,6 +32,12 @@ Finally, **system information and configuration** is available via a set of spec
 
 Here major and breaking changes to the API are listed by version.
 
+### ODK Central v2022.3
+
+**Added**:
+
+* OData Data Document requests now allow limited use of `$select`.
+
 ### ODK Central v1.5.3
 
 **Removed**:
@@ -3345,7 +3351,7 @@ While the latest 4.01 OData specification adds a new JSON EDMX CSDL format, most
 + Response 406 (application/json)
     + Attributes (Error 406)
 
-### Data Document [GET /v1/projects/{projectId}/forms/{xmlFormId}.svc/{table}{?%24skip,%24top,%24count,%24wkt,%24filter,%24expand}]
+### Data Document [GET /v1/projects/{projectId}/forms/{xmlFormId}.svc/{table}{?%24skip,%24top,%24count,%24wkt,%24filter,%24expand,%24select}]
 
 The data documents are the straightforward JSON representation of each table of `Submission` data. They follow the [corresponding specification](http://docs.oasis-open.org/odata/odata-json-format/v4.01/odata-json-format-v4.01.html), but apart from the representation of geospatial data as GeoJSON rather than the ODK proprietary format, the output here should not be at all surprising. If you are looking for JSON output of Submission data, this is the best place to look.
 
@@ -3370,6 +3376,11 @@ As of ODK Central v1.2, you can use `%24expand=*` to expand all repeat repetitio
 
 The _nonstandard_ `$wkt` querystring parameter may be set to `true` to request that geospatial data is returned as a [Well-Known Text (WKT) string](https://en.wikipedia.org/wiki/Well-known_text) rather than a GeoJSON structure. This exists primarily to support Tableau, which cannot yet read GeoJSON, but you may find it useful as well depending on your mapping software. **Please note** that both GeoJSON and WKT follow a `(lon, lat, alt)` coördinate ordering rather than the ODK-proprietary `lat lon alt`. This is so that the values map neatly to `(x, y, z)`. GPS accuracy information is not a part of either standards specification, and so is presently omitted from OData output entirely. GeoJSON support may come in a future version.
 
+As of ODK Central v2022.3, the [`$select` query parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358942) is supported with some limitations:
++ `$select` and `$expand` can't be used together.
++ Child properties of repeats can't be requested using `$select`
++ Requesting complex types (groups) to get all fields of that type is only supported for `__system`
+
 As the vast majority of clients only support the JSON OData format, that is the only format ODK Central offers.
 
 + Parameters
@@ -3381,6 +3392,7 @@ As the vast majority of clients only support the JSON OData format, that is the 
     + `%24wkt`: `true` (boolean, optional) - If set to `true`, geospatial data will be returned as Well-Known Text (WKT) strings rather than GeoJSON structures.
     + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
     + `%24expand`: `*` (string, optional) - Repetitions, which should get expanded. Currently, only `*` is implemented, which expands all repetitions.
+    + `%24select`: `__id, age, name, meta/instanceID` (string, optional) - If provided, will return only the selected fields.
 
 + Response 200 (application/json)
     + Body
@@ -3551,7 +3563,7 @@ Identical to [the non-Draft version](/reference/odata-endpoints/odata-form-servi
 + Response 406 (application/json)
     + Attributes (Error 406)
 
-### Data Document [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft.svc/{table}{?%24skip,%24top,%24count,%24wkt,%24filter}]
+### Data Document [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft.svc/{table}{?%24skip,%24top,%24count,%24wkt,%24filter,%24expand,%24select}]
 
 Identical to [the non-Draft version](/reference/odata-endpoints/odata-form-service/data-document) of this endpoint.
 
@@ -3563,6 +3575,8 @@ Identical to [the non-Draft version](/reference/odata-endpoints/odata-form-servi
     + `%24count`: `true` (boolean, optional) - If set to `true`, an `@odata.count` property will be added to the result indicating the total number of rows, ignoring the above paging parameters.
     + `%24wkt`: `true` (boolean, optional) - If set to `true`, geospatial data will be returned as Well-Known Text (WKT) strings rather than GeoJSON structures.
     + `%24filter`: `year(__system/submissionDate) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24expand`: `*` (string, optional) - Repetitions, which should get expanded. Currently, only `*` is implemented, which expands all repetitions.
+    + `%24select`: `__id, age, name, meta/instanceID` (string, optional) - If provided, will return only the selected fields.
 
 + Response 200 (application/json)
     + Body

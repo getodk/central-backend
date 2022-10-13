@@ -577,18 +577,14 @@ describe('api: /projects', () => {
             asAlice.get('/v1/projects/1/forms/simple.xml')
               .expect(200)
               .then(({ text }) => {
-                // eslint-disable-next-line no-useless-escape
-                text.should.match(/<data id="simple" version="\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
-                // eslint-disable-next-line no-useless-escape
-                text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
+                text.should.match(/<data id="simple" version="\[encrypted:[a-zA-Z0-9+/]{8}\]">/);
+                text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9+/]{392}"\/><\/model>/);
               }),
             asAlice.get('/v1/projects/1/forms/withrepeat.xml')
               .expect(200)
               .then(({ text }) => {
-                // eslint-disable-next-line no-useless-escape
-                text.should.match(/<data id="withrepeat" orx:version="1.0\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
-                // eslint-disable-next-line no-useless-escape
-                text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
+                text.should.match(/<data id="withrepeat" orx:version="1.0\[encrypted:[a-zA-Z0-9+/]{8}\]">/);
+                text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9+/]{392}"\/><\/model>/);
               })
           ])))));
 
@@ -619,18 +615,14 @@ describe('api: /projects', () => {
             asAlice.get('/v1/projects/1/forms/simple.xml')
               .expect(200)
               .then(({ text }) => {
-                // eslint-disable-next-line no-useless-escape
-                text.should.match(/<data id="simple" version="\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
-                // eslint-disable-next-line no-useless-escape
-                text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
+                text.should.match(/<data id="simple" version="\[encrypted:[a-zA-Z0-9+/]{8}\]">/);
+                text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9+/]{392}"\/><\/model>/);
               }),
             asAlice.get('/v1/projects/1/forms/simple/draft.xml')
               .expect(200)
               .then(({ text }) => {
-                // eslint-disable-next-line no-useless-escape
-                text.should.match(/<data id="simple" version="\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
-                // eslint-disable-next-line no-useless-escape
-                text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
+                text.should.match(/<data id="simple" version="\[encrypted:[a-zA-Z0-9+/]{8}\]">/);
+                text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9+/]{392}"\/><\/model>/);
               })
           ])))));
 
@@ -646,10 +638,8 @@ describe('api: /projects', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xml')
             .expect(200)
             .then(({ text }) => {
-              // eslint-disable-next-line no-useless-escape
-              text.should.match(/<data id="simple2" version="2\.1\[encrypted:[a-zA-Z0-9\+\/]{8}\]">/);
-              // eslint-disable-next-line no-useless-escape
-              text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9\+\/]{392}"\/><\/model>/);
+              text.should.match(/<data id="simple2" version="2\.1\[encrypted:[a-zA-Z0-9+/]{8}\]">/);
+              text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9+/]{392}"\/><\/model>/);
             })))));
 
     it('should purge the unneeded form defs being replaced when encrypted', testService((service, { oneFirst }) => {

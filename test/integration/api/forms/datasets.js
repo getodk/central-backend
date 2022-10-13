@@ -31,7 +31,7 @@ describe('api: /projects/:id/forms (entity-handling)', () => {
           .send(xml)
           .set('Content-Type', 'text/xml')
           .expect(400)
-          .then(({ body }) => { body.code.should.equal(400.23); }));
+          .then(({ body }) => { body.code.should.equal(400.25); }));
     }));
 
     it('should return the created form upon success', testService((service) =>

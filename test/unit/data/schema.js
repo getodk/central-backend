@@ -1876,7 +1876,7 @@ describe('form schema', () => {
           </h:head>
         </h:html>`;
         // Problem.user.invalidEntityForm
-        return getDataset(xml).should.be.rejectedWith(Problem, { problemCode: 400.23 });
+        return getDataset(xml).should.be.rejectedWith(Problem, { problemCode: 400.25 });
       });
 
       it('should return rejected promise if entity block is empty', () => {
@@ -1895,7 +1895,7 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-        return getDataset(xml).should.be.rejectedWith(Problem, { problemCode: 400.23 });
+        return getDataset(xml).should.be.rejectedWith(Problem, { problemCode: 400.25 });
       });
 
       it('should fail when entity form is invalid in another way', () => {
@@ -1915,7 +1915,7 @@ describe('form schema', () => {
             </model>
           </h:head>
         </h:html>`;
-        return getDataset(xml).should.be.rejectedWith(Problem, { problemCode: 400.23 });
+        return getDataset(xml).should.be.rejectedWith(Problem, { problemCode: 400.25 });
       });
     });
 

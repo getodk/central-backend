@@ -30,27 +30,13 @@ describe('db.stream()', () => {
       await clock.tickAsync(60 * 1000);
     };
 
-    beforeEach(() => { clock = FakeTimers.install({ shouldClearNativeTimers: true }); });
-    afterEach(() => clock?.uninstall());
-
-    // TODO this doesn't seem like the correct behaviour - no Error is thrown
-    // here.  At some point, this should be fixed elsewhere!
-    it('should close streams given an invalid sql statement', async () => {
-      // when
-      const stream = await db.stream(sql`NOT A SQL STATEMENT`);
-
-      // then
-      pool.getPoolState().activeConnectionCount.should.equal(1);
-      stream.destroyed.should.equal(false);
-
-      // when
-      await oneMinute();
-      await oneMinute();
-      // then
-      pool.getPoolState().activeConnectionCount.should.equal(0);
-      stream.destroyed.should.equal(true);
+    beforeEach(() => {
+      clock = FakeTimers.install({
+        shouldClearNativeTimers: true,
+        toFake: ['setTimeout', 'clearTimeout'],
+      });
     });
-
+    afterEach(() => clock?.uninstall());
 
     it('should time out after 2 mins if no activity at all', async () => {
       // given
