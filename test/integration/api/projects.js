@@ -420,7 +420,7 @@ describe('api: /projects', () => {
                   // eslint-disable-next-line no-multi-spaces
                   'dataset.list',      // from role(s): viewer
                   // eslint-disable-next-line no-multi-spaces
-                  'dataset.read',      // from role(s): viewer
+                  'entity.list',      // from role(s): viewer
                 ]);
               }))))));
   });
@@ -1468,7 +1468,7 @@ describe('api: /projects', () => {
                   // eslint-disable-next-line no-multi-spaces
                   'dataset.list',     // from role(s): viewer
                   // eslint-disable-next-line no-multi-spaces
-                  'dataset.read'      // from role(s): viewer
+                  'entity.list'      // from role(s): viewer
                 ]);
               }))))));
   });
@@ -1513,7 +1513,7 @@ describe('api: /projects', () => {
               // eslint-disable-next-line no-multi-spaces
               'dataset.list',  // from role(s): viewer
               // eslint-disable-next-line no-multi-spaces
-              'dataset.read'   // from role(s): viewer
+              'entity.list'   // from role(s): viewer
             ]);
           }))))));
 });
