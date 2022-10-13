@@ -355,7 +355,7 @@ describe('api: /projects', () => {
           .then(({ body }) => {
             body.verbs.should.be.an.Array();
             body.verbs.length.should.be.greaterThan(39);
-            body.verbs.should.containDeep([ 'user.password.invalidate' ]);
+            body.verbs.should.containDeep([ 'user.password.invalidate', 'project.delete' ]);
           }))));
 
     it('should return verb information with extended metadata (bob)', testService((service) =>
@@ -365,7 +365,7 @@ describe('api: /projects', () => {
           .expect(200)
           .then(({ body }) => {
             body.verbs.should.be.an.Array();
-            body.verbs.length.should.be.lessThan(30);
+            body.verbs.length.should.be.lessThan(28);
             body.verbs.should.containDeep([ 'assignment.create', 'project.delete', 'dataset.list' ]);
             body.verbs.should.not.containDeep([ 'project.create' ]);
           }))));
@@ -383,11 +383,11 @@ describe('api: /projects', () => {
               .then(({ body }) => {
                 body.verbs.should.eqlInAnyOrder([
                   // eslint-disable-next-line no-multi-spaces
-                  'project.read',      // from role(s): formfill, viewer
+                  'project.read',      // from role(s): formfill
                   // eslint-disable-next-line no-multi-spaces
-                  'form.list',         // from role(s): formfill, viewer
+                  'form.list',         // from role(s): formfill
                   // eslint-disable-next-line no-multi-spaces
-                  'form.read',         // from role(s): formfill, viewer
+                  'form.read',         // from role(s): formfill
                   'submission.create', // from role(s): formfill
                 ]);
               }))))));
