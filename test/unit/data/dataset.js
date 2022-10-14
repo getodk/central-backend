@@ -117,7 +117,7 @@ describe('parsing dataset from entity block', () => {
       return getDataset(xml).should.be.rejectedWith(Problem, { problemCode: 400.25 });
     });
 
-    it('should return rejected promise if dataset name is missing', () => {
+    it('should return rejected promise if dataset name is invalid', () => {
       const xml = `
       <?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">

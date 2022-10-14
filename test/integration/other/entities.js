@@ -13,8 +13,7 @@ describe('entities, etc.', () => {
   // ASSORTED ENTITY-RELATED TESTS THAT DON'T FIT BETTER ELSEWHERE
   ////////////////////////////////////////////////////////////////////////////////
   describe('processing a non-entity submission', () => {
-    it('should not freak out when processing a non-entity submission', testService(async (service, { Entities, Submissions, one }) => {
-      // Upload an entity form and a submission for that form
+    it('should gracefully handle processing a non-entity submission', testService(async (service, { Entities, Submissions, one }) => {
       await service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
@@ -24,6 +23,8 @@ describe('entities, etc.', () => {
       // Look up the submission to be able to get the corresponding form def
       const subDef = await Submissions.getCurrentDefByIds(1, 'simple', 'one', false).then((s) => s.get());
 
+      // Processing a submission without an entity should not yield
+      // any errors but it should also not create any entities.
       const entity = await Entities.processSubmissionDef(subDef.id);
       should.not.exist(entity);
       const { count } = await one(sql`select count(*) from entities`);
@@ -31,7 +32,8 @@ describe('entities, etc.', () => {
     }));
 
     it('should not make entity from non-entity approved submission', testService(async (service, container) => {
-      // Upload an entity form and a submission for that form
+      // When *any* submission is approved, the entity worker will look at it
+      // to determine if it contains an entity to be created.
       await service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
@@ -49,7 +51,6 @@ describe('entities, etc.', () => {
   });
 
   it('should create an entity from a submission', testService(async (service, { Entities, Submissions, one }) => {
-    // Upload an entity form and a submission for that form
     await service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms?publish=true')
         .send(testData.forms.simpleEntity)
