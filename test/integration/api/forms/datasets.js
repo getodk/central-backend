@@ -42,7 +42,7 @@ describe('api: /projects/:id/forms (entity-handling)', () => {
           .set('Content-Type', 'text/xml')
           .expect(400)
           .then(({ body }) => {
-            body.code.should.equal(400.23);
+            body.code.should.equal(400.25);
             body.details.reason.should.equal('Invalid Dataset property.');
           }))));
 

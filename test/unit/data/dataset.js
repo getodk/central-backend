@@ -114,7 +114,7 @@ describe('parsing dataset from entity block', () => {
         </h:head>
       </h:html>`;
       // Problem.user.invalidEntityForm
-      return getDataset(xml).should.be.rejectedWith(Problem, { problemCode: 400.23 });
+      return getDataset(xml).should.be.rejectedWith(Problem, { problemCode: 400.25 });
     });
 
     it('should return rejected promise if dataset name is missing', () => {
@@ -138,7 +138,7 @@ describe('parsing dataset from entity block', () => {
         </h:head>
       </h:html>`;
       // Problem.user.invalidEntityForm
-      return getDataset(xml).should.be.rejectedWith(Problem, { problemCode: 400.23 });
+      return getDataset(xml).should.be.rejectedWith(Problem, { problemCode: 400.25 });
     });
   });
 

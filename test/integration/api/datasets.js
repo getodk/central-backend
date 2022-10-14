@@ -75,7 +75,7 @@ describe('projects/:id/datasets', () => {
           .then(() => asAlice.get('/v1/projects/1/datasets/people/download')
             .expect(200)
             .then(({ text }) => {
-              text.should.equal('name,label,name,age\n');
+              text.should.equal('name,label,first_name,age\n');
             })))));
 
     // TODO: right now this returns 500 internal server error
