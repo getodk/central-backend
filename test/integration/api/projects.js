@@ -1298,7 +1298,7 @@ describe('api: /projects', () => {
             asAlice.get('/v1/projects/1/datasets')
               .expect(200)
               .then(({ body }) => {
-                body.map(({ id, ...d }) => d).should.eql([
+                body.map(({ id, createdAt, ...d }) => d).should.eql([
                   { name: 'people', projectId: 1, revisionNumber: 0 }
                 ]);
               })))));
@@ -1318,7 +1318,7 @@ describe('api: /projects', () => {
               asAlice.get('/v1/projects/1/datasets')
                 .expect(200)
                 .then(({ body }) => {
-                  body.map(({ id, ...d }) => d).should.eql([
+                  body.map(({ id, createdAt, ...d }) => d).should.eql([
                     { name: 'student', projectId: 1, revisionNumber: 0 }
                   ]);
                 }))))));
