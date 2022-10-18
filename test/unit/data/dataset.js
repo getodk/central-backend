@@ -200,8 +200,40 @@ describe('dataset name validation', () => {
     validateDatasetName('   ').should.equal(false);
   });
 
+  it('should reject name with whitepsace', () => {
+    validateDatasetName('white space').should.equal(false);
+  });
+
+  it('should reject names starting with disallowed characters', () => {
+    validateDatasetName('-nostartwithhyphen').should.equal(false);
+  });
+
+  it('should reject names starting with numbers', () => {
+    validateDatasetName('123number').should.equal(false);
+  });
+
+  it('should allow names starting with certain characters', () => {
+    validateDatasetName(':okstart').should.equal(true);
+  });
+
+  it('should allow names starting with certain characters', () => {
+    validateDatasetName('_single_start_paren_ok').should.equal(true);
+  });
+
   it('should reject name starting with reserved __ characters', () => {
     validateDatasetName('__system').should.equal(false);
+  });
+
+  it('should reject name with unicode', () => {
+    validateDatasetName('unicode÷divide').should.equal(false);
+  });
+
+  it('should allow name with unicode letters', () => {
+    validateDatasetName('bébés').should.equal(true);
+  });
+
+  it('should allow name with some other special characters', () => {
+    validateDatasetName('people:children_above_10').should.equal(true);
   });
 
   it('should allow a valid name', () => {
