@@ -113,7 +113,7 @@ describe('api: /projects/:id/forms (entity-handling)', () => {
   });
 });
 
-describe('api: /projects/:id/forms/draft/dataset', () => {
+describe('api: /projects/:id/forms/draft/dataset-diff', () => {
 
   it('should reject dataset-diff if the user cannot modify the form', testService((service) =>
     service.login('alice', (asAlice) =>
@@ -254,4 +254,32 @@ describe('api: /projects/:id/forms/draft/dataset', () => {
             body.should.be.eql([]);
           })));
   }));
+
+  it('should return only properties of the dataset of the requested project', testService(async (service) =>
+    service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects')
+          .set('Content-Type', 'application/json')
+          .send({ name: 'Second Project' })
+          .expect(200)
+          .then(({ body }) =>
+            asAlice.post(`/v1/projects/${body.id}/forms`)
+              .send(testData.forms.simpleEntity.replace(/age/g, 'email'))
+              .set('Content-Type', 'application/xml')
+              .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/draft/dataset-diff')
+            .expect(200)
+            .then(({ body }) =>
+              body.should.be.eql([
+                {
+                  name: 'people',
+                  isNew: true,
+                  properties: [
+                    { name: 'age', isNew: true },
+                    { name: 'name', isNew: true }
+                  ]
+                }])))))));
 });
