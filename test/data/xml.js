@@ -343,15 +343,14 @@ module.exports = {
           <age/>
           <hometown/>
           <meta>
-            <entities:entity entities:dataset="people">
+            <entities:entity dataset="people" create="">
               <entities:id/>
-              <entities:create/>
               <entities:label/>
             </entities:entity>
           </meta>
         </data>
       </instance>
-      <bind nodeset="/data/name" type="string" entities:saveto="name"/>
+      <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
       <bind nodeset="/data/age" type="int" entities:saveto="age"/>
       <bind nodeset="/data/hometown" type="string"/>
     </model>
@@ -439,8 +438,8 @@ module.exports = {
       one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
       <meta>
         <instanceID>one</instanceID>
-        <entities:entity entities:dataset="people">
-          <entities:id>uuid:12345678-1234-1234-1234-123456789abc</entities:id>
+        <entities:entity dataset="people">
+          <entities:id>uuid:12345678-1234-4123-8234-123456789abc</entities:id>
           <entities:label>Alice (88)</entities:label>
           <entities:create/>
         </entities:entity>
