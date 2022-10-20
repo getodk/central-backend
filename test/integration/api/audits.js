@@ -574,6 +574,21 @@ describe('/audits', () => {
               deletedActee.deletedAt.should.be.a.recentIsoDate();
             }))));
     });
+
+    describe('audit logs of dataset and entity events', () => {
+      it('should get the actee information of a dataset', testService(async (service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/audits?action=dataset').set('X-Extended-Metadata', true)
+              .expect(200))
+            .then(({ body }) => {
+              const datasetActee = body[0].actee;
+              datasetActee.name.should.equal('people');
+            }))));
+    });
   });
 });
 
