@@ -291,7 +291,7 @@ describe('api: /projects/:id/forms/draft/dataset-diff', () => {
                   isNew: true,
                   properties: [
                     { name: 'age', isNew: true },
-                    { name: 'name', isNew: true }
+                    { name: 'first_name', isNew: true }
                   ]
                 }])))))));
 });

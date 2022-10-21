@@ -306,6 +306,6 @@ describe('projects/:id/forms/:formId/attachments/:name (entities dataset)', () =
           .then(({ headers, text }) => {
             headers['content-disposition'].should.equal('attachment; filename="goodone.csv"; filename*=UTF-8\'\'goodone.csv');
             headers['content-type'].should.equal('text/csv; charset=utf-8');
-            text.should.equal('name,label,name,age\nuuid:12345678-1234-1234-1234-123456789abc,Alice (88),Alice,88\n');
+            text.should.equal('name,label,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88\n');
           })))));
 });
