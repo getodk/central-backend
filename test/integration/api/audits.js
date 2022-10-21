@@ -1,8 +1,11 @@
+const appRoot = require('app-root-path');
 const should = require('should');
 const { sql } = require('slonik');
 const { plain } = require('../../util/util');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
+// eslint-disable-next-line import/no-dynamic-require
+const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 const submitThree = (asAlice) =>
   asAlice.post('/v1/projects/1/forms/simple/submissions')
@@ -576,7 +579,7 @@ describe('/audits', () => {
     });
 
     describe('audit logs of dataset and entity events', () => {
-      it('should get the actee information of a dataset', testService(async (service) =>
+      it('should get the actee information of a dataset', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.simpleEntity)
@@ -587,7 +590,34 @@ describe('/audits', () => {
             .then(({ body }) => {
               const datasetActee = body[0].actee;
               datasetActee.name.should.equal('people');
+              datasetActee.projectId.should.equal(1);
             }))));
+
+      it('should get the actee information of a dataset through an entity event', testService(async (service, container) => {
+        await service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+              .send(testData.instances.simpleEntity.one)
+              .set('Content-Type', 'application/xml')
+              .expect(200))
+            .then(() => asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+              .send({ reviewState: 'approved' })
+              .expect(200)));
+
+        await exhaust(container);
+
+        await service.login('alice', (asAlice) =>
+          asAlice.get('/v1/audits?action=entity').set('X-Extended-Metadata', true)
+            .expect(200)
+            .then(({ body }) => {
+              const datasetActee = body[0].actee;
+              datasetActee.name.should.equal('people');
+              datasetActee.projectId.should.equal(1);
+            }));
+      }));
     });
   });
 });

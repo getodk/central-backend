@@ -94,11 +94,11 @@ describe('entities, etc.', () => {
 
     const approveEvent = await container.Audits.getLatestByAction('submission.update').then((o) => o.get());
 
-    const event = await container.Audits.getLatestByAction('entity.create').then((o) => o.get());
-    event.actorId.should.equal(6); // Bob
-    event.details.submissionId.should.equal(approveEvent.details.submissionId);
+    const createEvent = await container.Audits.getLatestByAction('entity.create').then((o) => o.get());
+    createEvent.actorId.should.equal(6); // Bob
+    createEvent.details.submissionId.should.equal(approveEvent.details.submissionId);
 
-    const entity = await container.Entities.getByUuid(event.details.entityUuid).then((o) => o.get());
+    const entity = await container.Entities.getByUuid(createEvent.details.entityUuid).then((o) => o.get());
     entity.label.should.equal('Alice (88)');
   }));
 
