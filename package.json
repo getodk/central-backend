@@ -9,7 +9,7 @@
     "node": "16.17.0"
   },
   "dependencies": {
-    "@sentry/node": "~6",
+    "@sentry/node": "~7",
     "archiver": "~5",
     "bcrypt": "~5",
     "body-parser": "~1.18",
