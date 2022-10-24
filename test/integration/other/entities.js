@@ -74,6 +74,87 @@ describe('entities, etc.', () => {
     count.should.equal(1);
   }));
 
+  it('should log entity creation in audit log', testService(async (service, container) => {
+    await service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200)));
+
+    await service.login('bob', (asBob) =>
+      asBob.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200));
+
+    await exhaust(container);
+
+    const approveEvent = await container.Audits.getLatestByAction('submission.update').then((o) => o.get());
+
+    const createEvent = await container.Audits.getLatestByAction('entity.create').then((o) => o.get());
+    createEvent.actorId.should.equal(6); // Bob
+    createEvent.details.submissionId.should.equal(approveEvent.details.submissionId);
+
+    const entity = await container.Entities.getByUuid(createEvent.details.entityUuid).then((o) => o.get());
+    entity.label.should.equal('Alice (88)');
+  }));
+
+  it.skip('should log entity error in audit log', testService(async (service, container) => {
+    await service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one.replace('people', 'invalid.dataset'))
+          .set('Content-Type', 'application/xml')
+          .expect(200)));
+
+    await service.login('bob', (asBob) =>
+      asBob.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200));
+
+    await exhaust(container);
+
+    const approveEvent = await container.Audits.getLatestByAction('submission.update').then((o) => o.get());
+
+    const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
+    event.actorId.should.equal(6); // Bob
+    event.details.submissionId.should.equal(approveEvent.details.submissionId);
+    // TODO: nonexistent dataset currently throwing the wrong kind of error
+    should.exist(event.details.problem);
+  }));
+
+  it('should log entity error in audit log', testService(async (service, container) => {
+    await service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one.replace('uuid', 'nomoreuuid'))
+          .set('Content-Type', 'application/xml')
+          .expect(200)));
+
+    await service.login('bob', (asBob) =>
+      asBob.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200));
+
+    await exhaust(container);
+
+    const approveEvent = await container.Audits.getLatestByAction('submission.update').then((o) => o.get());
+
+    const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
+    event.actorId.should.equal(6); // Bob
+    event.details.submissionId.should.equal(approveEvent.details.submissionId);
+    event.details.problem.problemCode.should.equal(409.14);
+  }));
+
   it('should write out some csv stuff from worker', testService((service, container) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms?publish=true')

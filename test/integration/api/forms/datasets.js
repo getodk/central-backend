@@ -123,6 +123,41 @@ describe('api: /projects/:id/forms (entity-handling)', () => {
         });
     }));
   });
+
+  describe('dataset audit logging', () => {
+    it('should log dataset creation in audit log', testService(async (service, { Audits }) => {
+      await service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'text/xml')
+          .expect(200));
+
+      const audit = await Audits.getLatestByAction('dataset.create').then((o) => o.get());
+      audit.details.fields.should.eql([[ '/name', 'first_name' ], [ '/age', 'age' ]]);
+    }));
+
+    it('should log dataset modification in audit log', testService(async (service, { Audits }) => {
+      await service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity
+              .replace('simpleEntity', 'simpleEntity2')
+              .replace('first_name', 'color_name'))
+            .set('Content-Type', 'text/xml')
+            .expect(200)));
+
+      const audit = await Audits.getLatestByAction('dataset.create').then((o) => o.get());
+      audit.details.fields.should.eql([[ '/name', 'first_name' ], [ '/age', 'age' ]]);
+
+      const audit2 = await Audits.getLatestByAction('dataset.update').then((o) => o.get());
+      audit2.details.fields.should.eql([[ '/name', 'color_name' ], [ '/age', 'age' ]]);
+
+      audit.acteeId.should.equal(audit2.acteeId);
+    }));
+  });
 });
 
 describe('api: /projects/:id/forms/draft/dataset-diff', () => {
