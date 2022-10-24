@@ -309,3 +309,22 @@ describe('projects/:id/forms/:formId/attachments/:name (entities dataset)', () =
             text.should.equal('name,label,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88\n');
           })))));
 });
+
+describe('autolink dataset to attachments', () => {
+  it('should set datasetId of attachment on form draft upload', testService((service, { Forms, FormAttachments }) =>
+    service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() =>
+            Forms.getByProjectAndXmlFormId(1, 'withAttachments')
+              .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+                .then(attachment => {
+                  attachment.value.datasetId.should.not.be.null();
+                })))))));
+});
