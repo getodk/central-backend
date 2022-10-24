@@ -111,7 +111,7 @@ describe('projects/:id/forms/:formId/draft/attachment/:name PATCH', () => {
             blobExists: false,
             datasetExists: true
           })))
-        .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
+        .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish?version=newversion')
           .expect(200))
         .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
           .expect(200)
