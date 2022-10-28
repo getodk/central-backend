@@ -7,6 +7,7 @@ const { getOrNotFound } = require('../../../lib/util/promise');
 const { omit } = require('ramda');
 // eslint-disable-next-line import/no-dynamic-require
 const { createEntityFromSubmission } = require(appRoot + '/lib/worker/entity');
+const should = require('should');
 
 // TODO merge with test/integration/api/forms/dataset.js
 
@@ -327,4 +328,55 @@ describe('autolink dataset to attachments', () => {
                 .then(attachment => {
                   attachment.value.datasetId.should.not.be.null();
                 })))))));
+
+  it('should not link dataset if previous version has blob', testService((service, { Forms, FormAttachments }) =>
+    service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200))
+        .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/people.csv')
+          .send('test,csv\n1,2')
+          .set('Content-Type', 'text/csv')
+          .expect(200))
+        .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200))
+        .then(() =>
+          Forms.getByProjectAndXmlFormId(1, 'withAttachments')
+            .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+              .then(attachment => {
+                should(attachment.value.datasetId).be.null();
+                should(attachment.value.blobId).not.be.null();
+              }))))));
+
+  it('should link dataset if previous version does not have blob or dataset linked', testService((service, { Forms, FormAttachments }) =>
+    service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200))
+        .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/people.csv')
+          .send({ dataset: false })
+          .expect(200))
+        .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200))
+        .then(() =>
+          Forms.getByProjectAndXmlFormId(1, 'withAttachments')
+            .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+              .then(attachment => {
+                should(attachment.value.datasetId).not.be.null();
+                should(attachment.value.blobId).be.null();
+              }))))));
 });
