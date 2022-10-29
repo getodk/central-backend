@@ -1325,8 +1325,8 @@ describe('api: /projects', () => {
   });
 });
 
-
-describe('api: /projects', () => {
+// Nested extended forms
+describe('api: /projects?forms=true', () => {
   describe('GET', () => {
     it('should return projects with verbs and nested extended forms', testService((service) =>
       service.login('alice', (asAlice) => asAlice.get('/v1/projects?forms=true')
