@@ -738,6 +738,27 @@ describe('datasets and entities', () => {
             result.properties[0].fields.length.should.equal(2);
           });
       }));
+
+      it('should be able to upload multiple drafts', testService(async (service) => {
+        // Upload a form and then create a new draft version
+        await service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+              .expect(200)
+              .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+                .send(testData.forms.simpleEntity)
+                .set('Content-Type', 'application/xml')
+                .expect(200))
+              .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/draft')
+                .set('X-Extended-Metadata', 'true')
+                .expect(200)
+                .then(({ body }) => {
+                  body.entityRelated.should.equal(true);
+                }))));
+      }));
     });
 
     describe('dataset audit logging at /projects/:id/forms POST', () => {
