@@ -52,6 +52,16 @@ describe('extracting entities from submissions', () => {
             failure.problemCode.should.equal(409.14);
           }));
 
+      it('should reject entity with missing dataset and other random entity attribute', () =>
+        fieldsFor(testData.forms.simpleEntity)
+          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
+          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('dataset="people"', 'random="something"')))
+          .should.be.rejected()
+          .then((failure) => {
+            failure.isProblem.should.equal(true);
+            failure.problemCode.should.equal(409.14);
+          }));
+
       it('should reject entity with empty dataset string', () =>
         fieldsFor(testData.forms.simpleEntity)
           .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
