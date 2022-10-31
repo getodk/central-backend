@@ -371,4 +371,28 @@ describe('api: /projects/:id/forms/dataset-diff', () => {
               }]);
             }))));
   }));
+
+  it('should not return unpublished properties', testService(async (service) => {
+    await service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity
+            .replace(/simpleEntity/, 'simpleEntity2')
+            .replace(/saveto="first_name"/, 'saveto="last_name"'))
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([{
+                name: 'people',
+                properties: [
+                  { name: 'age', inForm: true },
+                  { name: 'first_name', inForm: true }
+                ]
+              }]);
+            }))));
+  }));
 });
