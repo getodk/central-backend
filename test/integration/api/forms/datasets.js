@@ -190,7 +190,6 @@ describe('api: /projects/:id/forms/draft/dataset-diff', () => {
             .expect(403))))));
 
   it('should return all properties of dataset', testService(async (service) => {
-    // Upload a form and then create a new draft version
     await service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms')
         .send(testData.forms.simpleEntity)
@@ -204,8 +203,8 @@ describe('api: /projects/:id/forms/draft/dataset-diff', () => {
                 name: 'people',
                 isNew: true,
                 properties: [
-                  { name: 'age', isNew: true },
-                  { name: 'first_name', isNew: true }
+                  { name: 'age', isNew: true, inForm: true },
+                  { name: 'first_name', isNew: true, inForm: true }
                 ]
               }
             ]);
@@ -230,14 +229,8 @@ describe('api: /projects/:id/forms/draft/dataset-diff', () => {
                   name: 'people',
                   isNew: false,
                   properties: [
-                    {
-                      name: 'age',
-                      isNew: false
-                    },
-                    {
-                      name: 'first_name',
-                      isNew: false
-                    }
+                    { name: 'age', isNew: false, inForm: true },
+                    { name: 'first_name', isNew: false, inForm: true }
                   ]
                 }
               ]);
@@ -263,8 +256,9 @@ describe('api: /projects/:id/forms/draft/dataset-diff', () => {
                 name: 'people',
                 isNew: false,
                 properties: [
-                  { name: 'age', isNew: false },
-                  { name: 'lastName', isNew: true }
+                  { name: 'age', isNew: false, inForm: true },
+                  { name: 'first_name', isNew: false, inForm: false },
+                  { name: 'lastName', isNew: true, inForm: true }
                 ]
               }]);
             }))));
@@ -325,8 +319,80 @@ describe('api: /projects/:id/forms/draft/dataset-diff', () => {
                   name: 'people',
                   isNew: true,
                   properties: [
-                    { name: 'age', isNew: true },
-                    { name: 'first_name', isNew: true }
+                    { name: 'age', isNew: true, inForm: true },
+                    { name: 'first_name', isNew: true, inForm: true }
                   ]
                 }])))))));
+});
+
+describe('api: /projects/:id/forms/dataset-diff', () => {
+  it('should return all properties of dataset', testService(async (service) => {
+    await service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/dataset-diff')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.eql([
+              {
+                name: 'people',
+                properties: [
+                  { name: 'age', inForm: true },
+                  { name: 'first_name', inForm: true }
+                ]
+              }
+            ]);
+          })));
+  }));
+
+  it('should return all properties with appropriate value of inForm', testService(async (service) => {
+    await service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity
+            .replace(/simpleEntity/, 'simpleEntity2')
+            .replace(/saveto="first_name"/, 'saveto="last_name"'))
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity2/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([{
+                name: 'people',
+                properties: [
+                  { name: 'age', inForm: true },
+                  { name: 'first_name', inForm: false },
+                  { name: 'last_name', inForm: true }
+                ]
+              }]);
+            }))));
+  }));
+
+  it('should not return unpublished properties', testService(async (service) => {
+    await service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity
+            .replace(/simpleEntity/, 'simpleEntity2')
+            .replace(/saveto="first_name"/, 'saveto="last_name"'))
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([{
+                name: 'people',
+                properties: [
+                  { name: 'age', inForm: true },
+                  { name: 'first_name', inForm: true }
+                ]
+              }]);
+            }))));
+  }));
 });
