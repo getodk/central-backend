@@ -2814,7 +2814,9 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               body[0].action.should.equal('submission.update.version');
               body[0].details.should.eql({ instanceId: 'two', submissionId });
               body[1].action.should.equal('submission.update');
-              body[1].details.should.eql({ reviewState: 'rejected', submissionId });
+              body[1].details.reviewState.should.equal('rejected');
+              body[1].details.submissionId.should.equal(submissionId);
+              should.exist(body[1].details.submissionDefId);
               body[2].action.should.equal('submission.create');
               body[2].details.should.eql({ instanceId: 'one', submissionId });
             })))));

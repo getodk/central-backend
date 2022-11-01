@@ -84,7 +84,6 @@ describe('getSelectMultipleResponses', () => {
       }));
 });
 
-
 describe('diffing', () => {
   describe('_hashedTree', () => {
 

@@ -354,8 +354,8 @@ describe('api: /projects/:id/forms (versions)', () => {
                   delete body[0].updatedAt;
 
                   body.should.eql([
-                    { name: 'goodone.csv', type: 'file', exists: true },
-                    { name: 'goodtwo.mp3', type: 'audio', exists: false }
+                    { name: 'goodone.csv', type: 'file', exists: true, blobExists: true, datasetExists: false },
+                    { name: 'goodtwo.mp3', type: 'audio', exists: false, blobExists: false, datasetExists: false }
                   ]);
                 })))));
 

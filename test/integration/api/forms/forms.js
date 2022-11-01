@@ -786,8 +786,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                 .expect(200)
                 .then(({ body }) => {
                   body.should.eql([
-                    { name: 'goodone.csv', type: 'file', exists: false },
-                    { name: 'goodtwo.mp3', type: 'audio', exists: false }
+                    { name: 'goodone.csv', type: 'file', exists: false, blobExists: false, datasetExists: false },
+                    { name: 'goodtwo.mp3', type: 'audio', exists: false, blobExists: false, datasetExists: false }
                   ]);
                 })))));
 
@@ -812,8 +812,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                   delete body[0].updatedAt;
 
                   body.should.eql([
-                    { name: 'goodone.csv', type: 'file', exists: true },
-                    { name: 'goodtwo.mp3', type: 'audio', exists: false }
+                    { name: 'goodone.csv', type: 'file', exists: true, blobExists: true, datasetExists: false },
+                    { name: 'goodtwo.mp3', type: 'audio', exists: false, blobExists: false, datasetExists: false }
                   ]);
                 })))));
 

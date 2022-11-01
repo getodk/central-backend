@@ -331,6 +331,30 @@ module.exports = {
       <select ref="/data/g1/q2"><label>two</label></select>
     </group>
   </h:body>
+</h:html>`,
+
+    simpleEntity: `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+  <h:head>
+    <model>
+      <instance>
+        <data id="simpleEntity" orx:version="1.0">
+          <name/>
+          <age/>
+          <hometown/>
+          <meta>
+            <entities:entity dataset="people" create="">
+              <entities:id/>
+              <entities:label/>
+            </entities:entity>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+      <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+      <bind nodeset="/data/hometown" type="string"/>
+    </model>
+  </h:head>
 </h:html>`
   },
   instances: {
@@ -409,6 +433,20 @@ module.exports = {
       one: instance('selectMultiple', 'one', '<q1>a b</q1><g1><q2>x y z</q2>'),
       two: instance('selectMultiple', 'two', '<q1>b</q1><g1><q2>m x</q2>'),
       three: instance('selectMultiple', 'three', '<q1> b c</q1>')
+    },
+    simpleEntity: {
+      one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
+      <meta>
+        <instanceID>one</instanceID>
+        <entities:entity dataset="people">
+          <entities:id>uuid:12345678-1234-4123-8234-123456789abc</entities:id>
+          <entities:label>Alice (88)</entities:label>
+          <entities:create/>
+        </entities:entity>
+      </meta>
+      <name>Alice</name>
+      <age>88</age>
+    </data>`
     }
   }
 };
