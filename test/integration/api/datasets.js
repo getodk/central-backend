@@ -110,6 +110,7 @@ describe('datasets and entities', () => {
               .then(({ body }) => omit(['updatedAt'], body).should.be.eql({
                 name: 'goodone.csv',
                 type: 'file',
+                exists: true,
                 blobExists: false,
                 datasetExists: true
               })))
