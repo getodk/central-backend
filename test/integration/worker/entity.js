@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
 const should = require('should');
@@ -154,6 +153,43 @@ describe('worker: entity', () => {
         event = await container.Audits.getLatestByAction('submission.update').then((o) => o.get());
         should.exist(event.processed);
         event.failures.should.equal(0);
+      }));
+
+      it('should log entity error for submission that is approved twice and reprocessed', testService(async (service, container) => {
+        await service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+              .send(testData.instances.simpleEntity.one)
+              .set('Content-Type', 'application/xml')
+              .expect(200))
+            .then(() => asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+              .send({ reviewState: 'approved' })
+              .expect(200)));
+
+        await exhaust(container);
+
+        // reapprove submission - creating a new event that should not thwart worker
+        await service.login('alice', (asAlice) =>
+          asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+            .send({ reviewState: 'rejected' })
+            .expect(200));
+
+        await exhaust(container);
+
+        // reapprove submission - creating a new event that should not thwart worker
+        await service.login('alice', (asAlice) =>
+          asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+            .send({ reviewState: 'approved' })
+            .expect(200));
+
+        await exhaust(container);
+
+        // event should look like it was sucessfully processed
+        const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
+        event.details.problem.problemCode.should.equal(409.14);
       }));
 
       it('should have worker succeed even if entity creation fails because of duplicate uuid', testService(async (service, container) => {
