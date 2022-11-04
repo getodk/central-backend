@@ -37,6 +37,20 @@ Here major and breaking changes to the API are listed by version.
 **Added**:
 
 * OData Data Document requests now allow limited use of `$select`.
+* Forms can now create datasets in the project, see [ODK XFrom specification](https://getodk.github.io/xforms-spec) for the details.
+* New endpoint [GET /projects/:id/datasets](#reference/datasets/datasets/datasets) for listing datasets of a project.
+* New endpoint [GET /projects/:id/datasets/:name/download](#reference/datasets/download-dataset/download-dataset) to download dataset as csv file.
+* New endpoints for [Related datasets](#reference/forms/related-datasets/download-dataset) to see the affected datasets by a form.
+* New endpoint [PATCH .../attachments/:name](#reference/forms/draft-form/updating-a-draft-form-attachment) to link/unlink dataset to a form attachment.
+
+**Changed**:
+
+* [Extended Project](#reference/project-management/projects/listing-projects) endpoint now returns `datasets` count for the project.
+* [Extended Form](#reference/forms/forms/list-all-forms) endpoints now returns `entityRelated` flag if the form define dataset schema.
+* [DELETE .../draft/attachments/:name](#reference/forms/draft-form/clearing-a-draft-form-attachment) will unlink the dataset if there's a dataset link to the attachment in addition to the existing functionality of removing uploaded file.
+* [GET .../draft/attachments/:name](#reference/forms/individual-form/downloading-a-form-attachment) will return dataset as csv file if the attachment is linked to a dataset, otherwise content of the uploaded file.
+* [GET .../draft/attachments](#reference/forms/individual-form/updating-a-draft-form-attachment) returns two additional flags `blobExists` and `datasetExists`.
+* [OpenRosa Form Manifest](#reference/openrosa-endpoints/openrosa-form-manifest-api/openrosa-form-manifest-api) returns the list of form attachments, if the attachment is linked to dataset then value of hash is MD5 of last updated timestamp, instead of hash of dataset content and if there's no data in the dataset then MD5 of start of epoch i.e. `1970-01-01 00:00:00` is returned.
 
 ### ODK Central v1.5.3
 
@@ -1100,6 +1114,56 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 + Response 403 (application/json)
     + Attributes (Error 403)
 
+# Group Datasets
+
+_(introduced: version 2022.3)_
+
+Dataset is a collection of entities. Dataset schema is created using form XML, you can see [ODK XForm](https://getodk.github.io/xforms-spec) specification for defining dataset in form XML. 
+
+Entities are added to dataset when a submission of the form that defines the  dataset is **approved**.
+
+### Related APIs:
+
+- [Link dataset to a form attachment](/reference/project-management/project-assignments)
+- [Get related datasets of a form](#)
+
+
+## Datasets [GET /projects/{projectId}/datasets]
+
+Returns the list of datasets in a project
+
++ Parameters
+    + projectId: `16` (number, required) - The numeric ID of the Project
+
++ Response 200 (application/json)
+    This is the standard response
+
+    + Attributes (array[Dataset])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Download dataset [GET /projects/{projectId}/datasets/{name}/download]
+
+Download dataset as csv file
+
++ Parameters
+    + projectId: `16` (number, required) - The numeric ID of the Project
+    + name: `people` (string, required) - Name of the dataset
+
++ Response 200
+    + Headers
+
+            Content-Type: text/csv
+            Content-Disposition: attachment; filename={the dataset name}.csv
+
+    + Body
+
+            (binary data)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
 # Group Forms
 
 `Form`s are the heart of ODK. They are created out of XML documents in the [ODK XForms](https://getodk.github.io/xforms-spec/) specification format. The [Intro to Forms](https://docs.getodk.org/form-design-intro/) on the ODK Documentation website is a good resource if you are unsure what this means. Once created, Forms can be retrieved in a variety of ways, their state can be managed, and they can be deleted.
@@ -1564,9 +1628,12 @@ Form Attachments for each form are automatically determined when the form is fir
 
 To upload a binary to an expected file slot, `POST` the binary to its endpoint. Supply a `Content-Type` MIME-type header if you have one.
 
+If there is already a dataset linked to this attachment, it will be unlinked.
+
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
-
+    + filename: `people.csv` (string, required) - The name of tha attachment.
+    
 + Request (*/*)
     + Body
 
@@ -1580,16 +1647,18 @@ To upload a binary to an expected file slot, `POST` the binary to its endpoint. 
 
 #### Downloading a Draft Form Attachment [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}]
 
-To download a single file, use this endpoint. The appropriate `Content-Disposition` (attachment with a filename) and `Content-Type` (based on the type supplied at upload time) will be given.
+To download a single file, use this endpoint. The appropriate `Content-Disposition` (attachment with a filename or dataset name) and `Content-Type` (based on the type of supplied at upload time or `text/csv` in case of linked dataset) will be given.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + filename: `people.csv` (string, required) - The name of tha attachment.
 
 + Response 200
     + Headers
 
-            Content-Type: {the MIME type of the attachment file itself}
-            Content-Disposition: attachment; filename={the file's name}
+            
+            Content-Type: {the MIME type of the attachment file itself or text/csv for dataset}
+            Content-Disposition: attachment; filename={the file's name or [dataset name].csv}
 
     + Body
 
@@ -1600,16 +1669,40 @@ To download a single file, use this endpoint. The appropriate `Content-Dispositi
 
 #### Clearing a Draft Form Attachment [DELETE /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}]
 
-Because Form Attachments are completely determined by the XForms definition of the form itself, there is no direct way to entirely remove a Form Attachment entry from the list, only to clear its uploaded content. Thus, when you issue a `DELETE` to the attachment's endpoint, that is what happens.
+Because Form Attachments are completely determined by the XForms definition of the form itself, there is no direct way to entirely remove a Form Attachment entry from the list, only to clear its uploaded content or to unlink dataset. Thus, when you issue a `DELETE` to the attachment's endpoint, that is what happens.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + filename: `people.csv` (string, required) - The name of tha attachment.
 
 + Response 200 (application/json)
     + Attributes (Success)
 
 + Response 403 (application/json)
     + Attributes (Error 403)
+
+#### Updating a Draft Form Attachment [PATCH /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}]
+
+This endpoint can just update form attachment's link to a dataset. You can use this to link or unlink dataset to a Form Attachment. Linking of a dataset to the attachment only happens if attachment type is `file` and there is a dataset with the exact name of the attachment (excluding extension `.csv`) in the project. For example, Attachmnet name is `people.csv` and there is a dataset named `people`, pay special attention to letter case and spaces
+
+When linking dataset, if there is any existing file attached then it will be removed.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + filename: `people.csv` (string, required) - The name of tha attachment.
+
++ Request
+    + Attributes (Patch Attachment)
+    
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
++ Response 404 (application/json)
+    + Attributes (Error 404)
 
 #### Getting Draft Form Schema Fields [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/fields{?odata}]
 
@@ -1950,6 +2043,36 @@ You can fully delete a link by issuing `DELETE` to its resource. This will remov
 
 + Response 403 (application/json)
     + Attributes (Error 403)
+
+
+## Related Datasets [/v1]
+
+_(introduced: version 2022.3)_
+
+A form submission can affect one or more datasets by creating or updating entities. To know which datasets are affected by a form submission, use following endpoints.
+
+Note that it is not necessary that a form will save to all properties of a dataset, so the endpoint also returns `inForm` flag against each property and it is true only if form affects that property
+
+### For a published form [GET /v1/projects/{projectId}/forms/{xmlFormId}/dataset-diff]
+
+To know affected datasets and their properties by a published form, use this endpoint
+
++ Response 200 (application/json)
+    This is the standard response
+
+    + Attributes (array[Dataset Diff])
+
+### For a draft form [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/dataset-diff]
+
+To know affected datasets and their properties by a draft form, use this endpoint.
+
+This endpoint also returns `isNew` flag against each dataset and each of its properties. This flag is true only if the dataset/property is new and is going to be created by publishing the draft form
+
++ Response 200 (application/json)
+    This is the standard response
+
+    + Attributes (array[Draft Dataset Diff])
+    
 
 # Group Submissions
 
@@ -3004,6 +3127,7 @@ A Manifest document is available at this resource path for any form in the syste
 
 * A link to this document will not be given in the [Form Listing API](/reference/openrosa-endpoints/openrosa-form-listing-api) unless we expect the form to have media or data file attachments based on the XForms definition of the form.
 * The Manifest will only output information for files the server actually has in its possession. Any missing expected files will be omitted, as we cannot provide a `hash` or `downloadUrl` for them.
+* For attachments that are linked to a dataset, value of `hash` is bit different. It is calculated using MD5 of last updated timestamp of the dataset, instead of the content of the dataset.
 
 + Parameters
     + projectId: `7` (number, required) - The numeric ID of the Project
@@ -4008,6 +4132,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission, if any.
 + createdBy: (Actor, optional) - The full information of the Actor who created this Form.
 + excelContentType: (string, optional) - If the Form was created by uploading an Excel file, this field contains the MIME type of that file.
++ entityRelated: `false` (boolean, required) - True only if form is related to a dataset, in other words defines dataset details. (Note: this is not about form attachment(s) linked to a dataset)
 
 ## Extended Deleted Form (Extended Form)
 + deletedAt: `2018-03-21T12:45:02.312Z` (string, required) - ISO date format
@@ -4024,7 +4149,9 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Form Attachment (object)
 + name: `myfile.mp3` (string, required) - The name of the file as specified in the XForm.
 + type: (Form Attachment Type, required) - The expected type of file as specified in the XForm.
-+ exists: `true` (boolean, required) - Whether the server has the file or not.
++ exists: `true` (boolean, required) - True if attachment is linked to a dataset or the server has the file otherwise false.
++ blobExists: `true` (boolean, required) - Whether the server has the file or not.
++ datasetExists: `true` (boolean, required) - Whether attachment is linked to a dataset.
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format. The last time this file's binary content was set (POST) or cleared (DELETE).
 
 ## Form Attachment Type (enum)
@@ -4053,6 +4180,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + appUsers: `4` (number, required) - The number of App Users created within this Project.
 + forms: `7` (number, required) - The number of forms within this Project.
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission to any form in this project, if any.
++ datasets: `2` (number, required) - The number of datasets within this Project.
 
 ## Project With Forms (Project)
 + formList: (array[Extended Form], required) - The extended Forms associated with this Project that are visible to the authenticated Actor.
@@ -4124,3 +4252,30 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Success (object)
 + success: `true` (boolean, required)
 
+## Dataset (object)
++ id: `1` (number, required) - The numerical ID of the Dataset.
++ name: `poeple` (string, required) - The name of the dataset
++ createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format.
++ projectId: `1` (number, required) - The numerical ID of the project, the dataset belongs to.
++ revisionNumber: `1` (number, required) - The revision number of the dataset. It is incremented whenever dataset's properties are modified.
+
+## Patch Attachment (object)
++ dataset: `true` (boolean, required) - true for linking dataset and false for unlinking dataset.
+
+## Dataset Diff (object)
++ name: `people` (string, required) - The name of the dataset.
++ properties: (array[Property]) - All properties of the dataset.
+
+## Draft Dataset Diff (object)
++ name: `people` (string, required) - The name of the dataset.
++ isNew: `true` (boolean, required) - Whether or not this dataset is new and it will be created by publishing the draft form.
++ properties: (array[Draft Property]) - All properties of the dataset.
+
+## Property (object)
++ name: `first_name` (string, required) - The name of the property.
++ inForm: `true` (boolean, required) - Whether or not this property is affected by the form.
+
+## Draft Property (object)
++ name: `first_name` (string, required) - The name of the property.
++ inForm: `true` (boolean, required) - Whether or not this property is affected by the form.
++ isNew: `true` (boolean, required) - Whether or not this property is new and it will be created by publishing the draft form.
