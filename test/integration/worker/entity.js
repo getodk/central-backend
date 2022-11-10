@@ -331,9 +331,10 @@ describe('worker: entity', () => {
       const createEvent = await container.Audits.getLatestByAction('entity.create').then((o) => o.get());
       createEvent.actorId.should.equal(6); // Bob
       createEvent.details.submissionId.should.equal(approveEvent.details.submissionId);
-
-      const entity = await container.Entities.getByUuid(createEvent.details.entityUuid).then((o) => o.get());
-      entity.label.should.equal('Alice (88)');
+      // should contain information about entity
+      createEvent.details.entity.label.should.equal('Alice (88)');
+      createEvent.details.entity.dataset.should.equal('people');
+      createEvent.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
     }));
 
     it.skip('should log entity error in audit log', testService(async (service, container) => {
