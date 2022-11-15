@@ -4,11 +4,14 @@ const testData = require('../../data/xml');
 const config = require('config');
 const { Form } = require('../../../lib/model/frames');
 const { getOrNotFound } = require('../../../lib/util/promise');
-const { omit } = require('ramda');
-// eslint-disable-next-line import/no-dynamic-require
-const { createEntityFromSubmission } = require(appRoot + '/lib/worker/entity');
+const { omit, identity } = require('ramda');
 const should = require('should');
+const { sql } = require('slonik');
 
+/* eslint-disable import/no-dynamic-require */
+const { createEntityFromSubmission } = require(appRoot + '/lib/worker/entity');
+const { exhaust } = require(appRoot + '/lib/worker/worker');
+/* eslint-enable import/no-dynamic-require */
 
 describe('datasets and entities', () => {
   describe('listing and downloading datasets', () => {
@@ -548,6 +551,36 @@ describe('datasets and entities', () => {
                         { name: 'first_name', isNew: true, inForm: true }
                       ]
                     }])))))));
+
+      it('should return inForm false for removed property', testService(async (service) => {
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        // Let's create a draft without age property in dataset
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simpleEntity
+            .replace('entities:saveto="age"', ''))
+          .expect(200);
+
+        // Verify age.inForm should be false
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/draft/dataset-diff')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.eql([{
+              name: 'people',
+              isNew: false,
+              properties: [
+                { name: 'age', isNew: false, inForm: false },
+                { name: 'first_name', isNew: false, inForm: true }
+              ]
+            }]);
+          });
+      }));
     });
 
     describe('/projects/:id/forms/:formId/dataset-diff GET', () => {
@@ -796,5 +829,114 @@ describe('datasets and entities', () => {
         audit.acteeId.should.equal(audit2.acteeId);
       }));
     });
+  });
+
+  describe('dataset and entities should have isolated lifecycle', () => {
+    it('should allow a form that has created an entity to be purged', testService(async (service, container) => {
+      const asAlice = await service.login('alice', identity);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity.replace('simpleEntity', 'simpleEntityDup'))
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntityDup/submissions')
+        .send(testData.instances.simpleEntity.one
+          .replace('simpleEntity', 'simpleEntityDup')
+          .replace(/Alice/g, 'Jane')
+          .replace('12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789def'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/forms/simpleEntityDup/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      await container.Forms.purge(true);
+
+      await container.all(sql`select * from entity_defs`)
+        .then(eDefs => {
+          // Ensures that we are only clearing submissionDefId of entities whose submission/form is purged
+          should(eDefs.find(d => d.data.first_name === 'Alice').submissionDefId).be.null();
+          should(eDefs.find(d => d.data.first_name === 'Jane').submissionDefId).not.be.null();
+        });
+    }));
+
+    it('should return published dataset even if corresponding form is deleted', testService(async (service, container) => {
+      const asAlice = await service.login('alice', identity);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      await container.Forms.purge(true);
+
+      await asAlice.get('/v1/projects/1/datasets')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+        });
+    }));
+
+    it('should keep dataset and its property status intact even if corresponding form is deleted', testService(async (service, container) => {
+      const asAlice = await service.login('alice', identity);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      await container.Forms.purge(true);
+
+      // let's create another form that defines same dataset with a different property
+      await asAlice.post('/v1/projects/1/forms')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity
+          .replace(/first_name/g, 'last_name')
+          .replace(/simpleEntity/g, 'simpleEntityDup'))
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/simpleEntityDup/draft/dataset-diff')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.eql([{
+            name: 'people',
+            isNew: false,
+            properties: [
+              { name: 'age', isNew: false, inForm: true },
+              { name: 'first_name', isNew: false, inForm: false },
+              { name: 'last_name', isNew: true, inForm: true }
+            ]
+          }]);
+        });
+
+    }));
+
   });
 });
