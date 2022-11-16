@@ -828,6 +828,36 @@ describe('datasets and entities', () => {
 
         audit.acteeId.should.equal(audit2.acteeId);
       }));
+
+      it('should log dataset publishing in audit log', testService(async (service, { Audits }) => {
+
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        await Audits.getLatestByAction('dataset.update.publish')
+          .then(o => o.get())
+          .then(audit => audit.details.should.eql({ properties: ['age', 'first_name'] }));
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity
+            .replace('simpleEntity', 'simpleEntity2')
+            .replace('first_name', 'color_name'))
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity2/draft/publish')
+          .expect(200);
+
+        await Audits.getLatestByAction('dataset.update.publish')
+          .then(o => o.get())
+          .then(audit => audit.details.should.eql({ properties: ['age', 'color_name', 'first_name'] }));
+
+      }));
+
     });
   });
 
