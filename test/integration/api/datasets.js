@@ -99,6 +99,22 @@ describe('datasets and entities', () => {
 
   describe('linking form attachments to datasets', () => {
     describe('projects/:id/forms/:formId/draft/attachment/:name PATCH', () => {
+      it('should reject if user cannot form.update', testService((service) =>
+        service.login(['alice', 'chelsea'], (asAlice, asChelsea) =>
+          Promise.all([
+            asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.withAttachments)
+              .set('Content-Type', 'application/xml')
+              .expect(200),
+            asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity.replace('people', 'goodone'))
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+          ])
+            .then(() => asChelsea.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+              .send({ dataset: true })
+              .expect(403)))));
+
       it('should link dataset to form and returns in manifest', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
