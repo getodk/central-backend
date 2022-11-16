@@ -122,14 +122,17 @@ const authProxy = (token) => ({
 });
 // eslint-disable-next-line no-shadow
 const augment = (service) => {
-  // eslint-disable-next-line space-before-function-paren, func-names, no-param-reassign
-  service.login = function(user, test) {
-    const credentials = (typeof user === 'string')
-      ? { email: `${user}@getodk.org`, password: user }
-      : user;
-
-    return service.post('/v1/sessions').send(credentials)
-      .then(({ body }) => test(new Proxy(service, authProxy(body.token))));
+  // eslint-disable-next-line no-param-reassign
+  service.login = async (userOrUsers, test) => {
+    const users = Array.isArray(userOrUsers) ? userOrUsers : [userOrUsers];
+    const tokens = await Promise.all(users.map(async (user) => {
+      const credentials = (typeof user === 'string')
+        ? { email: `${user}@getodk.org`, password: user }
+        : user;
+      const { body } = await service.post('/v1/sessions').send(credentials);
+      return body.token;
+    }));
+    return test(...tokens.map((token) => new Proxy(service, authProxy(token))));
   };
   return service;
 };
