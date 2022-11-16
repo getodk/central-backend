@@ -190,6 +190,23 @@ describe('datasets and entities', () => {
   </manifest>`);
                 }))))));
 
+      it('should allow attachment to have .CSV extension', () => testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments.replace('goodone.csv', 'goodone.CSV'))
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity.replace('people', 'goodone'))
+              .expect(200))
+            .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.CSV')
+              .send({ dataset: true })
+              .expect(200)
+              .then(({ body }) => {
+                body.should.be.a.FormAttachment();
+                body.datasetExists.should.be.true();
+              })))));
+
       it('should unlink dataset from the form', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
