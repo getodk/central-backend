@@ -228,6 +228,25 @@ describe('datasets and entities', () => {
             .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
               .send({ dataset: true })
               .expect(404)))));
+
+      // Here withAttachment form has an audio file without extension
+      // hence dataset name is matching but because file type is audio
+      // it should return problem
+      it('should throw problem if datasetId is being set for non-data type', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments.replace('goodtwo.mp3', 'goodtwo'))
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity.replace(/people/g, 'goodtwo'))
+              .expect(200))
+            .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodtwo')
+              .send({ dataset: true })
+              .expect(400)
+              .then(({ body }) => {
+                body.message.should.be.equal('Dataset can only be linked to attachments with "Data File" type.');
+              })))));
     });
 
     describe('projects/:id/forms/:formId/draft/attachment/:name DELETE', () => {
@@ -324,6 +343,24 @@ describe('datasets and entities', () => {
                     should(attachment.value.datasetId).not.be.null();
                     should(attachment.value.blobId).be.null();
                   }))))));
+
+      // Verifying autolinking happens only for attachment with "file" type
+      it('should not set datasetId of non-file type attachment', testService((service, { Forms, FormAttachments }) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.withAttachments.replace(/goodtwo.mp3/g, 'people'))
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+              .then(() =>
+                Forms.getByProjectAndXmlFormId(1, 'withAttachments')
+                  .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people')
+                    .then(attachment => {
+                      should(attachment.value.datasetId).be.null();
+                    })))))));
     });
 
     // these scenario will never happen by just using APIs, adding following tests for safety
