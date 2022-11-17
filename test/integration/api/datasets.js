@@ -231,6 +231,25 @@ describe('datasets and entities', () => {
             .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
               .send({ dataset: true })
               .expect(404)))));
+
+      // Here withAttachment form has an audio file without extension
+      // hence dataset name is matching but because file type is audio
+      // it should return problem
+      it('should throw problem if datasetId is being set for non-data type', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments.replace('goodtwo.mp3', 'goodtwo'))
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity.replace(/people/g, 'goodtwo'))
+              .expect(200))
+            .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodtwo')
+              .send({ dataset: true })
+              .expect(400)
+              .then(({ body }) => {
+                body.message.should.be.equal('Dataset can only be linked to attachments with "Data File" type.');
+              })))));
     });
 
     describe('projects/:id/forms/:formId/draft/attachment/:name DELETE', () => {
@@ -327,11 +346,29 @@ describe('datasets and entities', () => {
                     should(attachment.value.datasetId).not.be.null();
                     should(attachment.value.blobId).be.null();
                   }))))));
+
+      // Verifying autolinking happens only for attachment with "file" type
+      it('should not set datasetId of non-file type attachment', testService((service, { Forms, FormAttachments }) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.withAttachments.replace(/goodtwo.mp3/g, 'people'))
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+              .then(() =>
+                Forms.getByProjectAndXmlFormId(1, 'withAttachments')
+                  .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people')
+                    .then(attachment => {
+                      should(attachment.value.datasetId).be.null();
+                    })))))));
     });
 
-    describe('check only blobId or datasetId is set', () => {
-      // this scenario will never happen by just using APIs, adding this test for safety
-      it('should throw problem 501.11 if both are being set', testService((service, { Forms, FormAttachments, Datasets }) =>
+    // these scenario will never happen by just using APIs, adding following tests for safety
+    describe('check datasetId constraints', () => {
+      it('should throw problem if blobId and datasetId are being set', testService((service, { Forms, FormAttachments, Datasets }) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
@@ -351,6 +388,24 @@ describe('datasets and entities', () => {
               .then((attachment) => FormAttachments.update(form, attachment, 1, dataset.id)
                 .catch(error => {
                   error.constraint.should.be.equal('check_blobId_or_datasetId_is_null');
+                }))))));
+
+      it('should throw problem if datasetId is being set for non-data type', testService((service, { Forms, FormAttachments, Datasets }) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity))
+            .then(() => Promise.all([
+              Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then(getOrNotFound),
+              Datasets.getByProjectAndName(1, 'people').then(getOrNotFound)
+            ]))
+            .then(([form, dataset]) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodtwo.mp3').then(getOrNotFound)
+              .then((attachment) => FormAttachments.update(form, attachment, null, dataset.id)
+                .catch(error => {
+                  error.constraint.should.be.equal('check_datasetId_is_null_for_non_file');
                 }))))));
     });
 
