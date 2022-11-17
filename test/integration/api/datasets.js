@@ -326,9 +326,9 @@ describe('datasets and entities', () => {
                   }))))));
     });
 
-    describe('check only blobId or datasetId is set', () => {
-      // this scenario will never happen by just using APIs, adding this test for safety
-      it('should throw problem 501.11 if both are being set', testService((service, { Forms, FormAttachments, Datasets }) =>
+    // these scenario will never happen by just using APIs, adding following tests for safety
+    describe('check datasetId constraints', () => {
+      it('should throw problem if blobId and datasetId are being set', testService((service, { Forms, FormAttachments, Datasets }) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
@@ -348,6 +348,24 @@ describe('datasets and entities', () => {
               .then((attachment) => FormAttachments.update(form, attachment, 1, dataset.id)
                 .catch(error => {
                   error.constraint.should.be.equal('check_blobId_or_datasetId_is_null');
+                }))))));
+
+      it('should throw problem if datasetId is being set for non-data type', testService((service, { Forms, FormAttachments, Datasets }) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity))
+            .then(() => Promise.all([
+              Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then(getOrNotFound),
+              Datasets.getByProjectAndName(1, 'people').then(getOrNotFound)
+            ]))
+            .then(([form, dataset]) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodtwo.mp3').then(getOrNotFound)
+              .then((attachment) => FormAttachments.update(form, attachment, null, dataset.id)
+                .catch(error => {
+                  error.constraint.should.be.equal('check_datasetId_is_null_for_non_file');
                 }))))));
     });
 
