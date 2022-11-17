@@ -189,8 +189,8 @@ describe('worker: entity', () => {
         const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(updateEvent.details.submissionId);
+        event.details.errorMessage.should.equal('There was a problem with entity processing: ID [bad_uuid] is not a valid UUID.');
         event.details.problem.problemCode.should.equal(409.14);
-        event.details.problem.problemDetails.reason.should.equal('ID [bad_uuid] is not a valid UUID.');
       }));
     });
 
@@ -238,7 +238,8 @@ describe('worker: entity', () => {
         const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(updateEvent.details.submissionId);
-        event.details.problem.problemCode.should.equal(409.14);
+        event.details.errorMessage.should.equal('A resource already exists with uuid value(s) of 12345678-1234-4123-8234-123456789abc.');
+        event.details.problem.problemCode.should.equal(409.3);
       }));
 
       it('should fail for other constraint errors like dataset name does not exist', testService(async (service, container) => {
@@ -266,7 +267,29 @@ describe('worker: entity', () => {
         const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(updateEvent.details.submissionId);
-        event.details.problem.problemCode.should.equal(409.14);
+        event.details.problem.problemCode.should.equal(400.14);
+        // this is going to have an errorMessage of something cryptic database complaint
+        // like "The given entityId 5 for entities does not exist."
+      }));
+
+      it('should fail and log other system errors', testService(async (service, container) => {
+        // log a submission update event that is partly broken
+        await container.Audits.log(null, 'submission.update', null, { reviewState: 'approved', submissionDefMissing: true });
+        await exhaust(container);
+
+        // most recent submission update event should look like it was sucessfully processed
+        const updateEvent2 = await container.Audits.getLatestByAction('submission.update').then((o) => o.get());
+        should.exist(updateEvent2.processed);
+        updateEvent2.failures.should.equal(0);
+
+        // the entity creation error should be logged
+        const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
+        should.exist(event);
+        // The error in this case is not one of our Problems but an error thrown by slonik
+        // from passing in some broken (undefined/missing) value for submissionDefId.
+        should.exist(event.details.errorMessage);
+        should.not.exist(event.details.problem);
+        event.details.errorMessage.should.equal('SQL tag cannot be bound an undefined value.');
       }));
     });
   });
