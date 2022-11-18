@@ -16,15 +16,27 @@ describe('parsing dataset from entity block', () => {
     getDataset(testData.forms.simple).then((res) =>
       res.should.equal(Option.none())));
 
-  it('should complain if version is wrong', () =>
-    getDataset(testData.forms.simpleEntity
-      .replace('entities-version="2022.1.0"', 'entities-version="bad-version"'))
-      .should.be.rejectedWith(Problem, { problemCode: 400.25 }));
+  describe('versioning', () => {
+    it('should check for any version that starts with 2022.1.', () =>
+      getDataset(testData.forms.simpleEntity
+        .replace('2022.1.0', '2022.1.123')).then((res) =>
+        res.get().should.eql('people')));
 
-  it('should complain if version is missing', () =>
-    getDataset(testData.forms.simpleEntity
-      .replace('entities-version="2022.1.0"', ''))
-      .should.be.rejectedWith(Problem, { problemCode: 400.25 }));
+    it('should reject probable future version', () =>
+      getDataset(testData.forms.simpleEntity
+        .replace('2022.1.0', '2023.1.0'))
+        .should.be.rejectedWith(Problem, { problemCode: 400.25 }));
+
+    it('should complain if version is wrong', () =>
+      getDataset(testData.forms.simpleEntity
+        .replace('entities-version="2022.1.0"', 'entities-version="bad-version"'))
+        .should.be.rejectedWith(Problem, { problemCode: 400.25 }));
+
+    it('should complain if version is missing', () =>
+      getDataset(testData.forms.simpleEntity
+        .replace('entities-version="2022.1.0"', ''))
+        .should.be.rejectedWith(Problem, { problemCode: 400.25 }));
+  });
 
   describe('extracting dataset name', () => {
     it('should retrieve the name of a dataset defined in entity block', () => {
