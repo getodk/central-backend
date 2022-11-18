@@ -281,6 +281,26 @@ describe('datasets and entities', () => {
               .then(({ body }) => {
                 body.message.should.be.equal('Dataset can only be linked to attachments with "Data File" type.');
               })))));
+
+      it('should return error if dataset is not published', testService(async (service) => {
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity.replace(/people/g, 'goodone'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+          .send({ dataset: true })
+          .expect(404);
+
+      }));
+
     });
 
     describe('projects/:id/forms/:formId/draft/attachment/:name DELETE', () => {
