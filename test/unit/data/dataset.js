@@ -25,17 +25,20 @@ describe('parsing dataset from entity block', () => {
     it('should reject probable future version', () =>
       getDataset(testData.forms.simpleEntity
         .replace('2022.1.0', '2023.1.0'))
-        .should.be.rejectedWith(Problem, { problemCode: 400.25 }));
+        .should.be.rejectedWith(Problem, { problemCode: 400.25,
+          message: 'The entity definition within the form is invalid. Entities specification version [2023.1.0] is not supported.' }));
 
     it('should complain if version is wrong', () =>
       getDataset(testData.forms.simpleEntity
         .replace('entities-version="2022.1.0"', 'entities-version="bad-version"'))
-        .should.be.rejectedWith(Problem, { problemCode: 400.25 }));
+        .should.be.rejectedWith(Problem, { problemCode: 400.25,
+          message: 'The entity definition within the form is invalid. Entities specification version [bad-version] is not supported.' }));
 
     it('should complain if version is missing', () =>
       getDataset(testData.forms.simpleEntity
         .replace('entities-version="2022.1.0"', ''))
-        .should.be.rejectedWith(Problem, { problemCode: 400.25 }));
+        .should.be.rejectedWith(Problem, { problemCode: 400.25,
+          message: 'The entity definition within the form is invalid. Entities specification version is missing.' }));
   });
 
   describe('extracting dataset name', () => {

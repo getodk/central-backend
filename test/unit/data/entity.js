@@ -58,7 +58,7 @@ describe('extracting entities from submissions', () => {
             should.exist(result);
           }));
 
-      it('should return null if entity if create is false', () =>
+      it('should return null if create is false', () =>
         fieldsFor(testData.forms.simpleEntity)
           .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
           .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('create="1"', 'create="false"')))
@@ -66,7 +66,7 @@ describe('extracting entities from submissions', () => {
             should.not.exist(result);
           }));
 
-      it('should return null if entity if create is "0"', () =>
+      it('should return null if create is "0"', () =>
         fieldsFor(testData.forms.simpleEntity)
           .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
           .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('create="1"', 'create="0"')))
@@ -74,7 +74,7 @@ describe('extracting entities from submissions', () => {
             should.not.exist(result);
           }));
 
-      it('should return null if entity if create is something else weird', () =>
+      it('should return null if create is something else weird', () =>
         fieldsFor(testData.forms.simpleEntity)
           .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
           .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('create="1"', 'create="bad-create"')))
