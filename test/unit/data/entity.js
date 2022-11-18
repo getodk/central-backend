@@ -41,6 +41,20 @@ describe('extracting entities from submissions', () => {
           result.system.uuid.should.be.a.uuid();
         }));
 
+    it('should lowercase UUIDs for better comparison', () =>
+      fieldsFor(testData.forms.simpleEntity)
+        .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
+        .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-ABCD56789abc')))
+        .then((result) => {
+          result.data.should.eql({ first_name: 'Alice', age: '88' });
+          result.system.should.eql({
+            uuid: '12345678-1234-4123-8234-abcd56789abc',
+            label: 'Alice (88)',
+            dataset: 'people'
+          });
+          result.system.uuid.should.be.a.uuid();
+        }));
+
     describe('create', () => {
       it('should create entity if create is "1"', () =>
         fieldsFor(testData.forms.simpleEntity)
