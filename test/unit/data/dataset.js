@@ -16,10 +16,15 @@ describe('parsing dataset from entity block', () => {
     getDataset(testData.forms.simple).then((res) =>
       res.should.equal(Option.none())));
 
-  it('should extract entity properties from form field bindings', () =>
+  it('should complain if version is wrong', () =>
     getDataset(testData.forms.simpleEntity
       .replace('entities-version="2022.1.0"', 'entities-version="bad-version"'))
-      .then((res) => res.should.equal(Option.none())));
+      .should.be.rejectedWith(Problem, { problemCode: 400.25 }));
+
+  it('should complain if version is missing', () =>
+    getDataset(testData.forms.simpleEntity
+      .replace('entities-version="2022.1.0"', ''))
+      .should.be.rejectedWith(Problem, { problemCode: 400.25 }));
 
   describe('extracting dataset name', () => {
     it('should retrieve the name of a dataset defined in entity block', () => {

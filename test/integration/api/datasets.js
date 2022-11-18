@@ -713,32 +713,27 @@ describe('datasets and entities', () => {
 
   describe('parsing datasets on form upload', () => {
     describe('parsing datasets at /projects/:id/forms POST', () => {
-      it('should return a Problem if the entity xml is invalid (e.g. missing dataset name)', testService((service) => {
-        const xml = `
-        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
-          <h:head>
-            <model>
-              <instance>
-                <data id="noDatasetName">
-                  <meta>
-                  <entity>
-                  </entity>
-                  </meta>
-                </data>
-              </instance>
-            </model>
-          </h:head>
-        </h:html>`;
-        return service.login('alice', (asAlice) =>
+      it('should return a Problem if the entity xml has the wrong version', testService((service) =>
+        service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
-            .send(xml)
+            .send(testData.forms.simpleEntity.replace('2022.1.0', 'bad-version'))
+            .set('Content-Type', 'text/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.equal(400.25);
+              body.details.reason.should.equal('Version is not supported.');
+            }))));
+
+      it('should return a Problem if the entity xml is invalid (e.g. missing dataset name)', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity.replace('dataset="people"', ''))
             .set('Content-Type', 'text/xml')
             .expect(400)
             .then(({ body }) => {
               body.code.should.equal(400.25);
               body.details.reason.should.equal('Dataset name is empty.');
-            }));
-      }));
+            }))));
 
       it('should return a Problem if the savetos reference invalid properties', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -774,7 +769,7 @@ describe('datasets and entities', () => {
         const xml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
           <h:title>nobinds</h:title>
-          <model>
+          <model entities:entities-version='2022.1.0'>
             <instance>
               <data id="nobinds">
                 <name/>
