@@ -16,13 +16,18 @@ describe('parsing dataset from entity block', () => {
     getDataset(testData.forms.simple).then((res) =>
       res.should.equal(Option.none())));
 
+  it('should extract entity properties from form field bindings', () =>
+    getDataset(testData.forms.simpleEntity
+      .replace('entities-version="2022.1.0"', 'entities-version="bad-version"'))
+      .then((res) => res.should.equal(Option.none())));
+
   describe('extracting dataset name', () => {
     it('should retrieve the name of a dataset defined in entity block', () => {
       const xml = `
       <?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model>
+          <model entities:entities-version="2022.1.0">
             <instance>
               <data id="FooForm">
                 <name/>
@@ -46,7 +51,7 @@ describe('parsing dataset from entity block', () => {
       <?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model>
+          <model entities:entities-version="2022.1.0">
             <instance>
               <data id="FooForm">
                 <name/>
@@ -71,7 +76,7 @@ describe('parsing dataset from entity block', () => {
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
           <h:head>
               <h:title>Foo Registration 2</h:title>
-              <model odk:xforms-version="1.0.0">
+              <model entities:entities-version="2022.1.0">
                   <instance>
                       <data id="bar_registration" version="1234">
                           <bbb/>
@@ -79,9 +84,9 @@ describe('parsing dataset from entity block', () => {
                           <meta>
                               <instanceID/>
                               <instanceName/>
-                              <entities:entity dataset="bar">
-                                <entities:label/>
-                              </entities:entity>
+                              <entity dataset="bar">
+                                <label/>
+                              </entity>
                           </meta>
                       </data>
                   </instance>
@@ -98,15 +103,15 @@ describe('parsing dataset from entity block', () => {
       <?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model>
+          <model entities:entities-version="2022.1.0">
             <instance>
               <data id="NoName">
                 <name/>
                 <age/>
                 <meta>
-                  <entities:entity>
-                    <entities:label/>
-                  </entities:entity>
+                  <entity>
+                    <label/>
+                  <entity>
                 </meta>
               </data>
             </instance>
@@ -122,15 +127,15 @@ describe('parsing dataset from entity block', () => {
       <?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model>
+          <model entities:entities-version="2022.1.0">
             <instance>
               <data id="badName">
                 <name/>
                 <age/>
                 <meta>
-                  <entities:entity dataset="bad.name">
-                    <entities:label/>
-                  </entities:entity>
+                  <entity dataset="bad.name">
+                    <label/>
+                  </entity>
                 </meta>
               </data>
             </instance>
