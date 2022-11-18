@@ -70,7 +70,7 @@ describe('datasets and entities', () => {
             .set('Content-Type', 'application/xml')
             .expect(200)
             .then(() => service.login('chelsea', (asChelsea) =>
-              asChelsea.get('/v1/projects/1/datasets/people.csv')
+              asChelsea.get('/v1/projects/1/datasets/people/entities.csv')
                 .expect(403))))));
 
       it('should let the user download the dataset (even if 0 entity rows)', testService((service) =>
@@ -79,7 +79,7 @@ describe('datasets and entities', () => {
             .send(testData.forms.simpleEntity)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.get('/v1/projects/1/datasets/people.csv')
+            .then(() => asAlice.get('/v1/projects/1/datasets/people/entities.csv')
               .expect(200)
               .then(({ text }) => {
                 text.should.equal('name,label,first_name,age\n');
@@ -100,7 +100,7 @@ describe('datasets and entities', () => {
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        await asAlice.get('/v1/projects/1/datasets/people.csv')
+        await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
           .expect(200)
           .then(({ text }) => {
             text.should.equal('name,label,first_name,age\n');
@@ -114,7 +114,7 @@ describe('datasets and entities', () => {
             .send(testData.forms.simpleEntity)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.get('/v1/projects/1/datasets/nonexistent.csv')
+            .then(() => asAlice.get('/v1/projects/1/datasets/nonexistent/entities.csv')
               .expect(404)))));
 
       it('should reject if dataset is not published', testService((service) =>
@@ -123,7 +123,7 @@ describe('datasets and entities', () => {
             .send(testData.forms.simpleEntity)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.get('/v1/projects/1/datasets/people.csv')
+            .then(() => asAlice.get('/v1/projects/1/datasets/people/entities.csv')
               .expect(404)))));
     });
   });
