@@ -1,4 +1,4 @@
-require('should');
+const should = require('should');
 const appRoot = require('app-root-path');
 const assert = require('assert');
 // eslint-disable-next-line import/no-dynamic-require
@@ -39,6 +39,14 @@ describe('extracting entities from submissions', () => {
             dataset: 'people'
           });
           result.system.uuid.should.be.a.uuid();
+        }));
+
+    it('should return null if entity create is not true', () =>
+      fieldsFor(testData.forms.simpleEntity)
+        .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
+        .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('create="1"', 'create="false"')))
+        .then((result) => {
+          should.not.exist(result);
         }));
 
     describe('entity validation errors', () => {

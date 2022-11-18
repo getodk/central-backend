@@ -71,6 +71,37 @@ describe('worker: entity', () => {
       errorEvent.isEmpty().should.equal(true);
     }));
 
+    it('should not make entity for create=false submission', testService(async (service, container) => {
+      await service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+            .send(testData.instances.simpleEntity.one.replace('create="1"', 'create="false"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200))
+          .then(() => asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+            .send({ reviewState: 'approved' })
+            .expect(200)));
+
+      await exhaust(container);
+
+      const { count } = await container.one(sql`select count(*) from entities`);
+      count.should.equal(0);
+
+      // Original submission update event should look like it was successfully processed with no failures.
+      const updateEvent = await container.Audits.getLatestByAction('submission.update').then((o) => o.get());
+      should.exist(updateEvent.processed);
+      updateEvent.failures.should.equal(0);
+
+      // There should be no entity events logged.
+      const createEvent = await container.Audits.getLatestByAction('entity.create');
+      const errorEvent = await container.Audits.getLatestByAction('entity.create.error');
+      createEvent.isEmpty().should.equal(true);
+      errorEvent.isEmpty().should.equal(true);
+    }));
+
     it('should not make an entity when reprocessing a submission', testService(async (service, container) => {
       await service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')

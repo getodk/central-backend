@@ -721,8 +721,8 @@ describe('datasets and entities', () => {
               <instance>
                 <data id="noDatasetName">
                   <meta>
-                  <entities:entity>
-                  </entities:entity>
+                  <entity>
+                  </entity>
                   </meta>
                 </data>
               </instance>
@@ -780,10 +780,9 @@ describe('datasets and entities', () => {
                 <name/>
                 <age/>
                 <meta>
-                  <entities:entity entities:dataset="something">
-                    <entities:create/>
-                    <entities:label/>
-                  </entities:entity>
+                  <entity dataset="something" id="" create="1">
+                    <label/>
+                  </entity>
                 </meta>
               </data>
             </instance>
