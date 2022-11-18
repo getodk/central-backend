@@ -66,7 +66,7 @@ describe('parsing dataset from entity block', () => {
         res.get().should.eql('foo'));
     });
 
-    it('should retrieve the name of a dataset with superfluous prefix on dataset attribute ', () => {
+    it('should retrieve the name of a dataset with namespace prefix on dataset attribute ', () => {
       const xml = `
       <?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
@@ -77,9 +77,9 @@ describe('parsing dataset from entity block', () => {
                 <name/>
                 <age/>
                 <meta>
-                  <entities:entity entities:dataset="foo">
-                    <entities:label/>
-                  </entities:entity>
+                  <entity entities:dataset="foo">
+                    <label/>
+                  </entity>
                 </meta>
               </data>
             </instance>
@@ -213,6 +213,16 @@ describe('parsing dataset from entity block', () => {
 });
 
 describe('dataset name validation', () => {
+  it('should have name be case sensitive', () =>
+    getDataset(testData.forms.simpleEntity
+      .replace('people', 'PeopleWithACapitalP')).then((res) =>
+      res.get().should.eql('PeopleWithACapitalP')));
+
+  it('should strip whitespace from name', () =>
+    getDataset(testData.forms.simpleEntity
+      .replace('people', '   people ')).then((res) =>
+      res.get().should.eql('people')));
+
   it('should reject names with .', () => {
     validateDatasetName('this.that').should.equal(false);
   });
