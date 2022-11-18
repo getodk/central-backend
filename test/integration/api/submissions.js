@@ -542,7 +542,8 @@ describe('api: /submission', () => {
                 body.value[0].name.should.equal('Alyssa');
               })))));
 
-      it('should accept submission update for a closing form', testService((service) =>
+      // TODO should be re-instated as part of https://github.com/getodk/central-backend/issues/469
+      it.skip('should accept submission update for a closing form', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/submission')
             .set('X-OpenRosa-Version', '1.0')
@@ -560,7 +561,8 @@ describe('api: /submission', () => {
                 body.value[0].name.should.equal('Alyssa');
               })))));
 
-      it('should accept submission update for a closed form', testService((service) =>
+      // TODO should be re-instated as part of https://github.com/getodk/central-backend/issues/469
+      it.skip('should accept submission update for a closed form', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/submission')
             .set('X-OpenRosa-Version', '1.0')
@@ -709,7 +711,8 @@ describe('api: /submission', () => {
                 .expect(404)
             ]))))));
 
-    it('should save a submission for the draft of a closing form', testService((service) =>
+    // TODO should be re-instated as part of https://github.com/getodk/central-backend/issues/469
+    it.skip('should save a submission for the draft of a closing form', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple')
           .send({ state: 'closing' })
@@ -737,7 +740,8 @@ describe('api: /submission', () => {
                 .expect(404)
             ]))))));
 
-    it('should save a submission for the draft of a closed form', testService((service) =>
+    // TODO should be re-instated as part of https://github.com/getodk/central-backend/issues/469
+    it.skip('should save a submission for the draft of a closed form', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple')
           .send({ state: 'closed' })
