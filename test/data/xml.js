@@ -336,17 +336,16 @@ module.exports = {
     simpleEntity: `<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
   <h:head>
-    <model>
+    <model entities:entities-version="2022.1.0">
       <instance>
         <data id="simpleEntity" orx:version="1.0">
           <name/>
           <age/>
           <hometown/>
           <meta>
-            <entities:entity dataset="people" create="">
-              <entities:id/>
-              <entities:label/>
-            </entities:entity>
+            <entity dataset="people" id="" create="">
+              <label/>
+            </entity>
           </meta>
         </data>
       </instance>
@@ -438,10 +437,8 @@ module.exports = {
       one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
       <meta>
         <instanceID>one</instanceID>
-        <entities:entity dataset="people">
-          <entities:id>uuid:12345678-1234-4123-8234-123456789abc</entities:id>
+        <entities:entity dataset="people" id="uuid:12345678-1234-4123-8234-123456789abc" create="1">
           <entities:label>Alice (88)</entities:label>
-          <entities:create/>
         </entities:entity>
       </meta>
       <name>Alice</name>

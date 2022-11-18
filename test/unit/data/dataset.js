@@ -16,13 +16,38 @@ describe('parsing dataset from entity block', () => {
     getDataset(testData.forms.simple).then((res) =>
       res.should.equal(Option.none())));
 
+  describe('versioning', () => {
+    it('should check for any version that starts with 2022.1.', () =>
+      getDataset(testData.forms.simpleEntity
+        .replace('2022.1.0', '2022.1.123')).then((res) =>
+        res.get().should.eql('people')));
+
+    it('should reject probable future version', () =>
+      getDataset(testData.forms.simpleEntity
+        .replace('2022.1.0', '2023.1.0'))
+        .should.be.rejectedWith(Problem, { problemCode: 400.25,
+          message: 'The entity definition within the form is invalid. Entities specification version [2023.1.0] is not supported.' }));
+
+    it('should complain if version is wrong', () =>
+      getDataset(testData.forms.simpleEntity
+        .replace('entities-version="2022.1.0"', 'entities-version="bad-version"'))
+        .should.be.rejectedWith(Problem, { problemCode: 400.25,
+          message: 'The entity definition within the form is invalid. Entities specification version [bad-version] is not supported.' }));
+
+    it('should complain if version is missing', () =>
+      getDataset(testData.forms.simpleEntity
+        .replace('entities-version="2022.1.0"', ''))
+        .should.be.rejectedWith(Problem, { problemCode: 400.25,
+          message: 'The entity definition within the form is invalid. Entities specification version is missing.' }));
+  });
+
   describe('extracting dataset name', () => {
     it('should retrieve the name of a dataset defined in entity block', () => {
       const xml = `
       <?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model>
+          <model entities:entities-version="2022.1.0">
             <instance>
               <data id="FooForm">
                 <name/>
@@ -41,20 +66,20 @@ describe('parsing dataset from entity block', () => {
         res.get().should.eql('foo'));
     });
 
-    it('should retrieve the name of a dataset with superfluous prefix on dataset attribute ', () => {
+    it('should retrieve the name of a dataset with namespace prefix on dataset attribute ', () => {
       const xml = `
       <?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model>
+          <model entities:entities-version="2022.1.0">
             <instance>
               <data id="FooForm">
                 <name/>
                 <age/>
                 <meta>
-                  <entities:entity entities:dataset="foo">
-                    <entities:label/>
-                  </entities:entity>
+                  <entity entities:dataset="foo">
+                    <label/>
+                  </entity>
                 </meta>
               </data>
             </instance>
@@ -71,7 +96,7 @@ describe('parsing dataset from entity block', () => {
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
           <h:head>
               <h:title>Foo Registration 2</h:title>
-              <model odk:xforms-version="1.0.0">
+              <model entities:entities-version="2022.1.0">
                   <instance>
                       <data id="bar_registration" version="1234">
                           <bbb/>
@@ -79,9 +104,9 @@ describe('parsing dataset from entity block', () => {
                           <meta>
                               <instanceID/>
                               <instanceName/>
-                              <entities:entity dataset="bar">
-                                <entities:label/>
-                              </entities:entity>
+                              <entity dataset="bar">
+                                <label/>
+                              </entity>
                           </meta>
                       </data>
                   </instance>
@@ -98,15 +123,15 @@ describe('parsing dataset from entity block', () => {
       <?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model>
+          <model entities:entities-version="2022.1.0">
             <instance>
               <data id="NoName">
                 <name/>
                 <age/>
                 <meta>
-                  <entities:entity>
-                    <entities:label/>
-                  </entities:entity>
+                  <entity>
+                    <label/>
+                  <entity>
                 </meta>
               </data>
             </instance>
@@ -122,15 +147,15 @@ describe('parsing dataset from entity block', () => {
       <?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model>
+          <model entities:entities-version="2022.1.0">
             <instance>
               <data id="badName">
                 <name/>
                 <age/>
                 <meta>
-                  <entities:entity dataset="bad.name">
-                    <entities:label/>
-                  </entities:entity>
+                  <entity dataset="bad.name">
+                    <label/>
+                  </entity>
                 </meta>
               </data>
             </instance>
@@ -188,6 +213,16 @@ describe('parsing dataset from entity block', () => {
 });
 
 describe('dataset name validation', () => {
+  it('should have name be case sensitive', () =>
+    getDataset(testData.forms.simpleEntity
+      .replace('people', 'PeopleWithACapitalP')).then((res) =>
+      res.get().should.eql('PeopleWithACapitalP')));
+
+  it('should strip whitespace from name', () =>
+    getDataset(testData.forms.simpleEntity
+      .replace('people', '   people ')).then((res) =>
+      res.get().should.eql('people')));
+
   it('should reject names with .', () => {
     validateDatasetName('this.that').should.equal(false);
   });
