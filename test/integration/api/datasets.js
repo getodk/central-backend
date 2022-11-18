@@ -721,7 +721,7 @@ describe('datasets and entities', () => {
             .expect(400)
             .then(({ body }) => {
               body.code.should.equal(400.25);
-              body.details.reason.should.equal('Version is not supported.');
+              body.details.reason.should.equal('Entities specification version [bad-version] is not supported.');
             }))));
 
       it('should return a Problem if the entity xml is invalid (e.g. missing dataset name)', testService((service) =>
@@ -732,7 +732,7 @@ describe('datasets and entities', () => {
             .expect(400)
             .then(({ body }) => {
               body.code.should.equal(400.25);
-              body.details.reason.should.equal('Dataset name is empty.');
+              body.details.reason.should.equal('Dataset name is missing.');
             }))));
 
       it('should return a Problem if the savetos reference invalid properties', testService((service) =>
