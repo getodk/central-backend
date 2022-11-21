@@ -897,12 +897,12 @@ describe('datasets and entities', () => {
       it('should not let multiple fields to be mapped to a single property', testService(async (service) => {
         await service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
-            .send(testData.forms.simpleEntity.replace(/first_name/g, 'name'))
+            .send(testData.forms.simpleEntity.replace(/first_name/g, 'age'))
             .set('Content-Type', 'application/xml')
             .expect(400)
             .then(({ body }) => {
               body.code.should.be.eql(400.25);
-              body.message.should.be.eql('The entity definition within the form is invalid. Invalid Dataset property.');
+              body.message.should.be.eql('The entity definition within the form is invalid. Multiple Form Fields cannot be saved to a single Dataset Property.');
             }));
       }));
     });
