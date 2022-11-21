@@ -351,7 +351,7 @@ describe('worker: entity', () => {
             .send({ reviewState: 'approved' })
             .expect(200))
           .then(() => exhaust(container))
-          .then(() => asAlice.get('/v1/projects/1/datasets/people/download')
+          .then(() => asAlice.get('/v1/projects/1/datasets/people/entities.csv')
             .then(({ text }) => {
               // eslint-disable-next-line no-console
               //console.log(text);
