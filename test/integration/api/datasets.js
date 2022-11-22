@@ -36,8 +36,8 @@ describe('datasets and entities', () => {
               asAlice.get('/v1/projects/1/datasets')
                 .expect(200)
                 .then(({ body }) => {
-                  body.map(({ id, createdAt, ...d }) => d).should.eql([
-                    { name: 'people', projectId: 1, revisionNumber: 0 }
+                  body.map(({ createdAt, ...d }) => d).should.eql([
+                    { name: 'people', projectId: 1 }
                   ]);
                 })))));
 
@@ -57,7 +57,7 @@ describe('datasets and entities', () => {
                   .expect(200)
                   .then(({ body }) => {
                     body.map(({ id, createdAt, ...d }) => d).should.eql([
-                      { name: 'student', projectId: 1, revisionNumber: 0 }
+                      { name: 'student', projectId: 1 }
                     ]);
                   }))))));
     });
@@ -869,7 +869,6 @@ describe('datasets and entities', () => {
         await Datasets.getById(datasetId)
           .then(result => {
             result.properties.length.should.be.eql(2);
-            result.properties[0].fields.length.should.equal(2);
           });
       }));
 
