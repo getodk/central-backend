@@ -32,12 +32,12 @@ describe('extracting entities from submissions', () => {
         .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
         .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one))
         .then((result) => {
-          result.data.should.eql({ first_name: 'Alice', age: '88' });
-          result.system.should.eql({
+          should(result.data).eql(Object.assign(Object.create(null), { first_name: 'Alice', age: '88' }));
+          should(result.system).eql(Object.assign(Object.create(null), {
             uuid: '12345678-1234-4123-8234-123456789abc',
             label: 'Alice (88)',
             dataset: 'people'
-          });
+          }));
           result.system.uuid.should.be.a.uuid();
         }));
 
@@ -46,12 +46,12 @@ describe('extracting entities from submissions', () => {
         .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
         .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-ABCD56789abc')))
         .then((result) => {
-          result.data.should.eql({ first_name: 'Alice', age: '88' });
-          result.system.should.eql({
+          should(result.data).eql(Object.assign(Object.create(null), { first_name: 'Alice', age: '88' }));
+          should(result.system).eql(Object.assign(Object.create(null), {
             uuid: '12345678-1234-4123-8234-abcd56789abc',
             label: 'Alice (88)',
             dataset: 'people'
-          });
+          }));
           result.system.uuid.should.be.a.uuid();
         }));
 

@@ -36,8 +36,8 @@ describe('datasets and entities', () => {
               asAlice.get('/v1/projects/1/datasets')
                 .expect(200)
                 .then(({ body }) => {
-                  body.map(({ id, createdAt, ...d }) => d).should.eql([
-                    { name: 'people', projectId: 1, revisionNumber: 0 }
+                  body.map(({ createdAt, ...d }) => d).should.eql([
+                    { name: 'people', projectId: 1 }
                   ]);
                 })))));
 
@@ -57,12 +57,12 @@ describe('datasets and entities', () => {
                   .expect(200)
                   .then(({ body }) => {
                     body.map(({ id, createdAt, ...d }) => d).should.eql([
-                      { name: 'student', projectId: 1, revisionNumber: 0 }
+                      { name: 'student', projectId: 1 }
                     ]);
                   }))))));
     });
 
-    describe('projects/:id/datasets/:dataset/download GET', () => {
+    describe('projects/:id/datasets/:dataset.csv GET', () => {
       it('should reject if the user cannot access dataset', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
@@ -70,7 +70,7 @@ describe('datasets and entities', () => {
             .set('Content-Type', 'application/xml')
             .expect(200)
             .then(() => service.login('chelsea', (asChelsea) =>
-              asChelsea.get('/v1/projects/1/datasets/people/download')
+              asChelsea.get('/v1/projects/1/datasets/people/entities.csv')
                 .expect(403))))));
 
       it('should let the user download the dataset (even if 0 entity rows)', testService((service) =>
@@ -79,20 +79,51 @@ describe('datasets and entities', () => {
             .send(testData.forms.simpleEntity)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.get('/v1/projects/1/datasets/people/download')
+            .then(() => asAlice.get('/v1/projects/1/datasets/people/entities.csv')
               .expect(200)
               .then(({ text }) => {
                 text.should.equal('name,label,first_name,age\n');
               })))));
 
-      // TODO: right now this returns 500 internal server error
-      it.skip('should reject if dataset does not exist', testService((service) =>
+      it('should return only published properties', testService(async (service) => {
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity
+            .replace(/simpleEntity/g, 'simpleEntity2')
+            .replace(/first_name/, 'full_name'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200)
+          .then(({ text }) => {
+            text.should.equal('name,label,first_name,age\n');
+          });
+
+      }));
+
+      it('should reject if dataset does not exist', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.simpleEntity)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.get('/v1/projects/1/datasets/nonexistent/download')
+            .then(() => asAlice.get('/v1/projects/1/datasets/nonexistent/entities.csv')
+              .expect(404)))));
+
+      it('should reject if dataset is not published', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/datasets/people/entities.csv')
               .expect(404)))));
     });
   });
@@ -304,6 +335,26 @@ describe('datasets and entities', () => {
               .then(({ body }) => {
                 body.message.should.be.equal('Dataset can only be linked to attachments with "Data File" type.');
               })))));
+
+      it('should return error if dataset is not published', testService(async (service) => {
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity.replace(/people/g, 'goodone'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+          .send({ dataset: true })
+          .expect(404);
+
+      }));
+
     });
 
     describe('projects/:id/forms/:formId/draft/attachment/:name DELETE', () => {
@@ -872,7 +923,6 @@ describe('datasets and entities', () => {
         await Datasets.getById(datasetId)
           .then(result => {
             result.properties.length.should.be.eql(2);
-            result.properties[0].fields.length.should.equal(2);
           });
       }));
 
@@ -895,6 +945,18 @@ describe('datasets and entities', () => {
                 .then(({ body }) => {
                   body.entityRelated.should.equal(true);
                 }))));
+      }));
+
+      it('should not let multiple fields to be mapped to a single property', testService(async (service) => {
+        await service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity.replace(/first_name/g, 'age'))
+            .set('Content-Type', 'application/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.be.eql(400.25);
+              body.message.should.be.eql('The entity definition within the form is invalid. Multiple Form Fields cannot be saved to a single Dataset Property.');
+            }));
       }));
     });
 
