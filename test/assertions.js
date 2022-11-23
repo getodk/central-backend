@@ -207,6 +207,21 @@ should.Assertion.add('ExtendedForm', function() {
 });
 
 // eslint-disable-next-line space-before-function-paren, func-names
+should.Assertion.add('FormAttachment', function() {
+  this.params = { operator: 'to be a Form Attachment' };
+
+  Object.keys(this.obj).should.eqlInAnyOrder([ 'name', 'type', 'blobExists', 'datasetExists', 'exists', 'updatedAt' ]);
+  this.obj.name.should.be.a.String();
+  this.obj.type.should.be.a.String();
+  const { blobExists, datasetExists, exists } = this.obj;
+  blobExists.should.be.a.Boolean();
+  datasetExists.should.be.a.Boolean();
+  (blobExists && datasetExists).should.be.false();
+  exists.should.equal(blobExists || datasetExists);
+  if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
+});
+
+// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('Project', function() {
   this.params = { operator: 'to be a Project' };
 

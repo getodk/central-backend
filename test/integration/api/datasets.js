@@ -130,6 +130,43 @@ describe('datasets and entities', () => {
 
   describe('linking form attachments to datasets', () => {
     describe('projects/:id/forms/:formId/draft/attachment/:name PATCH', () => {
+      it('should reject unless user can form.update', testService((service) =>
+        service.login(['alice', 'chelsea'], (asAlice, asChelsea) =>
+          Promise.all([
+            asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.withAttachments)
+              .set('Content-Type', 'application/xml')
+              .expect(200),
+            asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity.replace('people', 'goodone'))
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+          ])
+            .then(() => asChelsea.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+              .send({ dataset: true })
+              .expect(403)))));
+
+      it('should reject if user can form.update but not entity.list', testService((service) =>
+        service.login(['alice', 'chelsea'], (asAlice, asChelsea) =>
+          Promise.all([
+            asChelsea.get('/v1/users/current')
+              .expect(200)
+              .then(({ body }) => body.id),
+            asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.withAttachments)
+              .set('Content-Type', 'application/xml')
+              .expect(200),
+            asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity.replace('people', 'goodone'))
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+          ])
+            .then(([chelseaId]) => asAlice.post(`/v1/projects/1/forms/withAttachments/assignments/manager/${chelseaId}`)
+              .expect(200))
+            .then(() => asChelsea.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+              .send({ dataset: true })
+              .expect(403)))));
+
       it('should link dataset to form and returns in manifest', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
@@ -220,6 +257,23 @@ describe('datasets and entities', () => {
     </mediaFile>
   </manifest>`);
                 }))))));
+
+      it('should allow an attachment to have a .CSV extension', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments.replace('goodone.csv', 'goodone.CSV'))
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity.replace('people', 'goodone'))
+              .expect(200))
+            .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.CSV')
+              .send({ dataset: true })
+              .expect(200)
+              .then(({ body }) => {
+                body.should.be.a.FormAttachment();
+                body.datasetExists.should.be.true();
+              })))));
 
       it('should unlink dataset from the form', testService((service) =>
         service.login('alice', (asAlice) =>
