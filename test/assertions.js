@@ -208,7 +208,7 @@ should.Assertion.add('ExtendedForm', function() {
 
 // eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('FormAttachment', function() {
-  this.params = { operator: 'to be a Form.Attachment' };
+  this.params = { operator: 'to be a Form Attachment' };
 
   Object.keys(this.obj).should.eqlInAnyOrder([ 'name', 'type', 'blobExists', 'datasetExists', 'exists', 'updatedAt' ]);
   this.obj.name.should.be.a.String();

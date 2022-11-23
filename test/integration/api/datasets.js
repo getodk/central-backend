@@ -99,7 +99,7 @@ describe('datasets and entities', () => {
 
   describe('linking form attachments to datasets', () => {
     describe('projects/:id/forms/:formId/draft/attachment/:name PATCH', () => {
-      it('should reject if user cannot form.update', testService((service) =>
+      it('should reject unless user can form.update', testService((service) =>
         service.login(['alice', 'chelsea'], (asAlice, asChelsea) =>
           Promise.all([
             asAlice.post('/v1/projects/1/forms')
@@ -227,7 +227,7 @@ describe('datasets and entities', () => {
   </manifest>`);
                 }))))));
 
-      it('should allow attachment to have .CSV extension', () => testService((service) =>
+      it('should allow an attachment to have a .CSV extension', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments.replace('goodone.csv', 'goodone.CSV'))

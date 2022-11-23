@@ -106,7 +106,7 @@ afterEach(async () => {
   }
 });
 
-// augments a supertest object with a `.as(user, cb)` method, where user may be the
+// augments a supertest object with a `.login(user, cb)` method, where user may be the
 // name of a fixture user or an object with email/password. the user will be logged
 // in and the following single request will be performed as that user.
 //
