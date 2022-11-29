@@ -16,5 +16,8 @@
   "devDependencies": {
     "eslint": "^8.20.0"
   },
+  "volta": {
+    "node": "16.17.0"
+  },
   "license": "SEE LICENSE IN ../LICENSE"
 }
