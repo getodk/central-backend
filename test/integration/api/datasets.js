@@ -833,6 +833,21 @@ describe('datasets and entities', () => {
 
       }));
 
+      it('should let the user download even if there are no properties', testService(async (service) => {
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/entities:saveto[^/]+/g, ''))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200)
+          .then(({ text }) => {
+            text.should.equal('name,label\n');
+          });
+      }));
+
     });
   });
 
