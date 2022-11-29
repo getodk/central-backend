@@ -1,9 +1,11 @@
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
 const { testService, testContainer } = require('../setup');
-// eslint-disable-next-line import/no-dynamic-require
 const { createReadStream } = require('fs');
 const testData = require('../../data/xml');
+const { identity } = require('ramda');
+// eslint-disable-next-line import/no-dynamic-require
+const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 const geoForm = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <h:head>
@@ -120,7 +122,7 @@ describe('analytics task queries', () => {
     }));
 
     // eslint-disable-next-line no-multi-spaces
-    it('should count encrypted projects',  testService(async (service, container) => {
+    it('should count encrypted projects', testService(async (service, container) => {
       // encrypted project that has recent activity
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one);
 
@@ -199,7 +201,7 @@ describe('analytics task queries', () => {
       let res = await Analytics.backupsEnabled();
       res.backups_configured.should.equal(0);
       // eslint-disable-next-line object-curly-spacing
-      await Configs.set('backups.main', {detail: 'dummy'});
+      await Configs.set('backups.main', { detail: 'dummy' });
       res = await Analytics.backupsEnabled();
       res.backups_configured.should.equal(1);
     }));
@@ -222,7 +224,7 @@ describe('analytics task queries', () => {
       // default project has 1 manager already (bob) with no activity
       await createTestUser(service, container, 'Manager1', 'manager', 1);
       // eslint-disable-next-line no-trailing-spaces
-      
+
       // compute metrics
       const res = await container.Analytics.countUsersPerRole();
 
@@ -233,7 +235,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id][row.system] = {recent: row.recent, total: row.total};
+        projects[id][row.system] = { recent: row.recent, total: row.total };
       }
 
       projects['1'].manager.total.should.equal(2);
@@ -254,7 +256,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id][row.system] = {recent: row.recent, total: row.total};
+        projects[id][row.system] = { recent: row.recent, total: row.total };
       }
 
       projects['1'].viewer.total.should.equal(2);
@@ -275,7 +277,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id][row.system] = {recent: row.recent, total: row.total};
+        projects[id][row.system] = { recent: row.recent, total: row.total };
       }
 
       projects['1'].formfill.total.should.equal(2);
@@ -335,7 +337,7 @@ describe('analytics task queries', () => {
 
       const res = await container.Analytics.countForms();
       // eslint-disable-next-line no-trailing-spaces
-      
+
       const projects = {};
       for (const row of res) {
         const id = row.projectId;
@@ -343,7 +345,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id] = {recent: row.recent, total: row.total};
+        projects[id] = { recent: row.recent, total: row.total };
       }
 
       projects['1'].total.should.equal(2);
@@ -377,7 +379,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id] = {recent: row.audit_recent, total: row.audit_total};
+        projects[id] = { recent: row.audit_recent, total: row.audit_total };
       }
 
       projects['1'].total.should.equal(0);
@@ -398,7 +400,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id] = {recent: row.geo_recent, total: row.geo_total};
+        projects[id] = { recent: row.geo_recent, total: row.geo_total };
       }
 
       projects['1'].total.should.equal(1);
@@ -418,7 +420,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id] = {recent: row.recent, total: row.total};
+        projects[id] = { recent: row.recent, total: row.total };
       }
 
       projects['1'].total.should.equal(0);
@@ -539,7 +541,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id][row.reviewState] = {recent: row.recent, total: row.total};
+        projects[id][row.reviewState] = { recent: row.recent, total: row.total };
       }
 
       projects['1'].approved.recent.should.equal(1);
@@ -569,7 +571,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id][row.reviewState] = {recent: row.recent, total: row.total};
+        projects[id][row.reviewState] = { recent: row.recent, total: row.total };
       }
 
       projects['1'].rejected.recent.should.equal(1);
@@ -598,7 +600,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id][row.reviewState] = {recent: row.recent, total: row.total};
+        projects[id][row.reviewState] = { recent: row.recent, total: row.total };
       }
 
       projects['1'].hasIssues.recent.should.equal(1);
@@ -627,7 +629,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id][row.reviewState] = {recent: row.recent, total: row.total};
+        projects[id][row.reviewState] = { recent: row.recent, total: row.total };
       }
 
       projects['1'].edited.recent.should.equal(1);
@@ -720,6 +722,117 @@ describe('analytics task queries', () => {
     }));
   });
 
+  describe('dataset metrics', () => {
+    it('should return datasets ID', testService(async (service, container) => {
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await createTestForm(service, container, testData.forms.simpleEntity.replace(/people|simpleEntity/g, 'employees'), 1);
+
+      const datasets = await container.Analytics.getDatasets();
+      datasets.length.should.be.equal(2);
+      datasets[0].id.should.not.be.equal(datasets[1].id);
+    }));
+
+    it('should calculate properties', testService(async (service, container) => {
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await createTestForm(service, container, testData.forms.simpleEntity
+        .replace(/simpleEntity/g, 'simpleEntity2')
+        .replace(/age/g, 'gender'), 1);
+
+      const datasets = await container.Analytics.getDatasets();
+      datasets[0].num_properties.should.be.equal(3);
+    }));
+
+    it('should calculate creation forms', testService(async (service, container) => {
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await createTestForm(service, container, testData.forms.simpleEntity
+        .replace(/simpleEntity/g, 'simpleEntity2')
+        .replace(/age/g, 'gender'), 1);
+
+      const datasets = await container.Analytics.getDatasets();
+      datasets[0].num_creation_forms.should.be.equal(2);
+    }));
+
+    it('should calculate followup forms', testService(async (service, container) => {
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await createTestForm(service, container, testData.forms.withAttachments.replace(/goodone/g, 'people'), 1);
+      const datasets = await container.Analytics.getDatasets();
+      datasets[0].num_followup_forms.should.be.equal(1);
+    }));
+
+    it('should calculate entities', testService(async (service, container) => {
+      const asAlice = await service.login('alice', identity);
+
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one').send({ reviewState: 'approved' });
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two);
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two').send({ reviewState: 'approved' });
+      await exhaust(container);
+
+      await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1' WHERE TRUE`);
+
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three);
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/three').send({ reviewState: 'approved' });
+      await exhaust(container);
+
+      const datasets = await container.Analytics.getDatasets();
+
+      datasets[0].num_entities_total.should.be.equal(3);
+      datasets[0].num_entities_recent.should.be.equal(1);
+    }));
+
+    it('should calculate failed entities', testService(async (service, container) => {
+      const asAlice = await service.login('alice', identity);
+
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one').send({ reviewState: 'approved' });
+
+      // let's pass invalid UUID
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two.replace(/aaa/, 'xxx'));
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two').send({ reviewState: 'approved' });
+      await exhaust(container);
+
+      // let's set date of entity errors to long time ago
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.create.error'`);
+
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three.replace(/bbb/, 'xxx'));
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/three').send({ reviewState: 'approved' });
+      await exhaust(container);
+
+      const datasets = await container.Analytics.getDatasets();
+
+      datasets[0].num_failed_entities_total.should.be.equal(2);
+      datasets[0].num_entities_recent.should.be.equal(1);
+    }));
+
+    it('should return right dataset of each projects', testService(async (service, container) => {
+
+      const asAlice = await service.login('alice', identity);
+
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one').send({ reviewState: 'approved' });
+
+      const secondProjectId = await createTestProject(service, container, 'second');
+      await createTestForm(service, container, testData.forms.simpleEntity.replace(/people|simpleEntity/g, 'employees'), secondProjectId);
+
+      await exhaust(container);
+
+      const dsInDatabase = (await container.all(sql`SELECT * FROM datasets`)).reduce((map, obj) => ({ [obj.id]: obj, ...map }), {});
+      const datasets = await container.Analytics.getDatasets();
+
+      const datasetOfFirstProject = datasets.find(d => d.projectId === 1);
+      datasetOfFirstProject.id.should.be.equal(dsInDatabase[datasetOfFirstProject.id].id);
+      datasetOfFirstProject.num_entities_total.should.be.equal(1);
+
+      const datasetOfSecondProject = datasets.find(d => d.projectId === secondProjectId);
+      datasetOfSecondProject.id.should.be.equal(dsInDatabase[datasetOfSecondProject.id].id);
+      datasetOfSecondProject.num_entities_total.should.be.equal(0);
+
+    }));
+  });
+
   describe('other project metrics', () => {
     it('should calculate projects with descriptions', testService(async (service, container) => {
       await service.login('alice', (asAlice) =>
@@ -743,19 +856,19 @@ describe('analytics task queries', () => {
           .send({ description: null }));
 
       const res = await container.Analytics.getProjectsWithDescriptions();
-      res.should.eql([ { projectId: 1 }, { projectId: projWithDesc } ]);
+      res.should.eql([{ projectId: 1, description_length: 9 }, { projectId: projWithDesc, description_length: 13 }]);
     }));
   });
 
   // eslint-disable-next-line space-before-function-paren, func-names
-  describe('combined analytics', function() {
+  describe('combined analytics', function () {
     // increasing timeouts on this set of tests
     this.timeout(4000);
 
     it('should combine system level queries', testService(async (service, container) => {
       // backups
       // eslint-disable-next-line object-curly-spacing
-      await container.Configs.set('backups.main', {detail: 'dummy'});
+      await container.Configs.set('backups.main', { detail: 'dummy' });
 
       // encrypting a project
       await service.login('alice', (asAlice) =>
@@ -938,12 +1051,118 @@ describe('analytics task queries', () => {
       res = await container.Analytics.previewMetrics();
       res.projects[1].submissions.num_submissions_approved.total.should.equal(0);
     }));
+
+    it('should fill in all project.datasets queries', testService(async (service, container) => {
+      const { defaultMaxListeners } = require('events').EventEmitter;
+      require('events').EventEmitter.defaultMaxListeners = 30;
+
+      const asAlice = await service.login('alice', identity);
+
+      // Create first Dataset
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+
+      // Make submission for the first Dataset
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one').send({ reviewState: 'approved' });
+
+      // Create second Dataset using two forms
+      await createTestForm(service, container, testData.forms.simpleEntity.replace(/simpleEntity|people/g, 'employees'), 1);
+      await createTestForm(service, container, testData.forms.simpleEntity
+        .replace(/simpleEntity/, 'employees2')
+        .replace(/people/, 'employees')
+        .replace(/age/g, 'gender'), 1);
+
+      // Make submissions for the second Datasets
+      await submitToForm(service, 'alice', 1, 'employees', testData.instances.simpleEntity.two.replace(/simpleEntity|people/g, 'employees'));
+      await asAlice.patch('/v1/projects/1/forms/employees/submissions/two').send({ reviewState: 'approved' });
+      await submitToForm(service, 'alice', 1, 'employees2', testData.instances.simpleEntity.three
+        .replace(/simpleEntity/, 'employees2')
+        .replace(/people/, 'employees')
+        .replace(/age/g, 'gender'));
+      await asAlice.patch('/v1/projects/1/forms/employees2/submissions/three').send({ reviewState: 'approved' });
+
+      // Expecting all Submissions should generate Entities
+      await exhaust(container);
+
+      // Making all Entities ancient
+      await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1' WHERE TRUE`);
+
+      // Make a recent Submissions for the first Dataset
+      // aaa -> ccc creates unique UUID
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two.replace('aaa', 'ccc'));
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two').send({ reviewState: 'approved' });
+
+      // bbb -> xxx causes invalid UUID, hence this Submission should not generate Entity
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three.replace('bbb', 'xxx'));
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/three').send({ reviewState: 'approved' });
+
+      // One Entity will be created and one error will be logged
+      await exhaust(container);
+
+      // Make the error ancient
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.create.error'`);
+
+      // Create new Submission that will cause entity creation error
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three.replace(/bbb|three/g, 'xxx'));
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/xxx').send({ reviewState: 'approved' });
+
+      // One error will be logged
+      await exhaust(container);
+
+      // Link both Datasets to a Form
+      await createTestForm(service, container, testData.forms.withAttachments
+        .replace(/goodone/g, 'people')
+        .replace(/files\/badsubpath/g, 'file/employees'), 1);
+
+      // Create an empty project
+      const secondProject = await createTestProject(service, container, 'second');
+      await createTestForm(service, container, testData.forms.simple, secondProject);
+
+      const res = await container.Analytics.previewMetrics();
+
+      const { id, ...firstDataset } = res.projects[0].datasets[0];
+      const { id: _, ...secondDataset } = res.projects[0].datasets[1];
+
+      firstDataset.should.be.eql({
+        num_properties: 2,
+        num_creation_forms: 1,
+        num_followup_forms: 1,
+        num_entities: {
+          total: 2, // made one Entity ancient
+          recent: 1
+        },
+        num_failed_entities: { // two Submissions failed due to invalid UUID
+          total: 2, // made one Error ancient
+          recent: 1
+        }
+      });
+
+      secondDataset.should.be.eql({
+        num_properties: 3, // added third Property (age -> gender)
+        num_creation_forms: 2, // used two Forms to create Dataset
+        num_followup_forms: 1,
+        num_entities: {
+          total: 2,
+          recent: 0
+        },
+        num_failed_entities: {
+          total: 0,
+          recent: 0
+        }
+      });
+
+      // Assert that a Project without a Dataset returns an empty array
+      res.projects[1].datasets.should.be.eql([]);
+
+      // revert to original default
+      require('events').defaultMaxListeners = defaultMaxListeners;
+    }));
   });
 
   describe('latest analytics audit log utility', () => {
     it('should find recently created analytics audit log', testService(async (service, container) => {
       // eslint-disable-next-line object-curly-spacing
-      await container.Audits.log(null, 'analytics', null, {test: 'foo', success: true});
+      await container.Audits.log(null, 'analytics', null, { test: 'foo', success: true });
       const res = await container.Analytics.getLatestAudit().then((o) => o.get());
       res.details.test.should.equal('foo');
     }));
@@ -957,7 +1176,7 @@ describe('analytics task queries', () => {
 
     it('should not return analytics audit log more than 30 days prior', testService(async (service, container) => {
       // eslint-disable-next-line object-curly-spacing
-      await container.Audits.log(null, 'analytics', null, {test: 'foo', success: true});
+      await container.Audits.log(null, 'analytics', null, { test: 'foo', success: true });
       // make all analytics audits so far in the distant past
       await container.all(sql`update audits set "loggedAt" = '1999-1-1' where action = 'analytics'`);
       const res = await container.Analytics.getLatestAudit();
