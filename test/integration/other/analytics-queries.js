@@ -805,6 +805,32 @@ describe('analytics task queries', () => {
       datasets[0].num_failed_entities_total.should.be.equal(2);
       datasets[0].num_entities_recent.should.be.equal(1);
     }));
+
+    it('should return right dataset of each projects', testService(async (service, container) => {
+
+      const asAlice = await service.login('alice', identity);
+
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one').send({ reviewState: 'approved' });
+
+      const secondProjectId = await createTestProject(service, container, 'second');
+      await createTestForm(service, container, testData.forms.simpleEntity.replace(/people|simpleEntity/g, 'employees'), secondProjectId);
+
+      await exhaust(container);
+
+      const dsInDatabase = (await container.all(sql`SELECT * FROM datasets`)).reduce((map, obj) => ({ [obj.id]: obj, ...map }), {});
+      const datasets = await container.Analytics.getDatasets();
+
+      const datasetOfFirstProject = datasets.find(d => d.projectId === 1);
+      datasetOfFirstProject.id.should.be.equal(dsInDatabase[datasetOfFirstProject.id].id);
+      datasetOfFirstProject.num_entities_total.should.be.equal(1);
+
+      const datasetOfSecondProject = datasets.find(d => d.projectId === secondProjectId);
+      datasetOfSecondProject.id.should.be.equal(dsInDatabase[datasetOfSecondProject.id].id);
+      datasetOfSecondProject.num_entities_total.should.be.equal(0);
+
+    }));
   });
 
   describe('other project metrics', () => {
@@ -1088,6 +1114,10 @@ describe('analytics task queries', () => {
         .replace(/goodone/g, 'people')
         .replace(/files\/badsubpath/g, 'file/employees'), 1);
 
+      // Create an empty project
+      const secondProject = await createTestProject(service, container, 'second');
+      await createTestForm(service, container, testData.forms.simple, secondProject);
+
       const res = await container.Analytics.previewMetrics();
 
       const { id, ...firstDataset } = res.projects[0].datasets[0];
@@ -1120,6 +1150,9 @@ describe('analytics task queries', () => {
           recent: 0
         }
       });
+
+      // Assert that a Project without a Dataset returns an empty array
+      res.projects[1].datasets.should.be.eql([]);
 
       // revert to original default
       require('events').defaultMaxListeners = defaultMaxListeners;
