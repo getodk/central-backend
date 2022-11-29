@@ -830,7 +830,7 @@ describe('analytics task queries', () => {
           .send({ description: null }));
 
       const res = await container.Analytics.getProjectsWithDescriptions();
-      res.should.eql([{ projectId: 1 }, { projectId: projWithDesc }]);
+      res.should.eql([{ projectId: 1, description_length: 9 }, { projectId: projWithDesc, description_length: 13 }]);
     }));
   });
 
