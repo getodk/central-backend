@@ -1124,8 +1124,8 @@ Entities are added to a Dataset when a Submission of a Form that creates Entitie
 
 ### Related APIs:
 
-- [Link a Dataset to a Form Attachment](/reference/project-management/project-assignments)
-- [Get a Form's related Datasets](#)
+- [Link a Dataset to a Form Attachment](#reference/forms/draft-form/updating-a-draft-form-attachment)
+- [Get a Form's related Datasets](#reference/forms/related-datasets)
 
 
 ## Datasets [GET /projects/{projectId}/datasets]
