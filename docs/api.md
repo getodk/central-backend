@@ -36,7 +36,7 @@ Here major and breaking changes to the API are listed by version.
 
 **Added**:
 
-* Introducting [Datasets](#reference/datasets) as part of our new Entity-Based Data Collection feature!
+* Introducing [Datasets](#reference/datasets) as part of our new Entity-Based Data Collection feature!
   * Forms can now create Datasets in the project, see [Creating a New Form](#reference/forms/forms/creating-a-new-form) and the [ODK XForms specification](https://getodk.github.io/xforms-spec) for details.
   * New endpoint [GET /projects/:id/datasets](#reference/datasets/datasets/datasets) for listing Datasets of a project.
   * New endpoint [GET /projects/:id/datasets/:name/download](#reference/datasets/download-dataset/download-dataset) to download the Dataset as a CSV file.
@@ -2929,7 +2929,7 @@ Entities are added to a Dataset when a Submission of a Form that creates Entitie
 
 ### Related APIs:
 
-- [Link a Dataset to a Form Attachment](#reference/forms/draft-form/updating-a-draft-form-attachment)
+- [Link a Dataset to a Form Attachment](#reference/forms/draft-form/linking-a-dataset-to-a-draft-form-attachment)
 - [Get a Form's related Datasets](#reference/forms/related-datasets)
 
 
