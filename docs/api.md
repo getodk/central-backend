@@ -2932,7 +2932,7 @@ Returns the list of Datasets in a project
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-## Download Dataset [GET /projects/{projectId}/datasets/{name}/download]
+## Download Dataset [GET /projects/{projectId}/datasets/{name}/entities.csv]
 
 Download Dataset as CSV file
 
