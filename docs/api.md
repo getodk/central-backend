@@ -1114,56 +1114,6 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 + Response 403 (application/json)
     + Attributes (Error 403)
 
-# Group Datasets
-
-_(introduced: version 2022.3)_
-
-A Dataset is a collection of Entities. A Dataset's schema is defined by the Forms that create Entities in that Dataset. See the [ODK XForms specification](https://getodk.github.io/xforms-spec) for defining Datasets in Form definitions.
-
-Entities are added to a Dataset when a Submission of a Form that creates Entities is **approved**.
-
-### Related APIs:
-
-- [Link a Dataset to a Form Attachment](#reference/forms/draft-form/updating-a-draft-form-attachment)
-- [Get a Form's related Datasets](#reference/forms/related-datasets)
-
-
-## Datasets [GET /projects/{projectId}/datasets]
-
-Returns the list of Datasets in a project
-
-+ Parameters
-    + projectId: `16` (number, required) - The numeric ID of the Project
-
-+ Response 200 (application/json)
-    This is the standard response
-
-    + Attributes (array[Dataset])
-
-+ Response 403 (application/json)
-    + Attributes (Error 403)
-
-## Download Dataset [GET /projects/{projectId}/datasets/{name}/download]
-
-Download Dataset as CSV file
-
-+ Parameters
-    + projectId: `16` (number, required) - The numeric ID of the Project
-    + name: `people` (string, required) - Name of the Dataset
-
-+ Response 200
-    + Headers
-
-            Content-Type: text/csv
-            Content-Disposition: attachment; filename={the dataset name}.csv
-
-    + Body
-
-            (binary data)
-
-+ Response 403 (application/json)
-    + Attributes (Error 403)
-
 # Group Forms
 
 `Form`s are the heart of ODK. They are created out of XML documents in the [ODK XForms](https://getodk.github.io/xforms-spec/) specification format. The [Intro to Forms](https://docs.getodk.org/form-design-intro/) on the ODK Documentation website is a good resource if you are unsure what this means. Once created, Forms can be retrieved in a variety of ways, their state can be managed, and they can be deleted.
@@ -2949,6 +2899,56 @@ Identical to [the non-Draft version](/reference/submissions/attachments/clearing
 
 + Response 200 (application/json)
     + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+# Group Datasets
+
+_(introduced: version 2022.3)_
+
+A Dataset is a collection of Entities. A Dataset's schema is defined by the Forms that create Entities in that Dataset. See the [ODK XForms specification](https://getodk.github.io/xforms-spec) for defining Datasets in Form definitions.
+
+Entities are added to a Dataset when a Submission of a Form that creates Entities is **approved**.
+
+### Related APIs:
+
+- [Link a Dataset to a Form Attachment](#reference/forms/draft-form/updating-a-draft-form-attachment)
+- [Get a Form's related Datasets](#reference/forms/related-datasets)
+
+
+## Datasets [GET /projects/{projectId}/datasets]
+
+Returns the list of Datasets in a project
+
++ Parameters
+    + projectId: `16` (number, required) - The numeric ID of the Project
+
++ Response 200 (application/json)
+    This is the standard response
+
+    + Attributes (array[Dataset])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Download Dataset [GET /projects/{projectId}/datasets/{name}/download]
+
+Download Dataset as CSV file
+
++ Parameters
+    + projectId: `16` (number, required) - The numeric ID of the Project
+    + name: `people` (string, required) - Name of the Dataset
+
++ Response 200
+    + Headers
+
+            Content-Type: text/csv
+            Content-Disposition: attachment; filename={the dataset name}.csv
+
+    + Body
+
+            (binary data)
 
 + Response 403 (application/json)
     + Attributes (Error 403)
