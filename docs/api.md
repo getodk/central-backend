@@ -36,21 +36,23 @@ Here major and breaking changes to the API are listed by version.
 
 **Added**:
 
+* Introducting [Datasets](#reference/datasets) as part of our new Entity-Based Data Collection feature!
+  * Forms can now create Datasets in the project, see [Creating a New Form](#reference/forms/forms/creating-a-new-form) and the [ODK XForms specification](https://getodk.github.io/xforms-spec) for details.
+  * New endpoint [GET /projects/:id/datasets](#reference/datasets/datasets/datasets) for listing Datasets of a project.
+  * New endpoint [GET /projects/:id/datasets/:name/download](#reference/datasets/download-dataset/download-dataset) to download the Dataset as a CSV file.
+  * New endpoints for [Related Datasets](#reference/forms/related-datasets/) to see the Datasets affected by a Form.
+  * New endpoint [PATCH .../attachments/:name](#reference/forms/draft-form/updating-a-draft-form-attachment) to link/unlink a Dataset to a Form Attachment.
 * OData Data Document requests now allow limited use of `$select`.
-* Forms can now create Datasets in the project, see [the ODK XForms specification](https://getodk.github.io/xforms-spec) for details.
-* New endpoint [GET /projects/:id/datasets](#reference/datasets/datasets/datasets) for listing Datasets of a project.
-* New endpoint [GET /projects/:id/datasets/:name/download](#reference/datasets/download-dataset/download-dataset) to download the Dataset as a CSV file.
-* New endpoints for [Related Datasets](#reference/forms/related-datasets/) to see the Datasets affected by a Form.
-* New endpoint [PATCH .../attachments/:name](#reference/forms/draft-form/updating-a-draft-form-attachment) to link/unlink a Dataset to a Form Attachment.
 
 **Changed**:
 
-* The [Extended Project](#reference/project-management/projects/listing-projects) endpoint now returns the `datasets` count for the Project.
-* The [Extended Form](#reference/forms/forms/list-all-forms) endpoint now returns the `entityRelated` flag if the form defines a Dataset schema.
-* [DELETE .../draft/attachments/:name](#reference/forms/draft-form/clearing-a-draft-form-attachment) will unlink the Dataset if there's a Dataset link to the attachment.
-* [GET .../draft/attachments/:name](#reference/forms/individual-form/downloading-a-form-attachment) will return the Dataset as a CSV file if the attachment is linked to a Dataset.
-* [GET .../draft/attachments](#reference/forms/individual-form/updating-a-draft-form-attachment) returns two additional flags `blobExists` and `datasetExists`.
-* In the [OpenRosa Form Manifest](#reference/openrosa-endpoints/openrosa-form-manifest-api/openrosa-form-manifest-api), if a Form Attachment is linked to a Dataset then the value of `hash` is the MD5 of the last updated timestamp or the MD5 of `1970-01-01 00:00:00` if the Dataset is empty.
+* The following endpoints have changed with the addition of Datasets:
+  * The [Extended Project](#reference/project-management/projects/listing-projects) endpoint now returns the `datasets` count for the Project.
+  * The [Extended Form](#reference/forms/forms/list-all-forms) endpoint now returns the `entityRelated` flag if the form defines a Dataset schema.
+  * [DELETE .../draft/attachments/:name](#reference/forms/draft-form/clearing-a-draft-form-attachment) will unlink the Dataset if there's a Dataset link to the attachment.
+  * [GET .../draft/attachments/:name](#reference/forms/individual-form/downloading-a-form-attachment) will return the Dataset as a CSV file if the attachment is linked to a Dataset.
+  * [GET .../draft/attachments](#reference/forms/individual-form/updating-a-draft-form-attachment) returns two additional flags `blobExists` and `datasetExists`.
+  * In the [OpenRosa Form Manifest](#reference/openrosa-endpoints/openrosa-form-manifest-api/openrosa-form-manifest-api), if a Form Attachment is linked to a Dataset then the value of `hash` is the MD5 of the last updated timestamp or the MD5 of `1970-01-01 00:00:00` if the Dataset is empty.
 
 ### ODK Central v1.5.3
 
@@ -1184,6 +1186,8 @@ For XLSForm upload, either `.xls` or `.xlsx` are accepted. You must provide the 
 By default, any XLSForm conversion Warnings will fail this request and return the warnings rather than use the converted XML to create a form. To override this behaviour, provide a querystring flag `?ignoreWarnings=true`. Conversion Errors will always fail this request.
 
 The API will currently check the XML's structure in order to extract the information we need about it, but ODK Central does _not_ run comprehensive validation on the full contents of the XML to ensure compliance with the ODK specification. Future versions will likely do this, but in the meantime you will have to use a tool like [ODK Validate](https://getodk.org/use/validate/) to be sure your Forms are correct.
+
+**Creating Datasets with Forms**
 
 Starting from Version 2022.3, a Form can also create a Dataset by defining Dataset schema in the Form definition (XForms XML or XLSForm). When a Form with a Dataset schema is uploaded, Dataset and its Properties are created and `dataset.create` event is logged in Audit logs. The state of the Dataset is dependent on the state of the Form, you will need to publish the Form to publish the Dataset. Datasets in Draft state are not return in [Dataset APIs](#reference/datasets), however [Related Datasets](#reference/forms/related-datasets/for-a-draft-form) API for the Form can be called to get the Dataset and its Properties.
 
