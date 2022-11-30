@@ -4255,11 +4255,9 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + success: `true` (boolean, required)
 
 ## Dataset (object)
-+ id: `1` (number, required) - The numerical ID of the Dataset.
 + name: `people` (string, required) - The name of the Dataset
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format.
 + projectId: `1` (number, required) - The numerical ID of the Project that the Dataset belongs to.
-+ revisionNumber: `1` (number, required) - The revision number of the Dataset. It is incremented whenever the Dataset's properties are modified.
 
 ## Patch Attachment (object)
 + dataset: `true` (boolean, required) - true for linking Dataset and false for unlinking Dataset.
