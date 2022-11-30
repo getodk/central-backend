@@ -1185,6 +1185,10 @@ By default, any XLSForm conversion Warnings will fail this request and return th
 
 The API will currently check the XML's structure in order to extract the information we need about it, but ODK Central does _not_ run comprehensive validation on the full contents of the XML to ensure compliance with the ODK specification. Future versions will likely do this, but in the meantime you will have to use a tool like [ODK Validate](https://getodk.org/use/validate/) to be sure your Forms are correct.
 
+Starting from Version 2022.3, a Form can also create a Dataset by defining Dataset schema in the Form definition (XForms XML or XLSForm). When a Form with a Dataset schema is uploaded, Dataset and its Properties are created and `dataset.create` event is logged in Audit logs. The state of the Dataset is dependent on the state of the Form, you will need to publish the Form to publish the Dataset. Datasets in Draft state are not return in [Dataset APIs](#reference/datasets), however [Related Datasets](#reference/forms/related-datasets/for-a-draft-form) API for the Form can be called to get the Dataset and its Properties.
+
+It is possible to define the schema of a Dataset in multiple Forms. Such Forms can be created and published in any order. The creation of the first Form will generate `dataset.create` event in Audit logs and subsequent Form creation will generate `dataset.update` events. Once any of the Forms is published, it will publish the Dataset and will generate `dataset.update.publish` event. The state of a Property of the Dataset is also dependent on the state of the Form that define that Property, which mean if a Form is in Draft state then the Properties defined by that Form will not appear in the [.csv file](#reference/datasets/download-dataset/download-dataset) of the Dataset.
+
 + Parameters
     + ignoreWarnings: `false` (boolean, optional) - Defaults to `false`. Set to `true` if you want the Form to be created even if the XLSForm conversion results in warnings.
     + publish: `false` (boolean, optional) - Defaults to `false`. Set to `true` if you want the Form to skip the Draft state to Published.
@@ -1448,6 +1452,8 @@ Draft `version` conflicts are allowed with prior versions of a Form while in Dra
 
 The `xmlFormId`, however, must exactly match that of the Form overall, or the request will be rejected.
 
+Starting from Version 2022.3, a Draft Form can also create or update a Dataset by defining Dataset schema in the Form definition. State of the Dataset and its Properties is dependent on the state of the Form, see [Create Form request](#reference/forms/forms/creating-a-new-form) for more details. 
+
 + Parameters
     + ignoreWarnings: `false` (boolean, optional) - Defaults to `false`. Set to `true` if you want the form to be created even if the XLSForm conversion results in warnings.
 
@@ -1684,6 +1690,8 @@ If your Draft `version` conflicts with an older version of the Form, you will ge
 If you wish for the `version` to be set on your behalf as part of the publish operation, you can provide the new version string as a querystring parameter `?version`.
 
 Once the Draft is published, there will no longer be a Draft version of the form.
+
+Starting with Version 2022.3, publishing a Draft Form that defines a Dataset schema will also publish the Dataset. It will generate `dataset.update.publish` event in Audit logs and make the Dataset available in [Datasets APIs](#reference/datasets)
 
 + Parameters
     + version: `newVersion` (string, optional) - The `version` to be associated with the Draft once it's published.
@@ -2091,6 +2099,8 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 ### Updating Submission metadata [PATCH /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}]
 
 Currently, the only updatable _metadata_ on a Submission is its `reviewState`. To update the submission _data_ itself, please see [Updating Submission data](/reference/submissions/submissions/updating-submission-data).
+
+Starting with Version 2022.3, changing `reviewState` of a Submission to `approved` can create an Entity in a Dataset if corresponding Form defines the Dataset schema. If an Entity is created successfully then `entity.create` event is logged in Audit logs else `entity.create.error` is logged.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
@@ -3954,6 +3964,9 @@ Server Audit Logs entries are created for the following `action`s:
 * `submission.update` when a Submission's metadata is updated.
 * `submission.update.version` when a Submission XML data is updated.
 * `submission.attachment.update` when a Submission Attachment binary is set or cleared, but _only via the REST API_. Attachments created alongside the submission over the OpenRosa `/submission` API (including submissions from Collect) do not generate audit log entries.
+* `dataset.create` when a Dataset is created.
+* `dataset.update` when a Dataset is updated.
+* `dataset.updated.publish` when a Dataset is published.
 * `entity.create` when an Entity is created.
 * `entity.create.error` when there is an error during entity creation process.
 * `config.set` when a system configuration is set.
