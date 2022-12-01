@@ -40,7 +40,7 @@ Here major and breaking changes to the API are listed by version.
   * Forms can now create Datasets in the project, see [Creating a New Form](#reference/forms/forms/creating-a-new-form) and the [ODK XForms specification](https://getodk.github.io/xforms-spec) for details.
   * New endpoint [GET /projects/:id/datasets](#reference/datasets/datasets/datasets) for listing Datasets of a project.
   * New endpoint [GET /projects/:id/datasets/:name/download](#reference/datasets/download-dataset/download-dataset) to download the Dataset as a CSV file.
-  * New endpoints for [Related Datasets](#reference/forms/related-datasets/) to see the Datasets affected by a Form.
+  * New endpoints for [Dataset Properties](#reference/forms/dataset-properties/) to see the Datasets affected by published and unpublished Forms.
   * New endpoint [PATCH .../attachments/:name](#reference/forms/draft-form/linking-a-dataset-to-a-draft-form-attachment) to link/unlink a Dataset to a Form Attachment.
 * OData Data Document requests now allow limited use of `$select`.
 
@@ -1189,7 +1189,7 @@ The API will currently check the XML's structure in order to extract the informa
 
 **Creating Datasets with Forms**
 
-Starting from Version 2022.3, a Form can also create a Dataset by defining a Dataset schema in the Form definition (XForms XML or XLSForm). When a Form with a Dataset schema is uploaded, a Dataset and its Properties are created and a `dataset.create` event is logged in the Audit logs. The state of the Dataset is dependent on the state of the Form; you will need to publish the Form to publish the Dataset. Datasets in the Draft state are not return in [Dataset APIs](#reference/datasets), however the [Related Datasets](#reference/forms/related-datasets/for-a-draft-form) API for the Form can be called to get the Dataset and its Properties.
+Starting from Version 2022.3, a Form can also create a Dataset by defining a Dataset schema in the Form definition (XForms XML or XLSForm). When a Form with a Dataset schema is uploaded, a Dataset and its Properties are created and a `dataset.create` event is logged in the Audit logs. The state of the Dataset is dependent on the state of the Form; you will need to publish the Form to publish the Dataset. Datasets in the Draft state are not return in [Dataset APIs](#reference/datasets), however the [Dataset Properties](#reference/forms/dataset-properties/draft-form-dataset-diff) API for the Form can be called to get the Dataset and its Properties.
 
 It is possible to define the schema of a Dataset in multiple Forms. Such Forms can be created and published in any order. The creation of the first Form will generate a `dataset.create` event in Audit logs and subsequent Form creation will generate `dataset.update` events. Publishing any of the Forms will also publish the Dataset and will generate a `dataset.update.publish` event. The state of a Property of a Dataset is also dependent on the state of the Form that defines that Property, which means if a Form is in the Draft state then the Properties defined by that Form will not appear in the [.csv file](#reference/datasets/download-dataset/download-dataset) of the Dataset.
 
@@ -2009,28 +2009,31 @@ You can fully delete a link by issuing `DELETE` to its resource. This will remov
     + Attributes (Error 403)
 
 
-## Related Datasets [/v1]
+## Dataset Properties [/v1]
 
 _(introduced: version 2022.3)_
 
-A Form Submission can affect a Dataset by creating Entities in it. In future versions, a Submission will also be able to update Entities. To know which Dataset is affected by a Form's Submissions, use following endpoints.
+Datasets are created and updated through Forms. Dataset-related Forms follow a new version of the [ODK XForms specification](https://getodk.github.io/xforms-spec) that allow them to define a Dataset and a mapping of Form Fields to Dataset Properties. Submissions from such a Form can create Entities within the Dataset defined in the Form. 
 
-Note that it is not necessary that a Form will save to all Properties of a Dataset, so the endpoint also returns a `inForm` flag against each property which is true only if the Form affects that Property.
+Currently, Datasets and Dataset Properties are purely additive. Multiple Forms can add Properties to the same Dataset and multiple Forms can create Entities in the same Dataset. Not all Properties of a Dataset have to be included in a Form for that Dataset. For example, one Form publishing to a Dataset called `trees` could add `location` and `species`, while another could add `species` and `circumference`. The Properties of the Dataset would be the union of Properties from all Forms for that Dataset (`location`, `species`, `circumference`).
 
-### For a published form [GET /v1/projects/{projectId}/forms/{xmlFormId}/dataset-diff]
+Another way to think of this is how Submissions/Entities from a particular Form will affect a Dataset; which Properties will be saved on an Entity from a given Form Submission. Note that it is not necessary that a Form will save to all Properties of a Dataset, so the endpoint also returns a `inForm` flag for each property which is true only if the Form affects that Property.
 
-To know the Datasets and Entity Properties affected by a published Form, use this endpoint.
+The following endpoints can be used on Draft and Published Forms to show how a specific Form adds or contains Properties within a specific Dataset.
+
+
+### Published Form Dataset Properties [GET /v1/projects/{projectId}/forms/{xmlFormId}/dataset-diff]
+
+This endpoint lists the name and Properties of a Dataset that are affected by a Form. The list of Properties includes all published Properties on that Dataset, but each property has the `inForm` flag to note whether or not it will be filled in by that form.
 
 + Response 200 (application/json)
     This is the standard response
 
     + Attributes (array[Dataset Diff])
 
-### For a draft form [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/dataset-diff]
+### Draft Form Dataset Diff [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/dataset-diff]
 
-To know the Datasets and Entity Properties affected by a Draft Form, use this endpoint.
-
-This endpoint also returns an `isNew` flag against each Dataset and each of its Properties. This flag is true only if the Dataset/Property is new and is going to be created by publishing the Draft Form.
+This endpoint reflects the change to a Dataset that will go into effect once the form is Published. Like the endpoint above, it lists the Dataset name and Properties, but it also includes the `isNew` flag on both the Dataset, and on each individual property. This flag is true only if the Dataset/Property is new and is going to be created by publishing the Draft Form.
 
 + Response 200 (application/json)
     This is the standard response
@@ -2930,7 +2933,7 @@ Entities are added to a Dataset when a Submission of a Form that creates Entitie
 ### Related APIs:
 
 - [Link a Dataset to a Form Attachment](#reference/forms/draft-form/linking-a-dataset-to-a-draft-form-attachment)
-- [Get a Form's related Datasets](#reference/forms/related-datasets)
+- [Get a Form's Dataset Properties](#reference/forms/dataset-properties)
 
 
 ## Datasets [GET /projects/{projectId}/datasets]
