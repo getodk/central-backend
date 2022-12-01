@@ -6,7 +6,7 @@ userEmail="x@example.com"
 userPassword="secret1234"
 
 log() {
-  echo "[ci-benchmark] $*"
+  echo "[ci-soak-test] $*"
 }
 
 fail_job() {
@@ -21,14 +21,14 @@ node ./lib/bin/cli.js user-promote -u "$userEmail"
 
 make run >backend.log 2>&1 &
 
-cd benchmarker
+cd soak-tester
 npm ci
 
 log 'Waiting for backend to start...'
 timeout 30 bash -c "while ! curl -s -o /dev/null $serverUrl; do sleep 1; done"
 log 'Backend started!'
 
-node index.js -s "$serverUrl" -P "$userPassword" -L /tmp/benchmarker-logs
+node index.js -s "$serverUrl" -P "$userPassword" -L /tmp/soak-tester-logs
 
 if ! curl -s -o /dev/null "$serverUrl"; then
   log 'Backend died.'

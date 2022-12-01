@@ -3,7 +3,7 @@ name: Node.js CI
 on: push
 
 jobs:
-  benchmark:
+  soak-test:
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     strategy:
@@ -32,9 +32,9 @@ jobs:
         cache: 'npm'
     - run: npm ci --legacy-peer-deps
     - run: node lib/bin/create-docker-databases.js
-    - name: Benchmark
+    - name: Soak Test
       timeout-minutes: 10
-      run: ./benchmarker/scripts/ci-benchmark
+      run: ./soak-tester/scripts/ci-soak-test
     - name: Backend Logs
       if: always()
       run: "! [[ -f ./backend.log ]] || cat ./backend.log"

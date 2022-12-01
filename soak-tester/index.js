@@ -14,7 +14,7 @@ import { v4 as uuid } from 'uuid';
 import { basename } from 'node:path';
 import { program } from 'commander';
 
-const _log = (...args) => console.log(`[${new Date().toISOString()}]`, '[benchmarker]', ...args);
+const _log = (...args) => console.log(`[${new Date().toISOString()}]`, '[soak-tester]', ...args);
 const log  = (...args) => true  && _log('INFO',   ...args);
 log.debug  = (...args) => false && _log('DEBUG',  ...args);
 log.info   = log;
@@ -40,9 +40,9 @@ const logPath = logDirectory || `./logs/${new Date().toISOString()}`;
 
 let bearerToken;
 
-benchmark();
+soakTest();
 
-async function benchmark() {
+async function soakTest() {
   log.info('Setting up...');
 
   log.info('Creating log directory:', logPath, '...');
@@ -53,7 +53,7 @@ async function benchmark() {
   bearerToken = token;
 
   log.info('Creating project...');
-  const { id:projectId } = await apiPostJson('projects', { name:`benchmark-${new Date().toISOString().replace(/\..*/, '')}` });
+  const { id:projectId } = await apiPostJson('projects', { name:`soak-test-${new Date().toISOString().replace(/\..*/, '')}` });
 
   log.info('Uploading form...');
   const { xmlFormId:formId } = await apiPostFile(`projects/${projectId}/forms`, formPath);
@@ -61,9 +61,9 @@ async function benchmark() {
   log.info('Publishing form...');
   await apiPost(`projects/${projectId}/forms/${formId}/draft/publish`);
 
-  log.info('Setup complete.  Starting benchmarks...');
+  log.info('Setup complete.  Starting soak tests...');
 
-  await doBenchmark('randomSubmission', 50, 1_000, 30_000, 100, n => randomSubmission(n, projectId, formId));
+  await doSoakTest('randomSubmission', 50, 1_000, 30_000, 100, n => randomSubmission(n, projectId, formId));
 
   // TODO work out a more scientific sleep duration
   const backgroundJobPause = 20_000;
@@ -71,7 +71,7 @@ async function benchmark() {
   await new Promise(resolve => setTimeout(resolve, backgroundJobPause));
   log.info('Woke up.');
 
-  await doBenchmark('exportZipWithDataAndMedia', 10, 3_000, 300_000, 0, n => exportZipWithDataAndMedia(n, projectId, formId));
+  await doSoakTest('exportZipWithDataAndMedia', 10, 3_000, 300_000, 0, n => exportZipWithDataAndMedia(n, projectId, formId));
 
   log.info(`Check for extra logs at ${logPath}`);
 
@@ -81,8 +81,8 @@ async function benchmark() {
   process.exit(0);
 }
 
-function doBenchmark(name, throughput, throughputPeriod, testDuration, minimumSuccessThreshold, fn) {
-  log.info('Starting benchmark:', name);
+function doSoakTest(name, throughput, throughputPeriod, testDuration, minimumSuccessThreshold, fn) {
+  log.info('Starting soak test:', name);
   log.info('        throughput:', throughput, 'per period');
   log.info('  throughputPeriod:', throughputPeriod, 'ms');
   log.info('      testDuration:', durationForHumans(testDuration));
@@ -170,7 +170,7 @@ function doBenchmark(name, throughput, throughputPeriod, testDuration, minimumSu
 
         if(successPercent < minimumSuccessThreshold) reportFatalError('MINIMUM SUCCESS THRESHOLD WAS NOT MET');
 
-        if(fails.length) reportWarning('REQUEST FAILURES MAY AFFECT SUBSEQUENT BENCHMARKS');
+        if(fails.length) reportWarning('REQUEST FAILURES MAY AFFECT SUBSEQUENT SOAK TESTS');
 
         resolve();
       }, +testDuration);
