@@ -1187,7 +1187,7 @@ By default, any XLSForm conversion Warnings will fail this request and return th
 
 The API will currently check the XML's structure in order to extract the information we need about it, but ODK Central does _not_ run comprehensive validation on the full contents of the XML to ensure compliance with the ODK specification. Future versions will likely do this, but in the meantime you will have to use a tool like [ODK Validate](https://getodk.org/use/validate/) to be sure your Forms are correct.
 
-**Creating Datasets with Forms**
+### Creating Datasets with Forms
 
 Starting from Version 2022.3, a Form can also create a Dataset by defining a Dataset schema in the Form definition (XForms XML or XLSForm). When a Form with a Dataset schema is uploaded, a Dataset and its Properties are created and a `dataset.create` event is logged in the Audit logs. The state of the Dataset is dependent on the state of the Form; you will need to publish the Form to publish the Dataset. Datasets in the Draft state are not return in [Dataset APIs](#reference/datasets), however the [Dataset Properties](#reference/forms/dataset-properties/draft-form-dataset-diff) API for the Form can be called to get the Dataset and its Properties.
 
@@ -2926,19 +2926,24 @@ Identical to [the non-Draft version](/reference/submissions/attachments/clearing
 
 _(introduced: version 2022.3)_
 
-A Dataset is a collection of Entities. A Dataset's schema is defined by the Forms that create Entities in that Dataset. See the [ODK XForms specification](https://getodk.github.io/xforms-spec) for defining Datasets in Form definitions.
+Version 2022.3 introduces server-managed Datasets as the first step on our [Entity-based data collection](https://forum.getodk.org/t/entity-based-data-collection/38115) journey.
 
-Entities are added to a Dataset when a Submission of a Form that creates Entities is **approved**.
+An Entity is a specific person, place, or thing. A Dataset is a collection of Entities. A Dataset is defined within a Form, and then a Submission to that Form creates an Entity when that Submission is **approved**. The Dataset definition includes the Dataset name and which Form fields map to which Dataset/Entity Properties, e.g. how to construct an Entity from a Submission.
+
+See the [ODK XForms specification](https://getodk.github.io/xforms-spec) for guidance on defining Datasets in Forms.
+
+Once a Dataset exists, it can be linked to another Form as an Attachment and serve as an automatically-updating CSV.
 
 ### Related APIs:
 
+- [Implicit creation of Datasets via Forms](#reference/forms/forms/creating-a-new-form)
 - [Link a Dataset to a Form Attachment](#reference/forms/draft-form/linking-a-dataset-to-a-draft-form-attachment)
 - [Get a Form's Dataset Properties](#reference/forms/dataset-properties)
 
 
 ## Datasets [GET /projects/{projectId}/datasets]
 
-Returns the list of Datasets in a project
+The Dataset listing endpoint returns all published Datasets in a Project. If a Draft Form defines a new Dataset, that Dataset will not be included in this list until the Form is published.
 
 + Parameters
     + projectId: `16` (number, required) - The numeric ID of the Project
@@ -2953,7 +2958,17 @@ Returns the list of Datasets in a project
 
 ## Download Dataset [GET /projects/{projectId}/datasets/{name}/entities.csv]
 
-Download Dataset as CSV file
+Datasets (collections of Entities) can be used as Attachments in other Forms, but they can also be downloaded directly as a CSV file. The CSV format matches what is expected for a [select question](https://docs.getodk.org/form-datasets/#building-selects-from-csv-files) with columns for `name`, `label,` and properties. In the case of Datasets, the `name` column is the Entity's UUID, the `label` column is the human-readable Entity label populated in the Submission, and the properties are the full set of Dataset Properties for that Dataset. If an Property for an given Entity is blank (e.g. it was not captured by that Form or was left blank), that field of the CSV is blank.
+
+Note that as of Version 2022.3 we do not guarantee the order of the Dataset Property columns.
+
+```
+name,label,first_name,last_name,age,favorite_color
+54a405a0-53ce-4748-9788-d23a30cc3afa,Amy Aardvark,Amy,Aardvark,45,
+0ee79b8b-9711-4aa0-9b7b-ece0a109b1b2,Beth Baboon,Beth,Baboon,19,yellow
+3fc9c54c-7d41-4258-b014-bfacedb95711,Cory Cat,Cory,Cat,,cyan
+```
+
 
 + Parameters
     + projectId: `16` (number, required) - The numeric ID of the Project
