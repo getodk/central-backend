@@ -741,6 +741,42 @@ describe('datasets and entities', () => {
             }]);
           });
       }));
+
+      it('should return empty array if managed encryption is enabled', testService(async (service) => {
+        // Upload a form and then create a new draft version
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'supersecret' })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/draft/dataset-diff')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.eql([]);
+          });
+      }));
+
+      it('should return empty array if form is encrypted', testService(async (service) => {
+        // Upload a form and then create a new draft version
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity.replace('</model>', '<submission base64RsaPublicKey="abc"/></model>'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/draft/dataset-diff')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.eql([]);
+          });
+      }));
     });
 
     describe('/projects/:id/forms/:formId/dataset-diff GET', () => {
