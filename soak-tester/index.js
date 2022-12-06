@@ -23,7 +23,7 @@ log.report = (...args) => true  && _log('REPORT', ...args);
 
 program
     .option('-s, --server-url <serverUrl>', 'URL of ODK Central server', 'http://localhost:8989')
-    .option('-u, --user-email <serverUrl>', 'Email of central user', 'x@example.com')
+    .option('-u, --user-email <userEmail>', 'Email of central user', 'x@example.com')
     .option('-P, --user-password <userPassword>', 'Password of central user', 'secret')
     .option('-f, --form-path <formPath>', 'Path to form file (XML, XLS, XLSX etc.)', './250q-form.xml')
     .option('-L, --log-directory <log-directory>', 'Log output directory (this should be an empty or non-existent directory)')
