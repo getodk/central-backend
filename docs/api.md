@@ -36,7 +36,23 @@ Here major and breaking changes to the API are listed by version.
 
 **Added**:
 
+* Introducing [Datasets](#reference/datasets) as the first step of Entity-Based Data Collection! Future versions of Central will build on these new concepts. We consider this functionality experimental and subject to change in the next release.
+  * Forms can now create Datasets in the project, see [Creating a New Form](#reference/forms/forms/creating-a-new-form) and the [ODK XForms specification](https://getodk.github.io/xforms-spec) for details.
+  * New endpoint [GET /projects/:id/datasets](#reference/datasets/datasets/datasets) for listing Datasets of a project.
+  * New endpoint [GET /projects/:id/datasets/:name/entities.csv](#reference/datasets/download-dataset/download-dataset) to download the Dataset as a CSV file.
+  * New endpoints for [Related Datasets](#reference/forms/related-datasets/) to see the Datasets affected by published and unpublished Forms.
+  * New endpoint [PATCH .../attachments/:name](#reference/forms/draft-form/linking-a-dataset-to-a-draft-form-attachment) to link/unlink a Dataset to a Form Attachment.
 * OData Data Document requests now allow limited use of `$select`.
+
+**Changed**:
+
+* The following endpoints have changed with the addition of Datasets:
+  * The [Extended Project](#reference/project-management/projects/listing-projects) endpoint now returns the `datasets` count for the Project.
+  * The [Extended Form](#reference/forms/forms/list-all-forms) endpoint now returns the `entityRelated` flag if the form defines a Dataset schema.
+  * [DELETE .../draft/attachments/:name](#reference/forms/draft-form/clearing-a-draft-form-attachment) will unlink the Dataset if there's a Dataset link to the attachment.
+  * [GET .../draft/attachments/:filename](#reference/forms/individual-form/downloading-a-form-attachment) will return the Dataset as a CSV file if the attachment is linked to a Dataset.
+  * [GET .../draft/attachments](#reference/forms/draft-form/listing-expected-draft-form-attachments) returns two additional flags `blobExists` and `datasetExists`.
+  * In the [OpenRosa Form Manifest](#reference/openrosa-endpoints/openrosa-form-manifest-api/openrosa-form-manifest-api), if a Form Attachment is linked to a Dataset then the value of `hash` is the MD5 of the last updated timestamp or the MD5 of `1970-01-01 00:00:00` if the Dataset is empty.
 
 ### ODK Central v1.5.3
 
@@ -1171,6 +1187,12 @@ By default, any XLSForm conversion Warnings will fail this request and return th
 
 The API will currently check the XML's structure in order to extract the information we need about it, but ODK Central does _not_ run comprehensive validation on the full contents of the XML to ensure compliance with the ODK specification. Future versions will likely do this, but in the meantime you will have to use a tool like [ODK Validate](https://getodk.org/use/validate/) to be sure your Forms are correct.
 
+### Creating Datasets with Forms
+
+Starting from Version 2022.3, a Form can also create a Dataset by defining a Dataset schema in the Form definition (XForms XML or XLSForm). When a Form with a Dataset schema is uploaded, a Dataset and its Properties are created and a `dataset.create` event is logged in the Audit logs. The state of the Dataset is dependent on the state of the Form; you will need to publish the Form to publish the Dataset. Datasets in the Draft state are not returned in [Dataset APIs](#reference/datasets), however the [Related Datasets](#reference/forms/related-datasets/draft-form-dataset-diff) API for the Form can be called to get the Dataset and its Properties.
+
+It is possible to define the schema of a Dataset in multiple Forms. Such Forms can be created and published in any order. The creation of the first Form will generate a `dataset.create` event in Audit logs and subsequent Form creation will generate `dataset.update` events. Publishing any of the Forms will also publish the Dataset and will generate a `dataset.update.publish` event. The state of a Property of a Dataset is also dependent on the state of the Form that FIRST defines that Property, which means if a Form is in the Draft state then the Properties defined by that Form will not appear in the [.csv file](#reference/datasets/download-dataset/download-dataset) of the Dataset.
+
 + Parameters
     + ignoreWarnings: `false` (boolean, optional) - Defaults to `false`. Set to `true` if you want the Form to be created even if the XLSForm conversion results in warnings.
     + publish: `false` (boolean, optional) - Defaults to `false`. Set to `true` if you want the Form to skip the Draft state to Published.
@@ -1434,6 +1456,8 @@ Draft `version` conflicts are allowed with prior versions of a Form while in Dra
 
 The `xmlFormId`, however, must exactly match that of the Form overall, or the request will be rejected.
 
+Starting from Version 2022.3, a Draft Form can also create or update a Dataset by defining a Dataset schema in the Form definition. The state of the Dataset and its Properties is dependent on the state of the Form, see [Creating a new form](#reference/forms/forms/creating-a-new-form) for more details.
+
 + Parameters
     + ignoreWarnings: `false` (boolean, optional) - Defaults to `false`. Set to `true` if you want the form to be created even if the XLSForm conversion results in warnings.
 
@@ -1564,9 +1588,12 @@ Form Attachments for each form are automatically determined when the form is fir
 
 To upload a binary to an expected file slot, `POST` the binary to its endpoint. Supply a `Content-Type` MIME-type header if you have one.
 
+As of version 2022.3, if there is already a Dataset linked to this attachment, it will be unlinked and replaced with the uploaded file.
+
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
-
+    + filename: `people.csv` (string, required) - The name of that attachment.
+    
 + Request (*/*)
     + Body
 
@@ -1580,16 +1607,18 @@ To upload a binary to an expected file slot, `POST` the binary to its endpoint. 
 
 #### Downloading a Draft Form Attachment [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}]
 
-To download a single file, use this endpoint. The appropriate `Content-Disposition` (attachment with a filename) and `Content-Type` (based on the type supplied at upload time) will be given.
+To download a single file, use this endpoint. The appropriate `Content-Disposition` (attachment with a filename or Dataset name) and `Content-Type` (based on the type supplied at upload time or `text/csv` in the case of a linked Dataset) will be given.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + filename: `people.csv` (string, required) - The name of tha attachment.
 
 + Response 200
     + Headers
 
-            Content-Type: {the MIME type of the attachment file itself}
-            Content-Disposition: attachment; filename={the file's name}
+            
+            Content-Type: {the MIME type of the attachment file itself or text/csv for a Dataset}
+            Content-Disposition: attachment; filename={the file's name or [Dataset name].csv}
 
     + Body
 
@@ -1600,16 +1629,42 @@ To download a single file, use this endpoint. The appropriate `Content-Dispositi
 
 #### Clearing a Draft Form Attachment [DELETE /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}]
 
-Because Form Attachments are completely determined by the XForms definition of the form itself, there is no direct way to entirely remove a Form Attachment entry from the list, only to clear its uploaded content. Thus, when you issue a `DELETE` to the attachment's endpoint, that is what happens.
+Because Form Attachments are completely determined by the XForms definition of the form itself, there is no direct way to entirely remove a Form Attachment entry from the list, only to clear its uploaded content or to unlink the Dataset. Thus, when you issue a `DELETE` to the attachment's endpoint, that is what happens.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + filename: `people.csv` (string, required) - The name of tha attachment.
 
 + Response 200 (application/json)
     + Attributes (Success)
 
 + Response 403 (application/json)
     + Attributes (Error 403)
+
+#### Linking a Dataset to a Draft Form Attachment [PATCH /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}]
+
+_(introduced: version 2022.3)_
+
+This endpoint can update a Form Attachment's link to a Dataset. You can use this to link or unlink a Dataset to a Form Attachment. Linking of a Dataset to the Attachment only happens if the Attachment type is `file` and there is a Dataset with the exact name of the Attachment (excluding extension `.csv`) in the Project. For example, if the Form definition includes an Attachment named `people.csv`, then it can be linked to a Dataset named `people`. Pay special attention to letter case and spaces.
+
+When linking a Dataset, if there is any existing file attached then it will be removed.
+
++ Parameters
+    + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
+    + filename: `people.csv` (string, required) - The name of the attachment.
+
++ Request
+    + Attributes (Patch Attachment)
+    
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
++ Response 404 (application/json)
+    + Attributes (Error 404)
 
 #### Getting Draft Form Schema Fields [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/fields{?odata}]
 
@@ -1641,6 +1696,8 @@ If your Draft `version` conflicts with an older version of the Form, you will ge
 If you wish for the `version` to be set on your behalf as part of the publish operation, you can provide the new version string as a querystring parameter `?version`.
 
 Once the Draft is published, there will no longer be a Draft version of the form.
+
+Starting with Version 2022.3, publishing a Draft Form that defines a Dataset schema will also publish the Dataset. It will generate `dataset.update.publish` event in Audit logs and make the Dataset available in [Datasets APIs](#reference/datasets)
 
 + Parameters
     + version: `newVersion` (string, optional) - The `version` to be associated with the Draft once it's published.
@@ -1951,6 +2008,37 @@ You can fully delete a link by issuing `DELETE` to its resource. This will remov
 + Response 403 (application/json)
     + Attributes (Error 403)
 
+
+## Related Datasets [/v1]
+
+_(introduced: version 2022.3)_
+
+Datasets are created and updated through Forms. Dataset-related Forms follow [the entities sub-spec](https://getodk.github.io/xforms-spec/entities) of the ODK XForms specification that allow them to define a Dataset and a mapping of Form Fields to Dataset Properties. Submissions from such a Form can create Entities within the Dataset defined in the Form.
+
+Currently, Datasets and Dataset Properties are purely additive. Multiple Forms can add Properties to the same Dataset and multiple Forms can create Entities in the same Dataset. Not all Properties of a Dataset have to be included in a Form for that Dataset. For example, one Form publishing to a Dataset called `trees` could add `location` and `species`, while another could add `species` and `circumference`. The Properties of the Dataset would be the union of Properties from all Forms for that Dataset (`location`, `species`, `circumference`). Note that it is not necessary that a Form will save to all Properties of a Dataset, so the endpoint also returns a `inForm` flag for each property which is true only if the Form affects that Property.
+
+The following endpoints return the Dataset(s) that Submissions of that Form will populate. They also return all of the Entity Properties for each Dataset and indicate which ones are mapped to Fields in the specified Form.
+
+
+### Published Form Related Datasets [GET /v1/projects/{projectId}/forms/{xmlFormId}/dataset-diff]
+
+This endpoint lists the name and Properties of a Dataset that are affected by a Form. The list of Properties includes all published Properties on that Dataset, but each property has the `inForm` flag to note whether or not it will be filled in by that form.
+
++ Response 200 (application/json)
+    This is the standard response
+
+    + Attributes (array[Dataset Diff])
+
+### Draft Form Dataset Diff [GET /v1/projects/{projectId}/forms/{xmlFormId}/draft/dataset-diff]
+
+This endpoint reflects the change to a Dataset that will go into effect once the form is Published. Like the endpoint above, it lists the Dataset name and Properties, but it also includes the `isNew` flag on both the Dataset, and on each individual property. This flag is true only if the Dataset/Property is new and is going to be created by publishing the Draft Form.
+
++ Response 200 (application/json)
+    This is the standard response
+
+    + Attributes (array[Draft Dataset Diff])
+    
+
 # Group Submissions
 
 `Submission`s are filled-out forms (also called `Instance`s in some other ODK documentation). Each is associated with a particular Form (and in many cases with a particular _version_ of a Form), and is also created out of a standard XML format based on the Form itself. Submissions can be sent with many accompanying multimedia attachments, such as photos taken in the course of the survey. Once created, the Submissions themselves as well as their attachments can be retrieved through this API.
@@ -2018,6 +2106,8 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 ### Updating Submission metadata [PATCH /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}]
 
 Currently, the only updatable _metadata_ on a Submission is its `reviewState`. To update the submission _data_ itself, please see [Updating Submission data](/reference/submissions/submissions/updating-submission-data).
+
+Starting with Version 2022.3, changing the `reviewState` of a Submission to `approved` can create an Entity in a Dataset if the corresponding Form maps Dataset Properties to Form Fields. If an Entity is created successfully then an `entity.create` event is logged in Audit logs, else `entity.create.error` is logged.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
@@ -2830,6 +2920,71 @@ Identical to [the non-Draft version](/reference/submissions/attachments/clearing
 + Response 403 (application/json)
     + Attributes (Error 403)
 
+# Group Datasets
+
+_(introduced: version 2022.3)_
+
+Version 2022.3 introduces server-managed Datasets as the first step on our [Entity-based data collection](https://forum.getodk.org/t/entity-based-data-collection/38115) journey.
+
+An Entity is a specific person, place, or thing. A Dataset is a collection of Entities. A Dataset is defined within a Form, and then a Submission to that Form creates an Entity when that Submission is **approved**. The Dataset definition includes the Dataset name and which Form fields map to which Dataset/Entity Properties, e.g. how to construct an Entity from a Submission.
+
+See the [ODK XForms specification](https://getodk.github.io/xforms-spec) for guidance on defining Datasets in Forms.
+
+Once a Dataset exists, it can be linked to another Form as an Attachment and served as an automatically-updating CSV.
+
+### Related APIs:
+
+- [Implicit creation of Datasets via Forms](#reference/forms/forms/creating-a-new-form)
+- [Link a Dataset to a Form Attachment](#reference/forms/draft-form/linking-a-dataset-to-a-draft-form-attachment)
+- [Get a Form's Related Datasets](#reference/forms/related-datasets)
+
+
+## Datasets [GET /projects/{projectId}/datasets]
+
+The Dataset listing endpoint returns all published Datasets in a Project. If a Draft Form defines a new Dataset, that Dataset will not be included in this list until the Form is published.
+
++ Parameters
+    + projectId: `16` (number, required) - The numeric ID of the Project
+
++ Response 200 (application/json)
+    This is the standard response
+
+    + Attributes (array[Dataset])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Download Dataset [GET /projects/{projectId}/datasets/{name}/entities.csv]
+
+Datasets (collections of Entities) can be used as Attachments in other Forms, but they can also be downloaded directly as a CSV file. The CSV format matches what is expected for a [select question](https://docs.getodk.org/form-datasets/#building-selects-from-csv-files) with columns for `name`, `label,` and properties. In the case of Datasets, the `name` column is the Entity's UUID, the `label` column is the human-readable Entity label populated in the Submission, and the properties are the full set of Dataset Properties for that Dataset. If any Property for an given Entity is blank (e.g. it was not captured by that Form or was left blank), that field of the CSV is blank.
+
+Note that as of Version 2022.3 we do not guarantee the order of the Dataset Property columns.
+
+```
+name,label,first_name,last_name,age,favorite_color
+54a405a0-53ce-4748-9788-d23a30cc3afa,Amy Aardvark,Amy,Aardvark,45,
+0ee79b8b-9711-4aa0-9b7b-ece0a109b1b2,Beth Baboon,Beth,Baboon,19,yellow
+3fc9c54c-7d41-4258-b014-bfacedb95711,Cory Cat,Cory,Cat,,cyan
+```
+
+
++ Parameters
+    + projectId: `16` (number, required) - The numeric ID of the Project
+    + name: `people` (string, required) - Name of the Dataset
+
++ Response 200
+    + Headers
+
+            Content-Type: text/csv
+            Content-Disposition: attachment; filename={the dataset name}.csv
+
+    + Body
+
+            (binary data)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
 # Group OpenRosa Endpoints
 
 [OpenRosa](https://bitbucket.org/javarosa/javarosa/wiki/OpenRosaAPI) is an API standard which accompanies the ODK XForms XML standard, allowing compliant servers and clients to use a common protocol to communicate `Form`s and `Submission`s to each other. When survey clients like ODK Collect and Enketo submit Submission data to a Form, this is the API they use.
@@ -3004,6 +3159,7 @@ A Manifest document is available at this resource path for any form in the syste
 
 * A link to this document will not be given in the [Form Listing API](/reference/openrosa-endpoints/openrosa-form-listing-api) unless we expect the form to have media or data file attachments based on the XForms definition of the form.
 * The Manifest will only output information for files the server actually has in its possession. Any missing expected files will be omitted, as we cannot provide a `hash` or `downloadUrl` for them.
+* For Attachments that are linked to a Dataset, the value of `hash` is calculated using the MD5 of the last updated timestamp of the Dataset, instead of the content of the Dataset.
 
 + Parameters
     + projectId: `7` (number, required) - The numeric ID of the Project
@@ -3830,6 +3986,11 @@ Server Audit Logs entries are created for the following `action`s:
 * `submission.update` when a Submission's metadata is updated.
 * `submission.update.version` when a Submission XML data is updated.
 * `submission.attachment.update` when a Submission Attachment binary is set or cleared, but _only via the REST API_. Attachments created alongside the submission over the OpenRosa `/submission` API (including submissions from Collect) do not generate audit log entries.
+* `dataset.create` when a Dataset is created.
+* `dataset.update` when a Dataset is updated.
+* `dataset.update.publish` when a Dataset is published.
+* `entity.create` when an Entity is created.
+* `entity.create.error` when there is an error during entity creation process.
 * `config.set` when a system configuration is set.
 * `backup` when a backup operation is attempted.
 * `analytics` when a Usage Report is attempted.
@@ -4008,6 +4169,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission, if any.
 + createdBy: (Actor, optional) - The full information of the Actor who created this Form.
 + excelContentType: (string, optional) - If the Form was created by uploading an Excel file, this field contains the MIME type of that file.
++ entityRelated: `false` (boolean, required) - True only if this Form is related to a Dataset. In v2022.3, this means the Form's Submissions create Entities in a Dataset. In a future version, Submissions will also be able to update existing Entities.
 
 ## Extended Deleted Form (Extended Form)
 + deletedAt: `2018-03-21T12:45:02.312Z` (string, required) - ISO date format
@@ -4024,7 +4186,9 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Form Attachment (object)
 + name: `myfile.mp3` (string, required) - The name of the file as specified in the XForm.
 + type: (Form Attachment Type, required) - The expected type of file as specified in the XForm.
-+ exists: `true` (boolean, required) - Whether the server has the file or not.
++ exists: `true` (boolean, required) - True if the server has the file or the Attachment is linked to a Dataset, otherwise false.
++ blobExists: `true` (boolean, required) - Whether the server has the file or not.
++ datasetExists: `true` (boolean, required) - Whether attachment is linked to a Dataset.
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format. The last time this file's binary content was set (POST) or cleared (DELETE).
 
 ## Form Attachment Type (enum)
@@ -4053,6 +4217,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + appUsers: `4` (number, required) - The number of App Users created within this Project.
 + forms: `7` (number, required) - The number of forms within this Project.
 + lastSubmission: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent submission to any form in this project, if any.
++ datasets: `2` (number, required) - The number of Datasets within this Project.
 
 ## Project With Forms (Project)
 + formList: (array[Extended Form], required) - The extended Forms associated with this Project that are visible to the authenticated Actor.
@@ -4124,3 +4289,28 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 ## Success (object)
 + success: `true` (boolean, required)
 
+## Dataset (object)
++ name: `people` (string, required) - The name of the Dataset
++ createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format.
++ projectId: `1` (number, required) - The numerical ID of the Project that the Dataset belongs to.
+
+## Patch Attachment (object)
++ dataset: `true` (boolean, required) - true for linking Dataset and false for unlinking Dataset.
+
+## Dataset Diff (object)
++ name: `people` (string, required) - The name of the Dataset.
++ properties: (array[Property]) - All properties of the Dataset.
+
+## Draft Dataset Diff (object)
++ name: `people` (string, required) - The name of the Dataset.
++ isNew: `true` (boolean, required) - Whether or not this Dataset is new (will be created by publishing the Draft Form).
++ properties: (array[Draft Property]) - All properties of the Dataset.
+
+## Property (object)
++ name: `first_name` (string, required) - The name of the Property.
++ inForm: `true` (boolean, required) - Whether or not this Property is affected by the Form.
+
+## Draft Property (object)
++ name: `first_name` (string, required) - The name of the Property.
++ inForm: `true` (boolean, required) - Whether or not this Property is affected by the form.
++ isNew: `true` (boolean, required) - Whether or not this Property is new (will be created by publishing the Draft Form).
