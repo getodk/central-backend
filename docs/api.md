@@ -36,11 +36,11 @@ Here major and breaking changes to the API are listed by version.
 
 **Added**:
 
-* Introducing [Datasets](#reference/datasets) as part of our new Entity-Based Data Collection feature!
+* Introducing [Datasets](#reference/datasets) as the first step of Entity-Based Data Collection! Future versions of Central will build on these new concepts. We consider this functionality experimental and subject to change in the next release.
   * Forms can now create Datasets in the project, see [Creating a New Form](#reference/forms/forms/creating-a-new-form) and the [ODK XForms specification](https://getodk.github.io/xforms-spec) for details.
   * New endpoint [GET /projects/:id/datasets](#reference/datasets/datasets/datasets) for listing Datasets of a project.
-  * New endpoint [GET /projects/:id/datasets/:name/download](#reference/datasets/download-dataset/download-dataset) to download the Dataset as a CSV file.
-  * New endpoints for [Dataset Properties](#reference/forms/dataset-properties/) to see the Datasets affected by published and unpublished Forms.
+  * New endpoint [GET /projects/:id/datasets/:name/entities.csv](#reference/datasets/download-dataset/download-dataset) to download the Dataset as a CSV file.
+  * New endpoints for [Related Datasets](#reference/forms/related-datasets/) to see the Datasets affected by published and unpublished Forms.
   * New endpoint [PATCH .../attachments/:name](#reference/forms/draft-form/linking-a-dataset-to-a-draft-form-attachment) to link/unlink a Dataset to a Form Attachment.
 * OData Data Document requests now allow limited use of `$select`.
 
@@ -50,7 +50,7 @@ Here major and breaking changes to the API are listed by version.
   * The [Extended Project](#reference/project-management/projects/listing-projects) endpoint now returns the `datasets` count for the Project.
   * The [Extended Form](#reference/forms/forms/list-all-forms) endpoint now returns the `entityRelated` flag if the form defines a Dataset schema.
   * [DELETE .../draft/attachments/:name](#reference/forms/draft-form/clearing-a-draft-form-attachment) will unlink the Dataset if there's a Dataset link to the attachment.
-  * [GET .../draft/attachments/:name](#reference/forms/individual-form/downloading-a-form-attachment) will return the Dataset as a CSV file if the attachment is linked to a Dataset.
+  * [GET .../draft/attachments/:filename](#reference/forms/individual-form/downloading-a-form-attachment) will return the Dataset as a CSV file if the attachment is linked to a Dataset.
   * [GET .../draft/attachments](#reference/forms/draft-form/listing-expected-draft-form-attachments) returns two additional flags `blobExists` and `datasetExists`.
   * In the [OpenRosa Form Manifest](#reference/openrosa-endpoints/openrosa-form-manifest-api/openrosa-form-manifest-api), if a Form Attachment is linked to a Dataset then the value of `hash` is the MD5 of the last updated timestamp or the MD5 of `1970-01-01 00:00:00` if the Dataset is empty.
 
@@ -1189,9 +1189,9 @@ The API will currently check the XML's structure in order to extract the informa
 
 ### Creating Datasets with Forms
 
-Starting from Version 2022.3, a Form can also create a Dataset by defining a Dataset schema in the Form definition (XForms XML or XLSForm). When a Form with a Dataset schema is uploaded, a Dataset and its Properties are created and a `dataset.create` event is logged in the Audit logs. The state of the Dataset is dependent on the state of the Form; you will need to publish the Form to publish the Dataset. Datasets in the Draft state are not return in [Dataset APIs](#reference/datasets), however the [Dataset Properties](#reference/forms/dataset-properties/draft-form-dataset-diff) API for the Form can be called to get the Dataset and its Properties.
+Starting from Version 2022.3, a Form can also create a Dataset by defining a Dataset schema in the Form definition (XForms XML or XLSForm). When a Form with a Dataset schema is uploaded, a Dataset and its Properties are created and a `dataset.create` event is logged in the Audit logs. The state of the Dataset is dependent on the state of the Form; you will need to publish the Form to publish the Dataset. Datasets in the Draft state are not returned in [Dataset APIs](#reference/datasets), however the [Related Datasets](#reference/forms/related-datasets/draft-form-dataset-diff) API for the Form can be called to get the Dataset and its Properties.
 
-It is possible to define the schema of a Dataset in multiple Forms. Such Forms can be created and published in any order. The creation of the first Form will generate a `dataset.create` event in Audit logs and subsequent Form creation will generate `dataset.update` events. Publishing any of the Forms will also publish the Dataset and will generate a `dataset.update.publish` event. The state of a Property of a Dataset is also dependent on the state of the Form that defines that Property, which means if a Form is in the Draft state then the Properties defined by that Form will not appear in the [.csv file](#reference/datasets/download-dataset/download-dataset) of the Dataset.
+It is possible to define the schema of a Dataset in multiple Forms. Such Forms can be created and published in any order. The creation of the first Form will generate a `dataset.create` event in Audit logs and subsequent Form creation will generate `dataset.update` events. Publishing any of the Forms will also publish the Dataset and will generate a `dataset.update.publish` event. The state of a Property of a Dataset is also dependent on the state of the Form that FIRST defines that Property, which means if a Form is in the Draft state then the Properties defined by that Form will not appear in the [.csv file](#reference/datasets/download-dataset/download-dataset) of the Dataset.
 
 + Parameters
     + ignoreWarnings: `false` (boolean, optional) - Defaults to `false`. Set to `true` if you want the Form to be created even if the XLSForm conversion results in warnings.
@@ -1456,7 +1456,7 @@ Draft `version` conflicts are allowed with prior versions of a Form while in Dra
 
 The `xmlFormId`, however, must exactly match that of the Form overall, or the request will be rejected.
 
-Starting from Version 2022.3, a Draft Form can also create or update a Dataset by defining Dataset schema in the Form definition. State of the Dataset and its Properties is dependent on the state of the Form, see [Create Form request](#reference/forms/forms/creating-a-new-form) for more details. 
+Starting from Version 2022.3, a Draft Form can also create or update a Dataset by defining a Dataset schema in the Form definition. The state of the Dataset and its Properties is dependent on the state of the Form, see [Creating a new form](#reference/forms/forms/creating-a-new-form) for more details.
 
 + Parameters
     + ignoreWarnings: `false` (boolean, optional) - Defaults to `false`. Set to `true` if you want the form to be created even if the XLSForm conversion results in warnings.
@@ -1592,7 +1592,7 @@ As of version 2022.3, if there is already a Dataset linked to this attachment, i
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
-    + filename: `people.csv` (string, required) - The name of tha attachment.
+    + filename: `people.csv` (string, required) - The name of that attachment.
     
 + Request (*/*)
     + Body
@@ -2009,20 +2009,18 @@ You can fully delete a link by issuing `DELETE` to its resource. This will remov
     + Attributes (Error 403)
 
 
-## Dataset Properties [/v1]
+## Related Datasets [/v1]
 
 _(introduced: version 2022.3)_
 
-Datasets are created and updated through Forms. Dataset-related Forms follow a new version of the [ODK XForms specification](https://getodk.github.io/xforms-spec) that allow them to define a Dataset and a mapping of Form Fields to Dataset Properties. Submissions from such a Form can create Entities within the Dataset defined in the Form. 
+Datasets are created and updated through Forms. Dataset-related Forms follow [the entities sub-spec](https://getodk.github.io/xforms-spec/entities) of the ODK XForms specification that allow them to define a Dataset and a mapping of Form Fields to Dataset Properties. Submissions from such a Form can create Entities within the Dataset defined in the Form.
 
-Currently, Datasets and Dataset Properties are purely additive. Multiple Forms can add Properties to the same Dataset and multiple Forms can create Entities in the same Dataset. Not all Properties of a Dataset have to be included in a Form for that Dataset. For example, one Form publishing to a Dataset called `trees` could add `location` and `species`, while another could add `species` and `circumference`. The Properties of the Dataset would be the union of Properties from all Forms for that Dataset (`location`, `species`, `circumference`).
+Currently, Datasets and Dataset Properties are purely additive. Multiple Forms can add Properties to the same Dataset and multiple Forms can create Entities in the same Dataset. Not all Properties of a Dataset have to be included in a Form for that Dataset. For example, one Form publishing to a Dataset called `trees` could add `location` and `species`, while another could add `species` and `circumference`. The Properties of the Dataset would be the union of Properties from all Forms for that Dataset (`location`, `species`, `circumference`). Note that it is not necessary that a Form will save to all Properties of a Dataset, so the endpoint also returns a `inForm` flag for each property which is true only if the Form affects that Property.
 
-Another way to think of this is how Submissions/Entities from a particular Form will affect a Dataset; which Properties will be saved on an Entity from a given Form Submission. Note that it is not necessary that a Form will save to all Properties of a Dataset, so the endpoint also returns a `inForm` flag for each property which is true only if the Form affects that Property.
-
-The following endpoints can be used on Draft and Published Forms to show how a specific Form adds or contains Properties within a specific Dataset.
+The following endpoints return the Dataset(s) that Submissions of that Form will populate. They also return all of the Entity Properties for each Dataset and indicate which ones are mapped to Fields in the specified Form.
 
 
-### Published Form Dataset Properties [GET /v1/projects/{projectId}/forms/{xmlFormId}/dataset-diff]
+### Published Form Related Datasets [GET /v1/projects/{projectId}/forms/{xmlFormId}/dataset-diff]
 
 This endpoint lists the name and Properties of a Dataset that are affected by a Form. The list of Properties includes all published Properties on that Dataset, but each property has the `inForm` flag to note whether or not it will be filled in by that form.
 
@@ -2109,7 +2107,7 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 Currently, the only updatable _metadata_ on a Submission is its `reviewState`. To update the submission _data_ itself, please see [Updating Submission data](/reference/submissions/submissions/updating-submission-data).
 
-Starting with Version 2022.3, changing the `reviewState` of a Submission to `approved` can create an Entity in a Dataset if the corresponding Form defines the Dataset schema. If an Entity is created successfully then an `entity.create` event is logged in Audit logs, else `entity.create.error` is logged.
+Starting with Version 2022.3, changing the `reviewState` of a Submission to `approved` can create an Entity in a Dataset if the corresponding Form maps Dataset Properties to Form Fields. If an Entity is created successfully then an `entity.create` event is logged in Audit logs, else `entity.create.error` is logged.
 
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
@@ -2932,13 +2930,13 @@ An Entity is a specific person, place, or thing. A Dataset is a collection of En
 
 See the [ODK XForms specification](https://getodk.github.io/xforms-spec) for guidance on defining Datasets in Forms.
 
-Once a Dataset exists, it can be linked to another Form as an Attachment and serve as an automatically-updating CSV.
+Once a Dataset exists, it can be linked to another Form as an Attachment and served as an automatically-updating CSV.
 
 ### Related APIs:
 
 - [Implicit creation of Datasets via Forms](#reference/forms/forms/creating-a-new-form)
 - [Link a Dataset to a Form Attachment](#reference/forms/draft-form/linking-a-dataset-to-a-draft-form-attachment)
-- [Get a Form's Dataset Properties](#reference/forms/dataset-properties)
+- [Get a Form's Related Datasets](#reference/forms/related-datasets)
 
 
 ## Datasets [GET /projects/{projectId}/datasets]
@@ -2958,7 +2956,7 @@ The Dataset listing endpoint returns all published Datasets in a Project. If a D
 
 ## Download Dataset [GET /projects/{projectId}/datasets/{name}/entities.csv]
 
-Datasets (collections of Entities) can be used as Attachments in other Forms, but they can also be downloaded directly as a CSV file. The CSV format matches what is expected for a [select question](https://docs.getodk.org/form-datasets/#building-selects-from-csv-files) with columns for `name`, `label,` and properties. In the case of Datasets, the `name` column is the Entity's UUID, the `label` column is the human-readable Entity label populated in the Submission, and the properties are the full set of Dataset Properties for that Dataset. If an Property for an given Entity is blank (e.g. it was not captured by that Form or was left blank), that field of the CSV is blank.
+Datasets (collections of Entities) can be used as Attachments in other Forms, but they can also be downloaded directly as a CSV file. The CSV format matches what is expected for a [select question](https://docs.getodk.org/form-datasets/#building-selects-from-csv-files) with columns for `name`, `label,` and properties. In the case of Datasets, the `name` column is the Entity's UUID, the `label` column is the human-readable Entity label populated in the Submission, and the properties are the full set of Dataset Properties for that Dataset. If any Property for an given Entity is blank (e.g. it was not captured by that Form or was left blank), that field of the CSV is blank.
 
 Note that as of Version 2022.3 we do not guarantee the order of the Dataset Property columns.
 
