@@ -1,7 +1,7 @@
 const { testService } = require('../setup');
 const { sql } = require('slonik');
 const testData = require('../../data/xml');
-const { dissocPath } = require('ramda');
+const { dissocPath, identity } = require('ramda');
 
 // NOTE: for the data output tests, we do not attempt to extensively determine if every
 // internal case is covered; there are already two layers of tests below these, at
@@ -856,6 +856,36 @@ describe('api: /forms/:id.svc', () => {
                 }]
               });
             })))));
+
+    // #cb459: `gt` filter for submissionDate is not working as expected because of tz precision
+    // This test fails without 20221208-01-reduce-tz-precision.js (before-after state)
+    it('should only return submissions with submissionDate gt provided timestamp', testService(async (service, { run }) => {
+      const asAlice = await service.login('alice', identity);
+
+      await asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+        .send(testData.instances.withrepeat.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Ensure that microsecond does not ends at 000 - In that case existing code is working correctly
+      await run(sql`update submissions set "createdAt"=date_trunc('milliseconds', "createdAt") + interval '1 microseconds'`);
+
+      const lastTimestamp = await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions')
+        .expect(200)
+        .then(({ body }) => body.value[0].__system.submissionDate);
+
+      await asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+        .send(testData.instances.withrepeat.two)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.get(`/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=__system/submissionDate gt ${lastTimestamp}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.be.eql(1);
+          body.value[0].__id.should.be.eql('rtwo');
+        });
+    }));
 
     it('should return submissionDate-filtered toplevel rows with a function', testService((service, { run }) =>
       service.login('alice', (asAlice) =>
