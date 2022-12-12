@@ -1094,9 +1094,9 @@ describe('odata message composition', () => {
         (() => selectFields({ $select: 'address' }, 'Submissions')(fields)).should.throw('Could not find a property named \'address\'');
       }));
 
-    it('should not throw error if __id is requested for non-submissions table', () => fieldsFor(testData.forms.simple)
+    it('should not throw error if __id is requested for non-submissions table', () => fieldsFor(testData.forms.withrepeat)
       .then((fields) => {
-        (() => selectFields({ $select: '__id' }, 'Submissions.Children')(fields)).should.not.throw();
+        (() => selectFields({ $select: '__id' }, 'Submissions.children')(fields)).should.not.throw();
       }));
 
     it('should not throw error if system properties are requested for submissions table', () => fieldsFor(testData.forms.simple)

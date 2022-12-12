@@ -1,7 +1,7 @@
 const { testService } = require('../setup');
 const { sql } = require('slonik');
 const testData = require('../../data/xml');
-const { dissocPath } = require('ramda');
+const { dissocPath, identity } = require('ramda');
 
 // NOTE: for the data output tests, we do not attempt to extensively determine if every
 // internal case is covered; there are already two layers of tests below these, at
@@ -1251,6 +1251,56 @@ describe('api: /forms/:id.svc', () => {
             });
           }))));
 
+    it('should return toplevel rows with group properties', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$select=meta')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql({
+            '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+            value: [
+              { meta: { instanceID: 'rthree' } },
+              { meta: { instanceID: 'rtwo' } },
+              { meta: { instanceID: 'rone' } }
+            ]
+          });
+        });
+    }));
+
+    it('should return toplevel row with nested group properties', testService(async (service) => {
+      const asAlice = await service.login('alice', identity);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.nestedGroup)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/nestedGroup/submissions?deviceID=testid')
+        .send(testData.instances.nestedGroup.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/nestedGroup.svc/Submissions?$select=text,hospital')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql({
+            '@odata.context': 'http://localhost:8989/v1/projects/1/forms/nestedGroup.svc/$metadata#Submissions',
+            value: [
+              {
+                text: 'xyz',
+                hospital: {
+                  name: 'AKUH',
+                  hiv_medication: {
+                    have_hiv_medication: 'Yes',
+                  },
+                },
+              },
+            ]
+          });
+        });
+    }));
+
     it('should return subtable results with selected properties', testService((service) =>
       withSubmissions(service, (asAlice) =>
         asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$select=__id,name')
@@ -1270,6 +1320,35 @@ describe('api: /forms/:id.svc', () => {
               }]
             });
           }))));
+
+    it('should return subtable results with group properties', testService(async (service) => {
+      const asAlice = await service.login('alice', identity);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.groupRepeat)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/groupRepeat/submissions?deviceID=testid')
+        .send(testData.instances.groupRepeat.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/groupRepeat.svc/Submissions.child_repeat?$select=address')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql({
+            '@odata.context': 'http://localhost:8989/v1/projects/1/forms/groupRepeat.svc/$metadata#Submissions.child_repeat',
+            value: [
+              { address: { city: 'Toronto', country: 'Canada' } },
+              { address: { city: 'New York', country: 'US' } }
+            ]
+          });
+        });
+    }));
+
+
+
   });
 
   describe('/draft.svc', () => {
