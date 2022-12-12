@@ -1,4 +1,5 @@
 const appRoot = require('app-root-path');
+const { getFieldTree, getChildren } = require('../../../lib/formats/odata');
 const streamTest = require('streamtest').v2;
 // eslint-disable-next-line import/no-dynamic-require
 const { serviceDocumentFor, edmxFor, rowStreamToOData, singleRowToOData, selectFields } = require(appRoot + '/lib/formats/odata');
@@ -6,6 +7,7 @@ const { serviceDocumentFor, edmxFor, rowStreamToOData, singleRowToOData, selectF
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 // eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
+const should = require('should');
 
 // Helpers to deal with repeated system metadata generation.
 const submitter = { id: 5, displayName: 'Alice' };
@@ -1135,5 +1137,52 @@ describe('odata message composition', () => {
         filteredFields.length.should.equal(2);
       }));
   });
+
+  describe('getFieldTree', () => {
+    it('should make the tree', () => {
+      const fields = [
+        new MockField({ path: '/home', name: 'home', type: 'structure' }),
+        new MockField({ path: '/home/address', name: 'address', type: 'structure' }),
+        new MockField({ path: '/home/address/country', name: 'country', type: 'text' }),
+        new MockField({ path: '/home/address/province', name: 'province', type: 'text' }),
+        new MockField({ path: '/home/address/city', name: 'city', type: 'text' })
+      ];
+
+      const tree = getFieldTree(fields);
+      should(tree['/home'].parent).be.null();
+      tree['/home'].children.map(c => c.value.name).should.be.eql(['address']);
+
+      tree['/home/address'].parent.value.name.should.be.eql('home');
+      tree['/home/address'].children.map(c => c.value.name).should.be.eql(['country', 'province', 'city']);
+
+      tree['/home/address/country'].parent.value.name.should.be.eql('address');
+      tree['/home/address/country'].children.should.be.eql([]);
+
+      tree['/home/address/province'].parent.value.name.should.be.eql('address');
+      tree['/home/address/province'].children.should.be.eql([]);
+
+      tree['/home/address/city'].parent.value.name.should.be.eql('address');
+      tree['/home/address/city'].children.should.be.eql([]);
+    });
+  });
+
+  describe('getChildren', () => {
+    it('should return all children recursively', () => {
+      const fields = [
+        new MockField({ path: '/home', name: 'home', type: 'structure' }),
+        new MockField({ path: '/home/address', name: 'address', type: 'structure' }),
+        new MockField({ path: '/home/address/country', name: 'country', type: 'text' }),
+        new MockField({ path: '/home/address/province', name: 'province', type: 'text' }),
+        new MockField({ path: '/home/address/city', name: 'city', type: 'text' })
+      ];
+
+      const tree = getFieldTree(fields);
+
+      const children = getChildren(tree['/home']);
+
+      Array.from(children.values()).map(c => c.name).should.be.eql(['address', 'country', 'province', 'city']);
+    });
+  });
+
 });
 
