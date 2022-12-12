@@ -354,7 +354,109 @@ module.exports = {
       <bind nodeset="/data/hometown" type="string"/>
     </model>
   </h:head>
-</h:html>`
+</h:html>`,
+
+    groupRepeat: `<?xml version="1.0"?>
+    <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <h:head>
+            <h:title>groupRepeat</h:title>
+            <model odk:xforms-version="1.0.0">
+                <instance>
+                    <data id="groupRepeat">
+                        <text/>
+                        <child_repeat jr:template="">
+                            <name/>
+                            <address>
+                                <city/>
+                                <country/>
+                            </address>
+                        </child_repeat>
+                        <child_repeat>
+                            <name/>
+                            <address>
+                                <city/>
+                                <country/>
+                            </address>
+                        </child_repeat>
+                        <meta>
+                            <instanceID/>
+                        </meta>
+                    </data>
+                </instance>
+                <bind nodeset="/data/text" type="string"/>
+                <bind nodeset="/data/child_repeat/name" type="string"/>
+                <bind nodeset="/data/child_repeat/address/city" type="string"/>
+                <bind nodeset="/data/child_repeat/address/country" type="string"/>
+                <bind jr:preload="uid" nodeset="/data/meta/instanceID" readonly="true()" type="string"/>
+            </model>
+        </h:head>
+        <h:body>
+            <input ref="/data/text">
+                <label>text</label>
+            </input>
+            <group ref="/data/child_repeat">
+                <label>Children</label>
+                <repeat nodeset="/data/child_repeat">
+                    <input ref="/data/child_repeat/name">
+                        <label>Child's name</label>
+                    </input>
+                    <group ref="/data/child_repeat/address">
+                        <label>group</label>
+                        <input ref="/data/child_repeat/address/city">
+                            <label>City</label>
+                        </input>
+                        <input ref="/data/child_repeat/address/country">
+                            <label>Country</label>
+                        </input>
+                    </group>
+                </repeat>
+            </group>
+        </h:body>
+    </h:html>`,
+
+    nestedGroup: `<?xml version="1.0"?>
+    <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <h:head>
+            <h:title>nestedGroup</h:title>
+            <model odk:xforms-version="1.0.0">
+                <instance>
+                    <data id="nestedGroup">
+                        <text/>
+                        <hospital>
+                            <name/>
+                            <hiv_medication>
+                                <have_hiv_medication/>
+                            </hiv_medication>
+                        </hospital>
+                        <meta>
+                            <instanceID/>
+                        </meta>
+                    </data>
+                </instance>
+                <bind nodeset="/data/text" type="string"/>
+                <bind nodeset="/data/hospital/name" type="string"/>
+                <bind nodeset="/data/hospital/hiv_medication/have_hiv_medication" type="string"/>
+                <bind jr:preload="uid" nodeset="/data/meta/instanceID" readonly="true()" type="string"/>
+            </model>
+        </h:head>
+        <h:body>
+            <input ref="/data/text">
+                <label>text</label>
+            </input>
+            <group ref="/data/hospital">
+                <label>Hospital</label>
+                <input ref="/data/hospital/name">
+                    <label>What is the name of this hospital?</label>
+                </input>
+                <group ref="/data/hospital/hiv_medication">
+                    <label>HIV Medication</label>
+                    <input ref="/data/hospital/hiv_medication/have_hiv_medication">
+                        <label>Does this hospital have HIV medication?</label>
+                    </input>
+                </group>
+            </group>
+        </h:body>
+    </h:html>`
   },
   instances: {
     simple: {
@@ -464,6 +566,42 @@ module.exports = {
           <name>John</name>
           <age>40</age>
         </data>`
+    },
+    groupRepeat: {
+      one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="groupRepeat">
+      <text>xyz</text>
+      <child_repeat>
+        <name>John</name>
+        <address>
+          <city>Toronto</city>
+          <country>Canada</country>
+        </address>
+      </child_repeat>
+      <child_repeat>
+        <name>Jane</name>
+        <address>
+          <city>New York</city>
+          <country>US</country>
+        </address>
+      </child_repeat>
+      <meta>
+        <instanceID>uuid:2be07915-2c9c-401a-93ea-1c8f3f8e68f6</instanceID>
+      </meta>
+    </data>`
+    },
+    nestedGroup: {
+      one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="nestedGroup">
+      <text>xyz</text>
+      <hospital>
+        <name>AKUH</name>
+        <hiv_medication>
+          <have_hiv_medication>Yes</have_hiv_medication>
+        </hiv_medication>
+      </hospital>
+      <meta>
+       <instanceID>uuid:f7908274-ef70-4169-90a0-e1389ab732ff</instanceID>
+      </meta>
+    </data>`
     }
   }
 };
