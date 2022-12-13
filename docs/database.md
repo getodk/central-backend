@@ -3,7 +3,7 @@
 
 >This document is strictly intended for the developers who want to contribute to ODK central source code. If you are looking to integrate with ODK Central or automate your workflow, please refer to [API documentation](https://odkcentral.docs.apiary.io/#) or [pyODK](https://github.com/getodk/pyodk).
 
-ODK Central uses Postgresql database to store information.
+ODK Central uses PostgreSQL database to store information.
 
 **Code Style & Preference:**
 - Table names are lower snake case and pluralized
@@ -14,9 +14,12 @@ ODK Central uses Postgresql database to store information.
 
 There are more than 30 tables in Central database. In this document, we have divided the database into separate "Focus areas" so that it is easier to understand purpose of each table and the relationships amongst them.
 
+ _Note: The diagrams below have actual table names in the boxes but in the description, I have used entity nouns and put table name in the brackets where necessary_
+
 ## Forms and Submissions:
 
 ```mermaid
+%%{init: {'themeCSS': '.er.entityLabel { font-size:16px !important; }' }}%%
   erDiagram   
     projects ||..o{ forms : ""
     actees ||..o| forms : ""
@@ -44,7 +47,7 @@ There are more than 30 tables in Central database. In this document, we have div
 
 ```
 
- >_(The diagram has actual table names in the boxes but in the following description, I have used entity nouns and put table name in the brackets where necessary)_
+
 
 Forms and Submissions are the core part of ODK Central. Above ER Diagram shows how we store Forms, Submissions and everything that is related to them in the database. 
 
@@ -55,9 +58,9 @@ Forms and Submissions are the core part of ODK Central. Above ER Diagram shows h
 - Each Form can have Fields (form_fields) i.e. questions, notes, etc.
 - A Form can have Attachments (form_attachments) like images, video, audio and data.
 - A Form can have Public Links (public_links) that allow anonymous users make Submissions against it.
-- A Form can receive Submissions
-- A Submission has one or more Definitions (submission_defs) to support multiple versions. We keep submissioin XML in a single column of submission_defs table.
-- A Submission can have Field Values (form_field_values). We only store selected values of multi-select question type to support fast csv export.
+- A Form can receive Submissions.
+- A Submission has one or more Definitions (submission_defs) to support multiple versions. We keep submission XML in a single column of submission_defs table.
+- A Submission can have Field Values (form_field_values), which is a special extraction of certain kinds of values. We only store selected values of multi-select question type to support fast csv export. All other values of Form Fields are not extracted from the Submission XML.
 - A Submission can have Attachments (submission_attachments) like images, audio, video and data. Associated binary file is store in Blobs (blobs) table.
 - A Submission can hava a Client Audit (client_audits), which is a data file containing timestamped logs of user actions on client application (ODK Collect / Enketo). The data file is received as Submission Attachment, the file is stored in Blobs (blobs) table and each log entry is inserted into Client Audit (client_audits) table.
 - A Submission can have Comments
@@ -67,6 +70,7 @@ PS: You can think of `*_def` tables as history/version tables.
 ## Datasets and Entities:
 
 ```mermaid
+%%{init: {'themeCSS': '.er.entityLabel { font-size:16px !important; }' }}%%
   erDiagram
     projects ||..o{ forms : ""
     forms ||..|{ form_defs : ""
@@ -89,8 +93,6 @@ PS: You can think of `*_def` tables as history/version tables.
     form_defs ||..o{ form_attachments : ""
     datasets |o..o| form_attachments : ""
 ```
- 
- >_(The diagram has actual table names in the boxes but in the following description, I have used entity nouns and put table name in the brackets where necessary)_
 
 Datasets and Entities are the latest additions to ODK Central, the feature is still in alpha. The purpose here is to achieve longitudinal surveys and case management. 
 
@@ -128,10 +130,8 @@ Datasets and Entities are the latest additions to ODK Central, the feature is st
     roles   ||--o{ assignments : ""    
 
 ```
- 
- >_(The diagram has actual table names in the boxes but in the following description, I have used entity nouns and put table name in the brackets where necessary)_
 
-This area of the database deals with the users, their access rights and audit logs.
+This area of the database deals with the users, their access rights and audit logs.At the center of user management, we have Actors. An Actor is a generic reference to someone who can take action, represented by a User, Public Link, or Field Key.
 
 - A User is an Actor.
 - A Public Link (public_links) is an Actor, it is generated for anonymous submission through Enketo (web).
@@ -142,10 +142,11 @@ This area of the database deals with the users, their access rights and audit lo
 - An Actor can create Submissions and its Definitions (submission_def).
 - An Actor is assigned a Role on an Actee. It is a three way many-to-many relationship, resolved in assignments table.
 - An Actor can perform actions on the Actees, the action is logged in Audits (audits) table
-- Actees table contains autogenerated UUID for different species (entities as in Entitiy-Relationship) of the database like Projects, Forms, Users, etc. This is a clever way to handle access management that allow us to know the permissions of an user without having to join all the tables to Assignments table. Additionally we keep audit logs using actee ID, so that even if original object of that actee is deleted we can trace the history.
+- Actees table contains autogenerated UUID for different species (entities as in Entity-Relationship) of the database like Projects, Forms, Users, etc. This is a clever way to handle access management that allow us to know the permissions of an user without having to join all the tables to Assignments table. Additionally we keep audit logs using actee ID, so that even if original object of that actee is deleted we can trace the history.
 
 ## Other tables:
 ```mermaid
+%%{init: {'themeCSS': '.er.entityLabel { font-size:16px !important; }' }}%%
   erDiagram  
     config
     knex_migrations
