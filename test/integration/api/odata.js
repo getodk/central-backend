@@ -1381,6 +1381,100 @@ describe('api: /forms/:id.svc', () => {
 
   });
 
+    // bug cb#496 and cb#607
+    it('should return results even when repeat name is not a valid OData name ', testService(async (service) => {
+      const asAlice = await service.login('alice', identity);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(`<?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <h:head>
+                <h:title>odata_sanitize_repeat_name</h:title>
+                <model odk:xforms-version="1.0.0">
+                    <instance>
+                        <data id="odata_sanitize_repeat_name">
+                            <q1.8-test jr:template="">
+                                <one/>
+                            </q1.8-test>
+                            <q1.8-test>
+                                <one/>
+                            </q1.8-test>
+                            <meta>
+                                <instanceID/>
+                            </meta>
+                        </data>
+                    </instance>
+                    <bind nodeset="/data/q1.8-test/one" type="int"/>
+                    <bind jr:preload="uid" nodeset="/data/meta/instanceID" readonly="true()" type="string"/>
+                </model>
+            </h:head>
+            <h:body>
+                <group ref="/data/q1.8-test">
+                    <label>Some repeat</label>
+                    <repeat nodeset="/data/q1.8-test">
+                        <input ref="/data/q1.8-test/one">
+                            <label>Some int</label>
+                        </input>
+                    </repeat>
+                </group>
+            </h:body>
+        </h:html>`)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/odata_sanitize_repeat_name/submissions')
+        .send(`<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="odata_sanitize_repeat_name">
+          <q1.8-test>
+            <one>1</one>
+          </q1.8-test>
+          <meta>
+            <instanceID>uuid:bf17f620-c56a-4533-8f89-da3f5c9bf37a</instanceID>
+          </meta>
+        </data>`)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      const navLink = await asAlice.get('/v1/projects/1/forms/odata_sanitize_repeat_name.svc/Submissions')
+        .expect(200)
+        .then(({ body }) => {
+          body.value[0]['q1_8_test@odata.navigationLink'].should.endWith('/q1_8_test');
+          return body.value[0]['q1_8_test@odata.navigationLink'];
+        });
+
+      await asAlice.get(`/v1/projects/1/forms/odata_sanitize_repeat_name.svc/${navLink}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.eql({
+            value: [
+              {
+                one: 1,
+                __id: '13867da427f098fe217fc6f8f199b8ab07265043',
+                '__Submissions-id': 'uuid:bf17f620-c56a-4533-8f89-da3f5c9bf37a',
+              },
+            ],
+            '@odata.context': 'http://localhost:8989/v1/projects/1/forms/odata_sanitize_repeat_name.svc/$metadata#Submissions.q1_8_test',
+          });
+        });
+
+      await asAlice.get('/v1/projects/1/forms/odata_sanitize_repeat_name.svc/Submissions.q1_8_test')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.eql({
+            value: [
+              {
+                one: 1,
+                __id: '13867da427f098fe217fc6f8f199b8ab07265043',
+                '__Submissions-id': 'uuid:bf17f620-c56a-4533-8f89-da3f5c9bf37a',
+              },
+            ],
+            '@odata.context': 'http://localhost:8989/v1/projects/1/forms/odata_sanitize_repeat_name.svc/$metadata#Submissions.q1_8_test',
+          });
+        });
+
+    }));
+
+  });
+
   describe('/draft.svc', () => {
     // as usual, we do not exahustively test all possibilities for this draft version
     // of the endpoint; we just ensure everything seems to be plumbed correctly.
