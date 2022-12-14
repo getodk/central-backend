@@ -1377,12 +1377,8 @@ describe('api: /forms/:id.svc', () => {
         });
     }));
 
-
-
-  });
-
     // bug cb#496 and cb#607
-    it('should return results even when repeat name is not a valid OData name ', testService(async (service) => {
+    it.only('should return results even when repeat name is not a valid OData name ', testService(async (service) => {
       const asAlice = await service.login('alice', identity);
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -1433,6 +1429,27 @@ describe('api: /forms/:id.svc', () => {
         </data>`)
         .set('Content-Type', 'text/xml')
         .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/odata_sanitize_repeat_name.svc')
+        .expect(200)
+        .then(({ body }) => {
+
+          body.should.be.eql({
+            '@odata.context': 'http://localhost:8989/v1/projects/1/forms/odata_sanitize_repeat_name.svc/$metadata',
+            value: [
+              {
+                name: 'Submissions',
+                kind: 'EntitySet',
+                url: 'Submissions',
+              },
+              {
+                name: 'Submissions.q1_8_test',
+                kind: 'EntitySet',
+                url: 'Submissions.q1_8_test',
+              },
+            ],
+          });
+        });
 
       const navLink = await asAlice.get('/v1/projects/1/forms/odata_sanitize_repeat_name.svc/Submissions')
         .expect(200)
