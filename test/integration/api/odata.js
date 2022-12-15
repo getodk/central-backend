@@ -1378,7 +1378,7 @@ describe('api: /forms/:id.svc', () => {
     }));
 
     // bug cb#496 and cb#607
-    it.only('should return results even when repeat name is not a valid OData name ', testService(async (service) => {
+    it('should return results even when repeat name is not a valid OData name ', testService(async (service) => {
       const asAlice = await service.login('alice', identity);
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
