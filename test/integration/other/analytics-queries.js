@@ -475,11 +475,11 @@ describe('analytics task queries', () => {
 
       // one deleted unpublished form reused (in the same project)
       await service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
           .send(testData.forms.simple2)
           .set('Content-Type', 'application/xml')
           .then(() => asAlice.delete('/v1/projects/1/forms/simple2'))
-          .then(() => asAlice.post('/v1/projects/1/forms')
+          .then(() => asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
             .send(testData.forms.simple2)
             .set('Content-Type', 'application/xml')));
 
@@ -490,11 +490,11 @@ describe('analytics task queries', () => {
           .send(testData.forms.simple)
           .set('Content-Type', 'application/xml')
           .then(() => asAlice.delete(`/v1/projects/${proj2}/forms/simple`))
-          .then(() => asAlice.post(`/v1/projects/${proj2}/forms?publish=true`)
+          .then(() => asAlice.post(`/v1/projects/${proj2}/forms?publish=true&ignoreWarnings=true`)
             .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="two"'))
             .set('Content-Type', 'application/xml'))
           .then(() => asAlice.delete(`/v1/projects/${proj2}/forms/simple`))
-          .then(() => asAlice.post(`/v1/projects/${proj2}/forms?publish=true`)
+          .then(() => asAlice.post(`/v1/projects/${proj2}/forms?publish=true&ignoreWarnings=true`)
             .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="three"'))
             .set('Content-Type', 'application/xml')));
 
@@ -945,11 +945,11 @@ describe('analytics task queries', () => {
 
       // deleted and reused form id
       await service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
           .send(testData.forms.simple2)
           .set('Content-Type', 'application/xml')
           .then(() => asAlice.delete('/v1/projects/1/forms/simple2'))
-          .then(() => asAlice.post('/v1/projects/1/forms')
+          .then(() => asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
             .send(testData.forms.simple2)
             .set('Content-Type', 'application/xml')));
 

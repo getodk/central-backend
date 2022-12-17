@@ -254,7 +254,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
             .send(testData.forms.simple.replace(/simple/g, 'itemsets'))
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.post('/v1/projects/1/forms/itemsets/draft')
+            .then(() => asAlice.post('/v1/projects/1/forms/itemsets/draft?ignoreWarnings=true')
               .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
               .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
               .set('X-XlsForm-FormId-Fallback', 'itemsets'))
@@ -307,7 +307,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
 
       it('should complain about field conflicts (older)', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms/simple/draft')
+          asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
             .send(testData.forms.simple
               .replace('id="simple"', 'id="simple" version="2"')
               .replace(/age/g, 'number'))
@@ -315,7 +315,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
             .expect(200)
             .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish')
               .expect(200))
-            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
               .send(testData.forms.simple.replace('type="int"', 'type="date"'))
               .set('Content-Type', 'application/xml')
               .expect(400)
@@ -397,18 +397,18 @@ describe('api: /projects/:id/forms (drafts)', () => {
 
       it('should not complain about discarded draft field conflicts', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms/simple/draft')
+          asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
             .send(testData.forms.simple.replace(/age/g, 'number'))
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
               .send(testData.forms.simple.replace(/age/g, 'number').replace('type="int"', 'type="string"'))
               .set('Content-Type', 'application/xml')
               .expect(200)))));
 
       it('should identify attachments', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms/simple/draft')
+          asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
             .send(testData.forms.withAttachments.replace('id="withAttachments"', 'id="simple"'))
             .set('Content-Type', 'application/xml')
             .expect(200)

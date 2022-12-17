@@ -1635,7 +1635,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
             .set('Content-Type', 'application/xml')
             .send(testData.instances.simple.two))
-          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
             .set('Content-Type', 'application/xml')
             .send(`
               <?xml version="1.0"?>
