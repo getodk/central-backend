@@ -365,7 +365,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         .expect(400)
         .then(({ body }) => {
           body.code.should.be.eql(400.16);
-          body.details.warnings.workflowWarnings[0].type.should.be.eql('deletedFormExists');
+          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'deletedFormExists', details: { xmlFormId: 'simple' } });
         });
     }));
 
@@ -389,7 +389,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         .then(({ body }) => {
           body.code.should.be.eql(400.16);
           body.details.warnings.xlsFormWarnings.should.be.eql(['warning 1', 'warning 2']);
-          body.details.warnings.workflowWarnings[0].type.should.be.eql('deletedFormExists');
+          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'deletedFormExists', details: { xmlFormId: 'simple2' } });
         });
     }));
 
