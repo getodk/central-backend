@@ -58,7 +58,7 @@ const { ODKAnalytics } = require(appRoot + '/test/util/odk-analytics-mock');
 const odkAnalytics = new ODKAnalytics();
 
 // set up mock context
-const context = { query: {}, transitoryData: new Map(), headers: []};
+const context = { query: {}, transitoryData: new Map(), headers: [] };
 
 // application things.
 // eslint-disable-next-line import/no-dynamic-require

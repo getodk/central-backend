@@ -129,7 +129,7 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
             .expect(200))
           .then(() => asAlice.delete('/v1/projects/1/forms/simple')
             .expect(200))
-          .then(() => asAlice.post('/v1/projects/1/forms/1/restore')            
+          .then(() => asAlice.post('/v1/projects/1/forms/1/restore')
             .expect(200)))));
 
     it('should fail restoring a form that is not deleted', testService((service) =>
