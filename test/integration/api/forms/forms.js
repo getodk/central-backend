@@ -155,7 +155,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
           .expect(400)
           .then(({ body }) => {
             body.code.should.equal(400.16);
-            body.details.xlsFormWarnings.should.eql([ 'warning 1', 'warning 2' ]);
+            body.details.warnings.xlsFormWarnings.should.eql([ 'warning 1', 'warning 2' ]);
           }));
     }));
 
@@ -365,7 +365,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         .expect(400)
         .then(({ body }) => {
           body.code.should.be.eql(400.16);
-          body.details.xmlFormWarnings[0].warning.should.be.eql('deletedFormExists');
+          body.details.warnings.workflowWarnings[0].type.should.be.eql('deletedFormExists');
         });
     }));
 
@@ -388,8 +388,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         .expect(400)
         .then(({ body }) => {
           body.code.should.be.eql(400.16);
-          body.details.xlsFormWarnings.should.be.eql(['warning 1', 'warning 2']);
-          body.details.xmlFormWarnings[0].warning.should.be.eql('deletedFormExists');
+          body.details.warnings.xlsFormWarnings.should.be.eql(['warning 1', 'warning 2']);
+          body.details.warnings.workflowWarnings[0].type.should.be.eql('deletedFormExists');
         });
     }));
 
@@ -401,7 +401,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         .set('Content-Type', 'application/xml')
         .then(({ body }) => {
           body.code.should.be.eql(400.16);
-          body.details.xmlFormWarnings[0].should.be.eql({ warning: 'structureChanged', details: [ 'age' ] });
+          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'age' ] });
         });
     }));
 
@@ -421,8 +421,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         .expect(400)
         .then(({ body }) => {
           body.code.should.be.eql(400.16);
-          body.details.xlsFormWarnings.should.be.eql(['warning 1', 'warning 2']);
-          body.details.xmlFormWarnings[0].should.be.eql({ warning: 'structureChanged', details: [ 'address' ] });
+          body.details.warnings.xlsFormWarnings.should.be.eql(['warning 1', 'warning 2']);
+          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'address' ] });
         });
     }));
 
