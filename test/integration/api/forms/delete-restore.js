@@ -124,7 +124,7 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
       service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1/forms/simple')
           .expect(200)
-          .then(() => asAlice.post('/v1/projects/1/forms/')
+          .then(() => asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
             .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="two"'))
             .set('Content-Type', 'application/xml')
             .expect(200))
@@ -142,7 +142,7 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
       service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1/forms/simple')
           .expect(200)
-          .then(() => asAlice.post('/v1/projects/1/forms/')
+          .then(() => asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
             .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="two"'))
             .set('Content-Type', 'application/xml')
             .expect(200))

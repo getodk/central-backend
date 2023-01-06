@@ -7,6 +7,7 @@ const superagent = require('superagent');
 const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
+const { identity } = require('ramda');
 // eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -69,7 +70,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
       service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1/forms/simple')
           .expect(200)
-          .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+          .then(() => asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
             .send(testData.forms.simple)
             .set('Content-Type', 'application/xml')
             .expect(409)
@@ -154,7 +155,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
           .expect(400)
           .then(({ body }) => {
             body.code.should.equal(400.16);
-            body.details.should.eql({ warnings: [ 'warning 1', 'warning 2' ] });
+            body.details.warnings.xlsFormWarnings.should.eql([ 'warning 1', 'warning 2' ]);
           }));
     }));
 
@@ -351,6 +352,98 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               body[0].action.should.equal('form.update.publish');
               body[1].action.should.equal('form.create');
             })))));
+
+    it('should reject with deleted form exists warning', testService(async (service) => {
+      const asAlice = await service.login('alice', identity);
+
+      await asAlice.delete('/v1/projects/1/forms/simple')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simple)
+        .set('Content-Type', 'application/xml')
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.be.eql(400.16);
+          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'deletedFormExists', details: { xmlFormId: 'simple' } });
+        });
+    }));
+
+    it('should reject with xls and deleted form exists warnings', testService(async (service) => {
+      const asAlice = await service.login('alice', identity);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simple2)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/forms/simple2')
+        .expect(200);
+
+      global.xlsformTest = 'warning'; // set up the mock service to warn.
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+        .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.be.eql(400.16);
+          body.details.warnings.xlsFormWarnings.should.be.eql(['warning 1', 'warning 2']);
+          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'deletedFormExists', details: { xmlFormId: 'simple2' } });
+        });
+    }));
+
+    it('should reject with structure changed warning', testService(async (service) => {
+      const asAlice = await service.login('alice', identity);
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft')
+        .send(testData.forms.simple.replace(/age/g, 'address'))
+        .set('Content-Type', 'application/xml')
+        .then(({ body }) => {
+          body.code.should.be.eql(400.16);
+          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'age' ] });
+        });
+    }));
+
+    it('should reject with xls and structure changed warnings', testService(async (service) => {
+      const asAlice = await service.login('alice', identity);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simple2.replace(/age/g, 'address'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      global.xlsformTest = 'warning'; // set up the mock service to warn.
+
+      await asAlice.post('/v1/projects/1/forms/simple2/draft')
+        .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+        .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.be.eql(400.16);
+          body.details.warnings.xlsFormWarnings.should.be.eql(['warning 1', 'warning 2']);
+          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'address' ] });
+        });
+    }));
+
+    it('should create the form for xml files with warnings given ignoreWarnings', testService(async (service) => {
+      const asAlice = await service.login('alice', identity);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simple2)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/forms/simple2')
+        .expect(200);
+
+      global.xlsformTest = 'warning'; // set up the mock service to warn.
+
+      await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+        .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+        .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .expect(200);
+    }));
   });
 
 

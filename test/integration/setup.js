@@ -57,6 +57,9 @@ const enketo = require(appRoot + '/test/util/enketo');
 const { ODKAnalytics } = require(appRoot + '/test/util/odk-analytics-mock');
 const odkAnalytics = new ODKAnalytics();
 
+// set up mock context
+const context = { query: {}, transitoryData: new Map(), headers: [] };
+
 // application things.
 // eslint-disable-next-line import/no-dynamic-require
 const { withDefaults } = require(appRoot + '/lib/model/container');
@@ -88,7 +91,7 @@ const initialize = async () => {
     await migrator.destroy();
   }
 
-  return withDefaults({ db, bcrypt }).transacting(populate);
+  return withDefaults({ db, bcrypt, context }).transacting(populate);
 };
 
 before(initialize);
@@ -141,7 +144,8 @@ const augment = (service) => {
 ////////////////////////////////////////////////////////////////////////////////
 // FINAL TEST WRAPPERS
 
-const baseContainer = withDefaults({ db, mail, env, xlsform, google, bcrypt, enketo, Sentry, odkAnalytics });
+
+const baseContainer = withDefaults({ db, mail, env, xlsform, google, bcrypt, enketo, Sentry, odkAnalytics, context });
 
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
