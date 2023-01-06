@@ -123,6 +123,7 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
     it('should restore a specific form by numeric id when multiple trashed forms share the same xmlFormId', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1/forms/simple')
+          .expect(200)
           .then(() => asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
             .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="two"'))
             .set('Content-Type', 'application/xml')
