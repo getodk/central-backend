@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const uuid = require('uuid/v4');
@@ -9,6 +10,7 @@ const { withDatabase } = require(appRoot + '/lib/model/migrate');
 const testData = require('../../data/xml');
 const populateUsers = require('../fixtures/01-users');
 const populateForms = require('../fixtures/02-forms');
+const { getFormFields } = require('../../../lib/data/schema');
 
 
 const withTestDatabase = withDatabase(config.get('test.database'));
@@ -234,5 +236,114 @@ describe('datbase migrations: removing default project', function() {
     // check projects and forms
     const projCount = await container.oneFirst(sql`select count(*) from projects`);
     projCount.should.equal(0);
+  }));
+});
+
+// eslint-disable-next-line space-before-function-paren, func-names
+describe('datbase migrations: intermediate form schema', function() {
+  this.timeout(10000);
+
+  it('should test migration', testServiceFullTrx(async (service, container) => {
+    // before 20230109-01-add-form-schema.js
+    await upToMigration('20230106-01-remove-revision-number.js');
+    await populateUsers(container);
+
+    const createForm = async (xmlFormId) => {
+      const formActeeId = uuid();
+      await container.run(sql`insert into actees ("id", "species") values (${formActeeId}, 'form')`);
+      const newForm = await container.all(sql`insert into forms ("projectId", "acteeId", "xmlFormId")
+        values (1, ${formActeeId}, ${xmlFormId})
+        returning "id"`);
+      return newForm[0].id;
+    };
+
+    const createFormDef = async (formId, name, version, xml) => {
+      const newFormDef = await container.all(sql`insert into form_defs
+      ("formId", "name", "version", "xml", "hash", "sha", "sha256")
+      values (${formId}, ${name}, ${version}, ${xml}, 'hash', 'sha', 'sha256')
+      returning "id"`);
+      const formDefId = newFormDef[0].id;
+
+      const fields = await getFormFields(xml);
+      for (const field of fields) {
+        // eslint-disable-next-line no-await-in-loop
+        await container.run(sql`insert into form_fields ("formId", "formDefId", "path", "name", "type", "order")
+        values (${formId}, ${formDefId}, ${field.path}, ${field.name}, ${field.type}, ${field.order})`);
+      }
+      return formDefId;
+    };
+
+    const createDataset = async (name) => {
+      const datasetActeeId = uuid();
+      const newDataset = await container.all(sql`insert into datasets
+      ("acteeId", "name", "projectId", "createdAt")
+      values (${datasetActeeId}, ${name}, 1, now())
+      returning "id"`);
+      return newDataset[0].id;
+    };
+
+    const createDsProperties = async (dsId, formDefId, xml) => {
+      const fields = await getFormFields(xml);
+      for (const field of fields) {
+        if (field.propertyName) {
+          // eslint-disable-next-line no-await-in-loop
+          let propId = await container.maybeOne(sql`select id from ds_properties
+          where "name"=${field.propertyName} and "datasetId"=${dsId}`);
+          if (propId.isDefined())
+            propId = propId.get().id;
+          else {
+            // eslint-disable-next-line no-await-in-loop
+            propId = await container.all(sql`insert into ds_properties
+            ("name", "datasetId")
+            values (${field.propertyName}, ${dsId})
+            returning "id"`);
+            propId = propId[0].id;
+          }
+          // eslint-disable-next-line no-await-in-loop
+          await container.run(sql`insert into ds_property_fields
+          ("dsPropertyId", "formDefId", "path")
+          values (${propId}, ${formDefId}, ${field.path})`);
+        }
+      }
+    };
+
+    const id1 = await createForm('form1');
+    await createFormDef(id1, 'Form 1', 1, testData.forms.simple);
+    await createFormDef(id1, 'Form 1', 2, testData.forms.simple);
+    await createFormDef(id1, 'Form 1', 3, testData.forms.simple.replace(/name/g, 'nickname'));
+
+    const datasetId = await createDataset('people');
+    const id2 = await createForm('form2');
+    const defId1 = await createFormDef(id2, 'Form 2', 1, testData.forms.simpleEntity);
+    await container.all(sql`insert into dataset_form_defs ("datasetId", "formDefId") values (${datasetId}, ${defId1})`);
+    await createDsProperties(datasetId, defId1, testData.forms.simpleEntity);
+
+    const newEntityForm = testData.forms.simpleEntity.replace(/age/g, 'favorite_color');
+    const defId2 = await createFormDef(id2, 'Form 2', 2, newEntityForm);
+    await container.all(sql`insert into dataset_form_defs ("datasetId", "formDefId") values (${datasetId}, ${defId2})`);
+    await createDsProperties(datasetId, defId2, newEntityForm);
+
+    const defId3 = await createFormDef(id2, 'Form 2', 3, newEntityForm);
+    await container.all(sql`insert into dataset_form_defs ("datasetId", "formDefId") values (${datasetId}, ${defId3})`);
+    await createDsProperties(datasetId, defId3, newEntityForm);
+
+    let fieldCount = await container.one(sql`select count(*) from form_fields where "formId" = ${id1}`);
+    fieldCount.count.should.equal(12);
+
+    // migration to add intermediate form schemas
+    await up();
+
+    fieldCount = await container.one(sql`select count(*) from form_fields where "formId" = ${id1}`);
+    fieldCount.count.should.equal(8);
+
+    let res;
+    res = await container.all(sql`select * from ds_properties`);
+    console.log(res);
+    res = await container.all(sql`select * from ds_property_fields`);
+    console.log(res);
+    res = await container.all(sql`select * from form_schemas`);
+    console.log(res);
+    res = await container.all(sql`select "id", "name", "version", "schemaId" from form_defs`);
+    console.log(res);
   }));
 });
