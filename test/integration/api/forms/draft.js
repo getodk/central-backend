@@ -648,6 +648,79 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   .then((count) => {
                     count.should.equal(1); // only one for the new draft
                   })))));
+
+          describe('purging form fields of unneeded drafts', () => {
+            it('should not purge fields because they are part of schema of published form', testService((service, { oneFirst }) =>
+              service.login('alice', (asAlice) =>
+                asAlice.post('/v1/projects/1/forms/simple/draft')
+                  .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+                  .set('Content-Type', 'application/xml')
+                  .expect(200)
+                  .then(() => Promise.all([
+                    oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
+                    oneFirst(sql`select count(*) from form_fields where "formId" = 1`)
+                  ]))
+                  .then((counts) => counts.should.eql([ 2, 4 ]))
+                  .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+                    .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
+                    .set('Content-Type', 'application/xml')
+                    .expect(200))
+                  .then(() => Promise.all([
+                    oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
+                    oneFirst(sql`select count(*) from form_fields where "formId" = 1`)
+                  ]))
+                  .then((counts) => counts.should.eql([ 2, 4 ])))));
+
+            it('should purge fields of unneeded intermediate draft with different schema', testService((service, { oneFirst }) =>
+              service.login('alice', (asAlice) =>
+                asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+                  .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"').replace(/age/g, 'number'))
+                  .set('Content-Type', 'application/xml')
+                  .expect(200)
+                  .then(() => Promise.all([
+                    oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
+                    oneFirst(sql`select count(*) from form_fields where "formId" = 1`),
+                    oneFirst(sql`select count(*) from form_schemas`)
+                  ]))
+                  .then((counts) => counts.should.eql([ 2, 8, 3 ]))
+                  .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+                    .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"')) // back to original schema
+                    .set('Content-Type', 'application/xml')
+                    .expect(200))
+                  .then(() => Promise.all([
+                    oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
+                    oneFirst(sql`select count(*) from form_fields where "formId" = 1`),
+                    oneFirst(sql`select count(*) from form_schemas`) // 2: one for each different form
+                  ]))
+                  .then((counts) => counts.should.eql([ 2, 4, 2 ]))
+                  .then(() => asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+                    .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty3"').replace(/age/g, 'number')) // new schema again
+                    .set('Content-Type', 'application/xml')
+                    .expect(200))
+                  .then(() => Promise.all([
+                    oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
+                    oneFirst(sql`select count(*) from form_fields where "formId" = 1`),
+                    oneFirst(sql`select count(*) from form_schemas`) // new schema brought back
+                  ]))
+                  .then((counts) => counts.should.eql([ 2, 8, 3 ])))));
+
+            it('should purge the form field and schema of intermediate version (and no published draft)', testService((service, { oneFirst }) =>
+              service.login('alice', (asAlice) =>
+                asAlice.post('/v1/projects/1/forms')
+                  .send(testData.forms.simple2) // first draft version
+                  .set('Content-Type', 'application/xml')
+                  .expect(200)
+                  .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+                    .send(testData.forms.simple2.replace('id="simple2"', 'id="simple2" version="drafty2"').replace(/age/g, 'number'))
+                    .set('Content-Type', 'application/xml')
+                    .expect(200))
+                  .then(() => Promise.all([
+                    oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple2'`),
+                    oneFirst(sql`select count(*) from form_fields as fs join forms as f on fs."formId" = f.id where f."xmlFormId"='simple2'`),
+                    oneFirst(sql`select count(*) from form_schemas`) // two fixture forms and one for this form
+                  ]))
+                  .then((counts) => counts.should.eql([ 1, 4, 3 ])))));
+          });
         });
       });
     });
