@@ -126,6 +126,71 @@ describe('datasets and entities', () => {
             .then(() => asAlice.get('/v1/projects/1/datasets/people/entities.csv')
               .expect(404)))));
     });
+
+    describe('projects/:id/datasets/:name GET', () => {
+
+      it('should return the metadata of the dataset', testService(async (service) => {
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity
+            .replace(/simpleEntity/, 'simpleEntity2')
+            .replace(/age/g, 'address'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments
+            .replace(/goodone.csv/, 'people.csv'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/people.csv')
+          .send({ dataset: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people')
+          .expect(200)
+          .then(({ body }) => {
+
+            const { createdAt, linkedForms, properties, ...ds } = body;
+
+            ds.should.be.eql({
+              name: 'people',
+              projectId: 1
+            });
+
+            createdAt.should.not.be.null();
+
+            linkedForms.should.be.eql([{ name: 'withAttachments', xmlFormId: 'withAttachments' }]);
+
+            properties.map(({ id, datasetId, publishedAt, ...p }) => {
+              id.should.be.aboveOrEqual(1);
+              datasetId.should.be.aboveOrEqual(1);
+              publishedAt.should.not.be.null();
+              return p;
+            }).should.be.eql([
+              { name: 'age', forms: [ { name: 'simpleEntity', xmlFormId: 'simpleEntity' }, ] },
+              { name: 'first_name', forms: [
+                { name: 'simpleEntity', xmlFormId: 'simpleEntity' },
+                { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' }
+              ] },
+              { name: 'address', forms: [ { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' }, ] }
+            ]);
+
+          });
+
+      }));
+
+    });
   });
 
   describe('linking form attachments to datasets', () => {
