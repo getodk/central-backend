@@ -41,6 +41,39 @@ describe('datasets and entities', () => {
                   ]);
                 })))));
 
+      it('should return the extended datasets of Default project', testService(async (service, container) => {
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.map(({ createdAt, lastEntity, ...d }) => {
+              createdAt.should.not.be.null();
+              lastEntity.should.not.be.null();
+              return d;
+            }).should.eql([
+              { name: 'people', projectId: 1, entities: 1 }
+            ]);
+          });
+      }));
+
       it('should not return draft datasets', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
