@@ -94,16 +94,21 @@ const initialize = async () => {
   return withDefaults({ db, bcrypt, context }).transacting(populate);
 };
 
-before(initialize);
+// eslint-disable-next-line func-names, space-before-function-paren
+before(function() {
+  this.timeout(0);
+  return initialize();
+});
 
 let mustReinitAfter;
 beforeEach(() => {
   // eslint-disable-next-line keyword-spacing
   if(mustReinitAfter) throw new Error(`Failed to reinitalize after previous test: '${mustReinitAfter}'.  You may need to increase your mocha timeout.`);
 });
-afterEach(async () => {
-  // eslint-disable-next-line keyword-spacing
-  if(mustReinitAfter) {
+// eslint-disable-next-line func-names, space-before-function-paren
+afterEach(async function() {
+  this.timeout(0);
+  if (mustReinitAfter) {
     await initialize();
     mustReinitAfter = false;
   }
