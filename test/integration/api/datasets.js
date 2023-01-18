@@ -95,6 +95,176 @@ describe('datasets and entities', () => {
                   }))))));
     });
 
+    describe('projects/:id/datasets GET extended', () => {
+
+      it('should return the 0 for entities', testService(async (service) => {
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.map(({ createdAt, lastEntity, ...d }) => {
+              createdAt.should.not.be.null();
+              should(lastEntity).be.null();
+              return d;
+            }).should.eql([
+              { name: 'people', projectId: 1, entities: 0 }
+            ]);
+          });
+      }));
+
+      it('should return the extended datasets of Default project', testService(async (service, container) => {
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.map(({ createdAt, lastEntity, ...d }) => {
+              createdAt.should.not.be.null();
+              lastEntity.should.not.be.null();
+              return d;
+            }).should.eql([
+              { name: 'people', projectId: 1, entities: 1 }
+            ]);
+          });
+      }));
+
+      it('should return the correct count and latest timestamp of entities', testService(async (service, container) => {
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1' WHERE TRUE`);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.map(({ createdAt, lastEntity, ...d }) => {
+              createdAt.should.not.be.null();
+              lastEntity.should.not.be.null();
+              lastEntity.should.not.startWith('1999');
+              return d;
+            }).should.eql([
+              { name: 'people', projectId: 1, entities: 2 }
+            ]);
+          });
+      }));
+
+      it('should return the correct count for multiple dataset', testService(async (service, container) => {
+        const asAlice = await service.login('alice', identity);
+
+        // Create Datasets
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity
+            .replace(/simpleEntity/g, 'simpleEntity2')
+            .replace(/people/g, 'trees'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Make submissions
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity2/submissions')
+          .send(testData.instances.simpleEntity.one
+            .replace(/simpleEntity/g, 'simpleEntity2')
+            .replace(/123456789abc/g, '123456789000') // we have uniqueness contrainst on UUID for the whole table
+            .replace(/people/g, 'trees'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Approve submissions
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity2/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.map(({ createdAt, lastEntity, ...d }) => {
+              createdAt.should.not.be.null();
+              lastEntity.should.not.be.null();
+              return d;
+            }).should.eql([
+              { name: 'people', projectId: 1, entities: 2 },
+              { name: 'trees', projectId: 1, entities: 1 }
+            ]);
+          });
+      }));
+    });
+
     describe('projects/:id/datasets/:dataset.csv GET', () => {
       it('should reject if the user cannot access dataset', testService((service) =>
         service.login('alice', (asAlice) =>
