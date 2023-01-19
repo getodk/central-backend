@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const uuid = require('uuid/v4');
@@ -307,43 +306,64 @@ describe('datbase migrations: intermediate form schema', function() {
       }
     };
 
+    // Basic form with 3 defs, 2 different versions
     const id1 = await createForm('form1');
     await createFormDef(id1, 'Form 1', 1, testData.forms.simple);
     await createFormDef(id1, 'Form 1', 2, testData.forms.simple);
     await createFormDef(id1, 'Form 1', 3, testData.forms.simple.replace(/name/g, 'nickname'));
 
+    // Dataset form with 3 defs, version A, B, A (should turn into 3 separate schemas)
     const datasetId = await createDataset('people');
     const id2 = await createForm('form2');
+
     const defId1 = await createFormDef(id2, 'Form 2', 1, testData.forms.simpleEntity);
     await container.all(sql`insert into dataset_form_defs ("datasetId", "formDefId") values (${datasetId}, ${defId1})`);
     await createDsProperties(datasetId, defId1, testData.forms.simpleEntity);
 
-    const newEntityForm = testData.forms.simpleEntity.replace(/age/g, 'favorite_color');
-    const defId2 = await createFormDef(id2, 'Form 2', 2, newEntityForm);
+    const newFormVersion = testData.forms.simpleEntity.replace(/age/g, 'favorite_color');
+    const defId2 = await createFormDef(id2, 'Form 2', 2, newFormVersion);
     await container.all(sql`insert into dataset_form_defs ("datasetId", "formDefId") values (${datasetId}, ${defId2})`);
-    await createDsProperties(datasetId, defId2, newEntityForm);
+    await createDsProperties(datasetId, defId2, newFormVersion);
 
-    const defId3 = await createFormDef(id2, 'Form 2', 3, newEntityForm);
+    const defId3 = await createFormDef(id2, 'Form 2', 3, newFormVersion);
     await container.all(sql`insert into dataset_form_defs ("datasetId", "formDefId") values (${datasetId}, ${defId3})`);
-    await createDsProperties(datasetId, defId3, newEntityForm);
+    await createDsProperties(datasetId, defId3, newFormVersion);
 
+    // Checking field count of basic form before applying migration
     let fieldCount = await container.one(sql`select count(*) from form_fields where "formId" = ${id1}`);
-    fieldCount.count.should.equal(12);
+    fieldCount.count.should.equal(12); // three versions x four fields
+
+    // Checking field count of dataset form
+    fieldCount = await container.one(sql`select count(*) from form_fields where "formId" = ${id2}`);
+    fieldCount.count.should.equal(18); // three versions x six fields
 
     // migration to add intermediate form schemas
     await up();
 
+    let res;
+
+    res = await container.one(sql`select count(*) from form_schemas`);
+    res.count.should.equal(4);
+
+    res = await container.one(sql`select count(*) from form_defs`);
+    res.count.should.equal(6);
+
+    // Checking field count of basic form after applying migration
     fieldCount = await container.one(sql`select count(*) from form_fields where "formId" = ${id1}`);
     fieldCount.count.should.equal(8);
 
-    let res;
-    res = await container.all(sql`select * from ds_properties`);
-    console.log(res);
-    res = await container.all(sql`select * from ds_property_fields`);
-    console.log(res);
-    res = await container.all(sql`select * from form_schemas`);
-    console.log(res);
-    res = await container.all(sql`select "id", "name", "version", "schemaId" from form_defs`);
-    console.log(res);
+    // Checking field count of dataset form
+    fieldCount = await container.one(sql`select count(*) from form_fields where "formId" = ${id2}`);
+    fieldCount.count.should.equal(12); // two x six;
+
+    // Counting dataset-related rows in different tables
+    res = await container.one(sql`select count(*) from ds_properties`);
+    res.count.should.equal(3); // 3 dataset properties (first_name, age, favorite_color)
+
+    res = await container.one(sql`select count(*) from ds_property_fields`);
+    res.count.should.equal(6); // ds_property_fields not collapsed
+
+    res = await container.one(sql`select count(distinct "schemaId") from ds_property_fields`);
+    res.count.should.equal(2); // only 2 schema IDs represented here
   }));
 });
