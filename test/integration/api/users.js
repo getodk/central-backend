@@ -288,6 +288,18 @@ describe('api: /users', () => {
               .expect(401);
           }))));
 
+    it('should clear sessions if password is invalidated', testService(async (service) => {
+      // Log in as Bob twice.
+      const [asAlice, ...asBobs] = await service.login(['alice', 'bob', 'bob']);
+      await Promise.all(asBobs.map(asBob => asBob.get('/v1/users/current')
+        .expect(200)));
+      await asAlice.post('/v1/users/reset/initiate?invalidate=true')
+        .send({ email: 'bob@getodk.org' })
+        .expect(200);
+      await Promise.all(asBobs.map(asBob => asBob.get('/v1/users/current')
+        .expect(401)));
+    }));
+
     it('should fail the request if invalidation is not allowed and email doesn\'t exist', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.post('/v1/users/reset/initiate?invalidate=true')

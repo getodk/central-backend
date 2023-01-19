@@ -131,7 +131,7 @@ const authProxy = (token) => ({
 // eslint-disable-next-line no-shadow
 const augment = (service) => {
   // eslint-disable-next-line no-param-reassign
-  service.login = async (userOrUsers, test) => {
+  service.login = async (userOrUsers, test = undefined) => {
     const users = Array.isArray(userOrUsers) ? userOrUsers : [userOrUsers];
     const tokens = await Promise.all(users.map(async (user) => {
       const credentials = (typeof user === 'string')
@@ -140,7 +140,8 @@ const augment = (service) => {
       const { body } = await service.post('/v1/sessions').send(credentials);
       return body.token;
     }));
-    return test(...tokens.map((token) => new Proxy(service, authProxy(token))));
+    const proxies = tokens.map((token) => new Proxy(service, authProxy(token)));
+    return test != null ? test(...proxies) : proxies;
   };
   return service;
 };
