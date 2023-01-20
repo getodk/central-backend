@@ -15,7 +15,7 @@
     "body-parser": "~1.20",
     "cli": "~1",
     "cloneable-readable": "~2",
-    "config": "~1.26",
+    "config": "~1.31",
     "csv-parse": "~4",
     "csv-stringify": "~5",
     "digest-stream": "~2",
