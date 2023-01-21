@@ -141,7 +141,9 @@ const augment = (service) => {
       return body.token;
     }));
     const proxies = tokens.map((token) => new Proxy(service, authProxy(token)));
-    return test != null ? test(...proxies) : proxies;
+    return test != null
+      ? test(...proxies)
+      : (Array.isArray(userOrUsers) ? proxies : proxies[0]);
   };
   return service;
 };
