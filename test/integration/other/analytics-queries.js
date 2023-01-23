@@ -197,15 +197,6 @@ describe('analytics task queries', () => {
       res.database_size.should.be.above(0); // Probably around 13 MB?
     }));
 
-    it('should determine whether backups are enabled', testContainer(async ({ Analytics, Configs }) => {
-      let res = await Analytics.backupsEnabled();
-      res.backups_configured.should.equal(0);
-      // eslint-disable-next-line object-curly-spacing
-      await Configs.set('backups.main', { detail: 'dummy' });
-      res = await Analytics.backupsEnabled();
-      res.backups_configured.should.equal(1);
-    }));
-
     it('should check database configurations', testContainer(async ({ Analytics }) => {
       // only localhost (dev) and postgres (docker) should count as not external
       Analytics.databaseExternal('localhost').should.equal(0);
@@ -866,10 +857,6 @@ describe('analytics task queries', () => {
     this.timeout(4000);
 
     it('should combine system level queries', testService(async (service, container) => {
-      // backups
-      // eslint-disable-next-line object-curly-spacing
-      await container.Configs.set('backups.main', { detail: 'dummy' });
-
       // encrypting a project
       await service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')

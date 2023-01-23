@@ -3924,7 +3924,6 @@ An Administrator can use this endpoint to preview the metrics being sent. The pr
                   "recent":1,
                   "total":1
                 },
-                "backups_configured":1,
                 "database_size":12345,
                 ...
               },
