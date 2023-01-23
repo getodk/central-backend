@@ -857,10 +857,6 @@ describe('analytics task queries', () => {
     this.timeout(4000);
 
     it('should combine system level queries', testService(async (service, container) => {
-      // backups
-      // eslint-disable-next-line object-curly-spacing
-      await container.Configs.set('backups.main', { detail: 'dummy' });
-
       // encrypting a project
       await service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
