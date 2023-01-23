@@ -347,17 +347,10 @@ describe('datasets and entities', () => {
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        await asAlice.post('/v1/projects/1/forms')
+        await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.withAttachments
             .replace(/goodone.csv/, 'people.csv'))
           .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        await asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/people.csv')
-          .send({ dataset: true })
-          .expect(200);
-
-        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
           .expect(200);
 
         await asAlice.get('/v1/projects/1/datasets/people')
@@ -393,6 +386,36 @@ describe('datasets and entities', () => {
 
       }));
 
+      it('should not return duplicate linkedForms', testService(async (service) => {
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments
+            .replace(/goodone.csv/, 'people.csv'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/withAttachments/draft')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish?version=2.0')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people')
+          .expect(200)
+          .then(({ body }) => {
+
+            const { linkedForms } = body;
+
+            linkedForms.should.be.eql([{ name: 'withAttachments', xmlFormId: 'withAttachments' }]);
+          });
+
+      }));
     });
   });
 
