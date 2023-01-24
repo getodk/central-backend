@@ -300,6 +300,21 @@ describe('api: /users', () => {
         .expect(401)));
     }));
 
+    it('should log action in audit log if password is invalidated', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/users/reset/initiate?invalidate=true')
+        .send({ email: 'bob@getodk.org' })
+        .expect(200);
+      const { body: audits } = await asAlice.get('/v1/audits?action=user.update')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200);
+      audits.length.should.equal(1);
+      const audit = audits[0];
+      audit.actor.displayName.should.equal('Alice');
+      audit.actee.displayName.should.equal('Bob');
+      audit.details.should.eql({ data: { password: null } });
+    }));
+
     it('should fail the request if invalidation is not allowed and email doesn\'t exist', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.post('/v1/users/reset/initiate?invalidate=true')
