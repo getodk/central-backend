@@ -2,7 +2,7 @@ const should = require('should');
 const appRoot = require('app-root-path');
 const assert = require('assert');
 // eslint-disable-next-line import/no-dynamic-require
-const { parseSubmissionXml, validateEntity } = require(appRoot + '/lib/data/entity');
+const { parseSubmissionXml, validateEntity, extractSelectedProperties, selectFields } = require(appRoot + '/lib/data/entity');
 // eslint-disable-next-line import/no-dynamic-require
 const { fieldsFor } = require(appRoot + '/test/util/schema');
 // eslint-disable-next-line import/no-dynamic-require
@@ -147,6 +147,119 @@ describe('extracting entities from submissions', () => {
             failure.isProblem.should.equal(true);
             failure.problemCode.should.equal(409.14);
           }));
+    });
+  });
+
+  describe('extractSelectedProperties', () => {
+    const properties = [{ name: 'property1' }, { name: 'property2' }];
+
+    it('returns null if query.$select is not present', () => {
+      const query = {};
+      const result = extractSelectedProperties(query, properties);
+      should(result).be.null();
+    });
+
+    it('returns null if query.$select is equal to *', () => {
+      const query = { $select: '*' };
+      const result = extractSelectedProperties(query, properties);
+      should(result).be.null();
+    });
+
+    it('throws error if a selected property is not a valid property', () => {
+      const query = { $select: 'property1, property2, unknown_property' };
+      (() => {
+        extractSelectedProperties(query, properties);
+      }).should.throw('Could not find a property named \'unknown_property\'');
+    });
+
+    it('throws error if an invalid system property is $selected', () => {
+      const query = { $select: 'property1, property2, __system/unknown_property' };
+      (() => {
+        extractSelectedProperties(query, properties);
+      }).should.throw('Could not find a property named \'__system/unknown_property\'');
+    });
+
+    it('returns set of selected properties if they are all valid', () => {
+      const query = { $select: '__id, __system/createdAt, property1' };
+      const result = extractSelectedProperties(query, properties);
+      result.should.be.eql(new Set(['__id', '__system/createdAt', 'property1']));
+    });
+
+    it('returns all properties', () => {
+      const query = { $select: '__id, __system, property1, property2' };
+      const result = extractSelectedProperties(query, properties);
+      result.should.be.eql(new Set(['__id', '__system', 'property1', 'property2', ]));
+    });
+
+  });
+
+  describe('selectFields', () => {
+    const entity = {
+      uuid: 'uuid',
+      label: 'label',
+      createdAt: 'createdAt',
+      firstName: 'John',
+      lastName: 'Doe',
+      aux: {
+        creator: {
+          id: 'id',
+          displayName: 'displayName'
+        }
+      }
+    };
+    const properties = [{ name: 'firstName' }, { name: 'lastName' }];
+
+    it('selects all properties if selectedProperties is null', () => {
+      const selectedProperties = null;
+      const result = selectFields(entity, properties, selectedProperties);
+      result.should.be.eql({
+        __id: 'uuid',
+        name: 'uuid',
+        label: 'label',
+        __system: {
+          createdAt: 'createdAt',
+          creatorId: 'id',
+          creatorName: 'displayName'
+        },
+        firstName: entity.firstName,
+        lastName: entity.lastName
+      });
+    });
+
+    it('selects only specified properties', () => {
+      const selectedProperties = new Set(['__id', 'label', 'firstName']);
+      const result = selectFields(entity, properties, selectedProperties);
+      result.should.be.eql({
+        __id: 'uuid',
+        label: 'label',
+        firstName: entity.firstName
+      });
+    });
+
+    it('selects only specified system properties', () => {
+      const selectedProperties = new Set(['__id', 'label', '__system/createdAt']);
+      const result = selectFields(entity, properties, selectedProperties);
+      result.should.be.eql({
+        __id: 'uuid',
+        label: 'label',
+        __system: {
+          createdAt: 'createdAt'
+        }
+      });
+    });
+
+    it('selects all system properties', () => {
+      const selectedProperties = new Set(['__id', 'label', '__system']);
+      const result = selectFields(entity, properties, selectedProperties);
+      result.should.be.eql({
+        __id: 'uuid',
+        label: 'label',
+        __system: {
+          createdAt: 'createdAt',
+          creatorId: 'id',
+          creatorName: 'displayName'
+        }
+      });
     });
   });
 });
