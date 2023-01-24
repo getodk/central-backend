@@ -1145,7 +1145,7 @@ describe('form schema', () => {
 
     it('should say two forms with the different schemas do not match', () => Promise.all([
       fieldsFor(testData.forms.simple),
-      fieldsFor(testData.forms.withrepeat) // same form structure but different xmlFormId
+      fieldsFor(testData.forms.withrepeat)
     ]).then(([ a, b ]) => {
       compare(a, b).should.be.false();
     }));
