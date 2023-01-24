@@ -1386,6 +1386,40 @@ describe('datasets and entities', () => {
       }));
 
     });
+
+    describe('dataset property interaction with intermediate form schemas and purging uneeded drafts', () => {
+      it('should clean up form fields and dataset properties of unneeded drafts', testService(async (service, container) => {
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        // ignoring warning about removing a field
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft?ignoreWarnings=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simpleEntity.replace('orx:version="1.0"', 'orx:version="draft1"').replace(/first_name/g, 'nickname'))
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simpleEntity.replace('orx:version="1.0"', 'orx:version="draft"'))
+          .expect(200);
+
+        // there are expected to be
+        // 2 defs of this form (published and new draft)
+        // 6 form fields of original form (and new form): 3 entity related fields and 3 question fields
+        // ideally only 4 ds property fields, but 2 from deleted def are still there
+        await Promise.all([
+          container.oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simpleEntity'`),
+          container.oneFirst(sql`select count(*) from form_fields as fs join forms as f on fs."formId" = f.id where f."xmlFormId"='simpleEntity'`),
+          container.oneFirst(sql`select count(*) from ds_property_fields`),
+        ])
+          .then((counts) => counts.should.eql([ 2, 6, 6 ]));
+
+      }));
+    });
   });
 
   describe('dataset and entities should have isolated lifecycle', () => {

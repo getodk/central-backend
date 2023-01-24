@@ -2215,6 +2215,123 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               body[0].actee.xmlFormId.should.equal('simple');
               should.not.exist(body[0].details);
             })))));
+
+    describe('different versions of form schema', () => {
+      it('should export deleted fields and values if ?deletedFields=true', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .set('Content-Type', 'application/xml')
+            .send(testData.instances.simple.one)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+              .set('Content-Type', 'application/xml')
+              .send(testData.instances.simple.two))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+              .set('Content-Type', 'application/xml')
+              .send(`
+                <?xml version="1.0"?>
+                <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+                  <h:head>
+                    <model>
+                      <instance>
+                        <data id="simple" version="2">
+                          <meta><instanceID/></meta>
+                          <name/>
+                        </data>
+                      </instance>
+                      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+                      <bind nodeset="/data/name" type="string"/>
+                    </model>
+                  </h:head>
+                </h:html>`)
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish').expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft').expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=3').expect(200)) // introduce a new version with same schema as before
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+              .set('Content-Type', 'application/xml')
+              .send(testData.instances.simple.three.replace('id="simple"', 'id="simple" version="3"')))
+            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?deletedFields=true'))
+              .then((result) => {
+                result.filenames.should.containDeep([ 'simple.csv' ]);
+                const lines = result['simple.csv'].split('\n');
+                lines[0].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+                lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                  .should.equal(',three,Chelsea,38,three,5,Alice,0,0,,,,0,3');
+                lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                  .should.equal(',two,Bob,34,two,5,Alice,0,0,,,,0,');
+                lines[3].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                  .should.equal(',one,Alice,30,one,5,Alice,0,0,,,,0,');
+              })))));
+
+      it('should split select multiple values if ?splitSelectMultiples=true', testService((service, container) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.selectMultiple)
+            .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/draft').expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/draft/publish?version=2').expect(200)) // introduce a new version with same schema as before
+            .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/draft?ignoreWarnings=true')
+              .set('Content-Type', 'application/xml')
+              .send(`
+                <?xml version="1.0"?>
+                <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+                  <h:head>
+                    <model>
+                      <instance>
+                        <data id="selectMultiple" version='3'>
+                          <q1/>
+                          <g1><q2/></g1>
+                          <q3/>
+                        </data>
+                      </instance>
+                      <bind nodeset="/data/q1" type="string"/>
+                      <bind nodeset="/data/g1/q2" type="string"/>
+                      <bind nodeset="/data/q3" type="string"/>
+                    </model>
+                  </h:head>
+                  <h:body>
+                    <select ref="/data/q1"><label>one</label></select>
+                    <group ref="/data/g1">
+                      <label>group</label>
+                      <select ref="/data/g1/q2"><label>two</label></select>
+                    </group>
+                    <select ref="/data/q3"><label>three</label></select>
+                  </h:body>
+                </h:html>`)
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/draft/publish').expect(200)) // new different schema
+            .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+              .set('Content-Type', 'application/xml')
+              .send(testData.instances.selectMultiple.one))
+            .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+              .set('Content-Type', 'application/xml')
+              .send(testData.instances.selectMultiple.two))
+            .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+              .set('Content-Type', 'application/xml')
+              .send(`
+                <data id="selectMultiple" version="3">
+                  <orx:meta><orx:instanceID>three</orx:instanceID></orx:meta>
+                  <q1>a b</q1>
+                  <g1>
+                    <q2>m</q2>
+                  </g1>
+                  <q3>z</q3>
+                </data>
+              `).expect(200))
+            .then(() => exhaust(container))
+            .then(() => asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv?splitSelectMultiples=true')
+              .expect(200)
+              .then(({ text }) => {
+                const lines = text.split('\n');
+                lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,q3,q3/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+                lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                  .should.equal(',a b,1,1,m,1,0,0,0,z,1,three,5,Alice,0,0,,,,0,3');
+                lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                  .should.equal(',b,0,1,m x,1,1,0,0,,0,two,5,Alice,0,0,,,,0,');
+                lines[3].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                  .should.equal(',a b,1,1,x y z,0,1,1,1,,0,one,5,Alice,0,0,,,,0,');
+              })))));
+    });
   });
 
   describe('[draft] .csv.zip', () => {

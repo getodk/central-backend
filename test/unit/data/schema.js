@@ -1,7 +1,7 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 // eslint-disable-next-line import/no-dynamic-require
-const { getFormFields, sanitizeFieldsForOdata, SchemaStack, merge, expectedFormAttachments, injectPublicKey, addVersionSuffix, setVersion } = require(appRoot + '/lib/data/schema');
+const { getFormFields, sanitizeFieldsForOdata, SchemaStack, merge, compare, expectedFormAttachments, injectPublicKey, addVersionSuffix, setVersion } = require(appRoot + '/lib/data/schema');
 // eslint-disable-next-line import/no-dynamic-require
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 // eslint-disable-next-line import/no-dynamic-require
@@ -1132,6 +1132,30 @@ describe('form schema', () => {
         new MockField({ name: 'c', order: 6, path: '/group/c', type: 'string' }),
         new MockField({ name: 'name', order: 7, path: '/name', type: 'string' })
       ]);
+    }));
+  });
+
+  describe('compare', () => {
+    it('should say two forms with the same schemas do match', () => Promise.all([
+      fieldsFor(testData.forms.simple),
+      fieldsFor(testData.forms.simple2) // same form structure but different xmlFormId
+    ]).then(([ a, b ]) => {
+      compare(a, b).should.be.true();
+    }));
+
+    it('should say two forms with the different schemas do not match', () => Promise.all([
+      fieldsFor(testData.forms.simple),
+      fieldsFor(testData.forms.withrepeat)
+    ]).then(([ a, b ]) => {
+      compare(a, b).should.be.false();
+    }));
+
+    it('should say two forms with the different schemas of same size do not match', () => Promise.all([
+      fieldsFor(testData.forms.simple),
+      fieldsFor(testData.forms.simple.replace(/age/g, 'address'))
+    ]).then(([ a, b ]) => {
+      compare(a, b).should.be.false();
+      compare(b, a).should.be.false(); // try both directions
     }));
   });
 
