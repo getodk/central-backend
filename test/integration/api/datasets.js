@@ -822,7 +822,7 @@ describe('datasets and entities', () => {
               .expect(200))
             .then(() => container.Submissions.getCurrentDefByIds(1, 'simpleEntity', 'one', false)
               .then(getOrNotFound)
-              .then((subDef) => createEntityFromSubmission(container, { details: { submissionDefId: subDef.id, reviewState: 'approved' } })))
+              .then((subDef) => createEntityFromSubmission(container, { details: { submissionDefId: subDef.id, submissionId: subDef.submissionId, reviewState: 'approved' } })))
             .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
               .send({ dataset: true })
               .expect(200))
