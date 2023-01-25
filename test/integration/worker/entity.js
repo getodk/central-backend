@@ -132,8 +132,49 @@ describe('worker: entity', () => {
       // second event should look like it was processed.
       // also double-checking that there was a second event and another entity really was not made.
       const secondApproveEvent = await container.Audits.getLatestByAction('submission.update').then((o) => o.get());
-      should.exist(firstApproveEvent.processed);
+      should.exist(secondApproveEvent.processed);
       firstApproveEvent.id.should.not.equal(secondApproveEvent.id);
+
+      // there should be no log of an entity-creation error
+      const errorEvent = await container.Audits.getLatestByAction('entity.create.error');
+      errorEvent.isEmpty().should.be.true();
+    }));
+
+    it('should not make an entity when reprocessing an edited submission', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200))
+        .then(() => asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200));
+
+      await exhaust(container);
+
+      const firstApproveEvent = await container.Audits.getLatestByAction('submission.update').then((o) => o.get());
+      should.exist(firstApproveEvent.processed);
+
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.simpleEntity.one
+          .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2')),
+        { filename: 'data.xml' })
+        .expect(201)
+        .then(() => asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200));
+
+      await exhaust(container);
+
+      const secondApproveEvent = await container.Audits.getLatestByAction('submission.update').then((o) => o.get());
+      firstApproveEvent.id.should.not.equal(secondApproveEvent.id);
+      should.exist(secondApproveEvent.processed);
 
       // there should be no log of an entity-creation error
       const errorEvent = await container.Audits.getLatestByAction('entity.create.error');
