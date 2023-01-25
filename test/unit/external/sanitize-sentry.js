@@ -17,8 +17,7 @@ const cases = [
         accept: 'application/json, */*;q=0.5',
         connection: 'keep-alive',
         'content-type': 'application/json',
-        'content-length': '48',
-        'x-request-received-at': 1640995200000
+        'content-length': '48'
       },
       method: 'POST',
       query_string: null,
@@ -34,8 +33,7 @@ const cases = [
         accept: 'application/json, */*;q=0.5',
         connection: 'keep-alive',
         'content-type': 'application/json',
-        'content-length': '48',
-        'x-request-received-at': 1640995200000
+        'content-length': '48'
       },
       method: 'POST',
       query_string: null,
@@ -53,8 +51,7 @@ const cases = [
         'accept-encoding': 'gzip, deflate',
         accept: '*/*',
         connection: 'keep-alive',
-        authorization: 'Bearer sdff.....sdQ',
-        'x-request-received-at': 1640995200000
+        authorization: 'Bearer sdff.....sdQ'
       },
       method: 'GET',
       query_string: null,
@@ -69,8 +66,7 @@ const cases = [
         'accept-encoding': 'gzip, deflate',
         accept: '*/*',
         connection: 'keep-alive',
-        authorization: null,
-        'x-request-received-at': 1640995200000
+        authorization: null
       },
       method: 'GET',
       query_string: null,
@@ -103,8 +99,7 @@ const cases = [
         referer: 'http://localhost:8989/',
         'accept-encoding': 'gzip, deflate, br',
         'accept-language': 'en-US,en;q=0.9',
-        cookie: 'csrftoken=j0j3....QU5; __enketo_meta_deviceid=s%3Alocalhost%3AzgCh....AE; __csrf=kG2...1d; session=Ajp....vjSnR',
-        'x-request-received-at': 1640995200000
+        cookie: 'csrftoken=j0j3....QU5; __enketo_meta_deviceid=s%3Alocalhost%3AzgCh....AE; __csrf=kG2...1d; session=Ajp....vjSnR'
       },
       method: 'GET',
       query_string: '%24filter=__system%2FsubmitterId+eq+26+and+__system%2FreviewState+eq+null',
@@ -129,8 +124,7 @@ const cases = [
         referer: null,
         'accept-encoding': 'gzip, deflate, br',
         'accept-language': 'en-US,en;q=0.9',
-        cookie: 'csrftoken, __enketo_meta_deviceid, __csrf, session',
-        'x-request-received-at': 1640995200000
+        cookie: 'csrftoken, __enketo_meta_deviceid, __csrf, session'
       },
       method: 'GET',
       query_string: null,
@@ -150,8 +144,7 @@ const cases = [
         connection: 'keep-alive',
         'x-openrosa-version': '1.0',
         'content-type': 'multipart/form-data; boundary=58a8898824454fadb1e9d19fac47882c',
-        'content-length': '311',
-        'x-request-received-at': 1640995200000
+        'content-length': '311'
       },
       method: 'POST',
       query_string: null,
@@ -168,8 +161,7 @@ const cases = [
         connection: 'keep-alive',
         'x-openrosa-version': '1.0',
         'content-type': 'multipart/form-data; boundary=58a8898824454fadb1e9d19fac47882c',
-        'content-length': '311',
-        'x-request-received-at': 1640995200000
+        'content-length': '311'
       },
       method: 'POST',
       query_string: null,
@@ -188,8 +180,7 @@ const cases = [
         accept: '*/*',
         connection: 'keep-alive',
         'x-openrosa-version': '1.0',
-        'content-type': 'text/xml',
-        'x-request-received-at': 1640995200000
+        'content-type': 'text/xml'
       },
       method: 'GET',
       query_string: null,
@@ -205,8 +196,7 @@ const cases = [
         accept: '*/*',
         connection: 'keep-alive',
         'x-openrosa-version': '1.0',
-        'content-type': 'text/xml',
-        'x-request-received-at': 1640995200000
+        'content-type': 'text/xml'
       },
       method: 'GET',
       query_string: null,
@@ -238,8 +228,7 @@ const cases = [
         referer: 'http://localhost:8989/',
         'accept-encoding': 'gzip, deflate, br',
         'accept-language': 'en-US,en;q=0.9',
-        cookie: 'csrftoken=j0j32..6LEzgQU5; __enketo_meta_deviceid=s%3Alo...ucHhAE; __csrf=tdgs7t0..12lwQ; session=RPP..dUz',
-        'x-request-received-at': 1640995200000
+        cookie: 'csrftoken=j0j32..6LEzgQU5; __enketo_meta_deviceid=s%3Alo...ucHhAE; __csrf=tdgs7t0..12lwQ; session=RPP..dUz'
       },
       method: 'GET',
       query_string: '%24top=250&%24skip=0&%24count=true&%24wkt=true&%24filter=__system%2FsubmitterId+eq+48+and+__system%2FreviewState+eq+null',
@@ -265,8 +254,7 @@ const cases = [
         referer: null,
         'accept-encoding': 'gzip, deflate, br',
         'accept-language': 'en-US,en;q=0.9',
-        cookie: 'csrftoken, __enketo_meta_deviceid, __csrf, session',
-        'x-request-received-at': 1640995200000
+        cookie: 'csrftoken, __enketo_meta_deviceid, __csrf, session'
       },
       method: 'GET',
       query_string: '%24top=250&%24skip=0&%24count=true&%24wkt=true&%24filter=__system%2FsubmitterId+eq+48+and+__system%2FreviewState+eq+null',
@@ -305,8 +293,7 @@ const cases = [
         referer: 'http://localhost:8989/-/XoecwziQ',
         'accept-encoding': 'gzip, deflate, br',
         'accept-language': 'en-US,en;q=0.9',
-        cookie: 'csrftoken=j0j3..QU5; __enketo_meta_deviceid=s%3Aloc..AE; __csrf=tdg..lwQ; session=RP..SdUz',
-        'x-request-received-at': 1640995200000
+        cookie: 'csrftoken=j0j3..QU5; __enketo_meta_deviceid=s%3Aloc..AE; __csrf=tdg..lwQ; session=RP..SdUz'
       },
       method: 'POST',
       query_string: null,
@@ -340,8 +327,7 @@ const cases = [
         referer:  null,
         'accept-encoding': 'gzip, deflate, br',
         'accept-language': 'en-US,en;q=0.9',
-        cookie: 'csrftoken, __enketo_meta_deviceid, __csrf, session',
-        'x-request-received-at': 1640995200000
+        cookie: 'csrftoken, __enketo_meta_deviceid, __csrf, session'
       },
       method: 'POST',
       query_string: null,
@@ -363,8 +349,7 @@ const cases = [
         'content-length': '0',
         cookie: '__enketo_meta_deviceid=s%3Aloc..p4; _csrf=W_..Ua',
         'x-openrosa-version': '1.0',
-        date: 'Mon, 14 Jun 2021 18:47:25 GMT',
-        'x-request-received-at': 1640995200000
+        date: 'Mon, 14 Jun 2021 18:47:25 GMT'
       },
       method: 'HEAD',
       query_string: 'formID=simple-name-age&st=Cpl...62M0d',
@@ -380,8 +365,7 @@ const cases = [
         'content-length': '0',
         cookie: '__enketo_meta_deviceid, _csrf',
         'x-openrosa-version': '1.0',
-        date: 'Mon, 14 Jun 2021 18:47:25 GMT',
-        'x-request-received-at': 1640995200000
+        date: 'Mon, 14 Jun 2021 18:47:25 GMT'
       },
       method: 'HEAD',
       query_string: null,
@@ -418,8 +402,7 @@ const cases = [
         referer: 'http://localhost:8989/-/single/Xo..iQ?st=Cp...d',
         'accept-encoding': 'gzip, deflate, br',
         'accept-language': 'en-US,en;q=0.9',
-        cookie: '__enketo_meta_deviceid=s%3Alocalhost%3AZzEustWflva1byvA.R..p4; _csrf=W_..a',
-        'x-request-received-at': 1640995200000
+        cookie: '__enketo_meta_deviceid=s%3Alocalhost%3AZzEustWflva1byvA.R..p4; _csrf=W_..a'
       },
       method: 'POST',
       query_string: 'st=Cpl...M0d',
@@ -450,8 +433,7 @@ const cases = [
         referer: null,
         'accept-encoding': 'gzip, deflate, br',
         'accept-language': 'en-US,en;q=0.9',
-        cookie: '__enketo_meta_deviceid, _csrf',
-        'x-request-received-at': 1640995200000
+        cookie: '__enketo_meta_deviceid, _csrf'
       },
       method: 'POST',
       query_string: null,
@@ -473,8 +455,7 @@ const cases = [
         'content-length': '0',
         cookie: '__enketo_meta_deviceid=s%3Alocalhost%3AZz..Fp4; _csrf=W..Ua',
         'x-openrosa-version': '1.0',
-        date: 'Mon, 14 Jun 2021 19:08:30 GMT',
-        'x-request-received-at': 1640995200000
+        date: 'Mon, 14 Jun 2021 19:08:30 GMT'
       },
       method: 'HEAD',
       query_string: 'formID=simple-name-age&st=CplI..0d',
@@ -490,8 +471,7 @@ const cases = [
         'content-length': '0',
         cookie: '__enketo_meta_deviceid, _csrf',
         'x-openrosa-version': '1.0',
-        date: 'Mon, 14 Jun 2021 19:08:30 GMT',
-        'x-request-received-at': 1640995200000
+        date: 'Mon, 14 Jun 2021 19:08:30 GMT'
       },
       method: 'HEAD',
       query_string: null,
@@ -512,8 +492,7 @@ const cases = [
         'content-type': 'application/json',
         'x-action-notes': 'some test note',
         authorization: 'Bearer Ojz....1I',
-        'content-length': '36',
-        'x-request-received-at': 1640995200000
+        'content-length': '36'
       },
       method: 'POST',
       query_string: null,
@@ -531,8 +510,7 @@ const cases = [
         'content-type': 'application/json',
         'x-action-notes': null,
         authorization: null,
-        'content-length': '36',
-        'x-request-received-at': 1640995200000
+        'content-length': '36'
       },
       method: 'POST',
       query_string: null,
@@ -575,8 +553,11 @@ describe('external: sanitize-sentry', () => {
     const actualDateNow = global.Date.now;
     global.Date.now = () => 1640995210000;
 
+    const startTimestamp = 1640995200000;
+    const extra = { startTimestamp };
+
     for (const [input, expectedOutput] of cases) {
-      sanitizeEventRequest({ request: input }).should.eql({ request: expectedOutput, extra: { duration: '10 sec' } });
+      sanitizeEventRequest({ request: input, extra }).should.eql({ request: expectedOutput, extra: { startTimestamp, duration: 10000 } });
     }
 
     // Restore actual function
