@@ -189,7 +189,7 @@ describe('api: /users', () => {
             })))));
   });
 
-  describe('/reset/initiate POST', () => {
+  describe('/reset/initiate POST, /reset/verify POST', () => {
     it('should not send any email if no account exists', testService((service) =>
       service.post('/v1/users/reset/initiate')
         .send({ email: 'winnifred@getodk.org' })
@@ -234,6 +234,23 @@ describe('api: /users', () => {
             .then(() => service.login({ email: 'alice@getodk.org', password: 'resetthis!' }, (asAlice) =>
               asAlice.get('/v1/users/current').expect(200)));
         })));
+
+    it('should delete sessions after password reset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await service.post('/v1/users/reset/initiate')
+        .send({ email: 'alice@getodk.org' })
+        .expect(200);
+      // The session has not been deleted yet.
+      await asAlice.get('/v1/users/current').expect(200);
+
+      const token = /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html)[1];
+      await service.post('/v1/users/reset/verify')
+        .send({ new: 'resetpassword' })
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+      // The session has been deleted.
+      await asAlice.get('/v1/users/current').expect(401);
+    }));
 
     it('should not allow password reset token replay', testService((service) =>
       service.post('/v1/users/reset/initiate')
@@ -568,6 +585,34 @@ describe('api: /users', () => {
             .then(() => service.post('/v1/sessions')
               .send({ email: 'chelsea@getodk.org', password: 'newchelsea' })
               .expect(200))))));
+
+    it('should delete other sessions', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const anotherAlice = await service.login('alice');
+      const { body: { id } } = await asAlice.get('/v1/users/current')
+        .expect(200);
+      await anotherAlice.get('/v1/users/current').expect(200);
+      await asAlice.put(`/v1/users/${id}/password`)
+        .send({ old: 'alice', new: 'newpassword' })
+        .expect(200);
+      // The other session has been deleted.
+      await anotherAlice.get('/v1/users/current').expect(401);
+      // The current session has not.
+      await asAlice.get('/v1/users/current').expect(200);
+    }));
+
+    it('should delete sessions if Basic auth is used', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: { id } } = await asAlice.get('/v1/users/current')
+        .expect(200);
+      const basic = Buffer.from('alice@getodk.org:alice').toString('base64');
+      await service.put(`/v1/users/${id}/password`)
+        .set('Authorization', `Basic ${basic}`)
+        .set('X-Forwarded-Proto', 'https')
+        .send({ old: 'alice', new: 'newpassword' })
+        .expect(200);
+      await asAlice.get('/v1/users/current').expect(401);
+    }));
 
     it('should send an email to a user when their password changes', testService((service) =>
       service.login('alice', (asAlice) =>
