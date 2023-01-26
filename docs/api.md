@@ -3772,42 +3772,6 @@ Identical to [the non-Draft version](/reference/odata-endpoints/odata-form-servi
 
 There are some resources available for getting or setting system information and configuration. You can [set the Usage Reporting configuration](/reference/system-endpoints/usage-reporting-configuration) for the server, or you can [retrieve the Server Audit Logs](/reference/system-endpoints/server-audit-logs). If backups were configured using an earlier version of ODK Central, you can also [get the current configuration](/reference/system-endpoints/backups-configuration) or terminate it.
 
-## Backups Configuration [/v1/config/backups]
-
-Earlier versions of ODK Central allowed users to configure backups to Google Drive, but it is no longer possible to do so. If backups were configured using an earlier version of ODK Central, you can get the current configuration or terminate it. On January 31, 2023, backups to Google Drive will stop working entirely, and we will remove the endpoints to get the current configuration or terminate it. Although backups to Google Drive will stop working, it will still be possible to download a [Direct Backup](/reference/system-endpoints/direct-backup). For more information about these changes, please see [this topic](https://forum.getodk.org/t/backups-to-google-drive-from-central-will-stop-working-after-jan-31st/38895) in the ODK Forum.
-
-The backups configuration is essentially a singleton object: there can be only one backups configuration at a time.
-
-### Getting the current configuration [GET]
-
-If configured, this endpoint will return the present backups configuration type. For security reasons, none of the actual internal authentication and encryption information is returned.
-
-If no backups are configured, this endpoint will return a `404`.
-
-+ Response 200 (application/json)
-    + Body
-
-            {
-                "type": "google",
-                "setAt": "2018-01-06T00:32:52.787Z"
-            }
-
-+ Response 403 (application/json)
-    + Attributes (Error 403)
-
-+ Response 404 (application/json)
-    + Attributes (Error 404)
-
-### Terminating the current configuration [DELETE]
-
-Deleting the backups configuration will permanently remove it, stopping it from running as scheduled.
-
-+ Response 200 (application/json)
-    + Attributes (Success)
-
-+ Response 403 (application/json)
-    + Attributes (Error 403)
-
 ## Direct Backup [/v1/backup]
 
 _(introduced: version 1.1)_
