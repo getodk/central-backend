@@ -548,6 +548,7 @@ const filteredTokenUrls = [
 
 describe('external: sanitize-sentry', () => {
   it('removes sensitive data from request objects ', () => {
+
     for (const [input, expectedOutput] of cases) {
       sanitizeEventRequest({ request: input }).should.eql({ request: expectedOutput });
     }
