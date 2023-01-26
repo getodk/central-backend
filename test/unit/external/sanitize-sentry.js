@@ -549,19 +549,9 @@ const filteredTokenUrls = [
 describe('external: sanitize-sentry', () => {
   it('removes sensitive data from request objects ', () => {
 
-    // Mock Date.now()
-    const actualDateNow = global.Date.now;
-    global.Date.now = () => 1640995210000;
-
-    const startTimestamp = 1640995200000;
-    const extra = { startTimestamp };
-
     for (const [input, expectedOutput] of cases) {
-      sanitizeEventRequest({ request: input, extra }).should.eql({ request: expectedOutput, extra: { startTimestamp, duration: 10000 } });
+      sanitizeEventRequest({ request: input }).should.eql({ request: expectedOutput });
     }
-
-    // Restore actual function
-    global.Date.now = actualDateNow;
   });
 
   it('identifies sensitive URLs ', () => {
