@@ -3991,8 +3991,8 @@ Server Audit Logs entries are created for the following `action`s:
 * `entity.create` when an Entity is created.
 * `entity.create.error` when there is an error during entity creation process.
 * `config.set` when a system configuration is set.
-* `backup` when a backup operation is attempted.
 * `analytics` when a Usage Report is attempted.
+* Deprecated: `backup` when a backup operation is attempted for Google Drive backups.
 
 ### Getting Audit Log Entries [GET /v1/audits{?action,start,end,limit,offset}]
 

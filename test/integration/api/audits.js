@@ -151,9 +151,9 @@ describe('/audits', () => {
             })))));
 
     it('should not expand actor if there is no actor', testService((service, { run }) =>
-      run(sql`insert into audits (action, "loggedAt") values ('backup', now())`)
+      run(sql`insert into audits (action, "loggedAt") values ('analytics', now())`)
         .then(() => service.login('alice', (asAlice) =>
-          asAlice.get('/v1/audits?action=backup')
+          asAlice.get('/v1/audits?action=analytics')
             .set('X-Extended-Metadata', true)
             .expect(200)
             .then(({ body }) => {

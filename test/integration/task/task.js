@@ -98,11 +98,11 @@ describe('task: emailing', () => {
       .then(() => { global.inbox.length.should.equal(0); })));
 
   it('should send an email on task failure', testTask(() =>
-    emailing('backupFailed', Promise.reject(Problem.user.missingParameter({ field: 'test' })))
+    emailing('accountReset', Promise.reject(Problem.user.missingParameter({ field: 'test' })))
       .then(identity, () => {
         const email = global.inbox.pop();
         email.to.should.eql([{ address: 'no-reply@getodk.org', name: '' }]);
-        email.subject.should.equal('ODK Central backup failed');
+        email.subject.should.equal('ODK Central account password reset');
       }).should.be.fulfilled()));
 });
 
