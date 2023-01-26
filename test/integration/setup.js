@@ -31,12 +31,6 @@ if (mailConfig.transport !== 'json')
 // eslint-disable-next-line import/no-dynamic-require
 const xlsform = require(appRoot + '/test/util/xlsform');
 
-// set up our google mock.
-// eslint-disable-next-line import/no-dynamic-require
-const googler = require(appRoot + '/lib/external/google');
-const realGoogle = googler(config.get('default.external.google'));
-const google = require('../util/google-mock')(realGoogle);
-
 // set up our sentry mock.
 // eslint-disable-next-line import/no-dynamic-require
 const Sentry = require(appRoot + '/lib/external/sentry').init();
@@ -153,7 +147,7 @@ const augment = (service) => {
 // FINAL TEST WRAPPERS
 
 
-const baseContainer = withDefaults({ db, mail, env, xlsform, google, bcrypt, enketo, Sentry, odkAnalytics, context });
+const baseContainer = withDefaults({ db, mail, env, xlsform, bcrypt, enketo, Sentry, odkAnalytics, context });
 
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
