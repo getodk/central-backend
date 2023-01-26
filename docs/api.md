@@ -32,6 +32,12 @@ Finally, **system information and configuration** is available via a set of spec
 
 Here major and breaking changes to the API are listed by version.
 
+### ODK Central v2023.1
+
+**Removed**:
+
+- Scheduled backups to Google Drive are no longer supported. As a result, backups are no longer configurable. It is no longer possible to get or terminate a backups configuration or to use a backups configuration to GET a Direct Backup. For more information about these changes, please see [this topic](https://forum.getodk.org/t/backups-to-google-drive-from-central-will-stop-working-after-jan-31st/38895) in the ODK Forum.
+
 ### ODK Central v2022.3
 
 **Added**:
@@ -3770,55 +3776,7 @@ Identical to [the non-Draft version](/reference/odata-endpoints/odata-form-servi
 
 # Group System Endpoints
 
-There are some resources available for getting or setting system information and configuration. You can [set the Usage Reporting configuration](/reference/system-endpoints/usage-reporting-configuration) for the server, or you can [retrieve the Server Audit Logs](/reference/system-endpoints/server-audit-logs). If backups were configured using an earlier version of ODK Central, you can also [get the current configuration](/reference/system-endpoints/backups-configuration) or terminate it.
-
-## Direct Backup [/v1/backup]
-
-_(introduced: version 1.1)_
-
-ODK Central offers HTTP endpoints that will immediately perform a backup on the system database and send that encrypted backup as the response. You can `POST` with an encryption passphrase. If backups to Google Drive were [configured](/reference/system-endpoints/backups-configuration) using an earlier version of ODK Central, you can also `GET` to use the passphrase you configured then.
-
-Note that performing the backup takes a great deal of time, during which the request will be held open. Both of these endpoints trickle junk data every five seconds while that processing is occurring to prevent the request from timing out. Depending on how much data you have, it can take many minutes for the data stream to speed up to a full transfer rate.
-
-### Using an Ad-Hoc Passphrase [POST]
-
-A `POST` verb will start an direct download ad-hoc backup. You will want to supply a `passphrase` with your chosen encryption passphrase. It is possible to omit this, in which case the backup will still be encrypted, but it will decrypt given an empty passphrase.
-
-Please see the section notes above about the long-running nature of this endpoint.
-
-+ Request (application/json)
-    + Attributes
-        + passphrase: `my-password` (string, optional) - The passphrase with which to encrypt the backup.
-
-+ Response 200
-    + Headers
-
-            Content-Disposition: attachment; filename=central-backup-2020-01-01T00:00:00.000Z.zip
-
-    + Body
-
-            (binary data)
-
-+ Response 403 (application/json)
-    + Attributes (Error 403)
-
-### Using the Configured Scheduled Backups Passphrase [GET]
-
-A `GET` verb will start an direct download backup, but using the configured scheduled backups passphrase. If no scheduled backup has been configured, the endpoint will return not found.
-
-Please see the section notes above about the long-running nature of this endpoint.
-
-+ Response 200
-    + Headers
-
-            Content-Disposition: attachment; filename=central-backup-2020-01-01T00:00:00.000Z.zip
-
-    + Body
-
-            (binary data)
-
-+ Response 403 (application/json)
-    + Attributes (Error 403)
+There are some resources available for getting or setting system information and configuration. You can set the [Usage Reporting configuration](/reference/system-endpoints/usage-reporting-configuration) for the server, retrieve the [Server Audit Logs](/reference/system-endpoints/server-audit-logs), or perform a [Direct Backup](/reference/system-endpoints/direct-backup).
 
 ## Usage Reporting Configuration [/v1/config/analytics]
 
@@ -3985,6 +3943,36 @@ This endpoint supports retrieving extended metadata; provide a header `X-Extende
 
 + Response 400 (application/json)
     + Attributes (Error 400)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Direct Backup [/v1/backup]
+
+_(introduced: version 1.1)_
+
+ODK Central offers an HTTP endpoint that will immediately perform a backup on the system database and send that encrypted backup as the response. To use it, `POST` with an encryption passphrase.
+
+Note that performing the backup takes a great deal of time, during which the request will be held open. As a result, the endpoint will trickle junk data every five seconds while that processing is occurring to prevent the request from timing out. Depending on how much data you have, it can take many minutes for the data stream to speed up to a full transfer rate.
+
+### Using an Encryption Passphrase [POST]
+
+Use the `POST` verb to start a direct download ad-hoc backup. You will want to supply a `passphrase` with your chosen encryption passphrase. It is possible to omit this, in which case the backup will still be encrypted, but it will decrypt given an empty passphrase.
+
+Please see the section notes above about the long-running nature of this endpoint.
+
++ Request (application/json)
+    + Attributes
+        + passphrase: `my-password` (string, optional) - The passphrase with which to encrypt the backup.
+
++ Response 200
+    + Headers
+
+            Content-Disposition: attachment; filename=central-backup-2020-01-01T00:00:00.000Z.zip
+
+    + Body
+
+            (binary data)
 
 + Response 403 (application/json)
     + Attributes (Error 403)
