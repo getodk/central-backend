@@ -87,6 +87,17 @@ describe('task: accounts', () => {
         .then(() => setUserPassword('testuser@getodk.org', 'aoeu'))
         .catch((problem) => problem.problemCode.should.equal(400.21))));
 
+    it('should delete sessions', testTask(async ({ Sessions, Users }) => {
+      const user = await Users.create(User.fromApi({
+        email: 'testuser@getodk.org',
+        displayName: 'test user'
+      }));
+      const { token } = await Sessions.create(user.actor);
+      (await Sessions.getByBearerToken(token)).isDefined().should.be.true();
+      await setUserPassword('testuser@getodk.org', 'aoeuidhtns');
+      (await Sessions.getByBearerToken(token)).isDefined().should.be.false();
+    }));
+
     it('should log an audit entry', testTask(({ Audits, Users }) =>
       Users.create(User.fromApi({ email: 'testuser@getodk.org', displayName: 'test user' }))
         .then(() => setUserPassword('testuser@getodk.org', 'aoeuidhtns'))
