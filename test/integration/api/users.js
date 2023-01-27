@@ -96,8 +96,9 @@ describe('api: /users', () => {
         asAlice.post('/v1/users')
           .send({ email: 'david@getodk.org', password: '' })
           .expect(200) // treats a blank password as no password provided
-          .then(() => service.login({ email: 'david@getodk.org', password: '' }, (failed) =>
-            failed.get('/v1/users/current').expect(401))))));
+          .then(() => service.post('/v1/sessions')
+            .send({ email: 'david@getodk.org', password: '' })
+            .expect(400)))));
 
     it('should not accept a password that is too short', testService((service) =>
       service.login('alice', (asAlice) =>
