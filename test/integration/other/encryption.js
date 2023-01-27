@@ -678,6 +678,22 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0','' ]);
                 csv[3].should.eql([ '' ]);
               }))))));
+
+    it('should log publish events in the audits', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // There are the forms in the fixture that get re-published with managed encryption
+      await asAlice.post('/v1/projects/1/key')
+        .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+        .expect(200);
+
+      await asAlice.get('/v1/audits?action=form')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs.forEach(l => l.action.should.be.eql('form.update.publish'));
+        });
+
+    }));
   });
 });
 
