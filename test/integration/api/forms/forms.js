@@ -405,6 +405,18 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         });
     }));
 
+    it('should reject with structure changed warning', testService(async (service) => {
+      const asAlice = await service.login('alice', identity);
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+        .send(testData.forms.simple.replace(/age/g, 'address'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft/publish?ignoreWarnings=true&version=v2')
+        .expect(200);
+    }));
+
     it('should reject with xls and structure changed warnings', testService(async (service) => {
       const asAlice = await service.login('alice', identity);
 
