@@ -2,8 +2,10 @@ const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const uuid = require('uuid/v4');
 const config = require('config');
-const { testServiceFullTrx } = require('../setup');
+const { testContainerFullTrx, testServiceFullTrx } = require('../setup');
 const { sql } = require('slonik');
+// eslint-disable-next-line import/no-dynamic-require
+const { Actor, Config } = require(appRoot + '/lib/model/frames');
 // eslint-disable-next-line import/no-dynamic-require
 const { withDatabase } = require(appRoot + '/lib/model/migrate');
 const testData = require('../../data/xml');
@@ -14,23 +16,19 @@ const { getFormFields } = require('../../../lib/data/schema');
 
 const withTestDatabase = withDatabase(config.get('test.database'));
 const migrationsDir = appRoot + '/lib/model/migrations';
-const upToMigration = (toName) => withTestDatabase(async (migrator) => {
+const upToMigration = (toName, inclusive = true) => withTestDatabase(async (migrator) => {
   await migrator.raw('drop owned by current_user');
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
+  const migrations = await migrator.migrate.list({ directory: migrationsDir });
+  const pending = migrations[1].map(({ file }) => file);
+  const index = pending.indexOf(toName);
+  if (index === -1) throw new Error(`Could not find migration ${toName}`);
+  const end = inclusive ? index + 1 : index;
+  for (let i = 0; i < end; i += 1)
     // eslint-disable-next-line no-await-in-loop
     await migrator.migrate.up({ directory: migrationsDir });
-    // eslint-disable-next-line no-await-in-loop
-    const migrations = await migrator.migrate.list({ directory: migrationsDir });
-    const applied = migrations[0];
-    const remaining = migrations[1];
-    if (toName === applied[applied.length - 1]) break;
-    if (remaining.length === 0) {
-      // eslint-disable-next-line no-console
-      console.log('Could not find migration', toName);
-      break;
-    }
-  }
+  // Confirm that the migrations completed as expected.
+  const [completed] = await migrator.migrate.list({ directory: migrationsDir });
+  completed.should.eql(pending.slice(0, end));
 });
 const up = () => withTestDatabase((migrator) =>
   migrator.migrate.up({ directory: migrationsDir }));
@@ -365,5 +363,100 @@ describe('datbase migrations: intermediate form schema', function() {
 
     res = await container.one(sql`select count(distinct "schemaId") from ds_property_fields`);
     res.count.should.equal(2); // only 2 schema IDs represented here
+  }));
+});
+
+// eslint-disable-next-line func-names, space-before-function-paren
+describe('database migrations: 20230123-01-remove-google-backups', function() {
+  this.timeout(10000);
+
+  beforeEach(() => upToMigration('20230123-01-remove-google-backups.js', false));
+
+  it('deletes backups configs', testContainerFullTrx(async ({ Configs }) => {
+    await Configs.set('backups.main', { a: 'b' });
+    await Configs.set('backups.google', { c: 'd' });
+    await Configs.set('analytics', { enabled: false });
+    await up();
+    (await Configs.get('backups.main')).isEmpty().should.be.true();
+    (await Configs.get('backups.google')).isEmpty().should.be.true();
+    (await Configs.get('analytics')).isDefined().should.be.true();
+  }));
+
+  describe('backup creation token', () => {
+    // Much of this was copied from the old endpoint
+    // /v1/config/backups/initiate.
+    const createToken = async ({ Actors, Assignments, Sessions }) => {
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 1);
+      const actor = await Actors.create(new Actor({
+        type: 'singleUse',
+        displayName: 'Backup creation token',
+        expiresAt,
+        meta: {
+          keys: { some: 'data' }
+        }
+      }));
+      await Assignments.grantSystem(actor, 'initbkup', Config.species);
+      await Sessions.create(actor);
+      return actor.id;
+    };
+
+    it('consumes a token', testContainerFullTrx(async (container) => {
+      const actorId = await createToken(container);
+      const { one } = container;
+      const count = () => one(sql`SELECT
+        (SELECT count(*) FROM actors WHERE id = ${actorId} AND "deletedAt" IS NOT NULL) AS "deletedActors",
+        (SELECT count(*) FROM assignments WHERE "actorId" = ${actorId}) AS assignments,
+        (SELECT count(*) FROM sessions WHERE "actorId" = ${actorId}) AS sessions`);
+      (await count()).should.eql({
+        deletedActors: 0,
+        assignments: 1,
+        sessions: 1
+      });
+      await up();
+      (await count()).should.eql({
+        deletedActors: 1,
+        assignments: 0,
+        sessions: 0
+      });
+    }));
+
+    it('does not modify other actor data', testServiceFullTrx(async (service, container) => {
+      await populateUsers(container);
+      await service.login('alice');
+      await createToken(container);
+      const { one } = container;
+      const count = () => one(sql`SELECT
+        (SELECT count(*) FROM actors where "deletedAt" is not null) AS "deletedActors",
+        (SELECT count(*) FROM assignments) AS assignments,
+        (SELECT count(*) FROM sessions) AS sessions`);
+      (await count()).should.eql({
+        deletedActors: 0,
+        assignments: 3,
+        sessions: 2
+      });
+      await up();
+      // The counts decrease in the way that we would expect from the previous
+      // test.
+      (await count()).should.eql({
+        deletedActors: 1,
+        assignments: 2,
+        sessions: 1
+      });
+    }));
+  });
+
+  it('deletes the role that grants backup.verify', testContainerFullTrx(async ({ Roles }) => {
+    const rolesBefore = await Roles.getAll();
+    const canVerify = rolesBefore.filter(({ verbs }) =>
+      verbs.includes('backup.verify'));
+    canVerify.length.should.equal(1);
+    canVerify[0].system.should.equal('initbkup');
+    await up();
+    const rolesAfter = await Roles.getAll();
+    const deleted = rolesBefore.filter(roleBefore =>
+      !rolesAfter.some(roleAfter => roleAfter.id === roleBefore.id));
+    deleted.length.should.equal(1);
+    deleted[0].system.should.equal('initbkup');
   }));
 });
