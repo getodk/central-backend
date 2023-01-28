@@ -131,7 +131,9 @@ const augment = (service) => {
       const credentials = (typeof user === 'string')
         ? { email: `${user}@getodk.org`, password: user }
         : user;
-      const { body } = await service.post('/v1/sessions').send(credentials);
+      const { body } = await service.post('/v1/sessions')
+        .send(credentials)
+        .expect(200);
       return body.token;
     }));
     const proxies = tokens.map((token) => new Proxy(service, authProxy(token)));
