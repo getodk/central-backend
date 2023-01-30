@@ -1166,6 +1166,46 @@ describe('form schema', () => {
       compare(b, a).should.be.true(); // try both directions
     }));
 
+    // this doesn't actually come up, but compare() ought to handle it
+    it('should compare fields with selectMultiple=false and =null or undefined', () => {
+      // comparing false and null (should match)
+      // comparing false and undefined (should match)
+      const a = [
+        {
+          name: 'q1',
+          path: '/q1',
+          order: 0,
+          type: 'string',
+          selectMultiple: false
+        },
+        {
+          name: 'q2',
+          path: '/q2',
+          order: 0,
+          type: 'string',
+          selectMultiple: false
+        }
+      ];
+      const b = [
+        {
+          name: 'q1',
+          path: '/q1',
+          order: 0,
+          type: 'string',
+          selectMultiple: null
+        },
+        {
+          name: 'q2',
+          path: '/q2',
+          order: 0,
+          type: 'string'
+          // selectMultple is undefined
+        }
+      ];
+      compare(a, b).should.be.true();
+      compare(b, a).should.be.true(); // try both directions
+    });
+
     it('should say select1 and selectMultiple are different', () => {
       const selectOne = `<?xml version="1.0"?>
       <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
