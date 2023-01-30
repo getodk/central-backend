@@ -1,4 +1,7 @@
+const appRoot = require('app-root-path');
 const should = require('should');
+// eslint-disable-next-line import/no-dynamic-require
+const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { testService } = require('../setup');
 
 describe('api: /users', () => {
@@ -91,14 +94,19 @@ describe('api: /users', () => {
           .then(() => service.login({ email: 'david@getodk.org', password: 'alongpassword' }, (asDavid) =>
             asDavid.get('/v1/users/current').expect(200))))));
 
-    it('should not accept and hash blank passwords', testService((service) =>
+    it('should not accept and hash blank passwords', testService((service, { Users }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users')
           .send({ email: 'david@getodk.org', password: '' })
           .expect(200) // treats a blank password as no password provided
-          .then(() => service.post('/v1/sessions')
-            .send({ email: 'david@getodk.org', password: '' })
-            .expect(400)))));
+          .then(() => Promise.all([
+            service.post('/v1/sessions')
+              .send({ email: 'david@getodk.org', password: '' })
+              .expect(400),
+            Users.getByEmail('david@getodk.org')
+              .then(getOrNotFound)
+              .then(({ password }) => { should.not.exist(password); })
+          ])))));
 
     it('should not accept a password that is too short', testService((service) =>
       service.login('alice', (asAlice) =>
