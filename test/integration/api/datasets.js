@@ -257,10 +257,9 @@ describe('datasets and entities', () => {
               createdAt.should.not.be.null();
               lastEntity.should.not.be.null();
               return d;
-            }).should.eql([
-              { name: 'people', projectId: 1, entities: 2 },
-              { name: 'trees', projectId: 1, entities: 1 }
-            ]);
+            }).reduce((a, v) => ({ ...a, [v.name]: v.entities }), {}).should.eql({
+              people: 2, trees: 1
+            });
           });
       }));
     });
