@@ -34,6 +34,16 @@ Here major and breaking changes to the API are listed by version.
 
 ### ODK Central v2023.1
 
+**Added**:
+
+- New endpoint [GET /projects/:id/datasets/:name](#reference/datasets/datasets/dataset-metadata) to get the metadata of a Dataset
+
+**Changed**:
+
+- [GET /projects/:id/datasets](#reference/datasets/datasets/datasets) now supports `X-Extended-Metadata` header to retrieve number of Entities in the Dataset and timestamp of the last Entity
+- `$select` in OData now supports selecting complex type(groups) 
+- [Creating a form](#reference/forms/forms/creating-a-new-form) can now return workflow warnings
+
 **Removed**:
 
 - Scheduled backups to Google Drive are no longer supported. As a result, backups are no longer configurable. It is no longer possible to get or terminate a backups configuration or to use a backups configuration to GET a Direct Backup. For more information about these changes, please see [this topic](https://forum.getodk.org/t/backups-to-google-drive-from-central-will-stop-working-after-jan-31st/38895) in the ODK Forum.
@@ -1192,6 +1202,11 @@ For XLSForm upload, either `.xls` or `.xlsx` are accepted. You must provide the 
 By default, any XLSForm conversion Warnings will fail this request and return the warnings rather than use the converted XML to create a form. To override this behaviour, provide a querystring flag `?ignoreWarnings=true`. Conversion Errors will always fail this request.
 
 The API will currently check the XML's structure in order to extract the information we need about it, but ODK Central does _not_ run comprehensive validation on the full contents of the XML to ensure compliance with the ODK specification. Future versions will likely do this, but in the meantime you will have to use a tool like [ODK Validate](https://getodk.org/use/validate/) to be sure your Forms are correct.
+
+You will get following workflow warnings while creating a new form or uploading a new version of an existing form:
+
+- Structural Change: Returned when the uploaded definition of the form removes, renames or moves a field to a different group/repeat. [Learn more](https://docs.getodk.org/central-forms/#central-forms-updates)
+- Deleted Form: Returned when there is a form with the same ID in the Trash. [Learn more](https://docs.getodk.org/central-forms/#deleting-a-form)
 
 ### Creating Datasets with Forms
 
@@ -2957,6 +2972,25 @@ The Dataset listing endpoint returns all published Datasets in a Project. If a D
 
     + Attributes (array[Dataset])
 
++ Response 200 (application/json; extended)
+    This is the extended response
+
+    + Attributes (array[Extended Dataset])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Dataset Metadata [GET /projects/{projectId}/datasets/{name}]
+
+Returns the metadata of a Dataset including properties and forms that create and consume the Dataset.
+
++ Parameters
+    + projectId: `16` (number, required) - The numeric ID of the Project
+    + name: `people` (string, required) - Name of the Dataset
+
++ Response 200 (application/json)
+    + Attributes (DatasetMetadata)
+
 + Response 403 (application/json)
     + Attributes (Error 403)
 
@@ -3541,7 +3575,6 @@ The _nonstandard_ `$wkt` querystring parameter may be set to `true` to request t
 As of ODK Central v2022.3, the [`$select` query parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358942) is supported with some limitations:
 + `$select` and `$expand` can't be used together.
 + Child properties of repeats can't be requested using `$select`
-+ Requesting complex types (groups) to get all fields of that type is only supported for `__system`
 
 As the vast majority of clients only support the JSON OData format, that is the only format ODK Central offers.
 
@@ -4245,6 +4278,18 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format.
 + projectId: `1` (number, required) - The numerical ID of the Project that the Dataset belongs to.
 
+## Extended Dataset (Dataset)
++ lastEntity: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent entity, if any.
++ entities: `10` (number, required) - The number of Entities in the Dataset.
+
+## DatasetMetadata (Dataset)
++ linkedForms: (array[Form KeyValue]) - Forms that consume data from the Dataset
++ properties: (array[Property Detailed]) - All properties of the Dataset
+
+## Form KeyValue (object)
++ xmlFormId: `simple` (string, required) - The `id` of this form as given in its XForms XML definition
++ name: `Simple` (string, required) - The friendly name of this form. It is given by the `<title>` in the XForms XML definition. Returns `xmlFormId` if there is no title in the form definition.
+
 ## Patch Attachment (object)
 + dataset: `true` (boolean, required) - true for linking Dataset and false for unlinking Dataset.
 
@@ -4265,3 +4310,8 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + name: `first_name` (string, required) - The name of the Property.
 + inForm: `true` (boolean, required) - Whether or not this Property is affected by the form.
 + isNew: `true` (boolean, required) - Whether or not this Property is new (will be created by publishing the Draft Form).
+
+## Property Detailed (object)
++ name: `first_name` (string, required) - The name of the Property.
++ publishedAt: `2018-01-21T00:04:11.153Z` (string, required) - Publishing timestamp of the form that defined this property for the first time.
++ forms: (array[Form KeyValue]) - List of forms that create the property
