@@ -1157,6 +1157,86 @@ describe('form schema', () => {
       compare(a, b).should.be.false();
       compare(b, a).should.be.false(); // try both directions
     }));
+
+    it('should say selectMultiple matches selectMultiple', () => Promise.all([
+      fieldsFor(testData.forms.selectMultiple),
+      fieldsFor(testData.forms.selectMultiple)
+    ]).then(([ a, b ]) => {
+      compare(a, b).should.be.true();
+      compare(b, a).should.be.true(); // try both directions
+    }));
+
+    // this doesn't actually come up, but compare() ought to handle it
+    it('should compare fields with selectMultiple=false and =null or undefined', () => {
+      // comparing false and null (should match)
+      // comparing false and undefined (should match)
+      const a = [
+        {
+          name: 'q1',
+          path: '/q1',
+          order: 0,
+          type: 'string',
+          selectMultiple: false
+        },
+        {
+          name: 'q2',
+          path: '/q2',
+          order: 0,
+          type: 'string',
+          selectMultiple: false
+        }
+      ];
+      const b = [
+        {
+          name: 'q1',
+          path: '/q1',
+          order: 0,
+          type: 'string',
+          selectMultiple: null
+        },
+        {
+          name: 'q2',
+          path: '/q2',
+          order: 0,
+          type: 'string'
+          // selectMultple is undefined
+        }
+      ];
+      compare(a, b).should.be.true();
+      compare(b, a).should.be.true(); // try both directions
+    });
+
+    it('should say select1 and selectMultiple are different', () => {
+      const selectOne = `<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+        <h:head>
+          <model>
+            <instance>
+              <data id="selectMultiple">
+                <q1/>
+                <g1><q2/></g1>
+              </data>
+            </instance>
+            <bind nodeset="/data/q1" type="string"/>
+            <bind nodeset="/data/g1/q2" type="string"/>
+          </model>
+        </h:head>
+        <h:body>
+          <select1 ref="/data/q1"><label>one</label></select1>
+          <group ref="/data/g1">
+            <label>group</label>
+            <select1 ref="/data/g1/q2"><label>two</label></select1>
+          </group>
+        </h:body>
+      </h:html>`;
+      return Promise.all([
+        fieldsFor(testData.forms.selectMultiple),
+        fieldsFor(selectOne)
+      ]).then(([ a, b ]) => {
+        compare(a, b).should.be.false();
+        compare(b, a).should.be.false(); // try both directions
+      });
+    });
   });
 
   describe('expectedFormAttachments', () => {
