@@ -438,6 +438,32 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         });
     }));
 
+    it('should reject with missing meta group', testService(async (service) => {
+      const asAlice = await service.login('alice', identity);
+
+      const missingMeta = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml">
+      <h:head>
+        <h:title>Missing Meta</h:title>
+        <model>
+          <instance>
+            <data id="missingMeta">
+              <name/>
+              <age/>
+            </data>
+          </instance>
+          <bind nodeset="/data/name" type="string"/>
+          <bind nodeset="/data/age" type="int"/>
+        </model>
+      </h:head>
+
+    </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(missingMeta)
+        .set('Content-Type', 'application/xml')
+        .expect(400);
+    }));
+
     it('should create the form for xml files with warnings given ignoreWarnings', testService(async (service) => {
       const asAlice = await service.login('alice', identity);
 
@@ -809,6 +835,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               .expect(200)
               .then(({ body }) => {
                 body.should.eql([
+                  { name: 'meta', path: '/meta', type: 'structure', binary: null, selectMultiple: null },
+                  { name: 'instanceID', path: '/meta/instanceID', type: 'string', binary: null, selectMultiple: null },
                   { name: 'q1', path: '/q1', type: 'string', binary: null, selectMultiple: true },
                   { name: 'g1', path: '/g1', type: 'structure', binary: null, selectMultiple: null },
                   { name: 'q2', path: '/g1/q2', type: 'string', binary: null, selectMultiple: true }
@@ -821,13 +849,16 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
       <model>
         <instance>
           <data id="sanitize">
+            <meta>
+              <instanceID>
+            </meta>
             <q1.8>
               <17/>
             </q1.8>
             <4.2/>
           </data>
         </instance>
-
+        <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
         <bind nodeset="/data/q1.8/17" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
         <bind nodeset="/data/4.2" type="number"/>
       </model>
@@ -850,6 +881,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               .expect(200)
               .then(({ body }) => {
                 body.should.eql([
+                  { name: 'meta', path: '/meta', type: 'structure', binary: null, selectMultiple: null },
+                  { name: 'instanceID', path: '/meta/instanceID', type: 'string', binary: null, selectMultiple: null },
                   { name: 'q1_8', path: '/q1_8', type: 'structure', binary: null, selectMultiple: null },
                   { name: '_17', path: '/q1_8/_17', type: 'string', binary: null, selectMultiple: null },
                   { name: '_4_2', path: '/_4_2', type: 'number', binary: null, selectMultiple: null }

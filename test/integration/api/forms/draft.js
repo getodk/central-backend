@@ -406,6 +406,32 @@ describe('api: /projects/:id/forms (drafts)', () => {
               .set('Content-Type', 'application/xml')
               .expect(200)))));
 
+
+      it('should reject new draft with missing meta group', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        const simpleMissingMeta = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml">
+          <h:head>
+            <h:title>Simple</h:title>
+            <model>
+              <instance>
+                <data id="simple">
+                  <name/>
+                  <age/>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind nodeset="/data/age" type="int"/>
+            </model>
+          </h:head>
+        </h:html>`;
+
+        await asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+          .send(simpleMissingMeta)
+          .set('Content-Type', 'application/xml')
+          .expect(400);
+      }));
+
       it('should identify attachments', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
