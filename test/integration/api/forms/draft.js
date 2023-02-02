@@ -407,7 +407,10 @@ describe('api: /projects/:id/forms (drafts)', () => {
               .expect(200)))));
 
 
-      it('should reject new draft with missing meta group', testService(async (service) => {
+      it('should allow new draft with missing meta group', testService(async (service) => {
+        // This case is not expected, but it mimics a different scenario where there are
+        // already meta-less forms in a user's central repo and they need to be able to update them
+        // without breaking their workflows.
         const asAlice = await service.login('alice');
 
         const simpleMissingMeta = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml">
@@ -429,7 +432,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
         await asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
           .send(simpleMissingMeta)
           .set('Content-Type', 'application/xml')
-          .expect(400);
+          .expect(200);
       }));
 
       it('should identify attachments', testService((service) =>

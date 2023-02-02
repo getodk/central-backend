@@ -438,8 +438,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         });
     }));
 
-    it('should reject with missing meta group', testService(async (service) => {
-      const asAlice = await service.login('alice', identity);
+    it('should reject form with missing meta group', testService(async (service) => {
+      const asAlice = await service.login('alice');
 
       const missingMeta = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml">
       <h:head>
@@ -447,6 +447,33 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         <model>
           <instance>
             <data id="missingMeta">
+              <name/>
+              <age/>
+            </data>
+          </instance>
+          <bind nodeset="/data/name" type="string"/>
+          <bind nodeset="/data/age" type="int"/>
+        </model>
+      </h:head>
+
+    </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(missingMeta)
+        .set('Content-Type', 'application/xml')
+        .expect(400);
+    }));
+
+    it('should reject form with meta field that is not a group', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const missingMeta = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml">
+      <h:head>
+        <h:title>Non Group Meta</h:title>
+        <model>
+          <instance>
+            <data id="missingMeta">
+              <meta/>
               <name/>
               <age/>
             </data>
