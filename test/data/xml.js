@@ -173,11 +173,15 @@ module.exports = {
     <model>
       <instance>
         <data id="withAttachments">
+          <meta>
+            <instanceID/>
+          </meta>
           <name/>
           <age/>
           <hometown/>
         </data>
       </instance>
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
       <instance id="mydata" src="badnoroot.xls"/>
       <instance id="seconddata" src="jr://files/badsubpath.csv"/>
       <instance id="thirddata" src="jr://file/goodone.csv"/>
@@ -202,10 +206,14 @@ module.exports = {
     <model>
       <instance>
         <data id="itemsets">
+          <meta>
+            <instanceID/>
+          </meta>
           <name/>
         </data>
       </instance>
       <instance id="itemsets" src="jr://file/itemsets.csv"/>
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
       <bind nodeset="/data/name" type="string"/>
     </model>
   </h:head>
@@ -316,10 +324,14 @@ module.exports = {
     <model>
       <instance>
         <data id="selectMultiple">
+          <meta>
+            <instanceID/>
+          </meta>
           <q1/>
           <g1><q2/></g1>
         </data>
       </instance>
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
       <bind nodeset="/data/q1" type="string"/>
       <bind nodeset="/data/g1/q2" type="string"/>
     </model>

@@ -1575,11 +1575,11 @@ describe('api: /forms/:id/submissions', () => {
             .then((result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
               const lines = result['selectMultiple.csv'].split('\n');
-              lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+              lines[0].should.equal('SubmissionDate,meta-instanceID,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0,');
+                .should.equal(',two,b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0,');
               lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0,');
+                .should.equal(',one,a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0,');
             })))));
 
     it('should omit multiples it does not know about', testService((service) =>
@@ -1597,11 +1597,11 @@ describe('api: /forms/:id/submissions', () => {
             .then((result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
               const lines = result['selectMultiple.csv'].split('\n');
-              lines[0].should.equal('SubmissionDate,q1,g1-q2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+              lines[0].should.equal('SubmissionDate,meta-instanceID,q1,g1-q2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',b,m x,two,5,Alice,0,0,,,,0,');
+                .should.equal(',two,b,m x,two,5,Alice,0,0,,,,0,');
               lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',a b,x y z,one,5,Alice,0,0,,,,0,');
+                .should.equal(',one,a b,x y z,one,5,Alice,0,0,,,,0,');
             })))));
 
     it('should split select multiples and filter given both options', testService((service, container) =>
@@ -1741,11 +1741,11 @@ describe('api: /forms/:id/submissions', () => {
             .then((result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
               const lines = result['selectMultiple.csv'].split('\n');
-              lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,q2,q2/m,q2/x,q2/y,q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+              lines[0].should.equal('SubmissionDate,instanceID,q1,q1/a,q1/b,q2,q2/m,q2/x,q2/y,q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0,');
+                .should.equal(',two,b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0,');
               lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0,');
+                .should.equal(',one,a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0,');
             })))));
 
     it('should properly count present attachments', testService((service) =>
@@ -2186,11 +2186,11 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             // eslint-disable-next-line no-multi-spaces
             .then(({ text }) =>  {
               const lines = text.split('\n');
-              lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+              lines[0].should.equal('SubmissionDate,meta-instanceID,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0,');
+                .should.equal(',two,b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0,');
               lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0,');
+                .should.equal(',one,a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0,');
             })))));
 
     it('should omit group paths if ?groupPaths=false is given', testService((service) =>
@@ -2279,11 +2279,13 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                     <model>
                       <instance>
                         <data id="selectMultiple" version='3'>
+                          <meta><instanceID/></meta>
                           <q1/>
                           <g1><q2/></g1>
                           <q3/>
                         </data>
                       </instance>
+                      <bind nodeset="/data/meta/instanceID" type="string"/>
                       <bind nodeset="/data/q1" type="string"/>
                       <bind nodeset="/data/g1/q2" type="string"/>
                       <bind nodeset="/data/q3" type="string"/>
@@ -2323,13 +2325,13 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .expect(200)
               .then(({ text }) => {
                 const lines = text.split('\n');
-                lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,q3,q3/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+                lines[0].should.equal('SubmissionDate,meta-instanceID,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,q3,q3/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
                 lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                  .should.equal(',a b,1,1,m,1,0,0,0,z,1,three,5,Alice,0,0,,,,0,3');
+                  .should.equal(',three,a b,1,1,m,1,0,0,0,z,1,three,5,Alice,0,0,,,,0,3');
                 lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                  .should.equal(',b,0,1,m x,1,1,0,0,,0,two,5,Alice,0,0,,,,0,');
+                  .should.equal(',two,b,0,1,m x,1,1,0,0,,0,two,5,Alice,0,0,,,,0,');
                 lines[3].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                  .should.equal(',a b,1,1,x y z,0,1,1,1,,0,one,5,Alice,0,0,,,,0,');
+                  .should.equal(',one,a b,1,1,x y z,0,1,1,1,,0,one,5,Alice,0,0,,,,0,');
               })))));
     });
   });
@@ -2471,11 +2473,11 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .then((result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
               const lines = result['selectMultiple.csv'].split('\n');
-              lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+              lines[0].should.equal('SubmissionDate,meta-instanceID,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',b,0,1,m x,1,1,0,0,two,,,0,0,,,,0,');
+                .should.equal(',two,b,0,1,m x,1,1,0,0,two,,,0,0,,,,0,');
               lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',a b,1,1,x y z,0,1,1,1,one,,,0,0,,,,0,');
+                .should.equal(',one,a b,1,1,x y z,0,1,1,1,one,,,0,0,,,,0,');
             })))));
   });
 

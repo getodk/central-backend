@@ -120,7 +120,7 @@ describe('api: /projects/:id/forms (testing drafts)', () => {
       <formID>withAttachments</formID>
       <name>withAttachments</name>
       <version></version>
-      <hash>md5:7eb21b5b123b0badcf2b8f50bcf1cbd0</hash>
+      <hash>md5:dda89055c8fec222458f702aead30a83</hash>
       <downloadUrl>${domain}/v1/test/${token}/projects/1/forms/withAttachments/draft.xml</downloadUrl>
       <manifestUrl>${domain}/v1/test/${token}/projects/1/forms/withAttachments/draft/manifest</manifestUrl>
     </xform>

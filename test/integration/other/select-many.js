@@ -94,10 +94,12 @@ describe('select many value processing', () => {
           <model>
             <instance>
               <data id="selectMultiple">
+                <meta><instanceID/></meta>
                 <q1/>
                 <g1><q2/></g1>
               </data>
             </instance>
+            <bind nodeset="/data/meta/instanceID" type="string"/>
             <bind nodeset="/data/q1" type="string"/>
             <bind nodeset="/data/g1/q2" type="string"/>
           </model>
@@ -143,11 +145,11 @@ describe('select many value processing', () => {
       .expect(200)
       .then(({ text }) => {
         const lines = text.split('\n');
-        lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,g1-q2,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+        lines[0].should.equal('SubmissionDate,meta-instanceID,q1,q1/a,q1/b,g1-q2,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
         lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-          .should.equal(',a b,1,1,x y z,1,1,1,one,5,Alice,0,0,,,,0,2');
+          .should.equal(',one,a b,1,1,x y z,1,1,1,one,5,Alice,0,0,,,,0,2');
         lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-          .should.equal(',b,0,1,x,1,0,0,two,5,Alice,0,0,,,,0,');
+          .should.equal(',two,b,0,1,x,1,0,0,two,5,Alice,0,0,,,,0,');
       });
   }));
 });
