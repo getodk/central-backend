@@ -172,7 +172,7 @@ describe('api: /datasets/:name.svc', () => {
         });
     }));
 
-    it('should return service document', testService(async (service) => {
+    it('should return metadata document', testService(async (service) => {
 
       const asAlice = await service.login('alice', identity);
 
@@ -198,7 +198,7 @@ describe('api: /datasets/:name.svc', () => {
       <EntityType Name="Entities">
         <Key><PropertyRef Name="__id"/></Key>
         <Property Name="__id" Type="Edm.String"/>
-        <Property Name="__system" Type="org.opendatakit.submission.metadata"/>
+        <Property Name="__system" Type="org.opendatakit.entity.metadata"/>
         <Property Name="name" Type="Edm.String"/>
         <Property Name="label" Type="Edm.String"/>
         <Property Name="first_name" Type="Edm.String"/>
@@ -210,6 +210,15 @@ describe('api: /datasets/:name.svc', () => {
           <Annotation Term="Org.OData.Capabilities.V1.BatchSupported" Bool="false"/>
           <Annotation Term="Org.OData.Capabilities.V1.CountRestrictions">
             <Record><PropertyValue Property="Countable" Bool="true"/></Record>
+          </Annotation>
+          <Annotation Term="Org.OData.Capabilities.V1.FilterFunctions">
+            <Record>
+              <PropertyValue Property="NonCountableProperties">
+                <Collection>
+                  <String>eq</String>
+                </Collection>
+              </PropertyValue>
+            </Record>
           </Annotation>
           <Annotation Term="Org.OData.Capabilities.V1.FilterFunctions">
             <Record>
