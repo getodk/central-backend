@@ -209,7 +209,7 @@ describe('extracting entities from submissions', () => {
     };
     const properties = [{ name: 'firstName' }, { name: 'lastName' }];
 
-    it('selects all properties if selectedProperties is null', () => {
+    it('selects all properties', () => {
       const selectedProperties = null;
       const result = selectFields(entity, properties, selectedProperties);
       result.should.be.eql({
@@ -261,5 +261,34 @@ describe('extracting entities from submissions', () => {
         }
       });
     });
+
+    it('should return all properties even if entity object does not have all of them', () => {
+      const data = {
+        uuid: 'uuid',
+        label: 'label',
+        createdAt: 'createdAt',
+        aux: {
+          creator: {
+            id: 'id',
+            displayName: 'displayName'
+          }
+        }
+      };
+      const selectedProperties = null;
+      const result = selectFields(data, properties, selectedProperties);
+      result.should.be.eql({
+        __id: 'uuid',
+        name: 'uuid',
+        label: 'label',
+        __system: {
+          createdAt: 'createdAt',
+          creatorId: 'id',
+          creatorName: 'displayName'
+        },
+        firstName: '',
+        lastName: ''
+      });
+    });
+
   });
 });
