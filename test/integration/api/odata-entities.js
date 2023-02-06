@@ -9,7 +9,6 @@
 
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
-const { identity } = require('ramda');
 const { exhaust } = require('../../../lib/worker/worker');
 const { v4: uuid } = require('uuid');
 const { sql } = require('slonik');
@@ -36,7 +35,7 @@ describe('api: /datasets/:name.svc', () => {
     /* eslint-enable no-await-in-loop*/
 
     it('should return all entities', testService(async (service, container) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
@@ -53,7 +52,7 @@ describe('api: /datasets/:name.svc', () => {
     }));
 
     it('should return count of entities', testService(async (service, container) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
@@ -70,7 +69,7 @@ describe('api: /datasets/:name.svc', () => {
     }));
 
     it('should return only second entity', testService(async (service, container) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
@@ -87,7 +86,7 @@ describe('api: /datasets/:name.svc', () => {
     }));
 
     it('should return nextURL', testService(async (service, container) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
@@ -104,7 +103,7 @@ describe('api: /datasets/:name.svc', () => {
     }));
 
     it('should return filtered entities', testService(async (service, container) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
@@ -125,7 +124,7 @@ describe('api: /datasets/:name.svc', () => {
     }));
 
     it('should return selected properties only', testService(async (service, container) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
@@ -149,7 +148,7 @@ describe('api: /datasets/:name.svc', () => {
   describe('GET service document', () => {
     it('should return service document', testService(async (service) => {
 
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
@@ -174,7 +173,7 @@ describe('api: /datasets/:name.svc', () => {
 
     it('should return metadata document', testService(async (service) => {
 
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
