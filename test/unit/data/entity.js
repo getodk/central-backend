@@ -290,5 +290,24 @@ describe('extracting entities from submissions', () => {
       });
     });
 
+    it('should sanitize property names', () => {
+      entity['date.of.birth'] = '2023-01-01';
+      properties.push({ name: 'date.of.birth' });
+      const selectedProperties = null;
+      const result = selectFields(entity, properties, selectedProperties);
+      result.should.be.eql({
+        __id: 'uuid',
+        name: 'uuid',
+        label: 'label',
+        __system: {
+          createdAt: 'createdAt',
+          creatorId: 'id',
+          creatorName: 'displayName'
+        },
+        firstName: entity.firstName,
+        lastName: entity.lastName,
+        date_of_birth: entity['date.of.birth']
+      });
+    });
   });
 });
