@@ -188,7 +188,7 @@ describe('extracting entities from submissions', () => {
     it('returns all properties', () => {
       const query = { $select: '__id, __system, property1, property2' };
       const result = extractSelectedProperties(query, properties);
-      result.should.be.eql(new Set(['__id', '__system', 'property1', 'property2', ]));
+      result.should.be.eql(new Set(['__id', '__system', 'property1', 'property2']));
     });
 
   });
@@ -198,8 +198,12 @@ describe('extracting entities from submissions', () => {
       uuid: 'uuid',
       label: 'label',
       createdAt: 'createdAt',
-      firstName: 'John',
-      lastName: 'Doe',
+      def: {
+        data: {
+          firstName: 'John',
+          lastName: 'Doe'
+        }
+      },
       aux: {
         creator: {
           id: 'id',
@@ -221,8 +225,8 @@ describe('extracting entities from submissions', () => {
           creatorId: 'id',
           creatorName: 'displayName'
         },
-        firstName: entity.firstName,
-        lastName: entity.lastName
+        firstName: entity.def.data.firstName,
+        lastName: entity.def.data.lastName
       });
     });
 
@@ -232,7 +236,7 @@ describe('extracting entities from submissions', () => {
       result.should.be.eql({
         __id: 'uuid',
         label: 'label',
-        firstName: entity.firstName
+        firstName: entity.def.data.firstName
       });
     });
 
@@ -267,6 +271,7 @@ describe('extracting entities from submissions', () => {
         uuid: 'uuid',
         label: 'label',
         createdAt: 'createdAt',
+        def: { data: {} },
         aux: {
           creator: {
             id: 'id',
@@ -291,7 +296,7 @@ describe('extracting entities from submissions', () => {
     });
 
     it('should sanitize property names', () => {
-      entity['date.of.birth'] = '2023-01-01';
+      entity.def.data['date.of.birth'] = '2023-01-01';
       properties.push({ name: 'date.of.birth' });
       const selectedProperties = null;
       const result = selectFields(entity, properties, selectedProperties);
@@ -304,9 +309,9 @@ describe('extracting entities from submissions', () => {
           creatorId: 'id',
           creatorName: 'displayName'
         },
-        firstName: entity.firstName,
-        lastName: entity.lastName,
-        date_of_birth: entity['date.of.birth']
+        firstName: entity.def.data.firstName,
+        lastName: entity.def.data.lastName,
+        date_of_birth: entity.def.data['date.of.birth']
       });
     });
   });

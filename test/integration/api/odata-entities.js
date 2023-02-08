@@ -48,6 +48,13 @@ describe('api: /datasets/:name.svc', () => {
         .expect(200)
         .then(({ body }) => {
           body.value.length.should.be.eql(2);
+
+          body.value.forEach(r => {
+            r.first_name.should.be.eql('Alice');
+            r.age.should.be.eql('88');
+          });
+
+          body.value[0].name.should.not.be.eql(body.value[1].name);
         });
     }));
 
