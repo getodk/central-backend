@@ -287,40 +287,56 @@ describe('api: /projects', () => {
             body.should.be.a.Project();
           }))));
 
-    it('should return extended metadata if requested', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.get('/v1/projects/1')
-          .set('X-Extended-Metadata', 'true')
+    it('should return extended metadata if requested', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.an.ExtendedProject();
+          body.forms.should.equal(2);
+          body.datasets.should.equal(0);
+          should.not.exist(body.lastSubmission);
+        });
+
+      await Promise.all([
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200),
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.two)
+          .set('Content-Type', 'application/xml')
           .expect(200)
-          .then(({ body }) => {
-            body.should.be.an.ExtendedProject();
-            body.forms.should.equal(2);
-            body.datasets.should.equal(0);
-            should.not.exist(body.lastSubmission);
-          })
-          .then(() => Promise.all([
-            asAlice.post('/v1/projects/1/forms/simple/submissions')
-              .send(testData.instances.simple.one)
-              .set('Content-Type', 'application/xml')
-              .expect(200),
-            asAlice.post('/v1/projects/1/forms/simple/submissions')
-              .send(testData.instances.simple.two)
-              .set('Content-Type', 'application/xml')
-              .expect(200)
-          ]))
-          .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
-            .send(testData.forms.simpleEntity)
-            .set('Content-Type', 'application/xml')
-            .expect(200))
-          .then(() => asAlice.get('/v1/projects/1')
-            .set('X-Extended-Metadata', 'true')
-            .expect(200)
-            .then(({ body }) => {
-              body.should.be.an.ExtendedProject();
-              body.forms.should.equal(3);
-              body.datasets.should.equal(1);
-              body.lastSubmission.should.be.a.recentIsoDate();
-            })))));
+      ]);
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.an.ExtendedProject();
+          body.forms.should.equal(3);
+          body.datasets.should.equal(0); // Form that created dataset is not published yet
+          body.lastSubmission.should.be.a.recentIsoDate();
+        });
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          body.datasets.should.equal(1);
+        });
+
+    }));
 
     it('should not count deleted app users', testService((service) =>
       service.login('alice', (asAlice) =>
