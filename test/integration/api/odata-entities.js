@@ -75,6 +75,27 @@ describe('api: /datasets/:name.svc', () => {
         });
     }));
 
+    it('should return count of filtered entities', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      await container.run(sql`UPDATE entities SET "createdAt" = '2020-01-01'`);
+
+      await createSubmissions(asAlice, container, 2, 2);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$filter=__system/createdAt gt 2021-01-01&$count=true')
+        .expect(200)
+        .then(({ body }) => {
+          body['@odata.count'].should.be.eql(2);
+        });
+    }));
+
     it('should return only second entity', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
@@ -127,6 +148,23 @@ describe('api: /datasets/:name.svc', () => {
         .expect(200)
         .then(({ body }) => {
           body.value.length.should.be.eql(2);
+        });
+    }));
+
+    it('should throw error if filter criterion is invalid', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$filter=first_name eq Alice')
+        .expect(501)
+        .then(({ body }) => {
+          body.message.should.be.eql('The given OData filter expression references fields not supported by this server: first_name at 0');
         });
     }));
 
