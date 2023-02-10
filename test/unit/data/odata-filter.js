@@ -10,8 +10,12 @@
 const appRoot = require('app-root-path');
 const assert = require('assert');
 const { sql } = require('slonik');
-// eslint-disable-next-line import/no-dynamic-require
-const { odataFilter } = require(appRoot + '/lib/data/odata-filter');
+/* eslint-disable import/no-dynamic-require */
+const { odataFilter: _odataFilter } = require(appRoot + '/lib/data/odata-filter');
+const { odataToColumnMap } = require(appRoot + '/lib/data/submission');
+/* eslint-enable import/no-dynamic-require */
+
+const odataFilter = (exp) => _odataFilter(exp, odataToColumnMap);
 
 describe('OData filter query transformer', () => {
   it('should transform binary expressions', () => {
