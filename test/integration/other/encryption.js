@@ -143,11 +143,13 @@ describe('managed encryption', () => {
       return Submission.fromXml(xml)
         .then((partial) => hijacked.SubmissionAttachments.create(partial, {}, []))
         .then(() => {
+          // values to sql query of insertMany are passed as array of arrays
           results[0].values.should.eql([
-            null, null, 'zulu.file', 0, false,
-            null, null, 'alpha.file', 1, false,
-            null, null, 'bravo.file', 2, false,
-            null, null, 'submission.xml.enc', 3, null
+            [null, null, null, null],
+            [null, null, null, null],
+            ['zulu.file', 'alpha.file', 'bravo.file', 'submission.xml.enc'],
+            [0, 1, 2, 3],
+            [false, false, false, null]
           ]);
         });
     }));
