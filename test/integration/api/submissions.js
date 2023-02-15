@@ -82,7 +82,10 @@ describe('api: /submission', () => {
         asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
           .attach('xml_submission_file', Buffer.from('<data id="simple" version="-1"><orx:meta><orx:instanceID>one</orx:instanceID></orx:meta></data>'), { filename: 'data.xml' })
-          .expect(404))));
+          .expect(404)
+          .then(({ text }) => {
+            text.should.match(/The form version specified in this submission/);
+          }))));
 
     it('should save the submission to the appropriate form', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -932,7 +935,11 @@ describe('api: /forms/:id/submissions', () => {
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(Buffer.from('<data id="simple" version="-1"><meta><instanceID>one</instanceID></meta></data>'))
           .set('Content-Type', 'text/xml')
-          .expect(404))));
+          .expect(404)
+          .then(({ body }) => {
+            body.code.should.equal(404.6);
+            body.message.should.match(/The form version specified in this submission/);
+          }))));
 
     it('should submit if all details are provided', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -1089,6 +1096,15 @@ describe('api: /forms/:id/submissions', () => {
             asAlice.get('/v1/projects/1/forms/simple/submissions/one').expect(404),
             asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one').expect(200)
           ])))));
+
+    it('should accept even if the version in the submission is wrong', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(Buffer.from('<data id="simple" version="-1"><meta><instanceID>one</instanceID></meta></data>'))
+            .set('Content-Type', 'application/xml')
+            .expect(200)))));
   });
 
   describe('/:instanceId PUT', () => {
