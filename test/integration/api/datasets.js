@@ -373,11 +373,11 @@ describe('datasets and entities', () => {
               publishedAt.should.not.be.null();
               return p;
             }).should.be.eql([
-              { name: 'age', forms: [ { name: 'simpleEntity', xmlFormId: 'simpleEntity' }, ] },
               { name: 'first_name', forms: [
                 { name: 'simpleEntity', xmlFormId: 'simpleEntity' },
                 { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' }
               ] },
+              { name: 'age', forms: [ { name: 'simpleEntity', xmlFormId: 'simpleEntity' }, ] },
               { name: 'address', forms: [ { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' }, ] }
             ]);
 
@@ -414,6 +414,60 @@ describe('datasets and entities', () => {
             linkedForms.should.be.eql([{ name: 'withAttachments', xmlFormId: 'withAttachments' }]);
           });
 
+      }));
+
+      it('should return properties of a dataset in order', testService(async (service) => {
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyForm)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/foo')
+          .expect(200)
+          .then(({ body }) => {
+            const { properties } = body;
+            properties.map((p) => p.name)
+              .should.be.eql([
+                'b_q1',
+                'd_q2',
+                'a_q3',
+                'c_q4'
+              ]);
+          });
+      }));
+
+      it('should return dataset properties from multiple forms in order', testService(async (service) => {
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyForm)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyForm
+            .replace('multiPropertyForm', 'multiPropertyForm2')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/foo')
+          .expect(200)
+          .then(({ body }) => {
+            const { properties } = body;
+            properties.map((p) => p.name)
+              .should.be.eql([
+                'b_q1',
+                'd_q2',
+                'a_q3',
+                'c_q4',
+                'f_q1',
+                'e_q2'
+              ]);
+          });
       }));
     });
   });
@@ -881,8 +935,8 @@ describe('datasets and entities', () => {
                     name: 'people',
                     isNew: true,
                     properties: [
-                      { name: 'age', isNew: true, inForm: true },
-                      { name: 'first_name', isNew: true, inForm: true }
+                      { name: 'first_name', isNew: true, inForm: true },
+                      { name: 'age', isNew: true, inForm: true }
                     ]
                   }
                 ]);
@@ -907,8 +961,8 @@ describe('datasets and entities', () => {
                       name: 'people',
                       isNew: false,
                       properties: [
-                        { name: 'age', isNew: false, inForm: true },
-                        { name: 'first_name', isNew: false, inForm: true }
+                        { name: 'first_name', isNew: false, inForm: true },
+                        { name: 'age', isNew: false, inForm: true }
                       ]
                     }
                   ]);
@@ -934,9 +988,10 @@ describe('datasets and entities', () => {
                     name: 'people',
                     isNew: false,
                     properties: [
+                      // The first two isNew values are from the active form
+                      { name: 'lastName', isNew: true, inForm: true },
                       { name: 'age', isNew: false, inForm: true },
-                      { name: 'first_name', isNew: false, inForm: false },
-                      { name: 'lastName', isNew: true, inForm: true }
+                      { name: 'first_name', isNew: false, inForm: false }
                     ]
                   }]);
                 }))));
@@ -997,8 +1052,8 @@ describe('datasets and entities', () => {
                       name: 'people',
                       isNew: true,
                       properties: [
-                        { name: 'age', isNew: true, inForm: true },
-                        { name: 'first_name', isNew: true, inForm: true }
+                        { name: 'first_name', isNew: true, inForm: true },
+                        { name: 'age', isNew: true, inForm: true }
                       ]
                     }])))))));
 
@@ -1025,8 +1080,8 @@ describe('datasets and entities', () => {
               name: 'people',
               isNew: false,
               properties: [
-                { name: 'age', isNew: false, inForm: false },
-                { name: 'first_name', isNew: false, inForm: true }
+                { name: 'first_name', isNew: false, inForm: true },
+                { name: 'age', isNew: false, inForm: false }
               ]
             }]);
           });
@@ -1083,8 +1138,8 @@ describe('datasets and entities', () => {
                   {
                     name: 'people',
                     properties: [
-                      { name: 'age', inForm: true },
-                      { name: 'first_name', inForm: true }
+                      { name: 'first_name', inForm: true },
+                      { name: 'age', inForm: true }
                     ]
                   }
                 ]);
@@ -1108,9 +1163,36 @@ describe('datasets and entities', () => {
                   body.should.be.eql([{
                     name: 'people',
                     properties: [
+                      { name: 'last_name', inForm: true },
                       { name: 'age', inForm: true },
-                      { name: 'first_name', inForm: false },
-                      { name: 'last_name', inForm: true }
+                      { name: 'first_name', inForm: false }
+                    ]
+                  }]);
+                }))));
+      }));
+
+      it('should return dataset diff properties in order', testService(async (service) => {
+        await service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.multiPropertyForm
+              .replace('foo', 'people') // Use this form to submit 4 properties to 'people' dataset
+              .replace('b_q1', 'age')) // Make one property overlap
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity)
+              .expect(200)
+              .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/dataset-diff')
+                .expect(200)
+                .then(({ body }) => {
+                  body.should.be.eql([{
+                    name: 'people',
+                    properties: [
+                      { name: 'first_name', inForm: true },
+                      { name: 'age', inForm: true },
+                      { name: 'a_q3', inForm: false },
+                      { name: 'c_q4', inForm: false },
+                      { name: 'd_q2', inForm: false }
                     ]
                   }]);
                 }))));
@@ -1133,8 +1215,8 @@ describe('datasets and entities', () => {
                   body.should.be.eql([{
                     name: 'people',
                     properties: [
-                      { name: 'age', inForm: true },
-                      { name: 'first_name', inForm: true }
+                      { name: 'first_name', inForm: true },
+                      { name: 'age', inForm: true }
                     ]
                   }]);
                 }))));
@@ -1519,9 +1601,9 @@ describe('datasets and entities', () => {
             name: 'people',
             isNew: false,
             properties: [
+              { name: 'last_name', isNew: true, inForm: true },
               { name: 'age', isNew: false, inForm: true },
-              { name: 'first_name', isNew: false, inForm: false },
-              { name: 'last_name', isNew: true, inForm: true }
+              { name: 'first_name', isNew: false, inForm: false }
             ]
           }]);
         });

@@ -368,6 +368,31 @@ module.exports = {
   </h:head>
 </h:html>`,
 
+    multiPropertyForm: `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+  <h:head>
+    <model entities:entities-version="2022.1.0">
+      <instance>
+        <data id="multiPropertyForm" orx:version="1.0">
+          <q1/>
+          <q2/>
+          <q3/>
+          <q4/>
+          <meta>
+            <entity dataset="foo" id="" create="">
+              <label/>
+            </entity>
+          </meta>
+        </data>
+      </instance>
+      <bind entities:saveto="a_q3" nodeset="/data/q3" type="string"/>
+      <bind entities:saveto="b_q1" nodeset="/data/q1" type="string"/>
+      <bind entities:saveto="c_q4" nodeset="/data/q4" type="string"/>
+      <bind entities:saveto="d_q2" nodeset="/data/q2" type="string"/>
+    </model>
+  </h:head>
+</h:html>`,
+
     groupRepeat: `<?xml version="1.0"?>
     <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
         <h:head>
