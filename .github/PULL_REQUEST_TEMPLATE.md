@@ -18,4 +18,4 @@ https://github.com/getodk/central-backend/blob/master/CONTRIBUTING.md
 #### Before submitting this PR, please make sure you have:
 
 - [ ] run `make test-full` and confirmed all checks still pass OR confirm CircleCI build passes
-- [ ] verified that any code from external sources are properly credited in comments
+- [ ] verified that any code from external sources are properly credited in comments or that everything is internally sourced
