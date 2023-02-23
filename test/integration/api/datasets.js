@@ -499,6 +499,52 @@ describe('datasets and entities', () => {
   </manifest>`);
               })))));
 
+      it('should return md5 of last Entity timestamp in the manifest', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200);
+
+        const etag = result.get('ETag');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(({ text }) => {
+            const domain = config.get('default.env.domain');
+            text.should.be.eql(`<?xml version="1.0" encoding="UTF-8"?>
+  <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
+    <mediaFile>
+      <filename>people.csv</filename>
+      <hash>md5:${etag}</hash>
+      <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/people.csv</downloadUrl>
+    </mediaFile>
+  </manifest>`);
+          });
+
+      }));
+
       it('should override blob and link dataset', testService((service, { Forms, FormAttachments, Audits, Datasets }) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
