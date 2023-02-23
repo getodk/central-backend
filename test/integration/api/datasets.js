@@ -4,7 +4,7 @@ const testData = require('../../data/xml');
 const config = require('config');
 const { Form } = require('../../../lib/model/frames');
 const { getOrNotFound } = require('../../../lib/util/promise');
-const { omit, identity } = require('ramda');
+const { omit, identity, sortBy, prop } = require('ramda');
 const should = require('should');
 const { sql } = require('slonik');
 
@@ -432,18 +432,18 @@ describe('datasets and entities', () => {
 
             linkedForms.should.be.eql([{ name: 'withAttachments', xmlFormId: 'withAttachments' }]);
 
-            properties.map(({ id, datasetId, publishedAt, ...p }) => {
+            sortBy(prop('name'), properties.map(({ id, datasetId, publishedAt, ...p }) => {
               id.should.be.aboveOrEqual(1);
               datasetId.should.be.aboveOrEqual(1);
               publishedAt.should.not.be.null();
               return p;
-            }).should.be.eql([
+            })).should.be.eql([
+              { name: 'address', forms: [ { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' }, ] },
+              { name: 'age', forms: [ { name: 'simpleEntity', xmlFormId: 'simpleEntity' }, ] },
               { name: 'first_name', forms: [
                 { name: 'simpleEntity', xmlFormId: 'simpleEntity' },
                 { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' }
-              ] },
-              { name: 'age', forms: [ { name: 'simpleEntity', xmlFormId: 'simpleEntity' }, ] },
-              { name: 'address', forms: [ { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' }, ] }
+              ] }
             ]);
 
           });
