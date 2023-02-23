@@ -11,9 +11,10 @@ const { sql } = require('slonik');
 /* eslint-disable import/no-dynamic-require */
 const { createEntityFromSubmission } = require(appRoot + '/lib/worker/entity');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
+const { purgeForms } = require(appRoot + '/lib/task/purge');
 /* eslint-enable import/no-dynamic-require */
 
-describe('datasets and entities', () => {
+describe.only('datasets and entities', () => {
   describe('listing and downloading datasets', () => {
     describe('projects/:id/datasets GET', () => {
       it('should reject if the user cannot list datasets', testService((service) =>
@@ -1196,6 +1197,115 @@ describe('datasets and entities', () => {
                     ]
                   }]);
                 }))));
+      }));
+
+      it('should return dataset properties from multiple forms in order', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        const form1 = `<?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+          <h:head>
+            <model entities:entities-version="2022.1.0">
+              <instance>
+                <data id="multiPropertyForm1" orx:version="1.0">
+                  <q1/>
+                  <q2/>
+                  <q3/>
+                  <meta>
+                    <entity dataset="foo" id="" create="">
+                      <label/>
+                    </entity>
+                  </meta>
+                </data>
+              </instance>
+              <bind entities:saveto="p1" nodeset="/data/q1" type="string"/>
+              <bind entities:saveto="p2" nodeset="/data/q2" type="string"/>
+              <bind entities:saveto="p3" nodeset="/data/q3" type="string"/>
+            </model>
+          </h:head>
+        </h:html>`;
+
+        const form2 = `<?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+          <h:head>
+            <model entities:entities-version="2022.1.0">
+              <instance>
+                <data id="multiPropertyForm2" orx:version="1.0">
+                  <q1/>
+                  <q2/>
+                  <q3/>
+                  <q4/>
+                  <meta>
+                    <entity dataset="foo" id="" create="">
+                      <label/>
+                    </entity>
+                  </meta>
+                </data>
+              </instance>
+              <bind entities:saveto="p1" nodeset="/data/q1" type="string"/>
+              <bind entities:saveto="p3" nodeset="/data/q2" type="string"/>
+              <bind entities:saveto="b3" nodeset="/data/q3" type="string"/>
+              <bind entities:saveto="a4" nodeset="/data/q4" type="string"/>
+            </model>
+          </h:head>
+        </h:html>`;
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(form1)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(form2)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyForm1/draft/publish')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/multiPropertyForm1/dataset-diff')
+          .expect(200)
+          .then(({ body }) => {
+            const { properties } = body[0];
+            properties.map((p) => p.name)
+              .should.be.eql([
+                'p1',
+                'p2',
+                'p3',
+                'a4', // yes, these are alphabetical
+                'b3' // and not properly ordered by the question order
+              ]);
+          });
+      }));
+
+      it.only('should return all properties of multiPropertyForm2', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.multiPropertyForm)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyForm
+            .replace('multiPropertyForm', 'multiPropertyForm2')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.delete('/v1/projects/1/forms/multiPropertyForm')
+          .expect(200);
+
+        await purgeForms(true);
+
+        await asAlice.get('/v1/projects/1/forms/multiPropertyForm2/dataset-diff')
+          .expect(200)
+          .then(({ body }) => {
+            // eslint-disable-next-line no-console
+            console.log(body[0].properties);
+            body[0].properties.length.should.be.eql(4);
+          });
       }));
 
       it('should not return unpublished properties', testService(async (service) => {
