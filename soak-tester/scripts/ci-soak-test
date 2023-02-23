@@ -16,7 +16,7 @@ fail_job() {
 
 make base
 
-node ./lib/bin/cli.js user-create  -u "$userEmail" -p "$userPassword"
+echo "$userPassword" | node ./lib/bin/cli.js user-create  -u "$userEmail"
 node ./lib/bin/cli.js user-promote -u "$userEmail"
 
 make run >backend.log 2>&1 &
