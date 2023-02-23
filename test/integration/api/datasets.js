@@ -1319,6 +1319,33 @@ describe('datasets and entities', () => {
               body.message.should.be.eql('The entity definition within the form is invalid. Multiple Form Fields cannot be saved to a single Dataset Property.');
             }));
       }));
+
+      it('should publish dataset when any dataset creating form is published', testService(async (service) => {
+        const alice = await service.login('alice');
+
+        await alice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await alice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/simpleEntity/g, 'simpleEntity2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await alice.get('/v1/projects/1/datasets')
+          .expect(200)
+          .then(({ body }) => {
+            body[0].name.should.be.eql('people');
+          });
+
+        await alice.get('/v1/projects/1/datasets/people')
+          .expect(200)
+          .then(({ body }) => {
+            body.name.should.be.eql('people');
+          });
+
+      }));
     });
 
     describe('dataset audit logging at /projects/:id/forms POST', () => {
