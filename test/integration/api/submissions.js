@@ -1136,7 +1136,12 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => asAlice.put('/v1/projects/1/forms/simple/submissions/one')
             .set('Content-Type', 'text/xml')
             .send(withSimpleIds('one', 'two'))
-            .expect(200))
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.a.Submission();
+              body.instanceId.should.be.eql('one');
+              body.currentVersion.instanceId.should.be.eql('two');
+            }))
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one.xml')
             .expect(200)
             .then(({ text }) => { text.should.equal(withSimpleIds('one', 'two')); })))));
