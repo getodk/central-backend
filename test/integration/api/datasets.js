@@ -11,6 +11,7 @@ const { sql } = require('slonik');
 /* eslint-disable import/no-dynamic-require */
 const { createEntityFromSubmission } = require(appRoot + '/lib/worker/entity');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
+const { purgeForms } = require(appRoot + '/lib/task/purge');
 /* eslint-enable import/no-dynamic-require */
 
 describe('datasets and entities', () => {
@@ -531,6 +532,42 @@ describe('datasets and entities', () => {
                 'c_q4',
                 'f_q1',
                 'e_q2'
+              ]);
+          });
+      }));
+
+      // Test is broken because unpublished properties from previous form don't get properly published in new form.
+      it.skip('should return dataset properties from multiple forms in different published states in order', testService(async (service) => {
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.multiPropertyForm)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyForm
+            .replace('multiPropertyForm', 'multiPropertyForm2')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.delete('/v1/projects/1/forms/multiPropertyForm')
+          .expect(200);
+
+        await purgeForms(true);
+
+        await asAlice.get('/v1/projects/1/datasets/foo')
+          .expect(200)
+          .then(({ body }) => {
+            const { properties } = body;
+            properties.map((p) => p.name)
+              .should.be.eql([
+                'f_q1',
+                'e_q2',
+                'a_q3',
+                'c_q4'
               ]);
           });
       }));
