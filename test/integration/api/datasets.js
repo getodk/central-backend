@@ -11,7 +11,6 @@ const { sql } = require('slonik');
 /* eslint-disable import/no-dynamic-require */
 const { createEntityFromSubmission } = require(appRoot + '/lib/worker/entity');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
-const { purgeForms } = require(appRoot + '/lib/task/purge');
 /* eslint-enable import/no-dynamic-require */
 
 describe('datasets and entities', () => {
@@ -537,7 +536,7 @@ describe('datasets and entities', () => {
       }));
 
       // Test is broken because unpublished properties from previous form don't get properly published in new form.
-      it.skip('should return dataset properties from multiple forms in different published states in order', testService(async (service) => {
+      it('should return dataset properties from multiple forms in different published states in order', testService(async (service, { Forms }) => {
         const asAlice = await service.login('alice', identity);
 
         await asAlice.post('/v1/projects/1/forms')
@@ -556,7 +555,7 @@ describe('datasets and entities', () => {
         await asAlice.delete('/v1/projects/1/forms/multiPropertyForm')
           .expect(200);
 
-        await purgeForms(true);
+        await Forms.purge(true);
 
         await asAlice.get('/v1/projects/1/datasets/foo')
           .expect(200)
