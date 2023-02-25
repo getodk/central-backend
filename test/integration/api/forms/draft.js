@@ -96,8 +96,8 @@ describe('api: /projects/:id/forms (drafts)', () => {
               .then(({ body }) => {
                 body.enketoId.should.equal('::abcdefgh');
                 should.not.exist(body.enketoOnceId);
-                global.enketoReceivedUrl.startsWith(container.env.domain).should.equal(true);
-                global.enketoReceivedUrl.should.match(/\/v1\/test\/[a-z0-9$!]{64}\/projects\/1\/forms\/simple\/draft/i);
+                global.enketo.receivedUrl.startsWith(container.env.domain).should.equal(true);
+                global.enketo.receivedUrl.should.match(/\/v1\/test\/[a-z0-9$!]{64}\/projects\/1\/forms\/simple\/draft/i);
               })))));
 
       it('should manage draft/published enketo tokens separately', testService((service, container) =>
@@ -108,7 +108,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
             .expect(200)
             .then(() => exhaust(container))
             .then(() => {
-              global.enketoToken = '::ijklmnop';
+              global.enketo.token = '::ijklmnop';
               return asAlice.post('/v1/projects/1/forms/simple2/draft')
                 .expect(200)
                 .then(() => exhaust(container))
@@ -814,7 +814,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
             .expect(200)
             .then(() => exhaust(container))
             .then(() => {
-              global.enketoToken = '::ijklmnop';
+              global.enketo.token = '::ijklmnop';
               return asAlice.post('/v1/projects/1/forms/simple2/draft')
                 .expect(200)
                 .then(() => exhaust(container))

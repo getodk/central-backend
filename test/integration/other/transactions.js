@@ -52,7 +52,7 @@ describe('enketo worker transaction', () => {
     await Audits.log(null, 'form.update.publish', simple);
 
     let flush;
-    global.enketoWait = (f) => { flush = f; };
+    global.enketo.wait = (f) => { flush = f; };
     const workerTicket = exhaust(container);
     // eslint-disable-next-line no-await-in-loop
     while (flush == null) await sometime(50);

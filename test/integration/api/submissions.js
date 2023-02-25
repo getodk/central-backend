@@ -1247,11 +1247,12 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/edit')
             .expect(302))
           .then(() => {
-            global.enketoEditData.openRosaUrl.should.equal('http://localhost:8989/v1/projects/1');
-            global.enketoEditData.domain.should.equal('http://localhost:8989');
-            global.enketoEditData.logicalId.should.equal('both');
-            global.enketoEditData.attachments.length.should.equal(2);
-            global.enketoEditData.token.should.be.a.token();
+            const { editData } = global.enketo;
+            editData.openRosaUrl.should.equal('http://localhost:8989/v1/projects/1');
+            editData.domain.should.equal('http://localhost:8989');
+            editData.logicalId.should.equal('both');
+            editData.attachments.length.should.equal(2);
+            editData.token.should.be.a.token();
           }))));
   });
 
