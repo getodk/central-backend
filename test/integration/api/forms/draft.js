@@ -138,7 +138,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body.version.should.equal('drafty2');
               })))));
 
-      it('should keep the draft token while replacing the draft version', testService((service) =>
+      it('should keep the draft token while replacing the draft', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
@@ -160,6 +160,43 @@ describe('api: /projects/:id/forms (drafts)', () => {
                       body.draftToken.should.equal(draftToken);
                     }));
               })))));
+
+      it('should keep the enketoId while replacing the draft', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/draft')
+          .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+        const { body: draft1 } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200);
+        draft1.enketoId.should.equal('::abcdefgh');
+        await asAlice.post('/v1/projects/1/forms/simple/draft')
+          .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        const { body: draft2 } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200);
+        draft2.enketoId.should.equal('::abcdefgh');
+      }));
+
+      it('should not request an enketoId from the worker while replacing the draft', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/draft')
+          .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+        await asAlice.post('/v1/projects/1/forms/simple/draft')
+          .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        global.enketoToken = '::ijklmnop';
+        await exhaust(container);
+        const { body: draft } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200);
+        draft.enketoId.should.equal('::abcdefgh');
+      }));
 
       it('should copy the published form definition if not given one', testService((service) =>
         service.login('alice', (asAlice) =>
