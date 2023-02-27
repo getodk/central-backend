@@ -367,7 +367,7 @@ describe('worker: entity', () => {
   });
 
   describe('listing entities as dataset CSVs', () => {
-    it('should stream out out some entity csv', testService((service, container) =>
+    it('should stream out simple entity csv', testService((service, container) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -398,9 +398,64 @@ describe('worker: entity', () => {
               //console.log(text);
               const csv = text.split('\n');
               csv[0].includes('name,label,first_name,age').should.equal(true);
-              csv[1].includes('Alice (88),Alice,88').should.equal(true);
-              csv[2].includes('Beth (88),Beth,88').should.equal(true);
+              csv[1].includes('Beth (88),Beth,88').should.equal(true);
+              csv[2].includes('Alice (88),Alice,88').should.equal(true);
             })))));
+
+    it('should export dataset from multiple forms', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.multiPropertyEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.multiPropertyEntity
+          .replace('multiPropertyEntity', 'multiPropertyEntity2')
+          .replace('b_q1', 'f_q1')
+          .replace('d_q2', 'e_q2'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/draft/publish').expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/submissions')
+        .send(testData.instances.multiPropertyEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/submissions')
+        .send(testData.instances.multiPropertyEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/multiPropertyEntity2/submissions')
+        .send(testData.instances.multiPropertyEntity.one
+          .replace('multiPropertyEntity', 'multiPropertyEntity2')
+          .replace('uuid:12345678-1234-4123-8234-123456789aaa', 'uuid:12345678-1234-4123-8234-123456789ccc')
+          .replace('b_q1', 'f_q1')
+          .replace('d_q2', 'e_q2'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/forms/multiPropertyEntity/submissions/one')
+        .send({ reviewState: 'approved' });
+      await asAlice.patch('/v1/projects/1/forms/multiPropertyEntity/submissions/two')
+        .send({ reviewState: 'approved' });
+      await asAlice.patch('/v1/projects/1/forms/multiPropertyEntity2/submissions/one')
+        .send({ reviewState: 'approved' });
+
+      await exhaust(container);
+
+      const { text } = await asAlice.get('/v1/projects/1/datasets/foo/entities.csv');
+
+      const csv = text.split('\n');
+      csv[0].includes('name,label,b_q1,d_q2,a_q3,c_q4,f_q1,e_q2').should.equal(true);
+      csv[1].includes(',one,,,y,z,w,x').should.equal(true);
+      csv[2].includes(',two,a,b,c,d,,').should.equal(true);
+      csv[3].includes(',one,w,x,y,z,,').should.equal(true);
+    }));
   });
 });
 

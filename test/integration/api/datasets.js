@@ -485,7 +485,7 @@ describe('datasets and entities', () => {
         const asAlice = await service.login('alice', identity);
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.multiPropertyForm)
+          .send(testData.forms.multiPropertyEntity)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
@@ -507,13 +507,13 @@ describe('datasets and entities', () => {
         const asAlice = await service.login('alice', identity);
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.multiPropertyForm)
+          .send(testData.forms.multiPropertyEntity)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.multiPropertyForm
-            .replace('multiPropertyForm', 'multiPropertyForm2')
+          .send(testData.forms.multiPropertyEntity
+            .replace('multiPropertyEntity', 'multiPropertyEntity2')
             .replace('b_q1', 'f_q1')
             .replace('d_q2', 'e_q2'))
           .set('Content-Type', 'application/xml')
@@ -535,24 +535,23 @@ describe('datasets and entities', () => {
           });
       }));
 
-      // Test is broken because unpublished properties from previous form don't get properly published in new form.
       it('should return dataset properties from multiple forms in different published states in order', testService(async (service, { Forms }) => {
         const asAlice = await service.login('alice', identity);
 
         await asAlice.post('/v1/projects/1/forms')
-          .send(testData.forms.multiPropertyForm)
+          .send(testData.forms.multiPropertyEntity)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.multiPropertyForm
-            .replace('multiPropertyForm', 'multiPropertyForm2')
+          .send(testData.forms.multiPropertyEntity
+            .replace('multiPropertyEntity', 'multiPropertyEntity2')
             .replace('b_q1', 'f_q1')
             .replace('d_q2', 'e_q2'))
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        await asAlice.delete('/v1/projects/1/forms/multiPropertyForm')
+        await asAlice.delete('/v1/projects/1/forms/multiPropertyEntity')
           .expect(200);
 
         await Forms.purge(true);
