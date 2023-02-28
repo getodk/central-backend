@@ -32,6 +32,11 @@ Finally, **system information and configuration** is available via a set of spec
 
 Here major and breaking changes to the API are listed by version.
 
+### ODK Central v2023.2
+
+**Changed**:
+- The response of `GET`, `POST`, `PUT` and `PATCH` methods of [Submissions](#reference/submissions/listing-all-submissions-on-a-form) endpoint has been updated to include metadata of the `currentVersion` of the Submission. 
+
 ### ODK Central v2023.1
 
 **Added**:
@@ -43,7 +48,6 @@ Here major and breaking changes to the API are listed by version.
 - [GET /projects/:id/datasets](#reference/datasets/datasets/datasets) now supports `X-Extended-Metadata` header to retrieve number of Entities in the Dataset and timestamp of the last Entity
 - `$select` in OData now supports selecting complex type(groups) 
 - [Creating a form](#reference/forms/forms/creating-a-new-form) can now return workflow warnings
-- The response of `GET`, `POST`, `PUT` and `PATCH` methods of [Submissions](#reference/submissions/listing-all-submissions-on-a-form) endpoint has been updated to include metadata of the `currentVersion` of the Submission. 
 
 **Removed**:
 
@@ -2106,7 +2110,7 @@ Like how `Form`s are addressed by their XML `formId`, individual `Submission`s a
 
 As of version 1.4, a `deviceId` and `userAgent` will also be returned with each submission. The client device may transmit these extra metadata when the data is submitted. If it does, those fields will be recognized and returned here for reference. Here, only the initial `deviceId` and `userAgent` will be reported. If you wish to see these metadata for any submission edits, including the most recent edit, you will need to [list the versions](/reference/submissions/submission-versions/listing-versions).
 
-As of version 2023.2, this API returns `currentVersion` that contains metadata of the most recent edit of the Submission.
+As of version 2023.2, this API returns `currentVersion` that contains metadata of the most recent version of the Submission.
 
 This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to return a `submitter` data object alongside the `submitterId` Actor ID reference.
 
@@ -4251,7 +4255,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + reviewState: `approved` (Submission Review State, optional) - The current review state of the submission.
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format. The time that the server received the Submission.
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - ISO date format. `null` when the Submission is first created, then updated when the Submission's XML data or metadata is updated.
-+ currentVersion: (SubmissionVersion, optional) - The current version of the `Submission`
++ currentVersion: (SubmissionVersion) - The current version of the `Submission`.
 
 ## SubmissionVersion (object)
 + instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the `Submission` version, given by the Submission XML.
@@ -4260,13 +4264,14 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + deviceId: `imei:123456` (string, optional) - The self-identified `deviceId` of the device that submitted the `Submission` version. 
 + userAgent: `Enketo/3.0.4` (string, optional) - The self-identified `userAgent` of the device that submitted the `Submission` version.
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format. The time that the server received the `Submission` version.
++ current: `true` (boolean, required) - Whether the version is current or not.
 
 ## Extended Submission (Submission)
 + submitter (Actor, required) - The full details of the `Actor` that submitted this `Submission`.
 
 ## Extended SubmissionVersion (SubmissionVersion)
 + submitter (Actor, required) - The full details of the `Actor` that submitted this version of the `Submission`.
-+ formVersion: `1.0` (string, optional) - The version of the form the submission was initially created against.
++ formVersion: `1.0` (string, optional) - The version of the form the submission version was created against. Only returned with specific Submission Version requests.
 
 ## Review State Counts (object)
 + received: `3` (number, required) - The number of submissions receieved with no other review state.
