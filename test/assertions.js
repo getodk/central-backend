@@ -91,10 +91,11 @@ should.Assertion.add('User', function() {
 should.Assertion.add('Submission', function() {
   this.params = { operator: 'to be a Submission' };
 
-  Object.keys(this.obj).should.containDeep([ 'instanceId', 'createdAt', 'updatedAt', 'submitterId', 'currentVersion' ]);
+  Object.keys(this.obj).should.containDeep([ 'instanceId', 'createdAt', 'updatedAt', 'submitterId', 'currentVersion', 'userAgent' ]);
   this.obj.instanceId.should.be.a.String();
   this.obj.submitterId.should.be.a.Number();
   this.obj.createdAt.should.be.an.isoDate();
+  this.obj.userAgent.should.be.a.String();
   this.obj.currentVersion.should.be.a.SubmissionDef();
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
@@ -107,7 +108,7 @@ should.Assertion.add('ExtendedSubmission', function() {
   this.obj.instanceId.should.be.a.String();
   this.obj.submitter.should.be.an.Actor();
   this.obj.createdAt.should.be.an.isoDate();
-  this.obj.currentVersion.should.be.a.SubmissionDef();
+  this.obj.currentVersion.should.be.a.ExtendedSubmissionDef();
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 
@@ -115,7 +116,7 @@ should.Assertion.add('ExtendedSubmission', function() {
 should.Assertion.add('SubmissionDef', function() {
   this.params = { operator: 'to be a Submission' };
 
-  Object.keys(this.obj).should.containDeep([ 'submitterId', 'createdAt', 'instanceName' ]);
+  Object.keys(this.obj).should.containDeep([ 'instanceId', 'submitterId', 'createdAt', 'instanceName', 'current', 'userAgent', 'deviceId' ]);
   this.obj.submitterId.should.be.a.Number();
   this.obj.createdAt.should.be.an.isoDate();
   if (this.obj.instanceName != null) this.obj.instanceName.should.be.a.String();

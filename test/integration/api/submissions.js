@@ -1132,15 +1132,20 @@ describe('api: /forms/:id/submissions', () => {
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'application/xml')
+          .set('user-agent', 'node1')
           .expect(200)
           .then(() => asAlice.put('/v1/projects/1/forms/simple/submissions/one')
             .set('Content-Type', 'text/xml')
             .send(withSimpleIds('one', 'two'))
+            .set('user-agent', 'node2')
             .expect(200)
             .then(({ body }) => {
               body.should.be.a.Submission();
               body.instanceId.should.be.eql('one');
               body.currentVersion.instanceId.should.be.eql('two');
+
+              body.userAgent.should.be.eql('node1');
+              body.currentVersion.userAgent.should.be.eql('node2');
             }))
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one.xml')
             .expect(200)
