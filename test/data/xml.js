@@ -368,6 +368,31 @@ module.exports = {
   </h:head>
 </h:html>`,
 
+    multiPropertyEntity: `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+  <h:head>
+    <model entities:entities-version="2022.1.0">
+      <instance>
+        <data id="multiPropertyEntity" orx:version="1.0">
+          <q1/>
+          <q2/>
+          <q3/>
+          <q4/>
+          <meta>
+            <entity dataset="foo" id="" create="">
+              <label/>
+            </entity>
+          </meta>
+        </data>
+      </instance>
+      <bind entities:saveto="a_q3" nodeset="/data/q3" type="string"/>
+      <bind entities:saveto="b_q1" nodeset="/data/q1" type="string"/>
+      <bind entities:saveto="c_q4" nodeset="/data/q4" type="string"/>
+      <bind entities:saveto="d_q2" nodeset="/data/q2" type="string"/>
+    </model>
+  </h:head>
+</h:html>`,
+
     groupRepeat: `<?xml version="1.0"?>
     <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
         <h:head>
@@ -578,6 +603,32 @@ module.exports = {
           <name>John</name>
           <age>40</age>
         </data>`
+    },
+    multiPropertyEntity: {
+      one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="multiPropertyEntity" version="1.0">
+        <meta>
+          <instanceID>one</instanceID>
+          <entities:entity dataset="foo" id="uuid:12345678-1234-4123-8234-123456789aaa" create="1">
+            <entities:label>one</entities:label>
+          </entities:entity>
+        </meta>
+        <q1>w</q1>
+        <q2>x</q2>
+        <q3>y</q3>
+        <q4>z</q4>
+      </data>`,
+      two: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="multiPropertyEntity" version="1.0">
+        <meta>
+          <instanceID>two</instanceID>
+          <entities:entity dataset="foo" id="uuid:12345678-1234-4123-8234-123456789bbb" create="1">
+            <entities:label>two</entities:label>
+          </entities:entity>
+        </meta>
+        <q1>a</q1>
+        <q2>b</q2>
+        <q3>c</q3>
+        <q4>d</q4>
+      </data>`,
     },
     groupRepeat: {
       one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="groupRepeat">
