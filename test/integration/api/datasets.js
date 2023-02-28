@@ -611,6 +611,84 @@ describe('datasets and entities', () => {
               ]);
           });
       }));
+
+      it('should return dataset properties when draft form (purged before second form publish) shares some properties', testService(async (service, { Forms }) => {
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.multiPropertyEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.multiPropertyEntity
+            .replace('multiPropertyEntity', 'multiPropertyEntity2')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.delete('/v1/projects/1/forms/multiPropertyEntity')
+          .expect(200);
+
+        await Forms.purge(true);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity2/draft/publish');
+
+        await asAlice.get('/v1/projects/1/datasets/foo')
+          .expect(200)
+          .then(({ body }) => {
+            const { properties } = body;
+            properties.map((p) => p.name)
+              .should.be.eql([
+                'f_q1',
+                'e_q2',
+                'a_q3',
+                'c_q4'
+              ]);
+          });
+      }));
+
+      it.skip('should return ordered dataset properties including from deleted published form', testService(async (service, { Forms }) => {
+        const asAlice = await service.login('alice', identity);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.delete('/v1/projects/1/forms/multiPropertyEntity')
+          .expect(200);
+
+        await Forms.purge(true);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyEntity
+            .replace('multiPropertyEntity', 'multiPropertyEntity2')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/foo')
+          .expect(200)
+          .then(({ body }) => {
+            const { properties } = body;
+            // Properties are coming out in this other order:
+            // [ 'a_q3', 'c_q4', 'b_q1', 'd_q2', 'f_q1', 'e_q2' ]
+            // It's not terrible but would rather all the props of the first form
+            // show up first.
+            properties.map((p) => p.name)
+              .should.be.eql([
+                'b_q1',
+                'd_q2',
+                'a_q3',
+                'c_q4',
+                'f_q1',
+                'e_q2'
+              ]);
+          });
+      }));
     });
   });
 
