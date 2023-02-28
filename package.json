@@ -6,7 +6,7 @@
     "node": "16"
   },
   "volta": {
-    "node": "16.17.0"
+    "node": "16.19.1"
   },
   "dependencies": {
     "@sentry/node": "~7",
