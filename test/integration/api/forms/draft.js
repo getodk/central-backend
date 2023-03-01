@@ -61,7 +61,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body.version.should.equal('drafty');
               })))));
 
-      it('should create a new draft token setting a new draft version', testService((service) =>
+      it('should create a new draft token while setting a new draft', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .expect(200)
@@ -83,22 +83,81 @@ describe('api: /projects/:id/forms (drafts)', () => {
                     }));
               })))));
 
-      it('should worker-process the draft form over to enketo', testService((service, container) =>
-        service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms/simple/draft')
-            .expect(200)
-            .then(({ body }) => {
-              should.not.exist(body.enketoId);
-            })
-            .then(() => exhaust(container))
-            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
-              .expect(200)
-              .then(({ body }) => {
-                body.enketoId.should.equal('::abcdefgh');
-                should.not.exist(body.enketoOnceId);
-                global.enketoReceivedUrl.startsWith(container.env.domain).should.equal(true);
-                global.enketoReceivedUrl.should.match(/\/v1\/test\/[a-z0-9$!]{64}\/projects\/1\/forms\/simple\/draft/i);
-              })))));
+      it('should request an enketoId while setting a new draft', testService(async (service, { env }) => {
+        const asAlice = await service.login('alice');
+        global.enketo.token = '::ijklmnop';
+        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+        global.enketo.callCount.should.equal(1);
+        global.enketo.receivedUrl.startsWith(env.domain).should.be.true();
+        const match = global.enketo.receivedUrl.match(/\/v1\/test\/([a-z0-9$!]{64})\/projects\/1\/forms\/simple\/draft$/i);
+        should.exist(match);
+        const { body } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200);
+        match[1].should.equal(body.draftToken);
+        body.enketoId.should.equal('::ijklmnop');
+      }));
+
+      it('should request a new enketoId while setting each new draft', testService(async (service, { env }) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+        await asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+          .expect(200);
+        global.enketo.callCount.should.equal(1);
+        global.enketo.token = '::ijklmnop';
+        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+        global.enketo.callCount.should.equal(2);
+        global.enketo.receivedUrl.startsWith(env.domain).should.be.true();
+        const match = global.enketo.receivedUrl.match(/\/v1\/test\/([a-z0-9$!]{64})\/projects\/1\/forms\/simple\/draft$/i);
+        should.exist(match);
+        const { body } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200);
+        match[1].should.equal(body.draftToken);
+        body.enketoId.should.equal('::ijklmnop');
+      }));
+
+      it('should return with success even if the request to Enketo fails', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        global.enketo.state = 'error';
+        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+        const { body } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200);
+        should.not.exist(body.enketoId);
+      }));
+
+      it('should stop waiting for Enketo after 0.5 seconds @slow', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        global.enketo.wait = (f) => { setTimeout(f, 501); };
+        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+        const { body } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200);
+        should.not.exist(body.enketoId);
+      }));
+
+      it('should request an enketoId from the worker if the request from the endpoint fails', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+        global.enketo.state = 'error';
+        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+        global.enketo.callCount.should.equal(1);
+        global.enketo.token = '::ijklmnop';
+        await exhaust(container);
+        global.enketo.callCount.should.equal(2);
+        global.enketo.receivedUrl.startsWith(container.env.domain).should.be.true();
+        const match = global.enketo.receivedUrl.match(/\/v1\/test\/([a-z0-9$!]{64})\/projects\/1\/forms\/simple\/draft$/i);
+        should.exist(match);
+        const { body } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200);
+        match[1].should.equal(body.draftToken);
+        body.enketoId.should.equal('::ijklmnop');
+        should.not.exist(body.enketoOnceId);
+      }));
+
+      it('should not request an enketoId from the worker if the request from the endpoint succeeds', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+        global.enketo.callCount.should.equal(1);
+        await exhaust(container);
+        global.enketo.callCount.should.equal(1);
+      }));
 
       it('should manage draft/published enketo tokens separately', testService((service, container) =>
         service.login('alice', (asAlice) =>
@@ -108,10 +167,9 @@ describe('api: /projects/:id/forms (drafts)', () => {
             .expect(200)
             .then(() => exhaust(container))
             .then(() => {
-              global.enketoToken = '::ijklmnop';
+              global.enketo.token = '::ijklmnop';
               return asAlice.post('/v1/projects/1/forms/simple2/draft')
                 .expect(200)
-                .then(() => exhaust(container))
                 .then(() => Promise.all([
                   asAlice.get('/v1/projects/1/forms/simple2')
                     .expect(200)
@@ -138,7 +196,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body.version.should.equal('drafty2');
               })))));
 
-      it('should keep the draft token while replacing the draft version', testService((service) =>
+      it('should keep the draft token while replacing the draft', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
@@ -160,6 +218,41 @@ describe('api: /projects/:id/forms (drafts)', () => {
                       body.draftToken.should.equal(draftToken);
                     }));
               })))));
+
+      it('should keep the enketoId while replacing the draft', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/draft')
+          .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        global.enketo.callCount.should.equal(1);
+        const { body: draft1 } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200);
+        draft1.enketoId.should.equal('::abcdefgh');
+        await asAlice.post('/v1/projects/1/forms/simple/draft')
+          .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        global.enketo.callCount.should.equal(1);
+        const { body: draft2 } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200);
+        draft2.enketoId.should.equal('::abcdefgh');
+      }));
+
+      it('should not request an enketoId from the worker while replacing the draft', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/draft')
+          .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        global.enketo.callCount.should.equal(1);
+        await asAlice.post('/v1/projects/1/forms/simple/draft')
+          .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+        global.enketo.callCount.should.equal(1);
+      }));
 
       it('should copy the published form definition if not given one', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -814,10 +907,9 @@ describe('api: /projects/:id/forms (drafts)', () => {
             .expect(200)
             .then(() => exhaust(container))
             .then(() => {
-              global.enketoToken = '::ijklmnop';
+              global.enketo.token = '::ijklmnop';
               return asAlice.post('/v1/projects/1/forms/simple2/draft')
                 .expect(200)
-                .then(() => exhaust(container))
                 .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft')
                   .set('X-Extended-Metadata', true)
                   .expect(200)

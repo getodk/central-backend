@@ -44,7 +44,8 @@ const bcrypt = require(appRoot + '/lib/util/crypto').password(_bcrypt);
 
 // set up our enketo mock.
 // eslint-disable-next-line import/no-dynamic-require
-const enketo = require(appRoot + '/test/util/enketo');
+const { reset: resetEnketo, ...enketo } = require(appRoot + '/test/util/enketo');
+beforeEach(resetEnketo);
 
 // set up odk analytics mock.
 // eslint-disable-next-line import/no-dynamic-require

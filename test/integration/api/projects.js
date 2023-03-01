@@ -642,6 +642,22 @@ describe('api: /projects', () => {
               })
           ])))));
 
+    it('should reuse the draft token and enketoId of an existing draft', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+      const { body: draft1 } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+        .expect(200);
+      should.exist(draft1.draftToken);
+      should.exist(draft1.enketoId);
+      await asAlice.post('/v1/projects/1/key')
+        .send({ passphrase: 'supersecret' })
+        .expect(200);
+      const { body: draft2 } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+        .expect(200);
+      should(draft2.draftToken).equal(draft1.draftToken);
+      should(draft2.enketoId).equal(draft1.enketoId);
+    }));
+
     it('should modify only the draft if there is no published version', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')

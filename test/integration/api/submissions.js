@@ -1257,11 +1257,12 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/edit')
             .expect(302))
           .then(() => {
-            global.enketoEditData.openRosaUrl.should.equal('http://localhost:8989/v1/projects/1');
-            global.enketoEditData.domain.should.equal('http://localhost:8989');
-            global.enketoEditData.logicalId.should.equal('both');
-            global.enketoEditData.attachments.length.should.equal(2);
-            global.enketoEditData.token.should.be.a.token();
+            const { editData } = global.enketo;
+            editData.openRosaUrl.should.equal('http://localhost:8989/v1/projects/1');
+            editData.domain.should.equal('http://localhost:8989');
+            editData.logicalId.should.equal('both');
+            editData.attachments.length.should.equal(2);
+            editData.token.should.be.a.token();
           }))));
   });
 
@@ -2733,7 +2734,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .replace(/PublicKey="[a-z0-9+/]+"/i, 'PublicKey="keytwo"')
               .replace('working3', 'working4'))
           ]))
-          .then(([ form, partial ]) => Forms.createVersion(partial, form))
+          .then(([ form, partial ]) => Forms.createVersion(partial, form, false))
           .then(() => asAlice.get('/v1/projects/1/forms/encrypted/submissions/keys')
             .expect(200)
             .then(({ body }) => {
