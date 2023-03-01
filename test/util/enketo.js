@@ -7,7 +7,7 @@ const Problem = require(appRoot + '/lib/util/problem');
 const { without } = require(appRoot + '/lib/util/util');
 
 const defaults = {
-  // Properties that each test can set
+  // Properties that each test can set to determine the behavior of the mock
 
   // If `state` is set to 'error', the mock will pretend that Enketo has
   // misbehaved and will return a rejected promise for the next call.
@@ -19,7 +19,8 @@ const defaults = {
   // createOnceToken().
   token: undefined,
 
-  // Properties that may be updated after the mock is called
+  // Properties that the mock may update after being called. These properties
+  // are how the mock communicates back to the test.
 
   // The total number of times that the mock has been called during the test
   callCount: 0,
