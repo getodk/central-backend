@@ -860,7 +860,7 @@ describe('api: /forms/:id.svc', () => {
     // #cb459: `gt` filter for submissionDate is not working as expected because of tz precision
     // This test fails without 20221208-01-reduce-tz-precision.js (before-after state)
     it('should only return submissions with submissionDate gt provided timestamp', testService(async (service, { run }) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
         .send(testData.instances.withrepeat.one)
@@ -1299,7 +1299,7 @@ describe('api: /forms/:id.svc', () => {
     }));
 
     it('should return toplevel row with nested group properties', testService(async (service) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .send(testData.forms.nestedGroup)
@@ -1352,7 +1352,7 @@ describe('api: /forms/:id.svc', () => {
           }))));
 
     it('should return subtable results with group properties', testService(async (service) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .send(testData.forms.groupRepeat)
@@ -1379,7 +1379,7 @@ describe('api: /forms/:id.svc', () => {
 
     // bug cb#496 and cb#607
     it('should return results even when repeat name is not a valid OData name ', testService(async (service) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .send(`<?xml version="1.0"?>

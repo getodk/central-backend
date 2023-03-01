@@ -3,7 +3,6 @@ const { sql } = require('slonik');
 const { testService, testContainer } = require('../setup');
 const { createReadStream } = require('fs');
 const testData = require('../../data/xml');
-const { identity } = require('ramda');
 // eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -751,7 +750,7 @@ describe('analytics task queries', () => {
     }));
 
     it('should calculate entities', testService(async (service, container) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await createTestForm(service, container, testData.forms.simpleEntity, 1);
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
@@ -773,7 +772,7 @@ describe('analytics task queries', () => {
     }));
 
     it('should calculate failed entities', testService(async (service, container) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await createTestForm(service, container, testData.forms.simpleEntity, 1);
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
@@ -799,7 +798,7 @@ describe('analytics task queries', () => {
 
     it('should return right dataset of each projects', testService(async (service, container) => {
 
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await createTestForm(service, container, testData.forms.simpleEntity, 1);
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
@@ -1043,7 +1042,7 @@ describe('analytics task queries', () => {
       const { defaultMaxListeners } = require('events').EventEmitter;
       require('events').EventEmitter.defaultMaxListeners = 30;
 
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       // Create first Dataset
       await createTestForm(service, container, testData.forms.simpleEntity, 1);

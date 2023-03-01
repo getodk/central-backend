@@ -7,7 +7,6 @@ const superagent = require('superagent');
 const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
-const { identity } = require('ramda');
 // eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -354,7 +353,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             })))));
 
     it('should reject with deleted form exists warning', testService(async (service) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.delete('/v1/projects/1/forms/simple')
         .expect(200);
@@ -370,7 +369,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
     }));
 
     it('should reject with xls and deleted form exists warnings', testService(async (service) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .send(testData.forms.simple2)
@@ -394,7 +393,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
     }));
 
     it('should reject with structure changed warning', testService(async (service) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms/simple/draft')
         .send(testData.forms.simple.replace(/age/g, 'address'))
@@ -406,7 +405,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
     }));
 
     it('should reject with structure changed warning', testService(async (service) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
         .send(testData.forms.simple.replace(/age/g, 'address'))
@@ -418,7 +417,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
     }));
 
     it('should reject with xls and structure changed warnings', testService(async (service) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .send(testData.forms.simple2.replace(/age/g, 'address'))
@@ -492,7 +491,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
     }));
 
     it('should create the form for xml files with warnings given ignoreWarnings', testService(async (service) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .send(testData.forms.simple2)
