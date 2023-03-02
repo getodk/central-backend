@@ -34,6 +34,9 @@ Here major and breaking changes to the API are listed by version.
 
 ### ODK Central v2023.2
 
+**Added**:
+- New [OData Dataset Service](#reference/odata-endpoints/odata-dataset-service) for each `Dataset` that provides a list of `Entities`.
+
 **Changed**:
 - The response of `GET`, `POST`, `PUT` and `PATCH` methods of [Submissions](#reference/submissions/listing-all-submissions-on-a-form) endpoint has been updated to include metadata of the `currentVersion` of the Submission. 
 
@@ -3428,15 +3431,15 @@ While OData itself supports data of any sort of structure, Power BI and Tableau 
 
 In general, the OData standard protocol consists of three API endpoints:
 
-* The **Service Document** describes the available resources in the service. We provide one of these for every `Form` in the system. In our case, these are the tables we derive from the `repeat`s in the given Form. The root table is always named `Submissions`.
+* The **Service Document** describes the available resources in the service. We provide one of these for every `Form` in the system. As of version 2023.2, we also provide one for every `Dataset`.
 * The **Metadata Document** is a formal XML-based EDMX schema description of every data object we might return. It is linked in every OData response.
-* The actual data documents, linked from the Service Document, are a simple JSON representation of the submission data, conforming to the schema we describe in our Metadata Document.
+* The actual data documents, linked from the Service Document, are a simple JSON representation of the submission data or entity, conforming to the schema we describe in our Metadata Document.
 
 As our focus is on the bulk-export of data from ODK Central so that more advanced analysis tools can handle the data themselves, we do not support most of the features at the Intermediate and above conformance levels, like `$sort` or `$filter`.
 
 ## OData Form Service [/v1/projects/{projectId}/forms/{xmlFormId}.svc]
 
-ODK Central presents one OData service for every `Form` it knows about. Each service might have multiple tables related to that Form. To access the OData service, simply add `.svc` to the resource URL for the given Form.
+ODK Central presents one OData service for every `Form` it knows about. To access the OData service, simply add `.svc` to the resource URL for the given Form.
 
 + Parameters
     + projectId: `7` (number, required) - The numeric ID of the Project
@@ -3657,6 +3660,195 @@ Because this `/#/dl` path returns a web page that causes a file download rather 
     + Body
 
             (html markup data)
+
+
+## OData Dataset Service [/v1/projects/{projectId}/datasets/{name}.svc]
+
+ODK Central presents one OData service for every `Dataset` as a way to get an OData feed of `Entities`. To access the OData service, simply add `.svc` to the resource URL for the given Dataset.
+
++ Parameters
+    + projectId: `7` (number, required) - The numeric ID of the Project
+
+    + `name`: `trees` (string, required) - The `name` of the `Dataset` whose OData service you wish to access.
+
+### Service Document [GET]
+
+The Service Document is essentially the index of all available documents. From this document, you will find links to all other available information in this OData service. In particular, you will find the Metadata Document, as well as a data document for a single `Entities` table defined by the `Dataset`.
+
+This document is available only in JSON format.
+
++ Response 200 (application/json; charset=utf-8; odata.metadata=minimal)
+    + Body
+
+            {
+                "@odata.context": "https://your.odk.server/v1/projects/7/datasets/trees.svc/$metadata",
+                "value": [
+                    {
+                        "kind": "EntitySet",
+                        "name": "Entities",
+                        "url": "Entities"
+                    },
+                ]
+            }
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
++ Response 406 (application/json)
+    + Attributes (Error 406)
+
+### Metadata Document [GET /v1/projects/{projectId}/datasets/{name}.svc/$metadata]
+
+The Metadata Document describes, in [EDMX CSDL](http://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html), the schema of all the data you can retrieve from the OData Dataset Service in question. Essentially, these are the Dataset properties, or the schema of each `Entity`, translated into the OData format.
+
++ Response 200 (application/xml)
+      + Body
+
+            <?xml version="1.0" encoding="UTF-8"?>
+            <edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
+                <edmx:DataServices>
+                    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.entity">
+                        <ComplexType Name="metadata">
+                            <Property Name="createdAt" Type="Edm.DateTimeOffset"/>
+                            <Property Name="creatorId" Type="Edm.String"/>
+                            <Property Name="creatorName" Type="Edm.String"/>
+                        </ComplexType>
+                    </Schema>
+                    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.trees">
+                        <EntityType Name="Entities">
+                            <Key>
+                                <PropertyRef Name="__id"/>
+                            </Key>
+                            <Property Name="__id" Type="Edm.String"/>
+                            <Property Name="__system" Type="org.opendatakit.entity.metadata"/>
+                            <Property Name="name" Type="Edm.String"/>
+                            <Property Name="label" Type="Edm.String"/>
+                            <Property Name="geometry" Type="Edm.String"/>
+                            <Property Name="species" Type="Edm.String"/>
+                            <Property Name="circumference_cm" Type="Edm.String"/>
+                        </EntityType>
+                        <EntityContainer Name="trees">
+                            <EntitySet Name="Entities" EntityType="org.opendatakit.user.trees.Entities">
+                                <Annotation Term="Org.OData.Capabilities.V1.ConformanceLevel" EnumMember="Org.OData.Capabilities.V1.ConformanceLevelType/Minimal"/>
+                                <Annotation Term="Org.OData.Capabilities.V1.BatchSupported" Bool="false"/>
+                                <Annotation Term="Org.OData.Capabilities.V1.CountRestrictions">
+                                    <Record>
+                                        <PropertyValue Property="Countable" Bool="true"/>
+                                    </Record>
+                                </Annotation>
+                                <Annotation Term="Org.OData.Capabilities.V1.FilterFunctions">
+                                    <Record>
+                                        <PropertyValue Property="NonCountableProperties">
+                                            <Collection>
+                                                <String>eq</String>
+                                            </Collection>
+                                        </PropertyValue>
+                                    </Record>
+                                </Annotation>
+                                <Annotation Term="Org.OData.Capabilities.V1.FilterFunctions">
+                                    <Record>
+                                        <PropertyValue Property="Filterable" Bool="true"/>
+                                        <PropertyValue Property="RequiresFilter" Bool="false"/>
+                                        <PropertyValue Property="NonFilterableProperties">
+                                            <Collection>
+                                                <PropertyPath>geometry</PropertyPath>
+                                                <PropertyPath>species</PropertyPath>
+                                                <PropertyPath>circumference_cm</PropertyPath>
+                                            </Collection>
+                                        </PropertyValue>
+                                    </Record>
+                                </Annotation>
+                                <Annotation Term="Org.OData.Capabilities.V1.SortRestrictions">
+                                    <Record>
+                                        <PropertyValue Property="Sortable" Bool="false"/>
+                                    </Record>
+                                </Annotation>
+                                <Annotation Term="Org.OData.Capabilities.V1.ExpandRestrictions">
+                                    <Record>
+                                        <PropertyValue Property="Expandable" Bool="false"/>
+                                    </Record>
+                                </Annotation>
+                            </EntitySet>
+                        </EntityContainer>
+                    </Schema>
+                </edmx:DataServices>
+            </edmx:Edmx>
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
++ Response 406 (application/json)
+    + Attributes (Error 406)
+
+### Data Document [GET /v1/projects/{projectId}/datasets/{name}.svc/Entities{?%24skip,%24top,%24count,%24filter,%24select}]
+
+A data document is the straightforward JSON representation of all the `Entities` in a `Dataset`.
+
++ Parameters
+    + `%24skip`: `10` (number, optional) - If supplied, the first `$skip` rows will be omitted from the results.
+    + `%24top`: `5` (number, optional) - If supplied, only up to `$top` rows will be returned in the results.
+    + `%24count`: `true` (boolean, optional) - If set to `true`, an `@odata.count` property will be added to the result indicating the total number of rows, ignoring the above paging parameters.
+    + `%24filter`: `year(__system/createdAt) lt year(now())` (string, optional) - If provided, will filter responses to those matching the query. Only [certain fields](/reference/odata-endpoints/odata-form-service/data-document) are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+    + `%24select`: `__id, label, name` (string, optional) - If provided, will return only the selected fields.
+
+
++ Response 200 (application/json)
+    + Body
+
+            {
+                "@odata.context": "https://your.odk.server/v1/projects/7/datasets/trees.svc/$metadata#Entities"",
+                "value": [
+                    {
+                        "__id": "0f56bde5-dd05-41f7-8175-c4114eab41c6",
+                        "name": "0f56bde5-dd05-41f7-8175-c4114eab41c6",
+                        "label": "25cm purpleheart",
+                        "__system": {
+                            "createdAt": "2022-12-09T19:41:16.478Z",
+                            "creatorId": "39",
+                            "creatorName": "Tree surveyor"
+                        },
+                        "geometry": "32.7413996 -117.1394617 53.80000305175781 13.933",
+                        "species": "purpleheart",
+                        "circumference_cm": "25"
+                    },
+                    {
+                        "__id": "aeebd746-3b1e-4a24-ba9d-ed6547bd5ff1",
+                        "name": "aeebd746-3b1e-4a24-ba9d-ed6547bd5ff1",
+                        "label": "345cm mora",
+                        "__system": {
+                            "createdAt": "2022-11-21T19:17:36.348Z",
+                            "creatorId": "8",
+                            "creatorName": "ln@getodk.org"
+                        },
+                        "geometry": "47.722581 18.562111 0 0",
+                        "species": "mora",
+                        "circumference_cm": "345"
+                    },
+                    {
+                        "__id": "eacb9844-2f88-48b5-b7c0-6333263fe639",
+                        "name": "eacb9844-2f88-48b5-b7c0-6333263fe639",
+                        "label": "123cm wallaba",
+                        "__system": {
+                            "createdAt": "2022-11-21T18:22:43.759Z",
+                            "creatorId": "8",
+                            "creatorName": "ln@getodk.org"
+                        },
+                        "geometry": "",
+                        "species": "wallaba",
+                        "circumference_cm": "123"
+                    }
+                ]
+            }
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
++ Response 406 (application/json)
+    + Attributes (Error 406)
+
++ Response 501 (application/json)
+    + Attributes (Error 501)
+
 
 ## Draft Testing [/v1/projects/{projectId}/forms/{xmlFormId}/draft.svc]
 
