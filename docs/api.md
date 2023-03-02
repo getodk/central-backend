@@ -3784,6 +3784,28 @@ The Metadata Document describes, in [EDMX CSDL](http://docs.oasis-open.org/odata
 
 A data document is the straightforward JSON representation of all the `Entities` in a `Dataset`.
 
+The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. While paging is possible through these parameters, it will not greatly improve the performance of exporting data. ODK Central prefers to bulk-export all of its data at once if possible.
+
+The [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948)can be used to filter by any data field in the system-level schema, but not the Dataset properties. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported.
+
+The fields you can query against are as follows:
+
+| Entity Metadata         | OData Field Name     |
+| ------------------------| -------------------- |
+| Entity UUID             | `__id`               |
+| Entity Name (same as UUID) | `name`            |
+| Entity Label            | `label`              |
+| Entity Creator Actor ID | `__system/creatorId` |
+| Entity Timestamp        | `__system/createdAt` |
+
+Note that `createdAt` is a time component. This means that any comparisons you make need to account for the full time of the entity. It might seem like `$filter=__system/createdAt le 2020-01-31` would return all results on or before 31 Jan 2020, but in fact only entities made before midnight of that day would be accepted. To include all of the month of January, you need to filter by either `$filter=__system/createdAt le 2020-01-31T23:59:59.999Z` or `$filter=__system/createdAt lt 2020-02-01`. Remember also that you can [query by a specific timezone](https://en.wikipedia.org/wiki/ISO_8601#Time_offsets_from_UTC).
+
+Please see the [OData documentation](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) on `$filter` [operations](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinFilterOperations) and [functions](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinQueryFunctions) for more information.
+
+The [`$select` query parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358942) is partially supported on `__id`, `__system`, `__system/creatorId` and `__system/createdAt`. 
+
+As the vast majority of clients only support the JSON OData format, that is the only format ODK Central offers.
+
 + Parameters
     + `%24skip`: `10` (number, optional) - If supplied, the first `$skip` rows will be omitted from the results.
     + `%24top`: `5` (number, optional) - If supplied, only up to `$top` rows will be returned in the results.
