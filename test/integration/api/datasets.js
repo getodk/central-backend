@@ -36,6 +36,7 @@ describe('datasets and entities', () => {
               asAlice.get('/v1/projects/1/datasets')
                 .expect(200)
                 .then(({ body }) => {
+                  body[0].should.be.a.Dataset();
                   body.map(({ createdAt, ...d }) => d).should.eql([
                     { name: 'people', projectId: 1 }
                   ]);
@@ -64,11 +65,8 @@ describe('datasets and entities', () => {
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
-            body.map(({ createdAt, lastEntity, ...d }) => {
-              createdAt.should.not.be.null();
-              lastEntity.should.not.be.null();
-              return d;
-            }).should.eql([
+            body[0].should.be.an.ExtendedDataset();
+            body.map(({ createdAt, lastEntity, ...d }) => d).should.eql([
               { name: 'people', projectId: 1, entities: 1 }
             ]);
           });
@@ -89,6 +87,7 @@ describe('datasets and entities', () => {
                 asAlice.get('/v1/projects/1/datasets')
                   .expect(200)
                   .then(({ body }) => {
+                    body[0].should.be.a.Dataset();
                     body.map(({ id, createdAt, ...d }) => d).should.eql([
                       { name: 'student', projectId: 1 }
                     ]);
@@ -109,8 +108,8 @@ describe('datasets and entities', () => {
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
+            body[0].should.be.an.ExtendedDataset();
             body.map(({ createdAt, lastEntity, ...d }) => {
-              createdAt.should.not.be.null();
               should(lastEntity).be.null();
               return d;
             }).should.eql([
@@ -142,6 +141,7 @@ describe('datasets and entities', () => {
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
+            body[0].should.be.an.ExtendedDataset();
             body.map(({ createdAt, lastEntity, ...d }) => {
               createdAt.should.not.be.null();
               lastEntity.should.not.be.null();
@@ -188,9 +188,8 @@ describe('datasets and entities', () => {
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
+            body[0].should.be.an.ExtendedDataset();
             body.map(({ createdAt, lastEntity, ...d }) => {
-              createdAt.should.not.be.null();
-              lastEntity.should.not.be.null();
               lastEntity.should.not.startWith('1999');
               return d;
             }).should.eql([
