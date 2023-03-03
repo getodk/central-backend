@@ -1,7 +1,6 @@
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const should = require('should');
-const { identity } = require('ramda');
 const { sql } = require('slonik');
 // eslint-disable-next-line import/no-extraneous-dependencies
 const superagent = require('superagent');
@@ -392,7 +391,7 @@ describe('api: /projects/:id/forms (versions)', () => {
   // structure will reuse or change an intermedia form schema representation.
   describe('intermediate form schema', () => {
     it('should not make additional form schemas for a form with unchanged fields', testService(async (service, container) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       // Submit to first version of form
       await asAlice.post('/v1/projects/1/forms/simple/submissions')
@@ -438,7 +437,7 @@ describe('api: /projects/:id/forms (versions)', () => {
     }));
 
     it('should make additional form schema when fields change', testService(async (service, container) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       // Submit to first version of form
       await asAlice.post('/v1/projects/1/forms/simple/submissions')

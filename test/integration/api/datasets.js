@@ -4,7 +4,7 @@ const testData = require('../../data/xml');
 const config = require('config');
 const { Form } = require('../../../lib/model/frames');
 const { getOrNotFound } = require('../../../lib/util/promise');
-const { omit, identity } = require('ramda');
+const { omit } = require('ramda');
 const should = require('should');
 const { sql } = require('slonik');
 
@@ -36,13 +36,14 @@ describe('datasets and entities', () => {
               asAlice.get('/v1/projects/1/datasets')
                 .expect(200)
                 .then(({ body }) => {
+                  body[0].should.be.a.Dataset();
                   body.map(({ createdAt, ...d }) => d).should.eql([
                     { name: 'people', projectId: 1 }
                   ]);
                 })))));
 
       it('should return the extended datasets of Default project', testService(async (service, container) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity)
@@ -64,11 +65,8 @@ describe('datasets and entities', () => {
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
-            body.map(({ createdAt, lastEntity, ...d }) => {
-              createdAt.should.not.be.null();
-              lastEntity.should.not.be.null();
-              return d;
-            }).should.eql([
+            body[0].should.be.an.ExtendedDataset();
+            body.map(({ createdAt, lastEntity, ...d }) => d).should.eql([
               { name: 'people', projectId: 1, entities: 1 }
             ]);
           });
@@ -89,6 +87,7 @@ describe('datasets and entities', () => {
                 asAlice.get('/v1/projects/1/datasets')
                   .expect(200)
                   .then(({ body }) => {
+                    body[0].should.be.a.Dataset();
                     body.map(({ id, createdAt, ...d }) => d).should.eql([
                       { name: 'student', projectId: 1 }
                     ]);
@@ -98,7 +97,7 @@ describe('datasets and entities', () => {
     describe('projects/:id/datasets GET extended', () => {
 
       it('should return the 0 for entities', testService(async (service) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity)
@@ -109,8 +108,8 @@ describe('datasets and entities', () => {
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
+            body[0].should.be.an.ExtendedDataset();
             body.map(({ createdAt, lastEntity, ...d }) => {
-              createdAt.should.not.be.null();
               should(lastEntity).be.null();
               return d;
             }).should.eql([
@@ -120,7 +119,7 @@ describe('datasets and entities', () => {
       }));
 
       it('should return the extended datasets of Default project', testService(async (service, container) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity)
@@ -142,6 +141,7 @@ describe('datasets and entities', () => {
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
+            body[0].should.be.an.ExtendedDataset();
             body.map(({ createdAt, lastEntity, ...d }) => {
               createdAt.should.not.be.null();
               lastEntity.should.not.be.null();
@@ -153,7 +153,7 @@ describe('datasets and entities', () => {
       }));
 
       it('should return the correct count and latest timestamp of entities', testService(async (service, container) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity)
@@ -188,9 +188,8 @@ describe('datasets and entities', () => {
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
+            body[0].should.be.an.ExtendedDataset();
             body.map(({ createdAt, lastEntity, ...d }) => {
-              createdAt.should.not.be.null();
-              lastEntity.should.not.be.null();
               lastEntity.should.not.startWith('1999');
               return d;
             }).should.eql([
@@ -200,7 +199,7 @@ describe('datasets and entities', () => {
       }));
 
       it('should return the correct count for multiple dataset', testService(async (service, container) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         // Create Datasets
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -288,7 +287,7 @@ describe('datasets and entities', () => {
               })))));
 
       it('should return only published properties', testService(async (service) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity)
@@ -397,7 +396,7 @@ describe('datasets and entities', () => {
     describe('projects/:id/datasets/:name GET', () => {
 
       it('should return the metadata of the dataset', testService(async (service) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity)
@@ -451,7 +450,7 @@ describe('datasets and entities', () => {
       }));
 
       it('should not return duplicate linkedForms', testService(async (service) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity)
@@ -482,7 +481,7 @@ describe('datasets and entities', () => {
       }));
 
       it('should return properties of a dataset in order', testService(async (service) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.multiPropertyEntity)
@@ -504,7 +503,7 @@ describe('datasets and entities', () => {
       }));
 
       it('should return dataset properties from multiple forms in order', testService(async (service) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.multiPropertyEntity)
@@ -536,7 +535,7 @@ describe('datasets and entities', () => {
       }));
 
       it('should return dataset properties from multiple forms including updated form with updated schema', testService(async (service) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.multiPropertyEntity)
@@ -578,7 +577,7 @@ describe('datasets and entities', () => {
       }));
 
       it('should return dataset properties when purged draft form shares some properties', testService(async (service, { Forms }) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.multiPropertyEntity)
@@ -613,7 +612,7 @@ describe('datasets and entities', () => {
       }));
 
       it('should return dataset properties when draft form (purged before second form publish) shares some properties', testService(async (service, { Forms }) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.multiPropertyEntity)
@@ -650,7 +649,7 @@ describe('datasets and entities', () => {
       }));
 
       it.skip('should return ordered dataset properties including from deleted published form', testService(async (service, { Forms }) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.multiPropertyEntity)
@@ -947,7 +946,7 @@ describe('datasets and entities', () => {
               })))));
 
       it('should return error if dataset is not published', testService(async (service) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.withAttachments)
@@ -1323,7 +1322,7 @@ describe('datasets and entities', () => {
                     }])))))));
 
       it('should return inForm false for removed property', testService(async (service) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -1354,7 +1353,7 @@ describe('datasets and entities', () => {
 
       it('should return empty array if managed encryption is enabled', testService(async (service) => {
         // Upload a form and then create a new draft version
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.simpleEntity)
@@ -1374,7 +1373,7 @@ describe('datasets and entities', () => {
 
       it('should return empty array if form is encrypted', testService(async (service) => {
         // Upload a form and then create a new draft version
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.simpleEntity.replace('</model>', '<submission base64RsaPublicKey="abc"/></model>'))
@@ -1461,7 +1460,7 @@ describe('datasets and entities', () => {
       }));
 
       it('should return dataset name only if there is no properties', testService(async (service) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity.replace(/entities:saveto[^/]+/g, ''))
@@ -1480,7 +1479,7 @@ describe('datasets and entities', () => {
       }));
 
       it('should let the user download even if there are no properties', testService(async (service) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity.replace(/entities:saveto[^/]+/g, ''))
@@ -1704,7 +1703,7 @@ describe('datasets and entities', () => {
 
       it('should log dataset publishing in audit log', testService(async (service, { Audits }) => {
 
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity)
@@ -1735,7 +1734,7 @@ describe('datasets and entities', () => {
 
     describe('dataset property interaction with intermediate form schemas and purging uneeded drafts', () => {
       it('should clean up form fields and dataset properties of unneeded drafts', testService(async (service, container) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -1770,7 +1769,7 @@ describe('datasets and entities', () => {
 
   describe('dataset and entities should have isolated lifecycle', () => {
     it('should allow a form that has created an entity to be purged', testService(async (service, container) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
@@ -1819,7 +1818,7 @@ describe('datasets and entities', () => {
     }));
 
     it('should return published dataset even if corresponding form is deleted', testService(async (service, container) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
@@ -1839,7 +1838,7 @@ describe('datasets and entities', () => {
     }));
 
     it('should keep dataset and its property status intact even if corresponding form is deleted', testService(async (service, container) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
