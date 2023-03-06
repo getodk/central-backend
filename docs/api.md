@@ -3673,7 +3673,7 @@ ODK Central presents one OData service for every `Dataset` as a way to get an OD
 
 ### Service Document [GET]
 
-The Service Document is essentially the index of all available documents. From this document, you will find links to all other available information in this OData service. In particular, you will find the Metadata Document, as well as a data document for a single `Entities` table defined by the `Dataset`.
+The Service Document provides a link to the main source of information in this OData service: the list of `Entities` in this `Dataset`, as well as the Metadata Document describing the schema of this information.
 
 This document is available only in JSON format.
 
@@ -3802,7 +3802,7 @@ Note that `createdAt` is a time component. This means that any comparisons you m
 
 Please see the [OData documentation](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) on `$filter` [operations](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinFilterOperations) and [functions](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinQueryFunctions) for more information.
 
-The [`$select` query parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358942) is partially supported on `__id`, `__system`, `__system/creatorId` and `__system/createdAt`. 
+The [`$select` query parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358942) will return just the fields you specify and is supported on `__id`, `__system`, `__system/creatorId` and `__system/createdAt`, as well as on user defined properties.
 
 As the vast majority of clients only support the JSON OData format, that is the only format ODK Central offers.
 
