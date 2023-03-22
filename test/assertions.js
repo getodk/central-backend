@@ -356,10 +356,8 @@ should.Assertion.add('Dataset', function assertDataset() {
 should.Assertion.add('ExtendedDataset', function assertExtendedDataset() {
   this.params = { operator: 'to be an extended Dataset' };
 
-  Object.keys(this.obj).should.containDeep([ 'projectId', 'name', 'createdAt', 'entities', 'lastEntity' ]);
-  this.obj.projectId.should.be.a.Number();
-  this.obj.name.should.be.a.String();
-  this.obj.createdAt.should.be.an.isoDate();
+  this.obj.should.be.a.Dataset();
+  Object.keys(this.obj).should.containDeep([ 'entities', 'lastEntity' ]);
   this.obj.entities.should.be.a.Number();
   if (this.obj.lastEntity != null) this.obj.lastEntity.should.be.an.isoDate();
 });

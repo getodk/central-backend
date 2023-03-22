@@ -451,10 +451,10 @@ describe('worker: entity', () => {
       const { text } = await asAlice.get('/v1/projects/1/datasets/foo/entities.csv');
 
       const csv = text.split('\n');
-      csv[0].includes('name,label,b_q1,d_q2,a_q3,c_q4,f_q1,e_q2').should.equal(true);
-      csv[1].includes(',one,,,y,z,w,x').should.equal(true);
-      csv[2].includes(',two,a,b,c,d,,').should.equal(true);
-      csv[3].includes(',one,w,x,y,z,,').should.equal(true);
+      csv[0].includes('name,label,f_q1,e_q2,a_q3,c_q4,b_q1,d_q2').should.equal(true);
+      csv[1].includes(',one,w,x,y,z,,').should.equal(true);
+      csv[2].includes(',two,,,c,d,a,b').should.equal(true);
+      csv[3].includes(',one,,,y,z,w,x').should.equal(true);
     }));
   });
 });

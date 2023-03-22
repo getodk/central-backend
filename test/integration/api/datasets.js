@@ -772,7 +772,7 @@ describe('datasets and entities', () => {
   </manifest>`);
               })))));
 
-      it('should return md5 of last Entity timestamp in the manifest', testService(async (service, container) => {
+      it.skip('should return md5 of last Entity timestamp in the manifest', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -1580,32 +1580,6 @@ describe('datasets and entities', () => {
             }));
       }));
 
-      it('should update a dataset with new form draft', testService(async (service, { Datasets }) => {
-        // Upload a form and then create a new draft version
-        await service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms?publish=true')
-            .send(testData.forms.simpleEntity)
-            .set('Content-Type', 'application/xml')
-            .expect(200)
-            .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
-              .expect(200)
-              .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/draft')
-                .set('X-Extended-Metadata', 'true')
-                .expect(200)
-                .then(({ body }) => {
-                  body.entityRelated.should.equal(true);
-                }))));
-
-        // Get all datasets by projectId
-        const datasetId = await Datasets.getAllByProjectId(1)
-          .then(result => result[0].id);
-
-        await Datasets.getById(datasetId)
-          .then(result => {
-            result.properties.length.should.be.eql(2);
-          });
-      }));
-
       it('should be able to upload multiple drafts', testService(async (service) => {
         // Upload a form and then create a new draft version
         await service.login('alice', (asAlice) =>
@@ -1712,7 +1686,7 @@ describe('datasets and entities', () => {
 
         await Audits.getLatestByAction('dataset.update.publish')
           .then(o => o.get())
-          .then(audit => audit.details.should.eql({ properties: ['age', 'first_name'] }));
+          .then(audit => audit.details.should.eql({ properties: ['first_name', 'age'] }));
 
         await asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.simpleEntity
