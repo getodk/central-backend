@@ -772,7 +772,7 @@ describe('datasets and entities', () => {
   </manifest>`);
               })))));
 
-      it.skip('should return md5 of last Entity timestamp in the manifest', testService(async (service, container) => {
+      it('should return md5 of last Entity timestamp in the manifest', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
