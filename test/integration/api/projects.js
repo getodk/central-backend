@@ -69,7 +69,7 @@ describe('api: /projects', () => {
               .set('X-Extended-Metadata', 'true')
               .expect(200)
               .then(({ body }) => {
-                body.verbs.length.should.be.greaterThan(39);
+                body.verbs.length.should.be.greaterThan(43);
                 body.should.be.a.Project();
                 body.name.should.equal('Default Project');
               }))))));
@@ -381,7 +381,7 @@ describe('api: /projects', () => {
           .expect(200)
           .then(({ body }) => {
             body.verbs.should.be.an.Array();
-            body.verbs.length.should.be.lessThan(28);
+            body.verbs.length.should.be.lessThan(30);
             body.verbs.should.containDeep([ 'assignment.create', 'project.delete', 'dataset.list' ]);
             body.verbs.should.not.containDeep([ 'project.create' ]);
           }))));
@@ -398,13 +398,11 @@ describe('api: /projects', () => {
               .expect(200)
               .then(({ body }) => {
                 body.verbs.should.eqlInAnyOrder([
-                  // eslint-disable-next-line no-multi-spaces
-                  'project.read',      // from role(s): formfill
-                  // eslint-disable-next-line no-multi-spaces
-                  'form.list',         // from role(s): formfill
-                  // eslint-disable-next-line no-multi-spaces
-                  'form.read',         // from role(s): formfill
-                  'submission.create', // from role(s): formfill
+                  // following verbs from role: formfill
+                  'project.read',
+                  'form.list',
+                  'form.read',
+                  'submission.create',
                 ]);
               }))))));
 
@@ -422,21 +420,19 @@ describe('api: /projects', () => {
               .expect(200)
               .then(({ body }) => {
                 body.verbs.should.eqlInAnyOrder([
-                  // eslint-disable-next-line no-multi-spaces
-                  'project.read',      // from role(s): formfill, viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'form.list',         // from role(s): formfill, viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'form.read',         // from role(s): formfill, viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'submission.read',   // from role(s): viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'submission.list',   // from role(s): viewer
-                  'submission.create', // from role(s): formfill
-                  // eslint-disable-next-line no-multi-spaces
-                  'dataset.list',      // from role(s): viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'entity.list',      // from role(s): viewer
+                  // following roles from formfill + viewer:
+                  'project.read',
+                  'form.list',
+                  'form.read',
+                  // following roles from formfill only:
+                  'submission.create',
+                  // following roles from viewer only:
+                  'submission.read',
+                  'submission.list',
+                  'dataset.list',
+                  'dataset.read',
+                  'entity.list',
+                  'entity.read'
                 ]);
               }))))));
   });
@@ -1330,7 +1326,7 @@ describe('api: /projects?forms=true', () => {
           body.length.should.equal(1);
           body[0].should.be.a.Project();
           const { formList, verbs } = body[0];
-          verbs.length.should.equal(42);
+          verbs.length.should.equal(44);
           formList.length.should.equal(2);
           const form = formList[0];
           form.should.be.a.ExtendedForm();
@@ -1394,7 +1390,7 @@ describe('api: /projects?forms=true', () => {
             body.length.should.equal(2);
             // First project
             body[0].formList.length.should.equal(2);
-            body[0].verbs.length.should.equal(27);
+            body[0].verbs.length.should.equal(29);
             // Second project
             body[1].formList.length.should.equal(1);
             body[1].verbs.length.should.be.lessThan(5); // 4 for data collector
@@ -1439,21 +1435,19 @@ describe('api: /projects?forms=true', () => {
                 body.length.should.equal(1);
                 const { verbs } = body[0];
                 verbs.should.eqlInAnyOrder([
-                  // eslint-disable-next-line no-multi-spaces
-                  'form.list',         // from role(s): formfill, viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'form.read',         // from role(s): formfill, viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'project.read',      // from role(s): formfill, viewer
-                  'submission.create', // from role(s): formfill
-                  // eslint-disable-next-line no-multi-spaces
-                  'submission.list',   // from role(s): viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'submission.read',   // from role(s): viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'dataset.list',     // from role(s): viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'entity.list'      // from role(s): viewer
+                  // following roles from formfill + viewer:
+                  'project.read',
+                  'form.list',
+                  'form.read',
+                  // following roles from formfill only:
+                  'submission.create',
+                  // following roles from viewer only:
+                  'submission.read',
+                  'submission.list',
+                  'dataset.list',
+                  'dataset.read',
+                  'entity.list',
+                  'entity.read'
                 ]);
               }))))));
   });
@@ -1484,21 +1478,19 @@ describe('api: /projects?forms=true', () => {
             const project = body[0];
             project.id.should.equal(1);
             project.verbs.should.eqlInAnyOrder([
-              // eslint-disable-next-line no-multi-spaces
-              'project.read',     // from role(s): viewer
-              // eslint-disable-next-line no-multi-spaces
-              'form.list',        // from role(s): viewer
-              // eslint-disable-next-line no-multi-spaces
-              'form.read',        // from role(s): viewer, app-user
-              // eslint-disable-next-line no-multi-spaces
-              'submission.read',  // from role(s): viewer
-              // eslint-disable-next-line no-multi-spaces
-              'submission.list',  // from role(s): viewer
-              'submission.create', // from role(s): app-user
-              // eslint-disable-next-line no-multi-spaces
-              'dataset.list',  // from role(s): viewer
-              // eslint-disable-next-line no-multi-spaces
-              'entity.list'   // from role(s): viewer
+              // following roles from app-user + viewer:
+              'form.read',
+              // following roles from app-user only:
+              'submission.create',
+              // following roles from viewer only:
+              'project.read',
+              'form.list',
+              'submission.read',
+              'submission.list',
+              'dataset.list',
+              'dataset.read',
+              'entity.list',
+              'entity.read'
             ]);
           }))))));
 });
