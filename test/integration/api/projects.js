@@ -69,7 +69,7 @@ describe('api: /projects', () => {
               .set('X-Extended-Metadata', 'true')
               .expect(200)
               .then(({ body }) => {
-                body.verbs.length.should.be.greaterThan(43);
+                body.verbs.length.should.equal(46);
                 body.should.be.a.Project();
                 body.name.should.equal('Default Project');
               }))))));
@@ -370,7 +370,7 @@ describe('api: /projects', () => {
           .expect(200)
           .then(({ body }) => {
             body.verbs.should.be.an.Array();
-            body.verbs.length.should.be.greaterThan(39);
+            body.verbs.length.should.equal(46);
             body.verbs.should.containDeep([ 'user.password.invalidate', 'project.delete' ]);
           }))));
 
@@ -381,7 +381,7 @@ describe('api: /projects', () => {
           .expect(200)
           .then(({ body }) => {
             body.verbs.should.be.an.Array();
-            body.verbs.length.should.be.lessThan(30);
+            body.verbs.length.should.equal(31);
             body.verbs.should.containDeep([ 'assignment.create', 'project.delete', 'dataset.list' ]);
             body.verbs.should.not.containDeep([ 'project.create' ]);
           }))));
