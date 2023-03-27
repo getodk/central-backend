@@ -32,6 +32,8 @@ const upToMigration = (toName, inclusive = true) => withTestDatabase(async (migr
 });
 const up = () => withTestDatabase((migrator) =>
   migrator.migrate.up({ directory: migrationsDir }));
+const down = () => withTestDatabase((migrator) =>
+  migrator.migrate.down({ directory: migrationsDir }));
 
 // NOTE/TODO: figure out something else here D:
 // Skipping these migrations because after adding a new description
@@ -458,5 +460,42 @@ describe('database migrations: 20230123-01-remove-google-backups', function() {
       !rolesAfter.some(roleAfter => roleAfter.id === roleBefore.id));
     deleted.length.should.equal(1);
     deleted[0].system.should.equal('initbkup');
+  }));
+});
+
+// eslint-disable-next-line func-names
+describe('database migrations: 20230324-01-edit-dataset-verbs.js', function () {
+  this.timeout(10000);
+
+  it('should add dataset/entity read verbs with raw sql', testServiceFullTrx(async (service, container) => {
+    await upToMigration('20230324-01-edit-dataset-verbs.js', false);
+    await populateUsers(container);
+    await populateForms(container);
+
+    let admin = await container.one(sql`select verbs from roles where system = 'admin'`);
+    admin.verbs.should.not.containDeep(['dataset.read', 'entity.read', 'entity.create', 'entity.update']);
+    admin.verbs.length.should.equal(43);
+
+    let viewer = await container.one(sql`select verbs from roles where system = 'viewer'`);
+    viewer.verbs.should.not.containDeep(['dataset.read', 'entity.read', 'entity.create', 'entity.update']);
+    viewer.verbs.length.should.equal(7);
+
+    await up();
+
+    admin = await container.one(sql`select verbs from roles where system = 'admin'`);
+    admin.verbs.should.containDeep(['dataset.read', 'entity.read', 'entity.create', 'entity.update']);
+    admin.verbs.length.should.equal(47);
+
+    viewer = await container.one(sql`select verbs from roles where system = 'viewer'`);
+    viewer.verbs.should.containDeep(['dataset.read', 'entity.read']);
+    viewer.verbs.should.not.containDeep(['entity.create', 'entity.update']);
+    viewer.verbs.length.should.equal(9);
+
+    await down();
+
+    admin = await container.one(sql`select verbs from roles where system = 'admin'`);
+    admin.verbs.length.should.equal(43);
+    viewer = await container.one(sql`select verbs from roles where system = 'viewer'`);
+    viewer.verbs.length.should.equal(7);
   }));
 });
