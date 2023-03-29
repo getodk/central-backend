@@ -832,7 +832,7 @@ describe('datasets and entities', () => {
               .expect(200))
             .then(() => Promise.all([
               Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then(getOrNotFound),
-              Datasets.getByProjectAndName(1, 'goodone').then(getOrNotFound)
+              Datasets.get(1, 'goodone').then(getOrNotFound)
             ]))
             .then(([form, dataset]) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then(getOrNotFound)
               .then(attachment => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
@@ -1096,7 +1096,7 @@ describe('datasets and entities', () => {
               .expect(200))
             .then(() => Promise.all([
               Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then(getOrNotFound),
-              Datasets.getByProjectAndName(1, 'goodone').then(getOrNotFound)
+              Datasets.get(1, 'goodone').then(getOrNotFound)
             ]))
             .then(([form, dataset]) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then(getOrNotFound)
               .then((attachment) => FormAttachments.update(form, attachment, 1, dataset.id)
@@ -1114,7 +1114,7 @@ describe('datasets and entities', () => {
               .send(testData.forms.simpleEntity))
             .then(() => Promise.all([
               Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then(getOrNotFound),
-              Datasets.getByProjectAndName(1, 'people').then(getOrNotFound)
+              Datasets.get(1, 'people').then(getOrNotFound)
             ]))
             .then(([form, dataset]) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodtwo.mp3').then(getOrNotFound)
               .then((attachment) => FormAttachments.update(form, attachment, null, dataset.id)
@@ -1580,25 +1580,39 @@ describe('datasets and entities', () => {
             }));
       }));
 
-      it('should be able to upload multiple drafts', testService(async (service) => {
+      it('should update a dataset with a new draft and be able to upload multiple drafts', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
         // Upload a form and then create a new draft version
-        await service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms?publish=true')
-            .send(testData.forms.simpleEntity)
-            .set('Content-Type', 'application/xml')
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
             .expect(200)
             .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'application/xml')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/draft')
+              .set('X-Extended-Metadata', 'true')
               .expect(200)
-              .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
-                .send(testData.forms.simpleEntity)
-                .set('Content-Type', 'application/xml')
-                .expect(200))
-              .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/draft')
-                .set('X-Extended-Metadata', 'true')
-                .expect(200)
-                .then(({ body }) => {
-                  body.entityRelated.should.equal(true);
-                }))));
+              .then(({ body }) => {
+                body.entityRelated.should.equal(true);
+              })));
+
+        await asAlice.get('/v1/projects/1/datasets')
+          .expect(200)
+          .then(({ body }) => {
+            body[0].name.should.be.eql('people');
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people')
+          .expect(200)
+          .then(({ body }) => {
+            body.name.should.be.eql('people');
+            body.properties.length.should.be.eql(2);
+          });
       }));
 
       it('should not let multiple fields to be mapped to a single property', testService(async (service) => {
