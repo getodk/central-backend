@@ -3040,6 +3040,270 @@ name,label,first_name,last_name,age,favorite_color
 + Response 403 (application/json)
     + Attributes (Error 403)
 
+# Group Entities
+
+An Entity is a data row of the dataset. Following API endpoints will let you performance CRUD (create, read, update and delete) operations on the entities.
+
+## Entities Metadata [GET /projects/{projectId}/datasets/{datasetName}/entities]
+
+This endpoint returns list of entities of a Dataset. Please note that this endpoint only returns metadata of the entities not the data. If you want to get the data of all entiities then please refer to [OData Dataset Service](#reference/odata-endpoints/odata-form-service)
+
+You can provide `?deleted=true` to include deleted entities 
+
++ Parameters
+    + projectId: `16` (number, required) - The numeric ID of the Project
+    + name: `people` (string, required) - Name of the Dataset
+
++ Response 200 (application/json)
+    This is the standard response
+
+    + Attributes (array[EntitySummary])
+
++ Response 200 (application/json; extended)
+    This is the extended response
+
+    + Attributes (array[Extended EntitySummary])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Getting Entity Details  [GET /projects/{projectId}/datasets/{name}/entities/{uuid}]
+
+Returns the metadata and current data of an Entity
+
++ Parameters
+    + projectId: `16` (number, required) - The numeric ID of the Project
+    + name: `people` (string, required) - Name of the Dataset
+    + uuid: `54a405a0-53ce-4748-9788-d23a30cc3afa` (string, required) - UUID of the Entity
+
++ Response 200 (application/json)
+    + Attributes (Entity)
+
++ Response 200 (application/json; extended)
+    This is the extended response
+
+    + Attributes (array[Extended Entity])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Listing Entity Versions [GET /projects/{projectId}/datasets/{name}/entities/{uuid}/versions]
+
+Returns the version history of an Entity
+
++ Parameters
+    + projectId: `16` (number, required) - The numeric ID of the Project
+    + name: `people` (string, required) - Name of the Dataset
+    + uuid: `54a405a0-53ce-4748-9788-d23a30cc3afa` (string, required) - UUID of the Entity
+
++ Response 200 (application/json)
+    + Attributes (array[EntityVersion])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Getting Entity Version [GET /projects/{projectId}/datasets/{name}/entities/{uuid}/versions/{versionNumber}]
+
+Returns the details of a particular version of an Entity
+
++ Parameters
+    + projectId: `16` (number, required) - The numeric ID of the Project
+    + name: `people` (string, required) - Name of the Dataset
+    + uuid: `54a405a0-53ce-4748-9788-d23a30cc3afa` (string, required) - UUID of the Entity
+    + versionNumber: `1` (number, required) - The version version of the Entity
+
++ Response 200 (application/json)
+    + Attributes (EntityVersion)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Getting changes between Versions [GET /projects/{projectId}/datasets/{name}/entities/{uuid}/diffs]
+
+This returns the changes, or edits, between different versions of an Entity. These changes are returned in an object that is indexed by the versionNumber that uniquely identifies that version. Between two Entities, there is an array of objects representing how each property changed. This change object contains the old and new values, as well as the property name.
+
++ Parameters
+    + projectId: `16` (number, required) - The numeric ID of the Project
+    + name: `people` (string, required) - Name of the Dataset
+    + uuid: `54a405a0-53ce-4748-9788-d23a30cc3afa` (string, required) - UUID of the Entity
+
++ Response 200 (application/json)
+    + Response 200
+    + Attributes (array[array[Entity Diff Value]])
+
+    + Body
+
+            {
+              2: [
+                {
+                  "new": "John",
+                  "old": "Dana",
+                  "propertyName": "firstName"
+                },
+                {
+                  "new": "Doe",
+                  "old": "Roe",
+                  "propertyName": "lastName"
+                },
+                {
+                  "new": "John Doe",
+                  "old": "Jane Roe",
+                  "propertyName": "label"
+                }
+              ]
+            }
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Entity Audit Log [GET /projects/{projectId}/datasets/{name}/entities/{uuid}/audits]
+
+Returns [Server Audit Logs](/reference/system-endpoints/server-audit-logs) relating to an Entity. They will be returned most recent first.
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally expand the `actorId` into full `actor` details, and `acteeId` into full `actee` details. The `actor` will always be an Actor, and the `actee` will be the Dataset this Entity is a part of.
+
++ Parameters
+    + projectId: `16` (number, required) - The numeric ID of the Project
+    + name: `people` (string, required) - Name of the Dataset
+    + uuid: `54a405a0-53ce-4748-9788-d23a30cc3afa` (string, required) - UUID of the Entity
+
++ Response 200 (application/json)
+    + Attributes (array[Audit])
+
++ Response 200 (application/json; extended)
+    + Attributes (array[Extended Audit])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Creating an Entity [POST /projects/{projectId}/datasets/{name}/entities]
+
+Creates an Entity in the Dataset. Request body takes the json representation of the entity. It should have `uuid` and `label` property in addition to the user-defined properties of the Dataset. For e.g.
+```
+{
+    "uuid": "54a405a0-53ce-4748-9788-d23a30cc3afa",
+    "label": "John Doe",
+    "firstName": "John",
+    "lastName": "Doe",
+    "city": "New York",
+    ...
+}
+```
+
+You can provide header `X-Client-Id` to identify the client/transaction of the consumer of the API. The value is logged and can be retrieved from the [Getting Entity Details](#reference/entities/getting-entity-details) and [Listing Entity Versions](#reference/entities/listing-entity-versions) APIs
+
++ Request (application/json)
+    + Attributes
+        + projectId: `16` (number, required) - The numeric ID of the Project
+        + name: `people` (string, required) - Name of the Dataset
+
+    + Body
+
+            { 
+                "uuid": "54a405a0-53ce-4748-9788-d23a30cc3afa",
+                "label": "John Doe",
+                "firstName": "John",
+                "lastName": "Doe",
+                "city": "New York",
+                "...other properties": "...value of other properties"
+            }
+
++ Response 200 (application/json)
+    + Attributes (array[EntitySummary])
+
++ Response 200 (application/json; extended)
+    + Attributes (array[Extended EntitySummary])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Updating an Entity [PUT /projects/{projectId}/datasets/{name}/entities/{uuid}]
+
+Use this API to completely replace the Entity. A new version of the Entity will be created with the provided values. If you want to replace just one or few properties of the Entity then please use [Updating an Entity partially](#reference/entities/updating-an-entity-partially)
+
++ Request (application/json)
+    + Attributes
+        + projectId: `16` (number, required) - The numeric ID of the Project
+        + name: `people` (string, required) - Name of the Dataset
+        + uuid: `54a405a0-53ce-4748-9788-d23a30cc3afa` (string, required) - UUID of the Entity
+
+    + Body
+
+            { 
+                "uuid": "54a405a0-53ce-4748-9788-d23a30cc3afa",
+                "label": "John Doe",
+                "firstName": "John",
+                "lastName": "Doe",
+                "city": "New York",
+                "...other properties": "...value of other properties"
+            }
+
++ Response 200 (application/json)
+    + Attributes (array[EntitySummary])
+
++ Response 200 (application/json; extended)
+    + Attributes (array[Extended EntitySummary])
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Updating an Entity partially [PATCH /projects/{projectId}/datasets/{name}/entities/{uuid}]
+
+Use this API to replace one or few properties of the Entity
+
++ Request (application/json)
+    + Attributes
+        + projectId: `16` (number, required) - The numeric ID of the Project
+        + name: `people` (string, required) - Name of the Dataset
+        + uuid: `54a405a0-53ce-4748-9788-d23a30cc3afa` (string, required) - UUID of the Entity
+
+    + Body
+
+            { 
+                "firstName": "John"
+            }
+
++ Response 200 (application/json)
+    + Attributes (EntitySummary)
+
++ Response 200 (application/json; extended)
+    + Attributes (Extended EntitySummary)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Deleting an Entity [DELETE /projects/{projectId}/datasets/{name}/entities/{uuid}]
+
+Use this API to delete an Entity
+
++ Request (application/json)
+    + Attributes
+        + projectId: `16` (number, required) - The numeric ID of the Project
+        + name: `people` (string, required) - Name of the Dataset
+        + uuid: `54a405a0-53ce-4748-9788-d23a30cc3afa` (string, required) - UUID of the Entity
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+## Restoring an Entity [POST /projects/{projectId}/datasets/{name}/entities/{uuid}/restore]
+
+Restores a deleted Entity.
+
++ Request (application/json)
+    + Attributes
+        + projectId: `16` (number, required) - The numeric ID of the Project
+        + name: `people` (string, required) - Name of the Dataset
+        + uuid: `54a405a0-53ce-4748-9788-d23a30cc3afa` (string, required) - UUID of the Entity
+
++ Response 200 (application/json)
+    + Attributes (EntitySummary)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
 # Group OpenRosa Endpoints
 
 [OpenRosa](https://bitbucket.org/javarosa/javarosa/wiki/OpenRosaAPI) is an API standard which accompanies the ODK XForms XML standard, allowing compliant servers and clients to use a common protocol to communicate `Form`s and `Submission`s to each other. When survey clients like ODK Collect and Enketo submit Submission data to a Form, this is the API they use.
@@ -4553,3 +4817,49 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + name: `first_name` (string, required) - The name of the Property.
 + publishedAt: `2018-01-21T00:04:11.153Z` (string, required) - Publishing timestamp of the form that defined this property for the first time.
 + forms: (array[Form KeyValue]) - List of forms that create the property
+
+## EntitySummaryFields (object)
++ uuid: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `uuid` of the Entity that uniquely identifies the Entity.
++ datasetName: `people` (string, required) - Name of the dataset
++ createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format. The time that the server received the Entity.
++ updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - Timestamp of the last update in ISO date format. `null` when there is only one version of the Entity.
++ deletedAt: `2018-03-21T12:45:02.312Z` (string, optional) - Timestamp of the deletion in ISO date format. `null` if the Entity is not deleted.
+
+## EntitySourceType (enum)
++ SUBMISSION (string) - Entity was created through a Form Submission.
++ API (string) - Entity was created using the API.
++ FILE_UPLOAD (string) - Entity was created through uploading a file.
+
+## EntitySource (object)
++ type: `API` (EntitySourceType, required) - From what type of source this Entity was created.
++ id: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - `FormXmlId`/`SubmissionID` if the type is Submission otherwise value of `X-Client-Id` provided at the time of Entity creation.
+
+## EntityVersionFields (object)
++ versionNumber: `1` (number, required) - Numeric number to identify the version (auto incrementing)
++ label: `John Doe` (string, required) - Label of the Entity
++ current: `true` (boolean, required) - `true` if the version is the latest one
++ deleted: `false` (boolean, required) - `true` if the Entity is deleted
++ createdAt: `2018-03-21T12:45:02.312Z` (string, rquired) - Timestamp in ISO format
++ creatorId: `1` (number, required) - The ID of the Actor (App User, User, or Public Link) that created this version.
+
+## Extended EntityVersionSummary (EntityVersionFields)
++ creator: (Actor, required) - The full details of the Actor that created the Entity.
+
+## EntitySummary (EntitySummaryFields)
++ currentVersion: (EntityVersionFields, required) - Current version of the Entity
+
+## Extended EntitySummary (EntitySummaryFields)
++ currentVersion: (Extended EntityVersionSummary, required) - Current version of the Entity
+
+## Entity (EntitySummaryFields)
++ currentVersion: (EntityVersion, required) - Current version of the Entity
+
+## Extended Entity (EntitySummaryFields)
++ currentVersion: (Extended EntityVersion, required) - Current version of the Entity
+
+## EntityVersion (EntityVersionFields)
++ source: (EntitySource, required) - Source of the Entity
++ data: (object, required) - Data of the Entity
+
+## Extended EntityVersion (EntityVersion)
++ creator: (Actor, required) - The full details of the Actor that created the Entity.
