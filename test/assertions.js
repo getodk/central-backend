@@ -1,60 +1,58 @@
 const should = require('should');
 const { DateTime } = require('luxon');
 
+/* eslint-disable space-before-function-paren, func-names */
+
 // debugging things.
 // eslint-disable-next-line no-console
 global.tap = (x) => { console.log(x); return x; };
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('httpDate', function() {
   this.params = { operator: 'to be an HTTP date string' };
   DateTime.fromHTTP(this.obj).isValid.should.equal(true);
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('isoDate', function() {
   this.params = { operator: 'to be an ISO date string' };
   DateTime.fromISO(this.obj).isValid.should.equal(true);
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
+should.Assertion.add('nullOrIsoDate', function() {
+  this.params = { operator: 'to be an ISO date string' };
+  if (this.obj != null) this.obj.should.be.an.isoDate();
+});
+
 should.Assertion.add('recentIsoDate', function() {
   this.params = { operator: 'to be a recent ISO date string' };
   this.obj.should.be.an.isoDate();
   DateTime.fromISO(this.obj).plus({ minutes: 2 }).should.be.greaterThan(DateTime.local());
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('recentDate', function() {
   this.params = { operator: 'to be a recent date instance' };
   DateTime.local().minus({ minutes: 1 }).toJSDate().should.be.lessThan(this.obj);
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('token', function(length = 64) {
   this.params = { operator: 'to be a token string' };
   this.obj.should.match(new RegExp(`^[a-z0-9!$]{${length}}$`, 'i'));
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('uuid', function() {
   this.params = { operator: 'to be a uuid string' };
   this.obj.should.match(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('md5Sum', function() {
   this.params = { operator: 'to be an md5 sum string' };
   this.obj.should.match(/^[0-9a-f]{32}$/i);
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('base64string', function() {
   this.params = { operator: 'to be a base64 string' };
   this.obj.should.match(/^[0-9a-z/+=]+$/i);
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('Actor', function() {
   this.params = { operator: 'to be an Actor' };
 
@@ -68,7 +66,6 @@ should.Assertion.add('Actor', function() {
   should.not.exist(this.obj.meta);
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('Comment', function() {
   this.params = { operator: 'to be a Comment' };
 
@@ -78,7 +75,6 @@ should.Assertion.add('Comment', function() {
   this.obj.createdAt.should.be.an.isoDate();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('User', function() {
   this.params = { operator: 'to be a User' };
 
@@ -87,7 +83,6 @@ should.Assertion.add('User', function() {
   this.obj.email.should.be.a.String();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('Submission', function() {
   this.params = { operator: 'to be a Submission' };
 
@@ -100,7 +95,6 @@ should.Assertion.add('Submission', function() {
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('ExtendedSubmission', function() {
   this.params = { operator: 'to be an extended Submission' };
 
@@ -112,7 +106,6 @@ should.Assertion.add('ExtendedSubmission', function() {
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('SubmissionDef', function() {
   this.params = { operator: 'to be a Submission' };
 
@@ -122,7 +115,6 @@ should.Assertion.add('SubmissionDef', function() {
   if (this.obj.instanceName != null) this.obj.instanceName.should.be.a.String();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('ExtendedSubmissionDef', function() {
   this.params = { operator: 'to be a Submission' };
 
@@ -130,7 +122,6 @@ should.Assertion.add('ExtendedSubmissionDef', function() {
   this.obj.submitter.should.be.an.Actor();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('Session', function() {
   this.params = { operator: 'to be a Session' };
 
@@ -140,7 +131,6 @@ should.Assertion.add('Session', function() {
   this.obj.token.should.be.a.token();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('FieldKey', function() {
   this.params = { operator: 'to be a Field Key' };
 
@@ -151,7 +141,6 @@ should.Assertion.add('FieldKey', function() {
   if (this.obj.token != null) this.obj.token.should.be.a.token();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('ExtendedFieldKey', function() {
   this.params = { operator: 'to be an Extended Field Key' };
 
@@ -164,7 +153,6 @@ should.Assertion.add('ExtendedFieldKey', function() {
   if (this.obj.token != null) this.obj.token.should.be.a.token();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('PublicLink', function() {
   this.params = { operator: 'to be a Public Link' };
 
@@ -174,7 +162,6 @@ should.Assertion.add('PublicLink', function() {
   if (this.obj.token != null) this.obj.token.should.be.a.token();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('ExtendedPublicLink', function() {
   this.params = { operator: 'to be an Extended Public Link' };
 
@@ -184,7 +171,6 @@ should.Assertion.add('ExtendedPublicLink', function() {
   if (this.obj.token != null) this.obj.token.should.be.a.token();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('Form', function() {
   this.params = { operator: 'to be a Form' };
 
@@ -198,7 +184,6 @@ should.Assertion.add('Form', function() {
   this.obj.hash.should.be.an.md5Sum();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('ExtendedForm', function() {
   this.params = { operator: 'to be a ExtendedForm' };
 
@@ -209,7 +194,6 @@ should.Assertion.add('ExtendedForm', function() {
   if (this.obj.lastSubmission != null) this.obj.lastSubmission.should.be.an.isoDate();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('FormAttachment', function() {
   this.params = { operator: 'to be a Form Attachment' };
 
@@ -224,7 +208,6 @@ should.Assertion.add('FormAttachment', function() {
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('Project', function() {
   this.params = { operator: 'to be a Project' };
 
@@ -235,7 +218,6 @@ should.Assertion.add('Project', function() {
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('ExtendedProject', function() {
   this.params = { operator: 'to be a Project' };
 
@@ -246,7 +228,6 @@ should.Assertion.add('ExtendedProject', function() {
   if (this.obj.lastSubmission != null) this.obj.lastSubmission.should.be.an.isoDate();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('Role', function() {
   this.params = { operator: 'to be a Role' };
 
@@ -258,7 +239,6 @@ should.Assertion.add('Role', function() {
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('Audit', function() {
   this.params = { operator: 'to be an Audit' };
 
@@ -276,14 +256,12 @@ should.Assertion.add('Audit', function() {
   if (this.obj.notes != null) this.obj.notes.should.be.a.String();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('Key', function() {
   this.params = { operator: 'to be an Key' };
 
   Object.keys(this.obj).should.containDeep([ 'hint', 'managed', 'public' ]);
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('Config', function() {
   this.params = { operator: 'to be a Config' };
 
@@ -293,7 +271,6 @@ should.Assertion.add('Config', function() {
   this.obj.setAt.should.be.an.isoDate();
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('SimpleCsv', function() {
   this.params = { operator: 'to be a full simple.csv export with three rows' };
 
@@ -312,7 +289,6 @@ should.Assertion.add('SimpleCsv', function() {
   csv[4].should.eql([ '' ]);
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('EncryptedSimpleCsv', function() {
   this.params = { operator: 'to be a full encrypted simple.csv export with three rows' };
 
@@ -334,7 +310,6 @@ should.Assertion.add('EncryptedSimpleCsv', function() {
   csv[4].should.eql([ '' ]);
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 should.Assertion.add('eqlInAnyOrder', function(expectedUnsorted) {
   // eslint-disable-next-line key-spacing
   this.params = { operator:'to be equal in any order' };
@@ -360,4 +335,89 @@ should.Assertion.add('ExtendedDataset', function assertExtendedDataset() {
   Object.keys(this.obj).should.containDeep([ 'entities', 'lastEntity' ]);
   this.obj.entities.should.be.a.Number();
   if (this.obj.lastEntity != null) this.obj.lastEntity.should.be.an.isoDate();
+});
+
+should.Assertion.add('EntityRootFields', function() {
+  this.params = { operator: 'have root level entity fields' };
+
+  this.obj.should.have.property('uuid').which.is.a.String();
+  this.obj.should.have.property('datasetName').which.is.a.String();
+  this.obj.should.have.property('createdAt').which.is.a.isoDate();
+  this.obj.should.have.property('updatedAt').which.is.nullOrIsoDate();
+  this.obj.should.have.property('deletedAt').which.is.nullOrIsoDate();
+});
+
+should.Assertion.add('Source', function() {
+  this.params = { operator: 'to be a Source' };
+
+  this.obj.should.have.property('type').which.is.a.String();
+  this.obj.should.have.property('id').which.is.a.String();
+});
+
+should.Assertion.add('EntityDefSummaryFields', function() {
+  this.params = { operator: 'have Entity Def (version) summary fields' };
+
+  this.obj.should.have.property('versionNumber').which.is.a.Number();
+  this.obj.should.have.property('label').which.is.a.String();
+  this.obj.should.have.property('current').which.is.a.Boolean();
+  this.obj.should.have.property('deleted').which.is.a.Boolean();
+  this.obj.should.have.property('createdAt').which.is.a.isoDate();
+  this.obj.should.have.property('creatorId').which.is.a.Number();
+});
+
+should.Assertion.add('EntityDefSummary', function() {
+  this.params = { operator: 'to be an Entity Def Summary' };
+
+  this.obj.should.have.EntityDefSummaryFields();
+});
+
+should.Assertion.add('ExtendedEntityDefSummary', function() {
+  this.params = { operator: 'to be an Extended Entity Def Summary' };
+
+  this.obj.should.have.EntityDefSummaryFields();
+  this.obj.should.have.property('creator').which.is.an.Actor();
+});
+
+should.Assertion.add('EntityDef', function() {
+  this.params = { operator: 'to be an Entity Def' };
+
+  this.obj.should.have.EntityDefSummaryFields();
+  this.obj.should.have.property('source').which.is.a.Source();
+});
+
+should.Assertion.add('ExtendedEntityDef', function() {
+  this.params = { operator: 'to be an Extended Entity Def' };
+
+  this.obj.should.have.EntityDefSummaryFields();
+  this.obj.should.have.property('source').which.is.a.Source();
+  this.obj.should.have.property('data');
+  this.obj.should.have.property('creator').which.is.an.Actor();
+});
+
+should.Assertion.add('EntitySummary', function() {
+  this.params = { operator: 'to be an Entity Summary' };
+
+  this.obj.should.have.EntityRootFields();
+  this.obj.should.have.property('currentVersion').which.is.an.EntityDefSummary();
+});
+
+should.Assertion.add('ExtendedEntitySummary', function() {
+  this.params = { operator: 'to be an extended Entity Summary' };
+
+  this.obj.should.have.EntityRootFields();
+  this.obj.should.have.property('currentVersion').which.is.an.ExtendedEntityDefSummary();
+});
+
+should.Assertion.add('Entity', function() {
+  this.params = { operator: 'to be an Entity' };
+
+  this.obj.should.have.EntityRootFields();
+  this.obj.should.have.property('currentVersion').which.is.an.EntityDef();
+});
+
+should.Assertion.add('ExtendedEntity', function() {
+  this.params = { operator: 'to be an extended Entity' };
+
+  this.obj.should.have.EntityRootFields();
+  this.obj.should.have.property('currentVersion').which.is.an.ExtendedEntityDef();
 });
