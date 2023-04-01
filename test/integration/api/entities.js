@@ -26,7 +26,7 @@ const createEntities = async (asAlice, container) => {
 
 describe('Entities API', () => {
   describe('GET /datasets/:name/entities', () => {
-    it.only('should return metadata of the entities of the dataset', testService(async (service, container) => {
+    it('should return metadata of the entities of the dataset', testService(async (service, container) => {
       const asAlice = await service.login('alice');
       await createEntities(asAlice, container);
       await asAlice.get('/v1/projects/1/datasets/people/entities')
@@ -38,7 +38,7 @@ describe('Entities API', () => {
         });
     }));
 
-    it.only('should return extended metadata of the entities of the dataset', testService(async (service, container) => {
+    it('should return extended metadata of the entities of the dataset', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       await createEntities(asAlice, container);
@@ -200,9 +200,31 @@ describe('Entities API', () => {
 
   });
 
-  describe('PUT /datasets/:name/entities/:uuid', () => {
+  describe.only('PUT /datasets/:name/entities/:uuid', () => {
+    it('should update an entitiy', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
 
-    it('should return metadata of the entities of the dataset', testService(async (service) => {
+      await createEntities(asAlice, container);
+
+      await asAlice.put('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .send({ age: 77 })
+        .expect(200)
+        .then(({ body }) => {
+          // eslint-disable-next-line no-console
+          console.log(body);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          // eslint-disable-next-line no-console
+          console.log(body);
+          body.should.be.an.ExtendedEntity();
+        });
+    }));
+
+    it.skip('should return metadata of the entities of the dataset', testService(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.put('/v1/projects/1/datasets/People/entities/10000000-0000-0000-0000-000000000001')
