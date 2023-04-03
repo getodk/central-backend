@@ -3042,13 +3042,13 @@ name,label,first_name,last_name,age,favorite_color
 
 # Group Entities
 
-An Entity is a data row of the dataset. Following API endpoints will let you performance CRUD (create, read, update and delete) operations on the entities.
+An Entity is a data row of the dataset. Following API endpoints will let you perform CRUD (create, read, update and delete) operations on the entities.
 
 ## Entities Metadata [GET /projects/{projectId}/datasets/{datasetName}/entities]
 
-This endpoint returns list of entities of a Dataset. Please note that this endpoint only returns metadata of the entities not the data. If you want to get the data of all entiities then please refer to [OData Dataset Service](#reference/odata-endpoints/odata-form-service)
+This endpoint returns list of entities of a Dataset. Please note that this endpoint only returns metadata of the entities not the data. If you want to get the data of all entities then please refer to [OData Dataset Service](#reference/odata-endpoints/odata-form-service)
 
-You can provide `?deleted=true` to include deleted entities 
+You can provide `?deleted=true` to get only deleted entities 
 
 + Parameters
     + projectId: `16` (number, required) - The numeric ID of the Project
@@ -3057,12 +3057,12 @@ You can provide `?deleted=true` to include deleted entities
 + Response 200 (application/json)
     This is the standard response
 
-    + Attributes (array[EntitySummary])
+    + Attributes (array[Entity Summary])
 
 + Response 200 (application/json; extended)
     This is the extended response
 
-    + Attributes (array[Extended EntitySummary])
+    + Attributes (array[Extended Entity Summary])
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -3082,7 +3082,7 @@ Returns the metadata and current data of an Entity
 + Response 200 (application/json; extended)
     This is the extended response
 
-    + Attributes (array[Extended Entity])
+    + Attributes (Extended Entity)
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -3097,7 +3097,7 @@ Returns the version history of an Entity
     + uuid: `54a405a0-53ce-4748-9788-d23a30cc3afa` (string, required) - UUID of the Entity
 
 + Response 200 (application/json)
-    + Attributes (array[EntityVersion])
+    + Attributes (array[Entity Version])
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -3110,10 +3110,10 @@ Returns the details of a particular version of an Entity
     + projectId: `16` (number, required) - The numeric ID of the Project
     + name: `people` (string, required) - Name of the Dataset
     + uuid: `54a405a0-53ce-4748-9788-d23a30cc3afa` (string, required) - UUID of the Entity
-    + versionNumber: `1` (number, required) - The version version of the Entity
+    + versionNumber: `1` (number, required) - The version number of the Entity
 
 + Response 200 (application/json)
-    + Attributes (EntityVersion)
+    + Attributes (Entity Version)
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -3190,7 +3190,7 @@ Creates an Entity in the Dataset. Request body takes the json representation of 
 }
 ```
 
-You can provide header `X-Client-Id` to identify the client/transaction of the consumer of the API. The value is logged and can be retrieved from the [Getting Entity Details](#reference/entities/getting-entity-details) and [Listing Entity Versions](#reference/entities/listing-entity-versions) APIs
+You can provide header `X-Client-Id` to identify the client/transaction of the consumer of the API. The value is logged and can be retrieved from the [Getting Entity Details](#reference/entities/getting-entity-details) and [Listing Entity Versions](#reference/entities/listing-entity-versions) APIs in `currentVersion.source.id`
 
 + Request (application/json)
     + Attributes
@@ -3209,10 +3209,10 @@ You can provide header `X-Client-Id` to identify the client/transaction of the c
             }
 
 + Response 200 (application/json)
-    + Attributes (array[EntitySummary])
+    + Attributes (array[Entity Summary])
 
 + Response 200 (application/json; extended)
-    + Attributes (array[Extended EntitySummary])
+    + Attributes (array[Extended Entity Summary])
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -3239,10 +3239,10 @@ Use this API to completely replace the Entity. A new version of the Entity will 
             }
 
 + Response 200 (application/json)
-    + Attributes (array[EntitySummary])
+    + Attributes (array[Entity Summary])
 
 + Response 200 (application/json; extended)
-    + Attributes (array[Extended EntitySummary])
+    + Attributes (array[Extended Entity Summary])
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -3264,10 +3264,10 @@ Use this API to replace one or few properties of the Entity
             }
 
 + Response 200 (application/json)
-    + Attributes (EntitySummary)
+    + Attributes (Entity Summary)
 
 + Response 200 (application/json; extended)
-    + Attributes (Extended EntitySummary)
+    + Attributes (Extended Entity Summary)
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -3299,7 +3299,7 @@ Restores a deleted Entity.
         + uuid: `54a405a0-53ce-4748-9788-d23a30cc3afa` (string, required) - UUID of the Entity
 
 + Response 200 (application/json)
-    + Attributes (EntitySummary)
+    + Attributes (Entity Summary)
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -4818,48 +4818,59 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + publishedAt: `2018-01-21T00:04:11.153Z` (string, required) - Publishing timestamp of the form that defined this property for the first time.
 + forms: (array[Form KeyValue]) - List of forms that create the property
 
-## EntitySummaryFields (object)
+## Entity Summary Fields (object)
 + uuid: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `uuid` of the Entity that uniquely identifies the Entity.
-+ datasetName: `people` (string, required) - Name of the dataset
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format. The time that the server received the Entity.
 + updatedAt: `2018-03-21T12:45:02.312Z` (string, optional) - Timestamp of the last update in ISO date format. `null` when there is only one version of the Entity.
 + deletedAt: `2018-03-21T12:45:02.312Z` (string, optional) - Timestamp of the deletion in ISO date format. `null` if the Entity is not deleted.
++ creatorId: `1` (number, required) - The ID of the Actor (App User, User, or Public Link) that originally created the Entity.
 
-## EntitySourceType (enum)
-+ SUBMISSION (string) - Entity was created through a Form Submission.
-+ API (string) - Entity was created using the API.
-+ FILE_UPLOAD (string) - Entity was created through uploading a file.
+## Entity Source Type (enum)
++ submission (string) - Entity was created through a Form Submission.
++ api (string) - Entity was created using the API.
++ fileUpload (string) - Entity was created through uploading a file.
 
-## EntitySource (object)
-+ type: `API` (EntitySourceType, required) - From what type of source this Entity was created.
-+ id: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - `FormXmlId`/`SubmissionID` if the type is Submission otherwise value of `X-Client-Id` provided at the time of Entity creation.
+## Entity Source Details (object)
++ xmlFormId: `simple` (string, required) - The `id` of this form as given in its XForms XML definition
++ instanceId: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - The `instanceId` of the `Submission`, given by the Submission XML.
++ instanceName: `village third house` (string, optional) - The `instanceName`, if any, given by the Submission XML in the metadata section.
 
-## EntityVersionFields (object)
+## Entity Source (object)
++ type: `api` (Entity Source Type, required) - From what type of source this Entity was created.
++ id: `uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44` (string, required) - `xmlFormId`/`instanceName` if the type is Submission otherwise value of `X-Client-Id` provided at the time of Entity creation.
++ details: (Entity Source Details, optional) - Provides details of the Submission if the `type` is `submission`. It is `null` for `api` and `fileUpload` types
+
+## Entity Version Fields (object)
 + versionNumber: `1` (number, required) - Numeric number to identify the version (auto incrementing)
 + label: `John Doe` (string, required) - Label of the Entity
 + current: `true` (boolean, required) - `true` if the version is the latest one
 + deleted: `false` (boolean, required) - `true` if the Entity is deleted
-+ createdAt: `2018-03-21T12:45:02.312Z` (string, rquired) - Timestamp in ISO format
++ createdAt: `2018-03-21T12:45:02.312Z` (string, required) - Timestamp in ISO format
 + creatorId: `1` (number, required) - The ID of the Actor (App User, User, or Public Link) that created this version.
 
-## Extended EntityVersionSummary (EntityVersionFields)
+## Extended Entity Version Summary (Entity Version Fields)
 + creator: (Actor, required) - The full details of the Actor that created the Entity.
 
-## EntitySummary (EntitySummaryFields)
-+ currentVersion: (EntityVersionFields, required) - Current version of the Entity
+## Entity Summary (Entity Summary Fields)
++ currentVersion: (Entity Version Fields, required) - Current version of the Entity
 
-## Extended EntitySummary (EntitySummaryFields)
-+ currentVersion: (Extended EntityVersionSummary, required) - Current version of the Entity
+## Extended Entity Summary (Entity Summary Fields)
++ currentVersion: (Extended Entity Version Summary, required) - Current version of the Entity
 
-## Entity (EntitySummaryFields)
-+ currentVersion: (EntityVersion, required) - Current version of the Entity
+## Entity (Entity Summary Fields)
++ currentVersion: (Entity Version, required) - Current version of the Entity
 
-## Extended Entity (EntitySummaryFields)
-+ currentVersion: (Extended EntityVersion, required) - Current version of the Entity
+## Extended Entity (Entity Summary Fields)
++ currentVersion: (Extended Entity Version, required) - Current version of the Entity
 
-## EntityVersion (EntityVersionFields)
-+ source: (EntitySource, required) - Source of the Entity
+## Entity Version (Entity Version Fields)
++ source: (Entity Source, required) - Source of the Entity
 + data: (object, required) - Data of the Entity
 
-## Extended EntityVersion (EntityVersion)
+## Extended Entity Version (Entity Version)
 + creator: (Actor, required) - The full details of the Actor that created the Entity.
+
+## Entity Diff Value (object)
++ new (string, nullable) - The new value of this property.
++ old (string, nullable) - The old value of this property.
++ propertyName (array) - The name of the property that is changed.

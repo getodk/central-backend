@@ -343,10 +343,18 @@ should.Assertion.add('EntityRootFields', function() {
   this.params = { operator: 'have root level entity fields' };
 
   this.obj.should.have.property('uuid').which.is.a.String();
-  this.obj.should.have.property('datasetName').which.is.a.String();
   this.obj.should.have.property('createdAt').which.is.a.isoDate();
   this.obj.should.have.property('updatedAt').which.is.nullOrIsoDate();
   this.obj.should.have.property('deletedAt').which.is.nullOrIsoDate();
+  this.obj.should.have.property('creatorId').which.is.a.Number();
+});
+
+should.Assertion.add('EntitySourceDetails', function() {
+  this.params = { operator: 'to be an Entity Source Details' };
+
+  this.obj.should.have.property('xmlFormId').which.is.a.String();
+  this.obj.should.have.property('instanceId').which.is.a.String();
+  this.obj.should.have.property('instanceName').which.is.a.String();
 });
 
 should.Assertion.add('Source', function() {
@@ -354,6 +362,8 @@ should.Assertion.add('Source', function() {
 
   this.obj.should.have.property('type').which.is.a.String();
   this.obj.should.have.property('id').which.is.a.String();
+  this.obj.should.have.property('details');
+  if (this.obj.details != null) this.obj.details.should.be.an.EntitySourceDetails();
 });
 
 should.Assertion.add('EntityDefSummaryFields', function() {

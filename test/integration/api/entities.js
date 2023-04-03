@@ -12,15 +12,15 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should return metadata of the entities of the dataset - include deleted', testService(async (service) => {
+    it('should return metadata of the entities of the dataset - only deleted', testService(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.get('/v1/projects/1/datasets/People/entities?deleted=true')
         .expect(200)
         .then(({ body: people }) => {
           people.map(p => p.should.be.an.EntitySummary());
-          people[4].deletedAt.should.be.an.isoDate();
-          people[4].currentVersion.deleted.should.be.true();
+          people[0].deletedAt.should.be.an.isoDate();
+          people[0].currentVersion.deleted.should.be.true();
 
         });
     }));
@@ -91,7 +91,7 @@ describe('Entities API', () => {
         .expect(200)
         .then(({ body }) => {
           body[0].action.should.be.eql('entity.update.version');
-          body[0].details.should.be.eql({ entityId: '00000000-0000-0000-0000-000000000001', entitySource: 'API', entitySourceId: 'super-client' });
+          body[0].details.should.be.eql({ entityId: '00000000-0000-0000-0000-000000000001', entitySource: 'API', entitySourceId: 'super-client', label: 'Jane Roe', versionNumber: 2 });
           body[1].action.should.be.eql('entity.create');
         });
     }));
