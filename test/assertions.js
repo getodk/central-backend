@@ -361,3 +361,36 @@ should.Assertion.add('ExtendedDataset', function assertExtendedDataset() {
   this.obj.entities.should.be.a.Number();
   if (this.obj.lastEntity != null) this.obj.lastEntity.should.be.an.isoDate();
 });
+
+should.Assertion.add('Entity', function assertEntity() {
+  this.params = { operator: 'to be an Entity' };
+
+  Object.keys(this.obj).should.containDeep([ 'uuid', 'label', 'createdAt' ]);
+  this.obj.uuid.should.be.a.uuid();
+  this.obj.label.should.be.a.String();
+  this.obj.createdAt.should.be.an.isoDate();
+  this.obj.currentVersion.should.be.an.EntityDef();
+
+  should.not.exist(this.obj.id);
+  should.not.exist(this.obj.datasetId);
+  should.not.exist(this.obj.entityId);
+  //should.not.exist(this.obj.creator);
+  //should.not.exist(this.obj.data);
+});
+
+should.Assertion.add('ExtendedEntity', function assertExtendedEntity() {
+  this.params = { operator: 'to be an extended Entity' };
+
+  this.obj.should.be.an.Entity();
+  //Object.keys(this.obj).should.containDeep([ 'creator' ]);
+  this.obj.creator.should.be.an.Actor();
+});
+
+should.Assertion.add('EntityDef', function assertEntityDef() {
+  this.params = { operator: 'to be an Entity Def' };
+
+  Object.keys(this.obj).should.containDeep([ 'createdAt', 'current' ]);
+  // TODO: needs creator
+  this.obj.createdAt.should.be.an.isoDate();
+  this.obj.data.should.be.an.Object();
+});
