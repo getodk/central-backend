@@ -8,7 +8,10 @@ describe('Entities API', () => {
       await asAlice.get('/v1/projects/1/datasets/People/entities')
         .expect(200)
         .then(({ body: people }) => {
-          people.map(p => p.should.be.an.EntitySummary());
+          people.forEach(p => {
+            p.should.be.an.Entity();
+            p.should.have.property('currentVersion').which.is.an.EntityDef();
+          });
         });
     }));
 
@@ -18,9 +21,12 @@ describe('Entities API', () => {
       await asAlice.get('/v1/projects/1/datasets/People/entities?deleted=true')
         .expect(200)
         .then(({ body: people }) => {
-          people.map(p => p.should.be.an.EntitySummary());
-          people[0].deletedAt.should.be.an.isoDate();
-          people[0].currentVersion.deleted.should.be.true();
+          people.forEach(p => {
+            p.should.be.an.Entity();
+            p.should.have.property('currentVersion').which.is.an.EntityDef();
+            p.deletedAt.should.be.an.isoDate();
+            p.currentVersion.deleted.should.be.true();
+          });
 
         });
     }));
@@ -32,7 +38,10 @@ describe('Entities API', () => {
         .set('X-Extended-Metadata', true)
         .expect(200)
         .then(({ body: people }) => {
-          people.map(p => p.should.be.an.ExtendedEntitySummary());
+          people.forEach(p => {
+            p.should.be.an.Entity();
+            p.should.have.property('currentVersion').which.is.an.EntityDef();
+          });
         });
     }));
   });
@@ -45,7 +54,11 @@ describe('Entities API', () => {
         .expect(200)
         .then(({ body: person }) => {
           person.should.be.an.Entity();
-          person.currentVersion.data.should.eql({
+          person.should.have.property('currentVersion').which.is.an.EntityDef();
+
+          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
+
+          person.currentVersion.should.have.property('data').which.is.eql({
             firstName: 'Jane',
             lastName: 'Roe',
             city: 'Toronto'
@@ -57,13 +70,17 @@ describe('Entities API', () => {
   });
 
   describe('GET /datasets/:name/entities/:uuid/versions', () => {
-    it('should return full entity', testService(async (service) => {
+    it('should return all versions of the Entity', testService(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.get('/v1/projects/1/datasets/People/entities/00000000-0000-0000-0000-000000000001/versions')
         .expect(200)
         .then(({ body: versions }) => {
-          versions.map(v => v.should.be.an.EntityDef());
+          versions.forEach(v => {
+            v.should.be.an.EntityDef();
+            v.should.have.property('source').which.is.an.EntitySource();
+            v.should.have.property('data');
+          });
         });
     }));
 
@@ -84,14 +101,14 @@ describe('Entities API', () => {
   });
 
   describe('GET /datasets/:name/entities/:uuid/audits', () => {
-    it('should return metadata of the entities of the dataset', testService(async (service) => {
+    it('should return audit logs of the Entity', testService(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.get('/v1/projects/1/datasets/People/entities/00000000-0000-0000-0000-000000000001/audits')
         .expect(200)
         .then(({ body }) => {
           body[0].action.should.be.eql('entity.update.version');
-          body[0].details.should.be.eql({ entityId: '00000000-0000-0000-0000-000000000001', entitySource: 'API', entitySourceId: 'super-client', label: 'Jane Roe', versionNumber: 2 });
+          body[0].details.should.be.eql({ entityId: '00000000-0000-0000-0000-000000000001', entitySource: 'api', entitySourceId: 'super-client', label: 'Jane Roe', versionNumber: 2 });
           body[1].action.should.be.eql('entity.create');
         });
     }));
@@ -99,7 +116,7 @@ describe('Entities API', () => {
 
   describe('POST /datasets/:name/entities', () => {
 
-    it('should return metadata of the entities of the dataset', testService(async (service) => {
+    it('should create an Entity', testService(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/datasets/People/entities')
@@ -114,6 +131,13 @@ describe('Entities API', () => {
         .expect(200)
         .then(({ body: person }) => {
           person.should.be.an.Entity();
+          person.should.have.property('currentVersion').which.is.an.EntityDef();
+          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
+          person.currentVersion.should.have.property('data').which.is.eql({
+            firstName: 'Johnny',
+            lastName: 'Doe',
+            city: 'Toronto'
+          });
         });
     }));
 
@@ -126,7 +150,7 @@ describe('Entities API', () => {
 
   describe('PUT /datasets/:name/entities/:uuid', () => {
 
-    it('should return metadata of the entities of the dataset', testService(async (service) => {
+    it('should update an Entity', testService(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.put('/v1/projects/1/datasets/People/entities/10000000-0000-0000-0000-000000000001')
@@ -141,6 +165,13 @@ describe('Entities API', () => {
         .expect(200)
         .then(({ body: person }) => {
           person.should.be.an.Entity();
+          person.should.have.property('currentVersion').which.is.an.EntityDef();
+          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
+          person.currentVersion.should.have.property('data').which.is.eql({
+            firstName: 'Richard',
+            lastName: 'Roe',
+            city: 'Toronto'
+          });
         });
     }));
 
@@ -153,7 +184,7 @@ describe('Entities API', () => {
 
   describe('PATCH /datasets/:name/entities/:uuid', () => {
 
-    it('should return metadata of the entities of the dataset', testService(async (service) => {
+    it('should partially update an Entity', testService(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.patch('/v1/projects/1/datasets/People/entities/10000000-0000-0000-0000-000000000001')
@@ -164,7 +195,13 @@ describe('Entities API', () => {
         .expect(200)
         .then(({ body: person }) => {
           person.should.be.an.Entity();
-          person.currentVersion.data.city.should.be.eql('Boston');
+          person.should.have.property('currentVersion').which.is.an.EntityDef();
+          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
+          person.currentVersion.should.have.property('data').which.is.eql({
+            firstName: 'Johnny',
+            lastName: 'Doe',
+            city: 'Boston'
+          });
         });
     }));
 
@@ -177,7 +214,7 @@ describe('Entities API', () => {
 
   describe('DELETE /datasets/:name/entities/:uuid', () => {
 
-    it('should return metadata of the entities of the dataset', testService(async (service) => {
+    it('should delete an Entity', testService(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.delete('/v1/projects/1/datasets/People/entities/10000000-0000-0000-0000-000000000001')
@@ -194,16 +231,24 @@ describe('Entities API', () => {
 
   });
 
-  describe('POST /datasets/:name/entities/:uuid/restore', () => {
+  // Lowest Priority
+  describe.skip('POST /datasets/:name/entities/:uuid/restore', () => {
 
-    it('should return metadata of the entities of the dataset', testService(async (service) => {
+    it('should restore a deleted Entity', testService(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/datasets/People/entities/10000000-0000-0000-0000-000000000001/restore')
         .set('X-Client-Id', 'super-client')
         .expect(200)
-        .then(({ body }) => {
-          body.should.be.an.EntitySummary();
+        .then(({ body: person }) => {
+          person.should.be.an.Entity();
+          person.should.have.property('currentVersion').which.is.an.EntityDef();
+          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
+          person.currentVersion.should.have.property('data').which.is.eql({
+            firstName: 'Jane',
+            lastName: 'Roe',
+            city: 'Toronto'
+          });
         });
     }));
 

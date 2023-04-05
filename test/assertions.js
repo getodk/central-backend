@@ -339,8 +339,8 @@ should.Assertion.add('ExtendedDataset', function assertExtendedDataset() {
   if (this.obj.lastEntity != null) this.obj.lastEntity.should.be.an.isoDate();
 });
 
-should.Assertion.add('EntityRootFields', function() {
-  this.params = { operator: 'have root level entity fields' };
+should.Assertion.add('Entity', function assertEntity() {
+  this.params = { operator: 'to be an Entity' };
 
   this.obj.should.have.property('uuid').which.is.a.String();
   this.obj.should.have.property('createdAt').which.is.a.isoDate();
@@ -349,87 +349,56 @@ should.Assertion.add('EntityRootFields', function() {
   this.obj.should.have.property('creatorId').which.is.a.Number();
 });
 
-should.Assertion.add('EntitySourceDetails', function() {
-  this.params = { operator: 'to be an Entity Source Details' };
+should.Assertion.add('ExtendedEntity', function assertEntity() {
+  this.params = { operator: 'to be an Extended Entity' };
 
-  this.obj.should.have.property('xmlFormId').which.is.a.String();
-  this.obj.should.have.property('instanceId').which.is.a.String();
-  this.obj.should.have.property('instanceName').which.is.a.String();
+  this.obj.should.be.an.Entity();
+  this.obj.should.have.property('creator').which.is.an.Actor();
 });
 
-should.Assertion.add('Source', function() {
-  this.params = { operator: 'to be a Source' };
+should.Assertion.add('EntityDef', function assertEntityDef() {
+  this.params = { operator: 'to be an Entity Def (version)' };
 
-  this.obj.should.have.property('type').which.is.a.String();
-  this.obj.should.have.property('id').which.is.a.String();
-  this.obj.should.have.property('details');
-  if (this.obj.details != null) this.obj.details.should.be.an.EntitySourceDetails();
-});
 
-should.Assertion.add('EntityDefSummaryFields', function() {
-  this.params = { operator: 'have Entity Def (version) summary fields' };
-
-  this.obj.should.have.property('versionNumber').which.is.a.Number();
+  this.obj.should.have.property('versionNumber').which.is.a.Number(); // May not be needed
   this.obj.should.have.property('label').which.is.a.String();
   this.obj.should.have.property('current').which.is.a.Boolean();
-  this.obj.should.have.property('deleted').which.is.a.Boolean();
+  this.obj.should.have.property('deleted').which.is.a.Boolean(); // May not be necessary, depend on our approach of deleting entities
   this.obj.should.have.property('createdAt').which.is.a.isoDate();
   this.obj.should.have.property('creatorId').which.is.a.Number();
 });
 
-should.Assertion.add('EntityDefSummary', function() {
-  this.params = { operator: 'to be an Entity Def Summary' };
+should.Assertion.add('ExtendedEntityDef', function assertEntity() {
+  this.params = { operator: 'to be an Extended Entity Def (version)' };
 
-  this.obj.should.have.EntityDefSummaryFields();
-});
-
-should.Assertion.add('ExtendedEntityDefSummary', function() {
-  this.params = { operator: 'to be an Extended Entity Def Summary' };
-
-  this.obj.should.have.EntityDefSummaryFields();
+  this.obj.should.be.an.EntityDef();
   this.obj.should.have.property('creator').which.is.an.Actor();
 });
 
-should.Assertion.add('EntityDef', function() {
-  this.params = { operator: 'to be an Entity Def' };
+should.Assertion.add('SourceType', function Source() {
+  this.params = { operator: 'to be a Source Type' };
 
-  this.obj.should.have.EntityDefSummaryFields();
-  this.obj.should.have.property('source').which.is.a.Source();
+  this.obj.should.be.String();
+  ['submission', 'api', 'fileUpload'].should.matchAny(this.obj);
+
 });
 
-should.Assertion.add('ExtendedEntityDef', function() {
-  this.params = { operator: 'to be an Extended Entity Def' };
+// Entity Source
+should.Assertion.add('EntitySource', function Source() {
+  this.params = { operator: 'to be an Entity Source' };
 
-  this.obj.should.have.EntityDefSummaryFields();
-  this.obj.should.have.property('source').which.is.a.Source();
-  this.obj.should.have.property('data');
-  this.obj.should.have.property('creator').which.is.an.Actor();
+  this.obj.should.have.property('type').which.is.a.SourceType();
+  this.obj.should.have.property('details');
+
+  // details are there only in case of type is submission
+  if (this.obj.details != null) this.obj.details.should.be.SubmissionDetails();
 });
 
-should.Assertion.add('EntitySummary', function() {
-  this.params = { operator: 'to be an Entity Summary' };
+// Entity Source Submission Details
+should.Assertion.add('SubmissionDetails', function SubmissionDetails() {
+  this.params = { operator: 'have Submission details' };
 
-  this.obj.should.have.EntityRootFields();
-  this.obj.should.have.property('currentVersion').which.is.an.EntityDefSummary();
-});
-
-should.Assertion.add('ExtendedEntitySummary', function() {
-  this.params = { operator: 'to be an extended Entity Summary' };
-
-  this.obj.should.have.EntityRootFields();
-  this.obj.should.have.property('currentVersion').which.is.an.ExtendedEntityDefSummary();
-});
-
-should.Assertion.add('Entity', function() {
-  this.params = { operator: 'to be an Entity' };
-
-  this.obj.should.have.EntityRootFields();
-  this.obj.should.have.property('currentVersion').which.is.an.EntityDef();
-});
-
-should.Assertion.add('ExtendedEntity', function() {
-  this.params = { operator: 'to be an extended Entity' };
-
-  this.obj.should.have.EntityRootFields();
-  this.obj.should.have.property('currentVersion').which.is.an.ExtendedEntityDef();
+  this.obj.should.have.property('xmlFormId').which.is.a.String();
+  this.obj.should.have.property('instanceId').which.is.a.String();
+  this.obj.should.have.property('instanceName').which.is.a.String();
 });
