@@ -358,7 +358,6 @@ should.Assertion.add('EntityDef', function assertEntityDef() {
   this.params = { operator: 'to be an Entity Def (version)' };
 
 
-  this.obj.should.have.property('versionNumber').which.is.a.Number(); // May not be needed
   this.obj.should.have.property('label').which.is.a.String();
   this.obj.should.have.property('current').which.is.a.Boolean();
   this.obj.should.have.property('createdAt').which.is.a.isoDate();

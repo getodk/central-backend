@@ -1,11 +1,44 @@
+const appRoot = require('app-root-path');
 const { testService } = require('../setup');
+const testData = require('../../data/xml');
+const { sql } = require('slonik');
+
+/* eslint-disable import/no-dynamic-require */
+const { exhaust } = require(appRoot + '/lib/worker/worker');
+/* eslint-enable import/no-dynamic-require */
+
+const testEntities = (test) => testService(async (service, container) => {
+  const asAlice = await service.login('alice');
+
+  await asAlice.post('/v1/projects/1/forms?publish=true')
+    .send(testData.forms.simpleEntity)
+    .expect(200);
+
+  ['one', 'two'].forEach(async instanceId => {
+    await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+      .send(testData.instances.simpleEntity[instanceId])
+      .set('Content-Type', 'application/xml')
+      .expect(200);
+
+    await asAlice.patch(`/v1/projects/1/forms/simpleEntity/submissions/${instanceId}`)
+      .send({ reviewState: 'approved' })
+      .expect(200);
+  });
+
+  await exhaust(container);
+
+  // Temporary code, we will remove it once we real migration ready
+  await container.db.any(sql`UPDATE entity_defs SET label='TEMP', "userAgent"='NODEJS', "creatorId" = 5;`);
+
+  await test(service, container);
+});
 
 describe('Entities API', () => {
   describe('GET /datasets/:name/entities', () => {
-    it('should return metadata of the entities of the dataset', testService(async (service) => {
+    it('should return metadata of the entities of the dataset', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/People/entities')
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
         .expect(200)
         .then(({ body: people }) => {
           people.forEach(p => {
@@ -15,10 +48,13 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should return metadata of the entities of the dataset - only deleted', testService(async (service) => {
+    it('should return metadata of the entities of the dataset - only deleted', testEntities(async (service, container) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/People/entities?deleted=true')
+      // TODO: use request once it's ready
+      await container.db.any(sql`UPDATE entities SET "deletedAt" = clock_timestamp() WHERE id = 1;`);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities?deleted=true')
         .expect(200)
         .then(({ body: people }) => {
           people.forEach(p => {
@@ -30,10 +66,10 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should return extended metadata of the entities of the dataset', testService(async (service) => {
+    it('should return extended metadata of the entities of the dataset', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/People/entities')
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
         .set('X-Extended-Metadata', true)
         .expect(200)
         .then(({ body: people }) => {
