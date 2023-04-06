@@ -223,9 +223,11 @@ describe('worker: entity', () => {
       const { label } = await container.one(sql`select label from entities where "uuid" = ${createEvent.details.entity.uuid}`);
       label.should.equal('Alice (88)');
 
-      const { data } = await container.one(sql`select data from entity_defs`);
+      const { data, creatorId, userAgent } = await container.one(sql`select data, "creatorId", "userAgent" from entity_defs`);
       data.age.should.equal('88');
       data.first_name.should.equal('Alice');
+      creatorId.should.equal(5); // Alice the user created this entity
+      userAgent.should.not.be.null();
     }));
   });
 
