@@ -363,9 +363,9 @@ should.Assertion.add('EntityDef', function assertEntityDef() {
   this.obj.should.have.property('versionNumber').which.is.a.Number(); // May not be needed
   this.obj.should.have.property('label').which.is.a.String();
   this.obj.should.have.property('current').which.is.a.Boolean();
-  this.obj.should.have.property('deleted').which.is.a.Boolean(); // May not be necessary, depend on our approach of deleting entities
   this.obj.should.have.property('createdAt').which.is.a.isoDate();
   this.obj.should.have.property('creatorId').which.is.a.Number();
+  this.obj.should.have.property('userAgent').which.is.a.String();
 });
 
 should.Assertion.add('ExtendedEntityDef', function assertEntity() {

@@ -25,7 +25,6 @@ describe('Entities API', () => {
             p.should.be.an.Entity();
             p.should.have.property('currentVersion').which.is.an.EntityDef();
             p.deletedAt.should.be.an.isoDate();
-            p.currentVersion.deleted.should.be.true();
           });
 
         });
@@ -108,8 +107,17 @@ describe('Entities API', () => {
         .expect(200)
         .then(({ body }) => {
           body[0].action.should.be.eql('entity.update.version');
-          body[0].details.should.be.eql({ entityId: '00000000-0000-0000-0000-000000000001', entitySource: 'api', entitySourceId: 'super-client', label: 'Jane Roe', versionNumber: 2 });
+          body[0].details.should.be.eql({
+            entityId: '00000000-0000-0000-0000-000000000001',
+            source: {
+              type: 'api',
+              details: null
+            },
+            label: 'Jane Roe',
+            versionNumber: 2
+          });
           body[1].action.should.be.eql('entity.create');
+          // assert nested logs here
         });
     }));
   });
@@ -120,7 +128,6 @@ describe('Entities API', () => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/datasets/People/entities')
-        .set('X-Client-Id', 'super-client')
         .send({
           uuid: '10000000-0000-0000-0000-000000000001',
           label: 'Johnny Doe',
@@ -154,7 +161,6 @@ describe('Entities API', () => {
       const asAlice = await service.login('alice');
 
       await asAlice.put('/v1/projects/1/datasets/People/entities/10000000-0000-0000-0000-000000000001')
-        .set('X-Client-Id', 'super-client')
         .send({
           uuid: '10000000-0000-0000-0000-000000000001',
           label: 'Richard Roe',
@@ -188,7 +194,6 @@ describe('Entities API', () => {
       const asAlice = await service.login('alice');
 
       await asAlice.patch('/v1/projects/1/datasets/People/entities/10000000-0000-0000-0000-000000000001')
-        .set('X-Client-Id', 'super-client')
         .send({
           city: 'Boston'
         })
@@ -218,7 +223,6 @@ describe('Entities API', () => {
       const asAlice = await service.login('alice');
 
       await asAlice.delete('/v1/projects/1/datasets/People/entities/10000000-0000-0000-0000-000000000001')
-        .set('X-Client-Id', 'super-client')
         .expect(200)
         .then(({ body }) => {
           body.success.should.be.true();
@@ -238,7 +242,6 @@ describe('Entities API', () => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/datasets/People/entities/10000000-0000-0000-0000-000000000001/restore')
-        .set('X-Client-Id', 'super-client')
         .expect(200)
         .then(({ body: person }) => {
           person.should.be.an.Entity();
