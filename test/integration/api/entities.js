@@ -38,8 +38,8 @@ describe('Entities API', () => {
         .expect(200)
         .then(({ body: people }) => {
           people.forEach(p => {
-            p.should.be.an.Entity();
-            p.should.have.property('currentVersion').which.is.an.EntityDef();
+            p.should.be.an.ExtendedEntity();
+            p.should.have.property('currentVersion').which.is.an.ExtendedEntityDef();
           });
         });
     }));
