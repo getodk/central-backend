@@ -196,9 +196,9 @@ describe('extracting entities from submissions', () => {
   describe('selectFields', () => {
     const entity = {
       uuid: 'uuid',
-      label: 'label',
       createdAt: 'createdAt',
       def: {
+        label: 'label',
         data: {
           firstName: 'John',
           lastName: 'Doe'
@@ -269,9 +269,11 @@ describe('extracting entities from submissions', () => {
     it('should return all properties even if entity object does not have all of them', () => {
       const data = {
         uuid: 'uuid',
-        label: 'label',
         createdAt: 'createdAt',
-        def: { data: {} },
+        def: {
+          label: 'label',
+          data: {}
+        },
         aux: {
           creator: {
             id: 'id',
