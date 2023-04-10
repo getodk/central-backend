@@ -501,7 +501,7 @@ describe('database migrations: 20230324-01-edit-dataset-verbs.js', function () {
 });
 
 // eslint-disable-next-line func-names
-describe('database migrations: 20230406-01-add-entity-def-fields.js', function () {
+describe('database migrations from 20230406: altering entities and entity_defs', function () {
   this.timeout(10000);
 
   const createEntity = async (service, container) => {
@@ -564,11 +564,14 @@ describe('database migrations: 20230406-01-add-entity-def-fields.js', function (
   }));
 
   it('should move the entity label to the entity_def table', testServiceFullTrx(async (service, container) => {
-    await upToMigration('20230406-02-move-entity-label-add-deletedAt.js', false);
+    await upToMigration('20230406-01-add-entity-def-fields.js', false);
     await populateUsers(container);
     await populateForms(container);
 
     const { newEntity } = await createEntity(service, container);
+
+    // test entity had to be made before applying this migration because of not null creatorId constraint
+    await up(); // applying 20230406-02-move-entity-label-add-deletedAt.js
 
     // Apply the migration!!
     await up();
