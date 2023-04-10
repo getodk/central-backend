@@ -499,3 +499,98 @@ describe('database migrations: 20230324-01-edit-dataset-verbs.js', function () {
     viewer.verbs.length.should.equal(7);
   }));
 });
+
+// eslint-disable-next-line func-names
+describe('database migrations from 20230406: altering entities and entity_defs', function () {
+  this.timeout(10000);
+
+  const createEntity = async (service, container) => {
+    // Get bob's id because bob is going to be the one who
+    // submits the submission
+    const creatorId = await service.login('bob', (asBob) =>
+      asBob.get('/v1/users/current').expect(200).then(({ body }) => body.id));
+
+    await service.login('bob', (asBob) =>
+      asBob.post('/v1/projects/1/forms/simple/submissions')
+        .set('Content-Type', 'application/xml')
+        .send(testData.instances.simple.one)
+        .expect(200));
+
+    // Get the submission def id we just submitted.
+    // For this test, it doesn't have to be a real entity submission.
+    const subDef = await container.one(sql`SELECT id, "userAgent" FROM submission_defs WHERE "instanceId" = 'one' LIMIT 1`);
+
+    // Make sure there is a dataset for the entity to be part of.
+    const newDataset = await container.one(sql`
+    INSERT INTO datasets
+    ("acteeId", "name", "projectId", "createdAt")
+    VALUES (${uuid()}, 'trees', 1, now())
+    RETURNING "id"`);
+
+    // Create the entity.
+    // The root entity creator wont change in this migration though it should be
+    // the same as the submitter id.
+    const newEntity = await container.one(sql`
+    INSERT INTO entities (uuid, "datasetId", "label", "creatorId", "createdAt")
+    VALUES (${uuid()}, ${newDataset.id}, 'some label', ${creatorId}, now())
+    RETURNING "id"`);
+
+    // Create the entity def and link it to the submission def above.
+    await container.run(sql`
+    INSERT INTO entity_defs ("entityId", "createdAt", "current", "submissionDefId", "data")
+    VALUES (${newEntity.id}, now(), true, ${subDef.id}, '{}')`);
+
+    return { subDef, newEntity, creatorId };
+  };
+
+  it('should set entity def creator id and user agent from submission def', testServiceFullTrx(async (service, container) => {
+    await upToMigration('20230406-01-add-entity-def-fields.js', false);
+    await populateUsers(container);
+    await populateForms(container);
+
+    const { subDef, newEntity, creatorId } = await createEntity(service, container);
+
+    // Apply the migration!!
+    await up();
+
+    // Look up the entity def again
+    const entityDef = await container.one(sql`SELECT * FROM entity_defs WHERE "entityId" = ${newEntity.id} LIMIT 1`);
+
+    // The creatorId and userAgent should now exist and be set.
+    entityDef.creatorId.should.equal(creatorId);
+    entityDef.userAgent.should.equal(subDef.userAgent);
+
+    await down();
+  }));
+
+  it('should move the entity label to the entity_def table', testServiceFullTrx(async (service, container) => {
+    await upToMigration('20230406-01-add-entity-def-fields.js', false);
+    await populateUsers(container);
+    await populateForms(container);
+
+    const { newEntity } = await createEntity(service, container);
+
+    // test entity had to be made before applying this migration because of not null creatorId constraint
+    await up(); // applying 20230406-02-move-entity-label-add-deletedAt.js
+
+    // Apply the migration!!
+    await up();
+
+    // Should be able to set deleted at timestamp
+    await container.run(sql`UPDATE entities SET "deletedAt" = now() WHERE "id" = ${newEntity.id}`);
+
+    // Look up the entity def again
+    const entityDef = await container.one(sql`SELECT * FROM entity_defs WHERE "entityId" = ${newEntity.id} LIMIT 1`);
+    const entity = await container.one(sql`SELECT * FROM entities WHERE "id" = ${newEntity.id} LIMIT 1`);
+
+    // The label should now be on the entity def
+    (entity.label == null).should.equal(true);
+    entityDef.label.should.equal('some label');
+
+    // Should be able to see the deletedAt timestamp
+    entity.deletedAt.should.not.be.null();
+
+
+    await down();
+  }));
+});

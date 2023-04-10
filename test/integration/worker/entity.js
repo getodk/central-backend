@@ -220,12 +220,12 @@ describe('worker: entity', () => {
       const { count } = await container.one(sql`select count(*) from entities`);
       count.should.equal(1);
 
-      const { label } = await container.one(sql`select label from entities where "uuid" = ${createEvent.details.entity.uuid}`);
+      const { data, label, creatorId, userAgent } = await container.one(sql`select data, label, "creatorId", "userAgent" from entity_defs`);
       label.should.equal('Alice (88)');
-
-      const { data } = await container.one(sql`select data from entity_defs`);
       data.age.should.equal('88');
       data.first_name.should.equal('Alice');
+      creatorId.should.equal(5); // Alice the user created this entity
+      userAgent.should.not.be.null();
     }));
   });
 
