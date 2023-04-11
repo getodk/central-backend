@@ -7,7 +7,7 @@ const { sql } = require('slonik');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 /* eslint-enable import/no-dynamic-require */
 
-const populateEntities = async (service, container) => {
+const testEntities = (test) => testService(async (service, container) => {
   const asAlice = await service.login('alice');
 
   await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -29,21 +29,21 @@ const populateEntities = async (service, container) => {
 
   // Temporary code, we will remove it once we real migration ready
   await container.db.any(sql`UPDATE entity_defs SET label='TEMP', "userAgent"='NODEJS', "creatorId" = 5;`);
-};
+
+  await test(service, container);
+});
 
 describe('Entities API', () => {
   describe('GET /datasets/:name/entities', () => {
 
-    it('should return notfound if the dataset does not exist', testService(async (service) => {
+    it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.get('/v1/projects/1/datasets/nonexistent/entities')
         .expect(404);
     }));
 
-    it('should reject if the user cannot read', testService(async (service, container) => {
-      await populateEntities(service, container);
-
+    it('should reject if the user cannot read', testEntities(async (service) => {
       const asChelsea = await service.login('chelsea');
 
       await asChelsea.get('/v1/projects/1/datasets/people/entities')
@@ -64,9 +64,7 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should return metadata of the entities of the dataset', testService(async (service, container) => {
-      await populateEntities(service, container);
-
+    it('should return metadata of the entities of the dataset', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.get('/v1/projects/1/datasets/people/entities')
@@ -79,9 +77,7 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should return metadata of the entities of the dataset - only deleted', testService(async (service, container) => {
-      await populateEntities(service, container);
-
+    it('should return metadata of the entities of the dataset - only deleted', testEntities(async (service, container) => {
       const asAlice = await service.login('alice');
 
       // TODO: use request once it's ready
@@ -99,9 +95,7 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should return extended metadata of the entities of the dataset', testService(async (service, container) => {
-      await populateEntities(service, container);
-
+    it('should return extended metadata of the entities of the dataset', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.get('/v1/projects/1/datasets/people/entities')
@@ -118,34 +112,28 @@ describe('Entities API', () => {
 
   describe('GET /datasets/:name/entities/:uuid', () => {
 
-    it('should return notfound if the dataset does not exist', testService(async (service) => {
+    it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.get('/v1/projects/1/datasets/nonexistent/entities/123')
         .expect(404);
     }));
 
-    it('should return notfound if the entity does not exist', testService(async (service, container) => {
-      await populateEntities(service, container);
-
+    it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/123')
         .expect(404);
     }));
 
-    it('should reject if the user cannot read', testService(async (service, container) => {
-      await populateEntities(service, container);
-
+    it('should reject if the user cannot read', testEntities(async (service) => {
       const asChelsea = await service.login('chelsea');
 
       await asChelsea.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(403);
     }));
 
-    it('should return full entity', testService(async (service, container) => {
-      await populateEntities(service, container);
-
+    it('should return full entity', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
@@ -163,9 +151,7 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should return full extended entity', testService(async (service, container) => {
-      await populateEntities(service, container);
-
+    it('should return full extended entity', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
