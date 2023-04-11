@@ -397,5 +397,5 @@ should.Assertion.add('SubmissionDetails', function SubmissionDetails() {
 
   this.obj.should.have.property('xmlFormId').which.is.a.String();
   this.obj.should.have.property('instanceId').which.is.a.String();
-  this.obj.should.have.property('instanceName').which.is.a.String();
+  this.obj.should.have.property('instanceName'); // can be null
 });

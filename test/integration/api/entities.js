@@ -35,6 +35,35 @@ const testEntities = (test) => testService(async (service, container) => {
 
 describe('Entities API', () => {
   describe('GET /datasets/:name/entities', () => {
+
+    it('should return notfound if the dataset does not exist', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/nonexistent/entities')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot read', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.get('/v1/projects/1/datasets/people/entities')
+        .expect(403);
+    }));
+
+    it('should happily return given no entities', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql([]);
+        });
+    }));
+
     it('should return metadata of the entities of the dataset', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
@@ -82,10 +111,32 @@ describe('Entities API', () => {
   });
 
   describe('GET /datasets/:name/entities/:uuid', () => {
-    it('should return full entity', testService(async (service) => {
+
+    it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/People/entities/00000000-0000-0000-0000-000000000001')
+      await asAlice.get('/v1/projects/1/datasets/nonexistent/entities/123')
+        .expect(404);
+    }));
+
+    it('should return notfound if the entity does not exist', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/123')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot read', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(403);
+    }));
+
+    it('should return full entity', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(200)
         .then(({ body: person }) => {
           person.should.be.an.Entity();
@@ -94,14 +145,30 @@ describe('Entities API', () => {
           person.currentVersion.should.have.property('source').which.is.an.EntitySource();
 
           person.currentVersion.should.have.property('data').which.is.eql({
-            firstName: 'Jane',
-            lastName: 'Roe',
-            city: 'Toronto'
+            age: '88',
+            first_name: 'Alice'
           });
         });
     }));
 
-    // it should return extended entity
+    it('should return full extended entity', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body: person }) => {
+          person.should.be.an.ExtendedEntity();
+          person.should.have.property('currentVersion').which.is.an.ExtendedEntityDef();
+
+          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
+
+          person.currentVersion.should.have.property('data').which.is.eql({
+            age: '88',
+            first_name: 'Alice'
+          });
+        });
+    }));
   });
 
   describe('GET /datasets/:name/entities/:uuid/versions', () => {
