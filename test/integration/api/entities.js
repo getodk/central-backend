@@ -14,16 +14,20 @@ const testEntities = (test) => testService(async (service, container) => {
     .send(testData.forms.simpleEntity)
     .expect(200);
 
+  const promises = [];
+
   ['one', 'two'].forEach(async instanceId => {
-    await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+    promises.push(asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
       .send(testData.instances.simpleEntity[instanceId])
       .set('Content-Type', 'application/xml')
-      .expect(200);
+      .expect(200));
 
-    await asAlice.patch(`/v1/projects/1/forms/simpleEntity/submissions/${instanceId}`)
+    promises.push(asAlice.patch(`/v1/projects/1/forms/simpleEntity/submissions/${instanceId}`)
       .send({ reviewState: 'approved' })
-      .expect(200);
+      .expect(200));
   });
+
+  await Promise.all(promises);
 
   await exhaust(container);
 
