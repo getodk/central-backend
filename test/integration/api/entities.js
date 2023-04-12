@@ -77,6 +77,7 @@ describe('Entities API', () => {
           people.forEach(p => {
             p.should.be.an.Entity();
             p.should.have.property('currentVersion').which.is.an.EntityDef();
+            p.currentVersion.should.not.have.property('data');
           });
         });
     }));
