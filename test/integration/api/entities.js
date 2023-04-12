@@ -201,10 +201,36 @@ describe('Entities API', () => {
   });
 
   describe('GET /datasets/:name/entities/:uuid/versions', () => {
-    it('should return all versions of the Entity', testService(async (service) => {
+    it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/People/entities/00000000-0000-0000-0000-000000000001/versions')
+      await asAlice.get('/v1/projects/1/datasets/nonexistent/entities/123/versions')
+        .expect(404);
+    }));
+
+    it('should return notfound if the entity does not exist', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/123/versions')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot read', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(403);
+    }));
+
+    it('should return all versions of the Entity', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await container.db.any(sql`UPDATE entity_defs SET current = false;`);
+      await container.db.any(sql`
+        INSERT INTO entity_defs ("entityId", "createdAt", "current", "submissionDefId", "data", "creatorId", "userAgent", "label")
+        SELECT "entityId", clock_timestamp(), TRUE, NULL, "data", "creatorId", 'postman', "label" || ' updated' FROM entity_defs`);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
         .expect(200)
         .then(({ body: versions }) => {
           versions.forEach(v => {
