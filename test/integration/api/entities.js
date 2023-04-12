@@ -31,9 +31,6 @@ const testEntities = (test) => testService(async (service, container) => {
 
   await exhaust(container);
 
-  // Temporary code, we will remove it once we real migration ready
-  await container.db.any(sql`UPDATE entity_defs SET label='TEMP', "userAgent"='NODEJS', "creatorId" = 5;`);
-
   await test(service, container);
 });
 
@@ -86,7 +83,7 @@ describe('Entities API', () => {
       const asAlice = await service.login('alice');
 
       // TODO: use request once it's ready
-      await container.db.any(sql`UPDATE entities SET "deletedAt" = clock_timestamp() WHERE id = 1;`);
+      await container.db.any(sql`UPDATE entities SET "deletedAt" = clock_timestamp() WHERE uuid = '12345678-1234-4123-8234-123456789abc';`);
 
       await asAlice.get('/v1/projects/1/datasets/people/entities?deleted=true')
         .expect(200)
@@ -167,6 +164,33 @@ describe('Entities API', () => {
           person.should.have.property('currentVersion').which.is.an.ExtendedEntityDef();
 
           person.currentVersion.should.have.property('source').which.is.an.EntitySource();
+
+          person.currentVersion.should.have.property('data').which.is.eql({
+            age: '88',
+            first_name: 'Alice'
+          });
+        });
+    }));
+
+    it('should return full entity even if form+submission has been deleted and purged', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      await container.Forms.purge(true);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.should.be.an.Entity();
+          person.should.have.property('currentVersion').which.is.an.EntityDef();
+
+          // TODO: needs to be revisited after POST/PUT api
+          person.currentVersion.should.have.property('source').which.is.eql({
+            type: 'api',
+            details: null
+          });
 
           person.currentVersion.should.have.property('data').which.is.eql({
             age: '88',
