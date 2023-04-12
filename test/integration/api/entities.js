@@ -1,24 +1,91 @@
+const appRoot = require('app-root-path');
 const { testService } = require('../setup');
+const testData = require('../../data/xml');
+const { sql } = require('slonik');
+
+/* eslint-disable import/no-dynamic-require */
+const { exhaust } = require(appRoot + '/lib/worker/worker');
+/* eslint-enable import/no-dynamic-require */
+
+const testEntities = (test) => testService(async (service, container) => {
+  const asAlice = await service.login('alice');
+
+  await asAlice.post('/v1/projects/1/forms?publish=true')
+    .send(testData.forms.simpleEntity)
+    .expect(200);
+
+  const promises = [];
+
+  ['one', 'two'].forEach(async instanceId => {
+    promises.push(asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+      .send(testData.instances.simpleEntity[instanceId])
+      .set('Content-Type', 'application/xml')
+      .expect(200));
+
+    promises.push(asAlice.patch(`/v1/projects/1/forms/simpleEntity/submissions/${instanceId}`)
+      .send({ reviewState: 'approved' })
+      .expect(200));
+  });
+
+  await Promise.all(promises);
+
+  await exhaust(container);
+
+  await test(service, container);
+});
 
 describe('Entities API', () => {
   describe('GET /datasets/:name/entities', () => {
-    it('should return metadata of the entities of the dataset', testService(async (service) => {
+
+    it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/People/entities')
+      await asAlice.get('/v1/projects/1/datasets/nonexistent/entities')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot read', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.get('/v1/projects/1/datasets/people/entities')
+        .expect(403);
+    }));
+
+    it('should happily return given no entities', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql([]);
+        });
+    }));
+
+    it('should return metadata of the entities of the dataset', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
         .expect(200)
         .then(({ body: people }) => {
           people.forEach(p => {
             p.should.be.an.Entity();
             p.should.have.property('currentVersion').which.is.an.EntityDef();
+            p.currentVersion.should.not.have.property('data');
           });
         });
     }));
 
-    it('should return metadata of the entities of the dataset - only deleted', testService(async (service) => {
+    it('should return metadata of the entities of the dataset - only deleted', testEntities(async (service, container) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/People/entities?deleted=true')
+      // TODO: use request once it's ready
+      await container.db.any(sql`UPDATE entities SET "deletedAt" = clock_timestamp() WHERE uuid = '12345678-1234-4123-8234-123456789abc';`);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities?deleted=true')
         .expect(200)
         .then(({ body: people }) => {
           people.forEach(p => {
@@ -30,10 +97,10 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should return extended metadata of the entities of the dataset', testService(async (service) => {
+    it('should return extended metadata of the entities of the dataset', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/People/entities')
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
         .set('X-Extended-Metadata', true)
         .expect(200)
         .then(({ body: people }) => {
@@ -46,10 +113,32 @@ describe('Entities API', () => {
   });
 
   describe('GET /datasets/:name/entities/:uuid', () => {
-    it('should return full entity', testService(async (service) => {
+
+    it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/People/entities/00000000-0000-0000-0000-000000000001')
+      await asAlice.get('/v1/projects/1/datasets/nonexistent/entities/123')
+        .expect(404);
+    }));
+
+    it('should return notfound if the entity does not exist', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/123')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot read', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(403);
+    }));
+
+    it('should return full entity', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(200)
         .then(({ body: person }) => {
           person.should.be.an.Entity();
@@ -58,14 +147,57 @@ describe('Entities API', () => {
           person.currentVersion.should.have.property('source').which.is.an.EntitySource();
 
           person.currentVersion.should.have.property('data').which.is.eql({
-            firstName: 'Jane',
-            lastName: 'Roe',
-            city: 'Toronto'
+            age: '88',
+            first_name: 'Alice'
           });
         });
     }));
 
-    // it should return extended entity
+    it('should return full extended entity', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body: person }) => {
+          person.should.be.an.ExtendedEntity();
+          person.should.have.property('currentVersion').which.is.an.ExtendedEntityDef();
+
+          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
+
+          person.currentVersion.should.have.property('data').which.is.eql({
+            age: '88',
+            first_name: 'Alice'
+          });
+        });
+    }));
+
+    it('should return full entity even if form+submission has been deleted and purged', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      await container.Forms.purge(true);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.should.be.an.Entity();
+          person.should.have.property('currentVersion').which.is.an.EntityDef();
+
+          // TODO: needs to be revisited after POST/PUT api
+          person.currentVersion.should.have.property('source').which.is.eql({
+            type: 'api',
+            details: null
+          });
+
+          person.currentVersion.should.have.property('data').which.is.eql({
+            age: '88',
+            first_name: 'Alice'
+          });
+        });
+    }));
   });
 
   describe('GET /datasets/:name/entities/:uuid/versions', () => {

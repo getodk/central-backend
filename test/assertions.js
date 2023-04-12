@@ -358,7 +358,6 @@ should.Assertion.add('EntityDef', function assertEntityDef() {
   this.params = { operator: 'to be an Entity Def (version)' };
 
 
-  this.obj.should.have.property('versionNumber').which.is.a.Number(); // May not be needed
   this.obj.should.have.property('label').which.is.a.String();
   this.obj.should.have.property('current').which.is.a.Boolean();
   this.obj.should.have.property('createdAt').which.is.a.isoDate();
@@ -389,14 +388,14 @@ should.Assertion.add('EntitySource', function Source() {
   this.obj.should.have.property('details');
 
   // details are there only in case of type is submission
-  if (this.obj.details != null) this.obj.details.should.be.SubmissionDetails();
+  if (this.obj.details != null) this.obj.details.should.be.EntitySourceSubmissionDetails();
 });
 
 // Entity Source Submission Details
-should.Assertion.add('SubmissionDetails', function SubmissionDetails() {
-  this.params = { operator: 'have Submission details' };
+should.Assertion.add('EntitySourceSubmissionDetails', function SubmissionDetails() {
+  this.params = { operator: 'have Entity Source Submission details' };
 
   this.obj.should.have.property('xmlFormId').which.is.a.String();
   this.obj.should.have.property('instanceId').which.is.a.String();
-  this.obj.should.have.property('instanceName').which.is.a.String();
+  this.obj.should.have.property('instanceName'); // can be null
 });
