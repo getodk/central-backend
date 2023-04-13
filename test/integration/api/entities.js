@@ -271,15 +271,53 @@ describe('Entities API', () => {
   });
 
   describe('GET /datasets/:name/entities/:uuid/diffs', () => {
-    it('should return differences between the version of an Entity', testService(async (service) => {
+    it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/People/entities/00000000-0000-0000-0000-000000000001/diffs')
+      await asAlice.get('/v1/projects/1/datasets/nonexistent/entities/123/diffs')
+        .expect(404);
+    }));
+
+    it('should return notfound if the entity does not exist', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/123/diffs')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot read', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/diffs')
+        .expect(403);
+    }));
+
+    it('should return differences between the version of an Entity', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await container.db.any(sql`
+        INSERT INTO entity_defs ("entityId", "createdAt", "current", "submissionDefId", "data", "creatorId", "userAgent", "label")
+        SELECT "entityId", clock_timestamp(), "current", NULL::INTEGER, '{ "age": "12", "first_name": "John" }'::JSONB, entity_defs."creatorId", 'postman', "label" || ' updated' FROM entity_defs
+        JOIN entities ON entity_defs."entityId" = entities.id
+        WHERE uuid = '12345678-1234-4123-8234-123456789abc'
+        UNION
+        SELECT "entityId", clock_timestamp(), "current", NULL::INTEGER, '{ "age": "12", "first_name": "John", "city": "Toronto" }'::JSONB, entity_defs."creatorId", 'postman', "label" || ' updated' FROM entity_defs
+        JOIN entities ON entity_defs."entityId" = entities.id
+        WHERE uuid = '12345678-1234-4123-8234-123456789abc'
+        `);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/diffs')
         .expect(200)
         .then(({ body }) => {
-          body[2][0].should.be.eql({ old: 'John', new: 'Jane', propertyName: 'firstName' });
-          body[2][1].should.be.eql({ old: 'Doe', new: 'Roe', propertyName: 'lastName' });
-          body[2][2].should.be.eql({ old: 'John Doe', new: 'Jane Roe', propertyName: 'label' });
+          body.should.be.eql([
+            [
+              { old: '88', new: '12', propertyName: 'age' },
+              { old: 'Alice', new: 'John', propertyName: 'first_name' }
+            ],
+            [
+              { new: 'Toronto', propertyName: 'city' }
+            ]
+          ]);
         });
     }));
   });

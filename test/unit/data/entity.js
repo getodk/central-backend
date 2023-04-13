@@ -2,7 +2,7 @@ const should = require('should');
 const appRoot = require('app-root-path');
 const assert = require('assert');
 // eslint-disable-next-line import/no-dynamic-require
-const { parseSubmissionXml, validateEntity, extractSelectedProperties, selectFields } = require(appRoot + '/lib/data/entity');
+const { parseSubmissionXml, validateEntity, extractSelectedProperties, selectFields, diffEntityData } = require(appRoot + '/lib/data/entity');
 // eslint-disable-next-line import/no-dynamic-require
 const { fieldsFor } = require(appRoot + '/test/util/schema');
 // eslint-disable-next-line import/no-dynamic-require
@@ -315,6 +315,60 @@ describe('extracting entities from submissions', () => {
         lastName: entity.def.data.lastName,
         date_of_birth: entity.def.data['date.of.birth']
       });
+    });
+  });
+
+  describe('diffEntityData', () => {
+
+    it('should return an array of empty arrays when given an array of identical entities', () => {
+      const defs = [
+        { name: 'John', age: '12' },
+        { name: 'John', age: '12' },
+        { name: 'John', age: '12' }
+      ];
+
+      const result = diffEntityData(defs);
+
+      result.forEach(diff => diff.should.be.an.Array().and.be.empty());
+    });
+
+    it('should return an empty array when given an array with one or fewer elements', () => {
+      const emptyDefs = [];
+      const singleDef = [{ name: 'John', age: '12' }];
+
+      const emptyResult = diffEntityData(emptyDefs);
+      const singleResult = diffEntityData(singleDef);
+
+      emptyResult.should.be.an.Array().and.be.empty();
+      singleResult.should.be.an.Array().and.be.empty();
+    });
+
+    it('should return the diff', () => {
+      const defs = [
+        { name: 'John', age: '12' },
+        { name: 'Jane', age: '12', city: 'Toronto' },
+        { name: 'Robert', age: '12', city: 'Boston' },
+        { name: 'Robert', age: '', city: '', sex: 'male' },
+      ];
+
+      const expectedOutput = [
+        [
+          { old: 'John', new: 'Jane', propertyName: 'name' },
+          { old: undefined, new: 'Toronto', propertyName: 'city' }
+        ],
+        [
+          { old: 'Jane', new: 'Robert', propertyName: 'name' },
+          { old: 'Toronto', new: 'Boston', propertyName: 'city' }
+        ],
+        [
+          { old: '12', new: '', propertyName: 'age' },
+          { old: 'Boston', new: '', propertyName: 'city' },
+          { old: undefined, new: 'male', propertyName: 'sex' }
+        ]
+      ];
+
+      diffEntityData(defs).should.be.eql(expectedOutput);
+
     });
   });
 });
