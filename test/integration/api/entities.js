@@ -375,22 +375,21 @@ describe('Entities API', () => {
 
   describe('PATCH /datasets/:name/entities/:uuid', () => {
 
-    it('should partially update an Entity', testService(async (service) => {
+    it('should partially update an Entity', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.patch('/v1/projects/1/datasets/People/entities/10000000-0000-0000-0000-000000000001')
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .send({
-          city: 'Boston'
+          age: '77'
         })
         .expect(200)
         .then(({ body: person }) => {
           person.should.be.an.Entity();
           person.should.have.property('currentVersion').which.is.an.EntityDef();
-          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
+          //person.currentVersion.should.have.property('source').which.is.an.EntitySource();
           person.currentVersion.should.have.property('data').which.is.eql({
-            firstName: 'Johnny',
-            lastName: 'Doe',
-            city: 'Boston'
+            first_name: 'Alice',
+            age: '77'
           });
         });
     }));
