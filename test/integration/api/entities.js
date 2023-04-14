@@ -397,7 +397,7 @@ describe('Entities API', () => {
 
       await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .send({
-          age: '77'
+          data: { age: '77' }
         })
         .expect(200)
         .then(({ body: person }) => {
@@ -442,7 +442,7 @@ describe('Entities API', () => {
 
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
           .send({
-            age: '77'
+            data: { age: '77' }
           })
           .expect(200)
           .then(({ body: person }) => {
