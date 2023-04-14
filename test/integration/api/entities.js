@@ -201,10 +201,38 @@ describe('Entities API', () => {
   });
 
   describe('GET /datasets/:name/entities/:uuid/versions', () => {
-    it('should return all versions of the Entity', testService(async (service) => {
+    it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/People/entities/00000000-0000-0000-0000-000000000001/versions')
+      await asAlice.get('/v1/projects/1/datasets/nonexistent/entities/123/versions')
+        .expect(404);
+    }));
+
+    it('should return notfound if the entity does not exist', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/123/versions')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot read', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .expect(403);
+    }));
+
+    it('should return all versions of the Entity', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Use PUT API once that's ready
+      const chelsea = await container.db.one(sql`SELECT * FROM users WHERE email = 'chelsea@getodk.org';`);
+      await container.db.any(sql`UPDATE entity_defs SET current = false;`);
+      await container.db.any(sql`
+        INSERT INTO entity_defs ("entityId", "createdAt", "current", "submissionDefId", "data", "creatorId", "userAgent", "label")
+        SELECT "entityId", clock_timestamp(), TRUE, NULL, "data", ${chelsea.actorId}, 'postman', "label" || ' updated' FROM entity_defs`);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
         .expect(200)
         .then(({ body: versions }) => {
           versions.forEach(v => {
@@ -212,6 +240,31 @@ describe('Entities API', () => {
             v.should.have.property('source').which.is.an.EntitySource();
             v.should.have.property('data');
           });
+        });
+    }));
+
+    it('should return all versions of the Entity - Extended', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Use PUT API once that's ready
+      const chelsea = await container.db.one(sql`SELECT * FROM users WHERE email = 'chelsea@getodk.org';`);
+      await container.db.any(sql`UPDATE entity_defs SET current = false;`);
+      await container.db.any(sql`
+        INSERT INTO entity_defs ("entityId", "createdAt", "current", "submissionDefId", "data", "creatorId", "userAgent", "label")
+        SELECT "entityId", clock_timestamp(), TRUE, NULL, "data", ${chelsea.actorId}, 'postman', "label" || ' updated' FROM entity_defs`);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body: versions }) => {
+          versions.forEach(v => {
+            v.should.be.an.ExtendedEntityDef();
+            v.should.have.property('source').which.is.an.EntitySource();
+            v.should.have.property('data');
+          });
+
+          versions[0].creator.displayName.should.be.eql('Alice');
+          versions[1].creator.displayName.should.be.eql('Chelsea');
         });
     }));
 
