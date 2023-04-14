@@ -374,31 +374,94 @@ describe('Entities API', () => {
   });
 
   describe('PATCH /datasets/:name/entities/:uuid', () => {
-
-    it('should partially update an Entity', testEntities(async (service) => {
+    it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
+      await asAlice.patch('/v1/projects/1/datasets/nonexistent/entities/123')
+        .expect(404);
+    }));
 
-      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+    it('should return notfound if the entity does not exist', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/123')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot read', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+      await asChelsea.patch('/v1/projects/1/datasets/people/entities/123')
+        .expect(403);
+    }));
+
+    it('should store the entity update source and creator id', testEntities(async (service) => {
+      const asBob = await service.login('bob');
+
+      await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .send({
           age: '77'
         })
         .expect(200)
         .then(({ body: person }) => {
+          // Response is the right shape
           person.should.be.an.Entity();
           person.should.have.property('currentVersion').which.is.an.EntityDef();
-          //person.currentVersion.should.have.property('source').which.is.an.EntitySource();
-          person.currentVersion.should.have.property('data').which.is.eql({
-            first_name: 'Alice',
-            age: '77'
+          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
+
+          // Source is correct
+          // TODO: needs to be revisited after POST/PUT api
+          person.currentVersion.should.have.property('source').which.is.eql({
+            type: 'api',
+            details: null
           });
+
+          // Creator id is correct
+          person.currentVersion.creatorId.should.equal(6); // bob
+          person.creatorId.should.equal(5); // alice - original entity creator
+
+          // Updated date makes sense
+          person.updatedAt.should.be.a.recentIsoDate();
+        });
+
+      // Re-check source and creator by re-getting entity
+      await asBob.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.should.have.property('source').which.is.eql({
+            type: 'api',
+            details: null
+          });
+          person.currentVersion.creatorId.should.equal(6); // bob
+          person.creatorId.should.equal(5); // alice - original entity creator
+          person.updatedAt.should.be.a.recentIsoDate();
         });
     }));
 
-    // it should reject if uuid is not found
-    // it should reject if uuid is provided in the body and it is different then the queryParam
-    // it should reject if property is not present in dataset.publishedProperties
-    // it should reject if user don't have permission
+    describe('updating data', () => {
+      it('should partially update an Entity', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+        const newData = { age: '77', first_name: 'Alice' };
 
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .send({
+            age: '77'
+          })
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.should.have.property('data').which.is.eql(newData);
+          });
+
+        // re-get entity to check data
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.should.have.property('data').which.is.eql(newData);
+          });
+      }));
+
+      // should let label be updated
+      // should let properties added to dataset after initial entity be added/updated
+      // should let fields be set to empty strings
+      // it should reject if property is not present in dataset.publishedProperties
+    });
   });
 
   describe('DELETE /datasets/:name/entities/:uuid', () => {
