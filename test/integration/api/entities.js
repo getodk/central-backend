@@ -462,6 +462,21 @@ describe('Entities API', () => {
       // should let fields be set to empty strings
       // it should reject if property is not present in dataset.publishedProperties
     });
+
+    it('should log the entity update event in the audit log', testEntities(async (service, container) => {
+      const asBob = await service.login('bob');
+
+      await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .send({
+          data: { age: '77' }
+        })
+        .expect(200);
+
+      const audit = await container.Audits.getLatestByAction('entity.update.version').then(a => a.get());
+      audit.actorId.should.equal(6);
+      audit.details.uuid.should.eql('12345678-1234-4123-8234-123456789abc');
+      audit.details.dataset.should.eql('people');
+    }));
   });
 
   describe('DELETE /datasets/:name/entities/:uuid', () => {
