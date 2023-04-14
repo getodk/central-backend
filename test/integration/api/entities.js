@@ -399,6 +399,7 @@ describe('Entities API', () => {
         .send({
           data: { age: '77' }
         })
+        .set('User-Agent', 'central/tests')
         .expect(200)
         .then(({ body: person }) => {
           // Response is the right shape
@@ -417,6 +418,8 @@ describe('Entities API', () => {
           person.currentVersion.creatorId.should.equal(6); // bob
           person.creatorId.should.equal(5); // alice - original entity creator
 
+          person.currentVersion.userAgent.should.equal('central/tests');
+
           // Updated date makes sense
           person.updatedAt.should.be.a.recentIsoDate();
         });
@@ -431,6 +434,7 @@ describe('Entities API', () => {
           });
           person.currentVersion.creatorId.should.equal(6); // bob
           person.creatorId.should.equal(5); // alice - original entity creator
+          person.currentVersion.userAgent.should.equal('central/tests');
           person.updatedAt.should.be.a.recentIsoDate();
         });
     }));
