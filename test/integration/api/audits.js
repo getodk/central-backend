@@ -55,7 +55,6 @@ describe('/audits', () => {
               audits[0].details.should.eql({ data: {
                 actorId: david.actor.id,
                 email: 'david@getodk.org',
-                mfaSecret: null,
                 password: null
               } });
               audits[0].loggedAt.should.be.a.recentIsoDate();
@@ -113,7 +112,6 @@ describe('/audits', () => {
               audits[0].details.should.eql({ data: {
                 actorId: david.actor.id,
                 email: 'david@getodk.org',
-                mfaSecret: null,
                 password: null
               } });
               audits[0].loggedAt.should.be.a.recentIsoDate();
