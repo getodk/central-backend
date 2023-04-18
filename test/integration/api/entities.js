@@ -374,32 +374,250 @@ describe('Entities API', () => {
   });
 
   describe('PATCH /datasets/:name/entities/:uuid', () => {
-
-    it('should partially update an Entity', testService(async (service) => {
+    it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
+      await asAlice.patch('/v1/projects/1/datasets/nonexistent/entities/123')
+        .expect(404);
+    }));
 
-      await asAlice.patch('/v1/projects/1/datasets/People/entities/10000000-0000-0000-0000-000000000001')
+    it('should return notfound if the entity does not exist', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/123')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot update', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+      await asChelsea.patch('/v1/projects/1/datasets/people/entities/123')
+        .expect(403);
+    }));
+
+    it('should store the entity update source and creator id', testEntities(async (service) => {
+      const asBob = await service.login('bob');
+
+      await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .send({
-          city: 'Boston'
+          data: { age: '77' }
         })
+        .set('User-Agent', 'central/tests')
         .expect(200)
         .then(({ body: person }) => {
+          // Data is updated
+          person.currentVersion.data.age.should.equal('77');
+
+          // Response is the right shape
           person.should.be.an.Entity();
           person.should.have.property('currentVersion').which.is.an.EntityDef();
           person.currentVersion.should.have.property('source').which.is.an.EntitySource();
-          person.currentVersion.should.have.property('data').which.is.eql({
-            firstName: 'Johnny',
-            lastName: 'Doe',
-            city: 'Boston'
+
+          // Source is correct
+          // TODO: needs to be revisited after POST/PUT api
+          person.currentVersion.should.have.property('source').which.is.eql({
+            type: 'api',
+            details: null
           });
+
+          // Creator id is correct
+          person.currentVersion.creatorId.should.equal(6); // bob
+          person.creatorId.should.equal(5); // alice - original entity creator
+
+          person.currentVersion.userAgent.should.equal('central/tests');
+
+          // Updated date makes sense
+          person.updatedAt.should.be.a.recentIsoDate();
+        });
+
+      // Re-check source and creator by re-getting entity
+      await asBob.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.data.age.should.equal('77');
+          person.currentVersion.should.have.property('source').which.is.eql({
+            type: 'api',
+            details: null
+          });
+          person.currentVersion.creatorId.should.equal(6); // bob
+          person.creatorId.should.equal(5); // alice - original entity creator
+          person.currentVersion.userAgent.should.equal('central/tests');
+          person.updatedAt.should.be.a.recentIsoDate();
         });
     }));
 
-    // it should reject if uuid is not found
-    // it should reject if uuid is provided in the body and it is different then the queryParam
-    // it should reject if property is not present in dataset.publishedProperties
-    // it should reject if user don't have permission
+    describe('updating data', () => {
+      it('should partially update an Entity', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+        const newData = { age: '77', first_name: 'Alan' };
 
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .send({
+            data: { age: '77', first_name: 'Alan' }
+          })
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.should.have.property('data').which.is.eql(newData);
+            // label hasn't been updated
+            person.currentVersion.should.have.property('label').which.is.equal('Alice (88)');
+          });
+
+        // re-get entity to check data
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.should.have.property('data').which.is.eql(newData);
+            person.currentVersion.should.have.property('label').which.is.equal('Alice (88)');
+          });
+      }));
+
+      it('should return the latest data after multiple updates', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+        const newData = { age: '66', first_name: 'Arnold' };
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .send({
+            data: { age: '77' }
+          })
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .send({
+            data: { age: '66', first_name: 'Arnold' }
+          })
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .send({
+            data: { label: 'Arnold (66)' }
+          })
+          .expect(200);
+
+        // re-get entity to check data
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.should.have.property('data').which.is.eql(newData);
+            person.currentVersion.should.have.property('label').which.is.equal('Arnold (66)');
+          });
+      }));
+
+      it('should update the label of an entity', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .send({
+            data: { label: 'New Label' }
+          })
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.should.have.property('label').which.is.eql('New Label');
+          });
+
+        // re-get entity to check data
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.should.have.property('label').which.is.eql('New Label');
+          });
+      }));
+
+      it('should update an entity with additional properties', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity
+            .replace(/simpleEntity/, 'simpleEntity2')
+            .replace(/first_name/, 'city'))
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        const newData = { age: '88', first_name: 'Alice', city: 'Toronto' };
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .send({
+            data: { city: 'Toronto' }
+          })
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.should.have.property('data').which.is.eql(newData);
+          });
+
+        // re-get entity to check data
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.should.have.property('data').which.is.eql(newData);
+          });
+      }));
+
+      it('should let a propery be set to empty string', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+        const newData = { age: '88', first_name: '' };
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .send({
+            data: { first_name: '' }
+          })
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.should.have.property('data').which.is.eql(newData);
+          });
+
+        // re-get entity to check data
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.should.have.property('data').which.is.eql(newData);
+          });
+      }));
+
+      it('should transform null property to empty string', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+        const newData = { age: '88', first_name: '' };
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .send({
+            data: { first_name: null }
+          })
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.should.have.property('data').which.is.eql(newData);
+          });
+
+        // re-get entity to check data
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.should.have.property('data').which.is.eql(newData);
+          });
+      }));
+
+      it('should reject if updating property not in dataset', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .send({
+            data: { favorite_candy: 'chocolate' }
+          })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.14);
+          });
+      }));
+    });
+
+    it('should log the entity update event in the audit log', testEntities(async (service, container) => {
+      const asBob = await service.login('bob');
+
+      await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .send({
+          data: { age: '77' }
+        })
+        .expect(200);
+
+      const audit = await container.Audits.getLatestByAction('entity.update.version').then(a => a.get());
+      audit.actorId.should.equal(6);
+      audit.details.uuid.should.eql('12345678-1234-4123-8234-123456789abc');
+      audit.details.dataset.should.eql('people');
+    }));
   });
 
   describe('DELETE /datasets/:name/entities/:uuid', () => {
