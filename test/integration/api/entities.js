@@ -434,10 +434,20 @@ describe('Entities API', () => {
         .expect(403);
     }));
 
+    it('should reject force=true flag is not provided', testEntities(async (service) => {
+      // TODO: change logic around force flag and enforcing certain kinds of updates
+      const asAlice = await service.login('alice');
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.14);
+        });
+    }));
+
     it('should store the entity update source and creator id', testEntities(async (service) => {
       const asBob = await service.login('bob');
 
-      await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+      await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
         .send({
           data: { age: '77' }
         })
@@ -490,7 +500,7 @@ describe('Entities API', () => {
         const asAlice = await service.login('alice');
         const newData = { age: '77', first_name: 'Alan' };
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
           .send({
             data: { age: '77', first_name: 'Alan' }
           })
@@ -514,19 +524,19 @@ describe('Entities API', () => {
         const asAlice = await service.login('alice');
         const newData = { age: '66', first_name: 'Arnold' };
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
           .send({
             data: { age: '77' }
           })
           .expect(200);
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
           .send({
             data: { age: '66', first_name: 'Arnold' }
           })
           .expect(200);
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
           .send({
             data: { label: 'Arnold (66)' }
           })
@@ -544,7 +554,7 @@ describe('Entities API', () => {
       it('should update the label of an entity', testEntities(async (service) => {
         const asAlice = await service.login('alice');
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
           .send({
             data: { label: 'New Label' }
           })
@@ -573,7 +583,7 @@ describe('Entities API', () => {
 
         const newData = { age: '88', first_name: 'Alice', city: 'Toronto' };
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
           .send({
             data: { city: 'Toronto' }
           })
@@ -594,7 +604,7 @@ describe('Entities API', () => {
         const asAlice = await service.login('alice');
         const newData = { age: '88', first_name: '' };
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
           .send({
             data: { first_name: '' }
           })
@@ -615,7 +625,7 @@ describe('Entities API', () => {
         const asAlice = await service.login('alice');
         const newData = { age: '88', first_name: '' };
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
           .send({
             data: { first_name: null }
           })
@@ -635,7 +645,7 @@ describe('Entities API', () => {
       it('should reject if updating property not in dataset', testEntities(async (service) => {
         const asAlice = await service.login('alice');
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
           .send({
             data: { favorite_candy: 'chocolate' }
           })
@@ -649,7 +659,7 @@ describe('Entities API', () => {
     it('should log the entity update event in the audit log', testEntities(async (service, container) => {
       const asBob = await service.login('bob');
 
-      await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+      await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
         .send({
           data: { age: '77' }
         })
