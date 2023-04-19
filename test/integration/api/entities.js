@@ -222,15 +222,12 @@ describe('Entities API', () => {
         .expect(403);
     }));
 
-    it('should return all versions of the Entity', testEntities(async (service, container) => {
+    it('should return all versions of the Entity', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      // Use PUT API once that's ready
-      const chelsea = await container.db.one(sql`SELECT * FROM users WHERE email = 'chelsea@getodk.org';`);
-      await container.db.any(sql`UPDATE entity_defs SET current = false;`);
-      await container.db.any(sql`
-        INSERT INTO entity_defs ("entityId", "createdAt", "current", "submissionDefId", "data", "creatorId", "userAgent", "label")
-        SELECT "entityId", clock_timestamp(), TRUE, NULL, "data", ${chelsea.actorId}, 'postman', "label" || ' updated' FROM entity_defs`);
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .send({ data: { age: '12', first_name: 'John' } })
+        .expect(200);
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
         .expect(200)
@@ -240,18 +237,19 @@ describe('Entities API', () => {
             v.should.have.property('source').which.is.an.EntitySource();
             v.should.have.property('data');
           });
+
+          versions[1].data.should.be.eql({ age: '12', first_name: 'John' });
         });
     }));
 
-    it('should return all versions of the Entity - Extended', testEntities(async (service, container) => {
+    it('should return all versions of the Entity - Extended', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      // Use PUT API once that's ready
-      const chelsea = await container.db.one(sql`SELECT * FROM users WHERE email = 'chelsea@getodk.org';`);
-      await container.db.any(sql`UPDATE entity_defs SET current = false;`);
-      await container.db.any(sql`
-        INSERT INTO entity_defs ("entityId", "createdAt", "current", "submissionDefId", "data", "creatorId", "userAgent", "label")
-        SELECT "entityId", clock_timestamp(), TRUE, NULL, "data", ${chelsea.actorId}, 'postman', "label" || ' updated' FROM entity_defs`);
+      const asBob = await service.login('bob');
+
+      await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .send({ data: { age: '12', first_name: 'John' } })
+        .expect(200);
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
         .set('X-Extended-Metadata', true)
@@ -264,7 +262,9 @@ describe('Entities API', () => {
           });
 
           versions[0].creator.displayName.should.be.eql('Alice');
-          versions[1].creator.displayName.should.be.eql('Chelsea');
+          versions[1].creator.displayName.should.be.eql('Bob');
+
+          versions[1].data.should.be.eql({ age: '12', first_name: 'John' });
         });
     }));
 
@@ -292,19 +292,22 @@ describe('Entities API', () => {
         .expect(403);
     }));
 
-    it('should return differences between the version of an Entity', testEntities(async (service, container) => {
+    it('should return differences between the version of an Entity', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await container.db.any(sql`
-        INSERT INTO entity_defs ("entityId", "createdAt", "current", "submissionDefId", "data", "creatorId", "userAgent", "label")
-        SELECT "entityId", clock_timestamp(), "current", NULL::INTEGER, '{ "age": "12", "first_name": "John" }'::JSONB, entity_defs."creatorId", 'postman', "label" || ' updated' FROM entity_defs
-        JOIN entities ON entity_defs."entityId" = entities.id
-        WHERE uuid = '12345678-1234-4123-8234-123456789abc'
-        UNION
-        SELECT "entityId", clock_timestamp(), "current", NULL::INTEGER, '{ "age": "12", "first_name": "John", "city": "Toronto" }'::JSONB, entity_defs."creatorId", 'postman', "label" || ' updated' FROM entity_defs
-        JOIN entities ON entity_defs."entityId" = entities.id
-        WHERE uuid = '12345678-1234-4123-8234-123456789abc'
-        `);
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .send({ data: { age: '12', first_name: 'John' } })
+        .expect(200);
+
+      // creating a new property in the dataset
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(testData.forms.simpleEntity
+          .replace('first_name', 'city'))
+        .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=2.0'));
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .send({ data: { age: '12', first_name: 'John', city: 'Toronto' } })
+        .expect(200);
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/diffs')
         .expect(200)
