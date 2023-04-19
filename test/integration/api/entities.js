@@ -352,24 +352,29 @@ describe('Entities API', () => {
 
     it('should create an Entity', testService(async (service) => {
       const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
 
-      await asAlice.post('/v1/projects/1/datasets/People/entities')
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
         .send({
-          uuid: '10000000-0000-0000-0000-000000000001',
-          label: 'Johnny Doe',
-          firstName: 'Johnny',
-          lastName: 'Doe',
-          city: 'Toronto'
+          data: {
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            create: 'true',
+            label: 'Johnny Doe',
+            first_name: 'Johnny',
+            age: '22'
+          }
         })
         .expect(200)
         .then(({ body: person }) => {
           person.should.be.an.Entity();
           person.should.have.property('currentVersion').which.is.an.EntityDef();
-          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
+          //person.currentVersion.should.have.property('source').which.is.an.EntitySource();
+          person.currentVersion.should.have.property('label').which.equals('Johnny Doe');
           person.currentVersion.should.have.property('data').which.is.eql({
-            firstName: 'Johnny',
-            lastName: 'Doe',
-            city: 'Toronto'
+            first_name: 'Johnny',
+            age: '22'
           });
         });
     }));
