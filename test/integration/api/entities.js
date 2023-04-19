@@ -438,9 +438,9 @@ describe('Entities API', () => {
       // TODO: change logic around force flag and enforcing certain kinds of updates
       const asAlice = await service.login('alice');
       await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
-        .expect(409)
+        .expect(501)
         .then(({ body }) => {
-          body.code.should.equal(409.14);
+          body.code.should.equal(501.1);
         });
     }));
 
