@@ -296,7 +296,7 @@ describe('Entities API', () => {
       const asAlice = await service.login('alice');
 
       await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
-        .send({ data: { age: '12', first_name: 'John' } })
+        .send({ data: { age: '12', first_name: 'John', label: 'John (12)' } })
         .expect(200);
 
       // creating a new property in the dataset
@@ -314,6 +314,7 @@ describe('Entities API', () => {
         .then(({ body }) => {
           body.should.be.eql([
             [
+              { old: 'Alice (88)', new: 'John (12)', propertyName: 'label' },
               { old: '88', new: '12', propertyName: 'age' },
               { old: 'Alice', new: 'John', propertyName: 'first_name' }
             ],
