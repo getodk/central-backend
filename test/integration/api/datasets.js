@@ -688,6 +688,45 @@ describe('datasets and entities', () => {
               ]);
           });
       }));
+
+      // bug # 833
+      it('should not return null in properties.forms when creation form is updated', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=v2.0')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people')
+          .expect(200)
+          .then(({ body }) => {
+            body.properties[0].name.should.be.eql('first_name');
+            body.properties[0].forms.should.be.eql([
+              {
+                xmlFormId: 'simpleEntity',
+                name: 'simpleEntity'
+              }
+            ]);
+
+            body.properties[1].name.should.be.eql('age');
+            body.properties[1].forms.should.be.eql([
+              {
+                xmlFormId: 'simpleEntity',
+                name: 'simpleEntity'
+              }
+            ]);
+          });
+
+
+      }));
+
     });
   });
 
