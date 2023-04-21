@@ -1,7 +1,6 @@
 const appRoot = require('app-root-path');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
-const { sql } = require('slonik');
 
 /* eslint-disable import/no-dynamic-require */
 const { exhaust } = require(appRoot + '/lib/worker/worker');
@@ -79,11 +78,11 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should return metadata of the entities of the dataset - only deleted', testEntities(async (service, container) => {
+    it('should return metadata of the entities of the dataset - only deleted', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      // TODO: use request once it's ready
-      await container.db.any(sql`UPDATE entities SET "deletedAt" = clock_timestamp() WHERE uuid = '12345678-1234-4123-8234-123456789abc';`);
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200);
 
       await asAlice.get('/v1/projects/1/datasets/people/entities?deleted=true')
         .expect(200)
@@ -700,6 +699,22 @@ describe('Entities API', () => {
           audit.acteeId.should.not.be.null();
           audit.details.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
         });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(404);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.filter(e => e.uuid === '12345678-1234-4123-8234-123456789abc').should.be.empty();
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities?deleted=true')
+        .expect(200)
+        .then(({ body }) => {
+          body.filter(e => e.uuid === '12345678-1234-4123-8234-123456789abc').should.not.be.empty();
+        });
+
     }));
 
   });
