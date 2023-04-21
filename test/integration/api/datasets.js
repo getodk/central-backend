@@ -818,6 +818,46 @@ describe('datasets and entities', () => {
 
       }));
 
+      it('should return 304 content not changed if ETag matches', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+          .expect(200);
+
+        result.text.should.be.eql(
+          'name,label,first_name,age\n' +
+          '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88\n'
+        );
+
+        const etag = result.get('ETag');
+
+        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+          .set('If-None-Match', etag)
+          .expect(304);
+
+      }));
+
       it('should override blob and link dataset', testService((service, { Forms, FormAttachments, Audits, Datasets }) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
