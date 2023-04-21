@@ -225,7 +225,7 @@ describe('Entities API', () => {
     it('should return all versions of the Entity', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
         .send({ data: { age: '12', first_name: 'John' } })
         .expect(200);
 
@@ -247,7 +247,7 @@ describe('Entities API', () => {
 
       const asBob = await service.login('bob');
 
-      await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+      await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
         .send({ data: { age: '12', first_name: 'John' } })
         .expect(200);
 
@@ -295,7 +295,7 @@ describe('Entities API', () => {
     it('should return differences between the version of an Entity', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
         .send({ data: { age: '12', first_name: 'John', label: 'John (12)' } })
         .expect(200);
 
@@ -305,7 +305,7 @@ describe('Entities API', () => {
           .replace('first_name', 'city'))
         .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=2.0'));
 
-      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
         .send({ data: { age: '12', first_name: 'John', city: 'Toronto' } })
         .expect(200);
 
