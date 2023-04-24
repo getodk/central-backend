@@ -32,6 +32,11 @@ Finally, **system information and configuration** is available via a set of spec
 
 Here major and breaking changes to the API are listed by version.
 
+### ODK Central v2023.3
+
+**Changed**:
+- ETag support has been added for [Download Dataset](#reference/datasets/download-dataset/download-dataset) and [Download Form Attachment](#reference/forms/individual-form/downloading-a-form-attachment).
+
 ### ODK Central v2023.2
 
 **Added**:
@@ -1368,6 +1373,8 @@ This endpoint allows you to fetch the list of expected attachment files, and wil
 
 To download a single file, use this endpoint. The appropriate `Content-Disposition` (attachment with a filename) and `Content-Type` (based on the type supplied at upload time) will be given.
 
+This endpoint supports `ETag`, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, it returns a value in `ETag` header, you can pass this value in the header `If-None-Match` of subsequent requests. If the file has not been changed since the previous request, you will receive `304 Not Modified` response otherwise you'll get the latest file.
+
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
 
@@ -1376,10 +1383,13 @@ To download a single file, use this endpoint. The appropriate `Content-Dispositi
 
             Content-Type: {the MIME type of the attachment file itself}
             Content-Disposition: attachment; filename={the file's name}
+            ETag: content version identifier
 
     + Body
 
             (binary data)
+
++ Response 304
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -1619,6 +1629,8 @@ To upload a binary to an expected file slot, `POST` the binary to its endpoint. 
 
 As of version 2022.3, if there is already a Dataset linked to this attachment, it will be unlinked and replaced with the uploaded file.
 
+This endpoint supports `ETag` header, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, the endpoint returns a value in `ETag` header. If you pass that value in the `If-None-Match` header of a subsequent request, then if the file has not been changed since the previous request, you will receive `304 Not Modified` response; otherwise you'll get the latest file.
+
 + Parameters
     + xmlFormId: `simple` (string, required) - The `xmlFormId` of the Form being referenced.
     + filename: `people.csv` (string, required) - The name of that attachment.
@@ -1630,6 +1642,8 @@ As of version 2022.3, if there is already a Dataset linked to this attachment, i
 
 + Response 200 (application/json)
     + Attributes (Success)
+
++ Response 304
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -1861,6 +1875,8 @@ Attachments are specific to each version of a Form. You can retrieve the attachm
 
 To download a single file, use this endpoint. The appropriate `Content-Disposition` (attachment with a filename) and `Content-Type` (based on the type supplied at upload time) will be given.
 
+This endpoint supports `ETag` header, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, the endpoint returns a value in `ETag` header. If you pass that value in the `If-None-Match` header of a subsequent request, then if the file has not been changed since the previous request, you will receive `304 Not Modified` response; otherwise you'll get the latest file.
+
 + Parameters
     + version: `one` (string, required) - The `version` of the Form version being referenced. Pass `___` to indicate a blank `version`.
 
@@ -1869,10 +1885,13 @@ To download a single file, use this endpoint. The appropriate `Content-Dispositi
 
             Content-Type: {the MIME type of the attachment file itself}
             Content-Disposition: attachment; filename={the file's name}
+            ETag: content version identifier
 
     + Body
 
             (binary data)
+
++ Response 304
 
 + Response 403 (application/json)
     + Attributes (Error 403)
@@ -3013,6 +3032,8 @@ Returns the metadata of a Dataset including properties and forms that create and
 
 Datasets (collections of Entities) can be used as Attachments in other Forms, but they can also be downloaded directly as a CSV file. The CSV format matches what is expected for a [select question](https://docs.getodk.org/form-datasets/#building-selects-from-csv-files) with columns for `name`, `label,` and properties. In the case of Datasets, the `name` column is the Entity's UUID, the `label` column is the human-readable Entity label populated in the Submission, and the properties are the full set of Dataset Properties for that Dataset. If any Property for an given Entity is blank (e.g. it was not captured by that Form or was left blank), that field of the CSV is blank.
 
+This endpoint supports `ETag` header, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, the endpoint returns a value in the ETag header. If you pass that value in the If-None-Match header of a subsequent request, then if the Dataset has not been changed since the previous request, you will receive `304 Not Modified` response; otherwise you'll get the new data.
+
 Note that as of Version 2022.3 we do not guarantee the order of the Dataset Property columns.
 
 ```
@@ -3032,10 +3053,13 @@ name,label,first_name,last_name,age,favorite_color
 
             Content-Type: text/csv
             Content-Disposition: attachment; filename={the dataset name}.csv
+            ETag: content version identifier
 
     + Body
 
             (binary data)
+
++ Response 304
 
 + Response 403 (application/json)
     + Attributes (Error 403)

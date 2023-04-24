@@ -1085,6 +1085,70 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                   headers['content-type'].should.equal('text/csv; charset=utf-8');
                   text.should.equal('test,csv\n1,2');
                 })))));
+
+        it('should return 304 content not changed if ETag matches', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .send('test,csv\n1,2')
+            .set('Content-Type', 'text/csv')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
+            .expect(200);
+
+          const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+            .expect(200);
+
+          result.text.should.be.eql(
+            'test,csv\n' +
+              '1,2'
+          );
+
+          const etag = result.get('ETag');
+
+          await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+            .set('If-None-Match', etag)
+            .expect(304);
+
+        }));
+
+        it('should return latest content and correct ETag', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .send('test,csv\n1,2')
+            .set('Content-Type', 'text/csv')
+            .expect(200);
+
+          const attachmentV1 = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .expect(200);
+
+          const etagV1 = attachmentV1.get('ETag');
+
+          await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .send('test,csv\n1,2\n3,4')
+            .set('Content-Type', 'text/csv')
+            .expect(200);
+
+          const attachmentV2 = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .set('If-None-Match', etagV1)
+            .expect(200);
+
+          const etagV2 = attachmentV2.get('ETag');
+
+          etagV1.should.not.be.eql(etagV2);
+        }));
       });
     });
   });
