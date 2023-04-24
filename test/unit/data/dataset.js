@@ -3,7 +3,7 @@ const should = require('should');
 // eslint-disable-next-line import/no-dynamic-require
 const { getFormFields } = require(appRoot + '/lib/data/schema');
 // eslint-disable-next-line import/no-dynamic-require
-const { getDataset, validateDatasetName } = require(appRoot + '/lib/data/dataset');
+const { getDataset, validateDatasetName, validatePropertyName } = require(appRoot + '/lib/data/dataset');
 // eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
 // eslint-disable-next-line import/no-dynamic-require
@@ -273,5 +273,69 @@ describe('dataset name validation', () => {
 
   it('should allow a valid name', () => {
     validateDatasetName('good_dataset_name').should.equal(true);
+  });
+});
+
+describe('property name validation', () => {
+  // ALLOW
+  it('should allow name with underscore', () => {
+    validatePropertyName('first_name').should.equal(true);
+  });
+
+  it('should allow name with period', () => {
+    validatePropertyName('first.name').should.equal(true);
+  });
+
+  it('should allow name with hyphen', () => {
+    validatePropertyName('first-name').should.equal(true);
+  });
+
+  it('should allow name starting with single underscore', () => {
+    validatePropertyName('_age').should.equal(true);
+  });
+
+  it('should allow name containing "name" but not exactly matching', () => {
+    validatePropertyName('name.of.child').should.equal(true);
+  });
+
+  it('should allow name containing "label" but not exactly matching', () => {
+    validatePropertyName('final_label').should.equal(true);
+  });
+
+  it('should allow name with unicode letters', () => {
+    validateDatasetName('bébés').should.equal(true);
+  });
+
+  // REJECT
+  it('should reject property named "name"', () => {
+    validatePropertyName('name').should.equal(false);
+  });
+
+  it('should reject property named "label"', () => {
+    validatePropertyName('label').should.equal(false);
+  });
+
+  it('should reject names starting number', () => {
+    validatePropertyName('123bad').should.equal(false);
+  });
+
+  it('should reject names starting with double underscore __', () => {
+    validatePropertyName('__bad').should.equal(false);
+  });
+
+  it('should reject names starting with other disallowed characters', () => {
+    validatePropertyName('-bad').should.equal(false);
+  });
+
+  it('should reject names starting with : colon', () => {
+    validatePropertyName(':badprop').should.equal(false);
+  });
+
+  it('should reject names containing a : colon', () => {
+    validatePropertyName('bad:prop').should.equal(false);
+  });
+
+  it('should reject name with unicode', () => {
+    validateDatasetName('unicode÷divide').should.equal(false);
   });
 });
