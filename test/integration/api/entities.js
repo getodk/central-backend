@@ -1,7 +1,6 @@
 const appRoot = require('app-root-path');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
-const { sql } = require('slonik');
 
 /* eslint-disable import/no-dynamic-require */
 const { exhaust } = require(appRoot + '/lib/worker/worker');
@@ -79,11 +78,11 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should return metadata of the entities of the dataset - only deleted', testEntities(async (service, container) => {
+    it('should return metadata of the entities of the dataset - only deleted', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      // TODO: use request once it's ready
-      await container.db.any(sql`UPDATE entities SET "deletedAt" = clock_timestamp() WHERE uuid = '12345678-1234-4123-8234-123456789abc';`);
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200);
 
       await asAlice.get('/v1/projects/1/datasets/people/entities?deleted=true')
         .expect(200)
@@ -674,19 +673,59 @@ describe('Entities API', () => {
 
   describe('DELETE /datasets/:name/entities/:uuid', () => {
 
-    it('should delete an Entity', testService(async (service) => {
+    it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.delete('/v1/projects/1/datasets/People/entities/10000000-0000-0000-0000-000000000001')
+      await asAlice.delete('/v1/projects/1/datasets/nonexistent/entities/123')
+        .expect(404);
+    }));
+
+    it('should return notfound if the entity does not exist', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/123')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot read', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(403);
+    }));
+
+    it('should delete an Entity', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(200)
         .then(({ body }) => {
           body.success.should.be.true();
         });
-    }));
 
-    // it should reject if uuid is not found
-    // it should reject if body is not empty
-    // it should reject if user don't have permission
+      await container.Audits.getLatestByAction('entity.delete')
+        .then(o => o.get())
+        .then(audit => {
+          audit.acteeId.should.not.be.null();
+          audit.details.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(404);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.filter(e => e.uuid === '12345678-1234-4123-8234-123456789abc').should.be.empty();
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities?deleted=true')
+        .expect(200)
+        .then(({ body }) => {
+          body.filter(e => e.uuid === '12345678-1234-4123-8234-123456789abc').should.not.be.empty();
+        });
+
+    }));
 
   });
 
