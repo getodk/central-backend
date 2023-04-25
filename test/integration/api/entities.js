@@ -336,24 +336,33 @@ describe('Entities API', () => {
   });
 
   describe('GET /datasets/:name/entities/:uuid/audits', () => {
-    it('should return audit logs of the Entity', testService(async (service) => {
+    it('should return audit logs of the Entity', testEntities(async (service) => {
       const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
 
-      await asAlice.get('/v1/projects/1/datasets/People/entities/00000000-0000-0000-0000-000000000001/audits')
+      await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ data: { age: '12', first_name: 'John' } })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
         .expect(200)
-        .then(({ body }) => {
-          body[0].action.should.be.eql('entity.update.version');
-          body[0].details.should.be.eql({
-            entityId: '00000000-0000-0000-0000-000000000001',
-            source: {
-              type: 'api',
-              details: null
-            },
-            label: 'Jane Roe',
-            versionNumber: 2
-          });
-          body[1].action.should.be.eql('entity.create');
-          // assert nested logs here
+        .then(({ body: logs }) => {
+          logs[0].should.be.an.Audit();
+          logs[0].action.should.be.eql('entity.update.version');
+          logs[0].details.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
+          logs[0].actor.displayName.should.be.eql('Bob');
+
+          logs[1].should.be.an.Audit();
+          logs[1].action.should.be.eql('entity.create');
+          logs[1].actor.displayName.should.be.eql('Alice');
+
+          logs[1].details.approval.should.be.an.Audit();
+          logs[1].details.approval.actor.displayName.should.be.eql('Alice');
+          logs[1].details.approval.loggedAt.should.be.isoDate();
+
+          logs[1].details.submission.should.be.a.Submission();
+          logs[1].details.submission.currentVersion.instanceName.should.be.eql('one');
+          logs[1].details.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
         });
     }));
   });

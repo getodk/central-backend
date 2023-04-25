@@ -579,6 +579,7 @@ module.exports = {
                 <entities:entity dataset="people" id="uuid:12345678-1234-4123-8234-123456789abc" create="1">
                   <entities:label>Alice (88)</entities:label>
                 </entities:entity>
+                <orx:instanceName>one</orx:instanceName>
               </meta>
               <name>Alice</name>
               <age>88</age>
