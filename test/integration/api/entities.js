@@ -350,17 +350,39 @@ describe('Entities API', () => {
 
   describe('POST /datasets/:name/entities', () => {
 
-    it('should create an Entity', testService(async (service) => {
+    it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.simpleEntity)
-        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/nonexistent/entities')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot read', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.post('/v1/projects/1/datasets/people/entities')
+        .expect(403);
+    }));
+
+    it('should reject malformed json', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ broken: 'json' })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.28);
+        });
+    }));
+
+    it('should create an Entity', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/datasets/people/entities')
         .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          create: 'true',
           data: {
-            uuid: '12345678-1234-4123-8234-123456789abc',
-            create: 'true',
             label: 'Johnny Doe',
             first_name: 'Johnny',
             age: '22'
@@ -369,8 +391,10 @@ describe('Entities API', () => {
         .expect(200)
         .then(({ body: person }) => {
           person.should.be.an.Entity();
+          person.uuid.should.equal('12345678-1234-4123-8234-111111111aaa');
+          person.creatorId.should.equal(5);
           person.should.have.property('currentVersion').which.is.an.EntityDef();
-          //person.currentVersion.should.have.property('source').which.is.an.EntitySource();
+          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
           person.currentVersion.should.have.property('label').which.equals('Johnny Doe');
           person.currentVersion.should.have.property('data').which.is.eql({
             first_name: 'Johnny',
@@ -379,11 +403,196 @@ describe('Entities API', () => {
         });
     }));
 
-    // it should reject if uuid or label is missing
-    // it should reject if property is not present in dataset.publishedProperties
-    // it should reject if user don't have permission
-    // it should reject if uuid is not unique ??? what to do if uuid is deleted?
+    it('should allow if create is "1"', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
 
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          create: '1',
+          data: {
+            label: 'Johnny Doe',
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(200);
+    }));
+
+    it('should allow if create is 1', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          create: 1,
+          data: {
+            label: 'Johnny Doe',
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(200);
+    }));
+
+    it('should reject if the uuid is missing', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          create: 'true',
+          data: {
+            label: 'Johnny Doe',
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(409); // this could be 400 problem instead but that involves changing other entity processing code
+    }));
+
+    it('should reject if the uuid is blank', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '',
+          create: 'true',
+          data: {
+            label: 'Johnny Doe',
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(409); // this could be 400 problem instead but that involves changing other entity processing code
+    }));
+
+
+    it('should reject if the uuid is invalid', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: 'abdc-not-a-uuid',
+          create: 'true',
+          data: {
+            label: 'Johnny Doe',
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(409); // this could be 400 problem instead but that involves changing other entity processing code
+    }));
+
+    it('should reject if the label is missing', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          create: 'true',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(409); // this could be 400 problem instead but that involves changing other entity processing code
+    }));
+
+    it('should reject if the label is blank', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          create: 'true',
+          data: {
+            label: '',
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(409); // this could be 400 problem instead but that involves changing other entity processing code
+    }));
+
+
+    it('should reject if the label is null', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          create: 'true',
+          data: {
+            label: null,
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(409); // this could be 400 problem instead but that involves changing other entity processing code
+    }));
+
+    it('should reject if create is missing', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          data: {
+            label: 'Johnny Doe',
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(400);
+    }));
+
+    it('should reject if create is not "1"', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          create: 0,
+          data: {
+            label: 'Johnny Doe',
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(400);
+    }));
+
+    it('should reject if uuid is not unique', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          create: 'true',
+          data: {
+            label: 'Johnny Doe',
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(409);
+    }));
+
+    it('should reject if data properties do not match dataset exactly', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          create: 'true',
+          data: {
+            label: 'Johnny Doe',
+            favorite_color: 'yellow',
+            height: '167'
+          }
+        })
+        .expect(400);
+    }));
   });
 
   describe('PUT /datasets/:name/entities/:uuid', () => {
