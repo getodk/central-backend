@@ -34,6 +34,7 @@
     "odata-v4-parser": "~0.1",
     "pg": "~8",
     "pg-query-stream": "~4",
+    "pm2": "^5.2.2",
     "prompt": "~1",
     "ramda": "~0",
     "sanitize-filename": "~1",
