@@ -1,5 +1,5 @@
 module.exports = {
-  apps:  [{
+  apps: [{
     name: 'service',
     script: './lib/bin/run-server.js',
 
