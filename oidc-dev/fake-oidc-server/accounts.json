@@ -1,0 +1,12 @@
+{
+  "alice":   { "email":"alice@getodk.org",   "email_verified":true },
+  "bob":     { "email":"bob@getodk.org",     "email_verified":true },
+  "chelsea": { "email":"chelsea@getodk.org", "email_verified":true },
+  "david":   { "email":"david@getodk.org",   "email_verified":true },
+  "eleanor": { "email":"eleanor@getodk.org", "email_verified":true },
+
+  "playwright-alice":   { "email":"alice@example.com",   "email_verified":true },
+  "playwright-bob":     { "email":"bob@example.com",     "email_verified":true },
+  "playwright-charlie": { "email":"charlie@example.com", "email_verified":false },
+  "playwright-dave":    {}
+}

@@ -1,0 +1,11 @@
+{
+  "default": {
+    "oidc": {
+      "enabled": true,
+      "issuerUrl": "http://localhost:9898",
+      "clientId": "odk-central-backend-dev",
+      "clientSecret": "super-top-secret"
+    }
+  }
+}
+

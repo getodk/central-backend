@@ -6,6 +6,7 @@ const { join } = require('path');
 const request = require('supertest');
 const { noop } = require(appRoot + '/lib/util/util');
 const { task } = require(appRoot + '/lib/task/task');
+const authenticateUser = require('../util/authenticate-user');
 
 // knex things.
 const config = require('config');
@@ -122,15 +123,7 @@ const augment = (service) => {
   // eslint-disable-next-line no-param-reassign
   service.login = async (userOrUsers, test = undefined) => {
     const users = Array.isArray(userOrUsers) ? userOrUsers : [userOrUsers];
-    const tokens = await Promise.all(users.map(async (user) => {
-      const credentials = (typeof user === 'string')
-        ? { email: `${user}@getodk.org`, password: user }
-        : user;
-      const { body } = await service.post('/v1/sessions')
-        .send(credentials)
-        .expect(200);
-      return body.token;
-    }));
+    const tokens = await Promise.all(users.map(user => authenticateUser(service, user)));
     const proxies = tokens.map((token) => new Proxy(service, authProxy(token)));
     return test != null
       ? test(...proxies)

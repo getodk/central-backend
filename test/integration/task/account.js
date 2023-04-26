@@ -7,8 +7,16 @@ const { User } = require(appRoot + '/lib/model/frames');
 
 describe('task: accounts', () => {
   describe('createUser', () => {
-    it('should create a user account', testTask(({ Users }) =>
+    it('should create a user account with a password', testTask(({ Users }) =>
       createUser('testuser@getodk.org', 'aoeuidhtns')
+        .then((result) => {
+          result.email.should.equal('testuser@getodk.org');
+          return Users.getByEmail('testuser@getodk.org')
+            .then((user) => user.isDefined().should.equal(true));
+        })));
+
+    it('should create a user account with a null password', testTask(({ Users }) =>
+      createUser('testuser@getodk.org', null)
         .then((result) => {
           result.email.should.equal('testuser@getodk.org');
           return Users.getByEmail('testuser@getodk.org')
@@ -34,6 +42,12 @@ describe('task: accounts', () => {
         .then((user) => bcrypt.verify('aoeuidhtns', user.password))
         .then((verified) => verified.should.equal(true))));
 
+    it('should not verify a null password', testTask(({ Users, bcrypt }) =>
+      createUser('testuser@getodk.org', null)
+        .then(() => Users.getByEmail('testuser@getodk.org'))
+        .then(getOrNotFound)
+        .then((user) => bcrypt.verify(null, user.password))
+        .then((verified) => verified.should.equal(false))));
 
     it('should complain if the password is too short', testTask(() =>
       createUser('testuser@getodk.org', 'short')

@@ -1,6 +1,7 @@
 const should = require('should');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
+const authenticateUser = require('../../util/authenticate-user');
 
 describe('api: /projects/:id/app-users', () => {
   describe('POST', () => {
@@ -234,8 +235,8 @@ describe('api: /key/:key', () => {
       .expect(403)));
 
   it('should reject non-field tokens', testService((service) =>
-    service.post('/v1/sessions').send({ email: 'alice@getodk.org', password: 'alice' })
-      .then(({ body }) => service.get(`/v1/key/${body.token}/users/current`)
+    authenticateUser(service, 'alice')
+      .then((token) => service.get(`/v1/key/${token}/users/current`)
         .expect(403))));
 
   it('should passthrough to the appropriate route with successful auth', testService((service) =>
