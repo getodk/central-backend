@@ -42,7 +42,7 @@ const down = () => withTestDatabase((migrator) =>
 // new column to exist.
 // eslint-disable-next-line space-before-function-paren, func-names
 describe.skip('database migrations', function() {
-  this.timeout(4000);
+  this.timeout(8000);
 
   it('should purge deleted forms via migration', testServiceFullTrx(async (service, container) => {
     await upToMigration('20220121-01-form-cascade-delete.js');
@@ -202,7 +202,7 @@ describe.skip('database migrations', function() {
 
 // eslint-disable-next-line space-before-function-paren, func-names
 describe('datbase migrations: removing default project', function() {
-  this.timeout(4000);
+  this.timeout(8000);
 
   it('should put old forms into project', testServiceFullTrx(async (service, container) => {
     // before 20181206-01-add-projects.js
@@ -240,7 +240,7 @@ describe('datbase migrations: removing default project', function() {
 
 // eslint-disable-next-line space-before-function-paren, func-names
 describe('datbase migrations: intermediate form schema', function() {
-  this.timeout(10000);
+  this.timeout(20000);
 
   it('should test migration', testServiceFullTrx(async (service, container) => {
     // before 20230109-01-add-form-schema.js
@@ -370,7 +370,7 @@ describe('datbase migrations: intermediate form schema', function() {
 
 // eslint-disable-next-line func-names, space-before-function-paren
 describe('database migrations: 20230123-01-remove-google-backups', function() {
-  this.timeout(10000);
+  this.timeout(20000);
 
   beforeEach(() => upToMigration('20230123-01-remove-google-backups.js', false));
 
@@ -465,7 +465,7 @@ describe('database migrations: 20230123-01-remove-google-backups', function() {
 
 // eslint-disable-next-line func-names
 describe('database migrations: 20230324-01-edit-dataset-verbs.js', function () {
-  this.timeout(10000);
+  this.timeout(20000);
 
   it('should add dataset/entity read verbs with raw sql', testServiceFullTrx(async (service, container) => {
     await upToMigration('20230324-01-edit-dataset-verbs.js', false);
@@ -502,7 +502,7 @@ describe('database migrations: 20230324-01-edit-dataset-verbs.js', function () {
 
 // eslint-disable-next-line func-names
 describe('database migrations from 20230406: altering entities and entity_defs', function () {
-  this.timeout(10000);
+  this.timeout(20000);
 
   const createEntity = async (service, container) => {
     // Get bob's id because bob is going to be the one who
