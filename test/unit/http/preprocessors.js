@@ -44,14 +44,11 @@ describe('preprocessors', () => {
         should.not.exist(context);
       }));
 
-    it('should do nothing if Authorization mode is not Bearer or Basic', () =>
+    it('should fail the request if unsupported Authorization header is supplied', () =>
       Promise.resolve(authHandler(
         { Auth, Sessions: mockSessions() },
         new Context(createRequest({ headers: { Authorization: 'Digest aabbccddeeff123' }, fieldKey: Option.none() }))
-      )).then((context) => {
-        // preprocessors return nothing if they have no changes to make to the context.
-        should.not.exist(context);
-      }));
+      )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
     describe('Bearer auth', () => {
       it('should ignore bearer auth if a field key is present', () =>
