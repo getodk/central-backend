@@ -1,6 +1,7 @@
 const appRoot = require('app-root-path');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
+const { sql } = require('slonik');
 
 /* eslint-disable import/no-dynamic-require */
 const { exhaust } = require(appRoot + '/lib/worker/worker');
@@ -361,10 +362,118 @@ describe('Entities API', () => {
           logs[1].details.approval.loggedAt.should.be.isoDate();
 
           logs[1].details.submission.should.be.a.Submission();
+          logs[1].details.submission.xmlFormId.should.be.eql('simpleEntity');
           logs[1].details.submission.currentVersion.instanceName.should.be.eql('one');
           logs[1].details.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
         });
     }));
+
+    it('should return instanceId even when submission is deleted', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      await container.Forms.purge(true);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+
+          logs[0].should.be.an.Audit();
+          logs[0].action.should.be.eql('entity.create');
+          logs[0].actor.displayName.should.be.eql('Alice');
+
+          logs[0].details.approval.should.be.an.Audit();
+          logs[0].details.approval.actor.displayName.should.be.eql('Alice');
+          logs[0].details.approval.loggedAt.should.be.isoDate();
+
+          logs[0].details.should.not.have.property('submission');
+
+          logs[0].details.submissionCreate.details.instanceId.should.be.eql('one');
+          logs[0].details.submissionCreate.actor.displayName.should.be.eql('Alice');
+          logs[0].details.submissionCreate.loggedAt.should.be.isoDate();
+        });
+    }));
+
+    it('should return entity audits even when submission and its logs are deleted', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      await container.Forms.purge(true);
+
+      await container.run(sql`DELETE FROM audits WHERE action like 'submission%'`);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+
+          logs[0].should.be.an.Audit();
+          logs[0].action.should.be.eql('entity.create');
+          logs[0].actor.displayName.should.be.eql('Alice');
+
+          logs[0].details.should.not.have.property('approval');
+          logs[0].details.should.not.have.property('submission');
+          logs[0].details.should.not.have.property('submissionCreate');
+        });
+    }));
+
+    it('should return right approval details when we have multiple approvals', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one
+          .replace('create="1"', 'create="0"'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .send(testData.instances.simpleEntity.one
+          .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .set('X-Action-Notes', 'create entity')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+
+          logs[0].should.be.an.Audit();
+          logs[0].action.should.be.eql('entity.create');
+          logs[0].actor.displayName.should.be.eql('Alice');
+
+          logs[0].details.approval.should.be.an.Audit();
+          logs[0].details.approval.actor.displayName.should.be.eql('Alice');
+          logs[0].details.approval.loggedAt.should.be.isoDate();
+          logs[0].details.approval.notes.should.be.eql('create entity'); // this confirms that it's the second approval
+
+          logs[0].details.submission.should.be.a.Submission();
+          logs[0].details.submission.xmlFormId.should.be.eql('simpleEntity');
+          logs[0].details.submission.currentVersion.instanceName.should.be.eql('one');
+          logs[0].details.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
+        });
+
+    }));
+
+    // Add more tests once POST and PUT APIs are ready
   });
 
   describe('POST /datasets/:name/entities', () => {
