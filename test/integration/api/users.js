@@ -191,7 +191,6 @@ describe('api: /users', () => {
               log.details.should.eql({
                 data: {
                   email: 'david@getodk.org',
-                  mfaSecret: null,
                   password: null
                 }
               });
