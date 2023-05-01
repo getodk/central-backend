@@ -335,8 +335,12 @@ describe('property name validation', () => {
     validatePropertyName('__bad').should.equal(false);
   });
 
-  it('should reject names starting with other disallowed characters', () => {
+  it('should reject names starting with other disallowed characters like -', () => {
     validatePropertyName('-bad').should.equal(false);
+  });
+
+  it('should reject names starting with other disallowed characters like .', () => {
+    validatePropertyName('.bad').should.equal(false);
   });
 
   it('should reject names starting with : colon', () => {
