@@ -1610,6 +1610,17 @@ describe('datasets and entities', () => {
               body.details.reason.should.equal('Invalid Dataset property.');
             }))));
 
+      it('should return a Problem if the savetos reference invalid properties (extra whitespace)', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity.replace('first_name', '  first_name  '))
+            .set('Content-Type', 'text/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.equal(400.25);
+              body.details.reason.should.equal('Invalid Dataset property.');
+            }))));
+
       it('should return the created form upon success', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')

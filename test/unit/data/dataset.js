@@ -315,6 +315,14 @@ describe('property name validation', () => {
     validatePropertyName('label').should.equal(false);
   });
 
+  it('should reject name with whitespace at the ends', () => {
+    validatePropertyName(' bad_whitespace ').should.equal(false);
+  });
+
+  it('should reject name with spaces in the middle', () => {
+    validatePropertyName('first name').should.equal(false);
+  });
+
   it('should reject names starting number', () => {
     validatePropertyName('123bad').should.equal(false);
   });
