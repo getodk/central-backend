@@ -218,11 +218,11 @@ describe('api: /datasets/:name.svc', () => {
 
           body.value.forEach(r => {
             r.__system.should.have.property('updatedAt').which.is.nullOrIsoDate();
-            r.__system.should.have.property('update').which.is.a.Number();
+            r.__system.should.have.property('updates').which.is.a.Number();
           });
 
-          body.value[0].__system.update.should.be.eql(2);
-          body.value[1].__system.update.should.be.eql(0);
+          body.value[0].__system.updates.should.be.eql(2);
+          body.value[1].__system.updates.should.be.eql(0);
         });
     }));
   });

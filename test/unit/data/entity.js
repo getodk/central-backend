@@ -211,7 +211,7 @@ describe('extracting entities from submissions', () => {
           displayName: 'displayName'
         },
         stats: {
-          update: 0
+          updates: 0
         }
       }
     };
@@ -229,7 +229,7 @@ describe('extracting entities from submissions', () => {
           creatorId: 'id',
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
-          update: 0
+          updates: 0
         },
         firstName: entity.def.data.firstName,
         lastName: entity.def.data.lastName
@@ -269,7 +269,7 @@ describe('extracting entities from submissions', () => {
           creatorId: 'id',
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
-          update: 0
+          updates: 0
         }
       });
     });
@@ -289,7 +289,7 @@ describe('extracting entities from submissions', () => {
             displayName: 'displayName'
           },
           stats: {
-            update: 0
+            updates: 0
           }
         }
       };
@@ -304,7 +304,7 @@ describe('extracting entities from submissions', () => {
           creatorId: 'id',
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
-          update: 0
+          updates: 0
         },
         firstName: '',
         lastName: ''
@@ -325,7 +325,7 @@ describe('extracting entities from submissions', () => {
           creatorId: 'id',
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
-          update: 0
+          updates: 0
         },
         firstName: entity.def.data.firstName,
         lastName: entity.def.data.lastName,
