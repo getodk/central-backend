@@ -323,6 +323,10 @@ describe('property name validation', () => {
     validatePropertyName('first name').should.equal(false);
   });
 
+  it('should reject property with slash', () => {
+    validatePropertyName('bad\name').should.equal(false);
+  });
+
   it('should reject names starting number', () => {
     validatePropertyName('123bad').should.equal(false);
   });
