@@ -1650,6 +1650,17 @@ describe('datasets and entities', () => {
               body.details.reason.should.equal('Invalid Dataset property.');
             }))));
 
+      it('should return a Problem if the savetos reference invalid properties (extra whitespace)', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity.replace('first_name', '  first_name  '))
+            .set('Content-Type', 'text/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.equal(400.25);
+              body.details.reason.should.equal('Invalid Dataset property.');
+            }))));
+
       it('should return the created form upon success', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
@@ -1699,41 +1710,6 @@ describe('datasets and entities', () => {
             }));
       }));
 
-      it('should update a dataset with a new draft and be able to upload multiple drafts', testService(async (service) => {
-        const asAlice = await service.login('alice');
-
-        // Upload a form and then create a new draft version
-        await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.simpleEntity)
-          .set('Content-Type', 'application/xml')
-          .expect(200)
-          .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
-            .expect(200)
-            .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
-              .send(testData.forms.simpleEntity)
-              .set('Content-Type', 'application/xml')
-              .expect(200))
-            .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/draft')
-              .set('X-Extended-Metadata', 'true')
-              .expect(200)
-              .then(({ body }) => {
-                body.entityRelated.should.equal(true);
-              })));
-
-        await asAlice.get('/v1/projects/1/datasets')
-          .expect(200)
-          .then(({ body }) => {
-            body[0].name.should.be.eql('people');
-          });
-
-        await asAlice.get('/v1/projects/1/datasets/people')
-          .expect(200)
-          .then(({ body }) => {
-            body.name.should.be.eql('people');
-            body.properties.length.should.be.eql(2);
-          });
-      }));
-
       it('should not let multiple fields to be mapped to a single property', testService(async (service) => {
         await service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
@@ -1772,6 +1748,59 @@ describe('datasets and entities', () => {
           });
 
       }));
+
+      describe('updating datasets through new form drafts', () => {
+        it('should update a dataset with a new draft and be able to upload multiple drafts', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // Upload a form and then create a new draft version
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+              .expect(200)
+              .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+                .send(testData.forms.simpleEntity)
+                .set('Content-Type', 'application/xml')
+                .expect(200))
+              .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/draft')
+                .set('X-Extended-Metadata', 'true')
+                .expect(200)
+                .then(({ body }) => {
+                  body.entityRelated.should.equal(true);
+                })));
+
+          await asAlice.get('/v1/projects/1/datasets')
+            .expect(200)
+            .then(({ body }) => {
+              body[0].name.should.be.eql('people');
+            });
+
+          await asAlice.get('/v1/projects/1/datasets/people')
+            .expect(200)
+            .then(({ body }) => {
+              body.name.should.be.eql('people');
+              body.properties.length.should.be.eql(2);
+            });
+        }));
+
+        it('should return a Problem if updated form has invalid dataset properties', testService(async (service) => {
+          const asAlice = await service.login('alice');
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+              .send(testData.forms.simpleEntity.replace('first_name', 'name'))
+              .set('Content-Type', 'application/xml')
+              .expect(400)
+              .then(({ body }) => {
+                body.code.should.equal(400.25);
+                body.details.reason.should.equal('Invalid Dataset property.');
+              }));
+        }));
+      });
     });
 
     describe('dataset audit logging at /projects/:id/forms POST', () => {
