@@ -225,6 +225,35 @@ describe('api: /datasets/:name.svc', () => {
           body.value[1].__system.updates.should.be.eql(0);
         });
     }));
+
+    it('should filter by updatedAt', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      const lastEntity = await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$top=1')
+        .expect(200)
+        .then(({ body }) => body.value[0]);
+
+      await asAlice.patch(`/v1/projects/1/datasets/people/entities/${lastEntity.__id}?force=true`)
+        .send({ data: { age: 22 } })
+        .expect(200);
+
+      await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$filter=__system/updatedAt gt ${lastEntity.__system.createdAt}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.be.eql(1);
+          body.value[0].__system.updates.should.be.eql(1);
+          body.value[0].__system.updatedAt.should.be.greaterThan(lastEntity.__system.createdAt);
+          body.value[0].__id.should.be.eql(lastEntity.__id);
+
+        });
+    }));
   });
 
   describe('GET service document', () => {
