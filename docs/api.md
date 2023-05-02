@@ -3817,12 +3817,13 @@ The fields you can query against are as follows:
 | Entity Label            | `label`              |
 | Entity Creator Actor ID | `__system/creatorId` |
 | Entity Timestamp        | `__system/createdAt` |
+| Entity Update Timestamp | `__system/updatedAt` |
 
-Note that `createdAt` is a time component. This means that any comparisons you make need to account for the full time of the entity. It might seem like `$filter=__system/createdAt le 2020-01-31` would return all results on or before 31 Jan 2020, but in fact only entities made before midnight of that day would be accepted. To include all of the month of January, you need to filter by either `$filter=__system/createdAt le 2020-01-31T23:59:59.999Z` or `$filter=__system/createdAt lt 2020-02-01`. Remember also that you can [query by a specific timezone](https://en.wikipedia.org/wiki/ISO_8601#Time_offsets_from_UTC).
+Note that `createdAt` and `updatedAt` are time components. This means that any comparisons you make need to account for the full time of the entity. It might seem like `$filter=__system/createdAt le 2020-01-31` would return all results on or before 31 Jan 2020, but in fact only entities made before midnight of that day would be accepted. To include all of the month of January, you need to filter by either `$filter=__system/createdAt le 2020-01-31T23:59:59.999Z` or `$filter=__system/createdAt lt 2020-02-01`. Remember also that you can [query by a specific timezone](https://en.wikipedia.org/wiki/ISO_8601#Time_offsets_from_UTC).
 
 Please see the [OData documentation](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) on `$filter` [operations](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinFilterOperations) and [functions](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinQueryFunctions) for more information.
 
-The [`$select` query parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358942) will return just the fields you specify and is supported on `__id`, `__system`, `__system/creatorId` and `__system/createdAt`, as well as on user defined properties.
+The [`$select` query parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358942) will return just the fields you specify and is supported on `__id`, `__system`, `__system/creatorId`, `__system/createdAt` and `__system/updatedAt`, as well as on user defined properties.
 
 As the vast majority of clients only support the JSON OData format, that is the only format ODK Central offers.
 
@@ -3847,7 +3848,9 @@ As the vast majority of clients only support the JSON OData format, that is the 
                         "__system": {
                             "createdAt": "2022-12-09T19:41:16.478Z",
                             "creatorId": "39",
-                            "creatorName": "Tree surveyor"
+                            "creatorName": "Tree surveyor",
+                            "updates": 2,
+                            "updatedAt": "2023-04-31T19:41:16.478Z"
                         },
                         "geometry": "32.7413996 -117.1394617 53.80000305175781 13.933",
                         "species": "purpleheart",
@@ -3860,7 +3863,9 @@ As the vast majority of clients only support the JSON OData format, that is the 
                         "__system": {
                             "createdAt": "2022-11-21T19:17:36.348Z",
                             "creatorId": "8",
-                            "creatorName": "ln@getodk.org"
+                            "creatorName": "ln@getodk.org",
+                            "updates": 0,
+                            "updatedAt": null
                         },
                         "geometry": "47.722581 18.562111 0 0",
                         "species": "mora",
@@ -3873,7 +3878,9 @@ As the vast majority of clients only support the JSON OData format, that is the 
                         "__system": {
                             "createdAt": "2022-11-21T18:22:43.759Z",
                             "creatorId": "8",
-                            "creatorName": "ln@getodk.org"
+                            "creatorName": "ln@getodk.org",
+                            "updates": 0,
+                            "updatedAt": null
                         },
                         "geometry": "",
                         "species": "wallaba",

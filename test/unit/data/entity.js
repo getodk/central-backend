@@ -197,6 +197,7 @@ describe('extracting entities from submissions', () => {
     const entity = {
       uuid: 'uuid',
       createdAt: 'createdAt',
+      updatedAt: 'updatedAt',
       def: {
         label: 'label',
         data: {
@@ -208,6 +209,9 @@ describe('extracting entities from submissions', () => {
         creator: {
           id: 'id',
           displayName: 'displayName'
+        },
+        stats: {
+          updates: 0
         }
       }
     };
@@ -223,7 +227,9 @@ describe('extracting entities from submissions', () => {
         __system: {
           createdAt: 'createdAt',
           creatorId: 'id',
-          creatorName: 'displayName'
+          creatorName: 'displayName',
+          updatedAt: 'updatedAt',
+          updates: 0
         },
         firstName: entity.def.data.firstName,
         lastName: entity.def.data.lastName
@@ -261,7 +267,9 @@ describe('extracting entities from submissions', () => {
         __system: {
           createdAt: 'createdAt',
           creatorId: 'id',
-          creatorName: 'displayName'
+          creatorName: 'displayName',
+          updatedAt: 'updatedAt',
+          updates: 0
         }
       });
     });
@@ -270,6 +278,7 @@ describe('extracting entities from submissions', () => {
       const data = {
         uuid: 'uuid',
         createdAt: 'createdAt',
+        updatedAt: 'updatedAt',
         def: {
           label: 'label',
           data: {}
@@ -278,6 +287,9 @@ describe('extracting entities from submissions', () => {
           creator: {
             id: 'id',
             displayName: 'displayName'
+          },
+          stats: {
+            updates: 0
           }
         }
       };
@@ -290,7 +302,9 @@ describe('extracting entities from submissions', () => {
         __system: {
           createdAt: 'createdAt',
           creatorId: 'id',
-          creatorName: 'displayName'
+          creatorName: 'displayName',
+          updatedAt: 'updatedAt',
+          updates: 0
         },
         firstName: '',
         lastName: ''
@@ -309,7 +323,9 @@ describe('extracting entities from submissions', () => {
         __system: {
           createdAt: 'createdAt',
           creatorId: 'id',
-          creatorName: 'displayName'
+          creatorName: 'displayName',
+          updatedAt: 'updatedAt',
+          updates: 0
         },
         firstName: entity.def.data.firstName,
         lastName: entity.def.data.lastName,
