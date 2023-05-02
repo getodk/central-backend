@@ -235,6 +235,20 @@ describe('extracting entities from submissions', () => {
         });
       });
 
+      it('should reject if label is not a string', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 1234,
+          data: { age: '88', first_name: 'Alice' }
+        };
+        const propertyNames = ['age', 'first_name'];
+        assert.throws(() => { parseJson(null, body, propertyNames); }, (err) => {
+          err.problemCode.should.equal(400.28);
+          err.message.should.equal('The entity is invalid. Value for [label] is not a string.');
+          return true;
+        });
+      });
+
       it('should reject if data is missing', () => {
         const body = {
           uuid: '12345678-1234-4123-8234-123456789abc',
@@ -268,6 +282,20 @@ describe('extracting entities from submissions', () => {
           uuid: '12345678-1234-4123-8234-123456789abc',
           label: 'Label',
           data: { age: 99 }
+        };
+        const propertyNames = ['age'];
+        assert.throws(() => { parseJson(null, body, propertyNames); }, (err) => {
+          err.problemCode.should.equal(400.28);
+          err.message.should.equal('The entity is invalid. Property value for [age] is not a string.');
+          return true;
+        });
+      });
+
+      it('should reject if data value is null', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Label',
+          data: { age: null }
         };
         const propertyNames = ['age'];
         assert.throws(() => { parseJson(null, body, propertyNames); }, (err) => {
@@ -379,8 +407,8 @@ describe('extracting entities from submissions', () => {
           return true;
         });
         assert.throws(() => { parseJson(existingEntity, { data: { label: null } }, propertyNames); }, (err) => {
-          err.problemCode.should.equal(409.14);
-          err.message.should.equal('There was a problem with entity processing: Label empty or missing.');
+          err.problemCode.should.equal(400.28);
+          err.message.should.equal('The entity is invalid. Property value for [label] is not a string.');
           return true;
         });
       });
