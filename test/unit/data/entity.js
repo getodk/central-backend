@@ -191,6 +191,91 @@ describe('extracting entities from submissions', () => {
           data: { age: '88', first_name: 'Alice' }
         });
       });
+
+      it('should parse subset of dataset properties', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Alice (88)',
+          data: { first_name: 'Alice' }
+        };
+        const propertyNames = ['age', 'first_name'];
+        const entity = parseJson(null, body, propertyNames);
+        should(entity).eql({
+          system: {
+            label: 'Alice (88)',
+            uuid: '12345678-1234-4123-8234-123456789abc'
+          },
+          data: { first_name: 'Alice' }
+        });
+      });
+
+      it('should reject if uuid is missing', () => {
+        const body = {
+          label: 'Alice (88)',
+          data: { age: '88', first_name: 'Alice' }
+        };
+        const propertyNames = ['age', 'first_name'];
+        assert.throws(() => { parseJson(null, body, propertyNames); }, (err) => {
+          err.problemCode.should.equal(409.14);
+          err.message.should.equal('There was a problem with entity processing: ID empty or missing.');
+          return true;
+        });
+      });
+
+      it('should reject if label is missing', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          data: { age: '88', first_name: 'Alice' }
+        };
+        const propertyNames = ['age', 'first_name'];
+        assert.throws(() => { parseJson(null, body, propertyNames); }, (err) => {
+          err.problemCode.should.equal(409.14);
+          err.message.should.equal('There was a problem with entity processing: Label empty or missing.');
+          return true;
+        });
+      });
+
+      it('should reject if data is missing', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Label',
+        };
+        const propertyNames = ['age', 'first_name'];
+        assert.throws(() => { parseJson(null, body, propertyNames); }, (err) => {
+          err.problemCode.should.equal(400.28);
+          err.message.should.equal('The entity is invalid. No entity data provided.');
+          return true;
+        });
+      });
+
+      it('should reject if data contains unknown properties', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Label',
+          data: { favorite_food: 'pizza' }
+        };
+        const propertyNames = ['age', 'first_name'];
+        assert.throws(() => { parseJson(null, body, propertyNames); }, (err) => {
+          err.problemCode.should.equal(400.28);
+          err.message.should.equal('The entity is invalid. You specified the dataset property [favorite_food] which does not exist.');
+          return true;
+        });
+      });
+
+
+      it('should reject if data is not a string', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Label',
+          data: { age: 99 }
+        };
+        const propertyNames = ['age'];
+        assert.throws(() => { parseJson(null, body, propertyNames); }, (err) => {
+          err.problemCode.should.equal(400.28);
+          err.message.should.equal('The entity is invalid. Property value for [age] is not a string.');
+          return true;
+        });
+      });
     });
 
     describe('updated entities', () => {
@@ -275,6 +360,27 @@ describe('extracting entities from submissions', () => {
         assert.throws(() => { parseJson(existingEntity, body, propertyNames); }, (err) => {
           err.problemCode.should.equal(400.28);
           err.message.should.equal('The entity is invalid. No entity data provided.');
+          return true;
+        });
+      });
+
+      it('should reject if label update is null or empty string', () => {
+        const existingEntity = {
+          system: {
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Alice (88)',
+          },
+          data: { first_name: 'Alice' }
+        };
+        const propertyNames = ['first_name'];
+        assert.throws(() => { parseJson(existingEntity, { data: { label: '' } }, propertyNames); }, (err) => {
+          err.problemCode.should.equal(409.14);
+          err.message.should.equal('There was a problem with entity processing: Label empty or missing.');
+          return true;
+        });
+        assert.throws(() => { parseJson(existingEntity, { data: { label: null } }, propertyNames); }, (err) => {
+          err.problemCode.should.equal(409.14);
+          err.message.should.equal('There was a problem with entity processing: Label empty or missing.');
           return true;
         });
       });
