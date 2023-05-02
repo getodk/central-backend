@@ -783,24 +783,17 @@ describe('Entities API', () => {
           });
       }));
 
-      it('should transform null property to empty string', testEntities(async (service) => {
+      it('should not accept null property', testEntities(async (service) => {
         const asAlice = await service.login('alice');
-        const newData = { age: '88', first_name: '' };
 
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
           .send({
             data: { first_name: null }
           })
-          .expect(200)
-          .then(({ body: person }) => {
-            person.currentVersion.should.have.property('data').which.is.eql(newData);
-          });
-
-        // re-get entity to check data
-        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
-          .expect(200)
-          .then(({ body: person }) => {
-            person.currentVersion.should.have.property('data').which.is.eql(newData);
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.28);
+            body.message.should.equal('The entity is invalid. Property value for [first_name] is not a string.');
           });
       }));
 
@@ -811,9 +804,10 @@ describe('Entities API', () => {
           .send({
             data: { favorite_candy: 'chocolate' }
           })
-          .expect(409)
+          .expect(400)
           .then(({ body }) => {
-            body.code.should.equal(409.14);
+            body.code.should.equal(400.28);
+            body.message.should.equal('The entity is invalid. You specified the dataset property [favorite_candy] which does not exist.');
           });
       }));
     });
