@@ -367,7 +367,7 @@ describe('Entities API', () => {
         .expect(404);
     }));
 
-    it('should reject if the user cannot read', testDataset(async (service) => {
+    it('should reject if the user cannot write', testDataset(async (service) => {
       const asChelsea = await service.login('chelsea');
 
       await asChelsea.post('/v1/projects/1/datasets/people/entities')
