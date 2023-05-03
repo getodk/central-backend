@@ -204,11 +204,11 @@ describe('api: /datasets/:name.svc', () => {
         .then(({ body }) => body.value[0]);
 
       await asAlice.patch(`/v1/projects/1/datasets/people/entities/${firstEntity.__id}?force=true`)
-        .send({ data: { age: 22 } })
+        .send({ data: { age: '22' } })
         .expect(200);
 
       await asAlice.patch(`/v1/projects/1/datasets/people/entities/${firstEntity.__id}?force=true`)
-        .send({ data: { age: 44 } })
+        .send({ data: { age: '44' } })
         .expect(200);
 
       await asAlice.get('/v1/projects/1/datasets/people.svc/Entities')
@@ -241,7 +241,7 @@ describe('api: /datasets/:name.svc', () => {
         .then(({ body }) => body.value[0]);
 
       await asAlice.patch(`/v1/projects/1/datasets/people/entities/${lastEntity.__id}?force=true`)
-        .send({ data: { age: 22 } })
+        .send({ data: { age: '22' } })
         .expect(200);
 
       await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$filter=__system/updatedAt gt ${lastEntity.__system.createdAt}`)
