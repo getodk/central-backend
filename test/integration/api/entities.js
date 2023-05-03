@@ -723,14 +723,14 @@ describe('Entities API', () => {
           });
       }));
 
-      it.skip('should reject if updating the label to be empty', testEntities(async (service) => {
+      it('should reject if updating the label to be empty', testEntities(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
           .send({
             data: { label: '' }
           })
-          .expect(400);
+          .expect(409);
       }));
 
       it('should update an entity with additional properties', testEntities(async (service) => {

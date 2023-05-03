@@ -2,7 +2,7 @@ const should = require('should');
 const appRoot = require('app-root-path');
 const assert = require('assert');
 // eslint-disable-next-line import/no-dynamic-require
-const { parseSubmissionXml, parseJson, validateEntity, extractSelectedProperties, selectFields, diffEntityData } = require(appRoot + '/lib/data/entity');
+const { parseSubmissionXml, extractEntity, validateEntity, extractSelectedProperties, selectFields, diffEntityData } = require(appRoot + '/lib/data/entity');
 // eslint-disable-next-line import/no-dynamic-require
 const { fieldsFor } = require(appRoot + '/test/util/schema');
 // eslint-disable-next-line import/no-dynamic-require
@@ -150,7 +150,7 @@ describe('extracting entities from submissions', () => {
     });
   });
 
-  describe('parseJson', () => {
+  describe('extractEntity', () => {
     // Used to compare entity structure when Object.create(null) used.
     beforeEach(() => {
       should.config.checkProtoEql = false;
@@ -167,7 +167,7 @@ describe('extracting entities from submissions', () => {
         extra: 'field'
       };
       const propertyNames = ['first_name'];
-      assert.throws(() => { parseJson(null, body, propertyNames); }, (err) => {
+      assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
         err.problemCode.should.equal(400.28);
         err.message.should.equal('The entity is invalid. Unrecognized fields included in request.');
         return true;
@@ -182,7 +182,7 @@ describe('extracting entities from submissions', () => {
           data: { age: '88', first_name: 'Alice' }
         };
         const propertyNames = ['age', 'first_name'];
-        const entity = parseJson(null, body, propertyNames);
+        const entity = extractEntity(body, propertyNames);
         should(entity).eql({
           system: {
             label: 'Alice (88)',
@@ -199,7 +199,7 @@ describe('extracting entities from submissions', () => {
           data: { first_name: 'Alice' }
         };
         const propertyNames = ['age', 'first_name'];
-        const entity = parseJson(null, body, propertyNames);
+        const entity = extractEntity(body, propertyNames);
         should(entity).eql({
           system: {
             label: 'Alice (88)',
@@ -215,7 +215,7 @@ describe('extracting entities from submissions', () => {
           data: { age: '88', first_name: 'Alice' }
         };
         const propertyNames = ['age', 'first_name'];
-        assert.throws(() => { parseJson(null, body, propertyNames); }, (err) => {
+        assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
           err.problemCode.should.equal(409.14);
           err.message.should.equal('There was a problem with entity processing: ID empty or missing.');
           return true;
@@ -228,7 +228,7 @@ describe('extracting entities from submissions', () => {
           data: { age: '88', first_name: 'Alice' }
         };
         const propertyNames = ['age', 'first_name'];
-        assert.throws(() => { parseJson(null, body, propertyNames); }, (err) => {
+        assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
           err.problemCode.should.equal(409.14);
           err.message.should.equal('There was a problem with entity processing: Label empty or missing.');
           return true;
@@ -242,7 +242,7 @@ describe('extracting entities from submissions', () => {
           data: { age: '88', first_name: 'Alice' }
         };
         const propertyNames = ['age', 'first_name'];
-        assert.throws(() => { parseJson(null, body, propertyNames); }, (err) => {
+        assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
           err.problemCode.should.equal(400.28);
           err.message.should.equal('The entity is invalid. Value for [label] is not a string.');
           return true;
@@ -255,7 +255,7 @@ describe('extracting entities from submissions', () => {
           label: 'Label',
         };
         const propertyNames = ['age', 'first_name'];
-        assert.throws(() => { parseJson(null, body, propertyNames); }, (err) => {
+        assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
           err.problemCode.should.equal(400.28);
           err.message.should.equal('The entity is invalid. No entity data provided.');
           return true;
@@ -269,7 +269,7 @@ describe('extracting entities from submissions', () => {
           data: { favorite_food: 'pizza' }
         };
         const propertyNames = ['age', 'first_name'];
-        assert.throws(() => { parseJson(null, body, propertyNames); }, (err) => {
+        assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
           err.problemCode.should.equal(400.28);
           err.message.should.equal('The entity is invalid. You specified the dataset property [favorite_food] which does not exist.');
           return true;
@@ -284,7 +284,7 @@ describe('extracting entities from submissions', () => {
           data: { age: 99 }
         };
         const propertyNames = ['age'];
-        assert.throws(() => { parseJson(null, body, propertyNames); }, (err) => {
+        assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
           err.problemCode.should.equal(400.28);
           err.message.should.equal('The entity is invalid. Property value for [age] is not a string.');
           return true;
@@ -298,7 +298,7 @@ describe('extracting entities from submissions', () => {
           data: { age: null }
         };
         const propertyNames = ['age'];
-        assert.throws(() => { parseJson(null, body, propertyNames); }, (err) => {
+        assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
           err.problemCode.should.equal(400.28);
           err.message.should.equal('The entity is invalid. Property value for [age] is not a string.');
           return true;
@@ -319,7 +319,7 @@ describe('extracting entities from submissions', () => {
           data: { age: '99', first_name: 'Alice', label: 'New Label' }
         };
         const propertyNames = ['age', 'first_name'];
-        const entity = parseJson(existingEntity, body, propertyNames);
+        const entity = extractEntity(body, propertyNames, existingEntity);
         should(entity).eql({
           system: {
             label: 'New Label',
@@ -341,7 +341,7 @@ describe('extracting entities from submissions', () => {
           data: { first_name: 'New Name' }
         };
         const propertyNames = ['first_name'];
-        const entity = parseJson(existingEntity, body, propertyNames);
+        const entity = extractEntity(body, propertyNames, existingEntity);
         should(entity).eql({
           system: {
             label: 'Alice (88)',
@@ -363,7 +363,7 @@ describe('extracting entities from submissions', () => {
           data: { label: 'New Label' }
         };
         const propertyNames = ['first_name'];
-        const entity = parseJson(existingEntity, body, propertyNames);
+        const entity = extractEntity(body, propertyNames, existingEntity);
         should(entity).eql({
           system: {
             label: 'New Label',
@@ -385,7 +385,7 @@ describe('extracting entities from submissions', () => {
           label: 'Label is not supposed to get updated in body, should be in data.'
         };
         const propertyNames = ['first_name'];
-        assert.throws(() => { parseJson(existingEntity, body, propertyNames); }, (err) => {
+        assert.throws(() => { extractEntity(body, propertyNames, existingEntity); }, (err) => {
           err.problemCode.should.equal(400.28);
           err.message.should.equal('The entity is invalid. No entity data provided.');
           return true;
@@ -401,12 +401,12 @@ describe('extracting entities from submissions', () => {
           data: { first_name: 'Alice' }
         };
         const propertyNames = ['first_name'];
-        assert.throws(() => { parseJson(existingEntity, { data: { label: '' } }, propertyNames); }, (err) => {
+        assert.throws(() => { extractEntity({ data: { label: '' } }, propertyNames, existingEntity); }, (err) => {
           err.problemCode.should.equal(409.14);
           err.message.should.equal('There was a problem with entity processing: Label empty or missing.');
           return true;
         });
-        assert.throws(() => { parseJson(existingEntity, { data: { label: null } }, propertyNames); }, (err) => {
+        assert.throws(() => { extractEntity({ data: { label: null } }, propertyNames, existingEntity); }, (err) => {
           err.problemCode.should.equal(400.28);
           err.message.should.equal('The entity is invalid. Property value for [label] is not a string.');
           return true;
