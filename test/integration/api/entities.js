@@ -412,6 +412,25 @@ describe('Entities API', () => {
         });
     }));
 
+    it('should log the entity create event in the audit log', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          label: 'Johnny Doe',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        });
+
+      const audit = await container.Audits.getLatestByAction('entity.create').then(a => a.get());
+      audit.actorId.should.equal(5);
+      audit.details.uuid.should.eql('12345678-1234-4123-8234-111111111aaa');
+      audit.details.dataset.should.eql('people');
+    }));
+
     it('should reject if the uuid is missing', testDataset(async (service) => {
       const asAlice = await service.login('alice');
 
