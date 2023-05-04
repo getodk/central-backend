@@ -6,6 +6,16 @@ const testData = require('../../data/xml');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 /* eslint-enable import/no-dynamic-require */
 
+const testDataset = (test) => testService(async (service, container) => {
+  const asAlice = await service.login('alice');
+
+  await asAlice.post('/v1/projects/1/forms?publish=true')
+    .send(testData.forms.simpleEntity)
+    .expect(200);
+
+  await test(service, container);
+});
+
 const testEntities = (test) => testService(async (service, container) => {
   const asAlice = await service.login('alice');
 
@@ -350,35 +360,107 @@ describe('Entities API', () => {
 
   describe('POST /datasets/:name/entities', () => {
 
-    it('should create an Entity', testService(async (service) => {
+    it('should return notfound if the dataset does not exist', testDataset(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.post('/v1/projects/1/datasets/People/entities')
+      await asAlice.post('/v1/projects/1/datasets/nonexistent/entities')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot write', testDataset(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.post('/v1/projects/1/datasets/people/entities')
+        .expect(403);
+    }));
+
+    it('should reject malformed json', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ broken: 'json' })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.28);
+        });
+    }));
+
+    it('should create an Entity', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
         .send({
-          uuid: '10000000-0000-0000-0000-000000000001',
+          uuid: '12345678-1234-4123-8234-111111111aaa',
           label: 'Johnny Doe',
-          firstName: 'Johnny',
-          lastName: 'Doe',
-          city: 'Toronto'
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
         })
         .expect(200)
         .then(({ body: person }) => {
           person.should.be.an.Entity();
+          person.uuid.should.equal('12345678-1234-4123-8234-111111111aaa');
+          person.creatorId.should.equal(5);
           person.should.have.property('currentVersion').which.is.an.EntityDef();
           person.currentVersion.should.have.property('source').which.is.an.EntitySource();
+          person.currentVersion.should.have.property('label').which.equals('Johnny Doe');
           person.currentVersion.should.have.property('data').which.is.eql({
-            firstName: 'Johnny',
-            lastName: 'Doe',
-            city: 'Toronto'
+            first_name: 'Johnny',
+            age: '22'
           });
         });
     }));
 
-    // it should reject if uuid or label is missing
-    // it should reject if property is not present in dataset.publishedProperties
-    // it should reject if user don't have permission
-    // it should reject if uuid is not unique ??? what to do if uuid is deleted?
+    it('should reject if uuid is not unique', testEntities(async (service) => {
+      // Use testEntities here vs. testDataset to prepopulate with 2 entities
+      const asAlice = await service.login('alice');
 
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Johnny Doe',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(409);
+    }));
+
+    it('should reject if data properties do not match dataset exactly', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Johnny Doe',
+          data: {
+            favorite_color: 'yellow',
+            height: '167'
+          }
+        })
+        .expect(400);
+    }));
+
+    it('should log the entity create event in the audit log', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          label: 'Johnny Doe',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        });
+
+      const audit = await container.Audits.getLatestByAction('entity.create').then(a => a.get());
+      audit.actorId.should.equal(5);
+      audit.details.uuid.should.eql('12345678-1234-4123-8234-111111111aaa');
+      audit.details.dataset.should.eql('people');
+    }));
   });
 
   describe('PUT /datasets/:name/entities/:uuid', () => {
@@ -570,6 +652,16 @@ describe('Entities API', () => {
           });
       }));
 
+      it('should reject if updating the label to be empty', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+          .send({
+            data: { label: '' }
+          })
+          .expect(409);
+      }));
+
       it('should update an entity with additional properties', testEntities(async (service) => {
         const asAlice = await service.login('alice');
 
@@ -620,24 +712,17 @@ describe('Entities API', () => {
           });
       }));
 
-      it('should transform null property to empty string', testEntities(async (service) => {
+      it('should not accept null property', testEntities(async (service) => {
         const asAlice = await service.login('alice');
-        const newData = { age: '88', first_name: '' };
 
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
           .send({
             data: { first_name: null }
           })
-          .expect(200)
-          .then(({ body: person }) => {
-            person.currentVersion.should.have.property('data').which.is.eql(newData);
-          });
-
-        // re-get entity to check data
-        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
-          .expect(200)
-          .then(({ body: person }) => {
-            person.currentVersion.should.have.property('data').which.is.eql(newData);
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.28);
+            body.message.should.equal('The entity is invalid. Property value for [first_name] is not a string.');
           });
       }));
 
@@ -648,9 +733,10 @@ describe('Entities API', () => {
           .send({
             data: { favorite_candy: 'chocolate' }
           })
-          .expect(409)
+          .expect(400)
           .then(({ body }) => {
-            body.code.should.equal(409.14);
+            body.code.should.equal(400.28);
+            body.message.should.equal('The entity is invalid. You specified the dataset property [favorite_candy] which does not exist.');
           });
       }));
     });

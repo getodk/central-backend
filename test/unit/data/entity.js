@@ -2,7 +2,7 @@ const should = require('should');
 const appRoot = require('app-root-path');
 const assert = require('assert');
 // eslint-disable-next-line import/no-dynamic-require
-const { parseSubmissionXml, validateEntity, extractSelectedProperties, selectFields, diffEntityData } = require(appRoot + '/lib/data/entity');
+const { parseSubmissionXml, extractEntity, validateEntity, extractSelectedProperties, selectFields, diffEntityData } = require(appRoot + '/lib/data/entity');
 // eslint-disable-next-line import/no-dynamic-require
 const { fieldsFor } = require(appRoot + '/test/util/schema');
 // eslint-disable-next-line import/no-dynamic-require
@@ -147,6 +147,245 @@ describe('extracting entities from submissions', () => {
             failure.isProblem.should.equal(true);
             failure.problemCode.should.equal(409.14);
           }));
+    });
+  });
+
+  describe('extractEntity', () => {
+    // Used to compare entity structure when Object.create(null) used.
+    beforeEach(() => {
+      should.config.checkProtoEql = false;
+    });
+    afterEach(() => {
+      should.config.checkProtoEql = true;
+    });
+
+    it('should reject if extra fields passed to body', () => {
+      const body = {
+        uuid: '12345678-1234-4123-8234-123456789abc',
+        label: 'Alice (88)',
+        data: { first_name: 'Alice' },
+        extra: 'field'
+      };
+      const propertyNames = ['first_name'];
+      assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
+        err.problemCode.should.equal(400.28);
+        err.message.should.equal('The entity is invalid. Unrecognized fields included in request.');
+        return true;
+      });
+    });
+
+    describe('new entities', () => {
+      it('should parse new entity data', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Alice (88)',
+          data: { age: '88', first_name: 'Alice' }
+        };
+        const propertyNames = ['age', 'first_name'];
+        const entity = extractEntity(body, propertyNames);
+        should(entity).eql({
+          system: {
+            label: 'Alice (88)',
+            uuid: '12345678-1234-4123-8234-123456789abc'
+          },
+          data: { age: '88', first_name: 'Alice' }
+        });
+      });
+
+      it('should parse subset of dataset properties and leave the rest undefined', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Alice (88)',
+          data: { first_name: 'Alice' }
+        };
+        const propertyNames = ['age', 'first_name'];
+        const entity = extractEntity(body, propertyNames);
+        should(entity).eql({
+          system: {
+            label: 'Alice (88)',
+            uuid: '12345678-1234-4123-8234-123456789abc'
+          },
+          data: { first_name: 'Alice' }
+        });
+      });
+
+      it('should reject if data contains unknown properties', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Label',
+          data: { age: '88', favorite_food: 'pizza' }
+        };
+        const propertyNames = ['age'];
+        assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
+          err.problemCode.should.equal(400.28);
+          err.message.should.equal('The entity is invalid. You specified the dataset property [favorite_food] which does not exist.');
+          return true;
+        });
+      });
+
+      it('should reject if request does not form valid entity', () => {
+        // These are generic entity validation errors so they use an old 409.14 conflict problem
+        const requests = [
+          [
+            { label: 'Alice Label', data: { first_name: 'Alice' } },
+            'ID empty or missing.'
+          ],
+          [
+            { uuid: '12345678-1234-4123-8234-123456789abc', data: { first_name: 'Alice' } },
+            'Label empty or missing.'
+          ],
+        ];
+        const propertyNames = ['first_name'];
+        for (const [body, message] of requests) {
+          assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
+            err.problemCode.should.equal(409.14);
+            err.message.includes(message).should.equal(true);
+            return true;
+          });
+        }
+      });
+
+      it('should reject if required part of the request is missing or not a string', () => {
+        // These are JSON entity validation errors so they use a newer 400 bad request problem
+        const requests = [
+          [
+            { uuid: '12345678-1234-4123-8234-123456789abc', label: 1234, data: { first_name: 'Alice' } },
+            'Value for [label] is not a string.'
+          ],
+          [
+            { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Label' },
+            'No entity data provided.'
+          ],
+          [
+            { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Label', data: { first_name: 'Alice', age: 99 } },
+            'Property value for [age] is not a string.'
+          ],
+          [
+            { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Label', data: { first_name: 'Alice', age: null } },
+            'Property value for [age] is not a string.'
+          ],
+        ];
+        const propertyNames = ['age', 'first_name'];
+        for (const [body, message] of requests) {
+          assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
+            err.problemCode.should.equal(400.28);
+            err.message.includes(message).should.equal(true);
+            return true;
+          });
+        }
+      });
+    });
+
+    describe('updated entities', () => {
+      it('should parse updated entity data', () => {
+        const existingEntity = {
+          system: {
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Alice (88)',
+          },
+          data: { age: '88', first_name: 'Alice' }
+        };
+        const newData = {
+          data: { age: '99', first_name: 'Alice', label: 'New Label' }
+        };
+        const propertyNames = ['age', 'first_name'];
+        const entity = extractEntity(newData, propertyNames, existingEntity);
+        should(entity).eql({
+          system: {
+            label: 'New Label',
+            uuid: '12345678-1234-4123-8234-123456789abc'
+          },
+          data: { age: '99', first_name: 'Alice' }
+        });
+      });
+
+      it('should allow only label to be updated without changing data', () => {
+        const existingEntity = {
+          system: {
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Alice (88)',
+          },
+          data: { first_name: 'Alice' }
+        };
+        const body = {
+          data: { label: 'New Label' }
+        };
+        const propertyNames = ['first_name'];
+        const entity = extractEntity(body, propertyNames, existingEntity);
+        should(entity).eql({
+          system: {
+            label: 'New Label',
+            uuid: '12345678-1234-4123-8234-123456789abc'
+          },
+          data: { first_name: 'Alice' }
+        });
+      });
+
+      it('should allow updating properties not included in earlier version of entity', () => {
+        const existingEntity = {
+          system: {
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Label',
+          },
+          data: { first_name: 'Alice' }
+        };
+        const newData = {
+          data: { age: '99' }
+        };
+        const propertyNames = ['age', 'first_name'];
+        const entity = extractEntity(newData, propertyNames, existingEntity);
+        should(entity).eql({
+          system: {
+            label: 'Label',
+            uuid: '12345678-1234-4123-8234-123456789abc'
+          },
+          data: { age: '99', first_name: 'Alice' }
+        });
+      });
+
+      it('should reject if required part of the request is missing or not a string', () => {
+        const requests = [
+          [
+            {},
+            400.28, 'No entity data provided.'
+          ],
+          [
+            { label: 'Label is supposed to go in data for updating.' },
+            400.28, 'No entity data provided.'
+          ],
+          [
+            { data: { label: null } },
+            400.28, 'Property value for [label] is not a string.'
+          ],
+          [
+            { data: { label: '' } },
+            409.14, 'Label empty or missing.'
+          ],
+          [
+            { data: { first_name: 'Alice', age: 99 } },
+            400.28, 'Property value for [age] is not a string.'
+          ],
+          [
+            { data: { first_name: 'Alice', age: null } },
+            400.28, 'Property value for [age] is not a string.'
+          ],
+        ];
+        const existingEntity = {
+          system: {
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Alice (88)',
+          },
+          data: { first_name: 'Alice' }
+        };
+        const propertyNames = ['age', 'first_name'];
+        for (const [body, errorCode, message] of requests) {
+          assert.throws(() => { extractEntity(body, propertyNames, existingEntity); }, (err) => {
+            err.problemCode.should.equal(errorCode);
+            err.message.includes(message).should.equal(true);
+            return true;
+          });
+        }
+      });
     });
   });
 
