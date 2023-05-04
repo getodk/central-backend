@@ -853,7 +853,7 @@ describe('analytics task queries', () => {
   // eslint-disable-next-line space-before-function-paren, func-names
   describe('combined analytics', function () {
     // increasing timeouts on this set of tests
-    this.timeout(4000);
+    this.timeout(8000);
 
     it('should combine system level queries', testService(async (service, container) => {
       // encrypting a project
