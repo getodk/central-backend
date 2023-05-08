@@ -394,12 +394,13 @@ describe('worker: entity', () => {
           .then(() => exhaust(container))
           .then(() => asAlice.get('/v1/projects/1/datasets/people/entities.csv')
             .then(({ text }) => {
-              // eslint-disable-next-line no-console
-              //console.log(text);
-              const csv = text.split('\n');
-              csv[0].includes('name,label,first_name,age').should.equal(true);
-              csv[1].includes('Beth (88),Beth,88').should.equal(true);
-              csv[2].includes('Alice (88),Alice,88').should.equal(true);
+
+              const withOutTs = text.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g, '');
+              withOutTs.should.be.eql(
+                '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt\n' +
+                '12345678-1234-4123-8234-123456789def,Beth (88),Beth,88,,5,Alice,0,\n'+
+                '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,\n'
+              );
             })))));
 
     it('should export dataset from multiple forms', testService(async (service, container) => {
@@ -450,11 +451,13 @@ describe('worker: entity', () => {
 
       const { text } = await asAlice.get('/v1/projects/1/datasets/foo/entities.csv');
 
-      const csv = text.split('\n');
-      csv[0].includes('name,label,f_q1,e_q2,a_q3,c_q4,b_q1,d_q2').should.equal(true);
-      csv[1].includes(',one,w,x,y,z,,').should.equal(true);
-      csv[2].includes(',two,,,c,d,a,b').should.equal(true);
-      csv[3].includes(',one,,,y,z,w,x').should.equal(true);
+      const withOutTs = text.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g, '');
+      withOutTs.should.be.eql(
+        '__id,label,f_q1,e_q2,a_q3,c_q4,b_q1,d_q2,__createdAt,__creatorId,__creatorName,__updates,__updatedAt\n' +
+        '12345678-1234-4123-8234-123456789ccc,one,w,x,y,z,,,,5,Alice,0,\n'+
+        '12345678-1234-4123-8234-123456789bbb,two,,,c,d,a,b,,5,Alice,0,\n'+
+        '12345678-1234-4123-8234-123456789aaa,one,,,y,z,w,x,,5,Alice,0,\n'
+      );
     }));
   });
 });
