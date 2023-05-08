@@ -53,6 +53,7 @@
     "mocha": "~10",
     "nock": "~12",
     "node-mocks-http": "~1.6",
+    "nodemon": "^2.0.22",
     "nyc": "~15",
     "semver": "^7.3.7",
     "should": "~13",

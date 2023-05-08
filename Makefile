@@ -19,6 +19,10 @@ check-migrations: node_version
 .PHONY: base
 base: node_version migrations check-migrations
 
+.PHONY: dev
+dev: base
+	npx nodemon --watch lib --watch config lib/bin/run-server.js
+
 .PHONY: run
 run: base
 	node lib/bin/run-server.js
