@@ -337,6 +337,28 @@ describe('Entities API', () => {
   });
 
   describe('GET /datasets/:name/entities/:uuid/audits', () => {
+
+    it('should return notfound if the dataset does not exist', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/nonexistent/entities/123/audits')
+        .expect(404);
+    }));
+
+    it('should return notfound if the entity does not exist', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/123/audits')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot read', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+        .expect(403);
+    }));
+
     it('should return audit logs of the Entity', testEntities(async (service) => {
       const asAlice = await service.login('alice');
       const asBob = await service.login('bob');
@@ -365,6 +387,32 @@ describe('Entities API', () => {
           logs[1].details.submission.xmlFormId.should.be.eql('simpleEntity');
           logs[1].details.submission.currentVersion.instanceName.should.be.eql('one');
           logs[1].details.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
+        });
+    }));
+
+    it('should return audit logs of the Entity when it is created via POST API', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          label: 'Johnny Doe',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+
+          logs[0].should.be.an.Audit();
+          logs[0].action.should.be.eql('entity.create');
+          logs[0].actor.displayName.should.be.eql('Alice');
+
+
         });
     }));
 
@@ -422,6 +470,9 @@ describe('Entities API', () => {
         });
     }));
 
+    // It's not possible to purge audit logs via API.
+    // However System Administrators can purge/archive audit logs via SQL
+    // to save disk space and improve performance
     it('should return entity audits even when submission and its logs are deleted', testEntities(async (service, container) => {
       const asAlice = await service.login('alice');
 
@@ -478,6 +529,19 @@ describe('Entities API', () => {
 
       await exhaust(container);
 
+      await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .send(testData.instances.simpleEntity.one
+          .replace('<instanceID>one', '<deprecatedID>one2</deprecatedID><instanceID>one3'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .set('X-Action-Notes', 'approving one more time')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+
+      await exhaust(container);
+
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
         .expect(200)
         .then(({ body: logs }) => {
@@ -499,7 +563,22 @@ describe('Entities API', () => {
 
     }));
 
-    // Add more tests once POST and PUT APIs are ready
+    it('should return paginated audit logs of the Entity', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ data: { age: '12', first_name: 'John' } })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits?offset=1&limit=1')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs.length.should.equal(1);
+          logs[0].should.be.an.Audit();
+          logs[0].action.should.be.eql('entity.create');
+        });
+    }));
   });
 
   describe('POST /datasets/:name/entities', () => {
