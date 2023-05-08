@@ -402,7 +402,10 @@ describe('Entities API', () => {
             age: '22'
           }
         })
-        .expect(200);
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.an.Entity();
+        });
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/audits')
         .expect(200)
@@ -681,8 +684,8 @@ describe('Entities API', () => {
 
       const audit = await container.Audits.getLatestByAction('entity.create').then(a => a.get());
       audit.actorId.should.equal(5);
-      audit.details.uuid.should.eql('12345678-1234-4123-8234-111111111aaa');
-      audit.details.dataset.should.eql('people');
+      audit.details.entity.uuid.should.eql('12345678-1234-4123-8234-111111111aaa');
+      audit.details.entity.dataset.should.eql('people');
     }));
   });
 
