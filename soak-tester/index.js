@@ -246,7 +246,7 @@ async function apiFetch(method, path, body, extraHeaders) {
 
   const headers = { Authorization, ...extraHeaders };
 
-  log.debug('apiFetch()', { methor, url, headers, body });
+  log.debug('apiFetch()', { method, url, headers, body });
 
   const res = await fetch(url, {
     method,
