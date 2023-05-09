@@ -16,7 +16,7 @@ import { program } from 'commander';
 
 const _log = (...args) => console.log(`[${new Date().toISOString()}]`, '[soak-tester]', ...args);
 const log  = (...args) => true  && _log('INFO',   ...args);
-log.debug  = (...args) => true && _log('DEBUG',  ...args);
+log.debug  = (...args) => false && _log('DEBUG',  ...args);
 log.info   = log;
 log.error  = (...args) => true  && _log('ERROR',  ...args);
 log.report = (...args) => true  && _log('REPORT', ...args);
@@ -239,19 +239,15 @@ async function apiPost(path, body, headers) {
   return res.json();
 }
 
-async function apiFetch(method, path, body, extraHeaders) {
+async function apiFetch(method, path, body, headers) {
   const url = `${serverUrl}/v1/${path}`;
 
   const Authorization = bearerToken ? `Bearer ${bearerToken}` : `Basic ${base64(`${userEmail}:${userPassword}`)}`;
 
-  const headers = { Authorization, ...extraHeaders };
-
-  log.debug('apiFetch()', { method, url, headers, body });
-
   const res = await fetch(url, {
     method,
     body,
-    headers,
+    headers: { Authorization, ...headers },
   });
   log.debug(method, res.url, '->', res.status);
   if(!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
