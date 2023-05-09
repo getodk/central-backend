@@ -49,7 +49,7 @@ async function soakTest() {
   fs.mkdirSync(logPath, { recursive:true });
 
   log.info('Creating session...');
-  const { token } = await apiPostJson('sessions', { email:userEmail, password:userPassword }, { Authorization:null });
+  const { token } = await apiPostJson('sessions', { email:userEmail, password:userPassword }, { Authorization:undefined });
   bearerToken = token;
 
   log.info('Creating project...');
