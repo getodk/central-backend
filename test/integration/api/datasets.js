@@ -38,7 +38,7 @@ describe('datasets and entities', () => {
                 .then(({ body }) => {
                   body[0].should.be.a.Dataset();
                   body.map(({ createdAt, ...d }) => d).should.eql([
-                    { name: 'people', projectId: 1 }
+                    { name: 'people', projectId: 1, approvalRequired: false }
                   ]);
                 })))));
 
@@ -67,7 +67,7 @@ describe('datasets and entities', () => {
           .then(({ body }) => {
             body[0].should.be.an.ExtendedDataset();
             body.map(({ createdAt, lastEntity, ...d }) => d).should.eql([
-              { name: 'people', projectId: 1, entities: 1 }
+              { name: 'people', projectId: 1, entities: 1, approvalRequired: false }
             ]);
           });
       }));
@@ -89,7 +89,7 @@ describe('datasets and entities', () => {
                   .then(({ body }) => {
                     body[0].should.be.a.Dataset();
                     body.map(({ id, createdAt, ...d }) => d).should.eql([
-                      { name: 'student', projectId: 1 }
+                      { name: 'student', projectId: 1, approvalRequired: false }
                     ]);
                   }))))));
     });
@@ -113,7 +113,7 @@ describe('datasets and entities', () => {
               should(lastEntity).be.null();
               return d;
             }).should.eql([
-              { name: 'people', projectId: 1, entities: 0 }
+              { name: 'people', projectId: 1, entities: 0, approvalRequired: false }
             ]);
           });
       }));
@@ -147,7 +147,7 @@ describe('datasets and entities', () => {
               lastEntity.should.not.be.null();
               return d;
             }).should.eql([
-              { name: 'people', projectId: 1, entities: 1 }
+              { name: 'people', projectId: 1, entities: 1, approvalRequired: false }
             ]);
           });
       }));
@@ -193,7 +193,7 @@ describe('datasets and entities', () => {
               lastEntity.should.not.startWith('1999');
               return d;
             }).should.eql([
-              { name: 'people', projectId: 1, entities: 2 }
+              { name: 'people', projectId: 1, entities: 2, approvalRequired: false }
             ]);
           });
       }));
@@ -424,7 +424,8 @@ describe('datasets and entities', () => {
 
             ds.should.be.eql({
               name: 'people',
-              projectId: 1
+              projectId: 1,
+              approvalRequired: false
             });
 
             createdAt.should.not.be.null();

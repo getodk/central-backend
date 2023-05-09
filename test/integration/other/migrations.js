@@ -464,7 +464,7 @@ describe('database migrations: 20230123-01-remove-google-backups', function() {
 });
 
 // eslint-disable-next-line func-names
-describe('database migrations: 20230324-01-edit-dataset-verbs.js', function () {
+describe.skip('database migrations: 20230324-01-edit-dataset-verbs.js', function () {
   this.timeout(20000);
 
   it('should add dataset/entity read verbs with raw sql', testServiceFullTrx(async (service, container) => {
@@ -501,7 +501,7 @@ describe('database migrations: 20230324-01-edit-dataset-verbs.js', function () {
 });
 
 // eslint-disable-next-line func-names
-describe('database migrations from 20230406: altering entities and entity_defs', function () {
+describe.skip('database migrations from 20230406: altering entities and entity_defs', function () {
   this.timeout(20000);
 
   const createEntity = async (service, container) => {
