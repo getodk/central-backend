@@ -239,15 +239,19 @@ async function apiPost(path, body, headers) {
   return res.json();
 }
 
-async function apiFetch(method, path, body, headers) {
+async function apiFetch(method, path, body, extraHeaders) {
   const url = `${serverUrl}/v1/${path}`;
 
   const Authorization = bearerToken ? `Bearer ${bearerToken}` : `Basic ${base64(`${userEmail}:${userPassword}`)}`;
 
+  const headers = { Authorization, ...extraHeaders };
+
+  log.debug('apiFetch()', { methor, url, headers, body });
+
   const res = await fetch(url, {
     method,
     body,
-    headers: { Authorization, ...headers },
+    headers,
   });
   log.debug(method, res.url, '->', res.status);
   if(!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
