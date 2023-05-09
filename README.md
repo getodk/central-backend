@@ -36,6 +36,8 @@ Setup is now complete.
 
 To run the server, run `make run` from the repository root. Once started, the server will be available on port `8383`. If you run into trouble with this step, the typical solution is to run `npm install` manually.
 
+You can also run `make dev` to run the server and automatically restart it when a source file changes.
+
 You can also run `make debug` to run the server with a standard node inspector port running (use your favorite tool, or visit [`about:inspect`](chrome://inspect) in Chrome to attach breakpoints and step through statements).
 
 ### Setting up the database manually
