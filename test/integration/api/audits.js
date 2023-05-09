@@ -473,6 +473,40 @@ describe('/audits', () => {
               body[2].action.should.equal('user.session.create');
             })))));
 
+    it('should filter out entity events given action=nonverbose', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+      await exhaust(container);
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({
+          data: { age: '77', first_name: 'Alan' }
+        })
+        .expect(200);
+
+      await asAlice.get('/v1/audits?action=nonverbose')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(5);
+          body.map(a => a.action).should.eql([
+            'form.update.publish',
+            'form.create',
+            'dataset.update.publish',
+            'dataset.create',
+            'user.session.create'
+          ]);
+        });
+    }));
+
     it('should log and return notes if given', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
