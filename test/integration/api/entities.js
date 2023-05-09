@@ -978,8 +978,8 @@ describe('Entities API', () => {
 
       const audit = await container.Audits.getLatestByAction('entity.update.version').then(a => a.get());
       audit.actorId.should.equal(6);
-      audit.details.uuid.should.eql('12345678-1234-4123-8234-123456789abc');
-      audit.details.dataset.should.eql('people');
+      audit.details.entity.uuid.should.eql('12345678-1234-4123-8234-123456789abc');
+      audit.details.entity.dataset.should.eql('people');
     }));
   });
 
