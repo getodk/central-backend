@@ -239,15 +239,19 @@ async function apiPost(path, body, headers) {
   return res.json();
 }
 
-async function apiFetch(method, path, body, headers) {
+async function apiFetch(method, path, body, extraHeaders) {
   const url = `${serverUrl}/v1/${path}`;
 
   const Authorization = bearerToken ? `Bearer ${bearerToken}` : `Basic ${base64(`${userEmail}:${userPassword}`)}`;
 
+  const headers = { Authorization, ...extraHeaders };
+  // unset null/undefined Authorization value to prevent fetch() from stringifying it:
+  if(headers.Authorization == null) delete headers.Authorization;
+
   const res = await fetch(url, {
     method,
     body,
-    headers: { Authorization, ...headers },
+    headers,
   });
   log.debug(method, res.url, '->', res.status);
   if(!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
