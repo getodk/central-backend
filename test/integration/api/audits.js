@@ -304,6 +304,71 @@ describe('/audits', () => {
               body[0].action.should.equal('submission.create');
             })))));
 
+    it('should filter by action category (dataset)', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await asAlice.get('/v1/audits?action=dataset')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(2);
+          body.map(a => a.action).should.eql([
+            'dataset.update.publish',
+            'dataset.create'
+          ]);
+        });
+    }));
+
+    it('should filter by action category (entity)', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+      // this second sub will make an error when processing
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.two
+          .replace('uuid:12345678-1234-4123-8234-123456789aaa', '12345678-1234-4123-8234-123456789abc'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+      await exhaust(container);
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({
+          data: { age: '77', first_name: 'Alan' }
+        })
+        .expect(200);
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
+
+      await asAlice.get('/v1/audits?action=entity')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(4);
+          body.map(a => a.action).should.eql([
+            'entity.delete',
+            'entity.update.version',
+            'entity.create.error',
+            'entity.create'
+          ]);
+        });
+    }));
+
     it('should filter extended data by action', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects')
@@ -472,6 +537,45 @@ describe('/audits', () => {
               body[1].action.should.equal('form.create');
               body[2].action.should.equal('user.session.create');
             })))));
+
+    it('should filter out entity events given action=nonverbose', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+      await exhaust(container);
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({
+          data: { age: '77', first_name: 'Alan' }
+        })
+        .expect(200);
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
+
+      await asAlice.get('/v1/audits?action=nonverbose')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(5);
+          body.map(a => a.action).should.eql([
+            'form.update.publish',
+            'form.create',
+            'dataset.update.publish',
+            'dataset.create',
+            'user.session.create'
+          ]);
+        });
+    }));
 
     it('should log and return notes if given', testService((service) =>
       service.login('alice', (asAlice) =>
