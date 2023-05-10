@@ -283,7 +283,7 @@ describe('datasets and entities', () => {
             .then(() => asAlice.get('/v1/projects/1/datasets/people/entities.csv')
               .expect(200)
               .then(({ text }) => {
-                text.should.equal('name,label,first_name,age\n');
+                text.should.equal('__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt\n');
               })))));
 
       it('should return only published properties', testService(async (service) => {
@@ -304,7 +304,7 @@ describe('datasets and entities', () => {
         await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
           .expect(200)
           .then(({ text }) => {
-            text.should.equal('name,label,first_name,age\n');
+            text.should.equal('__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt\n');
           });
 
       }));
@@ -344,15 +344,102 @@ describe('datasets and entities', () => {
           .send({ reviewState: 'approved' })
           .expect(200);
 
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
         await exhaust(container);
 
         const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
           .expect(200)
           .then(r => r.text);
 
-        result.should.be.eql(
-          'name,label,first_name,age\n' +
-          '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88\n'
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(2);
+
+        const withOutTs = result.replace(isoRegex, '');
+        withOutTs.should.be.eql(
+          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt\n' +
+            '12345678-1234-4123-8234-123456789aaa,Jane (30),Jane,30,,5,Alice,0,\n' +
+            '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,\n'
+        );
+
+      }));
+
+      it('should not return deleted entities', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111aaa',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111bbb',
+            label: 'Robert Doe',
+            data: { first_name: 'Robert', age: '88' }
+          })
+          .expect(200);
+
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111bbb');
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200)
+          .then(r => r.text);
+
+        result.should.not.match(/Robert Doe/);
+
+      }));
+
+      it('should return updated value correctly', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111aaa',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa?force=true')
+          .send({
+            data: { first_name: 'Robert', age: '', label: 'Robert Doe (expired)' }
+          })
+          .expect(200);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200)
+          .then(r => r.text);
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(2);
+
+        const withOutTs = result.replace(isoRegex, '');
+        withOutTs.should.be.eql(
+          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt\n' +
+            '12345678-1234-4123-8234-111111111aaa,Robert Doe (expired),Robert,,,5,Alice,1,\n'
         );
 
       }));
@@ -379,9 +466,10 @@ describe('datasets and entities', () => {
         const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
           .expect(200);
 
-        result.text.should.be.eql(
-          'name,label,first_name,age\n' +
-          '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88\n'
+        const withOutTs = result.text.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g, '');
+        withOutTs.should.be.eql(
+          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt\n' +
+          '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,\n'
         );
 
         const etag = result.get('ETag');
@@ -851,91 +939,7 @@ describe('datasets and entities', () => {
   </manifest>`);
               })))));
 
-      it('should return md5 of last Entity timestamp in the manifest', testService(async (service, container) => {
-        const asAlice = await service.login('alice');
 
-        await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.simpleEntity)
-          .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
-          .send(testData.instances.simpleEntity.one)
-          .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
-          .send({ reviewState: 'approved' })
-          .expect(200);
-
-        await exhaust(container);
-
-        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
-          .expect(200);
-
-        const etag = result.get('ETag');
-
-        await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
-          .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
-          .set('X-OpenRosa-Version', '1.0')
-          .expect(200)
-          .then(({ text }) => {
-            const domain = config.get('default.env.domain');
-            text.should.be.eql(`<?xml version="1.0" encoding="UTF-8"?>
-  <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
-    <mediaFile>
-      <filename>people.csv</filename>
-      <hash>md5:${etag.replace(/"/g, '')}</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/people.csv</downloadUrl>
-    </mediaFile>
-  </manifest>`);
-          });
-
-      }));
-
-      it('should return 304 content not changed if ETag matches', testService(async (service, container) => {
-        const asAlice = await service.login('alice');
-
-        await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.simpleEntity)
-          .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
-          .send(testData.instances.simpleEntity.one)
-          .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
-          .send({ reviewState: 'approved' })
-          .expect(200);
-
-        await exhaust(container);
-
-        await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
-          .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
-          .expect(200);
-
-        result.text.should.be.eql(
-          'name,label,first_name,age\n' +
-          '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88\n'
-        );
-
-        const etag = result.get('ETag');
-
-        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
-          .set('If-None-Match', etag)
-          .expect(304);
-
-      }));
 
       it('should override blob and link dataset', testService((service, { Forms, FormAttachments, Audits, Datasets }) =>
         service.login('alice', (asAlice) =>
@@ -1243,6 +1247,19 @@ describe('datasets and entities', () => {
     });
 
     describe('projects/:id/forms/:formId/attachments/:name (entities dataset)', () => {
+
+      const createBothForms = async (asAlice) => {
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/people/g, 'goodone'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+      };
+
       it('should return entities csv', testService((service, container) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
@@ -1272,6 +1289,154 @@ describe('datasets and entities', () => {
                 headers['content-type'].should.equal('text/csv; charset=utf-8');
                 text.should.equal('name,label,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88\n');
               })))));
+
+      it('should not return deleted entities', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await createBothForms(asAlice);
+
+        await asAlice.post('/v1/projects/1/datasets/goodone/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111aaa',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/goodone/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111bbb',
+            label: 'Robert Doe',
+            data: { first_name: 'Robert', age: '88' }
+          })
+          .expect(200);
+
+        await asAlice.delete('/v1/projects/1/datasets/goodone/entities/12345678-1234-4123-8234-111111111bbb');
+
+        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+          .expect(200)
+          .then(r => r.text);
+
+        result.should.not.match(/Robert Doe/);
+
+      }));
+
+      it('should return updated value correctly', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await createBothForms(asAlice);
+
+        await asAlice.post('/v1/projects/1/datasets/goodone/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111aaa',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/goodone/entities/12345678-1234-4123-8234-111111111aaa?force=true')
+          .send({
+            data: { first_name: 'Robert', age: '', label: 'Robert Doe (expired)' }
+          })
+          .expect(200);
+
+        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+          .expect(200)
+          .then(r => r.text);
+
+        result.should.be.eql(
+          'name,label,first_name,age\n' +
+          '12345678-1234-4123-8234-111111111aaa,Robert Doe (expired),Robert,\n'
+        );
+
+      }));
+
+      it('should return md5 of last Entity timestamp in the manifest', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200);
+
+        const etag = result.get('ETag');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(({ text }) => {
+            const domain = config.get('default.env.domain');
+            text.should.be.eql(`<?xml version="1.0" encoding="UTF-8"?>
+  <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
+    <mediaFile>
+      <filename>people.csv</filename>
+      <hash>md5:${etag.replace(/"/g, '')}</hash>
+      <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/people.csv</downloadUrl>
+    </mediaFile>
+  </manifest>`);
+          });
+
+      }));
+
+      it('should return 304 content not changed if ETag matches', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+          .expect(200);
+
+        result.text.should.be.eql(
+          'name,label,first_name,age\n' +
+          '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88\n'
+        );
+
+        const etag = result.get('ETag');
+
+        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+          .set('If-None-Match', etag)
+          .expect(304);
+
+      }));
+
     });
   });
 
@@ -1608,7 +1773,7 @@ describe('datasets and entities', () => {
         await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
           .expect(200)
           .then(({ text }) => {
-            text.should.equal('name,label\n');
+            text.should.equal('__id,label,__createdAt,__creatorId,__creatorName,__updates,__updatedAt\n');
           });
       }));
 
