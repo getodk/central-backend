@@ -350,12 +350,18 @@ describe('/audits', () => {
           data: { age: '77', first_name: 'Alan' }
         })
         .expect(200);
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
 
       await asAlice.get('/v1/audits?action=entity')
         .expect(200)
         .then(({ body }) => {
-          body.length.should.equal(3);
+          body.length.should.equal(4);
           body.map(a => a.action).should.eql([
+            'entity.delete',
             'entity.update.version',
             'entity.create.error',
             'entity.create'
@@ -551,6 +557,11 @@ describe('/audits', () => {
           data: { age: '77', first_name: 'Alan' }
         })
         .expect(200);
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
 
       await asAlice.get('/v1/audits?action=nonverbose')
         .expect(200)
