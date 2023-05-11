@@ -126,6 +126,29 @@ describe('worker', () => {
       after.failures.should.equal(1);
       after.lastFailure.should.be.a.recentDate();
     }));
+
+    it('should roll back changes in case of error in any job', testContainerFullTrx(async (container) => {
+      const { Audits, Users } = container;
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
+      await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
+      const event = (await Audits.getLatestByAction('submission.attachment.update')).get();
+
+      const jobMap = { 'submission.attachment.update': [
+        ({ Audits: AuditQuery }) => AuditQuery.log(alice.actor, 'dummy.event', alice.actor),
+        // eslint-disable-next-line prefer-promise-reject-errors
+        () => Promise.reject({ uh: 'oh' }) ] };
+      await promisify(runner(container, jobMap))(event);
+
+      const dummyEvent = (await Audits.getLatestByAction('dummy.event'));
+      dummyEvent.isDefined().should.be.false();
+
+      const after = (await Audits.getLatestByAction('submission.attachment.update')).get();
+      should.not.exist(after.claimed);
+      should.not.exist(after.processed);
+      after.failures.should.equal(1);
+      after.lastFailure.should.be.a.recentDate();
+
+    }));
   });
 
   // we use submission.attachment.update throughout all these tests as it is currently

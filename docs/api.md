@@ -32,6 +32,9 @@ Here major and breaking changes to the API are listed by version.
 
 ### ODK Central v2023.3
 
+**Added**:
+- New endpoint [PATCH /projects/:id/datasets/:name](#reference/datasets/datasets/update-dataset-metadata) to change whether approval of Submission is required to create an Entity.
+
 **Changed**:
 - ETag support has been added for [Download Dataset](#reference/datasets/download-dataset/download-dataset) and [Download Form Attachment](#reference/forms/individual-form/downloading-a-form-attachment).
 
@@ -3024,6 +3027,33 @@ Returns the metadata of a Dataset including properties and forms that create and
 + Response 403 (application/json)
     + Attributes (Error 403)
 
+## Update Dataset Metadata [PATCH /projects/{projectId}/datasets/{name}]
+
+You can only update `approvalRequired` using this endpoint. `approvalRequired` flag controls the Entity creation flow; if it is `true` then the Submission must be approved before an Entity can be created from it and if it is `false` then an Entity is created as soon as the Submission is received by the ODK Central.
+
+By default `approvalRequired` is `false` for the Datasets created after v2023.3. Datasets created prior to that will have `approvalRequired` set to `true`.
+
++ Parameters
+    + projectId: `16` (number, required) - The numeric ID of the Project
+    + name: `people` (string, required) - Name of the Dataset
+
++ Request (application/json)
+    + Attributes
+        + approvalRequired: `true` (boolean, required) - Control whether a Submission should be approved before an Entity is created from it.
+
+    + Body
+
+        {
+           "approvalRequired": true
+        }
+
++ Response 200 (application/json)
+    + Attributes (DatasetMetadata)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+
 ## Download Dataset [GET /projects/{projectId}/datasets/{name}/entities.csv]
 
 Datasets (collections of Entities) can be used as Attachments in other Forms, but they can also be downloaded directly as a CSV file. The CSV format matches what is expected for a [select question](https://docs.getodk.org/form-datasets/#building-selects-from-csv-files) with columns for `name`, `label,` and properties. In the case of Datasets, the `name` column is the Entity's UUID, the `label` column is the human-readable Entity label populated in the Submission, and the properties are the full set of Dataset Properties for that Dataset. If any Property for an given Entity is blank (e.g. it was not captured by that Form or was left blank), that field of the CSV is blank.
@@ -4542,6 +4572,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + name: `people` (string, required) - The name of the Dataset
 + createdAt: `2018-01-19T23:58:03.395Z` (string, required) - ISO date format.
 + projectId: `1` (number, required) - The numerical ID of the Project that the Dataset belongs to.
++ approvalRequired: `true` (boolean, required) - Control whether a Submission should be approved before an Entity is created from it.
 
 ## Extended Dataset (Dataset)
 + lastEntity: `2018-04-18T03:04:51.695Z` (string, optional) - ISO date format. The timestamp of the most recent entity, if any.
