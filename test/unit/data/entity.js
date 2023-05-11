@@ -10,7 +10,7 @@ const testData = require(appRoot + '/test/data/xml');
 
 describe('extracting entities from submissions', () => {
   describe('validateEntity', () => {
-    it('should throw errors on invalid entity (e.g. missing label)', () => {
+    it('should throw errors on when label is missing', () => {
       const entity = {
         system: {
           id: '12345678-1234-4123-8234-123456789abc',
@@ -24,6 +24,56 @@ describe('extracting entities from submissions', () => {
         return true;
       });
     });
+
+    it('should throw errors when id is missing', () => {
+      (() => validateEntity({
+        system: {
+          label: 'foo',
+          id: '  ',
+          dataset: 'foo',
+        },
+        data: {}
+      })).should.throw(/ID empty or missing/);
+    });
+
+    it('should throw errors when id is not a valid uuid', () => {
+      (() => validateEntity({
+        system: {
+          label: 'foo',
+          id: 'uuid:12123123',
+          dataset: 'foo',
+        },
+        data: {}
+      })).should.throw(/ID \[uuid:12123123\] is not a valid UUID/);
+    });
+
+    it('should remove create property from system', () => {
+      const entity = {
+        system: {
+          create: '1',
+          id: '12345678-1234-4123-8234-123456789abc',
+          label: 'foo',
+          dataset: 'foo',
+        },
+        data: {}
+      };
+      validateEntity(entity).system.should.not.have.property('create');
+    });
+
+    it('should id property with uuid and remove uuid: prefix from the value', () => {
+      const entity = {
+        system: {
+          id: '12345678-1234-4123-8234-123456789abc',
+          label: 'foo',
+          dataset: 'foo',
+        },
+        data: {}
+      };
+      const validatedEntity = validateEntity(entity);
+
+      validatedEntity.system.should.not.have.property('id');
+      validatedEntity.system.should.have.property('uuid', '12345678-1234-4123-8234-123456789abc');
+    });
   });
 
   describe('parseSubmissionXml', () => {
@@ -34,25 +84,11 @@ describe('extracting entities from submissions', () => {
         .then((result) => {
           should(result.data).eql(Object.assign(Object.create(null), { first_name: 'Alice', age: '88' }));
           should(result.system).eql(Object.assign(Object.create(null), {
-            uuid: '12345678-1234-4123-8234-123456789abc',
+            create: '1',
+            id: 'uuid:12345678-1234-4123-8234-123456789abc',
             label: 'Alice (88)',
             dataset: 'people'
           }));
-          result.system.uuid.should.be.a.uuid();
-        }));
-
-    it('should lowercase UUIDs for better comparison', () =>
-      fieldsFor(testData.forms.simpleEntity)
-        .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-        .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-ABCD56789abc')))
-        .then((result) => {
-          should(result.data).eql(Object.assign(Object.create(null), { first_name: 'Alice', age: '88' }));
-          should(result.system).eql(Object.assign(Object.create(null), {
-            uuid: '12345678-1234-4123-8234-abcd56789abc',
-            label: 'Alice (88)',
-            dataset: 'people'
-          }));
-          result.system.uuid.should.be.a.uuid();
         }));
 
     describe('create', () => {
@@ -70,82 +106,6 @@ describe('extracting entities from submissions', () => {
           .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('create="1"', 'create="true"')))
           .then((result) => {
             should.exist(result);
-          }));
-
-      it('should return null if create is false', () =>
-        fieldsFor(testData.forms.simpleEntity)
-          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('create="1"', 'create="false"')))
-          .then((result) => {
-            should.not.exist(result);
-          }));
-
-      it('should return null if create is "0"', () =>
-        fieldsFor(testData.forms.simpleEntity)
-          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('create="1"', 'create="0"')))
-          .then((result) => {
-            should.not.exist(result);
-          }));
-
-      it('should return null if create is something else weird', () =>
-        fieldsFor(testData.forms.simpleEntity)
-          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('create="1"', 'create="bad-create"')))
-          .then((result) => {
-            should.not.exist(result);
-          }));
-    });
-
-    describe('entity validation errors', () => {
-      it('should reject entity with missing dataset', () =>
-        fieldsFor(testData.forms.simpleEntity)
-          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('dataset="people"', '')))
-          .should.be.rejected()
-          .then((failure) => {
-            failure.isProblem.should.equal(true);
-            failure.problemCode.should.equal(409.14);
-          }));
-
-      it('should reject entity with missing dataset and other random entity attribute', () =>
-        fieldsFor(testData.forms.simpleEntity)
-          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('dataset="people"', 'random="something"')))
-          .should.be.rejected()
-          .then((failure) => {
-            failure.isProblem.should.equal(true);
-            failure.problemCode.should.equal(409.14);
-          }));
-
-      it('should reject entity with empty dataset string', () =>
-        fieldsFor(testData.forms.simpleEntity)
-          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('people', '')))
-          .should.be.rejected()
-          .then((failure) => {
-            failure.isProblem.should.equal(true);
-            failure.problemCode.should.equal(409.14);
-          }));
-
-      it('should reject entity with blank whitespace dataset', () =>
-        fieldsFor(testData.forms.simpleEntity)
-          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('people', '  ')))
-          .should.be.rejected()
-          .then((failure) => {
-            failure.isProblem.should.equal(true);
-            failure.problemCode.should.equal(409.14);
-          }));
-
-      it('should reject entity with missing uuid', () =>
-        fieldsFor(testData.forms.simpleEntity)
-          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('uuid:12345678-1234-4123-8234-123456789abc', '')))
-          .should.be.rejected()
-          .then((failure) => {
-            failure.isProblem.should.equal(true);
-            failure.problemCode.should.equal(409.14);
           }));
     });
   });

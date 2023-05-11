@@ -70,6 +70,12 @@ const createTestForm = (service, container, xml, projectId) =>
       .send(xml)
       .then(({ body }) => body.xmlFormId));
 
+const approvalRequired = (service, projectId, datasetName) =>
+  service.login('alice', (asAlice) =>
+    asAlice.patch(`/v1/projects/${projectId}/datasets/${datasetName}`)
+      .send({ approvalRequired: true })
+      .expect(200));
+
 const createPublicLink = (service, projectId, xmlFormId) =>
   service.login('alice', (asAlice) =>
     asAlice.post(`/v1/projects/${projectId}/forms/${xmlFormId}/public-links`)
@@ -775,6 +781,7 @@ describe('analytics task queries', () => {
       const asAlice = await service.login('alice');
 
       await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await approvalRequired(service, 1, 'people');
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
       await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one').send({ reviewState: 'approved' });
 
@@ -1046,6 +1053,7 @@ describe('analytics task queries', () => {
 
       // Create first Dataset
       await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await approvalRequired(service, 1, 'people');
 
       // Make submission for the first Dataset
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
@@ -1053,6 +1061,7 @@ describe('analytics task queries', () => {
 
       // Create second Dataset using two forms
       await createTestForm(service, container, testData.forms.simpleEntity.replace(/simpleEntity|people/g, 'employees'), 1);
+      await approvalRequired(service, 1, 'employees');
       await createTestForm(service, container, testData.forms.simpleEntity
         .replace(/simpleEntity/, 'employees2')
         .replace(/people/, 'employees')

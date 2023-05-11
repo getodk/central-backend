@@ -69,7 +69,7 @@ describe('api: /projects', () => {
               .set('X-Extended-Metadata', 'true')
               .expect(200)
               .then(({ body }) => {
-                body.verbs.length.should.equal(46);
+                body.verbs.length.should.equal(47);
                 body.should.be.a.Project();
                 body.name.should.equal('Default Project');
               }))))));
@@ -370,7 +370,7 @@ describe('api: /projects', () => {
           .expect(200)
           .then(({ body }) => {
             body.verbs.should.be.an.Array();
-            body.verbs.length.should.equal(46);
+            body.verbs.length.should.equal(47);
             body.verbs.should.containDeep([ 'user.password.invalidate', 'project.delete' ]);
           }))));
 
@@ -381,7 +381,7 @@ describe('api: /projects', () => {
           .expect(200)
           .then(({ body }) => {
             body.verbs.should.be.an.Array();
-            body.verbs.length.should.equal(31);
+            body.verbs.length.should.equal(32);
             body.verbs.should.containDeep([ 'assignment.create', 'project.delete', 'dataset.list' ]);
             body.verbs.should.not.containDeep([ 'project.create' ]);
           }))));
@@ -1326,7 +1326,7 @@ describe('api: /projects?forms=true', () => {
           body.length.should.equal(1);
           body[0].should.be.a.Project();
           const { formList, verbs } = body[0];
-          verbs.length.should.equal(46);
+          verbs.length.should.equal(47);
           formList.length.should.equal(2);
           const form = formList[0];
           form.should.be.a.ExtendedForm();
@@ -1390,7 +1390,7 @@ describe('api: /projects?forms=true', () => {
             body.length.should.equal(2);
             // First project
             body[0].formList.length.should.equal(2);
-            body[0].verbs.length.should.equal(31);
+            body[0].verbs.length.should.equal(32);
             // Second project
             body[1].formList.length.should.equal(1);
             body[1].verbs.length.should.be.lessThan(5); // 4 for data collector

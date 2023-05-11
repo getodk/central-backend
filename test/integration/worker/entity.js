@@ -46,6 +46,9 @@ describe('worker: entity', () => {
           .send(testData.forms.simpleEntity)
           .set('Content-Type', 'application/xml')
           .expect(200)
+          .then(() => asAlice.patch('/v1/projects/1/datasets/people')
+            .send({ approvalRequired: true })
+            .expect(200))
           .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
             .send(testData.instances.simpleEntity.one)
             .set('Content-Type', 'application/xml')
@@ -191,6 +194,9 @@ describe('worker: entity', () => {
           .send(testData.forms.simpleEntity)
           .set('Content-Type', 'application/xml')
           .expect(200)
+          .then(() => asAlice.patch('/v1/projects/1/datasets/people')
+            .send({ approvalRequired: true })
+            .expect(200))
           .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
             .send(testData.instances.simpleEntity.one)
             .set('Content-Type', 'application/xml')
@@ -262,6 +268,34 @@ describe('worker: entity', () => {
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(updateEvent.details.submissionId);
         event.details.errorMessage.should.equal('There was a problem with entity processing: ID [bad_uuid] is not a valid UUID.');
+        event.details.problem.problemCode.should.equal(409.14);
+      }));
+
+      it('should fail because dataset attribute is missing', testService(async (service, container) => {
+        await service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+              .send(testData.instances.simpleEntity.one.replace('dataset="people" ', ''))
+              .set('Content-Type', 'application/xml')
+              .expect(200)));
+
+        await exhaust(container);
+
+        // Submission event should look successful
+        const updateEvent = await container.Audits.getLatestByAction('submission.create').then((o) => o.get());
+        should.exist(updateEvent.processed);
+        updateEvent.failures.should.equal(0);
+
+        const createEvent = await container.Audits.getLatestByAction('entity.create');
+        createEvent.isEmpty().should.be.true();
+
+        const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
+        event.actorId.should.equal(5); // Alice
+        event.details.submissionId.should.equal(updateEvent.details.submissionId);
+        event.details.errorMessage.should.equal('There was a problem with entity processing: Dataset empty or missing.');
         event.details.problem.problemCode.should.equal(409.14);
       }));
     });
@@ -456,6 +490,153 @@ describe('worker: entity', () => {
       csv[2].includes(',two,,,c,d,a,b').should.equal(true);
       csv[3].includes(',one,,,y,z,w,x').should.equal(true);
     }));
+  });
+
+  describe('event processing based on approvalRequired flag', () => {
+    it('should create entity on submission creation when approvalRequired is false', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const entity = await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => body);
+
+      entity.should.not.be.null();
+      entity.currentVersion.data.first_name.should.equal('Alice');
+    }));
+
+    it('should create entity on submission approval when approvalRequired is true', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(404);
+
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+
+      await exhaust(container);
+
+      const entity = await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => body);
+
+      entity.should.not.be.null();
+      entity.currentVersion.data.first_name.should.equal('Alice');
+    }));
+
+    it('should create entity on submission update when approvalRequired is false and it was not created on submission receipt', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one.replace('create="1"', 'create="0"'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(404);
+
+      await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .send(testData.instances.simpleEntity.one
+          .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const entity = await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => body);
+
+      entity.should.not.be.null();
+      entity.currentVersion.data.first_name.should.equal('Alice');
+    }));
+
+    it('should create entity on approval of submission update when approvalRequired is true and entity was not created previously', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one.replace('create="1"', 'create="0"'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(404);
+
+      await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .send(testData.instances.simpleEntity.one
+          .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(404);
+
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+
+      await exhaust(container);
+
+      const entity = await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => body);
+
+      entity.should.not.be.null();
+      entity.currentVersion.data.first_name.should.equal('Alice');
+    }));
+
   });
 });
 

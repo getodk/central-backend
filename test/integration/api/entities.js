@@ -24,6 +24,10 @@ const testEntities = (test) => testService(async (service, container) => {
     .send(testData.forms.simpleEntity)
     .expect(200);
 
+  await asAlice.patch('/v1/projects/1/datasets/people')
+    .send({ approvalRequired: true })
+    .expect(200);
+
   const promises = [];
 
   ['one', 'two'].forEach(async instanceId => {
@@ -505,6 +509,10 @@ describe('Entities API', () => {
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
         .expect(200);
 
       await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
