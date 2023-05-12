@@ -3,6 +3,7 @@ const { sql } = require('slonik');
 const should = require('should');
 
 const { testService } = require('../setup');
+const { QueryOptions } = require('../../../lib/util/db');
 // eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml.js');
 // eslint-disable-next-line import/no-dynamic-require
@@ -373,7 +374,8 @@ describe('worker: entity', () => {
         const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(updateEvent.details.submissionId);
-        event.details.problem.problemCode.should.equal(400.14);
+        event.details.problem.problemCode.should.equal(409.14);
+        event.details.errorMessage.should.match(/Dataset \[frogs\] not found/);
         // this is going to have an errorMessage of something cryptic database complaint
         // like "The given entityId 5 for entities does not exist."
       }));
@@ -637,6 +639,45 @@ describe('worker: entity', () => {
       entity.currentVersion.data.first_name.should.equal('Alice');
     }));
 
+    it('should not create a new entity on edit if it was created on submission receipt', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const entity = await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => body);
+
+      entity.should.not.be.null();
+      entity.currentVersion.data.first_name.should.equal('Alice');
+
+      await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .send(testData.instances.simpleEntity.one
+          .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => body.length.should.be.eql(1));
+
+      const errors = await container.Audits.get(new QueryOptions({ args: { action: 'entity.create.error' } }));
+
+      errors.should.be.empty();
+
+    }));
   });
 });
 

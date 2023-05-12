@@ -10,7 +10,7 @@ describe('entity', () => {
           label: 'label',
           id: 'uuid:12345678-1234-4123-8234-abcd56789abc',
           create: '1',
-          dataset: 'peoplse'
+          dataset: 'people'
         },
         data: { field: 'value' }
       });
@@ -21,7 +21,7 @@ describe('entity', () => {
         data: { field: 'value' },
         label: 'label'
       }));
-      partial.aux.should.have.property('dataset', 'peoplse');
+      partial.aux.should.have.property('dataset', 'people');
     });
   });
 });
