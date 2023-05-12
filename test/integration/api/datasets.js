@@ -7,6 +7,7 @@ const { getOrNotFound } = require('../../../lib/util/promise');
 const { omit } = require('ramda');
 const should = require('should');
 const { sql } = require('slonik');
+const { QueryOptions } = require('../../../lib/util/db');
 
 /* eslint-disable import/no-dynamic-require */
 const { exhaust } = require(appRoot + '/lib/worker/worker');
@@ -2191,7 +2192,7 @@ describe('datasets and entities', () => {
       it('should reject if the user cannot read', testService(async (service) => {
         const asAlice = await service.login('alice');
 
-        await asAlice.post('/v1/projects/1/forms')
+        await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity)
           .set('Content-Type', 'application/xml')
           .expect(200);
@@ -2206,7 +2207,7 @@ describe('datasets and entities', () => {
 
         const asAlice = await service.login('alice');
 
-        await asAlice.post('/v1/projects/1/forms')
+        await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity)
           .set('Content-Type', 'application/xml')
           .expect(200);
@@ -2216,6 +2217,176 @@ describe('datasets and entities', () => {
           .expect(200);
 
         dataset.body.approvalRequired.should.equal(true);
+
+      }));
+
+      it('should return bad request if value of convert query param is invalid', testService(async (service) => {
+
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=dummy')
+          .send({ approvalRequired: true })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.be.eql(400.8);
+          });
+
+      }));
+
+      it('should return warning if there are pending submissions', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: false })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.be.eql(400.29);
+          });
+      }));
+
+      it('should update the flag without automatic conversions', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=false')
+          .send({ approvalRequired: false })
+          .expect(200)
+          .then(({ body }) => body.approvalRequired.should.be.false());
+
+        // there are no entities
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => body.should.be.eql([]));
+
+      }));
+
+      it('should automatically convert pending submissions', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // There are no entities
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => body.length.should.be.eql(0));
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200)
+          .then(({ body }) => body.approvalRequired.should.be.false());
+
+        await exhaust(container);
+
+        // Entities are created now
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => body.length.should.be.eql(2));
+
+      }));
+
+      it('should log error if there is a problem in a submission while auto converting', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one.replace('<entities:label>Alice (88)</entities:label>', '')) //removing label
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.three.replace('create="1"', 'create="0"')) // don't create entity
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // There are no entities
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => body.length.should.be.eql(0));
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200)
+          .then(({ body }) => body.approvalRequired.should.be.false());
+
+        await exhaust(container);
+
+        // One Entity is created
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.be.eql(1);
+          });
+
+        const entityErrors = await container.Audits.get(new QueryOptions({ args: { action: 'entity.create.error' } }));
+
+        entityErrors.length.should.be.eql(1);
+        entityErrors[0].details.errorMessage.should.match(/Label empty or missing/);
 
       }));
     });
