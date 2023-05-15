@@ -9,7 +9,6 @@ const should = require('should');
 const { sql } = require('slonik');
 
 /* eslint-disable import/no-dynamic-require */
-const { createEntityFromSubmission } = require(appRoot + '/lib/worker/entity');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 /* eslint-enable import/no-dynamic-require */
 
@@ -38,7 +37,7 @@ describe('datasets and entities', () => {
                 .then(({ body }) => {
                   body[0].should.be.a.Dataset();
                   body.map(({ createdAt, ...d }) => d).should.eql([
-                    { name: 'people', projectId: 1 }
+                    { name: 'people', projectId: 1, approvalRequired: false }
                   ]);
                 })))));
 
@@ -67,7 +66,7 @@ describe('datasets and entities', () => {
           .then(({ body }) => {
             body[0].should.be.an.ExtendedDataset();
             body.map(({ createdAt, lastEntity, ...d }) => d).should.eql([
-              { name: 'people', projectId: 1, entities: 1 }
+              { name: 'people', projectId: 1, entities: 1, approvalRequired: false }
             ]);
           });
       }));
@@ -89,7 +88,7 @@ describe('datasets and entities', () => {
                   .then(({ body }) => {
                     body[0].should.be.a.Dataset();
                     body.map(({ id, createdAt, ...d }) => d).should.eql([
-                      { name: 'student', projectId: 1 }
+                      { name: 'student', projectId: 1, approvalRequired: false }
                     ]);
                   }))))));
     });
@@ -113,7 +112,7 @@ describe('datasets and entities', () => {
               should(lastEntity).be.null();
               return d;
             }).should.eql([
-              { name: 'people', projectId: 1, entities: 0 }
+              { name: 'people', projectId: 1, entities: 0, approvalRequired: false }
             ]);
           });
       }));
@@ -147,7 +146,7 @@ describe('datasets and entities', () => {
               lastEntity.should.not.be.null();
               return d;
             }).should.eql([
-              { name: 'people', projectId: 1, entities: 1 }
+              { name: 'people', projectId: 1, entities: 1, approvalRequired: false }
             ]);
           });
       }));
@@ -193,7 +192,7 @@ describe('datasets and entities', () => {
               lastEntity.should.not.startWith('1999');
               return d;
             }).should.eql([
-              { name: 'people', projectId: 1, entities: 2 }
+              { name: 'people', projectId: 1, entities: 2, approvalRequired: false }
             ]);
           });
       }));
@@ -512,7 +511,8 @@ describe('datasets and entities', () => {
 
             ds.should.be.eql({
               name: 'people',
-              projectId: 1
+              projectId: 1,
+              approvalRequired: false
             });
 
             createdAt.should.not.be.null();
@@ -1274,9 +1274,7 @@ describe('datasets and entities', () => {
               .send(testData.instances.simpleEntity.one.replace(/people/g, 'goodone'))
               .set('Content-Type', 'application/xml')
               .expect(200))
-            .then(() => container.Submissions.getCurrentDefByIds(1, 'simpleEntity', 'one', false)
-              .then(getOrNotFound)
-              .then((subDef) => createEntityFromSubmission(container, { details: { submissionDefId: subDef.id, submissionId: subDef.submissionId, reviewState: 'approved' } })))
+            .then(() => exhaust(container))
             .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
               .send({ dataset: true })
               .expect(200))
@@ -2175,5 +2173,48 @@ describe('datasets and entities', () => {
 
     }));
 
+  });
+
+  describe('configurable approval requirements', () => {
+    describe('PATCH /datasets/:name', () => {
+
+      it('should return notfound if the dataset does not exist', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.patch('/v1/projects/1/datasets/nonexistent')
+          .expect(404);
+      }));
+
+      it('should reject if the user cannot read', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const asChelsea = await service.login('chelsea');
+
+        await asChelsea.patch('/v1/projects/1/datasets/people')
+          .expect(403);
+      }));
+
+      it('should allow setting approval requirements', testService(async (service) => {
+
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const dataset = await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        dataset.body.approvalRequired.should.equal(true);
+
+      }));
+    });
   });
 });
