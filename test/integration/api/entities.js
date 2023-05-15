@@ -310,7 +310,7 @@ describe('Entities API', () => {
       const asAlice = await service.login('alice');
 
       await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
-        .send({ data: { age: '12', first_name: 'John', label: 'John (12)' } })
+        .send({ data: { age: '12', first_name: 'John' }, label: 'John (12)' })
         .expect(200);
 
       // creating a new property in the dataset
@@ -847,13 +847,14 @@ describe('Entities API', () => {
 
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
           .send({
-            data: { age: '66', first_name: 'Arnold' }
+            data: { age: '66', first_name: 'Arnold' },
+            label: 'Arnold'
           })
           .expect(200);
 
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
           .send({
-            data: { label: 'Arnold (66)' }
+            label: 'Arnold (66)'
           })
           .expect(200);
 
@@ -871,7 +872,7 @@ describe('Entities API', () => {
 
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
           .send({
-            data: { label: 'New Label' }
+            label: 'New Label'
           })
           .expect(200)
           .then(({ body: person }) => {
@@ -891,7 +892,7 @@ describe('Entities API', () => {
 
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
           .send({
-            data: { label: '' }
+            label: ''
           })
           .expect(409);
       }));

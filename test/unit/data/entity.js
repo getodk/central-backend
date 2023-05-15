@@ -213,8 +213,8 @@ describe('extracting entities from submissions', () => {
             'Value for [label] is not a string.'
           ],
           [
-            { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Label' },
-            'No entity data provided.'
+            { uuid: '12345678-1234-4123-8234-123456789abc' },
+            'No entity data or label provided.'
           ],
           [
             { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Label', data: { first_name: 'Alice', age: 99 } },
@@ -246,7 +246,8 @@ describe('extracting entities from submissions', () => {
           data: { age: '88', first_name: 'Alice' }
         };
         const newData = {
-          data: { age: '99', first_name: 'Alice', label: 'New Label' }
+          data: { age: '99', first_name: 'Alice' },
+          label: 'New Label'
         };
         const propertyNames = ['age', 'first_name'];
         const entity = extractEntity(newData, propertyNames, existingEntity);
@@ -268,7 +269,7 @@ describe('extracting entities from submissions', () => {
           data: { first_name: 'Alice' }
         };
         const body = {
-          data: { label: 'New Label' }
+          label: 'New Label'
         };
         const propertyNames = ['first_name'];
         const entity = extractEntity(body, propertyNames, existingEntity);
@@ -307,18 +308,14 @@ describe('extracting entities from submissions', () => {
         const requests = [
           [
             {},
-            400.28, 'No entity data provided.'
+            400.28, 'No entity data or label provided.'
           ],
           [
-            { label: 'Label is supposed to go in data for updating.' },
-            400.28, 'No entity data provided.'
+            { label: null },
+            400.28, 'No entity data or label provided.'
           ],
           [
-            { data: { label: null } },
-            400.28, 'Property value for [label] is not a string.'
-          ],
-          [
-            { data: { label: '' } },
+            { label: '' },
             409.14, 'Label empty or missing.'
           ],
           [
