@@ -678,6 +678,44 @@ describe('worker: entity', () => {
       errors.should.be.empty();
 
     }));
+
+    it('should not create on approval if approval is not required', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: false })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(404);
+
+      const errors = await container.Audits.get(new QueryOptions({ args: { action: 'entity.create.error' } }));
+
+      errors.should.be.empty();
+
+    }));
   });
 });
 
