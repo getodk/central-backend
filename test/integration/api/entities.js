@@ -689,39 +689,6 @@ describe('Entities API', () => {
     }));
   });
 
-  describe('PUT /datasets/:name/entities/:uuid', () => {
-
-    it('should update an Entity', testService(async (service) => {
-      const asAlice = await service.login('alice');
-
-      await asAlice.put('/v1/projects/1/datasets/People/entities/10000000-0000-0000-0000-000000000001')
-        .send({
-          uuid: '10000000-0000-0000-0000-000000000001',
-          label: 'Richard Roe',
-          firstName: 'Richard',
-          lastName: 'Roe',
-          city: 'Toronto'
-        })
-        .expect(200)
-        .then(({ body: person }) => {
-          person.should.be.an.Entity();
-          person.should.have.property('currentVersion').which.is.an.EntityDef();
-          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
-          person.currentVersion.should.have.property('data').which.is.eql({
-            firstName: 'Richard',
-            lastName: 'Roe',
-            city: 'Toronto'
-          });
-        });
-    }));
-
-    // it should reject if uuid is not found
-    // it should reject if uuid in queryParam and body don't match
-    // it should reject if uuid or label is missing
-    // it should reject if property is not present in dataset.publishedProperties
-    // it should reject if user don't have permission
-  });
-
   describe('PATCH /datasets/:name/entities/:uuid', () => {
     it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
@@ -1038,32 +1005,6 @@ describe('Entities API', () => {
         });
 
     }));
-
-  });
-
-  // Lowest Priority
-  describe.skip('POST /datasets/:name/entities/:uuid/restore', () => {
-
-    it('should restore a deleted Entity', testService(async (service) => {
-      const asAlice = await service.login('alice');
-
-      await asAlice.post('/v1/projects/1/datasets/People/entities/10000000-0000-0000-0000-000000000001/restore')
-        .expect(200)
-        .then(({ body: person }) => {
-          person.should.be.an.Entity();
-          person.should.have.property('currentVersion').which.is.an.EntityDef();
-          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
-          person.currentVersion.should.have.property('data').which.is.eql({
-            firstName: 'Jane',
-            lastName: 'Roe',
-            city: 'Toronto'
-          });
-        });
-    }));
-
-    // it should reject if uuid is not found or is not deleted
-    // it should reject if body is not empty
-    // it should reject if user don't have permission
 
   });
 });
