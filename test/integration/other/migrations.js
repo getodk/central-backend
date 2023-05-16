@@ -594,3 +594,79 @@ describe.skip('database migrations from 20230406: altering entities and entity_d
     await down();
   }));
 });
+
+// eslint-disable-next-line func-names
+describe('database migrations from 20230512: adding entity_def_sources table', function () {
+  this.timeout(20000);
+
+  const createEntity = async (service, container) => {
+    // Get bob's id because bob is going to be the one who
+    // submits the submission
+    const asBob = await service.login('bob');
+
+    const creatorId = await asBob.get('/v1/users/current')
+      .expect(200)
+      .then(({ body }) => body.id);
+
+    await asBob.post('/v1/projects/1/forms/simple/submissions')
+      .set('Content-Type', 'application/xml')
+      .send(testData.instances.simple.one)
+      .expect(200);
+
+    await asBob.patch('/v1/projects/1/forms/simple/submissions/one')
+      .send({ reviewState: 'approved' })
+      .expect(200);
+
+    // Get the submission def id we just submitted.
+    // For this test, it doesn't have to be a real entity submission.
+    const subDef = await container.one(sql`SELECT id, "userAgent" FROM submission_defs WHERE "instanceId" = 'one' LIMIT 1`);
+
+    // Make sure there is a dataset for the entity to be part of.
+    const newDataset = await container.one(sql`
+    INSERT INTO datasets
+    ("acteeId", "name", "projectId", "createdAt")
+    VALUES (${uuid()}, 'trees', 1, now())
+    RETURNING "id"`);
+
+    // Create the entity.
+    // The root entity creator wont change in this migration though it should be
+    // the same as the submitter id.
+    const newEntity = await container.one(sql`
+    INSERT INTO entities (uuid, "datasetId", "creatorId", "createdAt")
+    VALUES (${uuid()}, ${newDataset.id}, ${creatorId}, now())
+    RETURNING "id"`);
+
+    // Create the entity def and link it to the submission def above.
+    await container.run(sql`
+    INSERT INTO entity_defs ("entityId", "createdAt", "creatorId", "current", "submissionDefId", "label", "data")
+    VALUES (${newEntity.id}, now(), ${creatorId}, true, ${subDef.id}, 'some label', '{}')`);
+
+    return { subDef, newEntity, creatorId };
+  };
+
+  it('should migrate the submissionDefId source of an entity to new table with event links', testServiceFullTrx(async (service, container) => {
+    await upToMigration('20230512-01-add-entity-source.js', false);
+    await populateUsers(container);
+    await populateForms(container);
+
+    const { subDef, newEntity } = await createEntity(service, container);
+
+    await up();
+
+    const source = await container.one(sql`select * from entity_def_sources limit 1`);
+    source.submissionDefId.should.equal(subDef.id);
+
+    let def = await container.one(sql`select * from entity_defs where "entityId" = ${newEntity.id}`);
+    def.sourceId.should.equal(source.id);
+    def.should.not.have.property('submissionDefId');
+
+    // TODO: also look at details. should include submission creation event
+    // could use entity getters in tests here.
+
+    await down();
+
+    def = await container.one(sql`select * from entity_defs where "entityId" = ${newEntity.id}`);
+    def.submissionDefId.should.equal(subDef.id);
+    def.should.not.have.property('sourceId');
+  }));
+});
