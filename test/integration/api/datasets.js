@@ -2238,7 +2238,7 @@ describe('datasets and entities', () => {
 
       }));
 
-      it('should return warning if there are pending submissions', testService(async (service) => {
+      it('should return warning if there are pending submissions', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -2255,11 +2255,23 @@ describe('datasets and entities', () => {
           .set('Content-Type', 'application/xml')
           .expect(200);
 
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);        
+
         await asAlice.patch('/v1/projects/1/datasets/people')
           .send({ approvalRequired: false })
           .expect(400)
           .then(({ body }) => {
             body.code.should.be.eql(400.29);
+            body.details.count.should.be.eql(1);
           });
       }));
 
