@@ -4610,6 +4610,6 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 
 ## Property Detailed (object)
 + name: `the.age` (string, required) - The name of the Property.
-+ odataName: `the_age` (string, required) - OData santized name of the property.
++ odataName: `the_age` (string, required) - The name of the property as it will appear in OData. OData property names can only contain alphanumeric characters and underscores.
 + publishedAt: `2018-01-21T00:04:11.153Z` (string, required) - Publishing timestamp of the form that defined this property for the first time.
 + forms: (array[Form KeyValue]) - List of forms that create the property
