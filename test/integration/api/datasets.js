@@ -487,7 +487,7 @@ describe('datasets and entities', () => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.simpleEntity)
+          .send(testData.forms.simpleEntity.replace(/age/g, 'the.age'))
           .set('Content-Type', 'application/xml')
           .expect(200);
 
@@ -526,12 +526,12 @@ describe('datasets and entities', () => {
               publishedAt.should.not.be.null();
               return p;
             }).should.be.eql([
-              { name: 'first_name', forms: [
+              { name: 'first_name', odataName: 'first_name', forms: [
                 { name: 'simpleEntity', xmlFormId: 'simpleEntity' },
                 { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' }
               ] },
-              { name: 'age', forms: [ { name: 'simpleEntity', xmlFormId: 'simpleEntity' }, ] },
-              { name: 'address', forms: [ { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' }, ] }
+              { name: 'the.age', odataName: 'the_age', forms: [ { name: 'simpleEntity', xmlFormId: 'simpleEntity' }, ] },
+              { name: 'address', odataName: 'address', forms: [ { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' }, ] }
             ]);
 
           });
@@ -854,25 +854,6 @@ describe('datasets and entities', () => {
               }
             ]);
           });
-      }));
-
-
-      it('should sanitize property names for odata', testService(async (service) => {
-        const asAlice = await service.login('alice');
-
-        await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.simpleEntity.replace(/age/g, 'the.age'))
-          .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        await asAlice.get('/v1/projects/1/datasets/people?odata=true')
-          .expect(200)
-          .then(({ body }) => {
-
-            body.properties.map(p => p.name).should.be.eql(['first_name', 'the_age']);
-
-          });
-
       }));
 
     });

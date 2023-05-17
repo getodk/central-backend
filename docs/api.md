@@ -37,7 +37,7 @@ Here major and breaking changes to the API are listed by version.
 
 **Changed**:
 - ETag support has been added for [Download Dataset](#reference/datasets/download-dataset/download-dataset) and [Download Form Attachment](#reference/forms/individual-form/downloading-a-form-attachment).
-- `?odata=true` can be passed to [Dataset Metadata endpoint](#reference/datasets/datasets/dataset-metadata) to sanitize property names to match the way they will be outputted for OData.
+- [Dataset Metadata endpoint](#reference/datasets/datasets/dataset-metadata) also returns sanitized property names as `odataName` to match the way they will be outputted for OData.
 
 ### ODK Central v2023.2
 
@@ -3018,8 +3018,6 @@ The Dataset listing endpoint returns all published Datasets in a Project. If a D
 
 Returns the metadata of a Dataset including properties and forms that create and consume the Dataset.
 
-You may optionally add the querystring parameter `?odata=true` to sanitize the property names to match the way they will be outputted for OData.
-
 + Parameters
     + projectId: `16` (number, required) - The numeric ID of the Project
     + name: `people` (string, required) - Name of the Dataset
@@ -4611,6 +4609,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + isNew: `true` (boolean, required) - Whether or not this Property is new (will be created by publishing the Draft Form).
 
 ## Property Detailed (object)
-+ name: `first_name` (string, required) - The name of the Property.
++ name: `the.age` (string, required) - The name of the Property.
++ odataName: `the_age` (string, required) - OData santized name of the property.
 + publishedAt: `2018-01-21T00:04:11.153Z` (string, required) - Publishing timestamp of the form that defined this property for the first time.
 + forms: (array[Form KeyValue]) - List of forms that create the property
