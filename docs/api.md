@@ -37,6 +37,7 @@ Here major and breaking changes to the API are listed by version.
 
 **Changed**:
 - ETag support has been added for [Download Dataset](#reference/datasets/download-dataset/download-dataset) and [Download Form Attachment](#reference/forms/individual-form/downloading-a-form-attachment).
+- [Dataset Metadata endpoint](#reference/datasets/datasets/dataset-metadata) also returns sanitized property names as `odataName` to match the way they will be outputted for OData.
 
 ### ODK Central v2023.2
 
@@ -4608,6 +4609,7 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + isNew: `true` (boolean, required) - Whether or not this Property is new (will be created by publishing the Draft Form).
 
 ## Property Detailed (object)
-+ name: `first_name` (string, required) - The name of the Property.
++ name: `the.age` (string, required) - The name of the Property.
++ odataName: `the_age` (string, required) - The name of the property as it will appear in OData. OData property names can only contain alphanumeric characters and underscores.
 + publishedAt: `2018-01-21T00:04:11.153Z` (string, required) - Publishing timestamp of the form that defined this property for the first time.
 + forms: (array[Form KeyValue]) - List of forms that create the property
