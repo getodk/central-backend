@@ -856,6 +856,25 @@ describe('datasets and entities', () => {
           });
       }));
 
+
+      it('should sanitize property names for odata', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/age/g, 'the.age'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people?odata=true')
+          .expect(200)
+          .then(({ body }) => {
+
+            body.properties.map(p => p.name).should.be.eql(['first_name', 'the_age']);
+
+          });
+
+      }));
+
     });
   });
 
