@@ -599,74 +599,233 @@ describe.skip('database migrations from 20230406: altering entities and entity_d
 describe('database migrations from 20230512: adding entity_def_sources table', function () {
   this.timeout(20000);
 
-  const createEntity = async (service, container) => {
-    // Get bob's id because bob is going to be the one who
-    // submits the submission
-    const asBob = await service.login('bob');
+  it('should backfill entityId and entityDefId in audit log', testServiceFullTrx(async (service, container) => {
+    await upToMigration('20230512-02-backfill-entity-id.js', false); // actually this is the previous migration
+    await populateUsers(container);
+    await populateForms(container);
+    const asAlice = await service.login('alice');
+    const creatorId = await asAlice.get('/v1/users/current').then(({ body }) => body.id);
 
-    const creatorId = await asBob.get('/v1/users/current')
-      .expect(200)
-      .then(({ body }) => body.id);
+    const datasetActeeId = uuid();
+    await container.run(sql`insert into actees ("id", "species") values (${datasetActeeId}, 'dataset')`);
 
-    await asBob.post('/v1/projects/1/forms/simple/submissions')
-      .set('Content-Type', 'application/xml')
-      .send(testData.instances.simple.one)
-      .expect(200);
-
-    await asBob.patch('/v1/projects/1/forms/simple/submissions/one')
-      .send({ reviewState: 'approved' })
-      .expect(200);
-
-    // Get the submission def id we just submitted.
-    // For this test, it doesn't have to be a real entity submission.
-    const subDef = await container.one(sql`SELECT id, "userAgent" FROM submission_defs WHERE "instanceId" = 'one' LIMIT 1`);
-
-    // Make sure there is a dataset for the entity to be part of.
     const newDataset = await container.one(sql`
-    INSERT INTO datasets
-    ("acteeId", "name", "projectId", "createdAt")
-    VALUES (${uuid()}, 'trees', 1, now())
-    RETURNING "id"`);
+    INSERT INTO datasets ("acteeId", "name", "projectId", "createdAt")
+    VALUES (${datasetActeeId}, 'trees', 1, now()) RETURNING "id", "acteeId"`);
 
-    // Create the entity.
-    // The root entity creator wont change in this migration though it should be
-    // the same as the submitter id.
     const newEntity = await container.one(sql`
     INSERT INTO entities (uuid, "datasetId", "creatorId", "createdAt")
     VALUES (${uuid()}, ${newDataset.id}, ${creatorId}, now())
-    RETURNING "id"`);
+    RETURNING "id", "uuid"`);
 
     // Create the entity def and link it to the submission def above.
+    // eslint-disable-next-line no-await-in-loop
+    const newDef = await container.one(sql`
+    INSERT INTO entity_defs ("entityId", "createdAt", "creatorId", "current", "submissionDefId", "label", "data", "root")
+    VALUES (${newEntity.id}, now(), ${creatorId}, true, null, 'some label', '{}', true)
+    returning "id"`);
+
+    const eventDetails = { entity: { uuid: newEntity.uuid, label: newEntity.label } };
+    // eslint-disable-next-line no-await-in-loop
     await container.run(sql`
-    INSERT INTO entity_defs ("entityId", "createdAt", "creatorId", "current", "submissionDefId", "label", "data")
-    VALUES (${newEntity.id}, now(), ${creatorId}, true, ${subDef.id}, 'some label', '{}')`);
-
-    return { subDef, newEntity, creatorId };
-  };
-
-  it('should migrate the submissionDefId source of an entity to new table with event links', testServiceFullTrx(async (service, container) => {
-    await upToMigration('20230512-01-add-entity-source.js', false);
-    await populateUsers(container);
-    await populateForms(container);
-
-    const { subDef, newEntity } = await createEntity(service, container);
+    INSERT INTO audits ("actorId", "action", "acteeId", "details")
+    VALUES (${creatorId}, 'entity.create', ${newDataset.acteeId}, ${JSON.stringify(eventDetails)})`);
 
     await up();
 
-    const source = await container.one(sql`select * from entity_def_sources limit 1`);
-    source.submissionDefId.should.equal(subDef.id);
+    const audits = await container.all(sql`select * from audits where action = 'entity.create'`);
 
-    let def = await container.one(sql`select * from entity_defs where "entityId" = ${newEntity.id}`);
-    def.sourceId.should.equal(source.id);
-    def.should.not.have.property('submissionDefId');
+    audits[0].details.entityId.should.equal(newEntity.id);
+    audits[0].details.entityDefId.should.equal(newDef.id);
+  }));
 
-    // TODO: also look at details. should include submission creation event
-    // could use entity getters in tests here.
+  it('should migrate the submissionDefId source of an entity to new table with event links', testServiceFullTrx(async (service, container) => {
+    await upToMigration('20230512-03-add-entity-source.js', false); // actually this is the previous migration
+    await populateUsers(container);
+    await populateForms(container);
+
+    const asAlice = await service.login('alice');
+    const creatorId = await asAlice.get('/v1/users/current').then(({ body }) => body.id);
+
+    // ---- Create forms and submissions and submission events ----
+    // Track submission instance ids -> approval event ids
+    const subToEvent = {};
+
+    // Create a submission and approval event. It doesn't have to be an entity submission because
+    // we will manually link a dummy entity to this submission and event.
+    await asAlice.post('/v1/projects/1/forms/simple/submissions')
+      .set('Content-Type', 'application/xml')
+      .send(testData.instances.simple.one)
+      .expect(200);
+    await asAlice.patch('/v1/projects/1/forms/simple/submissions/one')
+      .send({ reviewState: 'approved' })
+      .expect(200);
+
+    let event = await container.Audits.getLatestByAction('submission.update').then(o => o.get());
+    subToEvent.one = event;
+
+    // Create another submission that we will delete by deleting the form
+    await asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+      .set('Content-Type', 'application/xml')
+      .send(testData.instances.withrepeat.one)
+      .expect(200);
+    await asAlice.patch('/v1/projects/1/forms/withrepeat/submissions/rone')
+      .send({ reviewState: 'approved' })
+      .expect(200);
+
+    event = await container.Audits.getLatestByAction('submission.update').then(o => o.get());
+    subToEvent.rone = event;
+
+    // Create another form and submission that we will delete by purging the form
+    await asAlice.post('/v1/projects/1/forms?publish=true')
+      .set('Content-Type', 'application/xml')
+      .send(testData.forms.simple2)
+      .expect(200);
+    await asAlice.post('/v1/projects/1/forms/simple2/submissions')
+      .set('Content-Type', 'application/xml')
+      .send(testData.instances.simple2.one
+        .replace('id="simple2"', 'id="simple2" version="2.1"'))
+      .expect(200);
+    await asAlice.patch('/v1/projects/1/forms/simple2/submissions/s2one')
+      .send({ reviewState: 'approved' })
+      .expect(200);
+    event = await container.Audits.getLatestByAction('submission.update').then(o => o.get());
+    subToEvent.s2one = event;
+    await asAlice.patch('/v1/projects/1/forms/simple2/submissions/s2one')
+      .send({ reviewState: 'rejected' })
+      .expect(200);
+    await asAlice.patch('/v1/projects/1/forms/simple2/submissions/s2one')
+      .send({ reviewState: 'approved' }) // multiple approval events to work with here
+      .expect(200);
+
+    // Create a fourth submission on the first form that won't have an approval event
+    // but will be linked to an entity (probably wont have happened but prior to this release
+    // but still want migration to work)
+    await asAlice.post('/v1/projects/1/forms/simple/submissions')
+      .set('Content-Type', 'application/xml')
+      .send(testData.instances.simple.two)
+      .expect(200);
+
+    // Create a fifth submission that will be deleted and wont have an approval event
+    await asAlice.post('/v1/projects/1/forms/simple2/submissions')
+      .set('Content-Type', 'application/xml')
+      .send(testData.instances.simple2.two
+        .replace('id="simple2"', 'id="simple2" version="2.1"'))
+      .expect(200);
+
+    // ----- Manually create entities to link to these submissions as sources ----
+
+    // Make sure there is a dataset for the entity to be part of.
+    const datasetActeeId = uuid();
+    await container.run(sql`insert into actees ("id", "species") values (${datasetActeeId}, 'dataset')`);
+
+    const newDataset = await container.one(sql`
+    INSERT INTO datasets ("acteeId", "name", "projectId", "createdAt")
+    VALUES (${datasetActeeId}, 'trees', 1, now()) RETURNING "id", "acteeId"`);
+
+    const subDefs = await container.all(sql`SELECT id, "submissionId", "instanceId" FROM submission_defs`);
+
+    const entityToSubDef = {};
+    for (const subDef of subDefs) {
+      // eslint-disable-next-line no-await-in-loop
+      const newEntity = await container.one(sql`
+      INSERT INTO entities (uuid, "datasetId", "creatorId", "createdAt")
+      VALUES (${subDef.instanceId}, ${newDataset.id}, ${creatorId}, now())
+      RETURNING "id", "uuid"`);
+
+      // Create the entity def and link it to the submission def above.
+      // eslint-disable-next-line no-await-in-loop
+      const newDef = await container.one(sql`
+      INSERT INTO entity_defs ("entityId", "createdAt", "creatorId", "current", "submissionDefId", "label", "data", "root")
+      VALUES (${newEntity.id}, now(), ${creatorId}, true, ${subDef.id}, 'some label', '{}', true)
+      RETURNING "id"`);
+
+      const eventDetails = {
+        entityId: newEntity.id,
+        entityDefId: newDef.id,
+        entity: { uuid: newEntity.uuid, label: newEntity.label },
+        submissionId: subDef.submissionId, submissionDefId: subDef.id
+      };
+      // eslint-disable-next-line no-await-in-loop
+      await container.run(sql`
+      INSERT INTO audits ("actorId", "action", "acteeId", "details")
+      VALUES (${creatorId}, 'entity.create', ${newDataset.acteeId}, ${JSON.stringify(eventDetails)})
+      `);
+
+      entityToSubDef[newEntity.uuid] = subDef;
+    }
+
+    const newEntity = await container.one(sql`
+    INSERT INTO entities (uuid, "datasetId", "creatorId", "createdAt")
+    VALUES ('no_sub', ${newDataset.id}, ${creatorId}, now())
+    RETURNING "id", "uuid"`);
+
+    // Create the entity def and link it to the submission def above.
+    // eslint-disable-next-line no-await-in-loop
+    await container.one(sql`
+    INSERT INTO entity_defs ("entityId", "createdAt", "creatorId", "current", "submissionDefId", "label", "data", "root")
+    VALUES (${newEntity.id}, now(), ${creatorId}, true, null, 'some label', '{}', true)
+    RETURNING "id"`);
+    entityToSubDef[newEntity.uuid] = null;
+
+    // ----- Start deleting submisisons ----
+
+    // simple2 is purged
+    await asAlice.delete('/v1/projects/1/forms/simple2')
+      .expect(200);
+
+    await container.Forms.purge(true);
+
+    // withrepeat is merely soft deleted so submission def is still there
+    await asAlice.delete('/v1/projects/1/forms/withrepeat')
+      .expect(200);
+
+    // ----- Run the migration! ----
+    await up();
+
+    // ----- Inspect the migrationed entity sources
+    const entityDefsWithSources = await container.all(sql`
+    SELECT entities."uuid", entity_defs."entityId", entity_defs."id", entity_def_sources.*
+    FROM entity_defs
+    JOIN entity_def_sources on entity_defs."sourceId" = entity_def_sources.id
+    JOIN entities on entity_defs."entityId" = entities.id`);
+
+    const entityToSource = entityDefsWithSources.reduce(
+      (acc, curr) => ({ ...acc, [curr.uuid]: curr }),
+      {}
+    );
+
+    // the normal submission
+    // and the soft-deleted submission (form deleted, submission def data still exists)
+    for (const k of ['one', 'rone']) {
+      entityToSource[k].submissionDefId.should.equal(entityToSubDef[k].id);
+      entityToSource[k].auditId.should.equal(subToEvent[k].id);
+      entityToSource[k].details.submission.instanceId.should.equal(entityToSubDef[k].instanceId);
+    }
+
+    // the submission was purged, but the event is still there
+    (entityToSource.s2one.submissionDefId == null).should.equal(true);
+    entityToSource.s2one.auditId.should.equal(subToEvent.s2one.id);
+    entityToSource.s2one.details.submission.instanceId.should.equal('s2one');
+
+    // the submission data exists and is linked, but there was no approval event to link
+    // (probably wont happen)
+    entityToSource.two.submissionDefId.should.equal(entityToSubDef.two.id);
+    (entityToSource.two.auditId == null).should.equal(true);
+
+    // most degenerate cases (probably wont happen):
+    // no sub def was provided to entity at all (so no events to look up)
+    // s2two was purged and there was no approval event for it, so no triggering event
+    for (const k of ['no_sub', 's2two']) {
+      (entityToSource[k].submissionDefId == null).should.equal(true);
+      (entityToSource[k].auditId == null).should.equal(true);
+    }
 
     await down();
 
-    def = await container.one(sql`select * from entity_defs where "entityId" = ${newEntity.id}`);
-    def.submissionDefId.should.equal(subDef.id);
-    def.should.not.have.property('sourceId');
+    // should be three entity_defs with non-null submissionDefId reset
+    // 6 entities total, two were linked to purged submissions, one was never linked to a submission
+    const { count } = await container.one(sql`select count(*) from entity_defs where "submissionDefId" is not null`);
+    count.should.equal(3);
   }));
 });
