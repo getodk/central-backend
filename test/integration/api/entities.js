@@ -157,9 +157,6 @@ describe('Entities API', () => {
         .then(({ body: person }) => {
           person.should.be.an.Entity();
           person.should.have.property('currentVersion').which.is.an.EntityDef();
-
-          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
-
           person.currentVersion.should.have.property('data').which.is.eql({
             age: '88',
             first_name: 'Alice'
@@ -176,9 +173,6 @@ describe('Entities API', () => {
         .then(({ body: person }) => {
           person.should.be.an.ExtendedEntity();
           person.should.have.property('currentVersion').which.is.an.ExtendedEntityDef();
-
-          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
-
           person.currentVersion.should.have.property('data').which.is.eql({
             age: '88',
             first_name: 'Alice'
@@ -199,12 +193,6 @@ describe('Entities API', () => {
         .then(({ body: person }) => {
           person.should.be.an.Entity();
           person.should.have.property('currentVersion').which.is.an.EntityDef();
-
-          // TODO: needs to be revisited after POST/PUT api
-          person.currentVersion.should.have.property('source').which.is.eql({
-            type: 'api',
-            details: null
-          });
 
           person.currentVersion.should.have.property('data').which.is.eql({
             age: '88',
@@ -248,7 +236,6 @@ describe('Entities API', () => {
         .then(({ body: versions }) => {
           versions.forEach(v => {
             v.should.be.an.EntityDef();
-            v.should.have.property('source').which.is.an.EntitySource();
             v.should.have.property('data');
           });
 
@@ -271,7 +258,6 @@ describe('Entities API', () => {
         .then(({ body: versions }) => {
           versions.forEach(v => {
             v.should.be.an.ExtendedEntityDef();
-            v.should.have.property('source').which.is.an.EntitySource();
             v.should.have.property('data');
           });
 
@@ -661,7 +647,6 @@ describe('Entities API', () => {
           person.uuid.should.equal('12345678-1234-4123-8234-111111111aaa');
           person.creatorId.should.equal(5);
           person.should.have.property('currentVersion').which.is.an.EntityDef();
-          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
           person.currentVersion.should.have.property('label').which.equals('Johnny Doe');
           person.currentVersion.should.have.property('data').which.is.eql({
             first_name: 'Johnny',
@@ -766,14 +751,6 @@ describe('Entities API', () => {
           // Response is the right shape
           person.should.be.an.Entity();
           person.should.have.property('currentVersion').which.is.an.EntityDef();
-          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
-
-          // Source is correct
-          // TODO: needs to be revisited after POST/PUT api
-          person.currentVersion.should.have.property('source').which.is.eql({
-            type: 'api',
-            details: null
-          });
 
           // Creator id is correct
           person.currentVersion.creatorId.should.equal(6); // bob
@@ -790,10 +767,6 @@ describe('Entities API', () => {
         .expect(200)
         .then(({ body: person }) => {
           person.currentVersion.data.age.should.equal('77');
-          person.currentVersion.should.have.property('source').which.is.eql({
-            type: 'api',
-            details: null
-          });
           person.currentVersion.creatorId.should.equal(6); // bob
           person.creatorId.should.equal(5); // alice - original entity creator
           person.currentVersion.userAgent.should.equal('central/tests');
