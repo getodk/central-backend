@@ -37,6 +37,7 @@ Here major and breaking changes to the API are listed by version.
 
 **Changed**:
 - ETag support has been added for [Download Dataset](#reference/datasets/download-dataset/download-dataset) and [Download Form Attachment](#reference/forms/individual-form/downloading-a-form-attachment).
+- `?odata=true` can be passed to [Dataset Metadata endpoint](#reference/datasets/datasets/dataset-metadata) to sanitize property names to match the way they will be outputted for OData.
 
 ### ODK Central v2023.2
 
@@ -3016,6 +3017,8 @@ The Dataset listing endpoint returns all published Datasets in a Project. If a D
 ## Dataset Metadata [GET /projects/{projectId}/datasets/{name}]
 
 Returns the metadata of a Dataset including properties and forms that create and consume the Dataset.
+
+You may optionally add the querystring parameter `?odata=true` to sanitize the property names to match the way they will be outputted for OData.
 
 + Parameters
     + projectId: `16` (number, required) - The numeric ID of the Project
