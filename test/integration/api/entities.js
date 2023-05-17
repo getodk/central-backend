@@ -686,6 +686,31 @@ describe('Entities API', () => {
         .expect(400);
     }));
 
+    it('should mark the source as type api', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          label: 'Johnny Doe',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        });
+
+      // Don't currently have a way to look up the source, when uploaded via API, and check it.
+      const typeCounts = await container.all(sql`
+      select type, count(*) from entity_defs
+      join entity_def_sources on entity_def_sources."id" = entity_defs."sourceId"
+      group by type
+      order by type asc`);
+      typeCounts[0].type.should.equal('api');
+      typeCounts[0].count.should.equal(1);
+      typeCounts[1].type.should.equal('submission');
+      typeCounts[1].count.should.equal(2);
+    }));
+
     it('should log the entity create event in the audit log', testEntities(async (service, container) => {
       const asAlice = await service.login('alice');
 
@@ -772,6 +797,28 @@ describe('Entities API', () => {
           person.currentVersion.userAgent.should.equal('central/tests');
           person.updatedAt.should.be.a.recentIsoDate();
         });
+    }));
+
+    it('should add a source row with type api when updating an entity via PATCH', testEntities(async (service, container) => {
+      const asBob = await service.login('bob');
+
+      await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({
+          data: { age: '77' }
+        })
+        .set('User-Agent', 'central/tests')
+        .expect(200);
+
+      // Don't currently have a way to look up the source, when uploaded via API, and check it.
+      const typeCounts = await container.all(sql`
+      select type, count(*) from entity_defs
+      join entity_def_sources on entity_def_sources."id" = entity_defs."sourceId"
+      where root = false
+      group by type
+      order by type asc`);
+      typeCounts.length.should.equal(1);
+      typeCounts[0].type.should.equal('api');
+      typeCounts[0].count.should.equal(1);
     }));
 
     describe('updating data', () => {
