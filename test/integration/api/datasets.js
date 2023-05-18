@@ -2264,7 +2264,7 @@ describe('datasets and entities', () => {
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
           .send(testData.instances.simpleEntity.two)
           .set('Content-Type', 'application/xml')
-          .expect(200);        
+          .expect(200);
 
         await asAlice.patch('/v1/projects/1/datasets/people')
           .send({ approvalRequired: false })
