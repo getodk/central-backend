@@ -369,9 +369,9 @@ describe('Entities API', () => {
           logs[1].action.should.be.eql('entity.create');
           logs[1].actor.displayName.should.be.eql('Alice');
 
-          logs[1].details.approval.should.be.an.Audit();
-          logs[1].details.approval.actor.displayName.should.be.eql('Alice');
-          logs[1].details.approval.loggedAt.should.be.isoDate();
+          logs[1].details.sourceEvent.should.be.an.Audit();
+          logs[1].details.sourceEvent.actor.displayName.should.be.eql('Alice');
+          logs[1].details.sourceEvent.loggedAt.should.be.isoDate();
 
           logs[1].details.submission.should.be.a.Submission();
           logs[1].details.submission.xmlFormId.should.be.eql('simpleEntity');
@@ -449,9 +449,9 @@ describe('Entities API', () => {
           logs[0].action.should.be.eql('entity.create');
           logs[0].actor.displayName.should.be.eql('Alice');
 
-          logs[0].details.approval.should.be.an.Audit();
-          logs[0].details.approval.actor.displayName.should.be.eql('Alice');
-          logs[0].details.approval.loggedAt.should.be.isoDate();
+          logs[0].details.sourceEvent.should.be.an.Audit();
+          logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
+          logs[0].details.sourceEvent.loggedAt.should.be.isoDate();
 
           logs[0].details.should.not.have.property('submission');
 
@@ -475,9 +475,9 @@ describe('Entities API', () => {
           logs[0].action.should.be.eql('entity.create');
           logs[0].actor.displayName.should.be.eql('Alice');
 
-          logs[0].details.approval.should.be.an.Audit();
-          logs[0].details.approval.actor.displayName.should.be.eql('Alice');
-          logs[0].details.approval.loggedAt.should.be.isoDate();
+          logs[0].details.sourceEvent.should.be.an.Audit();
+          logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
+          logs[0].details.sourceEvent.loggedAt.should.be.isoDate();
 
           logs[0].details.should.not.have.property('submission');
 
@@ -571,10 +571,10 @@ describe('Entities API', () => {
           logs[0].action.should.be.eql('entity.create');
           logs[0].actor.displayName.should.be.eql('Alice');
 
-          logs[0].details.approval.should.be.an.Audit();
-          logs[0].details.approval.actor.displayName.should.be.eql('Alice');
-          logs[0].details.approval.loggedAt.should.be.isoDate();
-          logs[0].details.approval.notes.should.be.eql('create entity'); // this confirms that it's the second approval
+          logs[0].details.sourceEvent.should.be.an.Audit();
+          logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
+          logs[0].details.sourceEvent.loggedAt.should.be.isoDate();
+          logs[0].details.sourceEvent.notes.should.be.eql('create entity'); // this confirms that it's the second approval
 
           logs[0].details.submission.should.be.a.Submission();
           logs[0].details.submission.xmlFormId.should.be.eql('simpleEntity');
