@@ -157,9 +157,6 @@ describe('Entities API', () => {
         .then(({ body: person }) => {
           person.should.be.an.Entity();
           person.should.have.property('currentVersion').which.is.an.EntityDef();
-
-          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
-
           person.currentVersion.should.have.property('data').which.is.eql({
             age: '88',
             first_name: 'Alice'
@@ -176,9 +173,6 @@ describe('Entities API', () => {
         .then(({ body: person }) => {
           person.should.be.an.ExtendedEntity();
           person.should.have.property('currentVersion').which.is.an.ExtendedEntityDef();
-
-          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
-
           person.currentVersion.should.have.property('data').which.is.eql({
             age: '88',
             first_name: 'Alice'
@@ -199,12 +193,6 @@ describe('Entities API', () => {
         .then(({ body: person }) => {
           person.should.be.an.Entity();
           person.should.have.property('currentVersion').which.is.an.EntityDef();
-
-          // TODO: needs to be revisited after POST/PUT api
-          person.currentVersion.should.have.property('source').which.is.eql({
-            type: 'api',
-            details: null
-          });
 
           person.currentVersion.should.have.property('data').which.is.eql({
             age: '88',
@@ -248,7 +236,6 @@ describe('Entities API', () => {
         .then(({ body: versions }) => {
           versions.forEach(v => {
             v.should.be.an.EntityDef();
-            v.should.have.property('source').which.is.an.EntitySource();
             v.should.have.property('data');
           });
 
@@ -271,7 +258,6 @@ describe('Entities API', () => {
         .then(({ body: versions }) => {
           versions.forEach(v => {
             v.should.be.an.ExtendedEntityDef();
-            v.should.have.property('source').which.is.an.EntitySource();
             v.should.have.property('data');
           });
 
@@ -420,6 +406,30 @@ describe('Entities API', () => {
           logs[0].actor.displayName.should.be.eql('Alice');
 
 
+        });
+    }));
+
+    it('should return the latest instance name of a source submission', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asBob.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+        .set('Content-Type', 'text/xml')
+        .send(testData.instances.simpleEntity.one
+          .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2')
+          .replace('<orx:instanceName>one</orx:instanceName>', '<orx:instanceName>new instance name</orx:instanceName>'))
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs[0].should.be.an.Audit();
+          logs[0].action.should.be.eql('entity.create');
+          logs[0].actor.displayName.should.be.eql('Alice');
+
+          logs[0].details.submission.should.be.a.Submission();
+          logs[0].details.submission.xmlFormId.should.be.eql('simpleEntity');
+          logs[0].details.submission.currentVersion.instanceName.should.be.eql('new instance name');
         });
     }));
 
@@ -637,7 +647,6 @@ describe('Entities API', () => {
           person.uuid.should.equal('12345678-1234-4123-8234-111111111aaa');
           person.creatorId.should.equal(5);
           person.should.have.property('currentVersion').which.is.an.EntityDef();
-          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
           person.currentVersion.should.have.property('label').which.equals('Johnny Doe');
           person.currentVersion.should.have.property('data').which.is.eql({
             first_name: 'Johnny',
@@ -675,6 +684,31 @@ describe('Entities API', () => {
           }
         })
         .expect(400);
+    }));
+
+    it('should mark the source as type api', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          label: 'Johnny Doe',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        });
+
+      // Don't currently have a way to look up the source, when uploaded via API, and check it.
+      const typeCounts = await container.all(sql`
+      select type, count(*) from entity_defs
+      join entity_def_sources on entity_def_sources."id" = entity_defs."sourceId"
+      group by type
+      order by type asc`);
+      typeCounts[0].type.should.equal('api');
+      typeCounts[0].count.should.equal(1);
+      typeCounts[1].type.should.equal('submission');
+      typeCounts[1].count.should.equal(2);
     }));
 
     it('should log the entity create event in the audit log', testEntities(async (service, container) => {
@@ -742,14 +776,6 @@ describe('Entities API', () => {
           // Response is the right shape
           person.should.be.an.Entity();
           person.should.have.property('currentVersion').which.is.an.EntityDef();
-          person.currentVersion.should.have.property('source').which.is.an.EntitySource();
-
-          // Source is correct
-          // TODO: needs to be revisited after POST/PUT api
-          person.currentVersion.should.have.property('source').which.is.eql({
-            type: 'api',
-            details: null
-          });
 
           // Creator id is correct
           person.currentVersion.creatorId.should.equal(6); // bob
@@ -766,15 +792,33 @@ describe('Entities API', () => {
         .expect(200)
         .then(({ body: person }) => {
           person.currentVersion.data.age.should.equal('77');
-          person.currentVersion.should.have.property('source').which.is.eql({
-            type: 'api',
-            details: null
-          });
           person.currentVersion.creatorId.should.equal(6); // bob
           person.creatorId.should.equal(5); // alice - original entity creator
           person.currentVersion.userAgent.should.equal('central/tests');
           person.updatedAt.should.be.a.recentIsoDate();
         });
+    }));
+
+    it('should add a source row with type api when updating an entity via PATCH', testEntities(async (service, container) => {
+      const asBob = await service.login('bob');
+
+      await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({
+          data: { age: '77' }
+        })
+        .set('User-Agent', 'central/tests')
+        .expect(200);
+
+      // Don't currently have a way to look up the source, when uploaded via API, and check it.
+      const typeCounts = await container.all(sql`
+      select type, count(*) from entity_defs
+      join entity_def_sources on entity_def_sources."id" = entity_defs."sourceId"
+      where root = false
+      group by type
+      order by type asc`);
+      typeCounts.length.should.equal(1);
+      typeCounts[0].type.should.equal('api');
+      typeCounts[0].count.should.equal(1);
     }));
 
     describe('updating data', () => {

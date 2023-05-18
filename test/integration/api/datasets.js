@@ -2110,7 +2110,8 @@ describe('datasets and entities', () => {
 
       await container.Forms.purge(true);
 
-      await container.all(sql`select * from entity_defs`)
+      await container.all(sql`SELECT * FROM entity_defs
+        JOIN entity_def_sources ON entity_defs."sourceId" = entity_def_sources.id`)
         .then(eDefs => {
           // Ensures that we are only clearing submissionDefId of entities whose submission/form is purged
           should(eDefs.find(d => d.data.first_name === 'Alice').submissionDefId).be.null();
