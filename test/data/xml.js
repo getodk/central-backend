@@ -605,6 +605,17 @@ module.exports = {
           </meta>
           <name>John</name>
           <age>40</age>
+        </data>`,
+      four: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
+          <meta>
+            <instanceID>four</instanceID>
+            <entities:entity dataset="people" id="uuid:12345678-1234-4123-8234-123456789ccc" create="1">
+              <entities:label>Robert (18)</entities:label>
+            </entities:entity>
+            <orx:instanceName>four</orx:instanceName>
+          </meta>
+          <name>Robert</name>
+          <age>18</age>
         </data>`
     },
     multiPropertyEntity: {
