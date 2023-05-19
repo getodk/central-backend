@@ -2345,6 +2345,21 @@ describe('datasets and entities', () => {
           .expect(200)
           .then(({ body }) => body.length.should.be.eql(2));
 
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then( ({body: logs}) => {
+            logs[0].should.be.an.Audit();
+            logs[0].action.should.be.eql('entity.create');
+            logs[0].actor.displayName.should.be.eql('Alice');
+
+            logs[0].details.submission.should.be.a.Submission();
+            logs[0].details.submission.xmlFormId.should.be.eql('simpleEntity');
+            logs[0].details.submission.currentVersion.instanceName.should.be.eql('one');
+            logs[0].details.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
+          });
+
+
+
       }));
 
       it('should log error if there is a problem in a submission while auto converting', testService(async (service, container) => {
