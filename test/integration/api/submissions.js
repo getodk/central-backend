@@ -3183,6 +3183,48 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               body.submitter.displayName.should.equal('Alice');
             })))));
 
+    // cb#858
+    it('should not mince object properties', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asBob.put('/v1/projects/1/forms/simple/submissions/one')
+        .set('Content-Type', 'text/xml')
+        .send(withSimpleIds('one', 'two'))
+        .expect(200);
+
+      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01' WHERE "displayName" = 'Alice'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01' WHERE "displayName" = 'Bob'`);
+
+      await container.run(sql`UPDATE submissions SET "createdAt" = '2022-01-01', "updatedAt" = '2023-01-01'`);
+
+      await container.run(sql`UPDATE submission_defs SET "createdAt" = '2022-01-01' WHERE "instanceId" = 'one'`);
+      await container.run(sql`UPDATE submission_defs SET "createdAt" = '2023-01-01' WHERE "instanceId" = 'two'`);
+
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.an.ExtendedSubmission();
+
+          body.createdAt.should.match(/2022/);
+          body.updatedAt.should.match(/2023/);
+
+          body.submitter.displayName.should.equal('Alice');
+          body.submitter.createdAt.should.match(/2020/);
+
+          body.currentVersion.createdAt.should.match(/2023/);
+
+          body.currentVersion.submitter.displayName.should.equal('Bob');
+          body.currentVersion.submitter.createdAt.should.match(/2021/);
+        });
+    }));
+
     it('should redirect to the version if the referenced instanceID is out of date', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission')
