@@ -701,7 +701,7 @@ describe('worker: entity', () => {
 
       await exhaust(container);
 
-      await asAlice.patch('/v1/projects/1/datasets/people')
+      await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
         .send({ approvalRequired: false })
         .expect(200);
 
