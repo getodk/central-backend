@@ -124,6 +124,45 @@ describe('Entities API', () => {
           });
         });
     }));
+
+    it('should not mince the object properties', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ label: 'two' })
+        .expect(200);
+
+      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01' WHERE "displayName" = 'Alice'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01' WHERE "displayName" = 'Bob'`);
+
+      await container.run(sql`UPDATE entities SET "createdAt" = '2022-01-01', "updatedAt" = '2023-01-01' WHERE uuid = '12345678-1234-4123-8234-123456789abc'`);
+
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2022-01-01' WHERE label = 'Alice (88)'`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2023-01-01' WHERE label = 'two'`);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body: people }) => {
+          people.forEach(p => {
+            p.should.be.an.ExtendedEntity();
+            p.should.have.property('currentVersion').which.is.an.ExtendedEntityDef();
+          });
+
+          const person = people.find(p => p.uuid === '12345678-1234-4123-8234-123456789abc');
+
+          person.createdAt.should.match(/2022/);
+          person.updatedAt.should.match(/2023/);
+
+          person.creator.displayName.should.be.eql('Alice');
+          person.creator.createdAt.should.match(/2020/);
+
+          person.currentVersion.createdAt.should.match(/2023/);
+          person.currentVersion.creator.displayName.should.be.eql('Bob');
+          person.currentVersion.creator.createdAt.should.match(/2021/);
+        });
+    }));
   });
 
   describe('GET /datasets/:name/entities/:uuid', () => {
@@ -177,6 +216,46 @@ describe('Entities API', () => {
             age: '88',
             first_name: 'Alice'
           });
+        });
+    }));
+
+
+    it('should not mince the object properties', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ label: 'two' })
+        .expect(200);
+
+      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01' WHERE "displayName" = 'Alice'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01' WHERE "displayName" = 'Bob'`);
+
+      await container.run(sql`UPDATE entities SET "createdAt" = '2022-01-01', "updatedAt" = '2023-01-01'`);
+
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2022-01-01' WHERE label = 'Alice (88)'`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2023-01-01' WHERE label = 'two'`);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body: person }) => {
+          person.should.be.an.ExtendedEntity();
+          person.should.have.property('currentVersion').which.is.an.ExtendedEntityDef();
+          person.currentVersion.should.have.property('data').which.is.eql({
+            age: '88',
+            first_name: 'Alice'
+          });
+
+          person.createdAt.should.match(/2022/);
+          person.updatedAt.should.match(/2023/);
+
+          person.creator.displayName.should.be.eql('Alice');
+          person.creator.createdAt.should.match(/2020/);
+
+          person.currentVersion.createdAt.should.match(/2023/);
+          person.currentVersion.creator.displayName.should.be.eql('Bob');
+          person.currentVersion.creator.createdAt.should.match(/2021/);
         });
     }));
 
