@@ -744,6 +744,73 @@ describe('worker: entity', () => {
       errors.should.be.empty();
 
     }));
+
+    it('should not create entity when review status is rejected', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      // review status is null
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // review status is edited
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/two')
+          .send(testData.instances.simpleEntity.two
+            .replace('<instanceID>two', '<deprecatedID>two</deprecatedID><instanceID>two2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200));
+
+      // review status is hasIssues
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.three)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/three')
+          .send({ reviewState: 'hasIssues' })
+          .expect(200));
+
+      // review status is rejected
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.four)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/four')
+          .send({ reviewState: 'rejected' })
+          .expect(200));
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => body.should.be.eql([]));
+
+      await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+        .send({ approvalRequired: false })
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.be.eql(3);
+          body.map(e => e.uuid).should.not.containEql('12345678-1234-4123-8234-123456789ccc');
+        });
+    }));
   });
 });
 
