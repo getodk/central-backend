@@ -185,6 +185,30 @@ describe('worker: entity', () => {
       errorEvent.isEmpty().should.be.true();
     }));
 
+    it('should not make entity for draft submission', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => body.should.be.eql([]));
+
+    }));
+
     // TODO: check that it doesn't make an entity for an encrypted form/submission
   });
 
@@ -381,7 +405,8 @@ describe('worker: entity', () => {
       }));
 
       it('should fail and log other system errors', testService(async (service, container) => {
-        // log a submission update event that is partly broken
+        // cause system error by dropping `forms` table
+        await container.run(sql`DROP TABLE forms CASCADE`);
         await container.Audits.log(null, 'submission.update', null, { reviewState: 'approved', submissionDefMissing: true });
         await exhaust(container);
 
@@ -397,7 +422,7 @@ describe('worker: entity', () => {
         // from passing in some broken (undefined/missing) value for submissionDefId.
         should.exist(event.details.errorMessage);
         should.not.exist(event.details.problem);
-        event.details.errorMessage.should.equal('SQL tag cannot be bound an undefined value.');
+        event.details.errorMessage.should.equal('relation "forms" does not exist');
       }));
     });
   });
