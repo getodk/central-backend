@@ -800,7 +800,33 @@ describe('analytics task queries', () => {
       const datasets = await container.Analytics.getDatasets();
 
       datasets[0].num_failed_entities_total.should.be.equal(2);
-      datasets[0].num_entities_recent.should.be.equal(1);
+      datasets[0].num_failed_entities_recent.should.be.equal(1);
+    }));
+
+    it('should calculate updated entities', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three);
+      await exhaust(container);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ data: { age: '2', first_name: 'John' }, label: 'John (12)' })
+        .expect(200);
+
+      // let's set date of entity errors to long time ago
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.update.version'`);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
+        .send({ data: { age: '1' } })
+        .expect(200);
+
+      const datasets = await container.Analytics.getDatasets();
+
+      datasets[0].num_updated_entities_total.should.be.equal(2);
+      datasets[0].num_updated_entities_recent.should.be.equal(1);
     }));
 
     it('should return right dataset of each projects', testService(async (service, container) => {
@@ -1104,6 +1130,17 @@ describe('analytics task queries', () => {
       // One error will be logged
       await exhaust(container);
 
+      // Update an entity
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ data: { age: '1' } });
+
+      // Make the update ancient
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.update.version'`);
+
+      // Update the same entity again
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ data: { age: '2' } });
+
       // Link both Datasets to a Form
       await createTestForm(service, container, testData.forms.withAttachments
         .replace(/goodone/g, 'people')
@@ -1129,6 +1166,10 @@ describe('analytics task queries', () => {
         num_failed_entities: { // two Submissions failed due to invalid UUID
           total: 2, // made one Error ancient
           recent: 1
+        },
+        num_updated_entities: {
+          total: 2,
+          recent: 1
         }
       });
 
@@ -1141,6 +1182,10 @@ describe('analytics task queries', () => {
           recent: 0
         },
         num_failed_entities: {
+          total: 0,
+          recent: 0
+        },
+        num_updated_entities: {
           total: 0,
           recent: 0
         }
