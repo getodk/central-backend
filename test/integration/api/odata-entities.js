@@ -309,7 +309,6 @@ describe('api: /datasets/:name.svc', () => {
         <Key><PropertyRef Name="__id"/></Key>
         <Property Name="__id" Type="Edm.String"/>
         <Property Name="__system" Type="org.opendatakit.entity.metadata"/>
-        <Property Name="name" Type="Edm.String"/>
         <Property Name="label" Type="Edm.String"/>
         <Property Name="first_name" Type="Edm.String"/>
         <Property Name="age" Type="Edm.String"/>
