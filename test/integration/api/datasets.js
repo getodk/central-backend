@@ -1321,7 +1321,7 @@ describe('datasets and entities', () => {
                 text.should.equal('name,label,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88\n');
               })))));
 
-      it('should return entities csv', testService(async (service, container) => {
+      it('should return data for columns that contain valid special characters', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
