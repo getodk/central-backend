@@ -372,6 +372,37 @@ describe('datasets and entities', () => {
 
       }));
 
+      it('should return csv file for dataset that have dot in its property name', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/age/g, 'the.age'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one.replace(/age/g, 'the.age'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200)
+          .then(r => r.text);
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(1);
+
+        const withOutTs = result.replace(isoRegex, '');
+        withOutTs.should.be.eql(
+          '__id,label,first_name,the.age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt\n' +
+            '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,\n'
+        );
+
+      }));
+
       it('should not return deleted entities', testService(async (service) => {
         const asAlice = await service.login('alice');
 
@@ -1289,6 +1320,40 @@ describe('datasets and entities', () => {
                 headers['content-type'].should.equal('text/csv; charset=utf-8');
                 text.should.equal('name,label,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88\n');
               })))));
+
+      it('should return data for columns that contain valid special characters', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity
+            .replace(/people/g, 'goodone')
+            .replace(/age/g, 'the.age'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one
+            .replace(/people/g, 'goodone')
+            .replace(/age/g, 'the.age'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+          .expect(200)
+          .then(({ text }) => {
+            text.should.equal('name,label,first_name,the.age\n' +
+          '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88\n');
+          });
+
+      }));
 
       it('should not return deleted entities', testService(async (service) => {
         const asAlice = await service.login('alice');
