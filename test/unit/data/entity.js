@@ -418,7 +418,6 @@ describe('extracting entities from submissions', () => {
       const result = selectFields(entity, properties, selectedProperties);
       result.should.be.eql({
         __id: 'uuid',
-        name: 'uuid',
         label: 'label',
         __system: {
           createdAt: 'createdAt',
@@ -493,7 +492,6 @@ describe('extracting entities from submissions', () => {
       const result = selectFields(data, properties, selectedProperties);
       result.should.be.eql({
         __id: 'uuid',
-        name: 'uuid',
         label: 'label',
         __system: {
           createdAt: 'createdAt',
@@ -514,7 +512,6 @@ describe('extracting entities from submissions', () => {
       const result = selectFields(entity, properties, selectedProperties);
       result.should.be.eql({
         __id: 'uuid',
-        name: 'uuid',
         label: 'label',
         __system: {
           createdAt: 'createdAt',

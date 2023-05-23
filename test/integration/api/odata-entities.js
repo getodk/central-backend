@@ -54,7 +54,7 @@ describe('api: /datasets/:name.svc', () => {
             r.age.should.be.eql('88');
           });
 
-          body.value[0].name.should.not.be.eql(body.value[1].name);
+          body.value[0].__id.should.not.be.eql(body.value[1].__id);
         });
     }));
 
