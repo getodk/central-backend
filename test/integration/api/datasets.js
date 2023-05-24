@@ -552,10 +552,8 @@ describe('datasets and entities', () => {
 
             linkedForms.should.be.eql([{ name: 'withAttachments', xmlFormId: 'withAttachments' }]);
 
-            properties.map(({ id, datasetId, publishedAt, ...p }) => {
-              id.should.be.aboveOrEqual(1);
-              datasetId.should.be.aboveOrEqual(1);
-              publishedAt.should.not.be.null();
+            properties.map(({ publishedAt, ...p }) => {
+              publishedAt.should.be.isoDate();
               return p;
             }).should.be.eql([
               { name: 'first_name', odataName: 'first_name', forms: [
