@@ -3772,7 +3772,6 @@ The Metadata Document describes, in [EDMX CSDL](http://docs.oasis-open.org/odata
                             </Key>
                             <Property Name="__id" Type="Edm.String"/>
                             <Property Name="__system" Type="org.opendatakit.entity.metadata"/>
-                            <Property Name="name" Type="Edm.String"/>
                             <Property Name="label" Type="Edm.String"/>
                             <Property Name="geometry" Type="Edm.String"/>
                             <Property Name="species" Type="Edm.String"/>
@@ -3844,7 +3843,6 @@ The fields you can query against are as follows:
 | Entity Metadata         | OData Field Name     |
 | ------------------------| -------------------- |
 | Entity UUID             | `__id`               |
-| Entity Name (same as UUID) | `name`            |
 | Entity Label            | `label`              |
 | Entity Creator Actor ID | `__system/creatorId` |
 | Entity Timestamp        | `__system/createdAt` |
@@ -3874,7 +3872,6 @@ As the vast majority of clients only support the JSON OData format, that is the 
                 "value": [
                     {
                         "__id": "0f56bde5-dd05-41f7-8175-c4114eab41c6",
-                        "name": "0f56bde5-dd05-41f7-8175-c4114eab41c6",
                         "label": "25cm purpleheart",
                         "__system": {
                             "createdAt": "2022-12-09T19:41:16.478Z",
@@ -3889,7 +3886,6 @@ As the vast majority of clients only support the JSON OData format, that is the 
                     },
                     {
                         "__id": "aeebd746-3b1e-4a24-ba9d-ed6547bd5ff1",
-                        "name": "aeebd746-3b1e-4a24-ba9d-ed6547bd5ff1",
                         "label": "345cm mora",
                         "__system": {
                             "createdAt": "2022-11-21T19:17:36.348Z",
@@ -3904,7 +3900,6 @@ As the vast majority of clients only support the JSON OData format, that is the 
                     },
                     {
                         "__id": "eacb9844-2f88-48b5-b7c0-6333263fe639",
-                        "name": "eacb9844-2f88-48b5-b7c0-6333263fe639",
                         "label": "123cm wallaba",
                         "__system": {
                             "createdAt": "2022-11-21T18:22:43.759Z",
