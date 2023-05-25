@@ -292,8 +292,8 @@ describe('worker: entity', () => {
         const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(updateEvent.details.submissionId);
-        event.details.errorMessage.should.equal('There was a problem with entity processing: ID [bad_uuid] is not a valid UUID.');
-        event.details.problem.problemCode.should.equal(409.14);
+        event.details.errorMessage.should.equal("Invalid input data type: expected 'id' to be (valid UUID)");
+        event.details.problem.problemCode.should.equal(400.11);
       }));
 
       it('should fail because dataset attribute is missing', testService(async (service, container) => {
@@ -320,8 +320,8 @@ describe('worker: entity', () => {
         const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(updateEvent.details.submissionId);
-        event.details.errorMessage.should.equal('There was a problem with entity processing: Dataset empty or missing.');
-        event.details.problem.problemCode.should.equal(409.14);
+        event.details.errorMessage.should.equal('Required parameter dataset missing.');
+        event.details.problem.problemCode.should.equal(400.2);
       }));
     });
 
@@ -398,10 +398,8 @@ describe('worker: entity', () => {
         const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(updateEvent.details.submissionId);
-        event.details.problem.problemCode.should.equal(409.14);
-        event.details.errorMessage.should.match(/Dataset \[frogs\] not found/);
-        // this is going to have an errorMessage of something cryptic database complaint
-        // like "The given entityId 5 for entities does not exist."
+        event.details.problem.problemCode.should.equal(404.7);
+        event.details.errorMessage.should.match(/The dataset \(frogs\) specified in the submission does not exist/);
       }));
 
       it('should fail and log other system errors', testService(async (service, container) => {
