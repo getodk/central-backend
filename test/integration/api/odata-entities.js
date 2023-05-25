@@ -302,6 +302,8 @@ describe('api: /datasets/:name.svc', () => {
         <Property Name="createdAt" Type="Edm.DateTimeOffset"/>
         <Property Name="creatorId" Type="Edm.String"/>
         <Property Name="creatorName" Type="Edm.String"/>        
+        <Property Name="updates" Type="Edm.Int64"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
       </ComplexType>
     </Schema>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.people">    
