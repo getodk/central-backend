@@ -803,7 +803,7 @@ describe('analytics task queries', () => {
       datasets[0].num_failed_entities_recent.should.be.equal(1);
     }));
 
-    it('should calculate updated entities', testService(async (service, container) => {
+    it('should calculate entity updates', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       await createTestForm(service, container, testData.forms.simpleEntity, 1);
@@ -816,17 +816,21 @@ describe('analytics task queries', () => {
         .send({ data: { age: '2', first_name: 'John' }, label: 'John (12)' })
         .expect(200);
 
-      // let's set date of entity errors to long time ago
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.update.version'`);
-
       await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
         .send({ data: { age: '1' } })
         .expect(200);
 
+      // let's set date of entity update to long time ago
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.update.version'`);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
+        .send({ data: { age: '2' } })
+        .expect(200);
+
       const datasets = await container.Analytics.getDatasets();
 
-      datasets[0].num_updated_entities_total.should.be.equal(2);
-      datasets[0].num_updated_entities_recent.should.be.equal(1);
+      datasets[0].num_entity_updates_total.should.be.equal(3);
+      datasets[0].num_entity_updates_recent.should.be.equal(1);
     }));
 
     it('should return right dataset of each projects', testService(async (service, container) => {
@@ -1167,7 +1171,7 @@ describe('analytics task queries', () => {
           total: 2, // made one Error ancient
           recent: 1
         },
-        num_updated_entities: {
+        num_entity_updates: {
           total: 2,
           recent: 1
         }
@@ -1185,7 +1189,7 @@ describe('analytics task queries', () => {
           total: 0,
           recent: 0
         },
-        num_updated_entities: {
+        num_entity_updates: {
           total: 0,
           recent: 0
         }
