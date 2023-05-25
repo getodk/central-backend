@@ -288,7 +288,7 @@ describe('api: /datasets/:name.svc', () => {
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
-        .send(testData.forms.simpleEntity)
+        .send(testData.forms.simpleEntity.replace(/age/g, 'the.age'))
         .expect(200);
 
       await asAlice.get('/v1/projects/1/datasets/people.svc/$metadata')
@@ -302,6 +302,8 @@ describe('api: /datasets/:name.svc', () => {
         <Property Name="createdAt" Type="Edm.DateTimeOffset"/>
         <Property Name="creatorId" Type="Edm.String"/>
         <Property Name="creatorName" Type="Edm.String"/>        
+        <Property Name="updates" Type="Edm.Int64"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
       </ComplexType>
     </Schema>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.people">    
@@ -311,7 +313,7 @@ describe('api: /datasets/:name.svc', () => {
         <Property Name="__system" Type="org.opendatakit.entity.metadata"/>
         <Property Name="label" Type="Edm.String"/>
         <Property Name="first_name" Type="Edm.String"/>
-        <Property Name="age" Type="Edm.String"/>
+        <Property Name="the_age" Type="Edm.String"/>
       </EntityType>    
       <EntityContainer Name="people">      
         <EntitySet Name="Entities" EntityType="org.opendatakit.user.people.Entities">          
@@ -336,7 +338,7 @@ describe('api: /datasets/:name.svc', () => {
               <PropertyValue Property="NonFilterableProperties">
                 <Collection>
                   <PropertyPath>first_name</PropertyPath>
-                  <PropertyPath>age</PropertyPath>
+                  <PropertyPath>the_age</PropertyPath>
                 </Collection>
               </PropertyValue>
             </Record>
