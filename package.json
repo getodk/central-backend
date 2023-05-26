@@ -58,7 +58,7 @@
     "semver": "^7.3.7",
     "should": "~13",
     "streamtest": "~1.2",
-    "supertest": "~3",
+    "supertest": "^6.3.3",
     "tmp": "~0.2"
   }
 }

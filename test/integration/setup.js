@@ -123,26 +123,43 @@ const authProxy = (token) => ({
     return (...args) => method.apply(target, args).set('Authorization', `Bearer ${token}`);
   }
 });
+// Add User-Agent header to all requests.  This was previously a default in
+// superagent, but was removed in 5.1.0.  We keep the value the same as before
+// we upgraded.
+// See: https://github.com/ladjs/superagent/pull/1495
+const uaProxy = {
+  get(target, name) {
+    const method = target[name];
+
+    if (method == null) return undefined;
+    if (name === 'login') return method;
+
+    return (...args) => method.apply(target, args)
+      .set('User-Agent', 'node-superagent/3.8.3');
+  }
+};
 // eslint-disable-next-line no-shadow
 const augment = (service) => {
+  const uaService = new Proxy(service, uaProxy);
+
   // eslint-disable-next-line no-param-reassign
-  service.login = async (userOrUsers, test = undefined) => {
+  uaService.login = async (userOrUsers, test = undefined) => {
     const users = Array.isArray(userOrUsers) ? userOrUsers : [userOrUsers];
     const tokens = await Promise.all(users.map(async (user) => {
       const credentials = (typeof user === 'string')
         ? { email: `${user}@getodk.org`, password: user }
         : user;
-      const { body } = await service.post('/v1/sessions')
+      const { body } = await uaService.post('/v1/sessions')
         .send(credentials)
         .expect(200);
       return body.token;
     }));
-    const proxies = tokens.map((token) => new Proxy(service, authProxy(token)));
+    const proxies = tokens.map((token) => new Proxy(uaService, authProxy(token)));
     return test != null
       ? test(...proxies)
       : (Array.isArray(userOrUsers) ? proxies : proxies[0]);
   };
-  return service;
+  return uaService;
 };
 
 
