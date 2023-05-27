@@ -727,6 +727,20 @@ describe('api: /projects', () => {
             log.acteeId.should.equal(project.acteeId);
             log.details.should.eql({ data: { keyId: project.keyId } });
           }))));
+
+    it('should not throw form warnings', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+        .send(testData.forms.simple.replace(/age/g, 'address'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/key')
+        .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+        .expect(200);
+
+    }));
   });
 
   describe('/:id PUT', () => {
