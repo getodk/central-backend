@@ -1319,6 +1319,28 @@ describe('datasets and entities', () => {
                 text.should.equal('name,label,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88\n');
               })))));
 
+      it('should return entities csv for testing', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await createBothForms(asAlice);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one.replace(/people/g, 'goodone'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        const token = await asAlice.get('/v1/projects/1/forms/withAttachments/draft')
+          .expect(200)
+          .then(({ body }) => body.draftToken);
+
+        await service.get(`/v1/test/${token}/projects/1/forms/withAttachments/draft/attachments/goodone.csv`)
+          .expect(200)
+          .then(({ text }) => { text.should.equal('name,label,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88\n'); });
+
+      }));
+
       it('should return data for columns that contain valid special characters', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
