@@ -33,7 +33,7 @@ describe('extracting entities from submissions', () => {
           dataset: 'foo',
         },
         data: {}
-      })).should.throw(/Required parameter ID missing/);
+      })).should.throw(/Required parameter uuid missing/);
     });
 
     it('should throw errors when id is not a valid uuid', () => {
@@ -44,7 +44,7 @@ describe('extracting entities from submissions', () => {
           dataset: 'foo',
         },
         data: {}
-      })).should.throw(/Invalid input data type: expected 'id' to be \(valid UUID\)/);
+      })).should.throw(/Invalid input data type: expected 'uuid' to be \(valid UUID\)/);
     });
 
     it('should remove create property from system', () => {
@@ -128,8 +128,8 @@ describe('extracting entities from submissions', () => {
       };
       const propertyNames = ['first_name'];
       assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
-        err.problemCode.should.equal(400.5);
-        err.message.should.equal('Passed parameters (extra) were not expected.');
+        err.problemCode.should.equal(400.30);
+        err.message.should.equal('Expected parameters: (label, uuid, data). Got (uuid, label, data, extra).');
         return true;
       });
     });
@@ -206,6 +206,11 @@ describe('extracting entities from submissions', () => {
             400.11,
             "Invalid input data type: expected 'age' to be (string)"
           ],
+          [
+            { uuid: 123, label: 'Label', data: { first_name: 'Alice', age: 99 } },
+            400.11,
+            "Invalid input data type: expected 'uuid' to be (string)"
+          ]
         ];
         const propertyNames = ['age', 'first_name'];
         for (const [body, code, message] of requests) {

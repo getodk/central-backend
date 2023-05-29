@@ -704,7 +704,7 @@ describe('Entities API', () => {
         .send({ broken: 'json' })
         .expect(400)
         .then(({ body }) => {
-          body.code.should.equal(400.5);
+          body.code.should.equal(400.30);
         });
     }));
 

@@ -292,7 +292,7 @@ describe('worker: entity', () => {
         const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(updateEvent.details.submissionId);
-        event.details.errorMessage.should.equal("Invalid input data type: expected 'id' to be (valid UUID)");
+        event.details.errorMessage.should.equal("Invalid input data type: expected 'uuid' to be (valid UUID)");
         event.details.problem.problemCode.should.equal(400.11);
       }));
 
