@@ -223,6 +223,44 @@ describe('api: /submission', () => {
                 ]);
               }))))));
 
+    it('should save attachments with unicode / non-english char', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.unicode), { filename: 'data.xml' })
+        .attach('fîlé2', Buffer.from('this is test file one'), { filename: 'fîlé2.bin' })
+        .attach('f😂le3صادق', Buffer.from('this is test file two'), { filename: 'f😂le3صادق' })
+        .expect(201);
+
+      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql([
+            { name: 'fîlé2', exists: true },
+            { name: 'f😂le3صادق', exists: true }
+          ]);
+        });
+
+      await asAlice.get(`/v1/projects/1/forms/binaryType/submissions/both/attachments/${encodeURI('fîlé2')}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.toString('utf8').should.be.eql('this is test file one');
+        });
+
+      await asAlice.get(`/v1/projects/1/forms/binaryType/submissions/both/attachments/${encodeURI('f😂le3صادق')}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.toString('utf8').should.be.eql('this is test file two');
+        });
+
+    }));
+
     it('should not fail given identical attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
