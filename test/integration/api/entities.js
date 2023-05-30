@@ -1047,7 +1047,7 @@ describe('Entities API', () => {
           .expect(400)
           .then(({ body }) => {
             body.code.should.equal(400.11);
-            body.message.should.equal("Invalid input data type: expected 'first_name' to be (string)");
+            body.message.should.equal('Invalid input data type: expected (first_name) to be (string)');
           });
       }));
 

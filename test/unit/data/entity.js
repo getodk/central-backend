@@ -44,7 +44,7 @@ describe('extracting entities from submissions', () => {
           dataset: 'foo',
         },
         data: {}
-      })).should.throw(/Invalid input data type: expected 'uuid' to be \(valid UUID\)/);
+      })).should.throw(/Invalid input data type: expected \(uuid\) to be \(valid UUID\)/);
     });
 
     it('should remove create property from system', () => {
@@ -189,34 +189,34 @@ describe('extracting entities from submissions', () => {
           [
             { uuid: '12345678-1234-4123-8234-123456789abc', label: 1234, data: { first_name: 'Alice' } },
             400.11,
-            "Invalid input data type: expected 'label' to be (string)"
+            'Invalid input data type: expected (label) to be (string)'
           ],
           [
             { uuid: '12345678-1234-4123-8234-123456789abc' },
             400.28,
-            'No entity data or label provided.'
+            'The entity is invalid. No entity data or label provided.'
           ],
           [
             { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Label', data: { first_name: 'Alice', age: 99 } },
             400.11,
-            "Invalid input data type: expected 'age' to be (string)"
+            'Invalid input data type: expected (age) to be (string)'
           ],
           [
             { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Label', data: { first_name: 'Alice', age: null } },
             400.11,
-            "Invalid input data type: expected 'age' to be (string)"
+            'Invalid input data type: expected (age) to be (string)'
           ],
           [
             { uuid: 123, label: 'Label', data: { first_name: 'Alice', age: 99 } },
             400.11,
-            "Invalid input data type: expected 'uuid' to be (string)"
+            'Invalid input data type: expected (uuid) to be (string)'
           ]
         ];
         const propertyNames = ['age', 'first_name'];
         for (const [body, code, message] of requests) {
           assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
             err.problemCode.should.equal(code);
-            err.message.includes(message).should.equal(true);
+            err.message.should.match(message);
             return true;
           });
         }
@@ -295,11 +295,11 @@ describe('extracting entities from submissions', () => {
         const requests = [
           [
             {},
-            400.28, 'No entity data or label provided.'
+            400.28, 'The entity is invalid. No entity data or label provided.'
           ],
           [
             { label: null },
-            400.28, 'No entity data or label provided.'
+            400.28, 'The entity is invalid. No entity data or label provided.'
           ],
           [
             { label: '' },
@@ -307,11 +307,11 @@ describe('extracting entities from submissions', () => {
           ],
           [
             { data: { first_name: 'Alice', age: 99 } },
-            400.11, "Invalid input data type: expected 'age' to be (string)"
+            400.11, 'Invalid input data type: expected (age) to be (string)'
           ],
           [
             { data: { first_name: 'Alice', age: null } },
-            400.11, "Invalid input data type: expected 'age' to be (string)"
+            400.11, 'Invalid input data type: expected (age) to be (string)'
           ],
         ];
         const existingEntity = {
@@ -325,7 +325,7 @@ describe('extracting entities from submissions', () => {
         for (const [body, errorCode, message] of requests) {
           assert.throws(() => { extractEntity(body, propertyNames, existingEntity); }, (err) => {
             err.problemCode.should.equal(errorCode);
-            err.message.includes(message).should.equal(true);
+            err.message.should.match(message);
             return true;
           });
         }
