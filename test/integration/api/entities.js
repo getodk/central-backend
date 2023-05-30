@@ -704,7 +704,7 @@ describe('Entities API', () => {
         .send({ broken: 'json' })
         .expect(400)
         .then(({ body }) => {
-          body.code.should.equal(400.28);
+          body.code.should.equal(400.31);
         });
     }));
 
@@ -984,7 +984,7 @@ describe('Entities API', () => {
           .send({
             label: ''
           })
-          .expect(409);
+          .expect(400);
       }));
 
       it('should update an entity with additional properties', testEntities(async (service) => {
@@ -1046,8 +1046,8 @@ describe('Entities API', () => {
           })
           .expect(400)
           .then(({ body }) => {
-            body.code.should.equal(400.28);
-            body.message.should.equal('The entity is invalid. Property value for [first_name] is not a string.');
+            body.code.should.equal(400.11);
+            body.message.should.equal('Invalid input data type: expected (first_name) to be (string)');
           });
       }));
 

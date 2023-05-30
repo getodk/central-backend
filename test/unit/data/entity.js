@@ -19,8 +19,8 @@ describe('extracting entities from submissions', () => {
         data: {}
       };
       assert.throws(() => { validateEntity(entity); }, (err) => {
-        err.problemCode.should.equal(409.14);
-        err.message.should.equal('There was a problem with entity processing: Label empty or missing.');
+        err.problemCode.should.equal(400.2);
+        err.message.should.equal('Required parameter label missing.');
         return true;
       });
     });
@@ -33,7 +33,7 @@ describe('extracting entities from submissions', () => {
           dataset: 'foo',
         },
         data: {}
-      })).should.throw(/ID empty or missing/);
+      })).should.throw(/Required parameter uuid missing/);
     });
 
     it('should throw errors when id is not a valid uuid', () => {
@@ -44,7 +44,7 @@ describe('extracting entities from submissions', () => {
           dataset: 'foo',
         },
         data: {}
-      })).should.throw(/ID \[uuid:12123123\] is not a valid UUID/);
+      })).should.throw(/Invalid input data type: expected \(uuid\) to be \(valid UUID\)/);
     });
 
     it('should remove create property from system', () => {
@@ -128,8 +128,8 @@ describe('extracting entities from submissions', () => {
       };
       const propertyNames = ['first_name'];
       assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
-        err.problemCode.should.equal(400.28);
-        err.message.should.equal('The entity is invalid. Unrecognized fields included in request.');
+        err.problemCode.should.equal(400.31);
+        err.message.should.equal('Expected parameters: (label, uuid, data). Got (uuid, label, data, extra).');
         return true;
       });
     });
@@ -183,53 +183,40 @@ describe('extracting entities from submissions', () => {
         });
       });
 
-      it('should reject if request does not form valid entity', () => {
-        // These are generic entity validation errors so they use an old 409.14 conflict problem
-        const requests = [
-          [
-            { label: 'Alice Label', data: { first_name: 'Alice' } },
-            'ID empty or missing.'
-          ],
-          [
-            { uuid: '12345678-1234-4123-8234-123456789abc', data: { first_name: 'Alice' } },
-            'Label empty or missing.'
-          ],
-        ];
-        const propertyNames = ['first_name'];
-        for (const [body, message] of requests) {
-          assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
-            err.problemCode.should.equal(409.14);
-            err.message.includes(message).should.equal(true);
-            return true;
-          });
-        }
-      });
-
       it('should reject if required part of the request is missing or not a string', () => {
         // These are JSON entity validation errors so they use a newer 400 bad request problem
         const requests = [
           [
             { uuid: '12345678-1234-4123-8234-123456789abc', label: 1234, data: { first_name: 'Alice' } },
-            'Value for [label] is not a string.'
+            400.11,
+            'Invalid input data type: expected (label) to be (string)'
           ],
           [
             { uuid: '12345678-1234-4123-8234-123456789abc' },
-            'No entity data or label provided.'
+            400.28,
+            'The entity is invalid. No entity data or label provided.'
           ],
           [
             { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Label', data: { first_name: 'Alice', age: 99 } },
-            'Property value for [age] is not a string.'
+            400.11,
+            'Invalid input data type: expected (age) to be (string)'
           ],
           [
             { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Label', data: { first_name: 'Alice', age: null } },
-            'Property value for [age] is not a string.'
+            400.11,
+            'Invalid input data type: expected (age) to be (string)'
           ],
+          [
+            { uuid: 123, label: 'Label', data: { first_name: 'Alice', age: 99 } },
+            400.11,
+            'Invalid input data type: expected (uuid) to be (string)'
+          ]
         ];
         const propertyNames = ['age', 'first_name'];
-        for (const [body, message] of requests) {
+        for (const [body, code, message] of requests) {
           assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
-            err.problemCode.should.equal(400.28);
-            err.message.includes(message).should.equal(true);
+            err.problemCode.should.equal(code);
+            err.message.should.match(message);
             return true;
           });
         }
@@ -308,23 +295,23 @@ describe('extracting entities from submissions', () => {
         const requests = [
           [
             {},
-            400.28, 'No entity data or label provided.'
+            400.28, 'The entity is invalid. No entity data or label provided.'
           ],
           [
             { label: null },
-            400.28, 'No entity data or label provided.'
+            400.28, 'The entity is invalid. No entity data or label provided.'
           ],
           [
             { label: '' },
-            409.14, 'Label empty or missing.'
+            400.2, 'Required parameter label missing.'
           ],
           [
             { data: { first_name: 'Alice', age: 99 } },
-            400.28, 'Property value for [age] is not a string.'
+            400.11, 'Invalid input data type: expected (age) to be (string)'
           ],
           [
             { data: { first_name: 'Alice', age: null } },
-            400.28, 'Property value for [age] is not a string.'
+            400.11, 'Invalid input data type: expected (age) to be (string)'
           ],
         ];
         const existingEntity = {
@@ -338,7 +325,7 @@ describe('extracting entities from submissions', () => {
         for (const [body, errorCode, message] of requests) {
           assert.throws(() => { extractEntity(body, propertyNames, existingEntity); }, (err) => {
             err.problemCode.should.equal(errorCode);
-            err.message.includes(message).should.equal(true);
+            err.message.should.match(message);
             return true;
           });
         }
