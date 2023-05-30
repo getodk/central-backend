@@ -128,7 +128,7 @@ describe('extracting entities from submissions', () => {
       };
       const propertyNames = ['first_name'];
       assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
-        err.problemCode.should.equal(400.30);
+        err.problemCode.should.equal(400.31);
         err.message.should.equal('Expected parameters: (label, uuid, data). Got (uuid, label, data, extra).');
         return true;
       });
