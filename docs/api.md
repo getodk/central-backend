@@ -3106,14 +3106,18 @@ __id,label,geometry,species,circumference_cm,__createdAt,__creatorId,__creatorNa
 
 # Group Entities
 
-An Entity is a data row of the dataset. Following API endpoints will let you perform CRUD (create, read, update and delete) operations on the entities.
+_(introduced: version 2023.3)_
+
+Version 2023.3 provides several new endpoints for accessing information about Entities, and introduces the ability to _create_,  _update_, and _soft-delete_ Entities via the API.
+
+An Entity is a specific person, place, or thing. Entities are contained within [Datasets](#reference/datasets) and much more information about how to set up and use Datasets can be found in the [Datasets](#reference/datasets) section of this documentation. Think of a single Entity as a data row with a Dataset. The following API endpoints will let you perform CRUD (create, read, update and delete) operations on Entities.
 
 ## Retrieving Entities [/projects/{projectId}/datasets/{datasetName}/entities]
 
 ### Entities Metadata [GET]
-This endpoint returns list of entities of a Dataset. Please note that this endpoint only returns metadata of the entities not the data. If you want to get the data of all entities then please refer to [OData Dataset Service](#reference/odata-endpoints/odata-form-service)
+This endpoint returns a list of the Entities of a Dataset. Please note that this endpoint only returns metadata of the entities not the data. If you want to get the data of all entities then please refer to [OData Dataset Service](#reference/odata-endpoints/odata-form-service)
 
-You can provide `?deleted=true` to get only deleted entities 
+You can provide `?deleted=true` to get only deleted entities.
 
 + Parameters
     + projectId: `16` (number, required) - The numeric ID of the Project
@@ -3134,7 +3138,7 @@ You can provide `?deleted=true` to get only deleted entities
 
 ### Getting Entity Details  [GET /projects/{projectId}/datasets/{name}/entities/{uuid}]
 
-Returns the metadata and current data of an Entity
+This returns the metadata and current data of an Entity
 
 + Parameters
     + projectId: `16` (number, required) - The numeric ID of the Project
@@ -3242,7 +3246,7 @@ Returns [Server Audit Logs](/reference/system-endpoints/server-audit-logs) relat
 ## Creating an Entity [/projects/{projectId}/datasets/{name}/entities]
 
 ### Creating an Entity [POST]
-Creates an Entity in the Dataset. Request body takes the json representation of the entity. It should have `uuid` and `label` property in addition to the user-defined properties of the Dataset in `data` property. For e.g.
+Creates an Entity in the Dataset. Request body takes the JSON representation of the Entity. It should have `uuid` and `label` property in addition to the user-defined properties of the Dataset in `data` property. For e.g.
 ```
 {
     "uuid": "54a405a0-53ce-4748-9788-d23a30cc3afa",
@@ -3292,7 +3296,7 @@ You can provide header `X-Action-Notes` to store the metadata about the request.
 ### Updating an Entity [PATCH]
 Use this API to update one or all properties of an Entity. It will throw `400 - Bad Request` if any of the updating properties doesn't exist in the dataset.
 
-To unset value of any property, you can set it to empty string (""), setting it to `null` will throw error.
+To unset value of any property, you can set it to empty string (""). Setting it to `null` will throw an error.
 
 + Request (application/json)
     + Attributes
@@ -3323,7 +3327,7 @@ To unset value of any property, you can set it to empty string (""), setting it 
 
 ### Deleting an Entity [DELETE /projects/{projectId}/datasets/{name}/entities/{uuid}]
 
-Use this API to delete an Entity. With this API, Entity is soft-deleted, which means it is still in the database and you can retreive it by passing `?deleted=true` to [](). In future, we will provide a way to restore deleted entities and purge deleted entities.
+Use this API to delete an Entity. With this API, Entity is soft-deleted, which means it is still in the database and you can retreive it by passing `?deleted=true` to [GET /projects/:id/datasets/:name/entities](#reference/entities/retrieving-entities/entities-metadata). In the future, we will provide a way to restore deleted entities and purge deleted entities.
 
 + Parameters
     + projectId: `16` (number, required) - The numeric ID of the Project
