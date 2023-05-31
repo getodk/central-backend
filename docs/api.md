@@ -35,7 +35,15 @@ Here major and breaking changes to the API are listed by version.
 **Added**:
 
 - New endpoint [PATCH /projects/:id/datasets/:name](#reference/datasets/datasets/update-dataset-metadata) to change whether approval of Submission is required to create an Entity.
-- TODO: list new entity endpoints
+- New [Entities](#reference/entities) endpoints for richer Entity-Based Data Collection workflows. These endpoints provide ways of accessing Entities, as well as the ability to _create_, _update_ and _soft-delete_ Entities via the API!
+  * New endpoint [GET /projects/:id/datasets/:name/entities](#reference/entities/retrieving-entities/entities-metadata) for listing Entities within a Dataset.
+  * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid](#reference/entities/retrieving-entities/getting-entity-details) for getting the metadata, or details, about a specific Entity.
+  * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/versions](#reference/entities/retrieving-entities/listing-versions) for listing the versions of an Entity.
+  * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/diffs](#reference/entities/retrieving-entities/getting-changes-between-versions) for getting the changse between versions of an Entity.
+  * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/audits](#reference/entities/retrieving-entities/entity-audit-log) for getting the changse between versions of an Entity.
+  * New endpoint [POST /projects/:id/datasets/:name/entities](#reference/entities/creating-an-entity/creating-an-entity) for creating an Entity.
+  * New endpoint [PATCH /projects/:id/datasets/:name/entities/:uuid](#reference/entities/updating-an-entity/updating-an-entity) for updating the data or label of an Entity.
+  * New endpoint [DELETE /projects/:id/datasets/:name/entities/:uuid](#reference/entities/deleting-an-entity/deleting-an-entity) for soft-deleting an Entity.
 
 **Changed**:
 
@@ -3140,6 +3148,28 @@ Returns the metadata and current data of an Entity
     This is the extended response
 
     + Attributes (Extended Entity)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+### Listing Versions [GET /projects/{projectId}/datasets/{name}/entities/{uuid}/versions]
+
+This returns the Entity metadata and data for every version of this Entity, in ascending creation order.
+
+This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to return a `creator` data object alongside the `creatorId` Actor ID reference.
+
++ Parameters
+    + projectId: `16` (number, required) - The numeric ID of the Project
+    + name: `people` (string, required) - Name of the Dataset
+    + uuid: `54a405a0-53ce-4748-9788-d23a30cc3afa` (string, required) - UUID of the Entity
+
++ Response 200 (application/json)
+    + Attributes (array[Entity Version])
+
++ Response 200 (application/json; extended)
+    This is the extended response
+
+    + Attributes (array[Extended Entity Version])
 
 + Response 403 (application/json)
     + Attributes (Error 403)
