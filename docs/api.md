@@ -33,11 +33,16 @@ Here major and breaking changes to the API are listed by version.
 ### ODK Central v2023.3
 
 **Added**:
+
 - New endpoint [PATCH /projects/:id/datasets/:name](#reference/datasets/datasets/update-dataset-metadata) to change whether approval of Submission is required to create an Entity.
+- TODO: list new entity endpoints
 
 **Changed**:
+
 - ETag support has been added for [Download Dataset](#reference/datasets/download-dataset/download-dataset) and [Download Form Attachment](#reference/forms/individual-form/downloading-a-form-attachment).
-- [Dataset Metadata endpoint](#reference/datasets/datasets/dataset-metadata) also returns sanitized property names as `odataName` to match the way they will be outputted for OData.
+- The format of [Download Dataset](#reference/datasets/download-dataset/download-dataset) was changed to more closely match the OData Dataset format.
+- In the [OData Dataset Service](#reference/odata-endpoints/odata-dataset-service), `name` was removed because it is a duplication of an `__id` representing an Entity's UUID.
+- The `properties` returned by the [Dataset Metadata endpoint](#reference/datasets/datasets/dataset-metadata) each now include a field `odataName`, which represents the way the property name will be sanitized and outputted for OData.
 
 ### ODK Central v2023.2
 
@@ -3057,17 +3062,16 @@ By default `approvalRequired` is `false` for the Datasets created after v2023.3.
 
 ## Download Dataset [GET /projects/{projectId}/datasets/{name}/entities.csv]
 
-Datasets (collections of Entities) can be used as Attachments in other Forms, but they can also be downloaded directly as a CSV file. The CSV format matches what is expected for a [select question](https://docs.getodk.org/form-datasets/#building-selects-from-csv-files) with columns for `name`, `label,` and properties. In the case of Datasets, the `name` column is the Entity's UUID, the `label` column is the human-readable Entity label populated in the Submission, and the properties are the full set of Dataset Properties for that Dataset. If any Property for an given Entity is blank (e.g. it was not captured by that Form or was left blank), that field of the CSV is blank.
+Datasets (collections of Entities) can be used as Attachments in other Forms, but they can also be downloaded directly as a CSV file.
+The CSV format closely matches the [OData Dataset Service](#reference/odata-endpoints/odata-dataset-service) format, with columns for system properties such as `__id` (the Entity UUID), `__createdAt`, `__creatorName`, etc., the Entity Label `label`, and the Dataset/Entity Properties themselves. If any Property for an given Entity is blank (e.g. it was not captured by that Form or was left blank), that field of the CSV is blank.
 
 This endpoint supports `ETag` header, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, the endpoint returns a value in the ETag header. If you pass that value in the If-None-Match header of a subsequent request, then if the Dataset has not been changed since the previous request, you will receive `304 Not Modified` response; otherwise you'll get the new data.
 
-Note that as of Version 2022.3 we do not guarantee the order of the Dataset Property columns.
 
 ```
-name,label,first_name,last_name,age,favorite_color
-54a405a0-53ce-4748-9788-d23a30cc3afa,Amy Aardvark,Amy,Aardvark,45,
-0ee79b8b-9711-4aa0-9b7b-ece0a109b1b2,Beth Baboon,Beth,Baboon,19,yellow
-3fc9c54c-7d41-4258-b014-bfacedb95711,Cory Cat,Cory,Cat,,cyan
+__id,label,geometry,species,circumference_cm,__createdAt,__creatorId,__creatorName,__updates,__updatedAt
+2c1ee90b-dde8-434b-9985-2eefd8465339,666cm purpleheart,-29.281608 -67.624883 0 0,purpleheart,667,2023-05-31T19:49:28.902Z,22,Alice,1,2023-05-31T19:52:34.467Z
+84ac3a03-9980-4098-93a5-b81fdc6ea749,555cm wallaba,18.921876 77.309451 0 0,wallaba,555,2023-05-31T19:49:20.152Z,22,Alice,0,
 ```
 
 
@@ -3975,6 +3979,8 @@ The Metadata Document describes, in [EDMX CSDL](http://docs.oasis-open.org/odata
                             <Property Name="createdAt" Type="Edm.DateTimeOffset"/>
                             <Property Name="creatorId" Type="Edm.String"/>
                             <Property Name="creatorName" Type="Edm.String"/>
+                            <Property Name="updates" Type="Edm.Int64"/>
+                            <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
                         </ComplexType>
                     </Schema>
                     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.trees">
@@ -3984,7 +3990,6 @@ The Metadata Document describes, in [EDMX CSDL](http://docs.oasis-open.org/odata
                             </Key>
                             <Property Name="__id" Type="Edm.String"/>
                             <Property Name="__system" Type="org.opendatakit.entity.metadata"/>
-                            <Property Name="name" Type="Edm.String"/>
                             <Property Name="label" Type="Edm.String"/>
                             <Property Name="geometry" Type="Edm.String"/>
                             <Property Name="species" Type="Edm.String"/>
@@ -4056,7 +4061,6 @@ The fields you can query against are as follows:
 | Entity Metadata         | OData Field Name     |
 | ------------------------| -------------------- |
 | Entity UUID             | `__id`               |
-| Entity Name (same as UUID) | `name`            |
 | Entity Label            | `label`              |
 | Entity Creator Actor ID | `__system/creatorId` |
 | Entity Timestamp        | `__system/createdAt` |
