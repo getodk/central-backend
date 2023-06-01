@@ -39,9 +39,9 @@ Here major and breaking changes to the API are listed by version.
   * New endpoint [GET /projects/:id/datasets/:name/entities](#reference/entities/retrieving-entities/entities-metadata) for listing Entities within a Dataset.
   * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid](#reference/entities/retrieving-entities/getting-entity-details) for getting the metadata, or details, about a specific Entity.
   * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/versions](#reference/entities/retrieving-entities/listing-versions) for listing the versions of an Entity.
-  * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/diffs](#reference/entities/retrieving-entities/getting-changes-between-versions) for getting the changse between versions of an Entity.
-  * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/audits](#reference/entities/retrieving-entities/entity-audit-log) for getting the changse between versions of an Entity.
-  * New endpoint [POST /projects/:id/datasets/:name/entities](#reference/entities/creating-an-entity/creating-an-entity) for creating an Entity.
+  * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/diffs](#reference/entities/retrieving-entities/getting-changes-between-versions) for getting the changes between versions of an Entity.
+  * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/audits](#reference/entities/retrieving-entities/entity-audit-log) for getting the server audit logs about a specific Entity.
+  * New endpoint [POST /projects/:id/datasets/:name/entities](#reference/entities/creating-an-entity/creating-an-entity) for creating an Entity from JSON.
   * New endpoint [PATCH /projects/:id/datasets/:name/entities/:uuid](#reference/entities/updating-an-entity/updating-an-entity) for updating the data or label of an Entity.
   * New endpoint [DELETE /projects/:id/datasets/:name/entities/:uuid](#reference/entities/deleting-an-entity/deleting-an-entity) for soft-deleting an Entity.
 
@@ -3108,9 +3108,9 @@ __id,label,geometry,species,circumference_cm,__createdAt,__creatorId,__creatorNa
 
 _(introduced: version 2023.3)_
 
-Version 2023.3 provides several new endpoints for accessing information about Entities, and introduces the ability to _create_,  _update_, and _soft-delete_ Entities via the API.
+Version 2023.3 brings further core enhancements to Datasets and Entities, including several new endpoints for accessing information about Entities, as well as the ability to _create_,  _update_, and _soft-delete_ Entities via the API.
 
-An Entity is a specific person, place, or thing. Entities are contained within [Datasets](#reference/datasets) and much more information about how to set up and use Datasets can be found in the [Datasets](#reference/datasets) section of this documentation. Think of a single Entity as a data row with a Dataset. The following API endpoints will let you perform CRUD (create, read, update and delete) operations on Entities.
+An Entity is a specific person, place, or thing. Datasets represent collections of Entities. More information about how to set up and use Datasets can be found in the [Datasets](#reference/datasets) section of this documentation.
 
 ## Retrieving Entities [/projects/{projectId}/datasets/{datasetName}/entities]
 
@@ -4124,7 +4124,6 @@ As the vast majority of clients only support the JSON OData format, that is the 
                 "value": [
                     {
                         "__id": "0f56bde5-dd05-41f7-8175-c4114eab41c6",
-                        "name": "0f56bde5-dd05-41f7-8175-c4114eab41c6",
                         "label": "25cm purpleheart",
                         "__system": {
                             "createdAt": "2022-12-09T19:41:16.478Z",
@@ -4139,7 +4138,6 @@ As the vast majority of clients only support the JSON OData format, that is the 
                     },
                     {
                         "__id": "aeebd746-3b1e-4a24-ba9d-ed6547bd5ff1",
-                        "name": "aeebd746-3b1e-4a24-ba9d-ed6547bd5ff1",
                         "label": "345cm mora",
                         "__system": {
                             "createdAt": "2022-11-21T19:17:36.348Z",
@@ -4154,7 +4152,6 @@ As the vast majority of clients only support the JSON OData format, that is the 
                     },
                     {
                         "__id": "eacb9844-2f88-48b5-b7c0-6333263fe639",
-                        "name": "eacb9844-2f88-48b5-b7c0-6333263fe639",
                         "label": "123cm wallaba",
                         "__system": {
                             "createdAt": "2022-11-21T18:22:43.759Z",
@@ -4907,5 +4904,5 @@ These are in alphabetic order, with the exception that the `Extended` versions o
 + propertyName (array) - The name of the property that is changed.
 
 ## Data Example (object)
-+ name: `John` (string, required)
++ firstName: `John` (string, required)
 + age: `88` (string, required)
