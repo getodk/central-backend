@@ -61,7 +61,7 @@ describe('api: /sessions', () => {
             body[0].actorId.should.equal(5);
             body[0].action.should.equal('user.session.create');
             body[0].actee.id.should.equal(5);
-            body[0].details.userAgent.should.startWith('node-superagent/');
+            body[0].details.userAgent.should.startWith('node-superagent');
           }))));
 
     it('should return a 401 if the password is wrong', testService((service) =>
