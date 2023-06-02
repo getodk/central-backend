@@ -50,6 +50,7 @@ describe('api: /sessions', () => {
     it('should log the action in the audit log', testService((service) =>
       service.post('/v1/sessions')
         .send({ email: 'alice@getodk.org', password: 'alice' })
+        .set('User-Agent', 'central/tests')
         .expect(200)
         .then(({ body }) => body.token)
         .then((token) => service.get('/v1/audits')
@@ -61,7 +62,7 @@ describe('api: /sessions', () => {
             body[0].actorId.should.equal(5);
             body[0].action.should.equal('user.session.create');
             body[0].actee.id.should.equal(5);
-            body[0].details.userAgent.should.startWith('node-superagent');
+            body[0].details.userAgent.should.equal('central/tests');
           }))));
 
     it('should return a 401 if the password is wrong', testService((service) =>
