@@ -584,6 +584,7 @@ module.exports = {
                 </meta>
                 <name>Alice</name>
                 <age>88</age>
+                <hometown>Chicago</hometown>
                 </data>`,
       two: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
               <meta>
@@ -595,6 +596,7 @@ module.exports = {
             </meta>
             <name>Jane</name>
             <age>30</age>
+            <hometown>Boston</hometown>
           </data>`,
       three: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
           <meta>
@@ -606,6 +608,7 @@ module.exports = {
           </meta>
           <name>John</name>
           <age>40</age>
+          <hometown>Toronto</hometown>
         </data>`,
       four: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
           <meta>
@@ -617,6 +620,7 @@ module.exports = {
           </meta>
           <name>Robert</name>
           <age>18</age>
+          <hometown>Seattle</hometown>
         </data>`
     },
     multiPropertyEntity: {

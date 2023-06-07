@@ -2154,6 +2154,94 @@ describe('datasets and entities', () => {
     });
   });
 
+  describe('form schemas and dataset properties', () => {
+    it.skip('should allow an entity binding to be removed from a form field', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // Upload a version of the form with just name and age mapped to dataset properties
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      // Upload a new version of the form with saveto moved from age to hometown
+      const x = testData.forms.simpleEntity
+        .replace('<bind nodeset="/data/age" type="int" entities:saveto="age"/>', '<bind nodeset="/data/age" type="int">')
+        .replace('<bind nodeset="/data/hometown" type="string"/>', '<bind nodeset="/data/hometown" type="string" entities:saveto="hometown"/>');
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .set('Content-Type', 'application/xml')
+        .send(x)
+        .expect(200);
+      // BUG: when i try to remove the binding from 'age', I get an error message about 'hometown':
+      // 400.17 message:
+      // The form you have uploaded attempts to change the type of the field at /hometown. In a previous version, it had the type string.
+      // Please either return that field to its previous type, or rename the field so it lives at a new path.'
+    }));
+
+    it('should populate entity properties based on correct form schema', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      // Submission to old (and only) version of form should have only age filled in
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Upload a new version of the form with saveto added to hometown
+      const x = testData.forms.simpleEntity
+        .replace('<bind nodeset="/data/hometown" type="string"/>', '<bind nodeset="/data/hometown" type="string" entities:saveto="hometown"/>');
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .set('Content-Type', 'application/xml')
+        .send(x)
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=2.0')
+        .expect(200);
+
+      // Submission to old version of form should make entity with age filled in
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Submission to new version of form should make entity with hometown filled in
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.three.replace('version="1.0"', 'version="2.0"'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Submission 1 - should just have name and age
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.should.have.property('data').which.is.eql({ age: '88', first_name: 'Alice' });
+        });
+
+      // Submission 2 - should also just have name and age
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.should.have.property('data').which.is.eql({ age: '30', first_name: 'Jane' });
+        });
+
+      // Submission 3 - should have hometown filled in, too
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789bbb')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.should.have.property('data').which.is.eql({ age: '40', hometown: 'Toronto', first_name: 'John' });
+        });
+    }));
+  });
+
   describe('dataset and entities should have isolated lifecycle', () => {
     it('should allow a form that has created an entity to be purged', testService(async (service, container) => {
       const asAlice = await service.login('alice');
