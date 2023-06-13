@@ -90,7 +90,7 @@ should.Assertion.add('Submission', function() {
   this.obj.instanceId.should.be.a.String();
   this.obj.submitterId.should.be.a.Number();
   this.obj.createdAt.should.be.an.isoDate();
-  this.obj.userAgent.should.be.a.String();
+  if (this.obj.userAgent !== null) this.obj.userAgent.should.be.a.String();
   this.obj.currentVersion.should.be.a.SubmissionDef();
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
@@ -362,7 +362,7 @@ should.Assertion.add('EntityDef', function assertEntityDef() {
   this.obj.should.have.property('current').which.is.a.Boolean();
   this.obj.should.have.property('createdAt').which.is.a.isoDate();
   this.obj.should.have.property('creatorId').which.is.a.Number();
-  this.obj.should.have.property('userAgent').which.is.a.String();
+  if (this.obj.userAgent !== null) this.obj.userAgent.should.be.a.String();
 });
 
 should.Assertion.add('ExtendedEntityDef', function assertEntity() {

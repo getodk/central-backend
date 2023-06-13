@@ -4043,11 +4043,12 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one.replace(/<\/meta>/, '<orx:instanceName>custom name</orx:instanceName></meta>'))
           .set('Content-Type', 'text/xml')
+          .set('User-Agent', 'central-tests/1')
           .expect(200)
           .then(() => asAlice.put('/v1/projects/1/forms/simple/submissions/one?deviceID=updateDevice')
             .send(withSimpleIds('one', 'two'))
             .set('Content-Type', 'text/xml')
-            .set('User-Agent', 'central/tests')
+            .set('User-Agent', 'central-tests/2')
             .expect(200))
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions')
             .expect(200)
@@ -4061,9 +4062,9 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               body[1].instanceName.should.equal('custom name');
 
               body[0].deviceId.should.equal('updateDevice');
-              body[0].userAgent.should.equal('central/tests');
               (body[1].deviceId == null).should.equal(true);
-              body[1].userAgent.should.equal('node-superagent/3.8.3');
+              body[0].userAgent.should.equal('central-tests/2');
+              body[1].userAgent.should.equal('central-tests/1');
             })))));
 
     it('should return extended submission details', testService((service) =>

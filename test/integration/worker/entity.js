@@ -225,6 +225,7 @@ describe('worker: entity', () => {
           .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
             .send(testData.instances.simpleEntity.one)
             .set('Content-Type', 'application/xml')
+            .set('User-Agent', 'central/tests')
             .expect(200)));
 
       await service.login('bob', (asBob) =>
@@ -256,7 +257,7 @@ describe('worker: entity', () => {
       data.age.should.equal('88');
       data.first_name.should.equal('Alice');
       creatorId.should.equal(5); // Alice the user created this entity
-      userAgent.should.not.be.null();
+      userAgent.should.equal('central/tests');
     }));
   });
 
