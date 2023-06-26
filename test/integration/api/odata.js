@@ -1351,6 +1351,27 @@ describe('api: /forms/:id.svc', () => {
             });
           }))));
 
+    it('should return only parent ID', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.doubleRepeat)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/doubleRepeat/submissions')
+        .send(testData.instances.doubleRepeat.double)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/doubleRepeat.svc/Submissions.children.child.toys.toy?$select=__Submissions-children-child-id')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.forEach(toy => toy.should.have.property('__Submissions-children-child-id'));
+        });
+
+    }));
+
     it('should return subtable results with group properties', testService(async (service) => {
       const asAlice = await service.login('alice');
 
