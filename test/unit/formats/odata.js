@@ -1106,6 +1106,11 @@ describe('odata message composition', () => {
         (() => selectFields({ $select: '__id, __system/status' }, 'Submissions')(fields)).should.not.throw();
       }));
 
+    it('should throw error if system properties are requested for non-submissions table', () => fieldsFor(testData.forms.withrepeat)
+      .then((fields) => {
+        (() => selectFields({ $select: '__id, __system/status' }, 'Submissions.children')(fields)).should.throw('Could not find a property named \'__system/status\'');
+      }));
+
     it('should throw error if unknown system property is requested', () => fieldsFor(testData.forms.simple)
       .then((fields) => {
         (() => selectFields({ $select: '__system/etag' }, 'Submissions')(fields)).should.throw('Could not find a property named \'__system/etag\'');

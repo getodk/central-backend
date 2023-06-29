@@ -521,6 +521,17 @@ describe('api: /forms/:id.svc', () => {
               }]
             });
           }))));
+
+    it('should return only parent ID', testService(async (service) => {
+      const asAlice = await withSubmission(service, identity);
+
+      await asAlice.get('/v1/projects/1/forms/doubleRepeat.svc/Submissions(\'double\')/children/child(\'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d\')/toys/toy?$select=__Submissions-children-child-id')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.forEach(toy => toy.should.have.property('__Submissions-children-child-id'));
+        });
+
+    }));
   });
 
   describe('/Submissions.xyz.* GET', () => {
