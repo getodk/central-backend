@@ -1,6 +1,6 @@
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
-const uuid = require('uuid/v4');
+const uuid = require('uuid').v4;
 const config = require('config');
 const { testContainerFullTrx, testServiceFullTrx } = require('../setup');
 const { sql } = require('slonik');
