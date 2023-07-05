@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": "16"
+    "node": "18"
   },
   "volta": {
-    "node": "16.19.1"
+    "node": "18.16.1"
   },
   "dependencies": {
     "@sentry/node": "~7",
