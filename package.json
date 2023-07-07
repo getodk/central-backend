@@ -47,7 +47,7 @@
   "devDependencies": {
     "@sinonjs/fake-timers": "^9.1.2",
     "app-root-path": "~3",
-    "eslint": "~7",
+    "eslint": "^8.44.0",
     "eslint-config-airbnb-base": "~14",
     "eslint-plugin-import": "~2.25",
     "mocha": "~10",
