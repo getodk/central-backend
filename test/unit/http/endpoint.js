@@ -499,7 +499,8 @@ describe('endpoints', () => {
       let trailers;
       const requestTest = streamTest.fromChunks();
       // eslint-disable-next-line no-shadow
-      const responseTest = streamTest.toText((_, result) => {
+      const responseTest = streamTest.toText((err, result) => {
+        err.message.should.equal('ERR_EXPECTED');
         trailers.should.eql({ Status: 'Error' });
         // eslint-disable-next-line no-multi-spaces
         should.not.exist(result);                  // node v14
@@ -515,7 +516,7 @@ describe('endpoints', () => {
         streamTest.fromChunks([ 'a', 'test', 'stream' ]),
         // eslint-disable-next-line no-shadow
         new Transform({ transform(s, _, done) {
-          if (s.length > 4) done(new Error('nope'));
+          if (s.length > 4) done(new Error('ERR_EXPECTED'));
           else done(null, s + '!');
         } })
       );
