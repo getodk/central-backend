@@ -50,7 +50,7 @@
     "eslint": "^8.44.0",
     "eslint-config-airbnb-base": "~14",
     "eslint-plugin-import": "~2.25",
-    "mocha": "~10",
+    "mocha": "^10.2.0",
     "nock": "^13.3.1",
     "node-mocks-http": "~1.6",
     "nodemon": "^2.0.22",
