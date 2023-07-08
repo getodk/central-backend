@@ -55,7 +55,7 @@
     "node-mocks-http": "~1.6",
     "nodemon": "^2.0.22",
     "nyc": "~15",
-    "semver": "^7.3.7",
+    "semver": "^7.5.3",
     "should": "~13",
     "streamtest": "~1.2",
     "supertest": "^6.3.3",
