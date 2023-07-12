@@ -387,7 +387,7 @@ _(There is not really anything at `/v1/example`; this section only demonstrates 
 
 #### Logging out [DELETE /v1/sessions/{token}]
 
-Logging out is not strictly necessary for Web Users; all sessions expire 24 hours after they are created. But it can be a good idea, in case someone else manages to steal your token. It is also the way Public Link and App User access are revoked. To do so, issue a `DELETE` request to that token resource.
+Logging out is not strictly necessary for Web Users; all sessions expire 24 hours after they are created. But it can be a good idea, in case someone else manages to steal your token. It is also the way Public Link and App User access is revoked. To do so, issue a `DELETE` request to that token resource.
 
 + Parameters
     + token: `lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7` (string, required) - The session bearer token, obtained at login time.
@@ -402,6 +402,26 @@ Logging out is not strictly necessary for Web Users; all sessions expire 24 hour
 
 + Response 403 (application/json)
     + Attributes (Error 403)
+
+#### Logging out current session [DELETE /v1/sessions/current]
+
+This endpoint causes the current session to log itself out. Logging out is not strictly necessary for Web Users; all sessions expire 24 hours after they are created. But it can be a good idea, in case someone else manages to steal your token.
+
+Only the session that was used to authenticate the request is logged out. If the Actor associated with the session has other sessions as well, those are not logged out.
+
++ Request
+    + Headers
+
+            Authorization: Bearer lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
++ Response 404 (application/json)
+    + Attributes (Error 404)
 
 ## HTTPS Basic Authentication [/v1/example]
 
