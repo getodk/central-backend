@@ -1,5 +1,5 @@
 const appRoot = require('app-root-path');
-const uuid = require('uuid/v4');
+const uuid = require('uuid').v4;
 const streamTest = require('streamtest').v2;
 // eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
