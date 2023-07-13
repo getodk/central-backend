@@ -1205,24 +1205,26 @@ describe('analytics task queries', () => {
 
   describe('latest analytics audit log utility', () => {
     it('should find recently created analytics audit log', testService(async (service, container) => {
-      // eslint-disable-next-line object-curly-spacing
       await container.Audits.log(null, 'analytics', null, { test: 'foo', success: true });
       const res = await container.Analytics.getLatestAudit().then((o) => o.get());
       res.details.test.should.equal('foo');
     }));
 
-    it('should find nothing if no recent analytics audit log', testService(async (service, container) => {
-      // make all submissions so far in the distant past
-      //await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+    it('should find nothing if no analytics audit log', testService(async (service, container) => {
       const res = await container.Analytics.getLatestAudit();
       res.isEmpty().should.equal(true);
     }));
 
-    it('should not return analytics audit log more than 30 days prior', testService(async (service, container) => {
-      // eslint-disable-next-line object-curly-spacing
+    it('should find analytics audit log created 30 days ago', testService(async (service, container) => {
       await container.Audits.log(null, 'analytics', null, { test: 'foo', success: true });
-      // make all analytics audits so far in the distant past
-      await container.all(sql`update audits set "loggedAt" = '1999-1-1' where action = 'analytics'`);
+      await container.all(sql`update audits set "loggedAt" = current_timestamp - interval '30 days' where action = 'analytics'`);
+      const res = await container.Analytics.getLatestAudit();
+      res.isDefined().should.equal(true);
+    }));
+
+    it('should not return analytics audit log more than 30 days prior', testService(async (service, container) => {
+      await container.Audits.log(null, 'analytics', null, { test: 'foo', success: true });
+      await container.all(sql`update audits set "loggedAt" = current_timestamp - interval '31 days' where action = 'analytics'`);
       const res = await container.Analytics.getLatestAudit();
       res.isEmpty().should.equal(true);
     }));
