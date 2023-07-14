@@ -11,6 +11,7 @@ ODK Central uses PostgreSQL database to store information.
 - Data type of primary keys is auto-incrementing integer `serial4`, except for table having composite primary keys
 - We have not used database views yet
 - We try to do most of the data validation at the database level, that's why we have few triggers like `check_email`, `check_state`, etc
+- For datetime columns, we use millisecond precision (`timestamptz(3)`).
 
 There are more than 30 tables in Central database. In this document, we have divided the database into separate "Focus areas" so that it is easier to understand purpose of each table and the relationships amongst them.
 
@@ -31,7 +32,8 @@ There are more than 30 tables in Central database. In this document, we have div
     forms ||..o{ form_attachments : ""
     forms ||..o{ form_field_values : ""
 
-    form_fields }o--|| form_defs : ""
+    form_schemas ||..o{ form_defs : ""
+    form_fields }o--|| form_schemas : ""
 
     submissions ||..o{ comments : ""
     submissions ||..|{ submission_defs : ""
@@ -56,6 +58,7 @@ Forms and Submissions are the core part of ODK Central. Above ER Diagram shows h
 - A Form is an Actee, which mean some action can be performed on it.
 - Each Form has one or more Definitions (form_defs) to support multiple versions. We keep form definition in  XForm (XML) format in a single column of form_defs table. If XLSForm was uploaded then .XLS file is kept in Blobs (blobs) table.
 - Each Form can have Fields (form_fields) i.e. questions, notes, etc.
+- Form Definition (form_defs) has a Form Schema (form_schemas), which contains the Fields (form_fields). We introduced Form Schema (form_schemas) to eliminate duplication of Fields when two continuous versions of a Form has the same set of questions with the same ordering and structure.
 - A Form can have Attachments (form_attachments) like images, video, audio and data.
 - A Form can have Public Links (public_links) that allow anonymous users make Submissions against it.
 - A Form can receive Submissions.
@@ -86,7 +89,8 @@ PS: You can think of `*_def` tables as history/version tables.
 
     form_defs ||..o{ submission_defs : ""
     submission_defs }|..|| submissions : ""
-    entity_defs }|..|| submission_defs : ""
+    entity_defs }|..|| entity_def_sources : ""
+    entity_def_sources }o..o| submission_defs : ""
     form_fields }o..|| form_defs : ""
 
     forms ||..o{ form_attachments : ""
@@ -102,7 +106,7 @@ Datasets and Entities are the latest additions to ODK Central, the feature is st
 - A Dataset can be populated by Forms. The relationship between Dataset and Form is many-to-many. Since Form can have multiple Definitions and each Definition can have different Dataset XML schema, we use form_defs table to represent Form side of the relationship and resolve the relationship in dataset_form_defs table.
 - A Dataset can have Entities.
 - Each Entity has one or more Definitions (entity_defs). We store Definition of an Entity as JSON Blob in a single column of entity_defs.
-- An Entity is created by a Submission, so we link both by their Definition tables i.e. submission_defs and entity_defs.
+- An Entity can be created by a Submission or by API, we keep the source of Entity in Entity Definition Source (entity_def_sources).
 - A Dataset can be used as a source of data for the Form Attachments in one or more "follow-up" Forms. A Form Attachment can be linked to either a Blob (.csv file uploaded by the user) or a Dataset.
 
 ## User Rights Management:
