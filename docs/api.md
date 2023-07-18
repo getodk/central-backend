@@ -3880,6 +3880,9 @@ The fields you can query against are as follows:
 | Submission Update Timestamp | `updatedAt`   | `__system/updatedAt`      |
 | Review State                | `reviewState` | `__system/reviewState`    |
 
+
+You can use `$root` expression to filter subtables (repeats) by Submission Metadata, you'll have to prefix above fields by `$root/Submissions/` in the filter criteria. For example, to filter a repeat table by Submission Timestamp you can pass `$filter=$root/Submissions/__system/submissionDate gt 2020-01-31T23:59:59.999Z` in the query parameter.
+
 Note that the `submissionDate` has a time component. This means that any comparisons you make need to account for the full time of the submission. It might seem like `$filter=__system/submissionDate le 2020-01-31` would return all results on or before 31 Jan 2020, but in fact only submissions made before midnight of that day would be accepted. To include all of the month of January, you need to filter by either `$filter=__system/submissionDate le 2020-01-31T23:59:59.999Z` or `$filter=__system/submissionDate lt 2020-02-01`. Remember also that you can [query by a specific timezone](https://en.wikipedia.org/wiki/ISO_8601#Time_offsets_from_UTC).
 
 Please see the [OData documentation](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) on `$filter` [operations](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinFilterOperations) and [functions](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinQueryFunctions) for more information.

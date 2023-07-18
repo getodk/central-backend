@@ -1031,6 +1031,50 @@ describe('api: /forms/:id.svc', () => {
               });
             })))));
 
+    it('should filter toplevel rows by $root expression', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      await asAlice.patch('/v1/projects/1/forms/withrepeat/submissions/rtwo')
+        .send({ reviewState: 'rejected' })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=$root/Submissions/__system/reviewState eq \'rejected\'')
+        .expect(200)
+        .then(({ body }) => {
+          // have to manually check and clear the dates for exact match:
+          body.value[0].__system.submissionDate.should.be.an.isoDate();
+          body.value[0].__system.updatedAt.should.be.an.isoDate();
+          // eslint-disable-next-line no-param-reassign
+          delete body.value[0].__system.submissionDate;
+          // eslint-disable-next-line no-param-reassign
+          delete body.value[0].__system.updatedAt;
+
+          body.should.eql({
+            '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+            value: [{
+              __id: 'rtwo',
+              __system: {
+                submitterId: '5',
+                submitterName: 'Alice',
+                attachmentsPresent: 0,
+                attachmentsExpected: 0,
+                status: null,
+                reviewState: 'rejected',
+                deviceId: null,
+                edits: 0,
+                formVersion: '1.0'
+              },
+              meta: { instanceID: 'rtwo' },
+              name: 'Bob',
+              age: 34,
+              children: {
+                'child@odata.navigationLink': "Submissions('rtwo')/children/child"
+              }
+            }]
+          });
+        });
+    }));
+
     it('should count correctly while windowing', testService((service) =>
       service.login('alice', (asAlice) =>
         service.login('bob', (asBob) =>
@@ -1250,6 +1294,80 @@ describe('api: /forms/:id.svc', () => {
               }]
             });
           }))));
+
+    it('should reject if subtable filtering criterion is non-root', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$filter=__system/reviewState eq \'rejected\'')
+        .expect(501)
+        .then(({ body }) => {
+          body.code.should.be.eql(501.5);
+          body.message.should.be.eql('The given OData filter expression references fields not supported by this server: __system/reviewState at 0');
+        });
+    }));
+
+    it('should filter subtable results', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      await asAlice.patch('/v1/projects/1/forms/withrepeat/submissions/rtwo')
+        .send({ reviewState: 'rejected' })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$filter=$root/Submissions/__system/reviewState eq \'rejected\'')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql({
+            '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions.children.child',
+            value: [{
+              __id: '52eff9ea82550183880b9d64c20487642fa6e60c',
+              '__Submissions-id': 'rtwo',
+              name: 'Billy',
+              age: 4
+            }, {
+              __id: '1291953ccbe2e5e866f7ab3fefa3036d649186d3',
+              '__Submissions-id': 'rtwo',
+              name: 'Blaine',
+              age: 6
+            }]
+          });
+        });
+    }));
+
+    it('should filter and paginate subtable results', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      await asAlice.patch('/v1/projects/1/forms/withrepeat/submissions/rtwo')
+        .send({ reviewState: 'rejected' })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$filter=$root/Submissions/__system/reviewState eq \'rejected\'&$skip=1&$top=1')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql({
+            '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions.children.child',
+            value: [{
+              __id: '1291953ccbe2e5e866f7ab3fefa3036d649186d3',
+              '__Submissions-id': 'rtwo',
+              name: 'Blaine',
+              age: 6
+            }]
+          });
+        });
+    }));
+
+    it('should count correctly while filtering and windowing subtable', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      await asAlice.patch('/v1/projects/1/forms/withrepeat/submissions/rtwo')
+        .send({ reviewState: 'rejected' })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$count=true&$filter=$root/Submissions/__system/reviewState eq \'rejected\'&$skip=1&$top=1')
+        .expect(200)
+        .then(({ body }) => {
+          body['@odata.count'].should.equal(2);
+        });
+    }));
 
     // we cheat here. see mark1.
     it('should gracefully degrade on encrypted subtables', testService((service) =>
