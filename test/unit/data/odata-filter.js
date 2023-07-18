@@ -22,6 +22,7 @@ describe('OData filter query transformer', () => {
     odataFilter('3 eq 5').should.eql(sql`(${'3'} is not distinct from ${'5'})`);
     odataFilter('2 lt 3 and 5 gt 4').should.eql(sql`((${'2'} < ${'3'}) and (${'5'} > ${'4'}))`);
     odataFilter('3 eq __system/submitterId').should.eql(sql`(${'3'} is not distinct from ${sql.identifier([ 'submissions', 'submitterId' ])})`);
+    odataFilter('2 eq $root/Submissions/__system/submitterId').should.eql(sql`(${'2'} is not distinct from ${sql.identifier([ 'submissions', 'submitterId' ])})`);
   });
 
   it('should transform not operators', () => {

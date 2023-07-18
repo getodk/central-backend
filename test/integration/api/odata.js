@@ -1031,6 +1031,50 @@ describe('api: /forms/:id.svc', () => {
               });
             })))));
 
+    it('should filter toplevel rows by $root expression', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      await asAlice.patch('/v1/projects/1/forms/withrepeat/submissions/rtwo')
+        .send({ reviewState: 'rejected' })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=$root/Submissions/__system/reviewState eq \'rejected\'')
+        .expect(200)
+        .then(({ body }) => {
+          // have to manually check and clear the dates for exact match:
+          body.value[0].__system.submissionDate.should.be.an.isoDate();
+          body.value[0].__system.updatedAt.should.be.an.isoDate();
+          // eslint-disable-next-line no-param-reassign
+          delete body.value[0].__system.submissionDate;
+          // eslint-disable-next-line no-param-reassign
+          delete body.value[0].__system.updatedAt;
+
+          body.should.eql({
+            '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+            value: [{
+              __id: 'rtwo',
+              __system: {
+                submitterId: '5',
+                submitterName: 'Alice',
+                attachmentsPresent: 0,
+                attachmentsExpected: 0,
+                status: null,
+                reviewState: 'rejected',
+                deviceId: null,
+                edits: 0,
+                formVersion: '1.0'
+              },
+              meta: { instanceID: 'rtwo' },
+              name: 'Bob',
+              age: 34,
+              children: {
+                'child@odata.navigationLink': "Submissions('rtwo')/children/child"
+              }
+            }]
+          });
+        });
+    }));
+
     it('should count correctly while windowing', testService((service) =>
       service.login('alice', (asAlice) =>
         service.login('bob', (asBob) =>
