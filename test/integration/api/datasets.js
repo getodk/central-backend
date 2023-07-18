@@ -11,6 +11,7 @@ const { QueryOptions } = require('../../../lib/util/db');
 
 /* eslint-disable import/no-dynamic-require */
 const { exhaust } = require(appRoot + '/lib/worker/worker');
+const Option = require(appRoot + '/lib/util/option');
 /* eslint-enable import/no-dynamic-require */
 
 describe('datasets and entities', () => {
@@ -2055,20 +2056,20 @@ describe('datasets and entities', () => {
     });
 
     describe('dataset audit logging at /projects/:id/forms POST', () => {
-      it('should log dataset creation in audit log', testService(async (service, { Audits }) => {
+      it('should not log dataset creation when form is not published', testService(async (service, { Audits }) => {
         await service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.simpleEntity)
             .set('Content-Type', 'text/xml')
             .expect(200));
 
-        const audit = await Audits.getLatestByAction('dataset.create').then((o) => o.get());
-        audit.details.fields.should.eql([['/name', 'first_name'], ['/age', 'age']]);
+        const audit = await Audits.getLatestByAction('dataset.create');
+        audit.should.equal(Option.none());
       }));
 
-      it('should log dataset modification in audit log', testService(async (service, { Audits }) => {
+      it('should not log dataset modification when form is not published', testService(async (service, { Audits }) => {
         await service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
+          asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.simpleEntity)
             .set('Content-Type', 'text/xml')
             .expect(200)
@@ -2079,13 +2080,28 @@ describe('datasets and entities', () => {
               .set('Content-Type', 'text/xml')
               .expect(200)));
 
-        const audit = await Audits.getLatestByAction('dataset.create').then((o) => o.get());
-        audit.details.fields.should.eql([['/name', 'first_name'], ['/age', 'age']]);
+        const audit = await Audits.getLatestByAction('dataset.update');
 
-        const audit2 = await Audits.getLatestByAction('dataset.update').then((o) => o.get());
-        audit2.details.fields.should.eql([['/name', 'color_name'], ['/age', 'age']]);
+        audit.should.equal(Option.none());
+      }));
 
-        audit.acteeId.should.equal(audit2.acteeId);
+      it('should not log dataset modification when no new property is added', testService(async (service, { Audits }) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=v2')
+          .expect(200);
+
+        const audit = await Audits.getLatestByAction('dataset.update');
+
+        audit.should.equal(Option.none());
       }));
 
       it('should log dataset publishing in audit log', testService(async (service, { Audits }) => {
@@ -2097,23 +2113,20 @@ describe('datasets and entities', () => {
           .set('Content-Type', 'text/xml')
           .expect(200);
 
-        await Audits.getLatestByAction('dataset.update.publish')
+        await Audits.getLatestByAction('dataset.create')
           .then(o => o.get())
           .then(audit => audit.details.should.eql({ properties: ['first_name', 'age'] }));
 
-        await asAlice.post('/v1/projects/1/forms')
+        await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity
             .replace('simpleEntity', 'simpleEntity2')
             .replace('first_name', 'color_name'))
           .set('Content-Type', 'text/xml')
           .expect(200);
 
-        await asAlice.post('/v1/projects/1/forms/simpleEntity2/draft/publish')
-          .expect(200);
-
-        await Audits.getLatestByAction('dataset.update.publish')
+        await Audits.getLatestByAction('dataset.update')
           .then(o => o.get())
-          .then(audit => audit.details.should.eql({ properties: ['age', 'color_name', 'first_name'] }));
+          .then(audit => audit.details.should.eql({ properties: ['first_name', 'age', 'color_name', ] }));
 
       }));
 
