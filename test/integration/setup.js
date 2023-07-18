@@ -4,6 +4,7 @@ const { sql } = require('slonik');
 const { readdirSync } = require('fs');
 const { join } = require('path');
 const request = require('supertest');
+const { noop } = require(appRoot + '/lib/util/util');
 // eslint-disable-next-line import/no-dynamic-require
 const { task } = require(appRoot + '/lib/task/task');
 
@@ -79,10 +80,14 @@ const populate = (container, [ head, ...tail ] = fixtures) =>
 // in that case.
 const initialize = async () => {
   const migrator = connect(config.get('test.database'));
+  const { log } = console;
   try {
     await migrator.raw('drop owned by current_user');
+    // Silence logging from migrations.
+    console.log = noop; // eslint-disable-line no-console
     await migrator.migrate.latest({ directory: appRoot + '/lib/model/migrations' });
   } finally {
+    console.log = log; // eslint-disable-line no-console
     await migrator.destroy();
   }
 
