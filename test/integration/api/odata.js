@@ -573,7 +573,7 @@ describe('api: /forms/:id.svc', () => {
         asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions')
           .expect(200)
           .then(({ body }) => {
-            for (const idx of [ 0, 1, 2 ]) {
+            for (const idx of [0, 1, 2]) {
               body.value[idx].__system.submissionDate.should.be.an.isoDate();
               // eslint-disable-next-line no-param-reassign
               delete body.value[idx].__system.submissionDate;
@@ -717,6 +717,70 @@ describe('api: /forms/:id.svc', () => {
             });
           }))));
 
+    // nb: order of id and createdAt is not guaranteed to be same
+    // in test env, see submission id 134849 and 134850
+    // 50 (at 873 ms) was created before 49 (at 874 ms)
+    it.skip('should limit Submissions', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$top=10')
+        .expect(200)
+        .then(({ body }) => {
+          const tokenData = {
+            instanceId: body.value[body.value.length - 1].instanceId,
+          }
+          const token = btoa(JSON.stringify(tokenData));
+          body['@odata.nextLink'].should.eql(`http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?$top=10&$skipToken=${token}`);
+        });
+    }));
+
+    it.skip('should ignore $skip when $skipToken is given', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      const nextlink = await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$top=10&$skip=10')
+        .expect(200)
+        .then(({ body }) => {
+
+          body.value[0].instanceName.should.be.eql('eleven');
+          body.value[9].instanceName.should.be.eql('twenty');
+
+          const tokenData = {
+            instanceId: body.value[body.value.length - 1].instanceId,
+          }
+          const token = btoa(JSON.stringify(tokenData));
+          body['@odata.nextLink'].should.eql(`http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?$top=10&$skipToken=${token}`);
+          return body['@odata.nextLink'];
+        });
+
+      await asAlice.get(nextlink + '&$skip=10')
+        .expect(200)
+        .then(({ body }) => {
+
+          body.value[0].instanceName.should.be.eql('twenty one');
+          body.value[9].instanceName.should.be.eql('thirty');
+
+          const tokenData = {
+            instanceId: body.value[body.value.length - 1].instanceId,
+          }
+          const token = btoa(JSON.stringify(tokenData));
+          body['@odata.nextLink'].should.eql(`http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?$top=10&$skipToken=${token}`);
+        });
+    }));
+
+    it.skip('should limit and filter Submissions', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      await asAlice.get(`/v1/projects/1/forms/withrepeat.svc/Submissions?$top=10&$filter=__system/reviewState eq 'rejected'`)
+        .expect(200)
+        .then(({ body }) => {
+          const tokenData = {
+            instanceId: body.value[body.value.length - 1].instanceId,
+          }
+          const token = btoa(JSON.stringify(tokenData));
+          body['@odata.nextLink'].should.eql(`http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?$top=10&$filter=__system/reviewState eq 'rejected'&$skipToken=${token}`);
+        });
+    }));
+
     it('should provide toplevel row count if requested', testService((service) =>
       withSubmissions(service, (asAlice) =>
         asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$top=1&$count=true')
@@ -777,7 +841,7 @@ describe('api: /forms/:id.svc', () => {
             .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=__system/submitterId eq 5')
               .expect(200)
               .then(({ body }) => {
-                for (const idx of [ 0, 1 ]) {
+                for (const idx of [0, 1]) {
                   body.value[idx].__system.submissionDate.should.be.an.isoDate();
                   // eslint-disable-next-line no-param-reassign
                   delete body.value[idx].__system.submissionDate;
@@ -1366,6 +1430,36 @@ describe('api: /forms/:id.svc', () => {
         .expect(200)
         .then(({ body }) => {
           body['@odata.count'].should.equal(2);
+        })
+    }));
+
+    it.skip('should limit subtable results', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=10')
+        .expect(200)
+        .then(({ body }) => {
+          const tokenData = {
+            instanceId: body.value[body.value.length - 1].instanceId,
+            __id: body.value[body.value.length - 1].__id,
+          }
+          const token = btoa(JSON.stringify(tokenData));
+          body['@odata.nextLink'].should.eql(`http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=10&$skipToken=${token}`);
+        });
+    }));
+
+    it.skip('should limit and filter subtable', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      await asAlice.get(`/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=10&$filter=$root/Submission/__system/reviewState eq 'rejected'`)
+        .expect(200)
+        .then(({ body }) => {
+          const tokenData = {
+            instanceId: body.value[body.value.length - 1].instanceId,
+            __id: body.value[body.value.length - 1].__id,
+          }
+          const token = btoa(JSON.stringify(tokenData));
+          body['@odata.nextLink'].should.eql(`http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=10&$filter=$root/Submission/__system/reviewState eq 'rejected'&$skipToken=${token}`);
         });
     }));
 
@@ -1832,7 +1926,7 @@ describe('api: /forms/:id.svc', () => {
             .then(() => asAlice.get('/v1/projects/1/forms/withrepeat/draft.svc/Submissions')
               .expect(200)
               .then(({ body }) => {
-                for (const idx of [ 0, 1, 2 ]) {
+                for (const idx of [0, 1, 2]) {
                   body.value[idx].__system.submissionDate.should.be.an.isoDate();
                   // eslint-disable-next-line no-param-reassign
                   delete body.value[idx].__system.submissionDate;
