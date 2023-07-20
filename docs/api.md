@@ -30,6 +30,12 @@ Finally, **system information and configuration** is available via a set of spec
 
 Here major and breaking changes to the API are listed by version.
 
+### ODK Central v2023.4
+
+**Added**:
+
+- [DELETE /sessions/current](/reference/authentication/session-authentication/logging-out-current-session) logs out the current session.
+
 ### ODK Central v2023.3
 
 **Added**:
@@ -387,7 +393,7 @@ _(There is not really anything at `/v1/example`; this section only demonstrates 
 
 #### Logging out [DELETE /v1/sessions/{token}]
 
-Logging out is not strictly necessary for Web Users; all sessions expire 24 hours after they are created. But it can be a good idea, in case someone else manages to steal your token. It is also the way Public Link and App User access is revoked. To do so, issue a `DELETE` request to that token resource.
+Logging out is not strictly necessary for Web Users; all sessions expire 24 hours after they are created. But it can be a good idea, in case someone else manages to steal your token. It is also the way Public Link and App User access are revoked. To do so, issue a `DELETE` request to that token resource.
 
 + Parameters
     + token: `lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7` (string, required) - The session bearer token, obtained at login time.
@@ -419,9 +425,6 @@ Only the session that was used to authenticate the request is logged out. If the
 
 + Response 403 (application/json)
     + Attributes (Error 403)
-
-+ Response 404 (application/json)
-    + Attributes (Error 404)
 
 ## HTTPS Basic Authentication [/v1/example]
 
