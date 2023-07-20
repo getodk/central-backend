@@ -195,7 +195,7 @@ describe('api: /sessions', () => {
           .then((token) => service.delete(`/v1/key/${token}/sessions/${token}`)
             .expect(403)))));
 
-    it('should clear the cookie if successful for the current session', testService((service) =>
+    it('should clear cookies if successful for the current session', testService((service) =>
       service.post('/v1/sessions')
         .send({ email: 'alice@getodk.org', password: 'alice' })
         .expect(200)
@@ -206,12 +206,14 @@ describe('api: /sessions', () => {
             .set('Authorization', 'Bearer ' + token)
             .expect(200)
             .then(({ headers }) => {
-              const cookie = headers['set-cookie'][0];
-              cookie.should.match(/__Host-session=null/);
+              headers['set-cookie'].should.eql([
+                '__Host-session=null; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Strict',
+                '__csrf=null; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; SameSite=Strict'
+              ]);
             });
         })));
 
-    it('should not clear the cookie if using some other session', testService((service) =>
+    it('should not clear cookies if using some other session', testService((service) =>
       service.post('/v1/sessions')
         .send({ email: 'alice@getodk.org', password: 'alice' })
         .expect(200)
