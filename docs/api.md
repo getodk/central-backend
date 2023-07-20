@@ -30,6 +30,12 @@ Finally, **system information and configuration** is available via a set of spec
 
 Here major and breaking changes to the API are listed by version.
 
+### ODK Central v2023.4
+
+**Added**:
+
+- [DELETE /sessions/current](/reference/authentication/session-authentication/logging-out-current-session) logs out the current session.
+
 ### ODK Central v2023.3
 
 **Added**:
@@ -391,6 +397,23 @@ Logging out is not strictly necessary for Web Users; all sessions expire 24 hour
 
 + Parameters
     + token: `lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7` (string, required) - The session bearer token, obtained at login time.
+
++ Request
+    + Headers
+
+            Authorization: Bearer lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7
+
++ Response 200 (application/json)
+    + Attributes (Success)
+
++ Response 403 (application/json)
+    + Attributes (Error 403)
+
+#### Logging out current session [DELETE /v1/sessions/current]
+
+This endpoint causes the current session to log itself out. Logging out is not strictly necessary for Web Users; all sessions expire 24 hours after they are created. But it can be a good idea, in case someone else manages to steal your token.
+
+Only the session that was used to authenticate the request is logged out. If the Actor associated with the session has other sessions as well, those are not logged out.
 
 + Request
     + Headers

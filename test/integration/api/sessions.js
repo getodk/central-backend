@@ -269,6 +269,35 @@ describe('api: /sessions', () => {
             })))));
   });
 
+  describe('/current DELETE', () => {
+    it('should return a 404 if no token was specified', testService(service =>
+      service.delete('/v1/sessions/current')
+        .expect(404)));
+
+    it('should invalidate the token if successful', testService(async (service) => {
+      const { body: session } = await service.post('/v1/sessions')
+        .send({ email: 'alice@getodk.org', password: 'alice' })
+        .expect(200);
+      const { token } = session;
+      const { body } = await service.delete('/v1/sessions/current')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+      body.should.eql({ success: true });
+      await service.get('/v1/users/current')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(401);
+    }));
+
+    it('should not allow app users to delete their own sessions', testService(async (service) => {
+      const asBob = await service.login('bob');
+      const { body: appUser } = await asBob.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test app user' })
+        .expect(200);
+      await service.delete(`/v1/key/${appUser.token}/sessions/current`)
+        .expect(403);
+    }));
+  });
+
   // this isn't exactly the right place for this but i just want to check the
   // whole stack in addition to the unit tests.
   describe('cookie CSRF auth', () => {
