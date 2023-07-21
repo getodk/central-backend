@@ -40,7 +40,7 @@ test-full: lint
 
 .PHONY: test-integration
 test-integration: node_version
-	npx mocha --recursive test/integration --exit
+	env BCRYPT=no npx mocha --recursive test/integration --exit
 
 .PHONY: test-unit
 test-unit: node_version
