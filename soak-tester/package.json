@@ -17,7 +17,7 @@
     "eslint": "^8.20.0"
   },
   "volta": {
-    "node": "18.16.1"
+    "node": "18.17.0"
   },
   "license": "SEE LICENSE IN ../LICENSE"
 }
