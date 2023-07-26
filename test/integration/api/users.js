@@ -165,7 +165,6 @@ describe('api: /users', () => {
               .should.equal(true);
           }))));
 
-    // TODO: for initial release only:
     it('should duplicate the email into the display name if not given', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users')
