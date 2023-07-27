@@ -27,8 +27,7 @@ const zipStreamToFiles = (zipStream, callback) => {
           if(err) return callback(err);
 
           const result = { filenames: [] };
-          // eslint-disable-next-line prefer-const
-          let entries = [];
+          const entries = [];
           let completed = 0;
 
           zipfile.on('entry', (entry) => entries.push(entry));

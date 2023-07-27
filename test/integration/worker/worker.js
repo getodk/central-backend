@@ -38,8 +38,7 @@ describe('worker', () => {
     });
 
     it('should pass the container and event details to the job', testContainerFullTrx(async (container) => {
-      // eslint-disable-next-line prefer-const
-      let sentineledContainer = container.with({ testSentinel: 108 });
+      const sentineledContainer = container.with({ testSentinel: 108 });
       let checked = false;
       const jobMap = { 'test.event': [ (c, e) => {
         c.testSentinel.should.equal(108);

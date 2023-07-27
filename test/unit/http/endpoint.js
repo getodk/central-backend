@@ -234,8 +234,7 @@ describe('endpoints', () => {
 
     describe('before handler', () => {
       it('should run after preprocessors and before the resource', () => {
-        // eslint-disable-next-line prefer-const
-        let ran = [];
+        const ran = [];
         const push = (str) => () => { ran.push(str); };
         return endpointBase({
           before: push('before'),
