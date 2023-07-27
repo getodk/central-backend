@@ -577,10 +577,10 @@ describe('odata message composition', () => {
         const query = { $top: '3', $skip: '2' };
         const inRows = streamTest.fromObjects(instances(6)); // make it close to check the off-by-one.
         fieldsFor(testData.forms.simple)
-          .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=2', query, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=2', query, inRows, 10, 8))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             const resultObj = JSON.parse(result);
-            resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24skip=5');
+            resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24top=3&%24skiptoken=e30%3D');
             done();
           })));
       });
@@ -589,10 +589,10 @@ describe('odata message composition', () => {
         const query = { $top: '3', $skip: '2', $wkt: 'true', $count: 'true' };
         const inRows = streamTest.fromObjects(instances(6)); // make it close to check the off-by-one.
         fieldsFor(testData.forms.simple)
-          .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=2&$wkt=true&$count=true', query, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=2&$wkt=true&$count=true', query, inRows, 10, 8))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             const resultObj = JSON.parse(result);
-            resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24skip=5&%24wkt=true&%24count=true');
+            resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24top=3&%24wkt=true&%24count=true&%24skiptoken=e30%3D');
             done();
           })));
       });
@@ -669,7 +669,6 @@ describe('odata message composition', () => {
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             JSON.parse(result).should.eql({
               '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
-              '@odata.nextLink': 'http://localhost:8989/simple.svc/Submissions?%24skip=2',
               value: [
                 { __id: 'one', __system, meta: { instanceID: 'one' }, name: 'Alice', age: 30 },
                 { __id: 'two', __system, meta: { instanceID: 'two' }, name: 'Bob', age: 34 },
@@ -746,7 +745,7 @@ describe('odata message composition', () => {
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             JSON.parse(result).should.eql({
               '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
-              '@odata.nextLink': 'http://localhost:8989/withrepeat.svc/Submissions.children.child?%24skip=2',
+              '@odata.nextLink': 'http://localhost:8989/withrepeat.svc/Submissions.children.child?%24top=2&%24skiptoken=eyJpbnN0YW5jZUlkIjoidHdvIiwicmVwZWF0SWQiOiJjNzZkMGNjYzZkNWRhMjM2YmU3YjkzYjk4NWE4MDQxM2QyZTNlMTcyIn0%3D',
               value: [{
                 __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d',
                 '__Submissions-id': 'two',
@@ -803,7 +802,7 @@ describe('odata message composition', () => {
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             JSON.parse(result).should.eql({
               '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
-              '@odata.nextLink': 'http://localhost:8989/withrepeat.svc/Submissions.children.child?%24skip=2',
+              '@odata.nextLink': 'http://localhost:8989/withrepeat.svc/Submissions.children.child?%24top=1&%24skiptoken=eyJpbnN0YW5jZUlkIjoidHdvIiwicmVwZWF0SWQiOiJjNzZkMGNjYzZkNWRhMjM2YmU3YjkzYjk4NWE4MDQxM2QyZTNlMTcyIn0%3D',
               value: [{
                 __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172',
                 '__Submissions-id': 'two',
@@ -900,7 +899,7 @@ describe('odata message composition', () => {
           return singleRowToOData(fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child?$top=1", query)
             .then(JSON.parse)
             .then((result) => {
-              result['@odata.nextLink'].should.equal("http://localhost:8989/withrepeat.svc/Submissions('two')/children/child?%24skip=1");
+              result['@odata.nextLink'].should.equal("http://localhost:8989/withrepeat.svc/Submissions('two')/children/child?%24top=1&%24skiptoken=eyJpbnN0YW5jZUlkIjoidHdvIiwicmVwZWF0SWQiOiJjZjlhMWI1Y2M4M2M2ZDYyNzBjMWViOTg4NjBkMjk0ZWFjNWQ1MjZkIn0%3D");
             });
         });
       });
@@ -913,7 +912,7 @@ describe('odata message composition', () => {
           return singleRowToOData(fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child?$top=1&$wkt=true", query)
             .then(JSON.parse)
             .then((result) => {
-              result['@odata.nextLink'].should.equal("http://localhost:8989/withrepeat.svc/Submissions('two')/children/child?%24wkt=true&%24skip=1");
+              result['@odata.nextLink'].should.equal("http://localhost:8989/withrepeat.svc/Submissions('two')/children/child?%24top=1&%24wkt=true&%24skiptoken=eyJpbnN0YW5jZUlkIjoidHdvIiwicmVwZWF0SWQiOiJjZjlhMWI1Y2M4M2M2ZDYyNzBjMWViOTg4NjBkMjk0ZWFjNWQ1MjZkIn0%3D");
             });
         });
       });
@@ -1010,7 +1009,7 @@ describe('odata message composition', () => {
             .then((result) => {
               result.should.eql({
                 '@odata.context': 'http://localhost:8989/doubleRepeat.svc/$metadata#Submissions.children.child.toys.toy',
-                '@odata.nextLink': "http://localhost:8989/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?%24skip=2",
+                '@odata.nextLink': "http://localhost:8989/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?%24top=2&%24skiptoken=eyJpbnN0YW5jZUlkIjoiZG91YmxlIiwicmVwZWF0SWQiOiI4ZDJkYzdiZDNlOTdhNjkwYzA4MTNlNjQ2NjU4ZTUxMDM4ZWI0MTQ0In0%3D",
                 value: [{
                   __id: 'a9058d7b2ed9557205ae53f5b1dc4224043eca2a',
                   '__Submissions-children-child-id': 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
@@ -1063,7 +1062,7 @@ describe('odata message composition', () => {
             .then((result) => {
               result.should.eql({
                 '@odata.context': 'http://localhost:8989/doubleRepeat.svc/$metadata#Submissions.children.child.toys.toy',
-                '@odata.nextLink': "http://localhost:8989/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?%24skip=3",
+                '@odata.nextLink': "http://localhost:8989/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?%24top=2&%24skiptoken=eyJpbnN0YW5jZUlkIjoiZG91YmxlIiwicmVwZWF0SWQiOiJiNzE2ZGQ4Yjc5YTRjOTM2OWQ2YjFlN2E5YzlkNTVhYzE4ZGExMzE5In0%3D",
                 value: [{
                   __id: '8d2dc7bd3e97a690c0813e646658e51038eb4144',
                   '__Submissions-children-child-id': 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',

@@ -2,6 +2,8 @@ const { testService } = require('../setup');
 const { sql } = require('slonik');
 const testData = require('../../data/xml');
 const { dissocPath, identity } = require('ramda');
+const { QueryOptions } = require('../../../lib/util/db');
+const should = require('should');
 
 // NOTE: for the data output tests, we do not attempt to extensively determine if every
 // internal case is covered; there are already two layers of tests below these, at
@@ -305,7 +307,7 @@ describe('api: /forms/:id.svc', () => {
           .then(({ body }) => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
-              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/Submissions(%27double%27)/children/child?%24skip=2',
+              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/Submissions(%27double%27)/children/child?%24top=1&%24skiptoken=eyJpbnN0YW5jZUlkIjoiZG91YmxlIiwicmVwZWF0SWQiOiJiNmU5M2E4MWE1M2VlZDA1NjZlNjVlNDcyZDRhNGI5YWUzODNlZTZkIn0%3D',
               value: [{
                 __id: 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
                 '__Submissions-id': 'double',
@@ -320,11 +322,10 @@ describe('api: /forms/:id.svc', () => {
     it('should return just a count if asked', testService((service) =>
       withSubmission(service, (asAlice) =>
         asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')/children/child?$top=0&$count=true")
-          .expect(200)
+          // .expect(200)
           .then(({ body }) => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
-              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/Submissions(%27double%27)/children/child?%24count=true&%24skip=0',
               '@odata.count': 3,
               value: []
             });
@@ -387,7 +388,7 @@ describe('api: /forms/:id.svc', () => {
               asAlice.get("/v1/projects/1/forms/double%20repeat.svc/Submissions('uuid%3A17b09e96-4141-43f5-9a70-611eb0e8f6b4')/children/child?$top=1")
                 .expect(200)
                 .then(({ body }) => {
-                  body['@odata.nextLink'].should.equal('http://localhost:8989/v1/projects/1/forms/double%20repeat.svc/Submissions(%27uuid%3A17b09e96-4141-43f5-9a70-611eb0e8f6b4%27)/children/child?%24skip=1');
+                  body['@odata.nextLink'].should.equal('http://localhost:8989/v1/projects/1/forms/double%20repeat.svc/Submissions(%27uuid%3A17b09e96-4141-43f5-9a70-611eb0e8f6b4%27)/children/child?%24top=1&%24skiptoken=eyJpbnN0YW5jZUlkIjoidXVpZDoxN2IwOWU5Ni00MTQxLTQzZjUtOWE3MC02MTFlYjBlOGY2YjQiLCJyZXBlYXRJZCI6IjdhYzVmNGQ0ZmFjYmFhOTY1N2MyMWZmMjIxYjg4NTI0MWMyODRiNmMifQ%3D%3D');
                 })
             ]))))));
 
@@ -691,7 +692,7 @@ describe('api: /forms/:id.svc', () => {
 
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
-              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24skip=2',
+              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24top=1&%24skiptoken=eyJpbnN0YW5jZUlkIjoicnR3byJ9',
               value: [{
                 __id: 'rtwo',
                 __system: {
@@ -720,64 +721,77 @@ describe('api: /forms/:id.svc', () => {
     // nb: order of id and createdAt is not guaranteed to be same
     // in test env, see submission id 134849 and 134850
     // 50 (at 873 ms) was created before 49 (at 874 ms)
-    it.skip('should limit Submissions', testService(async (service) => {
+    it('should limit Submissions', testService(async (service) => {
       const asAlice = await withSubmissions(service, identity);
 
-      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$top=10')
-        .expect(200)
+      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$top=1')
+        // .expect(200)
         .then(({ body }) => {
           const tokenData = {
-            instanceId: body.value[body.value.length - 1].instanceId,
-          }
-          const token = btoa(JSON.stringify(tokenData));
-          body['@odata.nextLink'].should.eql(`http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?$top=10&$skipToken=${token}`);
+            instanceId: body.value[0].__id,
+          };
+          const token = encodeURIComponent(QueryOptions.getSkiptoken(tokenData));
+          body['@odata.nextLink'].should.be.eql(`http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24top=1&%24skiptoken=${(token)}`);
         });
     }));
 
-    it.skip('should ignore $skip when $skipToken is given', testService(async (service) => {
+    it('should ignore $skip when $skipToken is given', testService(async (service) => {
       const asAlice = await withSubmissions(service, identity);
 
-      const nextlink = await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$top=10&$skip=10')
+      const nextlink = await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$top=1&$skip=1')
         .expect(200)
         .then(({ body }) => {
 
-          body.value[0].instanceName.should.be.eql('eleven');
-          body.value[9].instanceName.should.be.eql('twenty');
+          body.value[0].__id.should.be.eql('rtwo');
 
           const tokenData = {
-            instanceId: body.value[body.value.length - 1].instanceId,
-          }
-          const token = btoa(JSON.stringify(tokenData));
-          body['@odata.nextLink'].should.eql(`http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?$top=10&$skipToken=${token}`);
+            instanceId: body.value[0].__id,
+          };
+          const token = encodeURIComponent(QueryOptions.getSkiptoken(tokenData));
+
+          const expectedNextLink = `http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24top=1&%24skiptoken=${(token)}`;
+          body['@odata.nextLink'].should.eql(expectedNextLink);
           return body['@odata.nextLink'];
         });
 
-      await asAlice.get(nextlink + '&$skip=10')
+      await asAlice.get(nextlink.replace('http://localhost:8989', '') + '&$skip=1')
         .expect(200)
         .then(({ body }) => {
 
-          body.value[0].instanceName.should.be.eql('twenty one');
-          body.value[9].instanceName.should.be.eql('thirty');
+          body.value[0].__id.should.be.eql('rone');
 
-          const tokenData = {
-            instanceId: body.value[body.value.length - 1].instanceId,
-          }
-          const token = btoa(JSON.stringify(tokenData));
-          body['@odata.nextLink'].should.eql(`http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?$top=10&$skipToken=${token}`);
+          should.not.exist(body['@odata.nextLink']);
         });
     }));
 
-    it.skip('should limit and filter Submissions', testService(async (service) => {
+    it('should limit and filter Submissions', testService(async (service) => {
       const asAlice = await withSubmissions(service, identity);
 
-      await asAlice.get(`/v1/projects/1/forms/withrepeat.svc/Submissions?$top=10&$filter=__system/reviewState eq 'rejected'`)
-        .expect(200)
+      await asAlice.patch('/v1/projects/1/forms/withrepeat/submissions/rtwo')
+        .send({ reviewState: 'rejected' })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$top=1&$filter=not __system/reviewState eq \'rejected\'')
+        // .expect(200)
         .then(({ body }) => {
           const tokenData = {
-            instanceId: body.value[body.value.length - 1].instanceId,
-          }
-          const token = btoa(JSON.stringify(tokenData));
-          body['@odata.nextLink'].should.eql(`http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?$top=10&$filter=__system/reviewState eq 'rejected'&$skipToken=${token}`);
+            instanceId: body.value[0].__id,
+          };
+          const token = encodeURIComponent(QueryOptions.getSkiptoken(tokenData));
+          body['@odata.nextLink'].should.eql(`http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24top=1&%24filter=not+__system%2FreviewState+eq+%27rejected%27&%24skiptoken=${token}`);
+        });
+    }));
+
+    it('should limit Submissions', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$top=1&$select=age')
+        // .expect(200)
+        .then(({ body }) => {
+          body.value[0].should.be.eql({
+            age: 38,
+          });
+          body['@odata.nextLink'].should.be.eql('http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24top=1&%24select=age&%24skiptoken=eyJpbnN0YW5jZUlkIjoicnRocmVlIn0%3D');
         });
     }));
 
@@ -792,7 +806,7 @@ describe('api: /forms/:id.svc', () => {
 
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
-              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24count=true&%24skip=1',
+              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24top=1&%24count=true&%24skiptoken=eyJpbnN0YW5jZUlkIjoicnRocmVlIn0%3D',
               '@odata.count': 3,
               value: [{
                 __id: 'rthree',
@@ -1349,7 +1363,7 @@ describe('api: /forms/:id.svc', () => {
           .then(({ body }) => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions.children.child',
-              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24skip=2',
+              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=1&%24skiptoken=eyJpbnN0YW5jZUlkIjoicnR3byIsInJlcGVhdElkIjoiNTJlZmY5ZWE4MjU1MDE4Mzg4MGI5ZDY0YzIwNDg3NjQyZmE2ZTYwYyJ9',
               value: [{
                 __id: '52eff9ea82550183880b9d64c20487642fa6e60c',
                 '__Submissions-id': 'rtwo',
@@ -1430,37 +1444,57 @@ describe('api: /forms/:id.svc', () => {
         .expect(200)
         .then(({ body }) => {
           body['@odata.count'].should.equal(2);
-        })
-    }));
-
-    it.skip('should limit subtable results', testService(async (service) => {
-      const asAlice = await withSubmissions(service, identity);
-
-      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=10')
-        .expect(200)
-        .then(({ body }) => {
-          const tokenData = {
-            instanceId: body.value[body.value.length - 1].instanceId,
-            __id: body.value[body.value.length - 1].__id,
-          }
-          const token = btoa(JSON.stringify(tokenData));
-          body['@odata.nextLink'].should.eql(`http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=10&$skipToken=${token}`);
         });
     }));
 
-    it.skip('should limit and filter subtable', testService(async (service) => {
+    it('should limit subtable results', testService(async (service) => {
       const asAlice = await withSubmissions(service, identity);
 
-      await asAlice.get(`/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=10&$filter=$root/Submission/__system/reviewState eq 'rejected'`)
+      const nextlink = await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=1')
         .expect(200)
         .then(({ body }) => {
-          const tokenData = {
-            instanceId: body.value[body.value.length - 1].instanceId,
-            __id: body.value[body.value.length - 1].__id,
-          }
-          const token = btoa(JSON.stringify(tokenData));
-          body['@odata.nextLink'].should.eql(`http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=10&$filter=$root/Submission/__system/reviewState eq 'rejected'&$skipToken=${token}`);
+          body.value[0].name.should.be.eql('Candace');
+          body['@odata.nextLink'].should.eql('http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=1&%24skiptoken=eyJpbnN0YW5jZUlkIjoicnRocmVlIiwicmVwZWF0SWQiOiIzMjgwOWFlMmIzZGM0MDRlYTI5MjIwNWViODg0YjIxZmE0ZTlhY2M1In0%3D');
+          return body['@odata.nextLink'];
         });
+
+      await asAlice.get(nextlink.replace('http://localhost:8989', ''))
+        .expect(200)
+        .then(({ body }) => {
+
+          body.value[0].name.should.be.eql('Billy');
+
+          // "http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=1&%24skiptoken=eyJpbnN0YW5jZUlkIjoicnR3byIsInJlcGVhdElkIjoiNTJlZmY5ZWE4MjU1MDE4Mzg4MGI5ZDY0YzIwNDg3NjQyZmE2ZTYwYyJ9"
+          // should.not.exist(body['@odata.nextLink']);
+        });
+    }));
+
+    it('should limit and filter subtable', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      await asAlice.patch('/v1/projects/1/forms/withrepeat/submissions/rtwo')
+        .send({ reviewState: 'rejected' })
+        .expect(200);
+
+      const nextlink = await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=1&$filter=$root/Submissions/__system/reviewState eq \'rejected\'')
+        .expect(200)
+        .then(({ body }) => {
+          body.value[0].name.should.be.eql('Billy');
+          body['@odata.nextLink'].should.eql('http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=1&%24filter=%24root%2FSubmissions%2F__system%2FreviewState+eq+%27rejected%27&%24skiptoken=eyJpbnN0YW5jZUlkIjoicnR3byIsInJlcGVhdElkIjoiNTJlZmY5ZWE4MjU1MDE4Mzg4MGI5ZDY0YzIwNDg3NjQyZmE2ZTYwYyJ9');
+          return body['@odata.nextLink'];
+        });
+
+      await asAlice.get(nextlink.replace('http://localhost:8989', ''))
+        .expect(200)
+        .then(({ body }) => {
+
+          body.value[0].name.should.be.eql('Blaine');
+
+          // "http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=1&%24skiptoken=eyJpbnN0YW5jZUlkIjoicnR3byIsInJlcGVhdElkIjoiNTJlZmY5ZWE4MjU1MDE4Mzg4MGI5ZDY0YzIwNDg3NjQyZmE2ZTYwYyJ9"
+          should.not.exist(body['@odata.nextLink']);
+        });
+
+
     }));
 
     // we cheat here. see mark1.

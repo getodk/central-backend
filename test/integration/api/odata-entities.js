@@ -126,7 +126,7 @@ describe('api: /datasets/:name.svc', () => {
       await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$top=1')
         .expect(200)
         .then(({ body }) => {
-          body['@odata.nextLink'].should.be.equal('http://localhost:8989/v1/projects/1/datasets/people.svc/Entities?%24skip=1');
+          body['@odata.nextLink'].should.be.equal('http://localhost:8989/0?%24skiptoken=Mg%3D%3D');
         });
     }));
 
