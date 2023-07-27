@@ -23,6 +23,7 @@
     "no-nested-ternary": "off",
     "no-restricted-syntax": "off",
     "no-underscore-dangle": "off",
+    "no-use-before-define": ["error", { "functions": false } ],
     "nonblock-statement-body-position": "off",
     "object-curly-newline": [ "error", {
       "ObjectExpression": { "consistent": true },
