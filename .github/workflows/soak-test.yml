@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [16.19.1]
+        node-version: [18.17.0]
     services:
       # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
       postgres:
