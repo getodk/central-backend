@@ -424,6 +424,15 @@ returning *`);
         .args.should.eql({ b: 2, c: 3, f: 9 });
     });
 
+    it('should create and parse cursor token', () => {
+      const data = {
+        someid: '123'
+      };
+
+      const token = QueryOptions.getSkiptoken(data);
+      QueryOptions.parseSkiptoken(token).should.be.eql(data);
+    });
+
     describe('related functions', () => {
       it('should run the handler only if the arg is present', () => {
         let ran = false;

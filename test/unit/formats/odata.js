@@ -8,6 +8,7 @@ const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 // eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
 const should = require('should');
+const { QueryOptions } = require('../../../lib/util/db');
 
 // Helpers to deal with repeated system metadata generation.
 const submitter = { id: 5, displayName: 'Alice' };
@@ -808,6 +809,34 @@ describe('odata message composition', () => {
                 '__Submissions-id': 'two',
                 name: 'Blaine',
                 age: 6
+              }]
+            });
+            done();
+          })));
+      });
+
+      it('should offset subtable row data by skipToken', (done) => {
+        const query = { $skiptoken: QueryOptions.getSkiptoken({ instanceId: 'two', repeatId: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d' }) };
+        const inRows = streamTest.fromObjects([
+          mockSubmission('one', testData.instances.withrepeat.one),
+          mockSubmission('two', testData.instances.withrepeat.two),
+          mockSubmission('three', testData.instances.withrepeat.three)
+        ]);
+        fieldsFor(testData.forms.withrepeat)
+          .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows))
+          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
+            JSON.parse(result).should.eql({
+              '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
+              value: [{
+                __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172',
+                '__Submissions-id': 'two',
+                name: 'Blaine',
+                age: 6
+              }, {
+                __id: 'beaedcdba519e6e6b8037605c9ae3f6a719984fa',
+                '__Submissions-id': 'three',
+                name: 'Candace',
+                age: 2
               }]
             });
             done();

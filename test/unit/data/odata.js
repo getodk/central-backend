@@ -39,7 +39,8 @@ describe('submissionToOData', () => {
   it('should parse and transform a basic submission', () =>
     fieldsFor(testData.forms.simple).then((fields) => {
       const submission = mockSubmission('one', testData.instances.simple.one);
-      return submissionToOData(fields, 'Submissions', submission).then(({ data: result }) => {
+      return submissionToOData(fields, 'Submissions', submission).then(({ data: result, instanceId }) => {
+        instanceId.should.be.eql('one');
         result.should.eql([{
           __id: 'one',
           __system,
