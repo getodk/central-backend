@@ -732,9 +732,9 @@ describe('api: /projects', () => {
 
       await asAlice.get('/v1/projects/1/forms/simple2/draft')
         .set('X-Extended-Metadata', 'true')
-        .then(({body}) => {
+        .then(({ body }) => {
           body.submissions.should.be.eql(0);
-        });          
+        });
     }));
 
     it('should not delete live submissions on project encryption', testService(async (service) => {
@@ -752,11 +752,11 @@ describe('api: /projects', () => {
 
       await asAlice.get('/v1/projects/1/forms/simple')
         .set('X-Extended-Metadata', 'true')
-        .then(({body}) => {
+        .then(({ body }) => {
           body.submissions.should.be.eql(1);
-        });          
+        });
     }));
-      
+
 
     it('should log the action in the audit log', testService((service, { Audits, Projects, Users }) =>
       service.login('alice', (asAlice) =>
