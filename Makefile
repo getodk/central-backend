@@ -33,14 +33,14 @@ debug: base
 
 .PHONY: test
 test: lint
-	env BCRYPT=no npx mocha --recursive --exit
+	BCRYPT=no npx mocha --recursive --exit
 .PHONY: test-full
 test-full: lint
 	npx mocha --recursive --exit
 
 .PHONY: test-integration
 test-integration: node_version
-	env BCRYPT=no npx mocha --recursive test/integration --exit
+	BCRYPT=no npx mocha --recursive test/integration --exit
 
 .PHONY: test-unit
 test-unit: node_version
