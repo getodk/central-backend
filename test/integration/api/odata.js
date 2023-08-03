@@ -307,7 +307,7 @@ describe('api: /forms/:id.svc', () => {
           .then(({ body }) => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
-              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/Submissions(%27double%27)/children/child?%24top=1&%24skiptoken=eyJpbnN0YW5jZUlkIjoiZG91YmxlIiwicmVwZWF0SWQiOiJiNmU5M2E4MWE1M2VlZDA1NjZlNjVlNDcyZDRhNGI5YWUzODNlZTZkIn0%3D',
+              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/Submissions(%27double%27)/children/child?%24top=1&%24skiptoken=01eyJpbnN0YW5jZUlkIjoiZG91YmxlIiwicmVwZWF0SWQiOiJiNmU5M2E4MWE1M2VlZDA1NjZlNjVlNDcyZDRhNGI5YWUzODNlZTZkIn0%3D',
               value: [{
                 __id: 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
                 '__Submissions-id': 'double',
@@ -388,7 +388,7 @@ describe('api: /forms/:id.svc', () => {
               asAlice.get("/v1/projects/1/forms/double%20repeat.svc/Submissions('uuid%3A17b09e96-4141-43f5-9a70-611eb0e8f6b4')/children/child?$top=1")
                 .expect(200)
                 .then(({ body }) => {
-                  body['@odata.nextLink'].should.equal('http://localhost:8989/v1/projects/1/forms/double%20repeat.svc/Submissions(%27uuid%3A17b09e96-4141-43f5-9a70-611eb0e8f6b4%27)/children/child?%24top=1&%24skiptoken=eyJpbnN0YW5jZUlkIjoidXVpZDoxN2IwOWU5Ni00MTQxLTQzZjUtOWE3MC02MTFlYjBlOGY2YjQiLCJyZXBlYXRJZCI6IjdhYzVmNGQ0ZmFjYmFhOTY1N2MyMWZmMjIxYjg4NTI0MWMyODRiNmMifQ%3D%3D');
+                  body['@odata.nextLink'].should.equal('http://localhost:8989/v1/projects/1/forms/double%20repeat.svc/Submissions(%27uuid%3A17b09e96-4141-43f5-9a70-611eb0e8f6b4%27)/children/child?%24top=1&%24skiptoken=01eyJpbnN0YW5jZUlkIjoidXVpZDoxN2IwOWU5Ni00MTQxLTQzZjUtOWE3MC02MTFlYjBlOGY2YjQiLCJyZXBlYXRJZCI6IjdhYzVmNGQ0ZmFjYmFhOTY1N2MyMWZmMjIxYjg4NTI0MWMyODRiNmMifQ%3D%3D');
                 })
             ]))))));
 
@@ -692,7 +692,7 @@ describe('api: /forms/:id.svc', () => {
 
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
-              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24top=1&%24skiptoken=eyJpbnN0YW5jZUlkIjoicnR3byJ9',
+              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24top=1&%24skiptoken=01eyJpbnN0YW5jZUlkIjoicnR3byJ9',
               value: [{
                 __id: 'rtwo',
                 __system: {
@@ -791,7 +791,7 @@ describe('api: /forms/:id.svc', () => {
           body.value[0].should.be.eql({
             age: 38,
           });
-          body['@odata.nextLink'].should.be.eql('http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24top=1&%24select=age&%24skiptoken=eyJpbnN0YW5jZUlkIjoicnRocmVlIn0%3D');
+          body['@odata.nextLink'].should.be.eql('http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24top=1&%24select=age&%24skiptoken=01eyJpbnN0YW5jZUlkIjoicnRocmVlIn0%3D');
         });
     }));
 
@@ -806,7 +806,7 @@ describe('api: /forms/:id.svc', () => {
 
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
-              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24top=1&%24count=true&%24skiptoken=eyJpbnN0YW5jZUlkIjoicnRocmVlIn0%3D',
+              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24top=1&%24count=true&%24skiptoken=01eyJpbnN0YW5jZUlkIjoicnRocmVlIn0%3D',
               '@odata.count': 3,
               value: [{
                 __id: 'rthree',
@@ -1363,7 +1363,7 @@ describe('api: /forms/:id.svc', () => {
           .then(({ body }) => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions.children.child',
-              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=1&%24skiptoken=eyJpbnN0YW5jZUlkIjoicnR3byIsInJlcGVhdElkIjoiNTJlZmY5ZWE4MjU1MDE4Mzg4MGI5ZDY0YzIwNDg3NjQyZmE2ZTYwYyJ9',
+              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=1&%24skiptoken=01eyJpbnN0YW5jZUlkIjoicnR3byIsInJlcGVhdElkIjoiNTJlZmY5ZWE4MjU1MDE4Mzg4MGI5ZDY0YzIwNDg3NjQyZmE2ZTYwYyJ9',
               value: [{
                 __id: '52eff9ea82550183880b9d64c20487642fa6e60c',
                 '__Submissions-id': 'rtwo',
@@ -1454,7 +1454,7 @@ describe('api: /forms/:id.svc', () => {
         .expect(200)
         .then(({ body }) => {
           body.value[0].name.should.be.eql('Candace');
-          body['@odata.nextLink'].should.eql('http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=1&%24skiptoken=eyJpbnN0YW5jZUlkIjoicnRocmVlIiwicmVwZWF0SWQiOiIzMjgwOWFlMmIzZGM0MDRlYTI5MjIwNWViODg0YjIxZmE0ZTlhY2M1In0%3D');
+          body['@odata.nextLink'].should.eql('http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=1&%24skiptoken=01eyJpbnN0YW5jZUlkIjoicnRocmVlIiwicmVwZWF0SWQiOiIzMjgwOWFlMmIzZGM0MDRlYTI5MjIwNWViODg0YjIxZmE0ZTlhY2M1In0%3D');
           return body['@odata.nextLink'];
         });
 
@@ -1464,7 +1464,7 @@ describe('api: /forms/:id.svc', () => {
 
           body.value[0].name.should.be.eql('Billy');
 
-          // "http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=1&%24skiptoken=eyJpbnN0YW5jZUlkIjoicnR3byIsInJlcGVhdElkIjoiNTJlZmY5ZWE4MjU1MDE4Mzg4MGI5ZDY0YzIwNDg3NjQyZmE2ZTYwYyJ9"
+          // "http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=1&%24skiptoken=01eyJpbnN0YW5jZUlkIjoicnR3byIsInJlcGVhdElkIjoiNTJlZmY5ZWE4MjU1MDE4Mzg4MGI5ZDY0YzIwNDg3NjQyZmE2ZTYwYyJ9"
           // should.not.exist(body['@odata.nextLink']);
         });
     }));
@@ -1480,7 +1480,7 @@ describe('api: /forms/:id.svc', () => {
         .expect(200)
         .then(({ body }) => {
           body.value[0].name.should.be.eql('Billy');
-          body['@odata.nextLink'].should.eql('http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=1&%24filter=%24root%2FSubmissions%2F__system%2FreviewState+eq+%27rejected%27&%24skiptoken=eyJpbnN0YW5jZUlkIjoicnR3byIsInJlcGVhdElkIjoiNTJlZmY5ZWE4MjU1MDE4Mzg4MGI5ZDY0YzIwNDg3NjQyZmE2ZTYwYyJ9');
+          body['@odata.nextLink'].should.eql('http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=1&%24filter=%24root%2FSubmissions%2F__system%2FreviewState+eq+%27rejected%27&%24skiptoken=01eyJpbnN0YW5jZUlkIjoicnR3byIsInJlcGVhdElkIjoiNTJlZmY5ZWE4MjU1MDE4Mzg4MGI5ZDY0YzIwNDg3NjQyZmE2ZTYwYyJ9');
           return body['@odata.nextLink'];
         });
 
@@ -1490,7 +1490,7 @@ describe('api: /forms/:id.svc', () => {
 
           body.value[0].name.should.be.eql('Blaine');
 
-          // "http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=1&%24skiptoken=eyJpbnN0YW5jZUlkIjoicnR3byIsInJlcGVhdElkIjoiNTJlZmY5ZWE4MjU1MDE4Mzg4MGI5ZDY0YzIwNDg3NjQyZmE2ZTYwYyJ9"
+          // "http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=1&%24skiptoken=01eyJpbnN0YW5jZUlkIjoicnR3byIsInJlcGVhdElkIjoiNTJlZmY5ZWE4MjU1MDE4Mzg4MGI5ZDY0YzIwNDg3NjQyZmE2ZTYwYyJ9"
           should.not.exist(body['@odata.nextLink']);
         });
 
