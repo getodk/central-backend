@@ -314,9 +314,8 @@ describe('/audits', () => {
       await asAlice.get('/v1/audits?action=dataset')
         .expect(200)
         .then(({ body }) => {
-          body.length.should.equal(2);
+          body.length.should.equal(1);
           body.map(a => a.action).should.eql([
-            'dataset.update.publish',
             'dataset.create'
           ]);
         });
@@ -566,11 +565,10 @@ describe('/audits', () => {
       await asAlice.get('/v1/audits?action=nonverbose')
         .expect(200)
         .then(({ body }) => {
-          body.length.should.equal(5);
+          body.length.should.equal(4);
           body.map(a => a.action).should.eql([
             'form.update.publish',
             'form.create',
-            'dataset.update.publish',
             'dataset.create',
             'user.session.create'
           ]);

@@ -1259,9 +1259,9 @@ You will get following workflow warnings while creating a new form or uploading 
 
 ### Creating Datasets with Forms
 
-Starting from Version 2022.3, a Form can also create a Dataset by defining a Dataset schema in the Form definition (XForms XML or XLSForm). When a Form with a Dataset schema is uploaded, a Dataset and its Properties are created and a `dataset.create` event is logged in the Audit logs. The state of the Dataset is dependent on the state of the Form; you will need to publish the Form to publish the Dataset. Datasets in the Draft state are not returned in [Dataset APIs](#reference/datasets), however the [Related Datasets](#reference/forms/related-datasets/draft-form-dataset-diff) API for the Form can be called to get the Dataset and its Properties.
+Starting from Version 2022.3, a Form can also create a Dataset by defining a Dataset schema in the Form definition (XForms XML or XLSForm). When a Form with a Dataset schema is uploaded, a Dataset and its Properties are created. The state of the Dataset is dependent on the state of the Form; you will need to publish the Form to publish the Dataset. Datasets in the Draft state are not returned in [Dataset APIs](#reference/datasets), however the [Related Datasets](#reference/forms/related-datasets/draft-form-dataset-diff) API for the Form can be called to get the Dataset and its Properties.
 
-It is possible to define the schema of a Dataset in multiple Forms. Such Forms can be created and published in any order. The creation of the first Form will generate a `dataset.create` event in Audit logs and subsequent Form creation will generate `dataset.update` events. Publishing any of the Forms will also publish the Dataset and will generate a `dataset.update.publish` event. The state of a Property of a Dataset is also dependent on the state of the Form that FIRST defines that Property, which means if a Form is in the Draft state then the Properties defined by that Form will not appear in the [.csv file](#reference/datasets/download-dataset/download-dataset) of the Dataset.
+It is possible to define the schema of a Dataset in multiple Forms. Such Forms can be created and published in any order. Publishing any of the Forms will also publish the Dataset and will generate a `dataset.create` event; `dataset.update` events are generated in Audit logs when a Form adds a new property in the Dataset. The state of a Property of a Dataset is also dependent on the state of the Form that FIRST defines that Property, which means if a Form is in the Draft state then the Properties defined by that Form will not appear in the [.csv file](#reference/datasets/download-dataset/download-dataset) of the Dataset.
 
 + Parameters
     + ignoreWarnings: `false` (boolean, optional) - Defaults to `false`. Set to `true` if you want the Form to be created even if the XLSForm conversion results in warnings.
@@ -1776,7 +1776,7 @@ If you wish for the `version` to be set on your behalf as part of the publish op
 
 Once the Draft is published, there will no longer be a Draft version of the form.
 
-Starting with Version 2022.3, publishing a Draft Form that defines a Dataset schema will also publish the Dataset. It will generate `dataset.update.publish` event in Audit logs and make the Dataset available in [Datasets APIs](#reference/datasets)
+Starting with Version 2022.3, publishing a Draft Form that defines a Dataset schema will also publish the Dataset. It will generate `dataset.create` event in Audit logs and make the Dataset available in [Datasets APIs](#reference/datasets). If the Dataset is already published and the Form adds new properties then `dataset.update` event will be generated.
 
 + Parameters
     + version: `newVersion` (string, optional) - The `version` to be associated with the Draft once it's published.
@@ -4499,7 +4499,6 @@ Server Audit Logs entries are created for the following `action`s:
 * `submission.attachment.update` when a Submission Attachment binary is set or cleared, but _only via the REST API_. Attachments created alongside the submission over the OpenRosa `/submission` API (including submissions from Collect) do not generate audit log entries.
 * `dataset.create` when a Dataset is created.
 * `dataset.update` when a Dataset is updated.
-* `dataset.update.publish` when a Dataset is published.
 * `entity.create` when an Entity is created.
 * `entity.create.error` when there is an error during entity creation process.
 * `config.set` when a system configuration is set.
