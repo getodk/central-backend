@@ -1348,12 +1348,60 @@ describe('api: /projects?forms=true', () => {
           form.reviewStates.received.should.equal(0);
         }))));
 
+    it('should return projects with datasets', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.get('/v1/projects?datasets=true')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].datasetList.length.should.equal(1);
+          body[0].datasetList[0].name.should.equal('people');
+        });
+    }));
+
+    it('should return projects with forms and datasets', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.get('/v1/projects?datasets=true&forms=true')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].datasetList.length.should.equal(1);
+          body[0].formList.length.should.equal(3);
+        });
+    }));
+
     it('should not return projects/forms not assigned to user', testService((service) =>
       service.login('chelsea', (asChelsea) => asChelsea.get('/v1/projects?forms=true')
         .expect(200)
         .then(({ body }) => {
           body.length.should.equal(0);
         }))));
+
+    it('should not return projects/datasets not assigned to user', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const asChelsea = await service.login('chelsea');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asChelsea.get('/v1/projects?datasets=true')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(0);
+        });
+    }));
 
     it('should return all forms including drafts to managers and above', testService((service) =>
       service.login('alice', (asAlice) => asAlice.post('/v1/projects/1/forms')
@@ -1380,6 +1428,25 @@ describe('api: /projects?forms=true', () => {
             const { formList } = body[0];
             formList.length.should.equal(2);
           }))))));
+
+    it('should not return datasets to data collectors', testService(async (service, { Users }) => {
+      const asAlice = await service.login('alice');
+      const asChelsea = await service.login('chelsea');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      const chelsea = await Users.getByEmail('chelsea@getodk.org').then((o) => o.get());
+      await asAlice.post(`/v1/projects/1/assignments/formfill/${chelsea.actorId}`);
+
+      await asChelsea.get('/v1/projects?datasets=true')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].datasetList.length.should.equal(0);
+        });
+    }));
 
     // project 1: 2 published forms, bob = manager
     // project 2: 1 published, 1 draft, bob = data collector
