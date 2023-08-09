@@ -102,45 +102,62 @@ describe('api: /projects', () => {
                   body[3].archived.should.equal(true);
                 })))))));
 
-    it('should return extended metadata if requested', testService((service) =>
-      service.login('alice', (asAlice) => Promise.all([
-        asAlice.post('/v1/projects/1/app-users')
-          .send({ displayName: 'test 1' })
-          .expect(200),
-        asAlice.post('/v1/projects/1/app-users')
-          .send({ displayName: 'test 2' })
-          .expect(200),
-        asAlice.post('/v1/projects/1/forms/simple/submissions')
-          .send(testData.instances.simple.one)
+    it('should return extended metadata if requested', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
           .set('Content-Type', 'application/xml')
-          .expect(200),
-        asAlice.post('/v1/projects/1/forms/simple/submissions')
-          .send(testData.instances.simple.two)
-          .set('Content-Type', 'application/xml')
-          .expect(200),
-        asAlice.post('/v1/projects')
-          .send({ name: 'A Test Project' })
-          .set('Content-Type', 'application/json')
           .expect(200)
-      ])
-        .then(() => asAlice.get('/v1/projects')
-          .set('X-Extended-Metadata', 'true')
-          .expect(200)
-          .then(({ body }) => {
-            body.length.should.equal(2);
-            body[0].should.be.an.ExtendedProject();
-            body[1].should.be.an.ExtendedProject();
+          .then(() => Promise.all([
+            asAlice.post('/v1/projects/1/app-users')
+              .send({ displayName: 'test 1' })
+              .expect(200),
+            asAlice.post('/v1/projects/1/app-users')
+              .send({ displayName: 'test 2' })
+              .expect(200),
+            asAlice.post('/v1/projects/1/forms/simple/submissions')
+              .send(testData.instances.simple.one)
+              .set('Content-Type', 'application/xml')
+              .expect(200),
+            asAlice.post('/v1/projects/1/forms/simple/submissions')
+              .send(testData.instances.simple.two)
+              .set('Content-Type', 'application/xml')
+              .expect(200),
+            asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+              .send(testData.instances.simpleEntity.one)
+              .set('Content-Type', 'application/xml')
+              .expect(200),
+            asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+              .send(testData.instances.simpleEntity.two)
+              .set('Content-Type', 'application/xml')
+              .expect(200),
+            asAlice.post('/v1/projects')
+              .send({ name: 'A Test Project' })
+              .set('Content-Type', 'application/json')
+              .expect(200)
+          ])
+            .then(() => exhaust(container))
+            .then(() => asAlice.get('/v1/projects')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(2);
+                body[0].should.be.an.ExtendedProject();
+                body[1].should.be.an.ExtendedProject();
 
-            body[0].name.should.equal('A Test Project');
-            body[0].forms.should.equal(0);
-            body[0].appUsers.should.equal(0);
-            should.not.exist(body[0].lastSubmission);
+                body[0].name.should.equal('A Test Project');
+                body[0].forms.should.equal(0);
+                body[0].appUsers.should.equal(0);
+                should.not.exist(body[0].lastSubmission);
 
-            body[1].name.should.equal('Default Project');
-            body[1].forms.should.equal(2);
-            body[1].appUsers.should.equal(2);
-            body[1].lastSubmission.should.be.a.recentIsoDate();
-          })))));
+                body[1].name.should.equal('Default Project');
+                body[1].forms.should.equal(3);
+                body[1].appUsers.should.equal(2);
+                body[1].lastSubmission.should.be.a.recentIsoDate();
+
+                body[1].datasets.should.equal(1);
+                body[1].lastEntity.should.be.a.recentIsoDate();
+              }))))));
 
     it('should return extended metadata if requested', testService((service) =>
       service.login('alice', (asAlice) =>
