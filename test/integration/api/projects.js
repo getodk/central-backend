@@ -712,6 +712,52 @@ describe('api: /projects', () => {
               text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9+/]{392}"\/>/);
             })))));
 
+    it('should delete draft submissions on project encryption', testService(async (service) => {
+
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simple2)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple2/draft/submissions')
+        .send(testData.instances.simple2.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/key')
+        .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/simple2/draft')
+        .set('X-Extended-Metadata', 'true')
+        .then(({ body }) => {
+          body.submissions.should.be.eql(0);
+        });
+    }));
+
+    it('should not delete live submissions on project encryption', testService(async (service) => {
+
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/key')
+        .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/simple')
+        .set('X-Extended-Metadata', 'true')
+        .then(({ body }) => {
+          body.submissions.should.be.eql(1);
+        });
+    }));
+
+
     it('should log the action in the audit log', testService((service, { Audits, Projects, Users }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
