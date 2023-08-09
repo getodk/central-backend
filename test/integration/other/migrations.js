@@ -829,3 +829,42 @@ describe('database migrations from 20230512: adding entity_def_sources table', f
     count.should.equal(3);
   }));
 });
+
+describe('database migrations from 20230802: delete orphan submissions', function test() {
+  this.timeout(20000);
+
+  it('should delete orphan draft Submissions', testServiceFullTrx(async (service, container) => {
+    await upToMigration('20230518-01-add-entity-index-to-audits.js');
+    await populateUsers(container);
+
+    const asAlice = await service.login('alice');
+
+    await asAlice.post('/v1/projects/1/forms')
+      .set('Content-Type', 'application/xml')
+      .send(testData.forms.simple)
+      .expect(200);
+
+    await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+      .set('Content-Type', 'application/xml')
+      .send(testData.instances.simple.one)
+      .expect(200);
+
+    await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+      .set('Content-Type', 'application/xml')
+      .send(testData.instances.simple.two)
+      .expect(200);
+
+    // let's make first instance orphan
+    await container.run(sql`DELETE FROM submission_defs WHERE "instanceId" = 'one'`);
+
+    await up();
+
+    await asAlice.get('/v1/projects/1/forms/simple/draft/submissions')
+      .expect(200)
+      .then(({ body }) => {
+        body.length.should.be.eql(1);
+        body[0].instanceId.should.be.eql('two');
+      });
+
+  }));
+});
