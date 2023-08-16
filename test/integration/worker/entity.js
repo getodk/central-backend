@@ -457,9 +457,9 @@ describe('worker: entity', () => {
 
               const withOutTs = text.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g, '');
               withOutTs.should.be.eql(
-                '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt\n' +
-                '12345678-1234-4123-8234-123456789def,Beth (88),Beth,88,,5,Alice,0,\n'+
-                '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,\n'
+                '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+                '12345678-1234-4123-8234-123456789def,Beth (88),Beth,88,,5,Alice,0,,1\n'+
+                '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,,1\n'
               );
             })))));
 
@@ -513,10 +513,10 @@ describe('worker: entity', () => {
 
       const withOutTs = text.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g, '');
       withOutTs.should.be.eql(
-        '__id,label,f_q1,e_q2,a_q3,c_q4,b_q1,d_q2,__createdAt,__creatorId,__creatorName,__updates,__updatedAt\n' +
-        '12345678-1234-4123-8234-123456789ccc,one,w,x,y,z,,,,5,Alice,0,\n'+
-        '12345678-1234-4123-8234-123456789bbb,two,,,c,d,a,b,,5,Alice,0,\n'+
-        '12345678-1234-4123-8234-123456789aaa,one,,,y,z,w,x,,5,Alice,0,\n'
+        '__id,label,f_q1,e_q2,a_q3,c_q4,b_q1,d_q2,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+        '12345678-1234-4123-8234-123456789ccc,one,w,x,y,z,,,,5,Alice,0,,1\n'+
+        '12345678-1234-4123-8234-123456789bbb,two,,,c,d,a,b,,5,Alice,0,,1\n'+
+        '12345678-1234-4123-8234-123456789aaa,one,,,y,z,w,x,,5,Alice,0,,1\n'
       );
     }));
   });
