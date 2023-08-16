@@ -149,6 +149,7 @@ describe('api: /projects', () => {
                 body[0].forms.should.equal(0);
                 body[0].appUsers.should.equal(0);
                 should.not.exist(body[0].lastSubmission);
+                should.not.exist(body[0].lastEntity);
 
                 body[1].name.should.equal('Default Project');
                 body[1].forms.should.equal(3);
@@ -1378,6 +1379,7 @@ describe('api: /projects?forms=true', () => {
         .then(({ body }) => {
           body[0].datasetList.length.should.equal(1);
           body[0].datasetList[0].name.should.equal('people');
+          body[0].datasetList[0].should.be.an.ExtendedDataset();
         });
     }));
 
@@ -1517,6 +1519,57 @@ describe('api: /projects?forms=true', () => {
             form.name.should.equal('Simple');
             form.reviewStates.received.should.equal(2);
           })))));
+
+    it('should set project data from datasetList even on non-extended projects', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.multiPropertyEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          label: 'Johnny Doe',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/foo/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111bbb',
+          label: 'Johnny Doe',
+          data: {
+            b_q1: 'Johnny'
+          }
+        })
+        .expect(200);
+
+      await asAlice.get('/v1/projects?datasets=true')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+          const project = body[0];
+          project.should.be.a.Project();
+          project.datasets.should.equal(2);
+          project.lastEntity.should.be.eql(body[0].datasetList[0].lastEntity);
+          const dataset = body[0].datasetList[0];
+          dataset.should.be.a.ExtendedDataset();
+          dataset.name.should.equal('foo');
+        });
+    }));
 
     it('should return verbs for multiple roles', testService((service) =>
       service.login('alice', (asAlice) =>
