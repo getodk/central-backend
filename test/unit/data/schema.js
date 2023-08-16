@@ -524,6 +524,158 @@ describe('form schema', () => {
         ]);
       });
     });
+
+    describe('datasets', () => {
+      it('should ignore entities:saveto in bindings on structural nodes', () => { // gh cb#670
+        // binds must have a 'type' attribute to be picked up by XML parsing.
+        const xml = `
+          <?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+            <h:head>
+              <model>
+                <instance>
+                  <data id="form">
+                    <name/>
+                    <occupation>
+                      <title/>
+                      <dates>
+                        <joined/>
+                        <departed/>
+                      </dates>
+                      <salary/>
+                    </occupation>
+                  </data>
+                </instance>
+                <bind nodeset="/data/name" type="string"/>
+                <bind nodeset="/data/occupation" relevant="/data/name='liz'" entities:saveto="occupation"/>
+                <bind nodeset="/data/occupation/title" type="string"/>
+                <bind nodeset="/data/occupation/dates" relevant="true()"/>
+                <bind nodeset="/data/occupation/dates/joined" type="date"/>
+                <bind nodeset="/data/occupation/dates/departed" type="date"/>
+                <bind nodeset="/data/occupation/salary" type="decimal"/>
+              </model>
+            </h:head>
+          </h:html>`;
+        return getFormFields(xml).then((schema) => {
+          schema.should.eql([
+            { name: 'name', path: '/name', type: 'string', order: 0 },
+            { name: 'occupation', path: '/occupation', type: 'structure', order: 1 },
+            { name: 'title', path: '/occupation/title', type: 'string', order: 2 },
+            { name: 'dates', path: '/occupation/dates', type: 'structure', order: 3 },
+            { name: 'joined', path: '/occupation/dates/joined', type: 'date', order: 4 },
+            { name: 'departed', path: '/occupation/dates/departed', type: 'date', order: 5 },
+            { name: 'salary', path: '/occupation/salary', type: 'decimal', order: 6 }
+          ]);
+        });
+      });
+
+      it.skip('should allow binds on fields in repeats even if functionality is not correct', () => { // gh cb#670
+        const xml = `
+          <?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+            <h:head>
+              <model>
+                <instance>
+                  <data id="form">
+                    <name/>
+                    <children>
+                      <child>
+                        <name/>
+                        <toy>
+                          <name/>
+                        </toy>
+                      </child>
+                    </children>
+                  </data>
+                </instance>
+                <bind nodeset="/data/name" type="string" entities:saveto="parent_name"/>
+                <bind nodeset="/data/children/child/name" type="string" entities:saveto="child_name"/>
+                <bind nodeset="/data/children/child/toy/name" type="string"/>
+              </model>
+            </h:head>
+            <h:body>
+              <input ref="/data/name">
+                <label>What is your name?</label>
+              </input>
+              <group ref="/data/children/child">
+                <label>Child</label>
+                <repeat nodeset="/data/children/child">
+                  <input ref="/data/children/child/name">
+                    <label>What is the child's name?</label>
+                  </input>
+                  <group ref="/data/children/child/toy">
+                    <label>Child</label>
+                    <repeat nodeset="/data/children/child/toy">
+                      <input ref="/data/children/child/toy/name">
+                        <label>What is the toy's name?</label>
+                      </input>
+                    </repeat>
+                  </group>
+                </repeat>
+              </group>
+            </h:body>
+          </h:html>`;
+        return getFormFields(xml).then((schema) => {
+          schema.should.eql([
+            { name: 'name', path: '/name', type: 'string', order: 0, propertyName: 'parent_name' },
+            { name: 'children', path: '/children', type: 'structure', order: 1 },
+            { name: 'child', path: '/children/child', type: 'repeat', order: 2 },
+            { name: 'name', path: '/children/child/name', type: 'string', order: 3, propertyName: 'child_name' },
+            { name: 'toy', path: '/children/child/toy', type: 'repeat', order: 4 },
+            { name: 'name', path: '/children/child/toy/name', type: 'string', order: 5 }
+          ]);
+        });
+      });
+
+      it('should allow binds on fields in repeats even if functionality is not correct', () => { // gh cb#670
+        const xml = `
+          <?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+            <h:head>
+              <model>
+                <instance>
+                  <data id="form">
+                    <name/>
+                    <children>
+                      <child>
+                        <name/>
+                        <toy>
+                          <name/>
+                        </toy>
+                      </child>
+                    </children>
+                  </data>
+                </instance>
+                <bind nodeset="/data/name" type="string" entities:saveto="parent_name"/>
+                <bind nodeset="/data/children/child/name" type="string" entities:saveto="child_name"/>
+                <bind nodeset="/data/children/child/toy/name" type="string"/>
+              </model>
+            </h:head>
+            <h:body>
+              <input ref="/data/name">
+                <label>What is your name?</label>
+              </input>
+              <group ref="/data/children/child">
+                <label>Child</label>
+                <repeat nodeset="/data/children/child">
+                  <input ref="/data/children/child/name">
+                    <label>What is the child's name?</label>
+                  </input>
+                  <group ref="/data/children/child/toy">
+                    <label>Child</label>
+                    <repeat nodeset="/data/children/child/toy">
+                      <input ref="/data/children/child/toy/name">
+                        <label>What is the toy's name?</label>
+                      </input>
+                    </repeat>
+                  </group>
+                </repeat>
+              </group>
+            </h:body>
+          </h:html>`;
+        return getFormFields(xml).should.be.rejected().then((p) => p.problemCode.should.equal(400.25));
+      });
+    });
   });
 
   describe('SchemaStack', () => {

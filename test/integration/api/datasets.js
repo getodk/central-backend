@@ -2080,7 +2080,7 @@ describe('datasets and entities', () => {
           });
       }));
 
-      it('should not break when a saveto/bind is on a field inside a repeat group', testService(async (service, container) => {
+      it.skip('should not break when a saveto/bind is on a field inside a repeat group', testService(async (service, container) => {
         // Entities made from repeat groups are not yet supported. pyxform throws an error but central does not.
         // When parsing the corresponding submission, it will pick the last item in the repeat group.
         const form = `<?xml version="1.0"?>
@@ -2169,6 +2169,67 @@ describe('datasets and entities', () => {
               num_children: '3',
               child_name: 'chelsea'
             });
+          });
+      }));
+
+      it('should throw an error when a saveto is on a field inside a repeat group', testService(async (service) => {
+        // Entities made from repeat groups are not yet supported. pyxform also throws an error about this.
+        const form = `<?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+          <h:head>
+            <h:title>Repeat Children Entities</h:title>
+            <model entities:entities-version="2022.1.0" odk:xforms-version="1.0.0">
+              <instance>
+                <data id="repeat_entity" version="2">
+                  <num_children/>
+                  <child jr:template="">
+                    <child_name/>
+                  </child>
+                  <child>
+                    <child_name/>
+                  </child>
+                  <meta>
+                    <instanceID/>
+                    <instanceName/>
+                    <entity create="1" dataset="children" id="">
+                      <label/>
+                    </entity>
+                  </meta>
+                </data>
+              </instance>
+              <bind entities:saveto="num_children" nodeset="/data/num_children" type="int"/>
+              <bind entities:saveto="child_name" nodeset="/data/child/child_name" type="string"/>
+              <bind jr:preload="uid" nodeset="/data/meta/instanceID" readonly="true()" type="string"/>
+              <bind calculate=" /data/num_children " nodeset="/data/meta/instanceName" type="string"/>
+              <bind calculate="1" nodeset="/data/meta/entity/@create" readonly="true()" type="string"/>
+              <bind nodeset="/data/meta/entity/@id" readonly="true()" type="string"/>
+              <setvalue event="odk-instance-first-load" readonly="true()" ref="/data/meta/entity/@id" type="string" value="uuid()"/>
+              <bind calculate="concat(&quot;Num children:&quot;,  /data/num_children )" nodeset="/data/meta/entity/label" readonly="true()" type="string"/>
+            </model>
+          </h:head>
+          <h:body>
+            <input ref="/data/num_children">
+              <label>Num Children</label>
+            </input>
+            <group ref="/data/child">
+              <label>Child</label>
+              <repeat nodeset="/data/child">
+                <input ref="/data/child/child_name">
+                  <label>Child Name</label>
+                </input>
+              </repeat>
+            </group>
+          </h:body>
+        </h:html>
+        `;
+        const alice = await service.login('alice');
+        await alice.post('/v1/projects/1/forms?publish=true')
+          .send(form)
+          .set('Content-Type', 'application/xml')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.25);
+            body.details.reason.should.equal('Currently, entities cannot be populated from fields in repeat groups.');
           });
       }));
 
