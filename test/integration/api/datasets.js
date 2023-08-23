@@ -1279,7 +1279,7 @@ describe('datasets and entities', () => {
                 }))))));
 
       // cb#673
-      it('should not throw problem for fast external itemsets when there is existing "itemset" dataset', testService(async (service) => {
+      it('should not throw problem for fast external itemsets when there is existing "itemsets" dataset', testService(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -1301,7 +1301,7 @@ describe('datasets and entities', () => {
       }));
 
       // cb#673
-      it('should not throw problem for new version of "fast external itemsets" when there is existing "itemset" dataset', testService(async (service) => {
+      it('should not throw problem for new version of "fast external itemsets" when there is existing "itemsets" dataset', testService(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
