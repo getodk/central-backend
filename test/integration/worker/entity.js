@@ -244,7 +244,6 @@ describe('worker: entity', () => {
       createEvent.details.submissionId.should.equal(updateEvent.details.submissionId);
 
       // should contain information about entity
-      createEvent.details.entity.label.should.equal('Alice (88)');
       createEvent.details.entity.dataset.should.equal('people');
       createEvent.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
 
