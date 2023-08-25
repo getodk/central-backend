@@ -1,3 +1,4 @@
+const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
@@ -1297,6 +1298,58 @@ describe('datasets and entities', () => {
                 .catch(error => {
                   error.constraint.should.be.equal('check_datasetId_is_null_for_non_file');
                 }))))));
+
+      // cb#673
+      it('should not throw problem for fast external itemsets when there is existing "itemsets" dataset', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/people/, 'itemsets'))
+          .expect(200);
+
+        global.xlsformForm = 'itemsets';
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .set('X-XlsForm-FormId-Fallback', 'itemsets')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/itemsets/draft/attachments/itemsets.csv')
+            .expect(200)
+            .then(({ text }) => {
+              text.should.equal('a,b,c\n1,2,3\n4,5,6');
+            }));
+      }));
+
+      // cb#673
+      it('should not throw problem for new version of "fast external itemsets" when there is existing "itemsets" dataset', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.itemsets)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/people/, 'itemsets'))
+          .expect(200);
+
+        // add external choice (fast external itemsets) to an existing form
+        global.xlsformForm = 'itemsets';
+
+        await asAlice.post('/v1/projects/1/forms/itemsets/draft')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .set('X-XlsForm-FormId-Fallback', 'itemsets')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/itemsets/draft/attachments/itemsets.csv')
+            .expect(200)
+            .then(({ text }) => {
+              text.should.equal('a,b,c\n1,2,3\n4,5,6');
+            }));
+
+      }));
+
     });
 
     describe('projects/:id/forms/:formId/attachments/:name (entities dataset)', () => {
