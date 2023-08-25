@@ -541,7 +541,7 @@ describe('datasets and entities', () => {
           .expect(200)
           .then(({ body }) => {
 
-            const { createdAt, linkedForms, properties, ...ds } = body;
+            const { createdAt, linkedForms, properties, sourceForms, ...ds } = body;
 
             ds.should.be.eql({
               name: 'people',
@@ -552,6 +552,10 @@ describe('datasets and entities', () => {
             createdAt.should.not.be.null();
 
             linkedForms.should.be.eql([{ name: 'withAttachments', xmlFormId: 'withAttachments' }]);
+
+            sourceForms.should.be.eql([
+              { name: 'simpleEntity', xmlFormId: 'simpleEntity' },
+              { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' } ]);
 
             properties.map(({ publishedAt, ...p }) => {
               publishedAt.should.be.isoDate();
@@ -885,6 +889,23 @@ describe('datasets and entities', () => {
               }
             ]);
           });
+      }));
+
+      // bug central#464
+      it('should return source form that does not set any property', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/entities:saveto.*/g, '/>'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people')
+          .expect(200)
+          .then(({ body }) => {
+            body.sourceForms.should.be.eql([ { name: 'simpleEntity', xmlFormId: 'simpleEntity' } ]);
+          });
+
       }));
 
     });
