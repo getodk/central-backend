@@ -46,7 +46,12 @@ describe('/audits', () => {
               Users.getByEmail('david@getodk.org').then((o) => o.get())
             ]))
             .then(([ audits, project, alice, david ]) => {
-              audits.length.should.equal(4);
+              assertAuditActions(audits, [ // eslint-disable-line no-use-before-define
+                'user.create',
+                'project.update',
+                'project.create',
+                'user.session.create',
+              ]);
               audits.forEach((audit) => { audit.should.be.an.Audit(); });
 
               audits[0].actorId.should.equal(alice.actor.id);
@@ -101,7 +106,13 @@ describe('/audits', () => {
               Users.getByEmail('david@getodk.org').then((o) => o.get())
             ]))
             .then(([ audits, [ project, form ], alice, david ]) => {
-              audits.length.should.equal(5);
+              assertAuditActions(audits, [ // eslint-disable-line no-use-before-define
+                'user.create',
+                'form.update.publish',
+                'form.create',
+                'project.create',
+                'user.session.create',
+              ]);
               audits.forEach((audit) => { audit.should.be.an.Audit(); });
 
               audits[0].actorId.should.equal(alice.actor.id);
@@ -224,13 +235,14 @@ describe('/audits', () => {
           .then(() => asAlice.get('/v1/audits?action=user')
             .expect(200)
             .then(({ body }) => {
-              body.length.should.equal(6);
-              body[0].action.should.equal('user.delete');
-              body[1].action.should.equal('user.assignment.delete');
-              body[2].action.should.equal('user.assignment.create');
-              body[3].action.should.equal('user.update');
-              body[4].action.should.equal('user.create');
-              body[5].action.should.equal('user.session.create');
+              assertAuditActions(body, [ // eslint-disable-line no-use-before-define
+                'user.delete',
+                'user.assignment.delete',
+                'user.assignment.create',
+                'user.update',
+                'user.create',
+                'user.session.create',
+              ]);
             })))));
 
     it('should filter by action category (project)', testService((service) =>
@@ -722,3 +734,6 @@ describe('/audits', () => {
   });
 });
 
+function assertAuditActions(audits, expected) {
+  audits.map(a => a.action).should.deepEqual(expected);
+}
