@@ -1,11 +1,8 @@
 const appRoot = require('app-root-path');
 const { createWriteStream } = require('fs');
 const { Transform, Readable } = require('stream');
-// eslint-disable-next-line import/no-dynamic-require
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
-// eslint-disable-next-line import/no-dynamic-require
 const { PartialPipe } = require(appRoot + '/lib/util/stream');
-// eslint-disable-next-line import/no-dynamic-require
 const { zipPart, zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 const { fromChunks } = require('streamtest').v2;
 

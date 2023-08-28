@@ -1,11 +1,8 @@
 const should = require('should');
 const appRoot = require('app-root-path');
 const assert = require('assert');
-// eslint-disable-next-line import/no-dynamic-require
 const { parseSubmissionXml, extractEntity, validateEntity, extractSelectedProperties, selectFields, diffEntityData } = require(appRoot + '/lib/data/entity');
-// eslint-disable-next-line import/no-dynamic-require
 const { fieldsFor } = require(appRoot + '/test/util/schema');
-// eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
 
 describe('extracting entities from submissions', () => {

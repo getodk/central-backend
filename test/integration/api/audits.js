@@ -4,7 +4,6 @@ const { sql } = require('slonik');
 const { plain } = require('../../util/util');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
-// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 const submitThree = (asAlice) =>

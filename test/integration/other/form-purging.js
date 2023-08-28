@@ -3,7 +3,6 @@ const appPath = require('app-root-path');
 const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
-// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appPath + '/lib/worker/worker');
 
 

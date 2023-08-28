@@ -1,6 +1,5 @@
 const appRoot = require('app-root-path');
 const { testTask } = require('../setup');
-// eslint-disable-next-line import/no-dynamic-require
 const { purgeForms } = require(appRoot + '/lib/task/purge');
 
 // The basics of this task are tested here, including returning the count

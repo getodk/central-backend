@@ -1,8 +1,6 @@
 
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require
 const { mapSequential } = require(appRoot + '/test/util/util');
-// eslint-disable-next-line import/no-dynamic-require
 const { Form } = require(appRoot + '/lib/model/frames');
 const { simple, withrepeat } = require('../../data/xml').forms;
 const forms = [ simple, withrepeat ];

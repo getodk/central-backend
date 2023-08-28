@@ -7,9 +7,7 @@ const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { pZipStreamToFiles } = require('../../util/zip');
 const { map } = require('ramda');
-// eslint-disable-next-line import/no-dynamic-require
 const { Form } = require(appRoot + '/lib/model/frames');
-// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 // utilities used for versioning instances

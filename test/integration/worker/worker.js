@@ -4,11 +4,8 @@ const { promisify } = require('util');
 const { DateTime, Duration } = require('luxon');
 const { sql } = require('slonik');
 const { testContainerFullTrx, testContainer } = require('../setup');
-// eslint-disable-next-line import/no-dynamic-require
 const { runner, checker, worker } = require(appRoot + '/lib/worker/worker');
-// eslint-disable-next-line import/no-dynamic-require
 const { Audit } = require(appRoot + '/lib/model/frames');
-// eslint-disable-next-line import/no-dynamic-require
 const { insert } = require(appRoot + '/lib/util/db');
 
 describe('worker', () => {

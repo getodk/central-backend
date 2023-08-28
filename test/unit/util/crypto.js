@@ -3,7 +3,6 @@ const { readFileSync } = require('fs');
 const should = require('should');
 const streamTest = require('streamtest').v2;
 const bcrypt = require('bcrypt');
-// eslint-disable-next-line import/no-dynamic-require
 const crypto = require(appRoot + '/lib/util/crypto');
 
 describe('util/crypto', () => {

@@ -1,9 +1,6 @@
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require
 const { getOrElse, getOrReject, getOrNotFound, timebound, runSequentially } = require(appRoot + '/lib/util/promise');
-// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
-// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
 
 describe('getOr', () => {

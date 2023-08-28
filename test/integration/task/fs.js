@@ -5,9 +5,7 @@ const { join } = require('path');
 const tmp = require('tmp');
 const archiver = require('archiver');
 const { testTask } = require('../setup');
-// eslint-disable-next-line import/no-dynamic-require
 const { generateManagedKey } = require(appRoot + '/lib/util/crypto');
-// eslint-disable-next-line import/no-dynamic-require
 const { encryptToArchive, decryptFromArchive } = require(appRoot + '/lib/task/fs');
 
 describe('task: fs', () => {

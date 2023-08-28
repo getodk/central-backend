@@ -1,6 +1,5 @@
 require('should');
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require
 const { unpadPkcs1OaepMgf1Sha256 } = require(appRoot + '/lib/util/quarantine/oaep');
 
 describe('crypto: oeap decoding', () => {

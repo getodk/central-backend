@@ -9,10 +9,8 @@ const should = require('should');
 const { sql } = require('slonik');
 const { QueryOptions } = require('../../../lib/util/db');
 
-/* eslint-disable import/no-dynamic-require */
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const Option = require(appRoot + '/lib/util/option');
-/* eslint-enable import/no-dynamic-require */
 
 describe('datasets and entities', () => {
   describe('listing and downloading datasets', () => {

@@ -2,17 +2,11 @@ const appRoot = require('app-root-path');
 const { readFileSync } = require('fs');
 const { sql } = require('slonik');
 const { toText } = require('streamtest').v2;
-// eslint-disable-next-line import/no-dynamic-require
 const { testService, testContainerFullTrx, testContainer } = require(appRoot + '/test/integration/setup');
-// eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
-// eslint-disable-next-line import/no-dynamic-require
 const { pZipStreamToFiles } = require(appRoot + '/test/util/zip');
-// eslint-disable-next-line import/no-dynamic-require
 const { Form, Key, Submission } = require(appRoot + '/lib/model/frames');
-// eslint-disable-next-line import/no-dynamic-require
 const { mapSequential } = require(appRoot + '/test/util/util');
-// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('managed encryption', () => {
@@ -80,9 +74,7 @@ describe('managed encryption', () => {
   });
 
   describe('decryptor', () => {
-    // eslint-disable-next-line import/no-dynamic-require
     const { makePubkey, encryptInstance } = require(appRoot + '/test/util/crypto-odk');
-    // eslint-disable-next-line import/no-dynamic-require
     const { generateManagedKey, stripPemEnvelope } = require(appRoot + '/lib/util/crypto');
 
     it('should give a decryptor for the given passphrases', testService((service, { Keys }) =>
@@ -156,7 +148,6 @@ describe('managed encryption', () => {
   });
 
   describe('end-to-end', () => {
-    // eslint-disable-next-line import/no-dynamic-require
     const { extractPubkey, extractVersion, encryptInstance, sendEncrypted, internal } = require(appRoot + '/test/util/crypto-odk');
 
     describe('odk encryption simulation', () => {
@@ -164,7 +155,6 @@ describe('managed encryption', () => {
       // ODK Collect client encryption, i wouldn't feel right not.. testing.. the
       // test code....
       describe('oaep padding', () => {
-        // eslint-disable-next-line import/no-dynamic-require
         const { unpadPkcs1OaepMgf1Sha256 } = require(appRoot + '/lib/util/quarantine/oaep');
         it('should survive a round-trip', () => {
           const input = Buffer.from('0102030405060708090a0b0c0d0e0f1112131415161718191a1b1c1d1e1f2021', 'hex');

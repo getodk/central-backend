@@ -2,7 +2,6 @@ const appRoot = require('app-root-path');
 const { ceil } = Math;
 const { createPublicKey, publicEncrypt, createHash, randomBytes, createCipheriv } = require('crypto');
 const { RSA_NO_PADDING } = require('crypto').constants;
-// eslint-disable-next-line import/no-dynamic-require
 const { getSubmissionIvs } = require(appRoot + '/lib/util/crypto');
 
 
