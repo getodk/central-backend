@@ -60,11 +60,7 @@ debug: base
 
 .PHONY: test
 test: lint
-	BCRYPT=no npx mocha --recursive --exit
-
-.PHONY: test-full
-test-full: lint
-	npx mocha --recursive --exit
+	BCRYPT=insecure npx mocha --recursive --exit
 
 .PHONY: test-fast
 test-fast: node_version
@@ -72,11 +68,11 @@ test-fast: node_version
 
 .PHONY: test-integration
 test-integration: node_version
-	BCRYPT=no npx mocha --recursive test/integration --exit
+	BCRYPT=insecure npx mocha --recursive test/integration --exit
 
 .PHONY: test-unit
 test-unit: node_version
-	npx mocha --recursive test/unit --exit
+	BCRYPT=insecure npx mocha --recursive test/unit --exit
 
 .PHONY: test-coverage
 test-coverage: node_version

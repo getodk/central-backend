@@ -1,6 +1,7 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 const { testTask } = require('../setup');
+const { verifyPassword } = require(appRoot + '/lib/util/crypto');
 const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { createUser, promoteUser, setUserPassword } = require(appRoot + '/lib/task/account');
 const { User } = require(appRoot + '/lib/model/frames');
@@ -35,18 +36,18 @@ describe('task: accounts', () => {
           should(log.details.data.password).equal(null);
         })));
 
-    it('should set the password if given', testTask(({ Users, bcrypt }) =>
+    it('should set the password if given', testTask(({ Users }) =>
       createUser('testuser@getodk.org', 'aoeuidhtns')
         .then(() => Users.getByEmail('testuser@getodk.org'))
         .then(getOrNotFound)
-        .then((user) => bcrypt.verify('aoeuidhtns', user.password))
+        .then((user) => verifyPassword('aoeuidhtns', user.password))
         .then((verified) => verified.should.equal(true))));
 
-    it('should not verify a null password', testTask(({ Users, bcrypt }) =>
+    it('should not verify a null password', testTask(({ Users }) =>
       createUser('testuser@getodk.org', null)
         .then(() => Users.getByEmail('testuser@getodk.org'))
         .then(getOrNotFound)
-        .then((user) => bcrypt.verify(null, user.password))
+        .then((user) => verifyPassword(null, user.password))
         .then((verified) => verified.should.equal(false))));
 
     it('should complain if the password is too short', testTask(() =>
@@ -85,12 +86,12 @@ describe('task: accounts', () => {
   });
 
   describe('setUserPassword', () => {
-    it('should set a user password', testTask(({ Users, bcrypt }) =>
+    it('should set a user password', testTask(({ Users }) =>
       Users.create(User.fromApi({ email: 'testuser@getodk.org', displayName: 'test user' }))
         .then(() => setUserPassword('testuser@getodk.org', 'aoeuidhtns'))
         .then(() => Users.getByEmail('testuser@getodk.org'))
         .then(getOrNotFound)
-        .then((user) => bcrypt.verify('aoeuidhtns', user.password))
+        .then((user) => verifyPassword('aoeuidhtns', user.password))
         .then((verified) => verified.should.equal(true))));
 
     it('should complain about a password that is too short', testTask(({ Users }) =>
