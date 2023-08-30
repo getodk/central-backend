@@ -18,13 +18,17 @@ info:
 
     The `/projects/:id/app-users` subresource can be used to create, manage, and delete **App Users**.
 
-    The `/projects/:id/forms` resource and its subresource `/projects/:id/forms/…/submissions` provide full access to create, manage, and delete **`Form`s and `Submission`s to those Forms**. Each Form is a single ODK XForms survey, and many Submissions (filled-out forms, also sometimes called `Instance`s) may be attached to each Form. These resources are somewhat unique in that they are created by sending XML in the ODK XForms format instead of JSON. One can also retrieve all the multimedia attachments associated with any submission through the `/projects/:id/forms/…/submissions/…/attachments` subresource.
+    The `/projects/:id/forms` resource and its subresource `/projects/:id/forms/…/submissions` provide full access to create, manage, and delete **`Form`s and `Submission`s to those Forms**. Each Form is a single [ODK XForms form](https://getodk.github.io/xforms-spec/), and many Submissions (filled-out forms, also sometimes called `Instance`s) may be attached to each Form. These resources are are created by sending XML in the ODK XForms format instead of JSON. One can also retrieve all the multimedia attachments associated with any submission through the `/projects/:id/forms/…/submissions/…/attachments` subresource.
 
     Forms and their submissions are also accessible through two **open standards specifications** that we follow:
 
     * The [OpenRosa](https://docs.getodk.org/openrosa/) standard allows standard integration with tools like the [ODK Collect](https://docs.getodk.org/collect-intro/) mobile data collection app, or various other compatible tools like [Enketo](https://enketo.org/). It allows them to see the forms available on the server, and to send new submissions to them.
 
     * The [OData](http://odata.org/) standard allows data to be shared between platforms for analysis and reporting. Tools like [Microsoft Power BI](https://powerbi.microsoft.com/en-us/) and [Tableau](https://public.tableau.com/en-us/s/) are examples of clients that consume the standard OData format and provide advanced features beyond what we offer. If you are looking for a straightforward JSON output of your data, or you are considering building a visualization or reporting tool, this is your best option.
+
+    Projects can also contain **[`Entities`](/central-api-entity-management/)**, data objects that can be created by `Submission`s and shared between `Form`s to support workflows with multiple steps. Entities are organized into named Datasets and are managed from the `/projects/:id/datasets` resource.
+
+    > ⚠️  In this API and in the related [ODK XForms specification](https://getodk.github.io/xforms-spec/entities), collections of `Entities` are referred to as `Datasets`. The term "Entity List" is used for this concept in the Central frontend UI, user documentation, and all other text intended for end users who are not developers.
 
     Finally, **system information and configuration** is available via a set of specialized resources. Currently, you may set the Usage Reporting configuration and retrieve Server Audit Logs.
 
@@ -453,13 +457,11 @@ tags:
   description: |-
     _(introduced: version 2022.3)_
 
-    Version 2022.3 introduces server-managed Datasets as the first step on our [Entity-based data collection](https://forum.getodk.org/t/entity-based-data-collection/38115) journey.
+    > ⚠️  In this API and in the related [ODK XForms specification](https://getodk.github.io/xforms-spec/entities), collections of `Entities` are referred to as `Datasets`. The term "Entity List" is used for this concept in the Central frontend UI, user documentation, and all other text intended for end users who are not developers.
 
-    An Entity is a specific person, place, or thing. A Dataset is a collection of Entities. A Dataset is defined within a Form, and then a Submission to that Form creates an Entity when that Submission is **approved**. The Dataset definition includes the Dataset name and which Form fields map to which Dataset/Entity Properties, e.g. how to construct an Entity from a Submission.
+    A Dataset is a named collection of [Entities](/central-api-entity-management/) that have the same properties.
 
-    See the [ODK XForms specification](https://getodk.github.io/xforms-spec) for guidance on defining Datasets in Forms.
-
-    Once a Dataset exists, it can be linked to another Form as an Attachment and served as an automatically-updating CSV.
+    A Dataset can be linked to Forms as Attachments. This will make it available to clients as an automatically-updating CSV.
 
     **Related APIs:**
 
@@ -472,9 +474,9 @@ tags:
   description: |-
     _(introduced: version 2023.3)_
 
-    Version 2023.3 brings further core enhancements to Datasets and Entities, including several new endpoints for accessing information about Entities, as well as the ability to _create_,  _update_, and _soft-delete_ Entities via the API.
+    > ⚠️ In this API and in the related [ODK XForms specification](https://getodk.github.io/xforms-spec/entities), collections of `Entities` are referred to as `Datasets`. The term "Entity List" is used for this concept in the Central frontend UI, user facing documentation, and all other text intended for end users who are not developers.
 
-    An Entity is a specific person, place, or thing. Datasets represent collections of Entities. More information about how to set up and use Datasets can be found in the [Datasets](/central-api-dataset-management) section of this documentation.
+    Entities are data objects that can be shared between Forms to support workflows with multiple steps. They can be created either through form design or through this API. A collection of `Entities` is a [Dataset](/central-api-dataset-management/).
 - name: OpenRosa Endpoints
   description: |-
     [OpenRosa](https://bitbucket.org/javarosa/javarosa/wiki/OpenRosaAPI) is an API standard which accompanies the ODK XForms XML standard, allowing compliant servers and clients to use a common protocol to communicate `Form`s and `Submission`s to each other. When survey clients like ODK Collect and Enketo submit Submission data to a Form, this is the API they use.
