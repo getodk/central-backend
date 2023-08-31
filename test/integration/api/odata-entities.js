@@ -147,7 +147,7 @@ describe('api: /datasets/:name.svc', () => {
 
       await createSubmissions(asAlice, container, 2);
 
-      const nextlink = await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$top=1')
+      const nextlink = await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$top=1&$count=true')
         .expect(200)
         .then(({ body }) => {
           body.value[0].age.should.be.eql('2');
@@ -155,7 +155,8 @@ describe('api: /datasets/:name.svc', () => {
             uuid: body.value[0].__id,
           };
           const token = encodeURIComponent(QueryOptions.getSkiptoken(tokenData));
-          body['@odata.nextLink'].should.be.equal(`http://localhost:8989/v1/projects/1/datasets/people.svc/Entities?%24top=1&%24skiptoken=${token}`);
+          body['@odata.nextLink'].should.be.equal(`http://localhost:8989/v1/projects/1/datasets/people.svc/Entities?%24top=1&%24count=true&%24skiptoken=${token}`);
+          body['@odata.count'].should.be.eql(2);
           return body['@odata.nextLink'];
         });
 
@@ -166,6 +167,51 @@ describe('api: /datasets/:name.svc', () => {
         .expect(200)
         .then(({ body }) => {
           body.value[0].age.should.be.eql('1');
+          body['@odata.count'].should.be.eql(4);
+          should.not.exist(body['@odata.nextLink']);
+        });
+    }));
+
+    it('should not return deleted entities - opaque cursor', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 5);
+
+      const uuids = await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .then(({body}) => body.map(e => e.uuid));
+        
+
+      const nextlink = await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$top=2&$count=true')
+        .expect(200)
+        .then(({ body }) => {
+          body.value[0].age.should.be.eql('5');
+          body.value[1].age.should.be.eql('4');
+          const tokenData = {
+            uuid: body.value[1].__id,
+          };
+          const token = encodeURIComponent(QueryOptions.getSkiptoken(tokenData));
+          body['@odata.nextLink'].should.be.equal(`http://localhost:8989/v1/projects/1/datasets/people.svc/Entities?%24top=2&%24count=true&%24skiptoken=${token}`);
+          body['@odata.count'].should.be.eql(5);
+          return body['@odata.nextLink'];
+        });
+
+      // let's delete submissions
+      await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[0]}`)
+        .expect(200);
+      await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[4]}`)
+        .expect(200);
+
+      await asAlice.get(nextlink.replace('http://localhost:8989', ''))
+        .expect(200)
+        .then(({ body }) => {
+          body.value[0].age.should.be.eql('3');
+          body.value[1].age.should.be.eql('2');
+          body['@odata.count'].should.be.eql(3);
           should.not.exist(body['@odata.nextLink']);
         });
 
