@@ -3072,7 +3072,59 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           });
       }));
 
-      it('should return entity uuid and dataset when entity is soft-deleted', testService(async (service, container) => {
+      it('should not return basic entity details when extended metadata not set', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body }) => {
+            const entityCreate = body[0];
+            entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+            entityCreate.details.entity.dataset.should.equal('people');
+            entityCreate.details.should.not.have.property('dataset');
+          });
+      }));
+
+      it('should return updated entity in currentVersion', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+          .send({ label: 'New Label' })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .set('X-Extended-Metadata', true)
+          .expect(200)
+          .then(({ body }) => {
+            const entityCreate = body[0];
+            entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+            entityCreate.details.entity.currentVersion.label.should.equal('New Label');
+          });
+      }));
+
+      it('should return entity uuid and dataset only when entity is soft-deleted', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -3088,16 +3140,15 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
         await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc');
 
-        // TODO: this case probably shouldn't have the entity label and stuff
         await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
           .set('X-Extended-Metadata', true)
           .expect(200)
           .then(({ body }) => {
             const entityCreate = body[0];
             entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
-            entityCreate.details.entity.should.be.an.Entity();
-            entityCreate.details.entity.currentVersion.should.be.an.EntityDef();
-            entityCreate.details.dataset.should.be.a.Dataset();
+            entityCreate.details.entity.dataset.should.equal('people');
+            entityCreate.details.should.not.have.property('dataset');
+            entityCreate.details.entity.should.not.be.an.Entity();
           });
       }));
 
@@ -3119,7 +3170,6 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
         await container.run(sql`delete from entity_defs`);
         await container.run(sql`delete from entities`);
 
-        // TODO: this case probably shouldn't have the entity label and stuff
         await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
           .set('X-Extended-Metadata', true)
           .expect(200)
