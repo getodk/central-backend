@@ -18,7 +18,7 @@ info:
 
     The `/projects/:id/app-users` subresource can be used to create, manage, and delete **App Users**.
 
-    The `/projects/:id/forms` resource and its subresource `/projects/:id/forms/…/submissions` provide full access to create, manage, and delete **`Form`s and `Submission`s to those Forms**. Each Form is a single [ODK XForms form](https://getodk.github.io/xforms-spec/), and many Submissions (filled-out forms, also sometimes called `Instance`s) may be attached to each Form. These resources are are created by sending XML in the ODK XForms format instead of JSON. One can also retrieve all the multimedia attachments associated with any submission through the `/projects/:id/forms/…/submissions/…/attachments` subresource.
+    The `/projects/:id/forms` resource and its subresource `/projects/:id/forms/…/submissions` provide full access to create, manage, and delete **`Form`s and `Submission`s to those Forms**. Each Form is a single [ODK XForms form](https://getodk.github.io/xforms-spec/), and many Submissions (filled-out forms, also sometimes called `Instance`s) may be attached to each Form. These resources are created by sending XML in the ODK XForms format instead of JSON. One can also retrieve all the multimedia attachments associated with any submission through the `/projects/:id/forms/…/submissions/…/attachments` subresource.
 
     Forms and their submissions are also accessible through two **open standards specifications** that we follow:
 
