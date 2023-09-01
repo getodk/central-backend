@@ -183,8 +183,7 @@ describe('api: /datasets/:name.svc', () => {
       await createSubmissions(asAlice, container, 5);
 
       const uuids = await asAlice.get('/v1/projects/1/datasets/people/entities')
-        .then(({body}) => body.map(e => e.uuid));
-        
+        .then(({ body }) => body.map(e => e.uuid));
 
       const nextlink = await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$top=2&$count=true')
         .expect(200)
