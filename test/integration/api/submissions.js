@@ -3068,7 +3068,6 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
             entityCreate.details.entity.should.be.an.Entity();
             entityCreate.details.entity.currentVersion.should.be.an.EntityDef();
-            entityCreate.details.dataset.should.be.a.Dataset();
           });
       }));
 
@@ -3092,7 +3091,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             const entityCreate = body[0];
             entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
             entityCreate.details.entity.dataset.should.equal('people');
-            entityCreate.details.should.not.have.property('dataset');
+            entityCreate.details.entity.should.not.have.property('currentVersion');
           });
       }));
 
@@ -3147,7 +3146,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             const entityCreate = body[0];
             entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
             entityCreate.details.entity.dataset.should.equal('people');
-            entityCreate.details.should.not.have.property('dataset');
+            entityCreate.details.entity.should.not.have.property('currentVersion');
             entityCreate.details.entity.should.not.be.an.Entity();
           });
       }));
