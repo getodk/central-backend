@@ -285,7 +285,7 @@ describe('datasets and entities', () => {
             .then(() => asAlice.get('/v1/projects/1/datasets/people/entities.csv')
               .expect(200)
               .then(({ text }) => {
-                text.should.equal('__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt\n');
+                text.should.equal('__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n');
               })))));
 
       it('should return only published properties', testService(async (service) => {
@@ -306,7 +306,7 @@ describe('datasets and entities', () => {
         await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
           .expect(200)
           .then(({ text }) => {
-            text.should.equal('__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt\n');
+            text.should.equal('__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n');
           });
 
       }));
@@ -367,9 +367,9 @@ describe('datasets and entities', () => {
 
         const withOutTs = result.replace(isoRegex, '');
         withOutTs.should.be.eql(
-          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt\n' +
-            '12345678-1234-4123-8234-123456789aaa,Jane (30),Jane,30,,5,Alice,0,\n' +
-            '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,\n'
+          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-123456789aaa,Jane (30),Jane,30,,5,Alice,0,,1\n' +
+            '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,,1\n'
         );
 
       }));
@@ -399,8 +399,8 @@ describe('datasets and entities', () => {
 
         const withOutTs = result.replace(isoRegex, '');
         withOutTs.should.be.eql(
-          '__id,label,first_name,the.age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt\n' +
-            '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,\n'
+          '__id,label,first_name,the.age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,,1\n'
         );
 
       }));
@@ -472,8 +472,8 @@ describe('datasets and entities', () => {
 
         const withOutTs = result.replace(isoRegex, '');
         withOutTs.should.be.eql(
-          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt\n' +
-            '12345678-1234-4123-8234-111111111aaa,Robert Doe (expired),Robert,,,5,Alice,1,\n'
+          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-111111111aaa,Robert Doe (expired),Robert,,,5,Alice,1,,2\n'
         );
 
       }));
@@ -502,8 +502,8 @@ describe('datasets and entities', () => {
 
         const withOutTs = result.text.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g, '');
         withOutTs.should.be.eql(
-          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt\n' +
-          '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,\n'
+          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+          '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,,1\n'
         );
 
         const etag = result.get('ETag');
@@ -1391,7 +1391,7 @@ describe('datasets and entities', () => {
               .then(({ headers, text }) => {
                 headers['content-disposition'].should.equal('attachment; filename="goodone.csv"; filename*=UTF-8\'\'goodone.csv');
                 headers['content-type'].should.equal('text/csv; charset=utf-8');
-                text.should.equal('name,label,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88\n');
+                text.should.equal('name,label,version,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n');
               })))));
 
       it('should return entities csv for testing', testService(async (service, container) => {
@@ -1412,7 +1412,7 @@ describe('datasets and entities', () => {
 
         await service.get(`/v1/test/${token}/projects/1/forms/withAttachments/draft/attachments/goodone.csv`)
           .expect(200)
-          .then(({ text }) => { text.should.equal('name,label,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88\n'); });
+          .then(({ text }) => { text.should.equal('name,label,version,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n'); });
 
       }));
 
@@ -1444,8 +1444,8 @@ describe('datasets and entities', () => {
         await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
           .expect(200)
           .then(({ text }) => {
-            text.should.equal('name,label,first_name,the.age\n' +
-          '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88\n');
+            text.should.equal('name,label,version,first_name,the.age\n' +
+          '12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n');
           });
 
       }));
@@ -1506,8 +1506,8 @@ describe('datasets and entities', () => {
           .then(r => r.text);
 
         result.should.be.eql(
-          'name,label,first_name,age\n' +
-          '12345678-1234-4123-8234-111111111aaa,Robert Doe (expired),Robert,\n'
+          'name,label,version,first_name,age\n' +
+          '12345678-1234-4123-8234-111111111aaa,Robert Doe (expired),2,Robert,\n'
         );
 
       }));
@@ -1586,8 +1586,8 @@ describe('datasets and entities', () => {
           .expect(200);
 
         result.text.should.be.eql(
-          'name,label,first_name,age\n' +
-          '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88\n'
+          'name,label,version,first_name,age\n' +
+          '12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n'
         );
 
         const etag = result.get('ETag');
@@ -1990,7 +1990,7 @@ describe('datasets and entities', () => {
         await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
           .expect(200)
           .then(({ text }) => {
-            text.should.equal('__id,label,__createdAt,__creatorId,__creatorName,__updates,__updatedAt\n');
+            text.should.equal('__id,label,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n');
           });
       }));
 

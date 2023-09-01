@@ -383,6 +383,7 @@ describe('extracting entities from submissions', () => {
       updatedAt: 'updatedAt',
       def: {
         label: 'label',
+        version: 1,
         data: {
           firstName: 'John',
           lastName: 'Doe'
@@ -411,7 +412,8 @@ describe('extracting entities from submissions', () => {
           creatorId: 'id',
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
-          updates: 0
+          updates: 0,
+          version: 1
         },
         firstName: entity.def.data.firstName,
         lastName: entity.def.data.lastName
@@ -451,7 +453,8 @@ describe('extracting entities from submissions', () => {
           creatorId: 'id',
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
-          updates: 0
+          updates: 0,
+          version: 1
         }
       });
     });
@@ -463,6 +466,7 @@ describe('extracting entities from submissions', () => {
         updatedAt: 'updatedAt',
         def: {
           label: 'label',
+          version: 1,
           data: {}
         },
         aux: {
@@ -485,7 +489,8 @@ describe('extracting entities from submissions', () => {
           creatorId: 'id',
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
-          updates: 0
+          updates: 0,
+          version: 1
         },
         firstName: '',
         lastName: ''
@@ -505,7 +510,8 @@ describe('extracting entities from submissions', () => {
           creatorId: 'id',
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
-          updates: 0
+          updates: 0,
+          version: 1
         },
         firstName: entity.def.data.firstName,
         lastName: entity.def.data.lastName,

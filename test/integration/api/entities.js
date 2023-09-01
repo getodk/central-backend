@@ -193,7 +193,9 @@ describe('Entities API', () => {
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(200)
-        .then(({ body: person }) => {
+        .then(({ body: person, headers }) => {
+          headers.etag.should.be.eql('"1"');
+
           person.should.be.an.Entity();
           person.should.have.property('currentVersion').which.is.an.EntityDef();
           person.currentVersion.should.have.property('data').which.is.eql({
@@ -218,7 +220,6 @@ describe('Entities API', () => {
           });
         });
     }));
-
 
     it('should not mince the object properties', testEntities(async (service, container) => {
       const asAlice = await service.login('alice');
@@ -278,6 +279,14 @@ describe('Entities API', () => {
             first_name: 'Alice'
           });
         });
+    }));
+
+    it('should return 304 not changed ', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .set('If-None-Match', '"1"')
+        .expect(304);
     }));
   });
 
@@ -829,13 +838,22 @@ describe('Entities API', () => {
         .expect(403);
     }));
 
-    it('should reject force=true flag is not provided', testEntities(async (service) => {
-      // TODO: change logic around force flag and enforcing certain kinds of updates
+    it('should reject if version or force flag is not provided', testEntities(async (service) => {
       const asAlice = await service.login('alice');
       await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
-        .expect(501)
+        .expect(409)
         .then(({ body }) => {
-          body.code.should.equal(501.1);
+          body.code.should.equal(409.15);
+        });
+    }));
+
+    it('should reject if version does not match', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .set('If-Match', '"0"')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.15);
         });
     }));
 
@@ -905,7 +923,8 @@ describe('Entities API', () => {
         const asAlice = await service.login('alice');
         const newData = { age: '77', first_name: 'Alan' };
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .set('If-Match', '"1"')
           .send({
             data: { age: '77', first_name: 'Alan' }
           })
