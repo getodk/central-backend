@@ -839,7 +839,6 @@ describe('Entities API', () => {
     }));
 
     it('should reject if version or force flag is not provided', testEntities(async (service) => {
-      // TODO: change logic around force flag and enforcing certain kinds of updates
       const asAlice = await service.login('alice');
       await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(409)
@@ -849,7 +848,6 @@ describe('Entities API', () => {
     }));
 
     it('should reject if version does not match', testEntities(async (service) => {
-      // TODO: change logic around force flag and enforcing certain kinds of updates
       const asAlice = await service.login('alice');
       await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .set('If-Match', '"0"')
