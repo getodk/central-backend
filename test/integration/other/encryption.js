@@ -405,10 +405,8 @@ describe('managed encryption', () => {
             .then(({ body }) => body[0].id))
           .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/audits/submissions.csv.zip?${keyId}=supersecret`))
             .then((result) => {
-              result.filenames.should.containDeep([
+              result.filenames.should.eql([
                 'audits.csv',
-                'media/audit.csv',
-                'media/audit.csv',
                 'audits - audit.csv'
               ]);
 

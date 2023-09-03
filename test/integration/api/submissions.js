@@ -1859,10 +1859,8 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => exhaust(container))
           .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
             .then((result) => {
-              result.filenames.should.containDeep([
+              result.filenames.should.eql([
                 'audits.csv',
-                'media/audit.csv',
-                'media/log.csv',
                 'audits - audit.csv'
               ]);
 
@@ -1898,10 +1896,8 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(201))
           .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
             .then((result) => {
-              result.filenames.should.containDeep([
+              result.filenames.should.eql([
                 'audits.csv',
-                'media/audit.csv',
-                'media/log.csv',
                 'audits - audit.csv'
               ]);
 
@@ -1936,9 +1932,8 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .expect(201))
             .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip?$filter=__system/submitterId eq 5'))
               .then((result) => {
-                result.filenames.should.containDeep([
+                result.filenames.should.eql([
                   'audits.csv',
-                  'media/audit.csv',
                   'audits - audit.csv'
                 ]);
 
@@ -1973,9 +1968,8 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
             .expect(201))
           .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip?$filter=__system/reviewState eq \'approved\''))
             .then((result) => {
-              result.filenames.should.containDeep([
+              result.filenames.should.eql([
                 'audits.csv',
-                'media/audit.csv',
                 'audits - audit.csv'
               ]);
 
@@ -2009,9 +2003,8 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
             .expect(200)
             .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
               .then((result) => {
-                result.filenames.should.containDeep([
+                result.filenames.should.eql([
                   'audits.csv',
-                  'media/audit.csv',
                   'audits - audit.csv'
                 ]);
 
@@ -2042,9 +2035,8 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200)
             .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
               .then((result) => {
-                result.filenames.should.containDeep([
+                result.filenames.should.eql([
                   'audits.csv',
-                  'media/audit.csv',
                   'audits - audit.csv'
                 ]);
 
@@ -2071,9 +2063,8 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200)
             .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
               .then((result) => {
-                result.filenames.should.containDeep([
+                result.filenames.should.eql([
                   'audits.csv',
-                  'media/audit.csv',
                   'audits - audit.csv'
                 ]);
 
@@ -2101,9 +2092,8 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
             .expect(200)
             .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
               .then((result) => {
-                result.filenames.should.containDeep([
+                result.filenames.should.eql([
                   'audits.csv',
-                  'media/audit.csv',
                   'audits - audit.csv'
                 ]);
 
@@ -2140,9 +2130,8 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
               .expect(200)
               .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
                 .then((result) => {
-                  result.filenames.should.containDeep([
+                  result.filenames.should.eql([
                     'audits.csv',
-                    'media/audit.csv',
                     'audits - audit.csv'
                   ]);
 
