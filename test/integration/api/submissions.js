@@ -3012,7 +3012,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 body[2].details.should.eql({ instanceId: 'one', submissionId, submissionDefId: submissionDefIds[1] });
               }))))));
 
-    it.skip('should not expand actor when not extended', testService((service) =>
+    it('should not expand actor when not extended', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
