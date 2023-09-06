@@ -1,10 +1,8 @@
 const { execSync } = require('node:child_process');
 const uuid = require('uuid').v4;
 
-const { testContainer } = require('../setup');
-
 describe('cli', () => {
-  it('should return status code 1 if no command is issued', testContainer(async () => {
+  it('should return status code 1 if no command is issued', () => {
     let thrown = false; // pattern from test/unit/util/crypto.js
     try {
       // eslint-disable-next-line no-use-before-define
@@ -14,9 +12,9 @@ describe('cli', () => {
       thrown = true;
     }
     thrown.should.equal(true);
-  }));
+  });
 
-  it('should return status code 1 if non-existent command is issued', testContainer(async () => {
+  it('should return status code 1 if non-existent command is issued', () => {
     let thrown = false; // pattern from test/unit/util/crypto.js
     try {
       // eslint-disable-next-line no-use-before-define
@@ -26,10 +24,10 @@ describe('cli', () => {
       thrown = true;
     }
     thrown.should.equal(true);
-  }));
+  });
 
   describe('command: user-create', () => {
-    it('should return status code 0 and user details on success', testContainer(async () => {
+    it('should return status code 0 and user details on success', () => {
       // eslint-disable-next-line no-use-before-define
       const email = randomEmail();
 
@@ -39,7 +37,7 @@ describe('cli', () => {
 
       js.should.match(new RegExp(`email: '${email}',`));
       js.should.not.match(/password/);
-    }));
+    });
   });
 });
 
