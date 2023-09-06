@@ -6,7 +6,19 @@ describe('cli', () => {
     let thrown = false; // pattern from test/unit/util/crypto.js
     try {
       // eslint-disable-next-line no-use-before-define
-      cli('--email example@example.com');
+      cli('', { stdio: ['pipe', 'pipe', 'ignore'] });
+    } catch (err) {
+      err.status.should.equal(1);
+      thrown = true;
+    }
+    thrown.should.equal(true);
+  });
+
+  it('should return status code 1 if non-existent command is issued', () => {
+    let thrown = false; // pattern from test/unit/util/crypto.js
+    try {
+      // eslint-disable-next-line no-use-before-define
+      cli('user-congratulate', { stdio: ['pipe', 'pipe', 'ignore'] });
     } catch (err) {
       err.status.should.equal(1);
       thrown = true;
@@ -32,7 +44,7 @@ describe('cli', () => {
 function cli(argString, opts) {
   return execSync(
     'node lib/bin/cli.js ' + argString,
-    { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'], ...opts },
+    { encoding: 'utf-8', ...opts },
   );
 }
 
