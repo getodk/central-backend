@@ -101,7 +101,11 @@ const submitToForm = (service, user, projectId, xmlFormId, xml, deviceId = 'abcd
 ////////////////////////////////////////////////////////////////////////////////
 // Tests!
 ////////////////////////////////////////////////////////////////////////////////
-describe('analytics task queries', () => {
+// eslint-disable-next-line func-names
+describe('analytics task queries', function () {
+  // increasing timeouts on this set of tests
+  this.timeout(8000);
+
   describe('general server metrics', () => {
     it('should count audit log entries', testContainer(async (container) => {
       // recent "now" audits
@@ -887,11 +891,7 @@ describe('analytics task queries', () => {
     }));
   });
 
-  // eslint-disable-next-line space-before-function-paren, func-names
-  describe('combined analytics', function () {
-    // increasing timeouts on this set of tests
-    this.timeout(8000);
-
+  describe('combined analytics', () => {
     it('should combine system level queries', testService(async (service, container) => {
       // encrypting a project
       await service.login('alice', (asAlice) =>
