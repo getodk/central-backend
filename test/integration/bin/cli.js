@@ -3,7 +3,7 @@ const uuid = require('uuid').v4;
 
 const { testContainer } = require('../setup');
 
-describe.only('cli', () => {
+describe('cli', () => {
   it('should return status code 1 if no command is issued', testContainer(async () => {
     let thrown = false; // pattern from test/unit/util/crypto.js
     try {
