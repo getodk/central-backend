@@ -3001,6 +3001,22 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 body[2].details.should.eql({ instanceId: 'one', submissionId, submissionDefId: submissionDefIds[1] });
               }))))));
 
+    it('should not expand actor when not extended', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.patch('/v1/projects/1/forms/simple/submissions/one')
+            .send({ reviewState: 'rejected' })
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/audits')
+            .expect(200)
+            .then(({ body }) => {
+              should.not.exist(body[0].actor);
+              body[0].actorId.should.equal(5);
+            })))));
+
     it('should expand actor on extended', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
@@ -3017,6 +3033,142 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               body[0].actor.should.be.an.Actor();
               body[0].actor.displayName.should.equal('Alice');
             })))));
+
+    describe('submission audits about entity events', () => {
+      it('should return full entity in details of an event about an entity', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .set('X-Extended-Metadata', true)
+          .expect(200)
+          .then(({ body }) => {
+            const entityCreate = body[0];
+            entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+            entityCreate.details.entity.should.be.an.Entity();
+            entityCreate.details.entity.currentVersion.should.be.an.EntityDef();
+          });
+      }));
+
+      it('should not return basic entity details when extended metadata not set', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body }) => {
+            const entityCreate = body[0];
+            entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+            entityCreate.details.entity.dataset.should.equal('people');
+            entityCreate.details.entity.should.not.have.property('currentVersion');
+          });
+      }));
+
+      it('should return updated entity in currentVersion', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+          .send({ label: 'New Label' })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .set('X-Extended-Metadata', true)
+          .expect(200)
+          .then(({ body }) => {
+            const entityCreate = body[0];
+            entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+            entityCreate.details.entity.currentVersion.label.should.equal('New Label');
+          });
+      }));
+
+      it('should return entity uuid and dataset only when entity is soft-deleted', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc');
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .set('X-Extended-Metadata', true)
+          .expect(200)
+          .then(({ body }) => {
+            const entityCreate = body[0];
+            entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+            entityCreate.details.entity.dataset.should.equal('people');
+            entityCreate.details.entity.should.not.have.property('currentVersion');
+            entityCreate.details.entity.should.not.be.an.Entity();
+          });
+      }));
+
+      it('should return entity uuid and dataset when entity is (manually) purged', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // cascade on delete isn't set up for entitites so let's ruthlessly delete all the entities
+        await container.run(sql`delete from entity_defs`);
+        await container.run(sql`delete from entities`);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .set('X-Extended-Metadata', true)
+          .expect(200)
+          .then(({ body }) => {
+            const entityCreate = body[0];
+            entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+            entityCreate.details.entity.dataset.should.equal('people');
+            entityCreate.details.entity.should.not.be.an.Entity();
+          });
+      }));
+    });
   });
 
   describe('/:instanceId.xml GET', () => {
