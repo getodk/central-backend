@@ -5,22 +5,18 @@ const { readdirSync } = require('fs');
 const { join } = require('path');
 const request = require('supertest');
 const { noop } = require(appRoot + '/lib/util/util');
-// eslint-disable-next-line import/no-dynamic-require
 const { task } = require(appRoot + '/lib/task/task');
 
 // knex things.
 const config = require('config');
-// eslint-disable-next-line import/no-dynamic-require
 const { connect } = require(appRoot + '/lib/model/migrate');
 
 // slonik connection pool
-// eslint-disable-next-line import/no-dynamic-require
 const { slonikPool } = require(appRoot + '/lib/external/slonik');
 const db = slonikPool(config.get('test.database'));
 
 // set up our mailer.
 const env = config.get('default.env');
-// eslint-disable-next-line import/no-dynamic-require
 const { mailer } = require(appRoot + '/lib/external/mail');
 const mailConfig = config.get('test.email');
 const mail = mailer(mergeRight(mailConfig, env));
@@ -29,27 +25,22 @@ if (mailConfig.transport !== 'json')
   console.error('WARNING: some tests will not work except with a JSON email transport configuration.');
 
 // set up our xlsform-api mock.
-// eslint-disable-next-line import/no-dynamic-require
 const xlsform = require(appRoot + '/test/util/xlsform');
 
 // set up our sentry mock.
-// eslint-disable-next-line import/no-dynamic-require
 const Sentry = require(appRoot + '/lib/external/sentry').init();
 
 // set up our bcrypt module; possibly mock or not based on params.
 const _bcrypt = (process.env.BCRYPT === 'no')
   ? require('../util/bcrypt-mock')
   : require('bcrypt');
-// eslint-disable-next-line import/no-dynamic-require
 const bcrypt = require(appRoot + '/lib/util/crypto').password(_bcrypt);
 
 // set up our enketo mock.
-// eslint-disable-next-line import/no-dynamic-require
 const { reset: resetEnketo, ...enketo } = require(appRoot + '/test/util/enketo');
 beforeEach(resetEnketo);
 
 // set up odk analytics mock.
-// eslint-disable-next-line import/no-dynamic-require
 const { ODKAnalytics } = require(appRoot + '/test/util/odk-analytics-mock');
 const odkAnalytics = new ODKAnalytics();
 
@@ -57,9 +48,7 @@ const odkAnalytics = new ODKAnalytics();
 const context = { query: {}, transitoryData: new Map(), headers: [] };
 
 // application things.
-// eslint-disable-next-line import/no-dynamic-require
 const { withDefaults } = require(appRoot + '/lib/model/container');
-// eslint-disable-next-line import/no-dynamic-require
 const service = require(appRoot + '/lib/http/service');
 
 // get all our fixture scripts, and set up a function that runs them all.

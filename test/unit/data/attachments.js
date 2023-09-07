@@ -1,10 +1,7 @@
 const appRoot = require('app-root-path');
 const streamTest = require('streamtest').v2;
-// eslint-disable-next-line import/no-dynamic-require
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
-// eslint-disable-next-line import/no-dynamic-require
 const { streamAttachments } = require(appRoot + '/lib/data/attachments');
-// eslint-disable-next-line import/no-dynamic-require
 const { zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 
 describe('.zip attachments streaming', () => {

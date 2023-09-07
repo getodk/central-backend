@@ -1,6 +1,5 @@
 require('should');
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require
 const { sanitizeEventRequest, isSensitiveEndpoint, filterTokenFromUrl } = require(appRoot + '/lib/external/sentry');
 
 // These cases are based on real requests!

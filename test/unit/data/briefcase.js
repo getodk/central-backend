@@ -1,15 +1,10 @@
 const appRoot = require('app-root-path');
 const uuid = require('uuid').v4;
 const streamTest = require('streamtest').v2;
-// eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
-// eslint-disable-next-line import/no-dynamic-require
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
-// eslint-disable-next-line import/no-dynamic-require
 const { fieldsFor } = require(appRoot + '/test/util/schema');
-// eslint-disable-next-line import/no-dynamic-require
 const { streamBriefcaseCsvs } = require(appRoot + '/lib/data/briefcase');
-// eslint-disable-next-line import/no-dynamic-require
 const { zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 
 

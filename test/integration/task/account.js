@@ -1,11 +1,8 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 const { testTask } = require('../setup');
-// eslint-disable-next-line import/no-dynamic-require
 const { getOrNotFound } = require(appRoot + '/lib/util/promise');
-// eslint-disable-next-line import/no-dynamic-require
 const { createUser, promoteUser, setUserPassword } = require(appRoot + '/lib/task/account');
-// eslint-disable-next-line import/no-dynamic-require
 const { User } = require(appRoot + '/lib/model/frames');
 
 describe('task: accounts', () => {

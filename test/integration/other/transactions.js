@@ -1,16 +1,10 @@
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
-// eslint-disable-next-line import/no-dynamic-require
 const { testContainerFullTrx } = require(appRoot + '/test/integration/setup');
-// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
-// eslint-disable-next-line import/no-dynamic-require
 const { Frame } = require(appRoot + '/lib/model/frame');
-// eslint-disable-next-line import/no-dynamic-require
 const { injector } = require(appRoot + '/lib/model/container');
-// eslint-disable-next-line import/no-dynamic-require
 const { endpointBase } = require(appRoot + '/lib/http/endpoint');
-// eslint-disable-next-line import/no-dynamic-require
 const { noop } = require(appRoot + '/lib/util/util');
 
 describe('transaction integration', () => {

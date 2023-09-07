@@ -4,9 +4,7 @@ const should = require('should');
 
 const { testService } = require('../setup');
 const { QueryOptions } = require('../../../lib/util/db');
-// eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml.js');
-// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 

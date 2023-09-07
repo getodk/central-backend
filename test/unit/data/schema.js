@@ -1,10 +1,7 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-// eslint-disable-next-line import/no-dynamic-require
 const { getFormFields, sanitizeFieldsForOdata, SchemaStack, merge, compare, expectedFormAttachments, injectPublicKey, addVersionSuffix, setVersion } = require(appRoot + '/lib/data/schema');
-// eslint-disable-next-line import/no-dynamic-require
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
-// eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
 
 describe('form schema', () => {

@@ -1,7 +1,6 @@
 require('should');
 const appPath = require('app-root-path');
 const { Transform } = require('stream');
-// eslint-disable-next-line import/no-dynamic-require
 const { consumeAndBuffer, pipethrough, pipethroughAndBuffer, splitStream, PartialPipe } = require(appPath + '/lib/util/stream');
 const { fromObjects, toObjects } = require('streamtest').v2;
 

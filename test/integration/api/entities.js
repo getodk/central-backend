@@ -3,9 +3,7 @@ const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { sql } = require('slonik');
 
-/* eslint-disable import/no-dynamic-require */
 const { exhaust } = require(appRoot + '/lib/worker/worker');
-/* eslint-enable import/no-dynamic-require */
 
 const testDataset = (test) => testService(async (service, container) => {
   const asAlice = await service.login('alice');

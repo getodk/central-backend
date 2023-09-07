@@ -1,13 +1,9 @@
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
 const { fieldTypes } = require('../../../lib/model/frame');
-// eslint-disable-next-line import/no-dynamic-require
 const { Frame, table, into } = require(appRoot + '/lib/model/frame');
-// eslint-disable-next-line import/no-dynamic-require
 const util = require(appRoot + '/lib/util/db');
-// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
-// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
 
 describe('util/db', () => {

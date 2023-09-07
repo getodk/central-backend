@@ -2,20 +2,13 @@ const should = require('should');
 const { createRequest } = require('node-mocks-http');
 
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require
 const preprocessors = require(appRoot + '/lib/http/preprocessors');
-// eslint-disable-next-line import/no-dynamic-require
 const { Context } = require(appRoot + '/lib/http/endpoint');
-// eslint-disable-next-line import/no-dynamic-require
 const { Session, User, Actor } = require(appRoot + '/lib/model/frames');
-// eslint-disable-next-line import/no-dynamic-require
 const { by } = require(appRoot + '/lib/model/query/auth');
-// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
-// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
 
-// eslint-disable-next-line import/no-dynamic-require
 const bcrypt = require(appRoot + '/lib/util/crypto').password(require('bcrypt'));
 
 describe('preprocessors', () => {

@@ -1,7 +1,5 @@
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require
 const { User, Actor, Project } = require(appRoot + '/lib/model/frames');
-// eslint-disable-next-line import/no-dynamic-require
 const { mapSequential } = require(appRoot + '/test/util/util');
 
 module.exports = ({ Assignments, Users, Projects, bcrypt }) => {

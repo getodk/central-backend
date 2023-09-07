@@ -6,13 +6,9 @@ const streamTest = require('streamtest').v2;
 const { always } = require('ramda');
 
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require
 const { endpointBase, defaultErrorWriter, Context, defaultResultWriter, openRosaPreprocessor, openRosaBefore, openRosaResultWriter, openRosaErrorWriter, odataPreprocessor, odataBefore } = require(appRoot + '/lib/http/endpoint');
-// eslint-disable-next-line import/no-dynamic-require
 const { PartialPipe } = require(appRoot + '/lib/util/stream');
-// eslint-disable-next-line import/no-dynamic-require
 const { noop } = require(appRoot + '/lib/util/util');
-// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
 
 const createModernResponse = () => {
@@ -586,7 +582,6 @@ describe('endpoints', () => {
     });
 
     describe('resultWriter', () => {
-      // eslint-disable-next-line import/no-dynamic-require
       const { createdMessage } = require(appRoot + '/lib/formats/openrosa');
 
       it('should send the appropriate content with the appropriate header', () => {

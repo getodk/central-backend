@@ -5,9 +5,7 @@ const { writeFile, symlink } = require('fs');
 const { join } = require('path');
 const { exec } = require('child_process');
 const { identity } = require('ramda');
-// eslint-disable-next-line import/no-dynamic-require
 const { auditing, emailing } = require(appRoot + '/lib/task/task');
-// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
 const tmp = require('tmp');
 

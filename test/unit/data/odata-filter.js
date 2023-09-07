@@ -10,10 +10,8 @@
 const appRoot = require('app-root-path');
 const assert = require('assert');
 const { sql } = require('slonik');
-/* eslint-disable import/no-dynamic-require */
 const { odataFilter: _odataFilter } = require(appRoot + '/lib/data/odata-filter');
 const { odataToColumnMap } = require(appRoot + '/lib/data/submission');
-/* eslint-enable import/no-dynamic-require */
 
 const odataFilter = (exp) => _odataFilter(exp, odataToColumnMap);
 

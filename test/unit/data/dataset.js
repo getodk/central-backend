@@ -1,14 +1,9 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-// eslint-disable-next-line import/no-dynamic-require
 const { getFormFields } = require(appRoot + '/lib/data/schema');
-// eslint-disable-next-line import/no-dynamic-require
 const { getDataset, validateDatasetName, validatePropertyName } = require(appRoot + '/lib/data/dataset');
-// eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
-// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
-// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
 
 describe('parsing dataset from entity block', () => {

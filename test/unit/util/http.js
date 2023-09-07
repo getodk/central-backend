@@ -1,6 +1,5 @@
 const should = require('should');
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require
 const http = require(appRoot + '/lib/util/http');
 
 describe('util/http', () => {

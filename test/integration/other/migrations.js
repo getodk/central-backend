@@ -4,9 +4,7 @@ const uuid = require('uuid').v4;
 const config = require('config');
 const { testContainerFullTrx, testServiceFullTrx } = require('../setup');
 const { sql } = require('slonik');
-// eslint-disable-next-line import/no-dynamic-require
 const { Actor, Config } = require(appRoot + '/lib/model/frames');
-// eslint-disable-next-line import/no-dynamic-require
 const { withDatabase } = require(appRoot + '/lib/model/migrate');
 const testData = require('../../data/xml');
 const populateUsers = require('../fixtures/01-users');

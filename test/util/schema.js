@@ -1,6 +1,5 @@
 const appRoot = require('app-root-path');
 const { construct } = require('ramda');
-// eslint-disable-next-line import/no-dynamic-require
 const { getFormFields } = require(appRoot + '/lib/data/schema');
 
 // provies a mock FormField instance with its data processing methods, and a boilerplate

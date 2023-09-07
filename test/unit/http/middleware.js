@@ -1,9 +1,7 @@
 const { createRequest } = require('node-mocks-http');
 
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require
 const middleware = require(appRoot + '/lib/http/middleware');
-// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
 
 describe('middleware', () => {
