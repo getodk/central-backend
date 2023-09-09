@@ -1,3 +1,4 @@
+const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const { mergeRight } = require('ramda');
 const { sql } = require('slonik');
@@ -7,6 +8,7 @@ const request = require('supertest');
 const { noop } = require(appRoot + '/lib/util/util');
 const { task } = require(appRoot + '/lib/task/task');
 const authenticateUser = require('../util/authenticate-user');
+const testData = require('../data/xml');
 
 // knex things.
 const config = require('config');
@@ -188,5 +190,30 @@ const testTask = (test) => () => new Promise((resolve, reject) => {
   });//.catch(Promise.resolve.bind(Promise));
 });
 
-module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask };
+// eslint-disable-next-line no-shadow
+const withClosedForm = (f) => async (service) => {
+  const asAlice = await service.login('alice');
+
+  await asAlice.post('/v1/projects/1/forms?publish=true')
+    .send(testData.forms.withAttachments)
+    .set('Content-Type', 'application/xml')
+    .expect(200);
+
+  await asAlice.patch('/v1/projects/1/forms/withAttachments')
+    .send({ state: 'closed' })
+    .expect(200);
+
+  await asAlice.post('/v1/projects/1/forms?publish=true')
+    .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+    .set('Content-Type', 'application/vnd.ms-excel')
+    .expect(200);
+
+  await asAlice.patch('/v1/projects/1/forms/simple2')
+    .send({ state: 'closed' })
+    .expect(200);
+
+  return f(service);
+};
+
+module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask, withClosedForm };
 

@@ -5,7 +5,9 @@ const { toText } = require('streamtest').v2;
 const { testService, testContainerFullTrx, testContainer } = require(appRoot + '/test/integration/setup');
 const testData = require(appRoot + '/test/data/xml');
 const { pZipStreamToFiles } = require(appRoot + '/test/util/zip');
-const { Form, Key, Submission } = require(appRoot + '/lib/model/frames');
+// eslint-disable-next-line import/no-dynamic-require
+const { Form, Key, Submission, Actor } = require(appRoot + '/lib/model/frames');
+// eslint-disable-next-line import/no-dynamic-require
 const { mapSequential } = require(appRoot + '/test/util/util');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const authenticateUser = require('../../util/authenticate-user');
@@ -14,9 +16,9 @@ describe('managed encryption', () => {
   describe('lock management', () => {
     it('should reject keyless forms in keyed projects @slow', testContainerFullTrx(async (container) => {
       // enable managed encryption.
-      await container.transacting(({ Projects }) =>
+      await container.transacting(({ Projects, Auth }) =>
         Projects.getById(1).then((o) => o.get())
-          .then((project) => Projects.setManagedEncryption(project, 'supersecret', 'it is a secret')));
+          .then((project) => Projects.setManagedEncryption(project, 'supersecret', 'it is a secret', Auth.by())));
 
       // now attempt to create a keyless form.
       let error;
@@ -36,9 +38,9 @@ describe('managed encryption', () => {
       // enable managed encryption but don't allow the transaction to close.
       let encReq;
       const unblock = await new Promise((resolve) => {
-        encReq = container.transacting(({ Projects }) => Promise.all([
+        encReq = container.transacting(({ Projects, Auth }) => Promise.all([
           Projects.getById(1).then((o) => o.get())
-            .then((project) => Projects.setManagedEncryption(project, 'supersecret', 'it is a secret')),
+            .then((project) => Projects.setManagedEncryption(project, 'supersecret', 'it is a secret', Auth.by())),
           new Promise(resolve) // <- we want unblock to be the function that resolves this inner Promise.
         ]));
       });
@@ -543,7 +545,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               }))))));
 
     // we have to sort of cheat at this to get two different managed keys in effect.
-    it('should handle mixed[managedA/managedB] formdata (decrypting)', testService((service, { Forms, Projects }) =>
+    it('should handle mixed[managedA/managedB] formdata (decrypting)', testService((service, { Forms, Projects, Auth }) =>
       service.login('alice', (asAlice) =>
         // first enable managed encryption and submit submission one.
         asAlice.post('/v1/projects/1/key')
@@ -569,7 +571,11 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
           // now we can set managed encryption again and submit our last two submissions.
           .then(() => Projects.getById(1).then((o) => o.get()))
-          .then((project) => Projects.setManagedEncryption(project, 'superdupersecret'))
+          .then((project) => asAlice.get('/v1/users/current')
+            .then(({ body: user }) => {
+              const actor = new Actor(user);
+              return Projects.setManagedEncryption(project, 'superdupersecret', '', Auth.by(actor));
+            }))
           .then(() => asAlice.get('/v1/projects/1/forms/simple.xml')
             .expect(200)
             .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))

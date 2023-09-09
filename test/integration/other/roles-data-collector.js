@@ -1,4 +1,4 @@
-const { testService } = require('../setup');
+const { testService, withClosedForm } = require('../setup');
 const testData = require('../../data/xml');
 
 const collector = (f) => (service) =>
@@ -79,6 +79,41 @@ describe('data collector role', () => {
   it('should not be able to get submission detail', testService(collector((asCollector) =>
     asCollector.get('/v1/projects/1/forms/simple/submissions/one')
       .expect(403))));
+
+  it('should not be able access closed forms and its sub-resources', testService(withClosedForm(collector(async (asCollector) => {
+
+    await asCollector.get('/v1/projects/1/forms?publish=true')
+      .expect(200)
+      .then(({ body }) => {
+        body.length.should.equal(2);
+        body.forEach((form) => form.should.be.a.Form());
+        body[0].xmlFormId.should.equal('simple');
+        body[1].xmlFormId.should.equal('withrepeat');
+      });
+
+    await asCollector.get('/v1/projects/1/forms/withAttachments')
+      .expect(403);
+
+    await asCollector.get('/v1/projects/1/forms/simple2.xls')
+      .expect(403);
+
+    await asCollector.get('/v1/projects/1/forms/withAttachments.xml')
+      .expect(403);
+
+    await asCollector.get('/v1/projects/1/forms/withAttachments/versions')
+      .expect(403);
+
+    await asCollector.get('/v1/projects/1/forms/withAttachments/fields')
+      .expect(403);
+
+    await asCollector.get('/v1/projects/1/forms/withAttachments/manifest')
+      .set('X-OpenRosa-Version', '1.0')
+      .expect(403);
+
+    await asCollector.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+      .expect(403);
+  }))));
+
 
 });
 
