@@ -9,7 +9,7 @@ const collector = (f) => (service) =>
       .then((chelsea) => service.login('alice', (asAlice) =>
         asAlice.post(`/v1/projects/1/assignments/formfill/${chelsea.id}`)
           .expect(200)
-          .then(() => f(asChelsea, chelsea)))));
+          .then(() => f(asChelsea, chelsea, service)))));
 
 describe('data collector role', () => {
   it('should be able to list projects it can access', testService((service) =>
@@ -114,6 +114,28 @@ describe('data collector role', () => {
       .expect(403);
   }))));
 
+  it('should be able see closing forms', testService(collector(async (asCollector, _, service) => {
+
+    const asAlice = await service.login('alice');
+
+    await asAlice.patch('/v1/projects/1/forms/simple')
+      .send({ state: 'closing' })
+      .expect(200);
+
+    await asCollector.get('/v1/projects/1/forms?publish=true')
+      .expect(200)
+      .then(({ body }) => {
+        body.length.should.equal(2);
+        body.forEach((form) => form.should.be.a.Form());
+        body[0].xmlFormId.should.equal('simple');
+        body[1].xmlFormId.should.equal('withrepeat');
+      });
+
+    await asCollector.get('/v1/projects/1/forms/simple')
+      .expect(200);
+
+
+  })));
 
 });
 
