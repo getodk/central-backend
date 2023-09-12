@@ -323,7 +323,7 @@ describe('analytics task queries', function () {
         await container.Analytics.countClientAuditProcessingFailed()
           .then((res) => res.should.equal(1));
 
-        await container.Analytics.countFailedAudits()
+        await container.Analytics.auditLogs()
           .then((res) => {
             res.any_failure.should.equal(1);
             res.failed5.should.equal(1);
@@ -394,7 +394,7 @@ describe('analytics task queries', function () {
       const eventSubCreate = (await container.Audits.getLatestByAction('submission.create')).get();
       await container.run(sql`update audits set "loggedAt" = '2000-01-01T00:00Z' where id = ${eventSubCreate.id}`);
 
-      await container.Analytics.countFailedAudits()
+      await container.Analytics.auditLogs()
         .then((res) => {
           res.any_failure.should.equal(2);
           res.failed5.should.equal(1);
