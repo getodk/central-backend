@@ -621,6 +621,15 @@ describe('datasets and entities', () => {
 
       }));
 
+      it('should reject if dataset is not published', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/datasets/people')
+              .expect(404)))));
+
       it('should not return duplicate linkedForms', testService(async (service) => {
         const asAlice = await service.login('alice');
 
