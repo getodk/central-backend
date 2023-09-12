@@ -199,8 +199,10 @@ describe('api: /datasets/:name.svc', () => {
           return body['@odata.nextLink'];
         });
 
-      // let's delete submissions
+      // let's delete entities
       await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[0]}`)
+        .expect(200);
+      await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[2]}`)
         .expect(200);
       await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[4]}`)
         .expect(200);
@@ -208,9 +210,8 @@ describe('api: /datasets/:name.svc', () => {
       await asAlice.get(nextlink.replace('http://localhost:8989', ''))
         .expect(200)
         .then(({ body }) => {
-          body.value[0].age.should.be.eql('3');
-          body.value[1].age.should.be.eql('2');
-          body['@odata.count'].should.be.eql(3);
+          body.value[0].age.should.be.eql('2');
+          body['@odata.count'].should.be.eql(2);
           should.not.exist(body['@odata.nextLink']);
         });
 
@@ -240,6 +241,7 @@ describe('api: /datasets/:name.svc', () => {
 
     it('should return filtered entities with pagination', testService(async (service, container) => {
       const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
@@ -248,11 +250,11 @@ describe('api: /datasets/:name.svc', () => {
 
       await createSubmissions(asAlice, container, 2);
 
-      await container.run(sql`UPDATE entities SET "createdAt" = '2020-01-01'`);
+      await createSubmissions(asBob, container, 2, 2);
 
-      await createSubmissions(asAlice, container, 2, 2);
+      const bobId = await asBob.get('/v1/users/current').then(({ body }) => body.id);
 
-      const nextlink = await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$top=1&$filter=__system/createdAt gt 2021-01-01')
+      const nextlink = await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$top=1&$filter=__system/creatorId eq ${bobId}`)
         .expect(200)
         .then(({ body }) => {
           body.value.length.should.be.eql(1);
@@ -264,6 +266,7 @@ describe('api: /datasets/:name.svc', () => {
         .expect(200)
         .then(({ body }) => {
           body.value[0].age.should.be.eql('3');
+          should.not.exist(body['@odata.nextLink']);
         });
     }));
 
