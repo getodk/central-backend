@@ -1,9 +1,11 @@
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
 const { testService, testContainer } = require('../setup');
-const { createReadStream } = require('fs');
+const { createReadStream, readFileSync } = require('fs');
+
+const { promisify } = require('util');
 const testData = require('../../data/xml');
-const { exhaust } = require(appRoot + '/lib/worker/worker');
+const { runner, exhaust } = require(appRoot + '/lib/worker/worker');
 
 const geoForm = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <h:head>
@@ -215,6 +217,189 @@ describe('analytics task queries', function () {
       Analytics.databaseExternal('not-localhost').should.equal(1);
       Analytics.databaseExternal(undefined).should.equal(1);
       Analytics.databaseExternal(null).should.equal(1);
+    }));
+
+    describe('counting client audits', () => {
+      it('should count the total number of client audit submission attachments', testService(async (service, { Analytics }) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200);
+
+        // the one sub with good client audit attachment
+        await asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+          .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+          .expect(201);
+
+        // client audit attachment is missing
+        await asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+          .expect(201);
+
+        // another attachment that is not a client audit
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.one), { filename: 'data.xml' })
+            .attach('my_file1.mp4', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'my_file1.mp4' })
+            .expect(201));
+
+        const res = await Analytics.countClientAuditAttachments();
+        res.should.equal(1);
+      }));
+
+      it('should count client audit attachments that failed processing', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // encrypt default project and send one encrypted client audit attachment
+        const { extractPubkey, extractVersion, sendEncrypted } = require(appRoot + '/test/util/crypto-odk');
+        await asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.clientAudits)
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/audits.xml')
+            .expect(200)
+            .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
+            .then((send) => send(testData.instances.clientAudits.one, { 'audit.csv.enc': readFileSync(appRoot + '/test/data/audit.csv') })));
+
+        await exhaust(container);
+
+        // at this point there should be 0 failed
+        await container.Analytics.countClientAuditProcessingFailed()
+          .then((res) => res.should.equal(0));
+
+        // but there will be 0 rows in the clients audits table bc encrypted ones dont get extracted
+        await container.Analytics.countClientAuditRows()
+          .then((res) => res.should.equal(0));
+
+        // make a new project to not encrypt
+        const newProjectId = await asAlice.post('/v1/projects')
+          .set('Content-Type', 'application/json')
+          .send({ name: 'Test Project' })
+          .expect(200)
+          .then(({ body }) => body.id);
+
+        await asAlice.post(`/v1/projects/${newProjectId}/forms?publish=true`)
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200);
+
+        // submit a new submission with client audit attachment
+        await asAlice.post(`/v1/projects/${newProjectId}/submission`)
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+          .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+          .expect(201);
+
+        // fail the processing of this latest event
+        let event = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
+        // eslint-disable-next-line prefer-promise-reject-errors
+        const jobMap = { 'submission.attachment.update': [ () => Promise.reject({ uh: 'oh' }) ] };
+        await promisify(runner(container, jobMap))(event);
+
+        // should still be 0 because the failure count is only at 1, needs to be at 5 to count
+        event = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
+        event.failures.should.equal(1);
+        await container.Analytics.countClientAuditProcessingFailed()
+          .then((res) => res.should.equal(0));
+
+        // there should still be 0 extracted client audit rows
+        await container.Analytics.countClientAuditRows()
+          .then((res) => res.should.equal(0));
+
+        // manually upping failure count to 5
+        await container.run(sql`update audits set failures = 5, "loggedAt" = '1999-01-01' where id = ${event.id}`);
+
+        await container.Analytics.countClientAuditProcessingFailed()
+          .then((res) => res.should.equal(1));
+
+        await container.Analytics.auditLogs()
+          .then((res) => {
+            res.any_failure.should.equal(1);
+            res.failed5.should.equal(1);
+            res.unprocessed.should.equal(0);
+          });
+      }));
+
+      it('should count the number of rows extracted from client audit attachments', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+          .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+          .expect(201);
+
+        await asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+          .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+          .expect(201);
+
+        await container.Analytics.countClientAuditRows()
+          .then((res) => res.should.equal(0));
+
+        await exhaust(container);
+
+        await container.Analytics.countClientAuditRows()
+          .then((res) => res.should.equal(8));
+      }));
+    });
+
+    it('should count failed audits', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.clientAudits)
+        .expect(200);
+
+      // making the processing of this attachment fail once
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+        .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+        .expect(201);
+
+      // eslint-disable-next-line prefer-promise-reject-errors
+      const jobMap = { 'submission.attachment.update': [ () => Promise.reject({ uh: 'oh' }) ] };
+      const eventOne = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
+      await promisify(runner(container, jobMap))(eventOne);
+
+      // making this look like it failed 5 times
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+        .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+        .expect(201);
+
+
+      // we haven't run exhaust(container so there are some unprocessed events)
+      const eventTwo = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
+      await container.run(sql`update audits set failures = 5 where id = ${eventTwo.id}`);
+
+      const eventSubCreate = (await container.Audits.getLatestByAction('submission.create')).get();
+      await container.run(sql`update audits set "loggedAt" = '2000-01-01T00:00Z' where id = ${eventSubCreate.id}`);
+
+      await container.Analytics.auditLogs()
+        .then((res) => {
+          res.any_failure.should.equal(2);
+          res.failed5.should.equal(1);
+          res.unprocessed.should.equal(1);
+        });
     }));
   });
 
@@ -892,30 +1077,65 @@ describe('analytics task queries', function () {
 
   describe('combined analytics', () => {
     it('should combine system level queries', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // creating client audits (before encrypting the project)
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.clientAudits)
+        .expect(200);
+
+      // the one sub with good client audit attachment
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+        .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+        .expect(201);
+
+      await exhaust(container);
+
+      // add another client audit attachment to fail
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+        .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+        .expect(201);
+
+      // alter the second unprocessed client audit event to count as a failure
+      const event = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
+      await container.run(sql`update audits set failures = 5 where id = ${event.id}`);
+
       // encrypting a project
-      await service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/key')
-          .send({ passphrase: 'supersecret', hint: 'it is a secret' }));
+      await asAlice.post('/v1/projects/1/key')
+        .send({ passphrase: 'supersecret', hint: 'it is a secret' });
 
       // creating and archiving a project
-      await service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects')
+      await asAlice.post('/v1/projects')
+        .set('Content-Type', 'application/json')
+        .send({ name: 'New Project' })
+        .expect(200)
+        .then(({ body }) => asAlice.patch(`/v1/projects/${body.id}`)
           .set('Content-Type', 'application/json')
-          .send({ name: 'New Project' })
-          .expect(200)
-          .then(({ body }) => asAlice.patch(`/v1/projects/${body.id}`)
-            .set('Content-Type', 'application/json')
-            .send({ archived: true })
-            .expect(200)));
+          .send({ archived: true })
+          .expect(200));
 
       // creating more roles
       await createTestUser(service, container, 'Viewer1', 'viewer', 1);
       await createTestUser(service, container, 'Collector1', 'formfill', 1);
 
+      // creating audit events in various states
+      await container.run(sql`insert into audits ("actorId", action, "acteeId", details, "loggedAt", "failures")
+        values
+          (null, 'dummy.action', null, null, '1999-1-1', 1),
+          (null, 'dummy.action', null, null, '1999-1-1', 5),
+          (null, 'dummy.action', null, null, '1999-1-1', 0)`);
+
+
       const res = await container.Analytics.previewMetrics();
 
       // can't easily test this metric
       delete res.system.uses_external_db;
+      delete res.system.sso_enabled;
 
       // everything in system filled in
       Object.values(res.system).forEach((metric) =>
