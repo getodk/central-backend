@@ -554,18 +554,67 @@ describe('datasets and entities', () => {
 
             sourceForms.should.be.eql([
               { name: 'simpleEntity', xmlFormId: 'simpleEntity' },
-              { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' } ]);
+              { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' }]);
 
             properties.map(({ publishedAt, ...p }) => {
               publishedAt.should.be.isoDate();
               return p;
             }).should.be.eql([
-              { name: 'first_name', odataName: 'first_name', forms: [
-                { name: 'simpleEntity', xmlFormId: 'simpleEntity' },
-                { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' }
-              ] },
-              { name: 'the.age', odataName: 'the_age', forms: [ { name: 'simpleEntity', xmlFormId: 'simpleEntity' }, ] },
-              { name: 'address', odataName: 'address', forms: [ { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' }, ] }
+              {
+                name: 'first_name', odataName: 'first_name', forms: [
+                  { name: 'simpleEntity', xmlFormId: 'simpleEntity' },
+                  { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' }
+                ]
+              },
+              { name: 'the.age', odataName: 'the_age', forms: [{ name: 'simpleEntity', xmlFormId: 'simpleEntity' },] },
+              { name: 'address', odataName: 'address', forms: [{ name: 'simpleEntity2', xmlFormId: 'simpleEntity2' },] }
+            ]);
+
+          });
+
+      }));
+
+      it('should return the extended metadata of the dataset', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111aaa',
+            label: 'Johnny Doe'
+          })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+
+            const { createdAt, properties, lastEntity, ...ds } = body;
+
+            ds.should.be.eql({
+              name: 'people',
+              projectId: 1,
+              approvalRequired: false,
+              entities: 1,
+              linkedForms: [],
+              sourceForms: [{ name: 'simpleEntity', xmlFormId: 'simpleEntity' }]
+            });
+
+            lastEntity.should.be.recentIsoDate();
+
+            createdAt.should.be.recentIsoDate();
+
+            properties.map(({ publishedAt, ...p }) => {
+              publishedAt.should.be.isoDate();
+              return p;
+            }).should.be.eql([
+              { name: 'first_name', odataName: 'first_name', forms: [{ name: 'simpleEntity', xmlFormId: 'simpleEntity' }] },
+              { name: 'age', odataName: 'age', forms: [{ name: 'simpleEntity', xmlFormId: 'simpleEntity' },] }
             ]);
 
           });
@@ -902,7 +951,7 @@ describe('datasets and entities', () => {
         await asAlice.get('/v1/projects/1/datasets/people')
           .expect(200)
           .then(({ body }) => {
-            body.sourceForms.should.be.eql([ { name: 'simpleEntity', xmlFormId: 'simpleEntity' } ]);
+            body.sourceForms.should.be.eql([{ name: 'simpleEntity', xmlFormId: 'simpleEntity' }]);
           });
 
       }));
@@ -2362,7 +2411,7 @@ describe('datasets and entities', () => {
 
         await Audits.getLatestByAction('dataset.update')
           .then(o => o.get())
-          .then(audit => audit.details.should.eql({ properties: ['first_name', 'age', 'color_name', ] }));
+          .then(audit => audit.details.should.eql({ properties: ['first_name', 'age', 'color_name',] }));
 
       }));
 
@@ -2397,7 +2446,7 @@ describe('datasets and entities', () => {
           container.oneFirst(sql`select count(*) from form_fields as fs join forms as f on fs."formId" = f.id where f."xmlFormId"='simpleEntity'`),
           container.oneFirst(sql`select count(*) from ds_property_fields`),
         ])
-          .then((counts) => counts.should.eql([ 2, 6, 6 ]));
+          .then((counts) => counts.should.eql([2, 6, 6]));
 
       }));
     });

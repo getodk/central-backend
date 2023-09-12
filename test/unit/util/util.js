@@ -63,5 +63,13 @@ describe('util/util', () => {
     });
   });
 
+  describe('UTF-8 and Base64 conversion', () => {
+    const { utf8ToBase64, base64ToUtf8 } = util;
+    it('should convert unicode to base64', () => {
+      const input = 'a Ā 𐀀 文 🦄';
+      const base64 = utf8ToBase64(input);
+      base64ToUtf8(base64).should.be.eql(input);
+    });
+  });
 });
 
