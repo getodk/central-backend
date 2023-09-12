@@ -18,6 +18,12 @@ If you're looking for help or discussion on _how_ ODK Central Backend works inte
 
 Please see the [project README](https://github.com/getodk/central-backend#setting-up-a-development-environment) for instructions on how to set up your development environment.
 
+### OpenID Connect
+
+If you want to use OpenID Connect instead of username/password for authentication in development:
+
+Instead of `make dev`, run both `make dev-oidc` and `make fake-oidc-server`.
+
 ## Guidelines
 
 If you're starting work on an issue ticket, please leave a comment saying so. If you run into trouble or have to stop working on a ticket, please leave a comment as well. As you write code, the usual guidelines apply; please ensure you are following existing conventions:

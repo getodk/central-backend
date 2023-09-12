@@ -1,0 +1,11 @@
+{
+  "default": {
+    "oidc": {
+      "_description": "google: from https://console.cloud.google.com/apis/credentials",
+      "issuerUrl": "https://accounts.google.com",
+      "clientId": "564021877275-o5q3i8j44190d93d9mldd3rti1fncn3u.apps.googleusercontent.com",
+      "clientSecret": "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",
+      "enabled": true
+    }
+  }
+}

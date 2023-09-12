@@ -6,6 +6,7 @@
     "array-bracket-spacing": "off",
     "arrow-parens": "off",
     "class-methods-use-this": "off",
+    "camelcase": [ "error", { "ignoreDestructuring": true, "properties": "never" } ],
     "comma-dangle": "off",
     "consistent-return": "off",
     "curly": "off",

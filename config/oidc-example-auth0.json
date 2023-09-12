@@ -1,0 +1,11 @@
+{
+  "default": {
+    "oidc": {
+      "_description": "auth0: https://manage.auth0.com/dashboard/us/odk-oidc-dev/",
+      "issuerUrl": "https://odk-oidc-dev.us.auth0.com",
+      "clientId": "ZKKpcW8TpKymVLbD1dbDVExj7SU4Zxbn",
+      "clientSecret": "7tuVT7OsjRHfmUiwYYyWNT8YArMNlmvvv70tqlChkjtVHW0Xsp0mvVAyKIfCgUn5",
+      "enabled": true
+    }
+  }
+}

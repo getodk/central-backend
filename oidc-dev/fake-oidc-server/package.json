@@ -1,0 +1,14 @@
+{
+  "name": "fake-oidc-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {},
+  "volta": {
+    "node": "18.17.0"
+  },
+  "license": "SEE LICENSE IN ../LICENSE",
+  "dependencies": {
+    "oidc-provider": "^8.2.2"
+  }
+}

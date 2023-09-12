@@ -1,6 +1,7 @@
 const should = require('should');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
+const authenticateUser = require('../../util/authenticate-user');
 
 describe('api: /projects/:id/forms/:id/public-links', () => {
   describe('POST', () => {
@@ -195,16 +196,13 @@ describe('api: /key/:key', () => {
       .expect(403)));
 
   it('should allow cookie+public-link', testService((service) =>
-    service.post('/v1/sessions')
-      .send({ email: 'alice@getodk.org', password: 'alice' })
-      .expect(200)
-      .then(({ body }) => body.token)
+    authenticateUser(service, 'alice')
       .then((aliceToken) => service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/public-links')
           .send({ displayName: 'linktest' })
           .then(({ body }) => body.token)
           .then((linkToken) => service.get(`/v1/key/${linkToken}/projects/1/forms/simple.xml`)
-            .set('Cookie', `__Host-session=${aliceToken}`)
+            .set('Cookie', `session=${aliceToken}`)
             .set('X-Forwarded-Proto', 'https')
             .expect(200))))));
 

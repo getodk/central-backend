@@ -1,0 +1,11 @@
+{
+  "default": {
+    "oidc": {
+      "_description": "broken config: fiddle with this config to test out different init failure modes",
+      "issuerUrl": "http://example.com",
+      "clientId": "this is required; should be reported during client init if this line commented out",
+      "clientSecret": "this is required; should be reported during client init if this line commented out",
+      "enabled": true
+    }
+  }
+}

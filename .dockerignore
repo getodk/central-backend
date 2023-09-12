@@ -1,0 +1,21 @@
+# Ignore everything
+*
+
+# Explicitly whitelist _necessary_ **source files**
+!/package.json
+!/package-lock.json
+!/Makefile
+!/lib/
+!/config/
+!/test/
+
+!/oidc-dev/certs/*.pem
+!/oidc-dev/fake-oidc-server/accounts.json
+!/oidc-dev/fake-oidc-server/index.js
+!/oidc-dev/fake-oidc-server/package.json
+!/oidc-dev/fake-oidc-server/package-lock.json
+!/oidc-dev/playwright-tests/package.json
+!/oidc-dev/playwright-tests/package-lock.json
+!/oidc-dev/playwright-tests/playwright.config.js
+!/oidc-dev/playwright-tests/src/**/*.js
+!/oidc-dev/scripts/*.sh
