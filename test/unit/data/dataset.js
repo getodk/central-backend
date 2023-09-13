@@ -310,6 +310,12 @@ describe('property name validation', () => {
     validatePropertyName('label').should.equal(false);
   });
 
+  it('should reject name or label in case-insensitive way', () => {
+    validatePropertyName('Name').should.equal(false);
+    validatePropertyName('NaMe').should.equal(false);
+    validatePropertyName('LABEL').should.equal(false);
+  });
+
   it('should reject name with whitespace at the ends', () => {
     validatePropertyName(' bad_whitespace ').should.equal(false);
   });
