@@ -28,7 +28,7 @@
     "external": {
       "sentry": {},
       "analytics": {
-        "url": "https://data.getodk.cloud/v1/key/eOZ7S4bzyUW!g1PF6dIXsnSqktRuewzLTpmc6ipBtRq$LDfIMTUKswCexvE0UwJ9/projects/1/submission",
+        "url": "https://data.getodk.cloud/v1/key/eOZ7S4bzyUW!g1PF6dIXsnSqktRuewzLTpmc6ipBtRq$LDfIMTUKswCexvE0UwJ9/projects/1/forms/odk-analytics/submissions",
         "formId": "odk-analytics",
         "version": "v2023.4.0_1"
       }
