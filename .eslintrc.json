@@ -10,6 +10,9 @@
     "comma-dangle": "off",
     "consistent-return": "off",
     "curly": "off",
+    "default-param-last": "off", // TODO enable this and refactor the code
+    "function-call-argument-newline": "off",
+    "function-paren-newline": "off",
     "global-require": "off",
     "implicit-arrow-linebreak": "off",
     "import/newline-after-import": "off",
