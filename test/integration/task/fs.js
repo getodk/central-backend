@@ -46,7 +46,7 @@ describe('task: fs', () => {
       await decryptFromArchive(filepath, dirpath).should.be.rejected();
     }));
 
-    it('should fail gracefully given a random archive', testTask(() => new Promise((resolve) =>
+    it('should fail gracefully given a random archive', testTask(() => new Promise((resolve) => {
       tmp.dir((_, dirpath) =>
         // eslint-disable-next-line no-shadow
         tmp.file((_, filepath) => {
@@ -61,7 +61,8 @@ describe('task: fs', () => {
           archive.pipe(createWriteStream(filepath));
           archive.append('some file', { name: 'file.txt' });
           archive.finalize();
-        })))));
+        }));
+    })));
 
     // TODO: there are more failure cases that the code covers but the tests do not.
     // but they get increasingly elaborate to fake and increasingly improbable in

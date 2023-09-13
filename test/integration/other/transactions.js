@@ -36,7 +36,7 @@ describe('transaction integration', () => {
 });
 
 // resolves in ms ms
-const sometime = (ms) => new Promise((done) => setTimeout(done, ms));
+const sometime = (ms) => new Promise((done) => { setTimeout(done, ms); });
 
 describe('enketo worker transaction', () => {
   it('should not allow a write conflict @slow', testContainerFullTrx(async (container) => {
