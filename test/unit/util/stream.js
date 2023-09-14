@@ -107,8 +107,8 @@ describe('stream utils', () => {
     it('should work with piped outputs', () =>
       splitStream(
         fromObjects([ 4, 8, 15, 16, 23, 42 ]),
-        (stream) => new Promise((resolve) => stream.pipe(toObjects((e, result) => resolve(result)))),
-        (stream) => new Promise((resolve) => stream.pipe(toObjects((e, result) => resolve(result))))
+        (stream) => new Promise((resolve) => { stream.pipe(toObjects((e, result) => resolve(result))); }),
+        (stream) => new Promise((resolve) => { stream.pipe(toObjects((e, result) => resolve(result))); })
       ).then(([ x, y ]) => {
         x.should.eql([ 4, 8, 15, 16, 23, 42 ]);
         y.should.eql([ 4, 8, 15, 16, 23, 42 ]);

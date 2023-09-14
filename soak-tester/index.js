@@ -68,7 +68,7 @@ async function soakTest() {
   // TODO work out a more scientific sleep duration
   const backgroundJobPause = 20_000;
   log.info(`Sleeping ${durationForHumans(backgroundJobPause)} to allow central-backend to complete background jobs...`);
-  await new Promise(resolve => setTimeout(resolve, backgroundJobPause));
+  await new Promise(resolve => { setTimeout(resolve, backgroundJobPause); });
   log.info('Woke up.');
 
   await doSoakTest('exportZipWithDataAndMedia', 10, 3_000, 300_000, 0, n => exportZipWithDataAndMedia(n, projectId, formId));

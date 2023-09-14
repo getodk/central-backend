@@ -19,14 +19,16 @@ describe('task: runner', () => {
     const Problem = require('./lib/util/problem');
     run(Promise.reject(Problem.internal.emptyResponse()));
   `;
-  const runScript = (script) => new Promise((resolve) => tmp.dir((_, dirpath) => {
-    const scriptPath = join(dirpath, 'script.js');
-    writeFile(scriptPath, script, () =>
-      symlink(join(appRoot.toString(), 'node_modules'), join(dirpath, 'node_modules'), () =>
-        symlink(join(appRoot.toString(), 'lib'), join(dirpath, 'lib'), () =>
-          exec(`${process.argv0} ${scriptPath}`, (error, stdout, stderr) =>
-            resolve([ error, stdout, stderr ])))));
-  }));
+  const runScript = (script) => new Promise((resolve) => {
+    tmp.dir((_, dirpath) => {
+      const scriptPath = join(dirpath, 'script.js');
+      writeFile(scriptPath, script, () =>
+        symlink(join(appRoot.toString(), 'node_modules'), join(dirpath, 'node_modules'), () =>
+          symlink(join(appRoot.toString(), 'lib'), join(dirpath, 'lib'), () =>
+            exec(`${process.argv0} ${scriptPath}`, (error, stdout, stderr) =>
+              resolve([error, stdout, stderr])))));
+    });
+  });
 
   it('should print success object to stdout', () => runScript(success)
     // eslint-disable-next-line quotes
