@@ -7,19 +7,17 @@
 // including this file, may be copied, modified, propagated, or distributed
 // except according to the terms contained in the LICENSE file.
 
-const rules = {};
-
-// This rule does not work if the node_modules directory has not been populated.
-// Downloading playwright is quite slow, so it's probably better we don't have
-// to do that before linting.
-if (process.env.CI) rules['import/no-unresolved'] = 'off';
-
 module.exports = {
   extends: '../../.eslintrc.json',
   env: {
     browser: true, // for page.waitForFunction() code
   },
-  rules,
+  rules: {
+    // This rule does not work if the node_modules directory has not been populated.
+    // Downloading playwright is quite slow, so it's probably better we don't have
+    // to do that before linting.
+    'import/no-unresolved': 'off',
+  },
   settings: {
     'import/resolver': {
       node: {
