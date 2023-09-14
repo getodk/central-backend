@@ -261,7 +261,7 @@ describe('api: /key/:key', () => {
     await asAlice.post(`/v1/projects/1/forms/withAttachments/assignments/app-user/${fk.id}`)
       .expect(200);
 
-    await service.get(`/v1/key/${fk.token}/projects/1/forms?publish=true`)
+    await service.get(`/v1/key/${fk.token}/projects/1/forms`)
       .expect(403);
 
     await service.get(`/v1/key/${fk.token}/projects/1/forms/withAttachments`)
@@ -281,6 +281,9 @@ describe('api: /key/:key', () => {
 
     await service.get(`/v1/key/${fk.token}/projects/1/forms/withAttachments/manifest`)
       .set('X-OpenRosa-Version', '1.0')
+      .expect(403);
+
+    await service.get(`/v1/key/${fk.token}/projects/1/forms/withAttachments/attachments`)
       .expect(403);
 
     await service.get(`/v1/key/${fk.token}/projects/1/forms/withAttachments/attachments/goodone.csv`)

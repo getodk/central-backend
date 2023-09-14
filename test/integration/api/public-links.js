@@ -233,7 +233,7 @@ describe('api: /key/:key', () => {
       .send({ displayName: 'linktest' })
       .then(({ body }) => body);
 
-    await service.get(`/v1/key/${link.token}/projects/1/forms?publish=true`)
+    await service.get(`/v1/key/${link.token}/projects/1/forms`)
       .expect(403);
 
     await service.get(`/v1/key/${link.token}/projects/1/forms/withAttachments`)
@@ -253,6 +253,9 @@ describe('api: /key/:key', () => {
 
     await service.get(`/v1/key/${link.token}/projects/1/forms/withAttachments/manifest`)
       .set('X-OpenRosa-Version', '1.0')
+      .expect(403);
+
+    await service.get(`/v1/key/${link.token}/projects/1/forms/withAttachments/attachments`)
       .expect(403);
 
     await service.get(`/v1/key/${link.token}/projects/1/forms/withAttachments/attachments/goodone.csv`)

@@ -82,7 +82,7 @@ describe('data collector role', () => {
 
   it('should not be able access closed forms and its sub-resources', testService(withClosedForm(collector(async (asCollector) => {
 
-    await asCollector.get('/v1/projects/1/forms?publish=true')
+    await asCollector.get('/v1/projects/1/forms')
       .expect(200)
       .then(({ body }) => {
         body.length.should.equal(2);
@@ -110,11 +110,15 @@ describe('data collector role', () => {
       .set('X-OpenRosa-Version', '1.0')
       .expect(403);
 
+    await asCollector.get('/v1/projects/1/forms/withAttachments/attachments')
+      .expect(403);
+
     await asCollector.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
       .expect(403);
+
   }))));
 
-  it('should be able see closing forms', testService(collector(async (asCollector, _, service) => {
+  it('should be able see closing forms and make submission', testService(collector(async (asCollector, _, service) => {
 
     const asAlice = await service.login('alice');
 
@@ -134,6 +138,21 @@ describe('data collector role', () => {
     await asCollector.get('/v1/projects/1/forms/simple')
       .expect(200);
 
+    await asCollector.post('/v1/projects/1/forms/simple/submissions')
+      .send(testData.instances.simple.one)
+      .set('Content-Type', 'text/xml')
+      .expect(200);
+
+    // Let's close the Form
+    await asAlice.patch('/v1/projects/1/forms/simple')
+      .send({ state: 'closed' })
+      .expect(200);
+
+    // Should not be able make Submission
+    await asCollector.post('/v1/projects/1/forms/simple/submissions')
+      .send(testData.instances.simple.two)
+      .set('Content-Type', 'text/xml')
+      .expect(409);
 
   })));
 
