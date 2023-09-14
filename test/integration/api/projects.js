@@ -4,6 +4,8 @@ const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { QueryOptions } = require('../../../lib/util/db');
+const { Actor } = require('../../../lib/model/frames');
+// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects', () => {
@@ -417,8 +419,8 @@ describe('api: /projects', () => {
                 body.verbs.should.eqlInAnyOrder([
                   // following verbs from role: formfill
                   'project.read',
-                  'form.list',
-                  'form.read',
+                  'open_form.list',
+                  'open_form.read',
                   'submission.create',
                 ]);
               }))))));
@@ -439,11 +441,13 @@ describe('api: /projects', () => {
                 body.verbs.should.eqlInAnyOrder([
                   // following roles from formfill + viewer:
                   'project.read',
-                  'form.list',
-                  'form.read',
                   // following roles from formfill only:
+                  'open_form.list',
+                  'open_form.read',
                   'submission.create',
                   // following roles from viewer only:
+                  'form.list',
+                  'form.read',
                   'submission.read',
                   'submission.list',
                   'dataset.list',
@@ -965,7 +969,7 @@ describe('api: /projects', () => {
           })
           .expect(501)))); // 501 not implemented
 
-    it('should log the action in the audit log', testService((service, { Audits, Forms, Projects }) =>
+    it('should log the action in the audit log', testService((service, { Audits, Forms, Projects, Auth }) =>
       service.login('bob', (asBob) =>
         asBob.put('/v1/projects/1')
           .set('Content-Type', 'application/json')
@@ -979,11 +983,13 @@ describe('api: /projects', () => {
           .expect(200)
           .then(() => Promise.all([
             asBob.get('/v1/users/current').expect(200).then(({ body }) => body),
-            Projects.getById(1).then((o) => o.get())
-              .then((project) => Forms.getByProjectId(project.id)),
             Audits.get(new QueryOptions({ args: { action: 'form.update' } }))
           ]))
-          .then(([ bob, forms, audits ]) => {
+          .then(async ([ bob, audits ]) => {
+            const actor = new Actor(bob);
+            const forms = await Projects.getById(1).then((o) => o.get())
+              .then((project) => Forms.getByProjectId(Auth.by(actor), project.id));
+
             audits.length.should.equal(2);
 
             const simpleAudit = audits.find((a) => a.acteeId === forms[0].acteeId);
@@ -1633,11 +1639,13 @@ describe('api: /projects?forms=true', () => {
                 verbs.should.eqlInAnyOrder([
                   // following roles from formfill + viewer:
                   'project.read',
-                  'form.list',
-                  'form.read',
                   // following roles from formfill only:
+                  'open_form.list',
+                  'open_form.read',
                   'submission.create',
                   // following roles from viewer only:
+                  'form.list',
+                  'form.read',
                   'submission.read',
                   'submission.list',
                   'dataset.list',
@@ -1675,12 +1683,15 @@ describe('api: /projects?forms=true', () => {
             project.id.should.equal(1);
             project.verbs.should.eqlInAnyOrder([
               // following roles from app-user + viewer:
-              'form.read',
+              //none
+
               // following roles from app-user only:
+              'open_form.read',
               'submission.create',
               // following roles from viewer only:
               'project.read',
               'form.list',
+              'form.read',
               'submission.read',
               'submission.list',
               'dataset.list',
