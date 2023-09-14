@@ -715,6 +715,25 @@ describe('Entities API', () => {
         });
     }));
 
+    it('should reject creating new entity if dataset not yet published', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people')
+        .expect(404);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          label: 'Johnny Doe',
+          data: {}
+        })
+        .expect(404);
+    }));
+
     it('should create an Entity', testDataset(async (service) => {
       const asAlice = await service.login('alice');
 
