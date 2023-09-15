@@ -758,18 +758,16 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                 body.submissions.should.equal(0);
               })))));
 
-      it('should return the correct enketoId', testService((service, container) =>
+      it('should return the correct enketoId', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
             .set('Content-Type', 'application/xml')
             .send(testData.forms.simple2)
             .expect(200)
-            .then(() => exhaust(container))
             .then(() => {
               global.enketo.enketoId = '::ijklmnop';
               return asAlice.post('/v1/projects/1/forms/simple2/draft')
                 .expect(200)
-                .then(() => exhaust(container))
                 .then(() => asAlice.get('/v1/projects/1/forms/simple2')
                   .set('X-Extended-Metadata', true)
                   .expect(200)
