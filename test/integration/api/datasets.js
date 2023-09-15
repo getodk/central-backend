@@ -715,6 +715,40 @@ describe('datasets and entities', () => {
           });
       }));
 
+      it('should return dataset properties from multiple forms where later form publishes dataset', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.multiPropertyEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyEntity
+            .replace('multiPropertyEntity', 'multiPropertyEntity2')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/draft/publish');
+
+        await asAlice.get('/v1/projects/1/datasets/foo')
+          .expect(200)
+          .then(({ body }) => {
+            const { properties } = body;
+            properties.map((p) => p.name)
+              .should.be.eql([
+                'f_q1',
+                'e_q2',
+                'a_q3',
+                'c_q4',
+                'b_q1',
+                'd_q2',
+              ]);
+          });
+      }));
+
       it('should return dataset properties from multiple forms including updated form with updated schema', testService(async (service) => {
         const asAlice = await service.login('alice');
 
