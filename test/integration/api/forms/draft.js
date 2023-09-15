@@ -84,7 +84,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
 
       it('should request an enketoId while setting a new draft', testService(async (service, { env }) => {
         const asAlice = await service.login('alice');
-        global.enketo.token = '::ijklmnop';
+        global.enketo.enketoId = '::ijklmnop';
         await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
         global.enketo.callCount.should.equal(1);
         global.enketo.receivedUrl.startsWith(env.domain).should.be.true();
@@ -102,7 +102,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
         await asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
           .expect(200);
         global.enketo.callCount.should.equal(1);
-        global.enketo.token = '::ijklmnop';
+        global.enketo.enketoId = '::ijklmnop';
         await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
         global.enketo.callCount.should.equal(2);
         global.enketo.receivedUrl.startsWith(env.domain).should.be.true();
@@ -137,7 +137,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
         global.enketo.state = 'error';
         await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
         global.enketo.callCount.should.equal(1);
-        global.enketo.token = '::ijklmnop';
+        global.enketo.enketoId = '::ijklmnop';
         await exhaust(container);
         global.enketo.callCount.should.equal(2);
         global.enketo.receivedUrl.startsWith(container.env.domain).should.be.true();
@@ -166,7 +166,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
             .expect(200)
             .then(() => exhaust(container))
             .then(() => {
-              global.enketo.token = '::ijklmnop';
+              global.enketo.enketoId = '::ijklmnop';
               return asAlice.post('/v1/projects/1/forms/simple2/draft')
                 .expect(200)
                 .then(() => Promise.all([
@@ -906,7 +906,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
             .expect(200)
             .then(() => exhaust(container))
             .then(() => {
-              global.enketo.token = '::ijklmnop';
+              global.enketo.enketoId = '::ijklmnop';
               return asAlice.post('/v1/projects/1/forms/simple2/draft')
                 .expect(200)
                 .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft')

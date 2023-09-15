@@ -766,7 +766,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .expect(200)
             .then(() => exhaust(container))
             .then(() => {
-              global.enketo.token = '::ijklmnop';
+              global.enketo.enketoId = '::ijklmnop';
               return asAlice.post('/v1/projects/1/forms/simple2/draft')
                 .expect(200)
                 .then(() => exhaust(container))
