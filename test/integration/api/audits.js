@@ -6,6 +6,9 @@ const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
+const assertAuditActions = (audits, expected) => {
+  audits.map(a => a.action).should.deepEqual(expected);
+};
 const submitThree = (asAlice) =>
   asAlice.post('/v1/projects/1/forms/simple/submissions')
     .send(testData.instances.simple.one)
@@ -45,7 +48,7 @@ describe('/audits', () => {
               Users.getByEmail('david@getodk.org').then((o) => o.get())
             ]))
             .then(([ audits, project, alice, david ]) => {
-              assertAuditActions(audits, [ // eslint-disable-line no-use-before-define
+              assertAuditActions(audits, [
                 'user.create',
                 'project.update',
                 'project.create',
@@ -105,7 +108,7 @@ describe('/audits', () => {
               Users.getByEmail('david@getodk.org').then((o) => o.get())
             ]))
             .then(([ audits, [ project, form ], alice, david ]) => {
-              assertAuditActions(audits, [ // eslint-disable-line no-use-before-define
+              assertAuditActions(audits, [
                 'user.create',
                 'form.update.publish',
                 'form.create',
@@ -157,6 +160,25 @@ describe('/audits', () => {
               audits[4].actee.should.eql(plain(alice.actor.forApi()));
               audits[4].loggedAt.should.be.a.recentIsoDate();
             })))));
+
+    it('should return Enketo IDs for form', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simple2)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      const { body: audits } = await asAlice.get('/v1/audits')
+        .set('X-Extended-Metadata', true)
+        .expect(200);
+      assertAuditActions(audits, [
+        'form.update.publish',
+        'form.create',
+        'user.session.create'
+      ]);
+      const form = audits[0].actee;
+      form.enketoId.should.equal('::abcdefgh');
+      form.enketoOnceId.should.equal('::::abcdefgh');
+    }));
 
     it('should not expand actor if there is no actor', testService((service, { run }) =>
       run(sql`insert into audits (action, "loggedAt") values ('analytics', now())`)
@@ -234,7 +256,7 @@ describe('/audits', () => {
           .then(() => asAlice.get('/v1/audits?action=user')
             .expect(200)
             .then(({ body }) => {
-              assertAuditActions(body, [ // eslint-disable-line no-use-before-define
+              assertAuditActions(body, [
                 'user.delete',
                 'user.assignment.delete',
                 'user.assignment.create',
@@ -732,7 +754,3 @@ describe('/audits', () => {
     });
   });
 });
-
-function assertAuditActions(audits, expected) {
-  audits.map(a => a.action).should.deepEqual(expected);
-}
