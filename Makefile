@@ -4,6 +4,10 @@ node_modules: package.json
 	npm install --legacy-peer-deps
 	touch node_modules
 
+.PHONY: test-oidc-integration
+test-oidc-integration: node_modules
+	NODE_CONFIG_ENV=oidc-integration-test BCRYPT=no TEST_AUTH=oidc npx mocha --recursive --exit ./test/integration
+
 .PHONY: test-oidc-e2e
 test-oidc-e2e: node_modules
 	cd oidc-dev && \
@@ -56,26 +60,22 @@ debug: base
 
 .PHONY: test
 test: lint
-	NODE_CONFIG_ENV=test BCRYPT=no npm run test-all
+	NODE_CONFIG_ENV=test BCRYPT=no npx mocha --recursive --exit
 .PHONY: test-full
 test-full: lint
-	NODE_CONFIG_ENV=test npm run test-all
+	NODE_CONFIG_ENV=test npx mocha --recursive --exit
 
 .PHONY: test-integration
 test-integration: node_version
-	NODE_CONFIG_ENV=test BCRYPT=no npm run test-integration
-
-.PHONY: test-oidc-integration
-test-oidc-integration: node_modules
-	NODE_CONFIG_ENV=oidc-integration-test BCRYPT=no TEST_AUTH=oidc npm run test-integration
+	NODE_CONFIG_ENV=test BCRYPT=no npx mocha --recursive test/integration --exit
 
 .PHONY: test-unit
 test-unit: node_version
-	NODE_CONFIG_ENV=test npm run test-unit
+	NODE_CONFIG_ENV=test npx mocha --recursive test/unit --exit
 
 .PHONY: test-coverage
 test-coverage: node_version
-	NODE_CONFIG_ENV=test npx nyc -x "**/migrations/**" --reporter=lcov npm run test-all
+	NODE_CONFIG_ENV=test npx nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --recursive --exit test
 
 .PHONY: lint
 lint: node_version
