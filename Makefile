@@ -60,22 +60,22 @@ debug: base
 
 .PHONY: test
 test: lint
-	BCRYPT=no npx mocha --recursive --exit
+	BCRYPT=no npx mocha --recursive
 .PHONY: test-full
 test-full: lint
-	npx mocha --recursive --exit
+	npx mocha --recursive
 
 .PHONY: test-integration
 test-integration: node_version
-	BCRYPT=no npx mocha --recursive test/integration --exit
+	BCRYPT=no npx mocha --recursive test/integration
 
 .PHONY: test-unit
 test-unit: node_version
-	npx mocha --recursive test/unit --exit
+	npx mocha --recursive test/unit
 
 .PHONY: test-coverage
 test-coverage: node_version
-	npx nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --exit --recursive test
+	npx nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --recursive test
 
 .PHONY: lint
 lint: node_version

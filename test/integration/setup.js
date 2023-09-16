@@ -95,6 +95,9 @@ before(function() {
   this.timeout(0);
   return initialize();
 });
+after(async () => {
+  await db.end();
+});
 
 let mustReinitAfter;
 beforeEach(() => {
