@@ -2,6 +2,11 @@
   "name": "odk-central",
   "version": "0.1.0",
   "private": true,
+  "scripts": {
+    "test-all": "mocha --recursive --exit ./test",
+    "test-integration": "mocha --recursive --exit ./test/integration",
+    "test-unit": "mocha --recursive --exit ./test/unit"
+  },
   "engines": {
     "node": "18"
   },
