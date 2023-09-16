@@ -16,12 +16,12 @@ const { connect } = require(appRoot + '/lib/model/migrate');
 
 // slonik connection pool
 const { slonikPool } = require(appRoot + '/lib/external/slonik');
-const db = slonikPool(config.get('test.database'));
+const db = slonikPool(config.get('default.database'));
 
 // set up our mailer.
 const env = config.get('default.env');
 const { mailer } = require(appRoot + '/lib/external/mail');
-const mailConfig = config.get('test.email');
+const mailConfig = config.get('default.email');
 const mail = mailer(mergeRight(mailConfig, env));
 if (mailConfig.transport !== 'json')
   // eslint-disable-next-line no-console
@@ -71,7 +71,7 @@ const populate = (container, [ head, ...tail ] = fixtures) =>
 // this hook won't run if `test-unit` is called, as this directory is skipped
 // in that case.
 const initialize = async () => {
-  const migrator = connect(config.get('test.database'));
+  const migrator = connect(config.get('default.database'));
   const { log } = console;
   try {
     await migrator.raw('drop owned by current_user');
