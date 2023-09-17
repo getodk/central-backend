@@ -1,10 +1,10 @@
 name: OIDC e2e tests
-timeout-minutes: 2
 
 on: push
 
 jobs:
   oidc-e2e-test:
+    timeout-minutes: 2
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3

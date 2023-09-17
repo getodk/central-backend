@@ -1,10 +1,10 @@
 name: Full Standard Test Suite
-timeout-minutes: 2
 
 on: push
 
 jobs:
   standard-tests:
+    timeout-minutes: 2
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     services:

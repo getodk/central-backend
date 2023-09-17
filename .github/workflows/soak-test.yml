@@ -1,10 +1,10 @@
 name: Soak Test
-timeout-minutes: 2
 
 on: push
 
 jobs:
   soak-test:
+    timeout-minutes: 2
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     strategy:
