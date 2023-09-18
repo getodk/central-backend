@@ -1265,6 +1265,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
         should.not.exist(beforeWorker.enketoOnceId);
 
         // Second request, from worker
+        global.enketo.callCount.should.equal(2);
         await exhaust(container);
         global.enketo.callCount.should.equal(3);
         global.enketo.receivedUrl.should.equal(`${container.env.domain}/v1/projects/1`);

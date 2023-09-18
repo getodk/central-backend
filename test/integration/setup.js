@@ -41,7 +41,10 @@ const bcrypt = require(appRoot + '/lib/util/crypto').password(_bcrypt);
 
 // set up our enketo mock.
 const { reset: resetEnketo, ...enketo } = require(appRoot + '/test/util/enketo');
+// Initialize the mock before other setup that uses the mock, then reset the
+// mock after setup is complete and after each test.
 before(resetEnketo);
+after(resetEnketo);
 afterEach(resetEnketo);
 
 // set up odk analytics mock.
@@ -84,12 +87,7 @@ const initialize = async () => {
     await migrator.destroy();
   }
 
-  // When creating fixtures, create forms without Enketo IDs in order to
-  // maintain existing tests.
-  global.enketo.state = 'error';
-  return withDefaults({ db, bcrypt, context, enketo, env })
-    .transacting(populate)
-    .finally(resetEnketo);
+  return withDefaults({ db, bcrypt, context, enketo, env }).transacting(populate);
 };
 
 // eslint-disable-next-line func-names, space-before-function-paren
