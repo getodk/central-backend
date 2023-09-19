@@ -2298,17 +2298,21 @@ paths:
         - name: forms
           in: query
           description: |-
-            _(introduced: Version 1.5)_ If set to true then endpoint also returns the Forms that the authenticated Actor is allowed to see, with those Forms nested within their corresponding Project under a new parameter `formList`. The returned Forms will match structure of Forms requested with extended metadata (including additional `lastSubmission` timestamp and `submissions` and `reviewStates` counts)
+            _(introduced: Version 1.5)_ 
+            
+            If set to true then endpoint also returns the Forms that the authenticated Actor is allowed to see, with those Forms nested within their corresponding Project under a new parameter `formList`. The returned Forms will match structure of Forms requested with extended metadata (including additional `lastSubmission` timestamp and `submissions` and `reviewStates` counts)
           schema:
             type: boolean
           example: "true"
         - name: datasets
           in: query
           description: |-
-            _(introduced: Version 2023.4)_ If set to true then endpoint also returns the Datasets that the authenticated Actor is allowed to see, with those Datasets nested within their corresponding Project under a new parameter `datasetList`. The returned Datasets will match structure of Datasets requested with extended metadata (including additional `lastEntity` timestamp and `entities`)
+            _(introduced: Version 2023.4)_ 
+            
+            If set to true then endpoint also returns the Datasets that the authenticated Actor is allowed to see, with those Datasets nested within their corresponding Project under a new parameter `datasetList`. The returned Datasets will match structure of Datasets requested with extended metadata (including additional `lastEntity` timestamp and `entities`)
           schema:
             type: boolean
-          exmaple: "true"
+          example: "true"
       responses:
         200:
           description: OK
@@ -10423,7 +10427,7 @@ paths:
       tags:
       - Dataset Management
       summary: Dataset Metadata
-      description: Returns the metadata of a Dataset including properties and forms
+      description: Returns the metadata of a published Dataset including properties and forms
         that create and consume the Dataset.
       operationId: Dataset Metadata
       parameters:
@@ -10456,6 +10460,9 @@ paths:
                 createdAt: '2018-01-19T23:58:03.395Z'
                 projectId: 1
                 approvalRequired: true
+                sourceForms:
+                - xmlFormId: treeRegistration
+                  name: Tree Registration
                 linkedForms:
                 - xmlFormId: simple
                   name: Simple
@@ -10534,6 +10541,9 @@ paths:
                 createdAt: '2018-01-19T23:58:03.395Z'
                 projectId: 1
                 approvalRequired: true
+                sourceForms:
+                - xmlFormId: treeRegistration
+                  name: Tree Registration
                 linkedForms:
                 - xmlFormId: simple
                   name: Simple
@@ -14344,10 +14354,14 @@ components:
     DatasetMetadata:
       properties:
         linkedForms:
-          $ref: '#/components/schemas/EntitySummaryFields'
+          type: array
+          items:
+            $ref: '#/components/schemas/FormKeyValue'
           description: Forms that consume data from the Dataset
         sourceForms:
-          $ref: '#/components/schemas/FormKeyValue'
+          type: array
+          items:
+            $ref: '#/components/schemas/FormKeyValue'
           description: Forms that create Entities in the Dataset
         properties:
           type: array
