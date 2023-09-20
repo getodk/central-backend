@@ -2119,7 +2119,7 @@ describe('datasets and entities', () => {
             .expect(400)
             .then(({ body }) => {
               body.code.should.equal(400.25);
-              body.details.reason.should.equal('Invalid Dataset property.');
+              body.details.reason.should.equal('Invalid entity property name.');
             }))));
 
       it('should return a Problem if the savetos reference invalid properties (extra whitespace)', testService((service) =>
@@ -2130,7 +2130,7 @@ describe('datasets and entities', () => {
             .expect(400)
             .then(({ body }) => {
               body.code.should.equal(400.25);
-              body.details.reason.should.equal('Invalid Dataset property.');
+              body.details.reason.should.equal('Invalid entity property name.');
             }))));
 
       it('should return the created form upon success', testService((service) =>
@@ -2190,7 +2190,7 @@ describe('datasets and entities', () => {
             .expect(400)
             .then(({ body }) => {
               body.code.should.be.eql(400.25);
-              body.message.should.be.eql('The entity definition within the form is invalid. Multiple Form Fields cannot be saved to a single Dataset Property.');
+              body.message.should.be.eql('The entity definition within the form is invalid. Multiple Form Fields cannot be saved to a single property.');
             }));
       }));
 
@@ -2377,7 +2377,7 @@ describe('datasets and entities', () => {
               .expect(400)
               .then(({ body }) => {
                 body.code.should.equal(400.25);
-                body.details.reason.should.equal('Invalid Dataset property.');
+                body.details.reason.should.equal('Invalid entity property name.');
               }));
         }));
       });
