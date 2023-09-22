@@ -84,7 +84,9 @@ describe('extracting entities from submissions', () => {
             create: '1',
             id: 'uuid:12345678-1234-4123-8234-123456789abc',
             label: 'Alice (88)',
-            dataset: 'people'
+            dataset: 'people',
+            update: undefined,
+            baseVersion: undefined
           }));
         }));
 
