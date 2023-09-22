@@ -1251,7 +1251,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
       it('should request Enketo IDs from worker if request from endpoint fails', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
-        // First request to Enketo, from endpoint
+        // First request to Enketo, from the endpoint
         await asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.simple2)
           .set('Content-Type', 'application/xml')
@@ -1264,7 +1264,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
         should.not.exist(beforeWorker.enketoId);
         should.not.exist(beforeWorker.enketoOnceId);
 
-        // Second request, from worker
+        // Second request, from the worker
         global.enketo.callCount.should.equal(2);
         await exhaust(container);
         global.enketo.callCount.should.equal(3);

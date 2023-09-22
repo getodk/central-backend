@@ -8,6 +8,7 @@ const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
+const { without } = require(appRoot + '/lib/util/util');
 
 describe('api: /projects/:id/forms (create, read, update)', () => {
 
@@ -266,34 +267,6 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               body.draftToken.should.be.a.token();
             })))));
 
-    it('should worker-process the form draft over to enketo', testService((service, container) =>
-      service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
-          .set('Content-Type', 'application/xml')
-          .send(testData.forms.simple2)
-          .expect(200)
-          .then(() => exhaust(container))
-          .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft')
-            .expect(200)
-            .then(({ body }) => {
-              body.enketoId.should.equal('::abcdefgh');
-              should.not.exist(body.enketoOnceId);
-            })))));
-
-    it('should worker-process the published form over to enketo', testService((service, container) =>
-      service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms?publish=true')
-          .set('Content-Type', 'application/xml')
-          .send(testData.forms.simple2)
-          .expect(200)
-          .then(() => exhaust(container))
-          .then(() => asAlice.get('/v1/projects/1/forms/simple2')
-            .expect(200)
-            .then(({ body }) => {
-              body.enketoId.should.equal('::abcdefgh');
-              body.enketoOnceId.should.equal('::::abcdefgh');
-            })))));
-
     it('should if flagged save the given definition as published', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
@@ -323,6 +296,156 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .then(({ body }) => {
               body.publishedAt.should.be.a.recentIsoDate();
             })))));
+
+    describe('Enketo ID for draft', () => {
+      it('should request an enketoId', testService(async (service, { env }) => {
+        const asAlice = await service.login('alice');
+        const { body } = await asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+        global.enketo.callCount.should.equal(1);
+        global.enketo.createData.should.eql({
+          openRosaUrl: `${env.domain}/v1/test/${body.draftToken}/projects/1/forms/simple2/draft`,
+          xmlFormId: 'simple2',
+          token: undefined
+        });
+        body.enketoId.should.equal('::abcdefgh');
+        should.not.exist(body.enketoOnceId);
+      }));
+
+      it('should return with success even if request to Enketo fails', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        global.enketo.state = 'error';
+        const { body } = await asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+        should.not.exist(body.enketoId);
+        should.not.exist(body.enketoOnceId);
+      }));
+
+      it('should wait for Enketo only briefly @slow', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        global.enketo.wait = (done) => { setTimeout(done, 600); };
+        const { body } = await asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+        should.not.exist(body.enketoId);
+        should.not.exist(body.enketoOnceId);
+      }));
+
+      it('should request an enketoId from worker if request from endpoint fails', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // First request to Enketo, from the endpoint
+        global.enketo.state = 'error';
+        await asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+
+        // Second request, from the worker
+        global.enketo.callCount.should.equal(1);
+        await exhaust(container);
+        global.enketo.callCount.should.equal(2);
+        const { body } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        global.enketo.createData.should.eql({
+          openRosaUrl: `${container.env.domain}/v1/test/${body.draftToken}/projects/1/forms/simple2/draft`,
+          xmlFormId: 'simple2',
+          token: undefined
+        });
+        body.enketoId.should.equal('::abcdefgh');
+        should.not.exist(body.enketoOnceId);
+      }));
+
+      it('should not request an enketoId from worker if request from endpoint succeeds', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+        global.enketo.callCount.should.equal(1);
+        await exhaust(container);
+        global.enketo.callCount.should.equal(1);
+      }));
+    });
+
+    describe('Enketo IDs for published form', () => {
+      it('should request Enketo IDs', testService(async (service, { env }) => {
+        const asAlice = await service.login('alice');
+        const { body } = await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+        global.enketo.callCount.should.equal(1);
+        without(['token'], global.enketo.createData).should.eql({
+          openRosaUrl: `${env.domain}/v1/projects/1`,
+          xmlFormId: 'simple2'
+        });
+        body.enketoId.should.equal('::abcdefgh');
+        body.enketoOnceId.should.equal('::::abcdefgh');
+      }));
+
+      it('should return with success even if request to Enketo fails', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        global.enketo.state = 'error';
+        const { body } = await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+        should.not.exist(body.enketoId);
+        should.not.exist(body.enketoOnceId);
+      }));
+
+      it('should wait for Enketo only briefly @slow', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        global.enketo.wait = (done) => { setTimeout(done, 600); };
+        const { body } = await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+        should.not.exist(body.enketoId);
+        should.not.exist(body.enketoOnceId);
+      }));
+
+      it('should request Enketo IDs from worker if request from endpoint fails', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // First request to Enketo, from the endpoint
+        global.enketo.state = 'error';
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+
+        // Second request, from the worker
+        global.enketo.callCount.should.equal(1);
+        await exhaust(container);
+        global.enketo.callCount.should.equal(2);
+        const { body } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        without(['token'], global.enketo.createData).should.eql({
+          openRosaUrl: `${container.env.domain}/v1/projects/1`,
+          xmlFormId: 'simple2'
+        });
+        body.enketoId.should.equal('::abcdefgh');
+        body.enketoOnceId.should.equal('::::abcdefgh');
+      }));
+
+      it('should not request Enketo IDs from worker if request from endpoint succeeds', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+        global.enketo.callCount.should.equal(1);
+        await exhaust(container);
+        global.enketo.callCount.should.equal(1);
+      }));
+    });
 
     it('should log the action in the audit log', testService((service) =>
       service.login('alice', (asAlice) =>
