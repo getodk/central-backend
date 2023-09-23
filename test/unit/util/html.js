@@ -30,6 +30,10 @@ describe('util/html', () => {
       [ '/-/xyz',                    'http://localhost:8989/-/xyz' ], // eslint-disable-line no-multi-spaces
       [ '/account/edit',             '/#/account/edit' ],             // eslint-disable-line no-multi-spaces
       [ '/users',                    '/#/users' ],                    // eslint-disable-line no-multi-spaces
+      [ '/users"><badTag ',          '/#/users%22%3E%3CbadTag' ],     // eslint-disable-line no-multi-spaces
+      [ 'http://example.com',        '/#/' ],                         // eslint-disable-line no-multi-spaces
+      [ 'https://example.com',       '/#/' ],                         // eslint-disable-line no-multi-spaces
+      [ 'javascript:badFn()',        '/#/' ],                         // eslint-disable-line no-multi-spaces
     ].forEach(([next, expected]) => {
       it(`should convert next=${next} to ${expected}`, () => {
         safeNextPathFrom(next).should.equal(expected);
