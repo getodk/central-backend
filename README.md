@@ -24,7 +24,7 @@ A number of operational tasks (creating accounts, setting passwords, etc) may be
 
 ### Accessing the API
 
-ODK Central Backend is, first and foremost, a RESTful HTTP API server that manages Users, Forms, Submissions, and other objects necessary to run an ODK data collection campaign. This API is used by the bundled frontend web interface to form a complete user-installable server solution, but that API can also be used on its own with or without the frontend to programmatically manage a data collection project. We provide a full documentation of the API in the standard [API Blueprint](https://apiblueprint.org/) format: you can find a plain version of that documentation [here](https://github.com/getodk/central-backend/blob/master/docs/api.md) in the repository, or you can access the [Apiary version](https://odkcentral.docs.apiary.io/) for a friendlier version of the same material with neat features like an interactive query tool.
+ODK Central Backend is, first and foremost, a RESTful HTTP API server that manages Users, Forms, Submissions, and other objects necessary to run an ODK data collection campaign. This API is used by the bundled frontend web interface to form a complete user-installable server solution, but that API can also be used on its own with or without the frontend to programmatically manage a data collection project. We provide a full documentation of the API in the standard [OpenAPI](https://www.openapis.org/) format. You can find a plain version of that documentation [here](https://github.com/getodk/central-backend/blob/master/docs/api.yaml) in the repository, or you can access the [published version](https://docs.getodk.org/central-api/) for a friendlier interface.
 
 ## Setting up a development environment
 
