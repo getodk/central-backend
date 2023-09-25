@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Build status](https://circleci.com/gh/getodk/central-backend.svg?style=shield)](https://circleci.com/gh/getodk/central-backend)
 
-ODK Central Backend is a minimal [ODK](https://getodk.org/) server based on Node.js and Postgres. It is currently under development.
+ODK Central Backend is the API server for [ODK](https://getodk.org/). It's built with Node.js and Postgres.
 
 This repository contains only the code for the backend API server: [Central Frontend](https://github.com/getodk/central-frontend) holds frontend code, and [Central](https://github.com/getodk/central) contains both the Docker-based production deployment infrastructure for the combined frontend/backend, as well as project management and issue tickets.
 
@@ -29,8 +29,9 @@ ODK Central Backend is, first and foremost, a RESTful HTTP API server that manag
 ## Setting up a development environment
 
 1. Install Node.js 18 (other versions will not work).
-2. Set up the database. This can be done manually (see "Setting up the database manually"), or by running `make run-docker-postgres` if you have Docker installed.
-3. Go to the repository root in a command line (where this README is) and run `make` with no arguments. This will install all npm dependencies and run all necessary migrations on the database; see the [makefile](Makefile) for details.
+2. Install PostgreSQL 14 (older versions will not work).
+3. Set up the database. This can be done manually (see "Setting up the database manually"), or by running `make run-docker-postgres` if you have Docker installed.
+4. Go to the repository root in a command line (where this README is) and run `make` with no arguments. This will install all npm dependencies and run all necessary migrations on the database; see the [makefile](Makefile) for details.
 
 Setup is now complete.
 
