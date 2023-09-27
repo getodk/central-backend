@@ -9,7 +9,7 @@ describe('util/html', () => {
       const output = html`a string without references to vars`;
 
       // then
-      output.should.equal('a string without references to vars');
+      output.toString().should.equal('a string without references to vars');
     });
 
     it('should return input with vars substituted', () => {
@@ -21,7 +21,39 @@ describe('util/html', () => {
       const output = html`<div>${x}</div><span>${y}${x}</span>`;
 
       // then
-      output.should.equal('<div>1</div><span>helo1</span>');
+      output.toString().should.equal('<div>1</div><span>helo1</span>');
+    });
+
+    [
+      [ 'http://example.com/path?a=1&b=2', 'http://example.com/path?a=1&amp;b=2' ],
+      [ '<div>"a" & \'b\'</div>', '&lt;div&gt;&quot;a&quot; &amp; &apos;b&apos;&lt;/div&gt;' ],
+    ].forEach(([ raw, expected ], idx) => {
+      it(`should encode HTML entities in variables #${idx}`, () => {
+        // when
+        const output = html`<p>${raw}</p>`;
+
+        // then
+        output.toString().should.equal('<p>' + expected + '</p>');
+      });
+
+      it(`should not double-encode HTML entities in variables #${idx}`, () => {
+        // when
+        const output1 = html`<p>${raw}</p>`;
+        const output2 = html`<div>${output1}</div>`;
+
+        // then
+        output2.toString().should.equal('<div><p>' + expected + '</p></div>');
+      });
+
+      it(`should not triple-encode HTML entities in variables #${idx}`, () => {
+        // when
+        const output1 = html`<p>${raw}</p>`;
+        const output2 = html`<div>${output1}</div>`;
+        const output3 = html`<body>${output2}</body>`;
+
+        // then
+        output3.toString().should.equal('<body><div><p>' + expected + '</p></div></body>');
+      });
     });
   });
 
