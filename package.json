@@ -24,6 +24,7 @@
     "express": "~4.18",
     "express-graceful-exit": "~0.5",
     "fast-myers-diff": "~3",
+    "html-entities": "^2.4.0",
     "htmlparser2": "~3.9",
     "knex": "~0.21",
     "luxon": "~0.3",
