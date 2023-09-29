@@ -845,6 +845,14 @@ describe('worker: entity', () => {
           person.currentVersion.version.should.equal(2);
         });
 
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs[0].should.be.an.Audit();
+          logs[0].action.should.be.eql('entity.update.version');
+          logs[0].actor.displayName.should.be.eql('Alice');
+        });
+
       // update again
       await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
         .send(testData.instances.updateEntity.one
