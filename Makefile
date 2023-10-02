@@ -96,3 +96,8 @@ rm-docker-postgres: stop-docker-postgres
 .PHONY: check-file-headers
 check-file-headers:
 	git ls-files | node lib/bin/check-file-headers.js
+
+.PHONY: api-docs
+api-docs:
+	(test "$(docker images -q odk-docs)" || docker build --file odk-docs.dockerfile -t odk-docs .) && \
+	docker run --rm -it -v ./docs/api.yaml:/docs/docs/_static/api-spec/central.yaml -p 8000:8000 odk-docs
