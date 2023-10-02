@@ -61,9 +61,14 @@ debug: base
 .PHONY: test
 test: lint
 	BCRYPT=no npx mocha --recursive --exit
+
 .PHONY: test-full
 test-full: lint
 	npx mocha --recursive --exit
+
+.PHONY: test-fast
+test-fast: node_version
+	BCRYPT=no npx mocha --recursive --exit --fgrep @slow --invert
 
 .PHONY: test-integration
 test-integration: node_version
