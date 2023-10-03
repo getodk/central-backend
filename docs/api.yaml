@@ -7745,7 +7745,7 @@ paths:
         in: query
         description: If provided, will filter responses to those matching the given
           OData query. Only [certain fields](/central-api-odata-endpoints/#data-document)
-          are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`,
+          are available to reference. The operators `lt`, `le`, `eq`, `ne`, `ge`,
           `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`,
           `year`, `month`, `day`, `hour`, `minute`, `second`.
         schema:
@@ -7859,7 +7859,7 @@ paths:
         in: query
         description: If provided, will filter responses to those matching the given
           OData query. Only [certain fields](/central-api-odata-endpoints/#data-document)
-          are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`,
+          are available to reference. The operators `lt`, `le`, `eq`, `ne`, `ge`,
           `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`,
           `year`, `month`, `day`, `hour`, `minute`, `second`.
         schema:
@@ -7970,7 +7970,7 @@ paths:
         in: query
         description: If provided, will filter responses to those matching the given
           OData query. Only [certain fields](/central-api-odata-endpoints/#data-document)
-          are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`,
+          are available to reference. The operators `lt`, `le`, `eq`, `ne`, `ge`,
           `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`,
           `year`, `month`, `day`, `hour`, `minute`, `second`.
         schema:
@@ -8050,7 +8050,7 @@ paths:
         in: query
         description: If provided, will filter responses to those matching the given
           OData query. Only [certain fields](/central-api-odata-endpoints/#data-document)
-          are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`,
+          are available to reference. The operators `lt`, `le`, `eq`, `ne`, `ge`,
           `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`,
           `year`, `month`, `day`, `hour`, `minute`, `second`.
         schema:
@@ -12189,7 +12189,7 @@ paths:
         in: query
         description: If provided, will filter responses to those matching the query.
           Only [certain fields](/central-api-odata-endpoints/#data-document)
-          are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`,
+          are available to reference. The operators `lt`, `le`, `eq`, `ne`, `ge`,
           `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`,
           `year`, `month`, `day`, `hour`, `minute`, `second`.
         schema:
@@ -12658,7 +12658,7 @@ paths:
         in: query
         description: If provided, will filter responses to those matching the query.
           Only [certain fields](/central-api-odata-endpoints/#data-document)
-          are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`,
+          are available to reference. The operators `lt`, `le`, `eq`, `ne`, `ge`,
           `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`,
           `year`, `month`, `day`, `hour`, `minute`, `second`.
         schema:
@@ -13107,7 +13107,7 @@ paths:
         in: query
         description: If provided, will filter responses to those matching the query.
           Only [certain fields](/central-api-odata-endpoints/#data-document)
-          are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`,
+          are available to reference. The operators `lt`, `le`, `eq`, `ne`, `ge`,
           `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`,
           `year`, `month`, `day`, `hour`, `minute`, `second`.
         schema:
