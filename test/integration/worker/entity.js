@@ -839,10 +839,10 @@ describe('worker: entity', () => {
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(200)
-        .then(({ body: person, headers }) => {
+        .then(({ body: person }) => {
           person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
           person.currentVersion.label.should.eql('Alicia (85)');
-          headers.etag.should.be.eql('"2"');
+          person.currentVersion.version.should.equal(2);
         });
 
       // update again
@@ -858,10 +858,10 @@ describe('worker: entity', () => {
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .set('X-Extended-Metadata', true)
         .expect(200)
-        .then(({ body: person, headers }) => {
+        .then(({ body: person }) => {
           person.currentVersion.data.should.eql({ age: '84', first_name: 'Alicia' });
           person.currentVersion.label.should.eql('Alicia (85)');
-          headers.etag.should.be.eql('"3"');
+          person.currentVersion.version.should.equal(3);
         });
     }));
   });

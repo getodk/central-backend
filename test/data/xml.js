@@ -673,49 +673,16 @@ module.exports = {
     },
     updateEntity: {
       one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="updateEntity" version="1.0">
-            <meta>
-              <instanceID>one</instanceID>
-              <orx:instanceName>one</orx:instanceName>
-              <entity dataset="people" id="12345678-1234-4123-8234-123456789abc" baseVersion="1" update="1">
-                <label>Alicia (85)</label>
-              </entity>
-            </meta>
-            <name>Alicia</name>
-            <age>85</age>
-          </data>`,
-      two: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="updateEntity" version="1.0">
-            <meta>
-              <instanceID>one</instanceID>
-              <orx:instanceName>one</orx:instanceName>
-              <entity dataset="people" id="12345678-1234-4123-8234-123456789aaa" baseVersion="1" update="1">
-                <label>Julie (30)</label>
-              </entity>
-            </meta>
-            <name>Julie</name>
-            <age>30</age>
-          </data>`,
-      three: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="updateEntity" version="1.0">
-          <meta>
-            <instanceID>one</instanceID>
-            <orx:instanceName>one</orx:instanceName>
-            <entity dataset="people" id="12345678-1234-4123-8234-123456789bbb" baseVersion="1" update="1">
-              <label>Jonathan</label>
-            </entity>
-          </meta>
-          <name>Jonathan</name>
-          <age></age>
-        </data>`,
-      four: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="updateEntity" version="1.0">
         <meta>
           <instanceID>one</instanceID>
           <orx:instanceName>one</orx:instanceName>
-          <entity dataset="people" id="12345678-1234-4123-8234-123456789ccc" baseVersion="1" update="1">
-            <label>Bob (45)</label>
+          <entity dataset="people" id="12345678-1234-4123-8234-123456789abc" baseVersion="1" update="1">
+            <label>Alicia (85)</label>
           </entity>
         </meta>
-        <name>Bob</name>
-        <age>45</age>
-      </data>`,
+        <name>Alicia</name>
+        <age>85</age>
+      </data>`
     },
     groupRepeat: {
       one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="groupRepeat">
