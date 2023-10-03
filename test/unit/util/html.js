@@ -1,30 +1,8 @@
 const appRoot = require('app-root-path');
 // eslint-disable-next-line import/no-dynamic-require
-const { html, safeNextPathFrom } = require(appRoot + '/lib/util/html');
+const { safeNextPathFrom } = require(appRoot + '/lib/util/html');
 
 describe('util/html', () => {
-  describe('html()', () => {
-    it('should return a simple string unmodified', () => {
-      // when
-      const output = html`a string without references to vars`;
-
-      // then
-      output.should.equal('a string without references to vars');
-    });
-
-    it('should return input with vars substituted', () => {
-      // given
-      const x = 1;
-      const y = 'helo';
-
-      // when
-      const output = html`<div>${x}</div><span>${y}${x}</span>`;
-
-      // then
-      output.should.equal('<div>1</div><span>helo1</span>');
-    });
-  });
-
   describe('safeNextPathFrom()', () => {
     [
       // odk-central-frontend
