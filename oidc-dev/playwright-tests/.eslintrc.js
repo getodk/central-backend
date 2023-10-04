@@ -13,16 +13,9 @@ module.exports = {
     browser: true, // for page.waitForFunction() code
   },
   rules: {
-    // This rule does not work if the node_modules directory has not been populated.
-    // Downloading playwright is quite slow, so it's probably better we don't have
-    // to do that before linting.
+    // This rule does not work if the node_modules directory has not been
+    // populated.  Downloading playwright is quite slow, so it's probably better
+    // we don't have to do that before linting.
     'import/no-unresolved': 'off',
-  },
-  settings: {
-    'import/resolver': {
-      node: {
-        moduleDirectory: 'node_modules',
-      },
-    },
   },
 };
