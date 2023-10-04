@@ -808,5 +808,62 @@ describe('worker: entity', () => {
         });
     }));
   });
+
+  describe('should update an entity', () => {
+    it('should update an entity', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
+          person.currentVersion.label.should.eql('Alicia (85)');
+          person.currentVersion.version.should.equal(2);
+        });
+
+      // update again
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one
+          .replace('<instanceID>one</instanceID>', '<instanceID>one-v2</instanceID>')
+          .replace('<age>85</age>', '<age>84</age>'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.data.should.eql({ age: '84', first_name: 'Alicia' });
+          person.currentVersion.label.should.eql('Alicia (85)');
+          person.currentVersion.version.should.equal(3);
+        });
+    }));
+  });
 });
 

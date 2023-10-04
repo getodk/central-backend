@@ -393,6 +393,28 @@ module.exports = {
   </h:head>
 </h:html>`,
 
+    updateEntity: `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+  <h:head>
+    <model entities:entities-version="2022.1.0">
+      <instance>
+        <data id="updateEntity" orx:version="1.0">
+          <name/>
+          <age/>
+          <hometown/>
+          <meta>
+            <entity dataset="people" id="" update="" baseVersion="">
+              <label/>
+            </entity>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+      <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+    </model>
+  </h:head>
+</h:html>`,
+
     groupRepeat: `<?xml version="1.0"?>
     <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
         <h:head>
@@ -649,6 +671,19 @@ module.exports = {
         <q4>d</q4>
       </data>`,
     },
+    updateEntity: {
+      one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="updateEntity" version="1.0">
+        <meta>
+          <instanceID>one</instanceID>
+          <orx:instanceName>one</orx:instanceName>
+          <entity dataset="people" id="12345678-1234-4123-8234-123456789abc" baseVersion="1" update="1">
+            <label>Alicia (85)</label>
+          </entity>
+        </meta>
+        <name>Alicia</name>
+        <age>85</age>
+      </data>`
+    },
     groupRepeat: {
       one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="groupRepeat">
       <text>xyz</text>
@@ -681,7 +716,7 @@ module.exports = {
         </hiv_medication>
       </hospital>
       <meta>
-       <instanceID>uuid:f7908274-ef70-4169-90a0-e1389ab732ff</instanceID>
+        <instanceID>uuid:f7908274-ef70-4169-90a0-e1389ab732ff</instanceID>
       </meta>
     </data>`
     }
