@@ -72,6 +72,31 @@ describe('extracting and validating entities', () => {
       validatedEntity.system.should.not.have.property('id');
       validatedEntity.system.should.have.property('uuid', '12345678-1234-4123-8234-123456789abc');
     });
+
+    it('should throw error when baseVersion for update is missing', () => {
+      (() => validateEntity({
+        system: {
+          id: '12345678-1234-4123-8234-123456789abc',
+          label: 'foo',
+          dataset: 'foo',
+          update: '1'
+        },
+        data: {}
+      })).should.throw(/Required parameter baseVersion missing/);
+    });
+
+    it('should throw error when baseVersion is not an integer', () => {
+      (() => validateEntity({
+        system: {
+          id: '12345678-1234-4123-8234-123456789abc',
+          label: 'foo',
+          dataset: 'foo',
+          update: '1',
+          baseVersion: 'a'
+        },
+        data: {}
+      })).should.throw("Invalid input data type: expected (baseVersion) to be (integer)");
+    });
   });
 
   describe('extract entity from submission: parseSubmissionXml', () => {

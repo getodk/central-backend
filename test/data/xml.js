@@ -682,6 +682,15 @@ module.exports = {
         </meta>
         <name>Alicia</name>
         <age>85</age>
+      </data>`,
+      two: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="updateEntity" version="1.0">
+        <meta>
+          <instanceID>two</instanceID>
+          <orx:instanceName>two</orx:instanceName>
+          <entity dataset="people" id="12345678-1234-4123-8234-123456789abc" baseVersion="1" update="1">
+            <label>Alicia - 85</label>
+          </entity>
+        </meta>
       </data>`
     },
     groupRepeat: {

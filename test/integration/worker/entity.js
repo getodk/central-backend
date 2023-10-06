@@ -1061,6 +1061,98 @@ describe('worker: entity', () => {
       createEvent.isEmpty().should.equal(true);
       errorEvent.isEmpty().should.equal(true);
     }));
+
+    it('should update an entity and mark it SOFT conflict', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ data: { age: '99' } })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // changes label only
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body: person }) => {
+          person.conflict.should.be.eql('soft');
+
+          const { currentVersion } = person;
+          currentVersion.data.should.eql({ age: '99', first_name: 'Alice' });
+          currentVersion.label.should.eql('Alicia - 85');
+          currentVersion.version.should.equal(3);
+          currentVersion.conflictingProperties.should.be.eql([]);
+        });
+    }));
+
+    it('should update an entity and mark it SOFT conflict', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ data: { age: '99' } })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // all properties changed
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body: person }) => {
+          person.conflict.should.be.eql('hard');
+
+          const { currentVersion } = person;
+          currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
+          currentVersion.label.should.eql('Alicia (85)');
+          currentVersion.version.should.equal(3);
+          currentVersion.conflictingProperties.should.be.eql(['age']);
+        });
+    }));
   });
 });
 
