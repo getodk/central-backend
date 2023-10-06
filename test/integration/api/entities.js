@@ -405,6 +405,59 @@ describe('Entities API', () => {
         });
     }));
 
+    it('should return all versions of the Entity - Conflicts', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .send({ data: { age: '12' } })
+        .set('If-Match', '"1"')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Soft conflict - only label is changed
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.conflict.should.be.eql('soft');
+        });
+
+      // Hard conflict - all properties are changed
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.conflict.should.be.eql('hard');
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .expect(200)
+        .then(({ body: versions }) => {
+          versions.forEach(v => {
+            v.should.be.an.EntityDef();
+            v.should.have.property('data');
+          });
+
+          versions[2].conflictingProperties.should.be.eql([]);
+          versions[3].conflictingProperties.should.be.eql(['age', 'label']);
+        });
+    }));
   });
 
   describe('GET /datasets/:name/entities/:uuid/diffs', () => {

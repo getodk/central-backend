@@ -95,7 +95,7 @@ describe('extracting and validating entities', () => {
           baseVersion: 'a'
         },
         data: {}
-      })).should.throw("Invalid input data type: expected (baseVersion) to be (integer)");
+      })).should.throw('Invalid input data type: expected (baseVersion) to be (integer)');
     });
   });
 
