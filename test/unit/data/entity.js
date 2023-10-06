@@ -5,7 +5,7 @@ const { parseSubmissionXml, extractEntity, validateEntity, extractSelectedProper
 const { fieldsFor } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
-describe('extracting entities from submissions', () => {
+describe('extracting and validating entities', () => {
   describe('validateEntity', () => {
     it('should throw errors on when label is missing', () => {
       const entity = {
@@ -73,43 +73,108 @@ describe('extracting entities from submissions', () => {
     });
   });
 
-  describe('parseSubmissionXml', () => {
-    it('should return filled in entity props', () =>
-      fieldsFor(testData.forms.simpleEntity)
-        .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-        .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one))
-        .then((result) => {
-          should(result.data).eql(Object.assign(Object.create(null), { first_name: 'Alice', age: '88' }));
-          should(result.system).eql(Object.assign(Object.create(null), {
-            create: '1',
-            id: 'uuid:12345678-1234-4123-8234-123456789abc',
-            label: 'Alice (88)',
-            dataset: 'people',
-            update: undefined,
-            baseVersion: undefined
-          }));
-        }));
+  describe('extract entity from submission: parseSubmissionXml', () => {
+    // Used to compare entity structure when Object.create(null) used.
+    beforeEach(() => {
+      should.config.checkProtoEql = false;
+    });
+    afterEach(() => {
+      should.config.checkProtoEql = true;
+    });
 
-    describe('create', () => {
-      it('should create entity if create is "1"', () =>
+    describe('new entity', () => {
+      it('should return entity data parsed from submission based on form fields', () =>
         fieldsFor(testData.forms.simpleEntity)
           .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
           .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one))
           .then((result) => {
-            should.exist(result);
+            should(result.data).eql({ first_name: 'Alice', age: '88' });
           }));
 
-      it('should create entity if create is "true"', () =>
+      it('should return entity system data parsed from submission', () =>
+        fieldsFor(testData.forms.simpleEntity)
+          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
+          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one))
+          .then((result) => {
+            should(result.system).eql({
+              create: '1',
+              id: 'uuid:12345678-1234-4123-8234-123456789abc',
+              label: 'Alice (88)',
+              dataset: 'people',
+              update: undefined,
+              baseVersion: undefined
+            });
+          }));
+
+      it('should get entity uuid without uuid: prefix', () =>
+        fieldsFor(testData.forms.simpleEntity)
+          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
+          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('uuid:', '')))
+          .then((result) => {
+            should(result.system).eql({
+              create: '1',
+              id: '12345678-1234-4123-8234-123456789abc',
+              label: 'Alice (88)',
+              dataset: 'people',
+              update: undefined,
+              baseVersion: undefined
+            });
+          }));
+
+      it('should get create property of entity if create is "true"', () =>
         fieldsFor(testData.forms.simpleEntity)
           .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
           .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('create="1"', 'create="true"')))
           .then((result) => {
-            should.exist(result);
+            result.system.create.should.equal('true');
+          }));
+
+      it('should get any value of create', () =>
+        fieldsFor(testData.forms.simpleEntity)
+          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
+          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('create="1"', 'create="foo"')))
+          .then((result) => {
+            result.system.create.should.equal('foo');
+          }));
+
+      it('should get (but later ignore) baseVersion when it is provided with create instead of update', () =>
+        fieldsFor(testData.forms.updateEntity)
+          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
+          .then((fields) => parseSubmissionXml(fields, testData.instances.updateEntity.one.replace('update="1"', 'create="1"')))
+          .then((result) => {
+            should.not.exist(result.system.update);
+            result.system.create.should.equal('1');
+            result.system.baseVersion.should.equal('1');
+          }));
+    });
+
+    describe('update entity', () => {
+      it('should return entity data parsed from submission based on form fields', () =>
+        fieldsFor(testData.forms.updateEntity)
+          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
+          .then((fields) => parseSubmissionXml(fields, testData.instances.updateEntity.one))
+          .then((result) => {
+            should(result.data).eql(Object.assign(Object.create(null), { first_name: 'Alicia', age: '85' }));
+          }));
+
+      it('should return entity system data parsed from submission', () =>
+        fieldsFor(testData.forms.updateEntity)
+          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
+          .then((fields) => parseSubmissionXml(fields, testData.instances.updateEntity.one))
+          .then((result) => {
+            should(result.system).eql({
+              create: undefined,
+              id: '12345678-1234-4123-8234-123456789abc',
+              label: 'Alicia (85)',
+              dataset: 'people',
+              update: '1',
+              baseVersion: '1'
+            });
           }));
     });
   });
 
-  describe('extractEntity', () => {
+  describe('exctact entity from API request: extractEntity', () => {
     // Used to compare entity structure when Object.create(null) used.
     beforeEach(() => {
       should.config.checkProtoEql = false;
