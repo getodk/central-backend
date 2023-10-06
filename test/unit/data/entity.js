@@ -1,7 +1,8 @@
 const should = require('should');
 const appRoot = require('app-root-path');
 const assert = require('assert');
-const { parseSubmissionXml, extractEntity, validateEntity, extractSelectedProperties, selectFields, diffEntityData } = require(appRoot + '/lib/data/entity');
+const { ConflictType } = require('../../../lib/data/entity');
+const { parseSubmissionXml, extractEntity, validateEntity, extractSelectedProperties, selectFields, diffEntityData, getDiffProp, getWithConflictDetails } = require(appRoot + '/lib/data/entity');
 const { fieldsFor } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
@@ -635,6 +636,45 @@ describe('extracting and validating entities', () => {
 
       diffEntityData(defs).should.be.eql(expectedOutput);
 
+    });
+  });
+
+  describe('getDiffProp', () => {
+
+    it('should return list of different properties', () => {
+      getDiffProp({ name: 'John', age: '22', gender: 'male' }, { name: 'Jane', age: '22', hometown: 'Boston' })
+        .should.eql(['name']);
+    });
+  });
+
+  describe('getWithConflictDetails', () => {
+
+    it('should fill in correct information for SOFT conflict', () => {
+      const defs = [
+        { version: 1, label: 'John', data: { name: 'John', age: '88' }, dataReceived: { name: 'John', age: '88' }, conflictingProp: null, baseVersion: null },
+        { version: 2, label: 'Jane', data: { name: 'Jane', age: '88' }, dataReceived: { name: 'Jane' }, conflictingProp: [], baseVersion: 1 },
+        { version: 3, label: 'Jane', data: { name: 'Jane', age: '99' }, dataReceived: { age: '99' }, conflictingProp: [], baseVersion: 1 }
+      ];
+
+      const result = getWithConflictDetails(defs);
+
+      result[2].conflict.should.be.eql(ConflictType.SOFT);
+      result[2].baseDiff.should.be.eql(['age']);
+      result[2].serverDiff.should.be.eql(['age']);
+    });
+
+    it('should fill in correct information for HARD conflict', () => {
+      const defs = [
+        { version: 1, label: 'John', data: { name: 'John', age: '88' }, dataReceived: { name: 'John', age: '88' }, conflictingProp: null, baseVersion: null },
+        { version: 2, label: 'Jane', data: { name: 'Jane', age: '77' }, dataReceived: { age: '77' }, conflictingProp: [], baseVersion: 1 },
+        { version: 3, label: 'Jane', data: { name: 'Jane', age: '99' }, dataReceived: { age: '99' }, conflictingProp: ['age'], baseVersion: 1 }
+      ];
+
+      const result = getWithConflictDetails(defs);
+
+      result[2].conflict.should.be.eql(ConflictType.HARD);
+      result[2].baseDiff.should.be.eql(['age']);
+      result[2].serverDiff.should.be.eql(['age']);
     });
   });
 });
