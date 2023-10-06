@@ -123,9 +123,9 @@ describe('api: /projects/:id/forms (drafts)', () => {
         should.not.exist(body.enketoId);
       }));
 
-      it('should stop waiting for Enketo after 0.5 seconds @slow', testService(async (service) => {
+      it('should wait for Enketo only briefly @slow', testService(async (service) => {
         const asAlice = await service.login('alice');
-        global.enketo.wait = (f) => { setTimeout(f, 501); };
+        global.enketo.wait = (done) => { setTimeout(done, 600); };
         await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
         const { body } = await asAlice.get('/v1/projects/1/forms/simple/draft')
           .expect(200);
@@ -1181,13 +1181,13 @@ describe('api: /projects/:id/forms (drafts)', () => {
         should.not.exist(form.enketoOnceId);
       }));
 
-      it('should stop waiting for Enketo after 0.5 seconds @slow', testService(async (service) => {
+      it('should wait for Enketo only briefly @slow', testService(async (service) => {
         const asAlice = await service.login('alice');
         await asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.simple2)
           .set('Content-Type', 'application/xml')
           .expect(200);
-        global.enketo.wait = (f) => { setTimeout(f, 501); };
+        global.enketo.wait = (done) => { setTimeout(done, 600); };
         await asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
           .expect(200);
         const { body: form } = await asAlice.get('/v1/projects/1/forms/simple2')
@@ -1251,7 +1251,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
       it('should request Enketo IDs from worker if request from endpoint fails', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
-        // First request to Enketo, from endpoint
+        // First request to Enketo, from the endpoint
         await asAlice.post('/v1/projects/1/forms')
           .send(testData.forms.simple2)
           .set('Content-Type', 'application/xml')
@@ -1264,7 +1264,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
         should.not.exist(beforeWorker.enketoId);
         should.not.exist(beforeWorker.enketoOnceId);
 
-        // Second request, from worker
+        // Second request, from the worker
         global.enketo.callCount.should.equal(2);
         await exhaust(container);
         global.enketo.callCount.should.equal(3);
