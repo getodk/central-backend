@@ -219,6 +219,36 @@ describe('Entities API', () => {
         });
     }));
 
+    it('should return current version of entity data when updated', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body: person }) => {
+          person.should.be.an.ExtendedEntity();
+          person.should.have.property('currentVersion').which.is.an.ExtendedEntityDef();
+          person.currentVersion.should.have.property('version').which.is.equal(2);
+          person.currentVersion.should.have.property('label').which.is.equal('Alicia (85)');
+          person.currentVersion.should.have.property('data').which.is.eql({
+            age: '85',
+            first_name: 'Alicia'
+          });
+        });
+    }));
+
     it('should not mince the object properties', testEntities(async (service, container) => {
       const asAlice = await service.login('alice');
       const asBob = await service.login('bob');
@@ -435,13 +465,26 @@ describe('Entities API', () => {
         .expect(403);
     }));
 
-    it('should return audit logs of the Entity', testEntities(async (service) => {
+    it('should return audit logs of the Entity including updates via API and submission', testEntities(async (service, container) => {
       const asAlice = await service.login('alice');
       const asBob = await service.login('bob');
 
       await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
         .send({ data: { age: '12', first_name: 'John' } })
         .expect(200);
+
+      // update a second time via submission
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asBob.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
         .expect(200)
@@ -451,18 +494,33 @@ describe('Entities API', () => {
           logs[0].details.entity.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
           logs[0].actor.displayName.should.be.eql('Bob');
 
+          logs[0].details.submission.should.be.a.Submission();
+          logs[0].details.submission.xmlFormId.should.be.eql('updateEntity');
+          logs[0].details.submission.currentVersion.instanceName.should.be.eql('one');
+          logs[0].details.submission.currentVersion.submitter.displayName.should.be.eql('Bob');
+          logs[0].details.sourceEvent.should.be.an.Audit();
+          logs[0].details.sourceEvent.actor.displayName.should.be.eql('Bob');
+          logs[0].details.sourceEvent.loggedAt.should.be.isoDate();
+          logs[0].details.sourceEvent.action.should.be.eql('submission.create');
+
           logs[1].should.be.an.Audit();
-          logs[1].action.should.be.eql('entity.create');
-          logs[1].actor.displayName.should.be.eql('Alice');
+          logs[1].action.should.be.eql('entity.update.version');
+          logs[1].details.entity.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
+          logs[1].actor.displayName.should.be.eql('Bob');
 
-          logs[1].details.sourceEvent.should.be.an.Audit();
-          logs[1].details.sourceEvent.actor.displayName.should.be.eql('Alice');
-          logs[1].details.sourceEvent.loggedAt.should.be.isoDate();
+          logs[2].should.be.an.Audit();
+          logs[2].action.should.be.eql('entity.create');
+          logs[2].actor.displayName.should.be.eql('Alice');
 
-          logs[1].details.submission.should.be.a.Submission();
-          logs[1].details.submission.xmlFormId.should.be.eql('simpleEntity');
-          logs[1].details.submission.currentVersion.instanceName.should.be.eql('one');
-          logs[1].details.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
+          logs[2].details.sourceEvent.should.be.an.Audit();
+          logs[2].details.sourceEvent.actor.displayName.should.be.eql('Alice');
+          logs[2].details.sourceEvent.loggedAt.should.be.isoDate();
+          logs[2].details.sourceEvent.action.should.be.eql('submission.update');
+
+          logs[2].details.submission.should.be.a.Submission();
+          logs[2].details.submission.xmlFormId.should.be.eql('simpleEntity');
+          logs[2].details.submission.currentVersion.instanceName.should.be.eql('one');
+          logs[2].details.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
         });
     }));
 
@@ -490,7 +548,6 @@ describe('Entities API', () => {
           logs[0].should.be.an.Audit();
           logs[0].action.should.be.eql('entity.create');
           logs[0].actor.displayName.should.be.eql('Alice');
-
 
         });
     }));
