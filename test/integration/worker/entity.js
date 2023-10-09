@@ -915,7 +915,152 @@ describe('worker: entity', () => {
     }));
   });
 
-  // TODO: submisssion.update/approval should never update entity https://github.com/getodk/central-backend/pull/1005#discussion_r1341794108
-  // TODO: update should be processed even if approval required for creation https://github.com/getodk/central-backend/pull/1005#discussion_r1341833278
+  describe('event processing of entity updates only on submission.create regardless of approvalRequired', () => {
+    it('should update entity on submission.create even if approvalRequired is true for new entities', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      // Need an entity to update, but will make it through the API
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Johnny Doe',
+          data: { first_name: 'Johnny', age: '22' }
+        })
+        .expect(200);
+
+      // create form and submission to update entity
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // entity audit log should point to submission create event as source
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs[0].action.should.be.eql('entity.update.version');
+          logs[0].details.sourceEvent.action.should.be.eql('submission.create');
+        });
+    }));
+
+    it('should not process submission.update (approval) for entity update', testService(async (service, container) => {
+      // approving the submission wont update the entity because there is already an entity def associated with this submission
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      // Need an entity to update, but will make it through the API
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Johnny Doe',
+          data: { first_name: 'Johnny', age: '22' }
+        })
+        .expect(200);
+
+      // create form and submission to update entity
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // approve submission
+      await asAlice.patch('/v1/projects/1/forms/updateEntity/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+
+      await exhaust(container);
+
+      const subEvent = await container.Audits.getLatestByAction('submission.update').then((o) => o.get());
+      should.exist(subEvent.processed);
+      subEvent.failures.should.equal(0);
+
+      const updateCount = await container.oneFirst(sql`select count(*) from audits where action = 'entity.update.version'`);
+      updateCount.should.equal(1); // only the original update from submission.count should be present
+    }));
+
+    it('should never process submission.update for entity update even if submission.create gets skipped', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      // Need an entity to update, but will make it through the API
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Johnny Doe',
+          data: { first_name: 'Johnny', age: '22' }
+        })
+        .expect(200);
+
+      // create form and submission to update entity
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // set submission.create audit event to already be processed
+      await container.run(sql`update audits set processed=now() where action = 'submission.create'`);
+
+      // approve submission
+      await asAlice.patch('/v1/projects/1/forms/updateEntity/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+
+      await exhaust(container);
+
+      const subEvent = await container.Audits.getLatestByAction('submission.update').then((o) => o.get());
+      should.exist(subEvent.processed);
+      subEvent.failures.should.equal(0);
+
+      // There should be no entity update events logged.
+      const createEvent = await container.Audits.getLatestByAction('entity.update.version');
+      const errorEvent = await container.Audits.getLatestByAction('entity.create.error');
+      createEvent.isEmpty().should.equal(true);
+      errorEvent.isEmpty().should.equal(true);
+    }));
+  });
 });
 
