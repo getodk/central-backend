@@ -174,7 +174,7 @@ describe('extracting and validating entities', () => {
     });
   });
 
-  describe('exctact entity from API request: extractEntity', () => {
+  describe('extract entity from API request: extractEntity', () => {
     // Used to compare entity structure when Object.create(null) used.
     beforeEach(() => {
       should.config.checkProtoEql = false;
