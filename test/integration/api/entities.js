@@ -46,6 +46,31 @@ const testEntities = (test) => testService(async (service, container) => {
   await test(service, container);
 });
 
+const testEntityUpdates = (test) => testService(async (service, container) => {
+  const asAlice = await service.login('alice');
+
+  await asAlice.post('/v1/projects/1/forms?publish=true')
+    .send(testData.forms.simpleEntity)
+    .set('Content-Type', 'application/xml')
+    .expect(200);
+
+  await asAlice.post('/v1/projects/1/datasets/people/entities')
+    .send({
+      uuid: '12345678-1234-4123-8234-123456789abc',
+      label: 'Johnny Doe',
+      data: { first_name: 'Johnny', age: '22' }
+    })
+    .expect(200);
+
+  // create form and submission to update entity
+  await asAlice.post('/v1/projects/1/forms?publish=true')
+    .send(testData.forms.updateEntity)
+    .set('Content-Type', 'application/xml')
+    .expect(200);
+
+  await test(service, container);
+});
+
 describe('Entities API', () => {
   describe('GET /datasets/:name/entities', () => {
 
@@ -219,14 +244,10 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should return current version of entity data when updated', testEntities(async (service, container) => {
+    it('should return current version of entity data when updated', testEntityUpdates(async (service, container) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.updateEntity)
-        .set('Content-Type', 'application/xml')
-        .expect(200);
-
+      // testEntityUpdates does the following: creates dataset, creates update form. test needs to submit update.
       await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
         .send(testData.instances.updateEntity.one)
         .set('Content-Type', 'application/xml')
@@ -1231,5 +1252,126 @@ describe('Entities API', () => {
 
     }));
 
+  });
+
+  describe('entity updates from submissions', () => {
+    it('should process multiple updates in a row', testEntityUpdates(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one
+          .replace('<instanceID>one</instanceID>', '<instanceID>one-v2</instanceID>')
+          .replace('<age>85</age>', '<age>33</age>'))
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .expect(200)
+        .then(({ body: versions }) => {
+          versions[0].data.should.eql({ age: '22', first_name: 'Johnny' });
+          versions[0].version.should.equal(1);
+
+          versions[1].data.should.eql({ age: '85', first_name: 'Alicia' });
+          versions[1].version.should.equal(2);
+
+          versions[2].data.should.eql({ age: '33', first_name: 'Alicia' });
+          versions[2].version.should.equal(3);
+        });
+    }));
+
+    it('should update label', testEntityUpdates(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one
+          .replace('<label>Alicia (85)</label>', '<label>new label</label>'))
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.label.should.equal('new label');
+          person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
+        });
+    }));
+
+    it.skip('should set label to blank', testEntityUpdates(async (service, container) => {
+      // TODO: fix the entity label update logic to make this test pass.
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one
+          .replace('<label>Alicia (85)</label>', '<label></label>'))
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.label.should.equal('');
+        });
+    }));
+
+    it('should not update label if not included', testEntityUpdates(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one
+          .replace('<label>Alicia (85)</label>', ''))
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.label.should.equal('Johnny Doe');
+        });
+    }));
+
+    it.skip('should set field to blank', testEntityUpdates(async (service, container) => {
+      // TODO: fix update logic to make this test pass
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one
+          .replace('<age>85</age>', '<age></age>'))
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.data.age.should.eql('');
+        });
+    }));
+
+    it('should not update field if not included in xml', testEntityUpdates(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one
+          .replace('<age>85</age>', '<age>22</age>')
+          .replace('<name>Alicia</name>', '')) // original first_name in entity is Johnny
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.data.should.eql({ age: '22', first_name: 'Johnny' });
+        });
+    }));
   });
 });
