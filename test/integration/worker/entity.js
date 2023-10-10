@@ -1061,6 +1061,7 @@ describe('worker: entity', () => {
       createEvent.isEmpty().should.equal(true);
       errorEvent.isEmpty().should.equal(true);
     }));
+
   });
 });
 
