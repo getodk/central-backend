@@ -210,7 +210,7 @@ describe('worker: entity', () => {
     // TODO: check that it doesn't make an entity for an encrypted form/submission
   });
 
-  describe('should make an entity', () => {
+  describe('should successfully process submissions about entities', () => {
     it('should log entity creation in audit log', testService(async (service, container) => {
       await service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
@@ -244,21 +244,51 @@ describe('worker: entity', () => {
       // should contain information about entity
       createEvent.details.entity.dataset.should.equal('people');
       createEvent.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+    }));
 
-      // Don't have Entites.getEntityById() yet so we'll quickly check the DB directly
-      const { count } = await container.one(sql`select count(*) from entities`);
-      count.should.equal(1);
+    it('should log entity update in audit log', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
 
-      const { data, label, creatorId, userAgent } = await container.one(sql`select data, label, "creatorId", "userAgent" from entity_defs`);
-      label.should.equal('Alice (88)');
-      data.age.should.equal('88');
-      data.first_name.should.equal('Alice');
-      creatorId.should.equal(5); // Alice the user created this entity
-      userAgent.should.equal('central/tests');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asBob.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const updateEvent = await container.Audits.getLatestByAction('submission.create').then((o) => o.get());
+      should.exist(updateEvent.processed);
+      updateEvent.failures.should.equal(0);
+
+      const createEvent = await container.Audits.getLatestByAction('entity.update.version').then((o) => o.get());
+      createEvent.actorId.should.equal(6); // Bob
+      createEvent.details.submissionId.should.equal(updateEvent.details.submissionId);
+
+      // should contain information about entity
+      createEvent.details.entity.dataset.should.equal('people');
+      createEvent.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
     }));
   });
 
-  describe('should catch problems making entities', () => {
+  describe('should catch problems creating new entity', () => {
     // These validation errors are ones we can catch before trying to insert the new entity
     // in the database. They likely point to a form design error that we want to try to surface.
     // There are more tests of validation errors in test/unit/data/entity.
@@ -423,99 +453,175 @@ describe('worker: entity', () => {
     });
   });
 
-  describe('listing entities as dataset CSVs', () => {
-    it('should stream out simple entity csv', testService((service, container) =>
-      service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms?publish=true')
-          .set('Content-Type', 'application/xml')
+  describe('should catch problems updating entity', () => {
+    // TODO: these errors are getting logged as entity.create.error audit events
+    describe('validation errors', () => {
+      it('should fail because UUID is invalid', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // create an initial entity to update
+        await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity)
-          .expect(200)
-          .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
-            .send(testData.instances.simpleEntity.one)
-            .set('Content-Type', 'application/xml')
-            .expect(200))
-          .then(() => asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
-            .send({ reviewState: 'approved' })
-            .expect(200))
-          .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
-            .send(testData.instances.simpleEntity.one
-              .replace('one', 'two')
-              .replace('Alice', 'Beth')
-              .replace('Alice', 'Beth')
-              .replace('12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789def'))
-            .set('Content-Type', 'application/xml')
-            .expect(200))
-          .then(() => asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two')
-            .send({ reviewState: 'approved' })
-            .expect(200))
-          .then(() => exhaust(container))
-          .then(() => asAlice.get('/v1/projects/1/datasets/people/entities.csv')
-            .then(({ text }) => {
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+        await exhaust(container);
+        // create form and submission to update entity
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one.replace('12345678-1234-4123-8234-123456789abc', 'bad_uuid'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
 
-              const withOutTs = text.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g, '');
-              withOutTs.should.be.eql(
-                '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
-                '12345678-1234-4123-8234-123456789def,Beth (88),Beth,88,,5,Alice,0,,1\n'+
-                '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,,1\n'
-              );
-            })))));
+        // Submission event should look successful
+        const subEvent = await container.Audits.getLatestByAction('submission.create').then((o) => o.get());
+        should.exist(subEvent.processed);
+        subEvent.failures.should.equal(0);
 
-    it('should export dataset from multiple forms', testService(async (service, container) => {
-      const asAlice = await service.login('alice');
+        const updateEvent = await container.Audits.getLatestByAction('entity.update');
+        updateEvent.isEmpty().should.be.true();
 
-      await asAlice.post('/v1/projects/1/forms')
-        .send(testData.forms.multiPropertyEntity)
-        .set('Content-Type', 'application/xml')
-        .expect(200);
+        const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
+        event.actorId.should.equal(5); // Alice
+        event.details.submissionId.should.equal(subEvent.details.submissionId);
+        event.details.errorMessage.should.equal('Invalid input data type: expected (uuid) to be (valid UUID)');
+        event.details.problem.problemCode.should.equal(400.11);
+      }));
 
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.multiPropertyEntity
-          .replace('multiPropertyEntity', 'multiPropertyEntity2')
-          .replace('b_q1', 'f_q1')
-          .replace('d_q2', 'e_q2'))
-        .set('Content-Type', 'application/xml')
-        .expect(200);
+      it('should fail because dataset attribute is missing', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
 
-      await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/draft/publish').expect(200);
+        // create an initial entity to update
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+        await exhaust(container);
+        // create form and submission to update entity
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one.replace('people', ''))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
 
-      await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/submissions')
-        .send(testData.instances.multiPropertyEntity.one)
-        .set('Content-Type', 'application/xml')
-        .expect(200);
+        // Submission event should look successful
+        const subEvent = await container.Audits.getLatestByAction('submission.create').then((o) => o.get());
+        should.exist(subEvent.processed);
+        subEvent.failures.should.equal(0);
 
-      await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/submissions')
-        .send(testData.instances.multiPropertyEntity.two)
-        .set('Content-Type', 'application/xml')
-        .expect(200);
+        const udpateEvent = await container.Audits.getLatestByAction('entity.update');
+        udpateEvent.isEmpty().should.be.true();
 
-      await asAlice.post('/v1/projects/1/forms/multiPropertyEntity2/submissions')
-        .send(testData.instances.multiPropertyEntity.one
-          .replace('multiPropertyEntity', 'multiPropertyEntity2')
-          .replace('uuid:12345678-1234-4123-8234-123456789aaa', 'uuid:12345678-1234-4123-8234-123456789ccc')
-          .replace('b_q1', 'f_q1')
-          .replace('d_q2', 'e_q2'))
-        .set('Content-Type', 'application/xml')
-        .expect(200);
+        const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
+        event.actorId.should.equal(5); // Alice
+        event.details.submissionId.should.equal(subEvent.details.submissionId);
+        event.details.errorMessage.should.equal('Required parameter dataset missing.');
+        event.details.problem.problemCode.should.equal(400.2);
+      }));
+    });
 
-      await asAlice.patch('/v1/projects/1/forms/multiPropertyEntity/submissions/one')
-        .send({ reviewState: 'approved' });
-      await asAlice.patch('/v1/projects/1/forms/multiPropertyEntity/submissions/two')
-        .send({ reviewState: 'approved' });
-      await asAlice.patch('/v1/projects/1/forms/multiPropertyEntity2/submissions/one')
-        .send({ reviewState: 'approved' });
+    describe('constraint errors', () => {
+      it('should fail if trying to update an entity by uuid that does not exist', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
 
-      await exhaust(container);
+        // create an initial entity to update
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789bad', // not the uuid in updateEntity.one
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+        await exhaust(container);
+        // create form and submission to update entity
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
 
-      const { text } = await asAlice.get('/v1/projects/1/datasets/foo/entities.csv');
+        // most recent submission event should look like it was sucessfully processed
+        const subEvent = await container.Audits.getLatestByAction('submission.create').then((o) => o.get());
+        should.exist(subEvent.processed);
+        subEvent.failures.should.equal(0);
 
-      const withOutTs = text.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g, '');
-      withOutTs.should.be.eql(
-        '__id,label,f_q1,e_q2,a_q3,c_q4,b_q1,d_q2,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
-        '12345678-1234-4123-8234-123456789ccc,one,w,x,y,z,,,,5,Alice,0,,1\n'+
-        '12345678-1234-4123-8234-123456789bbb,two,,,c,d,a,b,,5,Alice,0,,1\n'+
-        '12345678-1234-4123-8234-123456789aaa,one,,,y,z,w,x,,5,Alice,0,,1\n'
-      );
-    }));
+        // the entity creation error should be logged
+        const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
+        event.actorId.should.equal(5); // Alice
+        event.details.submissionId.should.equal(subEvent.details.submissionId);
+        event.details.errorMessage.should.equal('Could not find the resource you were looking for.');
+        event.details.problem.problemCode.should.equal(404.1);
+      }));
+
+      it('should fail for other constraint errors like dataset name does not exist', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // create an initial entity to update
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789bad', // not the uuid in updateEntity.one
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+        await exhaust(container);
+        // create form and submission to update entity
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one.replace('people', 'frogs'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+
+        // most recent submission event should look like it was sucessfully processed
+        const subEvent = await container.Audits.getLatestByAction('submission.create').then((o) => o.get());
+        should.exist(subEvent.processed);
+        subEvent.failures.should.equal(0);
+
+        // the entity creation error should be logged
+        const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
+        event.actorId.should.equal(5); // Alice
+        event.details.submissionId.should.equal(subEvent.details.submissionId);
+        event.details.problem.problemCode.should.equal(404.7);
+        event.details.errorMessage.should.match(/The dataset \(frogs\) specified in the submission does not exist/);
+      }));
+    });
   });
 
   describe('event processing based on approvalRequired flag', () => {
@@ -809,8 +915,8 @@ describe('worker: entity', () => {
     }));
   });
 
-  describe('should update an entity', () => {
-    it('should update an entity', testService(async (service, container) => {
+  describe('event processing of entity updates only on submission.create regardless of approvalRequired', () => {
+    it('should update entity on submission.create even if approvalRequired is true for new entities', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -818,13 +924,20 @@ describe('worker: entity', () => {
         .set('Content-Type', 'application/xml')
         .expect(200);
 
-      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
-        .send(testData.instances.simpleEntity.one)
-        .set('Content-Type', 'application/xml')
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
         .expect(200);
 
-      await exhaust(container);
+      // Need an entity to update, but will make it through the API
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Johnny Doe',
+          data: { first_name: 'Johnny', age: '22' }
+        })
+        .expect(200);
 
+      // create form and submission to update entity
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .send(testData.forms.updateEntity)
         .set('Content-Type', 'application/xml')
@@ -837,40 +950,116 @@ describe('worker: entity', () => {
 
       await exhaust(container);
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
-        .expect(200)
-        .then(({ body: person }) => {
-          person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
-          person.currentVersion.label.should.eql('Alicia (85)');
-          person.currentVersion.version.should.equal(2);
-        });
-
+      // entity audit log should point to submission create event as source
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
         .expect(200)
         .then(({ body: logs }) => {
-          logs[0].should.be.an.Audit();
           logs[0].action.should.be.eql('entity.update.version');
-          logs[0].actor.displayName.should.be.eql('Alice');
+          logs[0].details.sourceEvent.action.should.be.eql('submission.create');
         });
+    }));
 
-      // update again
+    it('should not process submission.update (approval) for entity update', testService(async (service, container) => {
+      // approving the submission wont update the entity because there is already an entity def associated with this submission
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      // Need an entity to update, but will make it through the API
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Johnny Doe',
+          data: { first_name: 'Johnny', age: '22' }
+        })
+        .expect(200);
+
+      // create form and submission to update entity
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
       await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
-        .send(testData.instances.updateEntity.one
-          .replace('<instanceID>one</instanceID>', '<instanceID>one-v2</instanceID>')
-          .replace('<age>85</age>', '<age>84</age>'))
+        .send(testData.instances.updateEntity.one)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
       await exhaust(container);
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
-        .set('X-Extended-Metadata', true)
-        .expect(200)
-        .then(({ body: person }) => {
-          person.currentVersion.data.should.eql({ age: '84', first_name: 'Alicia' });
-          person.currentVersion.label.should.eql('Alicia (85)');
-          person.currentVersion.version.should.equal(3);
-        });
+      // approve submission
+      await asAlice.patch('/v1/projects/1/forms/updateEntity/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+
+      await exhaust(container);
+
+      const subEvent = await container.Audits.getLatestByAction('submission.update').then((o) => o.get());
+      should.exist(subEvent.processed);
+      subEvent.failures.should.equal(0);
+
+      const updateCount = await container.oneFirst(sql`select count(*) from audits where action = 'entity.update.version'`);
+      updateCount.should.equal(1); // only the original update from submission.count should be present
+    }));
+
+    it('should never process submission.update for entity update even if submission.create gets skipped', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      // Need an entity to update, but will make it through the API
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Johnny Doe',
+          data: { first_name: 'Johnny', age: '22' }
+        })
+        .expect(200);
+
+      // create form and submission to update entity
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // set submission.create audit event to already be processed
+      await container.run(sql`update audits set processed=now() where action = 'submission.create'`);
+
+      // approve submission
+      await asAlice.patch('/v1/projects/1/forms/updateEntity/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+
+      await exhaust(container);
+
+      const subEvent = await container.Audits.getLatestByAction('submission.update').then((o) => o.get());
+      should.exist(subEvent.processed);
+      subEvent.failures.should.equal(0);
+
+      // There should be no entity update events logged.
+      const createEvent = await container.Audits.getLatestByAction('entity.update.version');
+      const errorEvent = await container.Audits.getLatestByAction('entity.create.error');
+      createEvent.isEmpty().should.equal(true);
+      errorEvent.isEmpty().should.equal(true);
     }));
   });
 });

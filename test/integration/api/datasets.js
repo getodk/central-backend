@@ -340,17 +340,9 @@ describe('datasets and entities', () => {
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
-          .send({ reviewState: 'approved' })
-          .expect(200);
-
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
           .send(testData.instances.simpleEntity.two)
           .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two')
-          .send({ reviewState: 'approved' })
           .expect(200);
 
         await exhaust(container);
@@ -403,6 +395,63 @@ describe('datasets and entities', () => {
 
       }));
 
+      it('should stream csv of dataset with entities from multiple forms', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.multiPropertyEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyEntity
+            .replace('multiPropertyEntity', 'multiPropertyEntity2')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/draft/publish').expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/submissions')
+          .send(testData.instances.multiPropertyEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/submissions')
+          .send(testData.instances.multiPropertyEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity2/submissions')
+          .send(testData.instances.multiPropertyEntity.one
+            .replace('multiPropertyEntity', 'multiPropertyEntity2')
+            .replace('uuid:12345678-1234-4123-8234-123456789aaa', 'uuid:12345678-1234-4123-8234-123456789ccc')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/multiPropertyEntity/submissions/one')
+          .send({ reviewState: 'approved' });
+        await asAlice.patch('/v1/projects/1/forms/multiPropertyEntity/submissions/two')
+          .send({ reviewState: 'approved' });
+        await asAlice.patch('/v1/projects/1/forms/multiPropertyEntity2/submissions/one')
+          .send({ reviewState: 'approved' });
+
+        await exhaust(container);
+
+        const { text } = await asAlice.get('/v1/projects/1/datasets/foo/entities.csv');
+
+        const withOutTs = text.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g, '');
+        withOutTs.should.be.eql(
+          '__id,label,f_q1,e_q2,a_q3,c_q4,b_q1,d_q2,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+          '12345678-1234-4123-8234-123456789ccc,one,w,x,y,z,,,,5,Alice,0,,1\n'+
+          '12345678-1234-4123-8234-123456789bbb,two,,,c,d,a,b,,5,Alice,0,,1\n'+
+          '12345678-1234-4123-8234-123456789aaa,one,,,y,z,w,x,,5,Alice,0,,1\n'
+        );
+      }));
+
       it('should not return deleted entities', testService(async (service) => {
         const asAlice = await service.login('alice');
 
@@ -437,7 +486,7 @@ describe('datasets and entities', () => {
 
       }));
 
-      it('should return updated value correctly', testService(async (service) => {
+      it('should return updated value correctly (entity updated via API)', testService(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -472,6 +521,51 @@ describe('datasets and entities', () => {
         withOutTs.should.be.eql(
           '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
             '12345678-1234-4123-8234-111111111aaa,Robert Doe (expired),Robert,,,5,Alice,1,,2\n'
+        );
+
+      }));
+
+      it('should return updated value correctly (entity updated via submission)', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        // create form and submission to update entity
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200)
+          .then(r => r.text);
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(2);
+
+        const withOutTs = result.replace(isoRegex, '');
+        withOutTs.should.be.eql(
+          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-123456789abc,Alicia (85),Alicia,85,,5,Alice,1,,2\n'
         );
 
       }));
