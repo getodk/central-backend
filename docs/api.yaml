@@ -10235,6 +10235,10 @@ paths:
         Use this API to update one or all properties of an Entity. It will throw `400 - Bad Request` if any of the updating properties doesn't exist in the dataset.
 
         To unset value of any property, you can set it to empty string (""). Setting it to `null` will throw an error.
+
+        **Resolve the conflict**
+
+        You can also use this endpoint to resolve the conflict by passing `resolve=true` query parameter. If you set `resolve` parameter then providing data in the body is optional, in that case only `conflict` status from the Entity will be cleared.
       operationId: Updating an Entity
       parameters:
       - name: projectId
@@ -10258,6 +10262,20 @@ paths:
         schema:
           type: string
         example: 54a405a0-53ce-4748-9788-d23a30cc3afa
+      - name: force
+        in: query
+        description: Flag to forcefully update the Entity
+        required: false
+        schema:
+          type: boolean
+        example: true
+      - name: resolve
+        in: query
+        description: Flag to resolve the conflict
+        required: false
+        schema:
+          type: boolean
+        example: true
       requestBody:
         content:
           '*/*':
