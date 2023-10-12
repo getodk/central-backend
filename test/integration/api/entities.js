@@ -2,6 +2,7 @@ const appRoot = require('app-root-path');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { sql } = require('slonik');
+const should = require('should');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -1340,6 +1341,107 @@ describe('Entities API', () => {
       audit.details.entity.uuid.should.eql('12345678-1234-4123-8234-123456789abc');
       audit.details.entity.dataset.should.eql('people');
     }));
+
+    describe('resolve conflict', () => {
+
+      const createConflict = async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+          .send({ data: { age: '99' } })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // all properties changed
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+      };
+
+      it('should resolve the conflict without updating data', testService(async (service, container) => {
+        await createConflict(service, container);
+
+        const asAlice = await service.login('alice');
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .set('X-Extended-Metadata', true)
+          .expect(200)
+          .then(({ body: person }) => {
+            should(person.conflict).be.null();
+          });
+      }));
+
+      it('should resolve the conflict with updating data', testService(async (service, container) => {
+        await createConflict(service, container);
+
+        const asAlice = await service.login('alice');
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+          .send({ data: { first_name: 'John', age: '10' } })
+          .set('If-Match', '"3"')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .set('X-Extended-Metadata', true)
+          .expect(200)
+          .then(({ body: person }) => {
+            should(person.conflict).be.null();
+
+            person.currentVersion.data.age.should.be.eql('10');
+            person.currentVersion.data.first_name.should.be.eql('John');
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: audits }) => {
+            audits[0].action.should.be.eql('entity.update.resolve');
+          });
+      }));
+
+      it('should resolve the conflict and forcefully update the entity', testService(async (service, container) => {
+        await createConflict(service, container);
+
+        const asAlice = await service.login('alice');
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&force=true')
+          .send({ data: { first_name: 'John', age: '10' } })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .set('X-Extended-Metadata', true)
+          .expect(200)
+          .then(({ body: person }) => {
+            should(person.conflict).be.null();
+
+            person.currentVersion.data.age.should.be.eql('10');
+            person.currentVersion.data.first_name.should.be.eql('John');
+          });
+      }));
+
+    });
+
   });
 
   describe('DELETE /datasets/:name/entities/:uuid', () => {
