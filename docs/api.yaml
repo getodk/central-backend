@@ -12609,6 +12609,7 @@ paths:
         | Entity Creator Actor ID | `__system/creatorId` |
         | Entity Timestamp        | `__system/createdAt` |
         | Entity Update Timestamp | `__system/updatedAt` |
+        | Entity Conflict         | `__system/conflict`  |
 
         Note that `createdAt` and `updatedAt` are time components. This means that any comparisons you make need to account for the full time of the entity. It might seem like `$filter=__system/createdAt le 2020-01-31` would return all results on or before 31 Jan 2020, but in fact only entities made before midnight of that day would be accepted. To include all of the month of January, you need to filter by either `$filter=__system/createdAt le 2020-01-31T23:59:59.999Z` or `$filter=__system/createdAt lt 2020-02-01`. Remember also that you can [query by a specific timezone](https://en.wikipedia.org/wiki/ISO_8601#Time_offsets_from_UTC).
 
@@ -12691,6 +12692,7 @@ paths:
                     updates: 1,
                     updatedAt: '2023-04-31T19:41:16.478Z'
                     version: 1
+                    conflict: null
                 - __id: aeebd746-3b1e-4a24-ba9d-ed6547bd5ff1
                   label: 345cm mora
                   __system:
@@ -12700,6 +12702,7 @@ paths:
                     updates: 1,
                     updatedAt: '2023-04-31T19:41:16.478Z'
                     version: 2
+                    conflict: null
                   geometry: 47.722581 18.562111 0 0,
                   species: mora,
                   circumference_cm: 345            
