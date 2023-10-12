@@ -471,6 +471,7 @@ describe('extracting and validating entities', () => {
       uuid: 'uuid',
       createdAt: 'createdAt',
       updatedAt: 'updatedAt',
+      conflict: 'hard',
       def: {
         label: 'label',
         version: 1,
@@ -503,7 +504,8 @@ describe('extracting and validating entities', () => {
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
           updates: 0,
-          version: 1
+          version: 1,
+          conflict: 'hard'
         },
         firstName: entity.def.data.firstName,
         lastName: entity.def.data.lastName
@@ -544,7 +546,8 @@ describe('extracting and validating entities', () => {
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
           updates: 0,
-          version: 1
+          version: 1,
+          conflict: 'hard'
         }
       });
     });
@@ -554,6 +557,7 @@ describe('extracting and validating entities', () => {
         uuid: 'uuid',
         createdAt: 'createdAt',
         updatedAt: 'updatedAt',
+        conflict: 'hard',
         def: {
           label: 'label',
           version: 1,
@@ -580,7 +584,8 @@ describe('extracting and validating entities', () => {
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
           updates: 0,
-          version: 1
+          version: 1,
+          conflict: 'hard'
         },
         firstName: '',
         lastName: ''
@@ -601,7 +606,8 @@ describe('extracting and validating entities', () => {
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
           updates: 0,
-          version: 1
+          version: 1,
+          conflict: 'hard'
         },
         firstName: entity.def.data.firstName,
         lastName: entity.def.data.lastName,
