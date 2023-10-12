@@ -1,7 +1,7 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 const { sql } = require('slonik');
-const { testService } = require('../setup');
+const { testService, createConflict } = require('../setup');
 const testData = require('../../data/xml');
 const { QueryOptions } = require('../../../lib/util/db');
 const { Actor } = require('../../../lib/model/frames');
@@ -1571,7 +1571,7 @@ describe('api: /projects?forms=true', () => {
             form.reviewStates.received.should.equal(2);
           })))));
 
-    it('should set project data from datasetList even on non-extended projects', testService(async (service) => {
+    it('should set project data from datasetList even on non-extended projects', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -1608,6 +1608,8 @@ describe('api: /projects?forms=true', () => {
         })
         .expect(200);
 
+      await createConflict(asAlice, container);
+
       await asAlice.get('/v1/projects?datasets=true')
         .expect(200)
         .then(({ body }) => {
@@ -1615,10 +1617,12 @@ describe('api: /projects?forms=true', () => {
           const project = body[0];
           project.should.be.a.Project();
           project.datasets.should.equal(2);
-          project.lastEntity.should.be.eql(body[0].datasetList[0].lastEntity);
+          project.lastEntity.should.be.eql(body[0].datasetList[1].lastEntity);
           const dataset = body[0].datasetList[0];
           dataset.should.be.a.ExtendedDataset();
           dataset.name.should.equal('foo');
+
+          body[0].datasetList[1].conflicts.should.equal(1);
         });
     }));
 

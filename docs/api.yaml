@@ -10395,6 +10395,7 @@ paths:
                   approvalRequired: true
                   lastEntity: '2018-04-18T03:04:51.695Z'
                   entities: 10
+                  conflicts: 2
         403:
           description: Forbidden
           content:
@@ -14210,6 +14211,10 @@ components:
           entities:
             type: number
             description: The number of Entities in the Dataset.
+            example: 10
+          conflicts:
+            type: number
+            description: The number of Entities that have conflicts.
             example: 10.0
     PatchAttachment:
       required:
