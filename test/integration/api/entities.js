@@ -1398,7 +1398,9 @@ describe('Entities API', () => {
 
         const asAlice = await service.login('alice');
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+        const asBob = await service.login('bob');
+
+        await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
           .send({ data: { first_name: 'John', age: '10' } })
           .set('If-Match', '"3"')
           .expect(200);
@@ -1417,6 +1419,7 @@ describe('Entities API', () => {
           .expect(200)
           .then(({ body: audits }) => {
             audits[0].action.should.be.eql('entity.update.resolve');
+            audits[0].actor.displayName.should.eql('Bob');
           });
       }));
 

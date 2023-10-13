@@ -36,7 +36,19 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
-    ## ODK Central v2023.4
+    ### ODK Central v2023.5
+
+    **Added**:
+
+    - Entities accessed via API now have conflict and version-specific conflictingProperties fields
+
+      * Conflicts are either hard (baseVersion conflicts and multiple versions update the same property), soft (baseVersion conflicts but data updates are independent), or null
+
+    **Changed**:
+
+    - Conflicts can be resolved using the [PATCH entity](/central-api-entity-management/#updating-an-entity) endpoint with or without new data
+
+    ### ODK Central v2023.4
 
     **Added**:
 
@@ -9957,6 +9969,7 @@ paths:
                 updatedAt: '2018-03-21T12:45:02.312Z'
                 deletedAt: '2018-03-21T12:45:02.312Z'
                 creatorId: 1
+                conflict: null
                 creator:
                   createdAt: '2018-04-18T23:19:14.802Z'
                   displayName: My Display Name
@@ -9970,6 +9983,7 @@ paths:
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   creator:
                     createdAt: '2018-04-18T23:19:14.802Z'
                     displayName: My Display Name
@@ -10042,12 +10056,14 @@ paths:
                 updatedAt: '2018-03-21T12:45:02.312Z'
                 deletedAt: '2018-03-21T12:45:02.312Z'
                 creatorId: 1
+                conflict: null
                 currentVersion:
                   label: John (88)
                   current: true
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   data:
                     firstName: John
                     age: '88'
@@ -10101,12 +10117,14 @@ paths:
                 updatedAt: '2018-03-21T12:45:02.312Z'
                 deletedAt: '2018-03-21T12:45:02.312Z'
                 creatorId: 1
+                conflict: null
                 currentVersion:
                   label: John (88)
                   current: true
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   data:
                     firstName: John
                     age: '88'
@@ -10121,6 +10139,7 @@ paths:
                 updatedAt: '2018-03-21T12:45:02.312Z'
                 deletedAt: '2018-03-21T12:45:02.312Z'
                 creatorId: 1
+                conflict: null
                 creator:
                   createdAt: '2018-04-18T23:19:14.802Z'
                   displayName: My Display Name
@@ -10134,6 +10153,7 @@ paths:
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   data:
                     firstName: John
                     age: '88'
@@ -10305,12 +10325,14 @@ paths:
                 updatedAt: '2018-03-21T12:45:02.312Z'
                 deletedAt: '2018-03-21T12:45:02.312Z'
                 creatorId: 1
+                conflict: null
                 currentVersion:
                   label: John (88)
                   current: true
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   data:
                     firstName: John
                     age: '88'
@@ -10390,6 +10412,7 @@ paths:
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   data:
                     firstName: John
                     age: '88'
@@ -10405,6 +10428,7 @@ paths:
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   data:
                     firstName: John
                     age: '88'
@@ -13193,6 +13217,17 @@ components:
           type: number
           description: The ID of the Actor (App User, User, or Public Link) that originally created the Entity.
           example: 1
+        conflict:
+          type: string
+          description: |-
+            Type of the conflict. 
+            
+            `hard`: baseVersion conflicts and multiple versions update the same property
+            
+            `soft`: baseVersion conflicts but data updates are independent
+          enum:
+            - soft
+            - hard
     EntityVersionFields:
       type: object
       properties:
@@ -13212,6 +13247,11 @@ components:
           type: string
           description: The self-identified `userAgent` of the device that created the `Entity` version.
           example: Enketo/3.0.4
+        conflictingProperties:
+          type: array
+          description: list of properties updated offline simultaneously.
+          items:
+            type: string
     EntitySummary:
       allOf: 
         - $ref: '#/components/schemas/EntitySummaryFields'
