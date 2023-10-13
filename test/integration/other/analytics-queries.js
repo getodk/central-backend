@@ -979,7 +979,7 @@ describe('analytics task queries', function () {
       await exhaust(container);
 
       // let's set date of entity errors to long time ago
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.create.error'`);
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.error'`);
 
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three.replace(/bbb/, 'xxx'));
       await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/three').send({ reviewState: 'approved' });
@@ -1344,7 +1344,7 @@ describe('analytics task queries', function () {
       await exhaust(container);
 
       // Make the error ancient
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.create.error'`);
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.error'`);
 
       // Create new Submission that will cause entity creation error
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three.replace(/bbb|three/g, 'xxx'));

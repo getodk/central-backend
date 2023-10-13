@@ -34,7 +34,7 @@ describe('worker: entity', () => {
 
       // There should be no entity events logged.
       const createEvent = await container.Audits.getLatestByAction('entity.create');
-      const errorEvent = await container.Audits.getLatestByAction('entity.create.error');
+      const errorEvent = await container.Audits.getLatestByAction('entity.error');
       createEvent.isEmpty().should.equal(true);
       errorEvent.isEmpty().should.equal(true);
     }));
@@ -68,7 +68,7 @@ describe('worker: entity', () => {
 
       // There should be no entity events logged.
       const createEvent = await container.Audits.getLatestByAction('entity.create');
-      const errorEvent = await container.Audits.getLatestByAction('entity.create.error');
+      const errorEvent = await container.Audits.getLatestByAction('entity.error');
       createEvent.isEmpty().should.equal(true);
       errorEvent.isEmpty().should.equal(true);
     }));
@@ -99,7 +99,7 @@ describe('worker: entity', () => {
 
       // There should be no entity events logged.
       const createEvent = await container.Audits.getLatestByAction('entity.create');
-      const errorEvent = await container.Audits.getLatestByAction('entity.create.error');
+      const errorEvent = await container.Audits.getLatestByAction('entity.error');
       createEvent.isEmpty().should.equal(true);
       errorEvent.isEmpty().should.equal(true);
     }));
@@ -138,7 +138,7 @@ describe('worker: entity', () => {
       firstApproveEvent.id.should.not.equal(secondApproveEvent.id);
 
       // there should be no log of an entity-creation error
-      const errorEvent = await container.Audits.getLatestByAction('entity.create.error');
+      const errorEvent = await container.Audits.getLatestByAction('entity.error');
       errorEvent.isEmpty().should.be.true();
     }));
 
@@ -179,7 +179,7 @@ describe('worker: entity', () => {
       should.exist(secondApproveEvent.processed);
 
       // there should be no log of an entity-creation error
-      const errorEvent = await container.Audits.getLatestByAction('entity.create.error');
+      const errorEvent = await container.Audits.getLatestByAction('entity.error');
       errorEvent.isEmpty().should.be.true();
     }));
 
@@ -317,7 +317,7 @@ describe('worker: entity', () => {
         const createEvent = await container.Audits.getLatestByAction('entity.create');
         createEvent.isEmpty().should.be.true();
 
-        const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
+        const event = await container.Audits.getLatestByAction('entity.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(updateEvent.details.submissionId);
         event.details.errorMessage.should.equal('Invalid input data type: expected (uuid) to be (valid UUID)');
@@ -345,7 +345,7 @@ describe('worker: entity', () => {
         const createEvent = await container.Audits.getLatestByAction('entity.create');
         createEvent.isEmpty().should.be.true();
 
-        const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
+        const event = await container.Audits.getLatestByAction('entity.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(updateEvent.details.submissionId);
         event.details.errorMessage.should.equal('Required parameter dataset missing.');
@@ -394,7 +394,7 @@ describe('worker: entity', () => {
         updateEvent.failures.should.equal(0);
 
         // the entity creation error should be logged
-        const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
+        const event = await container.Audits.getLatestByAction('entity.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(updateEvent.details.submissionId);
         event.details.errorMessage.should.equal('A resource already exists with uuid value(s) of 12345678-1234-4123-8234-123456789abc.');
@@ -423,7 +423,7 @@ describe('worker: entity', () => {
         updateEvent.failures.should.equal(0);
 
         // the entity creation error should be logged
-        const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
+        const event = await container.Audits.getLatestByAction('entity.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(updateEvent.details.submissionId);
         event.details.problem.problemCode.should.equal(404.7);
@@ -442,7 +442,7 @@ describe('worker: entity', () => {
         updateEvent2.failures.should.equal(0);
 
         // the entity creation error should be logged
-        const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
+        const event = await container.Audits.getLatestByAction('entity.error').then((o) => o.get());
         should.exist(event);
         // The error in this case is not one of our Problems but an error thrown by slonik
         // from passing in some broken (undefined/missing) value for submissionDefId.
@@ -454,7 +454,7 @@ describe('worker: entity', () => {
   });
 
   describe('should catch problems updating entity', () => {
-    // TODO: these errors are getting logged as entity.create.error audit events
+    // TODO: these errors are getting logged as entity.error audit events
     describe('validation errors', () => {
       it('should fail because UUID is invalid', testService(async (service, container) => {
         const asAlice = await service.login('alice');
@@ -491,7 +491,7 @@ describe('worker: entity', () => {
         const updateEvent = await container.Audits.getLatestByAction('entity.update');
         updateEvent.isEmpty().should.be.true();
 
-        const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
+        const event = await container.Audits.getLatestByAction('entity.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(subEvent.details.submissionId);
         event.details.errorMessage.should.equal('Invalid input data type: expected (uuid) to be (valid UUID)');
@@ -533,7 +533,7 @@ describe('worker: entity', () => {
         const udpateEvent = await container.Audits.getLatestByAction('entity.update');
         udpateEvent.isEmpty().should.be.true();
 
-        const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
+        const event = await container.Audits.getLatestByAction('entity.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(subEvent.details.submissionId);
         event.details.errorMessage.should.equal('Required parameter dataset missing.');
@@ -575,7 +575,7 @@ describe('worker: entity', () => {
         subEvent.failures.should.equal(0);
 
         // the entity creation error should be logged
-        const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
+        const event = await container.Audits.getLatestByAction('entity.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(subEvent.details.submissionId);
         event.details.errorMessage.should.equal('Could not find the resource you were looking for.');
@@ -615,7 +615,7 @@ describe('worker: entity', () => {
         subEvent.failures.should.equal(0);
 
         // the entity creation error should be logged
-        const event = await container.Audits.getLatestByAction('entity.create.error').then((o) => o.get());
+        const event = await container.Audits.getLatestByAction('entity.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(subEvent.details.submissionId);
         event.details.problem.problemCode.should.equal(404.7);
@@ -803,7 +803,7 @@ describe('worker: entity', () => {
         .expect(200)
         .then(({ body }) => body.length.should.be.eql(1));
 
-      const errors = await container.Audits.get(new QueryOptions({ args: { action: 'entity.create.error' } }));
+      const errors = await container.Audits.get(new QueryOptions({ args: { action: 'entity.error' } }));
 
       errors.should.be.empty();
 
@@ -841,7 +841,7 @@ describe('worker: entity', () => {
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(404);
 
-      const errors = await container.Audits.get(new QueryOptions({ args: { action: 'entity.create.error' } }));
+      const errors = await container.Audits.get(new QueryOptions({ args: { action: 'entity.error' } }));
 
       errors.should.be.empty();
 
@@ -1057,7 +1057,7 @@ describe('worker: entity', () => {
 
       // There should be no entity update events logged.
       const createEvent = await container.Audits.getLatestByAction('entity.update.version');
-      const errorEvent = await container.Audits.getLatestByAction('entity.create.error');
+      const errorEvent = await container.Audits.getLatestByAction('entity.error');
       createEvent.isEmpty().should.equal(true);
       errorEvent.isEmpty().should.equal(true);
     }));

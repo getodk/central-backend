@@ -3129,7 +3129,7 @@ describe('datasets and entities', () => {
             body.length.should.be.eql(1);
           });
 
-        const entityErrors = await container.Audits.get(new QueryOptions({ args: { action: 'entity.create.error' } }));
+        const entityErrors = await container.Audits.get(new QueryOptions({ args: { action: 'entity.error' } }));
 
         entityErrors.length.should.be.eql(1);
         entityErrors[0].details.errorMessage.should.match(/Required parameter label missing/);
