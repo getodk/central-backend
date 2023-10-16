@@ -9,6 +9,7 @@ const { omit } = require('ramda');
 const should = require('should');
 const { sql } = require('slonik');
 const { QueryOptions } = require('../../../lib/util/db');
+const { createConflict } = require('../fixtures/scenarios');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const Option = require(appRoot + '/lib/util/option');
@@ -624,6 +625,39 @@ describe('datasets and entities', () => {
           .expect(304);
       }));
 
+      it('should filter the Entities', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111aaa',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        await createConflict(asAlice, container);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv?$filter=__system/conflict eq \'hard\'')
+          .expect(200)
+          .then(r => r.text);
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(2);
+
+        const withOutTs = result.replace(isoRegex, '');
+        withOutTs.should.be.eql(
+          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-123456789abc,Alicia (85),Alicia,85,,5,Alice,2,,3\n'
+        );
+
+      }));
     });
 
     describe('projects/:id/datasets/:name GET', () => {
