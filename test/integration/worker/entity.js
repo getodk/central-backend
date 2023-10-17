@@ -574,7 +574,7 @@ describe('worker: entity', () => {
         should.exist(subEvent.processed);
         subEvent.failures.should.equal(0);
 
-        // the entity creation error should be logged
+        // the entity processing error should be logged
         const event = await container.Audits.getLatestByAction('entity.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(subEvent.details.submissionId);
@@ -614,7 +614,7 @@ describe('worker: entity', () => {
         should.exist(subEvent.processed);
         subEvent.failures.should.equal(0);
 
-        // the entity creation error should be logged
+        // the entity processing error should be logged
         const event = await container.Audits.getLatestByAction('entity.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(subEvent.details.submissionId);

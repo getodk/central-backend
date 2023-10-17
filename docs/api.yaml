@@ -814,7 +814,10 @@ tags:
     * `dataset.update` when a Dataset is updated.
     * `dataset.update.publish` when a Dataset is published.
     * `entity.create` when an Entity is created.
-    * `entity.error` when there is an error during entity creation process.
+    * `entity.error` when there is an error processing a Submission to create or update an Entity.
+    * `entity.update.version` when an Entity is updated.
+    * `entity.update.resolve` when an Entity conflict is resolved.
+    * `entity.delete` when an Entity is deleted.
     * `config.set` when a system configuration is set.
     * `analytics` when a Usage Report is attempted.
     * Deprecated: `backup` when a backup operation is attempted for Google Drive backups.
