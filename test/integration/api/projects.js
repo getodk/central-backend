@@ -1,10 +1,11 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 const { sql } = require('slonik');
-const { testService, createConflict } = require('../setup');
+const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { QueryOptions } = require('../../../lib/util/db');
 const { Actor } = require('../../../lib/model/frames');
+const { createConflict } = require('../fixtures/scenarios');
 // eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
