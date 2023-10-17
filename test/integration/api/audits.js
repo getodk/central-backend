@@ -414,7 +414,7 @@ describe('/audits', () => {
             'entity.update.resolve',
             'entity.update.version',
             'entity.update.version',
-            'entity.create.error',
+            'entity.error',
             'entity.create'
           ]);
         });

@@ -814,7 +814,10 @@ tags:
     * `dataset.update` when a Dataset is updated.
     * `dataset.update.publish` when a Dataset is published.
     * `entity.create` when an Entity is created.
-    * `entity.create.error` when there is an error during entity creation process.
+    * `entity.error` when there is an error processing a Submission to create or update an Entity.
+    * `entity.update.version` when an Entity is updated.
+    * `entity.update.resolve` when an Entity conflict is resolved.
+    * `entity.delete` when an Entity is deleted.
     * `config.set` when a system configuration is set.
     * `analytics` when a Usage Report is attempted.
     * Deprecated: `backup` when a backup operation is attempted for Google Drive backups.
@@ -6831,7 +6834,7 @@ paths:
       description: |-
         Currently, the only updatable _metadata_ on a Submission is its `reviewState`. To update the submission _data_ itself, please see [Updating Submission data](/central-api-submission-management/#updating-submission-data).
 
-        Starting with Version 2022.3, changing the `reviewState` of a Submission to `approved` can create an Entity in a Dataset if the corresponding Form maps Dataset Properties to Form Fields. If an Entity is created successfully then an `entity.create` event is logged in Audit logs, else `entity.create.error` is logged.
+        Starting with Version 2022.3, changing the `reviewState` of a Submission to `approved` can create an Entity in a Dataset if the corresponding Form maps Dataset Properties to Form Fields. If an Entity is created successfully then an `entity.create` event is logged in Audit logs, else `entity.error` is logged.
       operationId: Updating Submission metadata
       parameters:
       - name: projectId
