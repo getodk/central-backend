@@ -36,7 +36,19 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
-    ## ODK Central v2023.4
+    ## ODK Central v2023.5
+
+    **Added**:
+
+    - Entities accessed via API now have conflict and version-specific conflictingProperties fields
+
+      * Conflicts are either `hard` (baseVersion conflicts and multiple versions update the same property), `soft` (baseVersion conflicts but data updates are independent), or `null`
+
+    **Changed**:
+
+    - Conflicts can be resolved using the [PATCH entity](/central-api-entity-management/#updating-an-entity) endpoint with or without new data
+
+    ### ODK Central v2023.4
 
     **Added**:
 
@@ -9957,6 +9969,7 @@ paths:
                 updatedAt: '2018-03-21T12:45:02.312Z'
                 deletedAt: '2018-03-21T12:45:02.312Z'
                 creatorId: 1
+                conflict: null
                 creator:
                   createdAt: '2018-04-18T23:19:14.802Z'
                   displayName: My Display Name
@@ -9970,6 +9983,7 @@ paths:
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   creator:
                     createdAt: '2018-04-18T23:19:14.802Z'
                     displayName: My Display Name
@@ -10042,12 +10056,14 @@ paths:
                 updatedAt: '2018-03-21T12:45:02.312Z'
                 deletedAt: '2018-03-21T12:45:02.312Z'
                 creatorId: 1
+                conflict: null
                 currentVersion:
                   label: John (88)
                   current: true
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   data:
                     firstName: John
                     age: '88'
@@ -10101,12 +10117,14 @@ paths:
                 updatedAt: '2018-03-21T12:45:02.312Z'
                 deletedAt: '2018-03-21T12:45:02.312Z'
                 creatorId: 1
+                conflict: null
                 currentVersion:
                   label: John (88)
                   current: true
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   data:
                     firstName: John
                     age: '88'
@@ -10121,6 +10139,7 @@ paths:
                 updatedAt: '2018-03-21T12:45:02.312Z'
                 deletedAt: '2018-03-21T12:45:02.312Z'
                 creatorId: 1
+                conflict: null
                 creator:
                   createdAt: '2018-04-18T23:19:14.802Z'
                   displayName: My Display Name
@@ -10134,6 +10153,7 @@ paths:
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   data:
                     firstName: John
                     age: '88'
@@ -10235,6 +10255,10 @@ paths:
         Use this API to update one or all properties of an Entity. It will throw `400 - Bad Request` if any of the updating properties doesn't exist in the dataset.
 
         To unset value of any property, you can set it to empty string (""). Setting it to `null` will throw an error.
+
+        **Resolve the conflict**
+
+        You can also use this endpoint to resolve the conflict by passing `resolve=true` query parameter. If you set `resolve` parameter then providing data in the body is optional, in that case only `conflict` status from the Entity will be cleared.
       operationId: Updating an Entity
       parameters:
       - name: projectId
@@ -10258,6 +10282,20 @@ paths:
         schema:
           type: string
         example: 54a405a0-53ce-4748-9788-d23a30cc3afa
+      - name: force
+        in: query
+        description: Flag to forcefully update the Entity
+        required: false
+        schema:
+          type: boolean
+        example: true
+      - name: resolve
+        in: query
+        description: Flag to resolve the conflict
+        required: false
+        schema:
+          type: boolean
+        example: true
       requestBody:
         content:
           '*/*':
@@ -10287,12 +10325,14 @@ paths:
                 updatedAt: '2018-03-21T12:45:02.312Z'
                 deletedAt: '2018-03-21T12:45:02.312Z'
                 creatorId: 1
+                conflict: null
                 currentVersion:
                   label: John (88)
                   current: true
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   data:
                     firstName: John
                     age: '88'
@@ -10372,6 +10412,7 @@ paths:
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   data:
                     firstName: John
                     age: '88'
@@ -10387,6 +10428,7 @@ paths:
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   data:
                     firstName: John
                     age: '88'
@@ -13175,6 +13217,17 @@ components:
           type: number
           description: The ID of the Actor (App User, User, or Public Link) that originally created the Entity.
           example: 1
+        conflict:
+          type: string
+          description: |-
+            Type of the conflict. 
+            
+            `hard`: baseVersion conflicts and multiple versions update the same property
+            
+            `soft`: baseVersion conflicts but data updates are independent
+          enum:
+            - soft
+            - hard
     EntityVersionFields:
       type: object
       properties:
@@ -13194,6 +13247,11 @@ components:
           type: string
           description: The self-identified `userAgent` of the device that created the `Entity` version.
           example: Enketo/3.0.4
+        conflictingProperties:
+          type: array
+          description: list of properties updated offline simultaneously.
+          items:
+            type: string
     EntitySummary:
       allOf: 
         - $ref: '#/components/schemas/EntitySummaryFields'
