@@ -67,7 +67,7 @@ describe('datasets and entities', () => {
           .then(({ body }) => {
             body[0].should.be.an.ExtendedDataset();
             body.map(({ createdAt, lastEntity, ...d }) => d).should.eql([
-              { name: 'people', projectId: 1, entities: 1, approvalRequired: false }
+              { name: 'people', projectId: 1, entities: 1, approvalRequired: false, conflicts: 0 }
             ]);
           });
       }));
@@ -113,7 +113,7 @@ describe('datasets and entities', () => {
               should(lastEntity).be.null();
               return d;
             }).should.eql([
-              { name: 'people', projectId: 1, entities: 0, approvalRequired: false }
+              { name: 'people', projectId: 1, entities: 0, approvalRequired: false, conflicts: 0 }
             ]);
           });
       }));
@@ -147,7 +147,7 @@ describe('datasets and entities', () => {
               lastEntity.should.not.be.null();
               return d;
             }).should.eql([
-              { name: 'people', projectId: 1, entities: 1, approvalRequired: false }
+              { name: 'people', projectId: 1, entities: 1, approvalRequired: false, conflicts: 0 }
             ]);
           });
       }));
@@ -171,6 +171,23 @@ describe('datasets and entities', () => {
 
         await exhaust(container);
 
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+          .send({ data: { age: '99' } })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // all properties changed
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
         await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1' WHERE TRUE`);
 
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
@@ -189,12 +206,14 @@ describe('datasets and entities', () => {
           .expect(200)
           .then(({ body }) => {
             body[0].should.be.an.ExtendedDataset();
-            body.map(({ createdAt, lastEntity, ...d }) => {
+            body.map(({ createdAt, lastEntity, conflicts, ...d }) => {
               lastEntity.should.not.startWith('1999');
               return d;
             }).should.eql([
               { name: 'people', projectId: 1, entities: 2, approvalRequired: false }
             ]);
+
+            body[0].conflicts.should.equal(1);
           });
       }));
 
@@ -695,6 +714,7 @@ describe('datasets and entities', () => {
               projectId: 1,
               approvalRequired: false,
               entities: 1,
+              conflicts: 0,
               linkedForms: [],
               sourceForms: [{ name: 'simpleEntity', xmlFormId: 'simpleEntity' }]
             });

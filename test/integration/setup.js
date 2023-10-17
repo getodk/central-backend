@@ -220,4 +220,3 @@ const withClosedForm = (f) => async (service) => {
 };
 
 module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask, withClosedForm };
-
