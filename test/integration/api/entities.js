@@ -552,6 +552,91 @@ describe('Entities API', () => {
           versions[3].conflictingProperties.should.be.eql(['age', 'label']);
         });
     }));
+
+    describe('relevantToConflict', () => {
+
+      const createConflictOnV2 = async (user, container) => {
+        await user.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .send({ data: { age: '12' } })
+          .set('If-Match', '"1"')
+          .expect(200);
+
+        await user.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .send({ data: { age: '18' } })
+          .set('If-Match', '"2"')
+          .expect(200);
+
+        await user.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Hard conflict - all properties are changed
+        await user.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one.replace('baseVersion="1"', 'baseVersion="2"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+      };
+      it('should return only relevent versions needed for conflict resolution', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await createConflictOnV2(asAlice, container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions?relevantToConflict=true')
+          .expect(200)
+          .then(({ body: versions }) => {
+            // Doesn't return first version
+            versions.some(v => v.version === 1).should.be.false();
+
+            versions[0].lastGoodVersion.should.be.true();
+            versions[2].conflictingProperties.should.be.eql(['age']);
+          });
+      }));
+
+      it('should return empty array when all conflicts are resolved', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await createConflictOnV2(asAlice, container);
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions?relevantToConflict=true')
+          .expect(200)
+          .then(({ body: versions }) => {
+            versions.length.should.be.eql(0);
+          });
+      }));
+
+      it('should return only relevent versions after conflict resolution', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await createConflictOnV2(asAlice, container);
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.two
+            .replace('baseVersion="1"', 'baseVersion="3"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions?relevantToConflict=true')
+          .expect(200)
+          .then(({ body: versions }) => {
+            // Doesn't return old versions
+            versions.some(v => v.version < 3).should.be.false();
+
+            versions[0].lastGoodVersion.should.be.true();
+            versions[2].conflictingProperties.should.be.eql(['label']);
+          });
+      }));
+    });
   });
 
   describe('GET /datasets/:name/entities/:uuid/diffs', () => {

@@ -2,6 +2,7 @@ const should = require('should');
 const appRoot = require('app-root-path');
 const assert = require('assert');
 const { ConflictType } = require('../../../lib/data/entity');
+const { Entity } = require('../../../lib/model/frames');
 const { parseSubmissionXml, extractEntity, validateEntity, extractSelectedProperties, selectFields, diffEntityData, getDiffProp, getWithConflictDetails } = require(appRoot + '/lib/data/entity');
 const { fieldsFor } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
@@ -682,12 +683,14 @@ describe('extracting and validating entities', () => {
 
     it('should fill in correct information for SOFT conflict', () => {
       const defs = [
-        { version: 1, label: 'John', data: { name: 'John', age: '88' }, dataReceived: { name: 'John', age: '88' }, conflictingProp: null, baseVersion: null },
-        { version: 2, label: 'Jane', data: { name: 'Jane', age: '88' }, dataReceived: { name: 'Jane' }, conflictingProp: [], baseVersion: 1 },
-        { version: 3, label: 'Jane', data: { name: 'Jane', age: '99' }, dataReceived: { age: '99' }, conflictingProp: [], baseVersion: 1 }
+        new Entity.Def({ id: 0, version: 1, label: 'John', data: { name: 'John', age: '88' }, dataReceived: { name: 'John', age: '88' }, conflictingProp: null, baseVersion: null }),
+        new Entity.Def({ id: 0, version: 2, label: 'Jane', data: { name: 'Jane', age: '88' }, dataReceived: { name: 'Jane' }, conflictingProp: [], baseVersion: 1 }),
+        new Entity.Def({ id: 0, version: 3, label: 'Jane', data: { name: 'Jane', age: '99' }, dataReceived: { age: '99' }, conflictingProp: [], baseVersion: 1 })
       ];
 
-      const result = getWithConflictDetails(defs);
+      const audits = [{ details: { entityDefId: 0 } }];
+
+      const result = getWithConflictDetails(defs, audits, false);
 
       result[2].conflict.should.be.eql(ConflictType.SOFT);
       result[2].baseDiff.should.be.eql(['age']);
@@ -696,12 +699,14 @@ describe('extracting and validating entities', () => {
 
     it('should fill in correct information for HARD conflict', () => {
       const defs = [
-        { version: 1, label: 'John', data: { name: 'John', age: '88' }, dataReceived: { name: 'John', age: '88' }, conflictingProp: null, baseVersion: null },
-        { version: 2, label: 'Jane', data: { name: 'Jane', age: '77' }, dataReceived: { age: '77' }, conflictingProp: [], baseVersion: 1 },
-        { version: 3, label: 'Jane', data: { name: 'Jane', age: '99' }, dataReceived: { age: '99' }, conflictingProp: ['age'], baseVersion: 1 }
+        new Entity.Def({ id: 0, version: 1, label: 'John', data: { name: 'John', age: '88' }, dataReceived: { name: 'John', age: '88' }, conflictingProperties: null, baseVersion: null }),
+        new Entity.Def({ id: 0, version: 2, label: 'Jane', data: { name: 'Jane', age: '77' }, dataReceived: { age: '77' }, conflictingProperties: [], baseVersion: 1 }),
+        new Entity.Def({ id: 0, version: 3, label: 'Jane', data: { name: 'Jane', age: '99' }, dataReceived: { age: '99' }, conflictingProperties: ['age'], baseVersion: 1 })
       ];
 
-      const result = getWithConflictDetails(defs);
+      const audits = [{ details: { entityDefId: 0 } }];
+
+      const result = getWithConflictDetails(defs, audits, false);
 
       result[2].conflict.should.be.eql(ConflictType.HARD);
       result[2].baseDiff.should.be.eql(['age']);
