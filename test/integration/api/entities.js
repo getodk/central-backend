@@ -1443,6 +1443,16 @@ describe('Entities API', () => {
           });
       }));
 
+      it('should throw error if there is no conflict', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.be.eql(400.32);
+          });
+      }));
+
     });
 
   });

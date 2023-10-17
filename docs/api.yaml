@@ -36,13 +36,13 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
-    ### ODK Central v2023.5
+    ## ODK Central v2023.5
 
     **Added**:
 
     - Entities accessed via API now have conflict and version-specific conflictingProperties fields
 
-      * Conflicts are either hard (baseVersion conflicts and multiple versions update the same property), soft (baseVersion conflicts but data updates are independent), or null
+      * Conflicts are either `hard` (baseVersion conflicts and multiple versions update the same property), `soft` (baseVersion conflicts but data updates are independent), or `null`
 
     **Changed**:
 
