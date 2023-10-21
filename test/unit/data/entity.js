@@ -688,7 +688,7 @@ describe('extracting and validating entities', () => {
         new Entity.Def({ id: 0, version: 3, label: 'Jane', data: { name: 'Jane', age: '99' }, dataReceived: { age: '99' }, conflictingProp: [], baseVersion: 1 })
       ];
 
-      const audits = [{ details: { entityDefId: 0 } }];
+      const audits = [{ action: 'entity.create', details: { entityDefId: 0 } }];
 
       const result = getWithConflictDetails(defs, audits, false);
 
@@ -704,7 +704,7 @@ describe('extracting and validating entities', () => {
         new Entity.Def({ id: 0, version: 3, label: 'Jane', data: { name: 'Jane', age: '99' }, dataReceived: { age: '99' }, conflictingProperties: ['age'], baseVersion: 1 })
       ];
 
-      const audits = [{ details: { entityDefId: 0 } }];
+      const audits = [{ action: 'entity.create', details: { entityDefId: 0 } }];
 
       const result = getWithConflictDetails(defs, audits, false);
 
