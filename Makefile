@@ -23,7 +23,7 @@ dev-oidc: base
 dev-s3: base
 	 docker run -v "${PWD}/s3-dev/minio-config/:/root/.mc/" --network=host minio/mc admin user add local odk-central-dev topSecret123 && \
 	 docker run -v "${PWD}/s3-dev/minio-config/:/root/.mc/" --network=host minio/mc mb --ignore-existing local/odk-central-bucket && \
-  (docker run -v "${PWD}/s3-dev/minio-config/:/root/.mc/" --network=host minio/mc admin policy attach local readwrite --user odk-central-dev || true) && \
+	(docker run -v "${PWD}/s3-dev/minio-config/:/root/.mc/" --network=host minio/mc admin policy attach local readwrite --user odk-central-dev || true) && \
 	NODE_CONFIG_ENV=s3-blob-storage-development node lib/bin/minio-test.js && \
 	NODE_CONFIG_ENV=s3-blob-storage-development npx nodemon --watch lib --watch config lib/bin/run-server.js
 
