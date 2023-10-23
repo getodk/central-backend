@@ -1,6 +1,7 @@
 {
   "default": {
     "s3blobStore": {
+      "server": "http://localhost:9000",
       "accessKey": "odk-central-dev",
       "secretKey": "topSecret123",
       "bucketName": "odk-central-bucket"
