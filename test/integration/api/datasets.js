@@ -645,7 +645,10 @@ describe('datasets and entities', () => {
 
         const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv?$filter=__system/conflict eq \'hard\'')
           .expect(200)
-          .then(r => r.text);
+          .then(r => {
+            should.not.exist(r.get('ETag'));
+            return r.text;
+          });
 
         const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
 
