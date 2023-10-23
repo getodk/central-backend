@@ -19,11 +19,24 @@ test-oidc-e2e: node_modules
 dev-oidc: base
 	NODE_CONFIG_ENV=oidc-development npx nodemon --watch lib --watch config lib/bin/run-server.js
 
+.PHONY: dev-s3
+dev-s3: base
+	node lib/bin/create-minio-dev-account.js && \
+	NODE_CONFIG_ENV=s3-blob-storage-development npx nodemon --watch lib --watch config lib/bin/run-server.js
+
 .PHONY: fake-oidc-server
 fake-oidc-server:
 	cd oidc-dev/fake-oidc-server && \
 	npm clean-install && \
 	FAKE_OIDC_ROOT_URL=http://localhost:9898 npx nodemon index.js
+
+.PHONY: fake-s3-server
+fake-s3-server:
+	# run an ephemeral, s3-compatible local store
+	# default admin credentials: minioadmin:minioadmin
+	# see: https://hub.docker.com/r/minio/minio/
+	docker run --rm -p 9000:9000 -p 9001:9001 \
+	  quay.io/minio/minio server /data --console-address ":9001"
 
 .PHONY: fake-oidc-server-ci
 fake-oidc-server-ci:
