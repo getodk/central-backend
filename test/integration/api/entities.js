@@ -590,7 +590,7 @@ describe('Entities API', () => {
             // Doesn't return first version
             versions.some(v => v.version === 1).should.be.false();
 
-            versions[0].lastGoodVersion.should.be.true();
+            versions[1].lastGoodVersion.should.be.true();
             versions[2].conflictingProperties.should.be.eql(['age']);
           });
       }));
@@ -632,7 +632,7 @@ describe('Entities API', () => {
             // Doesn't return old versions
             versions.some(v => v.version < 3).should.be.false();
 
-            versions[0].lastGoodVersion.should.be.true();
+            versions[1].lastGoodVersion.should.be.true();
             versions[2].conflictingProperties.should.be.eql(['label']);
           });
       }));
