@@ -1,8 +1,9 @@
 {
   "default": {
-    "blobStore": {
+    "s3blobStore": {
       "accessKey": "odk-central-dev",
-      "secretKey": "topSecret123"
+      "secretKey": "topSecret123",
+      "bucketName": "odk-central-bucket"
     }
   }
 }
