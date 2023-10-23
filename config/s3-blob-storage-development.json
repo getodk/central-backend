@@ -1,6 +1,8 @@
 {
-	"default": {
-		"blobStore": {
-		}
-	}
+  "default": {
+    "blobStore": {
+      "accessKey": "odk-central-dev",
+      "secretKey": "topSecret123"
+    }
+  }
 }

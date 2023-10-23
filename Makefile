@@ -21,7 +21,7 @@ dev-oidc: base
 
 .PHONY: dev-s3
 dev-s3: base
-	node lib/bin/create-minio-dev-account.js && \
+	docker run -v "${PWD}/s3-dev/minio-config/:/root/.mc/" --network=host minio/mc admin user add local odk-central-dev topSecret123 && \
 	NODE_CONFIG_ENV=s3-blob-storage-development npx nodemon --watch lib --watch config lib/bin/run-server.js
 
 .PHONY: fake-oidc-server
