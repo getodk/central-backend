@@ -673,8 +673,13 @@ describe('extracting and validating entities', () => {
   describe('getDiffProp', () => {
 
     it('should return list of different properties', () => {
-      getDiffProp({ name: 'John', age: '22', gender: 'male' }, { name: 'Jane', age: '22', hometown: 'Boston' })
+      getDiffProp({ name: 'John', age: '22', hometown: 'Boston' }, { name: 'Jane', age: '22', hometown: 'Boston' })
         .should.eql(['name']);
+    });
+
+    it('should include properties not in 2nd argument', () => {
+      getDiffProp({ name: 'John', age: '22', gender: 'male' }, { name: 'Jane', age: '22', hometown: 'Boston' })
+        .should.eql(['name', 'gender']);
     });
   });
 
