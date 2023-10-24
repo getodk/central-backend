@@ -1236,6 +1236,7 @@ describe('Entities API', () => {
           .expect(200)
           .then(({ body: person }) => {
             person.currentVersion.should.have.property('label').which.is.eql('New Label');
+            person.currentVersion.dataReceived.should.have.property('label').which.is.eql('New Label');
           });
       }));
 
