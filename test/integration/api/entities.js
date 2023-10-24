@@ -381,6 +381,7 @@ describe('Entities API', () => {
           const { currentVersion } = person;
           currentVersion.data.should.eql({ age: '99', first_name: 'Alice' });
           currentVersion.label.should.eql('Alicia - 85');
+          currentVersion.dataReceived.should.eql({ label: 'Alicia - 85' });
           currentVersion.version.should.equal(3);
           currentVersion.conflictingProperties.should.be.eql([]);
         });
