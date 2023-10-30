@@ -1713,28 +1713,7 @@ describe('Entities API', () => {
         });
     }));
 
-    it.skip('should set label to blank', testEntityUpdates(async (service, container) => {
-      // TODO: fix the entity label update logic to make this test pass.
-      const asAlice = await service.login('alice');
-
-      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
-        .send(testData.instances.updateEntity.one
-          .replace('<label>Alicia (85)</label>', '<label></label>'))
-        .expect(200);
-
-      await exhaust(container);
-
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
-        .expect(200)
-        .then(({ body: person }) => {
-          person.currentVersion.dataReceived.should.eql({ age: '85', first_name: 'Alicia' });
-          person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
-          person.currentVersion.label.should.equal('');
-        });
-    }));
-
-    it.skip('should not update label if not included', testEntityUpdates(async (service, container) => {
-      // TODO: fix the entity label update logic to make this test pass.
+    it('should not update label if not included', testEntityUpdates(async (service, container) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
@@ -1753,8 +1732,31 @@ describe('Entities API', () => {
         });
     }));
 
-    it.skip('should set field to blank', testEntityUpdates(async (service, container) => {
-      // TODO: fix update logic to make this test pass
+    it('should log error and not update if trying to set label to blank', testEntityUpdates(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one
+          .replace('<label>Alicia (85)</label>', '<label></label>'))
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          should(person.currentVersion.baseVersion).be.null();
+        });
+
+      await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs[0].should.be.an.Audit();
+          logs[0].action.should.be.eql('entity.error');
+        });
+    }));
+
+    it('should set field to blank', testEntityUpdates(async (service, container) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
@@ -1767,7 +1769,7 @@ describe('Entities API', () => {
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(200)
         .then(({ body: person }) => {
-          person.currentVersion.dataReceived.should.eql({ label: 'Alicia (85)', first_name: 'Alicia' });
+          person.currentVersion.dataReceived.should.eql({ label: 'Alicia (85)', first_name: 'Alicia', age: '' });
           person.currentVersion.data.first_name.should.eql('Alicia');
           person.currentVersion.data.age.should.eql('');
         });
