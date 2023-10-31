@@ -1505,8 +1505,16 @@ describe('Entities API', () => {
 
         const asAlice = await service.login('alice');
 
+        const lastUpdatedAt = await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body }) => body.updatedAt);
+
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
-          .expect(200);
+          .expect(200)
+          .then(({ body }) => {
+            body.updatedAt.should.not.be.eql(lastUpdatedAt);
+            should(body.conflict).be.null();
+          });
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
           .set('X-Extended-Metadata', true)
