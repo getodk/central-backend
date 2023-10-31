@@ -471,6 +471,7 @@ describe('Entities API', () => {
           });
 
           versions[1].data.should.be.eql({ age: '12', first_name: 'John' });
+          versions[1].lastGoodVersion.should.be.true();
         });
     }));
 
@@ -548,8 +549,18 @@ describe('Entities API', () => {
             v.should.have.property('data');
           });
 
-          versions[2].conflictingProperties.should.be.eql([]);
-          versions[3].conflictingProperties.should.be.eql(['age', 'label']);
+          const thirdVersion = versions[2];
+          thirdVersion.conflict.should.be.eql('soft');
+          thirdVersion.conflictingProperties.should.be.eql([]);
+          thirdVersion.source.event.action.should.be.eql('submission.create');
+          thirdVersion.source.submission.instanceId.should.be.eql('two');
+
+          const fourthVersion = versions[3];
+          fourthVersion.conflict.should.be.eql('hard');
+          fourthVersion.conflictingProperties.should.be.eql(['age', 'label']);
+          fourthVersion.source.event.action.should.be.eql('submission.create');
+          fourthVersion.source.submission.instanceId.should.be.eql('one');
+
         });
     }));
 
@@ -579,6 +590,7 @@ describe('Entities API', () => {
 
         await exhaust(container);
       };
+
       it('should return only relevent versions needed for conflict resolution', testEntities(async (service, container) => {
         const asAlice = await service.login('alice');
 
@@ -588,7 +600,7 @@ describe('Entities API', () => {
           .expect(200)
           .then(({ body: versions }) => {
             // Doesn't return first version
-            versions.some(v => v.version === 1).should.be.false();
+            versions.map(v => v.version).should.eql([2, 3, 4]);
 
             versions[1].lastGoodVersion.should.be.true();
             versions[2].conflictingProperties.should.be.eql(['age']);
@@ -630,10 +642,34 @@ describe('Entities API', () => {
           .expect(200)
           .then(({ body: versions }) => {
             // Doesn't return old versions
-            versions.some(v => v.version < 3).should.be.false();
+            versions.map(v => v.version).should.eql([3, 4, 5]);
 
             versions[1].lastGoodVersion.should.be.true();
             versions[2].conflictingProperties.should.be.eql(['label']);
+          });
+      }));
+
+      it('should correctly set `resolved` flag for the versions', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await createConflictOnV2(asAlice, container);
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.two
+            .replace('baseVersion="1"', 'baseVersion="2"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+          .expect(200)
+          .then(({ body: versions }) => {
+            // resolved flag is true only for the old conflict
+            versions.map(v => v.resolved).should.eql([false, false, false, true, false]);
           });
       }));
     });
