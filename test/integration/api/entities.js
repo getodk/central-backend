@@ -1546,6 +1546,29 @@ describe('Entities API', () => {
           });
       }));
 
+      it('should not resolve without the flag', testService(async (service, container) => {
+        await createConflict(service, container);
+
+        const asAlice = await service.login('alice');
+
+        const asBob = await service.login('bob');
+
+        await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .send({ data: { first_name: 'John', age: '10' } })
+          .set('If-Match', '"3"')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .set('X-Extended-Metadata', true)
+          .expect(200)
+          .then(({ body: person }) => {
+            should(person.conflict).not.be.null();
+
+            person.currentVersion.data.age.should.be.eql('10');
+            person.currentVersion.data.first_name.should.be.eql('John');
+          });
+      }));
+
       it('should resolve the conflict and forcefully update the entity', testService(async (service, container) => {
         await createConflict(service, container);
 
