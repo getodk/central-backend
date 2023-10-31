@@ -2703,12 +2703,29 @@ describe('datasets and entities', () => {
             });
         }));
 
-        it('should create dataset if it does not exist and and log it', testService(async (service, { Audits }) => {
+        it('should create dataset if it does not exist and and log it', testService(async (service) => {
           const asAlice = await service.login('alice');
-          await asAlice.post('/v1/projects/1/forms?publish=true')
+          await asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.updateEntity)
             .set('Content-Type', 'text/xml')
             .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([
+                {
+                  name: 'people',
+                  isNew: true, // Dataset is new
+                  properties: [
+                    { name: 'first_name', isNew: true, inForm: true },
+                    { name: 'age', isNew: true, inForm: true }
+                  ]
+                }
+              ]);
+            });
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish');
 
           await asAlice.get('/v1/projects/1/datasets/people')
             .expect(200)
@@ -2717,9 +2734,11 @@ describe('datasets and entities', () => {
               body.properties.map(p => p.name).should.eql([ 'first_name', 'age' ]);
             });
 
-          await Audits.getLatestByAction('dataset.create')
-            .then(o => o.get())
-            .then(audit => audit.details.should.eql({ properties: ['first_name', 'age'] }));
+          await asAlice.get('/v1/audits?action=dataset.create')
+            .expect(200)
+            .then(({ body: audits }) => {
+              audits[0].details.should.eql({ properties: ['first_name', 'age'] });
+            });
         }));
       });
     });
