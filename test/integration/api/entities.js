@@ -614,6 +614,7 @@ describe('Entities API', () => {
         await createConflictOnV2(asAlice, container);
 
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+          .set('If-Match', '"4"')
           .expect(200);
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions?relevantToConflict=true')
@@ -629,6 +630,7 @@ describe('Entities API', () => {
         await createConflictOnV2(asAlice, container);
 
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+          .set('If-Match', '"4"')
           .expect(200);
 
         await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
@@ -656,6 +658,7 @@ describe('Entities API', () => {
         await createConflictOnV2(asAlice, container);
 
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+          .set('If-Match', '"4"')
           .expect(200);
 
         await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
@@ -1510,6 +1513,7 @@ describe('Entities API', () => {
           .then(({ body }) => body.updatedAt);
 
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+          .set('If-Match', '"3"')
           .expect(200)
           .then(({ body }) => {
             body.updatedAt.should.not.be.eql(lastUpdatedAt);
@@ -1604,6 +1608,31 @@ describe('Entities API', () => {
           .expect(400)
           .then(({ body }) => {
             body.code.should.be.eql(400.32);
+          });
+      }));
+
+      it('should reject if version does not match', testService(async (service, container) => {
+        await createConflict(service, container);
+
+        const asAlice = await service.login('alice');
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+          .set('If-Match', '"0"')
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.15);
+          });
+      }));
+
+      it('should reject if version does not match', testService(async (service, container) => {
+        await createConflict(service, container);
+
+        const asAlice = await service.login('alice');
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&force=true')
+          .expect(200)
+          .then(({ body }) => {
+            should(body.conflict).be.null();
           });
       }));
 
