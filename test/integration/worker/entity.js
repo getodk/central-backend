@@ -578,7 +578,7 @@ describe('worker: entity', () => {
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(subEvent.details.submissionId);
         event.details.problem.problemCode.should.equal(404.8);
-        event.details.errorMessage.should.equal('Entity not found. The entity with UUID (12345678-1234-4123-8234-123456789abc) specified in the submission does not exist in the dataset (people).');
+        event.details.errorMessage.should.equal('The entity with UUID (12345678-1234-4123-8234-123456789abc) specified in the submission does not exist in the dataset (people).');
       }));
 
       it('should fail for other constraint errors like dataset name does not exist', testService(async (service, container) => {

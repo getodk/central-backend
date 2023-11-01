@@ -1842,8 +1842,8 @@ describe('Entities API', () => {
           .then(({ body: logs }) => {
             logs[0].should.be.an.Audit();
             logs[0].action.should.be.eql('entity.error');
-            logs[0].details.problem.problemCode.should.equal(404.8);
-            logs[0].details.errorMessage.should.equal('Entity not found. Base version (2) does not exist for entity UUID (12345678-1234-4123-8234-123456789abc) in dataset (people).');
+            logs[0].details.problem.problemCode.should.equal(404.9);
+            logs[0].details.errorMessage.should.equal('Base version (2) does not exist for entity UUID (12345678-1234-4123-8234-123456789abc) in dataset (people).');
           });
       }));
     });
