@@ -1,4 +1,4 @@
-require('should');
+const should = require('should');
 const appRoot = require('app-root-path');
 const { filter } = require('ramda');
 const { toObjects } = require('streamtest').v2;
@@ -55,6 +55,71 @@ describe('submission field streamer', () => {
       const stream = submissionXmlToFieldStream(fields, '<data></goodbye></goodbye></goodbye>');
       stream.on('data', () => {});
       stream.on('end', done); // not hanging/timing out is the assertion here
+    });
+  });
+
+  describe('entity flags includeStructuralAttrs and includeEmptyNodes', () => {
+    beforeEach(() => {
+      should.config.checkProtoEql = false;
+    });
+    afterEach(() => {
+      should.config.checkProtoEql = true;
+    });
+
+    it('should include structural fields', (done) => {
+      fieldsFor(testData.forms.simpleEntity).then((fields) =>
+        submissionXmlToFieldStream(fields, testData.instances.simpleEntity.one, true).pipe(toObjects((error, result) => {
+          result.should.eql([
+            { field: new MockField({ order: 4, name: 'entity', path: '/meta/entity', type: 'structure', attrs: {
+              create: '1',
+              dataset: 'people',
+              id: 'uuid:12345678-1234-4123-8234-123456789abc'
+            } }), text: null },
+            { field: new MockField({ order: 5, name: 'label', path: '/meta/entity/label', type: 'unknown' }), text: 'Alice (88)' },
+            { field: new MockField({ order: 0, name: 'name', path: '/name', type: 'string', propertyName: 'first_name' }), text: 'Alice' },
+            { field: new MockField({ order: 1, name: 'age', path: '/age', type: 'int', propertyName: 'age' }), text: '88' },
+            { field: new MockField({ order: 2, name: 'hometown', path: '/hometown', type: 'string' }), text: 'Chicago' }
+          ]);
+          done();
+        })));
+    });
+
+    it('should not include structural fields', (done) => {
+      fieldsFor(testData.forms.simpleEntity).then((fields) =>
+        submissionXmlToFieldStream(fields, testData.instances.simpleEntity.one, false).pipe(toObjects((error, result) => {
+          result.should.eql([
+            { field: new MockField({ order: 5, name: 'label', path: '/meta/entity/label', type: 'unknown' }), text: 'Alice (88)' },
+            { field: new MockField({ order: 0, name: 'name', path: '/name', type: 'string', propertyName: 'first_name' }), text: 'Alice' },
+            { field: new MockField({ order: 1, name: 'age', path: '/age', type: 'int', propertyName: 'age' }), text: '88' },
+            { field: new MockField({ order: 2, name: 'hometown', path: '/hometown', type: 'string' }), text: 'Chicago' }
+          ]);
+          done();
+        })));
+    });
+
+    it('should include empty nodes if specified in fields', (done) => {
+      fieldsFor(testData.forms.simpleEntity).then((fields) =>
+        submissionXmlToFieldStream(fields, testData.instances.simpleEntity.one.replace('<age>88</age>', '<age></age>'), false, true).pipe(toObjects((error, result) => {
+          result.should.eql([
+            { field: new MockField({ order: 5, name: 'label', path: '/meta/entity/label', type: 'unknown' }), text: 'Alice (88)' },
+            { field: new MockField({ order: 0, name: 'name', path: '/name', type: 'string', propertyName: 'first_name' }), text: 'Alice' },
+            { field: new MockField({ order: 1, name: 'age', path: '/age', type: 'int', propertyName: 'age' }), text: '' },
+            { field: new MockField({ order: 2, name: 'hometown', path: '/hometown', type: 'string' }), text: 'Chicago' }
+          ]);
+          done();
+        })));
+    });
+
+    it('should not include empty nodes', (done) => {
+      fieldsFor(testData.forms.simpleEntity).then((fields) =>
+        submissionXmlToFieldStream(fields, testData.instances.simpleEntity.one.replace('<age>88</age>', '<age></age>'), false, false).pipe(toObjects((error, result) => {
+          result.should.eql([
+            { field: new MockField({ order: 5, name: 'label', path: '/meta/entity/label', type: 'unknown' }), text: 'Alice (88)' },
+            { field: new MockField({ order: 0, name: 'name', path: '/name', type: 'string', propertyName: 'first_name' }), text: 'Alice' },
+            { field: new MockField({ order: 2, name: 'hometown', path: '/hometown', type: 'string' }), text: 'Chicago' }
+          ]);
+          done();
+        })));
     });
   });
 });
