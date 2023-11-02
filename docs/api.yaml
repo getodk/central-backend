@@ -9961,6 +9961,9 @@ paths:
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  version: 1
+                  baseVersion: null
+                  conflictingProperties: null
             application/json; extended:
               schema:
                 type: array
@@ -9987,6 +9990,8 @@ paths:
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  version: 1
+                  baseVersion: null
                   conflictingProperties: null
                   creator:
                     createdAt: '2018-04-18T23:19:14.802Z'
@@ -10068,7 +10073,13 @@ paths:
                   creatorId: 1
                   userAgent: Enketo/3.0.4
                   conflictingProperties: null
+                  version: 1
+                  baseVersion: null
                   data:
+                    firstName: John
+                    age: '88'
+                  dataReceived:
+                    label: John (88)
                     firstName: John
                     age: '88'
         403:
@@ -10129,9 +10140,15 @@ paths:
                   creatorId: 1
                   userAgent: Enketo/3.0.4
                   conflictingProperties: null
+                  version: 1
+                  baseVersion: null
                   data:
                     firstName: John
                     age: '88'
+                  dataReceived:
+                    firstName: John
+                    age: '88'
+                    label: John (88)
             application/json; extended:
               schema:
                 type: array
@@ -10158,9 +10175,15 @@ paths:
                   creatorId: 1
                   userAgent: Enketo/3.0.4
                   conflictingProperties: null
+                  version: 1
+                  baseVersion: null
                   data:
                     firstName: John
                     age: '88'
+                  dataReceived:
+                    firstName: John
+                    age: '88'
+                    label: John (88)
                   creator:
                     createdAt: '2018-04-18T23:19:14.802Z'
                     displayName: My Display Name
@@ -10337,9 +10360,15 @@ paths:
                   creatorId: 1
                   userAgent: Enketo/3.0.4
                   conflictingProperties: null
+                  version: 1
+                  baseVersion: null
                   data:
                     firstName: John
                     age: '88'
+                  dataReceived:
+                    firstName: John
+                    age: '88'
+                    label: John (88)
         403:
           description: Forbidden
           content:
@@ -10409,33 +10438,59 @@ paths:
                 type: array
                 description: Standard Response
                 items:
-                  $ref: '#/components/schemas/EntityVersion'
+                  $ref: '#/components/schemas/EntityVersionFull'
               example:
                 - label: John (88)
                   current: true
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  version: 1
+                  baseVersion: null
+                  conflict: null
+                  resolved: false
+                  lastGoodVersion: true
+                  relevantToConflict: false
                   conflictingProperties: null
+                  baseDiff: []
+                  serverDiff: []
+                  source: "// same as Audit.details - It is fluid; can be changed later on."
                   data:
                     firstName: John
                     age: '88'
+                  dataReceived:
+                    firstName: John
+                    age: '88'
+                    label: John (88)
             application/json; extended:
               schema:
                 type: array
                 description: Extended Response
                 items:
-                  $ref: '#/components/schemas/ExtendedEntityVersion'
+                  $ref: '#/components/schemas/ExtendedEntityVersionFull'
               example:
                 - label: John (88)
                   current: true
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  version: 1
+                  baseVersion: null
+                  conflict: null
+                  resolved: false
+                  lastGoodVersion: true
+                  relevantToConflict: false
                   conflictingProperties: null
+                  baseDiff: []
+                  serverDiff: []
+                  source: "// same as Audit.details - It is fluid; can be changed later on."
                   data:
                     firstName: John
                     age: '88'
+                  dataReceived:
+                    firstName: John
+                    age: '88'
+                    label: John (88)
                   creator:
                     createdAt: '2018-04-18T23:19:14.802Z'
                     displayName: My Display Name
@@ -13256,6 +13311,14 @@ components:
           description: list of properties updated offline simultaneously.
           items:
             type: string
+        version:
+          type: number
+          description: The version number of the Entity. Each update increments this number.
+          example: 2
+        baseVersion:
+          type: number
+          description: The version number of the base Entity, which was used to make an update.
+          example: 1
     EntitySummary:
       allOf: 
         - $ref: '#/components/schemas/EntitySummaryFields'
@@ -13302,12 +13365,57 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/DataExample'
+            dataReceived:
+              $ref: '#/components/schemas/DataReceivedExample'
+    
     ExtendedEntityVersion:
       allOf: 
         - $ref: '#/components/schemas/EntityVersion'
         - type: object
           properties:
-            reator:
+            creator:
+              $ref: '#/components/schemas/Actor'
+    EntityVersionFull:
+      allOf: 
+        - $ref: '#/components/schemas/EntityVersion'
+        - type: object
+          properties:
+            source:
+              type: object
+              description: The source of the Entity version, like Submission or API request
+              example: {event: {}, submissionCreate: {}, submission: {}}
+            baseDiff:
+              type: array
+              description: List of properties that are different between this version and base version
+              example: ['name', 'age']
+            serverDiff:
+              type: array
+              description: List of properties that are different between this version and the last version on the server
+              example: ['name', 'age']
+            conflict:
+              type: string
+              description: Type of the conflict if this version causes a conflict; otherwise `null`
+              enum:
+                - soft
+                - hard
+            resolved:
+              type: boolean
+              description: Is the conflict resolved? Note that this is also false for the version which didn't cause a conflict
+              example: false
+            lastGoodVersion:
+              type: boolean
+              description: Is this version the last good known version?
+              example: false
+            relevantToConflict:
+              type: boolean
+              description: Is this version relevant for the conflict resolution?
+              example: false
+    ExtendedEntityVersionFull:
+      allOf: 
+        - $ref: '#/components/schemas/EntityVersionFull'
+        - type: object
+          properties:
+            creator:
               $ref: '#/components/schemas/Actor'
     EntityDiffValue:
       type: array
@@ -13370,6 +13478,14 @@ components:
         age:
           type: string
           example: '88'    
+    DataReceivedExample:
+      allOf: 
+        - $ref: '#/components/schemas/DataExample'
+        - type: object
+          properties:
+            label:
+              type: string
+              example: John (88)
     Form:
       required:
       - createdAt

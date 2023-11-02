@@ -362,6 +362,9 @@ should.Assertion.add('EntityDef', function assertEntityDef() {
   this.obj.should.have.property('current').which.is.a.Boolean();
   this.obj.should.have.property('createdAt').which.is.a.isoDate();
   this.obj.should.have.property('creatorId').which.is.a.Number();
+  this.obj.should.have.property('version');
+  this.obj.should.have.property('baseVersion');
+  this.obj.should.have.property('conflictingProperties');
   if (this.obj.userAgent !== null) this.obj.userAgent.should.be.a.String();
 });
 
@@ -370,6 +373,21 @@ should.Assertion.add('ExtendedEntityDef', function assertEntity() {
 
   this.obj.should.be.an.EntityDef();
   this.obj.should.have.property('creator').which.is.an.Actor();
+});
+
+should.Assertion.add('EntityDefFull', function assertEntityDefFull() {
+  this.params = { operator: 'to be an Entity Def (version) including Conflict related fields' };
+
+  this.obj.should.be.an.EntityDef();
+  this.obj.should.have.property('data');
+  this.obj.should.have.property('dataReceived');
+  this.obj.should.have.property('source');
+  this.obj.should.have.property('baseDiff');
+  this.obj.should.have.property('serverDiff');
+  this.obj.should.have.property('conflict');
+  this.obj.should.have.property('resolved');
+  this.obj.should.have.property('lastGoodVersion');
+  this.obj.should.have.property('relevantToConflict');
 });
 
 should.Assertion.add('SourceType', function Source() {
