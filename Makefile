@@ -105,4 +105,4 @@ check-file-headers:
 .PHONY: api-docs
 api-docs:
 	(test "$(docker images -q odk-docs)" || docker build --file odk-docs.dockerfile -t odk-docs .) && \
-	docker run --rm -it -v ./docs/api.yaml:/docs/docs/_static/api-spec/central.yaml -p 8000:8000 odk-docs
+	docker run --rm -it -v ./docs:/docs/docs/_static/central-spec -p 8000:8000 odk-docs
