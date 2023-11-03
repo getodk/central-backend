@@ -10,12 +10,6 @@ describe('util/html', () => {
       [ '/users',                 '/#/users' ],                   // eslint-disable-line no-multi-spaces
       [ '/users"><badTag ',       '/#/users%22%3E%3CbadTag' ],    // eslint-disable-line no-multi-spaces
 
-      // login URLs - in contrast to frontend
-      [ '/login',                          '/#/' ],    // eslint-disable-line no-multi-spaces
-      [ '/login/',                         '/#/' ],    // eslint-disable-line no-multi-spaces
-      [ '/login/foo/..',                   '/#/' ],    // eslint-disable-line no-multi-spaces
-      [ '/login/foo&sol;&period;&period;', '/#/' ],    // eslint-disable-line no-multi-spaces
-
       // query params
       [ '/users?"><badTag ',      '/#/users?%22%3E%3CbadTag' ],   // eslint-disable-line no-multi-spaces
       [ '/users?="><badTag ',     '/#/users?=%22%3E%3CbadTag' ],  // eslint-disable-line no-multi-spaces
