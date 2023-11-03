@@ -9,6 +9,7 @@ const { omit } = require('ramda');
 const should = require('should');
 const { sql } = require('slonik');
 const { QueryOptions } = require('../../../lib/util/db');
+const { createConflict } = require('../fixtures/scenarios');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const Option = require(appRoot + '/lib/util/option');
@@ -624,6 +625,42 @@ describe('datasets and entities', () => {
           .expect(304);
       }));
 
+      it('should filter the Entities', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111aaa',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        await createConflict(asAlice, container);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv?$filter=__system/conflict eq \'hard\'')
+          .expect(200)
+          .then(r => {
+            should.not.exist(r.get('ETag'));
+            return r.text;
+          });
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(2);
+
+        const withOutTs = result.replace(isoRegex, '');
+        withOutTs.should.be.eql(
+          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-123456789abc,Alicia (85),Alicia,85,,5,Alice,2,,3\n'
+        );
+
+      }));
     });
 
     describe('projects/:id/datasets/:name GET', () => {
@@ -2572,6 +2609,138 @@ describe('datasets and entities', () => {
 
       }));
 
+      describe('uploading forms that UPDATE but do not create entities', () => {
+        it('should be able to add properties to datasets', testService(async (service) => {
+          const asAlice = await service.login('alice');
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.updateEntity
+              .replace('entities:saveto="first_name"', 'entities:saveto="nickname"'))
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([
+                {
+                  name: 'people',
+                  isNew: false,
+                  properties: [
+                    { name: 'first_name', isNew: false, inForm: false },
+                    { name: 'nickname', isNew: true, inForm: true },
+                    { name: 'age', isNew: false, inForm: true }
+                  ]
+                }
+              ]);
+            });
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish');
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([
+                {
+                  name: 'people',
+                  properties: [
+                    { name: 'first_name', inForm: false },
+                    { name: 'nickname', inForm: true },
+                    { name: 'age', inForm: true }
+                  ]
+                }
+              ]);
+            });
+        }));
+
+        it('should be able to have an update entity form with no savetos', testService(async (service) => {
+          const asAlice = await service.login('alice');
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.updateEntity
+              .replace('entities:saveto="first_name"', '')
+              .replace('entities:saveto="age"', ''))
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([
+                {
+                  name: 'people',
+                  isNew: false,
+                  properties: [
+                    { name: 'first_name', isNew: false, inForm: false },
+                    { name: 'age', isNew: false, inForm: false }
+                  ]
+                }
+              ]);
+            });
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish');
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([
+                {
+                  name: 'people',
+                  properties: [
+                    { name: 'first_name', inForm: false },
+                    { name: 'age', inForm: false }
+                  ]
+                }
+              ]);
+            });
+        }));
+
+        it('should create dataset if it does not exist and and log it', testService(async (service) => {
+          const asAlice = await service.login('alice');
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.updateEntity)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([
+                {
+                  name: 'people',
+                  isNew: true, // Dataset is new
+                  properties: [
+                    { name: 'first_name', isNew: true, inForm: true },
+                    { name: 'age', isNew: true, inForm: true }
+                  ]
+                }
+              ]);
+            });
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish');
+
+          await asAlice.get('/v1/projects/1/datasets/people')
+            .expect(200)
+            .then(({ body }) => {
+              body.name.should.be.eql('people');
+              body.properties.map(p => p.name).should.eql([ 'first_name', 'age' ]);
+            });
+
+          await asAlice.get('/v1/audits?action=dataset.create')
+            .expect(200)
+            .then(({ body: audits }) => {
+              audits[0].details.should.eql({ properties: ['first_name', 'age'] });
+            });
+        }));
+      });
     });
 
     describe('dataset property interaction with intermediate form schemas and purging uneeded drafts', () => {
