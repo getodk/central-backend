@@ -24,6 +24,12 @@ If you want to use OpenID Connect instead of username/password for authenticatio
 
 Instead of `make dev`, run both `make dev-oidc` and `make fake-oidc-server`.
 
+### API documentation
+
+We use OpenAPI specification for API documentation. It is located at `docs/api.yaml`. 
+
+You can run `make api-docs` to preview the document.
+
 ## Guidelines
 
 If you're starting work on an issue ticket, please leave a comment saying so. If you run into trouble or have to stop working on a ticket, please leave a comment as well. As you write code, the usual guidelines apply; please ensure you are following existing conventions:

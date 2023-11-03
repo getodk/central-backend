@@ -27,15 +27,36 @@ describe('api: /datasets/:name.svc', () => {
             .replace('uuid:12345678-1234-4123-8234-123456789abc', uuid()))
           .set('Content-Type', 'application/xml')
           .expect(200);
-
-        await user.patch(`/v1/projects/1/forms/simpleEntity/submissions/submission${i+skip}`)
-          .send({ reviewState: 'approved' })
-          .expect(200);
-
       }
       await exhaust(container);
     };
     /* eslint-enable no-await-in-loop*/
+
+    const createConflict = async (user, container) => {
+      await user.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await user.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ data: { age: '99' } })
+        .expect(200);
+
+      await user.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // all properties changed
+      await user.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+    };
 
     it('should return all entities', testService(async (service, container) => {
       const asAlice = await service.login('alice');
@@ -236,6 +257,27 @@ describe('api: /datasets/:name.svc', () => {
         .expect(200)
         .then(({ body }) => {
           body.value.length.should.be.eql(2);
+        });
+    }));
+
+    it('should filter by conflict status', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      await createConflict(asAlice, container);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$filter=__system/conflict eq \'hard\'')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.be.eql(1);
+
+          body.value[0].__system.conflict.should.be.eql('hard');
         });
     }));
 

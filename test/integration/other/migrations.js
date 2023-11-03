@@ -199,7 +199,7 @@ describe.skip('database migrations', function() {
 });
 
 // eslint-disable-next-line space-before-function-paren, func-names
-describe('datbase migrations: removing default project', function() {
+describe('database migrations: removing default project', function() {
   this.timeout(8000);
 
   it('should put old forms into project', testServiceFullTrx(async (service, container) => {
@@ -237,7 +237,7 @@ describe('datbase migrations: removing default project', function() {
 });
 
 // eslint-disable-next-line space-before-function-paren, func-names
-describe('datbase migrations: intermediate form schema', function() {
+describe('database migrations: intermediate form schema', function() {
   this.timeout(20000);
 
   it('should test migration', testServiceFullTrx(async (service, container) => {

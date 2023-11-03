@@ -1,11 +1,13 @@
 const should = require('should');
 const appRoot = require('app-root-path');
 const assert = require('assert');
-const { parseSubmissionXml, extractEntity, validateEntity, extractSelectedProperties, selectFields, diffEntityData } = require(appRoot + '/lib/data/entity');
+const { ConflictType } = require('../../../lib/data/entity');
+const { Entity } = require('../../../lib/model/frames');
+const { parseSubmissionXml, extractEntity, validateEntity, extractSelectedProperties, selectFields, diffEntityData, getDiffProp, getWithConflictDetails } = require(appRoot + '/lib/data/entity');
 const { fieldsFor } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
-describe('extracting entities from submissions', () => {
+describe('extracting and validating entities', () => {
   describe('validateEntity', () => {
     it('should throw errors on when label is missing', () => {
       const entity = {
@@ -71,43 +73,135 @@ describe('extracting entities from submissions', () => {
       validatedEntity.system.should.not.have.property('id');
       validatedEntity.system.should.have.property('uuid', '12345678-1234-4123-8234-123456789abc');
     });
+
+    it('should throw error when baseVersion for update is missing', () => {
+      (() => validateEntity({
+        system: {
+          id: '12345678-1234-4123-8234-123456789abc',
+          label: 'foo',
+          dataset: 'foo',
+          update: '1'
+        },
+        data: {}
+      })).should.throw(/Required parameter baseVersion missing/);
+    });
+
+    it('should throw error when baseVersion is not an integer', () => {
+      (() => validateEntity({
+        system: {
+          id: '12345678-1234-4123-8234-123456789abc',
+          label: 'foo',
+          dataset: 'foo',
+          update: '1',
+          baseVersion: 'a'
+        },
+        data: {}
+      })).should.throw('Invalid input data type: expected (baseVersion) to be (integer)');
+    });
   });
 
-  describe('parseSubmissionXml', () => {
-    it('should return filled in entity props', () =>
-      fieldsFor(testData.forms.simpleEntity)
-        .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-        .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one))
-        .then((result) => {
-          should(result.data).eql(Object.assign(Object.create(null), { first_name: 'Alice', age: '88' }));
-          should(result.system).eql(Object.assign(Object.create(null), {
-            create: '1',
-            id: 'uuid:12345678-1234-4123-8234-123456789abc',
-            label: 'Alice (88)',
-            dataset: 'people'
-          }));
-        }));
+  describe('extract entity from submission: parseSubmissionXml', () => {
+    // Used to compare entity structure when Object.create(null) used.
+    beforeEach(() => {
+      should.config.checkProtoEql = false;
+    });
+    afterEach(() => {
+      should.config.checkProtoEql = true;
+    });
 
-    describe('create', () => {
-      it('should create entity if create is "1"', () =>
+    describe('new entity', () => {
+      it('should return entity data parsed from submission based on form fields', () =>
         fieldsFor(testData.forms.simpleEntity)
           .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
           .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one))
           .then((result) => {
-            should.exist(result);
+            should(result.data).eql({ first_name: 'Alice', age: '88' });
           }));
 
-      it('should create entity if create is "true"', () =>
+      it('should return entity system data parsed from submission', () =>
+        fieldsFor(testData.forms.simpleEntity)
+          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
+          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one))
+          .then((result) => {
+            should(result.system).eql({
+              create: '1',
+              id: 'uuid:12345678-1234-4123-8234-123456789abc',
+              label: 'Alice (88)',
+              dataset: 'people',
+              update: undefined,
+              baseVersion: undefined
+            });
+          }));
+
+      it('should get entity uuid without uuid: prefix', () =>
+        fieldsFor(testData.forms.simpleEntity)
+          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
+          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('uuid:', '')))
+          .then((result) => {
+            should(result.system).eql({
+              create: '1',
+              id: '12345678-1234-4123-8234-123456789abc',
+              label: 'Alice (88)',
+              dataset: 'people',
+              update: undefined,
+              baseVersion: undefined
+            });
+          }));
+
+      it('should get create property of entity if create is "true"', () =>
         fieldsFor(testData.forms.simpleEntity)
           .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
           .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('create="1"', 'create="true"')))
           .then((result) => {
-            should.exist(result);
+            result.system.create.should.equal('true');
+          }));
+
+      it('should get any value of create', () =>
+        fieldsFor(testData.forms.simpleEntity)
+          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
+          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('create="1"', 'create="foo"')))
+          .then((result) => {
+            result.system.create.should.equal('foo');
+          }));
+
+      it('should get (but later ignore) baseVersion when it is provided with create instead of update', () =>
+        fieldsFor(testData.forms.updateEntity)
+          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
+          .then((fields) => parseSubmissionXml(fields, testData.instances.updateEntity.one.replace('update="1"', 'create="1"')))
+          .then((result) => {
+            should.not.exist(result.system.update);
+            result.system.create.should.equal('1');
+            result.system.baseVersion.should.equal('1');
+          }));
+    });
+
+    describe('update entity', () => {
+      it('should return entity data parsed from submission based on form fields', () =>
+        fieldsFor(testData.forms.updateEntity)
+          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
+          .then((fields) => parseSubmissionXml(fields, testData.instances.updateEntity.one))
+          .then((result) => {
+            should(result.data).eql(Object.assign(Object.create(null), { first_name: 'Alicia', age: '85' }));
+          }));
+
+      it('should return entity system data parsed from submission', () =>
+        fieldsFor(testData.forms.updateEntity)
+          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
+          .then((fields) => parseSubmissionXml(fields, testData.instances.updateEntity.one))
+          .then((result) => {
+            should(result.system).eql({
+              create: undefined,
+              id: '12345678-1234-4123-8234-123456789abc',
+              label: 'Alicia (85)',
+              dataset: 'people',
+              update: '1',
+              baseVersion: '1'
+            });
           }));
     });
   });
 
-  describe('extractEntity', () => {
+  describe('extract entity from API request: extractEntity', () => {
     // Used to compare entity structure when Object.create(null) used.
     beforeEach(() => {
       should.config.checkProtoEql = false;
@@ -378,6 +472,7 @@ describe('extracting entities from submissions', () => {
       uuid: 'uuid',
       createdAt: 'createdAt',
       updatedAt: 'updatedAt',
+      conflict: 'hard',
       def: {
         label: 'label',
         version: 1,
@@ -410,7 +505,8 @@ describe('extracting entities from submissions', () => {
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
           updates: 0,
-          version: 1
+          version: 1,
+          conflict: 'hard'
         },
         firstName: entity.def.data.firstName,
         lastName: entity.def.data.lastName
@@ -451,7 +547,8 @@ describe('extracting entities from submissions', () => {
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
           updates: 0,
-          version: 1
+          version: 1,
+          conflict: 'hard'
         }
       });
     });
@@ -461,6 +558,7 @@ describe('extracting entities from submissions', () => {
         uuid: 'uuid',
         createdAt: 'createdAt',
         updatedAt: 'updatedAt',
+        conflict: 'hard',
         def: {
           label: 'label',
           version: 1,
@@ -487,7 +585,8 @@ describe('extracting entities from submissions', () => {
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
           updates: 0,
-          version: 1
+          version: 1,
+          conflict: 'hard'
         },
         firstName: '',
         lastName: ''
@@ -508,7 +607,8 @@ describe('extracting entities from submissions', () => {
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
           updates: 0,
-          version: 1
+          version: 1,
+          conflict: 'hard'
         },
         firstName: entity.def.data.firstName,
         lastName: entity.def.data.lastName,
@@ -568,6 +668,70 @@ describe('extracting entities from submissions', () => {
 
       diffEntityData(defs).should.be.eql(expectedOutput);
 
+    });
+  });
+
+  describe('getDiffProp', () => {
+
+    it('should return list of different properties', () => {
+      getDiffProp({ name: 'John', age: '22', hometown: 'Boston' }, { name: 'Jane', age: '22', hometown: 'Boston' })
+        .should.eql(['name']);
+    });
+
+    it('should include properties not in 2nd argument', () => {
+      getDiffProp({ name: 'John', age: '22', gender: 'male' }, { name: 'Jane', age: '22', hometown: 'Boston' })
+        .should.eql(['name', 'gender']);
+    });
+  });
+
+  describe('getWithConflictDetails', () => {
+
+    it('should fill in correct information for SOFT conflict', () => {
+      const defs = [
+        new Entity.Def({ id: 0, version: 1, label: 'John', data: { name: 'John', age: '88' }, dataReceived: { name: 'John', age: '88' }, conflictingProp: null, baseVersion: null }),
+        new Entity.Def({ id: 0, version: 2, label: 'Jane', data: { name: 'Jane', age: '88' }, dataReceived: { label: 'Jane', name: 'Jane' }, conflictingProp: [], baseVersion: 1 }),
+        new Entity.Def({ id: 0, version: 3, label: 'Jane', data: { name: 'Jane', age: '99' }, dataReceived: { age: '99' }, conflictingProp: [], baseVersion: 1 })
+      ];
+
+      const audits = [{ action: 'entity.create', details: { entityDefId: 0 } }];
+
+      const result = getWithConflictDetails(defs, audits, false);
+
+      result[2].conflict.should.be.eql(ConflictType.SOFT);
+      result[2].baseDiff.should.be.eql(['age']);
+      result[2].serverDiff.should.be.eql(['age']);
+    });
+
+    it('should fill in correct information for HARD conflict', () => {
+      const defs = [
+        new Entity.Def({ id: 0, version: 1, label: 'John', data: { name: 'John', age: '88' }, dataReceived: { name: 'John', age: '88' }, conflictingProperties: null, baseVersion: null }),
+        new Entity.Def({ id: 0, version: 2, label: 'Jane', data: { name: 'Jane', age: '77' }, dataReceived: { label: 'Jane', name: 'Jane', age: '77' }, conflictingProperties: [], baseVersion: 1 }),
+        new Entity.Def({ id: 0, version: 3, label: 'Jane', data: { name: 'Jane', age: '99' }, dataReceived: { age: '99' }, conflictingProperties: ['age'], baseVersion: 1 })
+      ];
+
+      const audits = [{ action: 'entity.create', details: { entityDefId: 0 } }];
+
+      const result = getWithConflictDetails(defs, audits, false);
+
+      result[2].conflict.should.be.eql(ConflictType.HARD);
+      result[2].baseDiff.should.be.eql(['age']);
+      result[2].serverDiff.should.be.eql(['age']);
+    });
+
+    it('should return only relevant versions', () => {
+      const defs = [
+        new Entity.Def({ id: 0, version: 1, label: 'John', data: { name: 'John', age: '88' }, dataReceived: { name: 'John', age: '88' }, conflictingProp: null, baseVersion: null }),
+        new Entity.Def({ id: 0, version: 2, label: 'Robert', data: { name: 'Robert', age: '20' }, dataReceived: { label: 'Robert', name: 'Robert', age: '20' }, conflictingProp: null, baseVersion: 1 }),
+        new Entity.Def({ id: 0, version: 3, label: 'Jane', data: { name: 'Jane', age: '20' }, dataReceived: { label: 'Jane', name: 'Jane' }, conflictingProp: [], baseVersion: 2 }),
+        new Entity.Def({ id: 0, version: 4, label: 'Jane', data: { name: 'Jane', age: '99' }, dataReceived: { age: '99' }, conflictingProp: [], baseVersion: 2 }),
+        new Entity.Def({ id: 0, version: 5, label: 'Jane', data: { name: 'Jane', age: '10' }, dataReceived: { age: '10' }, conflictingProp: [], baseVersion: 3 }),
+      ];
+
+      const audits = [{ action: 'entity.create', details: { entityDefId: 0 } }];
+
+      const result = getWithConflictDetails(defs, audits, true);
+
+      result.map(v => v.version).should.eql([2, 3, 4, 5]);
     });
   });
 });

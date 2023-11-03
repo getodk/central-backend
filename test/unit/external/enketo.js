@@ -1,7 +1,7 @@
 const appRoot = require('app-root-path');
 const nock = require('nock');
 const querystring = require('querystring');
-const enketo_ = require(appRoot + '/lib/external/enketo');
+const { init } = require(appRoot + '/lib/external/enketo');
 const Problem = require(appRoot + '/lib/util/problem');
 
 describe('external/enketo', () => {
@@ -9,7 +9,7 @@ describe('external/enketo', () => {
     url: 'http://enketoHost:1234/enketoPath',
     apiKey: 'enketoApiKey'
   };
-  const enketo = enketo_.init(enketoConfig);
+  const enketo = init(enketoConfig);
   const enketoNock = nock('http://enketoHost:1234');
   const openRosaUrl = 'http://openRosaHost:5678/somePath';
   const xmlFormId = 'wellPumps';
@@ -17,7 +17,7 @@ describe('external/enketo', () => {
   describe('preview', () => {
     it('should send a properly constructed request to Enketo', () => {
       enketoNock
-        .post('/enketoPath/api/v2/survey')
+        .post('/enketoPath/api/v2/survey/all')
         // eslint-disable-next-line space-before-function-paren, func-names
         .reply(201, function(uri, requestBody) {
           const base64Auth = Buffer.from('enketoApiKey:').toString('base64');
@@ -25,57 +25,58 @@ describe('external/enketo', () => {
           this.req.headers.authorization.should.equal(`Basic ${base64Auth}`);
           this.req.headers.cookie.should.equal('__Host-session=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
           requestBody.should.equal(expectedQueryString);
-          return JSON.stringify({ url: 'http://enke.to/::stuvwxyz', code: 201 });
+          return JSON.stringify({
+            enketo_id: '::stuvwxyz',
+            single_once_url: 'http://enke.to/single/::::zyxwvuts',
+            code: 201
+          });
         });
       return enketo.create(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
     });
 
-    it('should return the Enketo survey ID', () => {
+    it('should return Enketo survey IDs', async () => {
       enketoNock
-        .post('/enketoPath/api/v2/survey')
-        .reply(201, { url: 'http://enke.to/::stuvwxyz', code: 201 });
-      // eslint-disable-next-line no-trailing-spaces
-      
-      return enketo.create(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
-        .then((result) => result.should.equal('::stuvwxyz'));
-    });
+        .post('/enketoPath/api/v2/survey/all')
+        .reply(201, {
+          enketo_id: '::stuvwxyz',
+          single_once_url: 'http://enke.to/single/::::zyxwvuts',
+          code: 201
+        });
 
-    it('should return an Enketo single-survey ID', () => {
-      enketoNock
-        .post('/enketoPath/api/v2/survey/single/once')
-        .reply(201, { single_once_url: 'http://enke.to/single/::stuvwxyz', code: 201 });
-      // eslint-disable-next-line no-trailing-spaces
-      
-      return enketo.createOnceToken(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
-        .then((result) => result.should.equal('::stuvwxyz'));
+      const result = await enketo.create(openRosaUrl, xmlFormId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+      result.should.eql({
+        enketoId: '::stuvwxyz',
+        enketoOnceId: '::::zyxwvuts',
+      });
     });
 
     it('should throw a Problem if the Enketo response is not valid json', () => {
       enketoNock
-        .post('/enketoPath/api/v2/survey')
+        .post('/enketoPath/api/v2/survey/all')
         .reply(201, 'no json for you!');
-      // eslint-disable-next-line no-trailing-spaces
-      
+
       return enketo.create(openRosaUrl, xmlFormId, null)
         .should.be.rejectedWith(Problem.internal.enketoUnexpectedResponse('invalid JSON'));
     });
 
-    it('should throw a Problem if the Enketo response url is unparseable', () => {
+    it('should throw a Problem if the single_once_url from Enketo is unparseable', () => {
       enketoNock
-        .post('/enketoPath/api/v2/survey')
-        .reply(201, { url: 'http://enke.to/$$', code: 201 });
-      // eslint-disable-next-line no-trailing-spaces
-      
+        .post('/enketoPath/api/v2/survey/all')
+        .reply(201, {
+          enketoId: '::stuvwxyz',
+          single_once_url: 'http://enke.to/$$',
+          code: 201
+        });
+
       return enketo.create(openRosaUrl, xmlFormId, null)
-        .should.be.rejectedWith(Problem.internal.enketoUnexpectedResponse('Could not parse token from enketo response url: http://enke.to/$$'));
+        .should.be.rejectedWith(Problem.internal.enketoUnexpectedResponse('Could not parse token from single_once_url: http://enke.to/$$'));
     });
 
     it('should throw a Problem if the Enketo response code is unexpected', () => {
       enketoNock
-        .post('/enketoPath/api/v2/survey')
+        .post('/enketoPath/api/v2/survey/all')
         .reply(204, {});
-      // eslint-disable-next-line no-trailing-spaces
-      
+
       return enketo.create(openRosaUrl, xmlFormId, null)
         .should.be.rejectedWith(Problem.internal.enketoUnexpectedResponse('wrong status code'));
     });

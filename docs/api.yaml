@@ -36,13 +36,31 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
+    ## ODK Central v2023.5
+
+    **Added**:
+
+    - Entities accessed via API now have conflict and version-specific conflictingProperties fields
+
+      * Conflicts are either `hard` (baseVersion conflicts and multiple versions update the same property), `soft` (baseVersion conflicts but data updates are independent), or `null`
+
+    **Changed**:
+
+    - Conflicts can be resolved using the [PATCH entity](/central-api-entity-management/#updating-an-entity) endpoint with or without new data
+
     ### ODK Central v2023.4
 
     **Added**:
 
     - [DELETE /sessions/current](/central-api-authentication/#logging-out-current-session) logs out the current session.
 
-    ### ODK Central v2023.3
+    **Changed**:
+
+    - If single sign-on (SSO) with Open ID Connect (OIDC) is enabled then HTTP Basic Authentication and login with `POST /v1/session` are disabled.
+    - [GET /v1/projects](/central-api-project-management/#listing-projects) returns list of Datasets if `?dataset=true` parameter is provided in the request.
+    - Version number of the Entity is added to the response of [GET /projects/{projectId}/datasets/{name}/entities.csv](/central-api-dataset-management/#download-dataset) and [Entity OData feed](/central-api-odata-endpoints/#id3)
+
+    ## ODK Central v2023.3
 
     **Added**:
 
@@ -66,7 +84,7 @@ info:
     - The `properties` returned by the [Dataset Metadata endpoint](/central-api-dataset-management/#dataset-metadata) each now include a field `odataName`, which represents the way the property name will be sanitized and outputted for OData.
 
 
-    ### ODK Central v2023.2
+    ## ODK Central v2023.2
 
     **Added**:
 
@@ -76,7 +94,7 @@ info:
 
     - The response of `GET`, `POST`, `PUT` and `PATCH` methods of [Submissions](/central-api-submission-management/#listing-all-submissions-on-a-form) endpoint has been updated to include metadata of the `currentVersion` of the Submission.
 
-    ### ODK Central v2023.1
+    ## ODK Central v2023.1
 
     **Added**:
 
@@ -94,7 +112,7 @@ info:
 
     - Scheduled backups to Google Drive are no longer supported. As a result, backups are no longer configurable. It is no longer possible to get or terminate a backups configuration or to use a backups configuration to GET a Direct Backup. For more information about these changes, please see [this topic](https://forum.getodk.org/t/backups-to-google-drive-from-central-will-stop-working-after-jan-31st/38895) in the ODK Forum.
 
-    ### ODK Central v2022.3
+    ## ODK Central v2022.3
 
     **Added**:
 
@@ -119,13 +137,13 @@ info:
       * [GET .../draft/attachments](/central-api-form-management/#listing-expected-draft-form-attachments) returns two additional flags `blobExists` and `datasetExists`.
       * In the [OpenRosa Form Manifest](central-api-form-management/#openrosa-form-manifest-api), if a Form Attachment is linked to a Dataset then the value of `hash` is the MD5 of the last updated timestamp or the MD5 of `1970-01-01 00:00:00` if the Dataset is empty.
 
-    ### ODK Central v1.5.3
+    ## ODK Central v1.5.3
 
     **Removed**:
 
     * It is no longer possible to initiate a new backups configuration (`POST /v1/config/backups/initiate`) or to verify one (`POST /v1/config/backups/verify`). However, for now, if there is an existing configuration, it is still possible to get it or terminate it. If the existing configuration is terminated, it will not be possible to set up a new configuration. Note that it is still possible to download a [Direct Backup](/central-api-system-endpoints/#direct-backup). For more information about this change, please see [this topic](https://forum.getodk.org/t/backups-to-google-drive-from-central-will-stop-working-after-jan-31st/38895) in the ODK Forum.
 
-    ### ODK Central v1.5
+    ## ODK Central v1.5
 
     ODK Central v1.5 adds editable Project descriptions as well as more detailed information about Forms and Submissions when listing Projects.
 
@@ -139,7 +157,7 @@ info:
 
     * New `?forms=true` option on [Project Listing](/central-api-project-management/#listing-projects-with-nested-forms) that includes a `formList` field containing a list of extended Forms (and the review state counts described above) associated with that Project.
 
-    ### ODK Central v1.4
+    ## ODK Central v1.4
 
     ODK Central v1.4 enables additional CSV export options and creates an API-manageable 30 day permanent purge system for deleted Forms. Previously, deleted Forms were made inaccessible but the data was not purged from the database.
 
@@ -160,7 +178,7 @@ info:
 
       * These are collected automatically upon submission through transmitted client metadata information, similar to the existing `deviceId` field returned with each Submission.
 
-    ### ODK Central v1.3
+    ## ODK Central v1.3
 
     ODK Central v1.3 adds granular Submission edit history, as well as opt-in usage reporting to the Central team.
 
@@ -225,7 +243,7 @@ info:
 
     * Broke Forms and Submissions section apart into two below. This may break some links.
 
-    ### ODK Central v1.1
+    ## ODK Central v1.1
 
     ODK Central v1.1 adds minor new features to the API.
 
@@ -247,7 +265,7 @@ info:
 
     * Documented the `deviceId` property of submission, which was added in version 0.4.
 
-    ### ODK Central v1.0
+    ## ODK Central v1.0
 
     ODK Central v1.0 adds Public Links to the API, and makes one minor breaking change.
 
@@ -261,7 +279,7 @@ info:
 
     * We no longer reject the request if multiple authentication schemes are presented, and instead document the priority order of the different schemes [here](/central-api-authentication).
 
-    ### ODK Central v0.9
+    ## ODK Central v0.9
 
     ODK Central v0.9 does not change the API except for one minor breaking change.
 
@@ -269,7 +287,7 @@ info:
 
     * The [OpenRosa Form Listing API](/central-api-openrosa-endpoints/#openrosa-form-listing-api) has been modified to always require authentication. If a valid Actor is authenticated at all, a form list will always be returned, filtered by what that Actor is allowed to access.
 
-    ### ODK Central v0.8
+    ## ODK Central v0.8
 
     ODK Central v0.8 introduces Draft Forms, publishing, and archived Form versions, which has a significant breaking impact on the existing API. The changes should be straightforward to adapt to, however. If you are currently creating Forms with `POST /projects/…/forms`, you may wish to add `?publish=true` to skip the Draft state and mimic the old behaviour. If you are using the API to push Form Attachments onto Forms, you'll only be able to do so now in draft state, at `/projects/…/forms/…/draft/attachments`.
 
@@ -297,7 +315,7 @@ info:
 
     * Documented `GET /projects/…/forms/….xls(x)`, which was added in 0.7.
 
-    ### ODK Central v0.7
+    ## ODK Central v0.7
 
     **Added**:
 
@@ -320,7 +338,7 @@ info:
 
     * Correctly documented `keyId` property on Projects.
 
-    ### ODK Central v0.6
+    ## ODK Central v0.6
 
     **Added**:
 
@@ -351,7 +369,7 @@ info:
 
     * The Extended responses for Forms and Submissions no longer include an `xml` property. To retrieve Form or Submission XML, use the dedicated endpoints for [Form XML](/central-api-form-management/#retrieving-form-xml) and [Submission XML](/central-api-submission-management/#retrieving-submission-xml).
 
-    ### ODK Central v0.5
+    ## ODK Central v0.5
 
     **Added**:
 
@@ -387,7 +405,7 @@ info:
 
     * Added Submission POST REST documentation.
 
-    ### ODK Central v0.4
+    ## ODK Central v0.4
 
     **Added**:
 
@@ -423,6 +441,8 @@ tags:
     * `App User`s are only allowed to access the OpenRosa parts of the API: in essence, they are allowed to list forms, download form definitions, and create new submissions against those forms. They can only authenticate using **App User URL**s.
 
     Next, you will find documentation on each of the three authentication methods described above. It is best not to present multiple credentials. If you do, the first _presented_ scheme out of `/key` token, Bearer, Basic, then Cookie will be used for the request. If the multiple schemes are sent at once, and the first matching scheme fails, the request will be immediately rejected.
+
+    **Note:** If Single Sign-on with Open ID Connect is enabled on the ODK Central, you can neither use HTTP Basic Authentication nor login with `POST /v1/session` endpoint.
 - name: Accounts and Users
   description: |-
     Today, there are two types of accounts: `Users`, which are the administrative accounts held by staff members managing the data collection process, and `App Users`, which are restricted access keys granted per Form within a Project to data collection clients in the field. Although both of these entities are backed by `Actor`s as we explain in the [Authentication section](/central-api-authentication) above, there is not yet any way to directly create or manipulate an Actor. Today, you can only create, manage, and delete Users and App Users.
@@ -794,7 +814,10 @@ tags:
     * `dataset.update` when a Dataset is updated.
     * `dataset.update.publish` when a Dataset is published.
     * `entity.create` when an Entity is created.
-    * `entity.create.error` when there is an error during entity creation process.
+    * `entity.error` when there is an error processing a Submission to create or update an Entity.
+    * `entity.update.version` when an Entity is updated.
+    * `entity.update.resolve` when an Entity conflict is resolved.
+    * `entity.delete` when an Entity is deleted.
     * `config.set` when a system configuration is set.
     * `analytics` when a Usage Report is attempted.
     * Deprecated: `backup` when a backup operation is attempted for Google Drive backups.
@@ -1477,6 +1500,45 @@ paths:
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  createdAt:
+                    type: string
+                    description: ISO date format
+                  displayName:
+                    type: string
+                    description: All `Actor`s, regardless of type, have a display
+                      name
+                  id:
+                    type: number
+                  type:
+                    type: string
+                    description: the Type of this Actor; typically this will be `user`.
+                    enum:
+                    - user
+                    - field_key
+                    - public_link
+                    - singleUse
+                  updatedAt:
+                    type: string
+                    description: ISO date format
+                  deletedAt:
+                    type: string
+                    description: ISO date format
+                  email:
+                    type: string
+                    description: Only `User`s have email addresses associated with
+                      them
+              example:
+                createdAt: 2018-04-18T23:19:14.802Z
+                displayName: My Display Name
+                id: 115
+                type: user
+                updatedAt: 2018-04-18T23:42:11.406Z
+                deletedAt: 2018-04-18T23:42:11.406Z
+                email: my.email.address@getodk.org
             application/json; extended:
               schema:
                 required:
@@ -1532,63 +1594,9 @@ paths:
                 verbs:
                 - project.create
                 - project.update
-            application/json:
-              schema:
-                required:
-                - createdAt
-                - displayName
-                - email
-                - id
-                - type
-                - verbs
-                type: object
-                properties:
-                  createdAt:
-                    type: string
-                    description: ISO date format
-                  displayName:
-                    type: string
-                    description: All `Actor`s, regardless of type, have a display
-                      name
-                  id:
-                    type: number
-                  type:
-                    type: string
-                    description: the Type of this Actor; typically this will be `user`.
-                    enum:
-                    - user
-                    - field_key
-                    - public_link
-                    - singleUse
-                  updatedAt:
-                    type: string
-                    description: ISO date format
-                  deletedAt:
-                    type: string
-                    description: ISO date format
-                  email:
-                    type: string
-                    description: Only `User`s have email addresses associated with
-                      them
-                  verbs:
-                    type: array
-                    description: The verbs the authenticated Actor is allowed to perform
-                      server-wide.
-                    items:
-                      type: object
         403:
           description: Forbidden
           content:
-            application/json; extended:
-              schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
             application/json:
               schema:
                 required:
@@ -1762,16 +1770,27 @@ paths:
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AppUser'
+              example:
+                - createdAt: 2018-04-18T23:19:14.802Z
+                  displayName: My Display Name
+                  id: 115
+                  type: user
+                  updatedAt: 2018-04-18T23:42:11.406Z
+                  deletedAt: 2018-04-18T23:42:11.406Z
+                  token: d1!E2GVHgpr4h9bpxxtqUJ7EVJ1Q$Dusm2RBXg8XyVJMCBCbvyE8cGacxUx3bcUT
+                  projectId: 1
+                  lastUsed: 2018-04-14T08:34:21.633Z
             application/json; extended:
               schema:
-                oneOf:
-                  - type: array
-                    items:
-                      $ref: '#/components/schemas/AppUser'
-                  - type: array
-                    description: Extended App Users
-                    items:
-                      $ref: '#/components/schemas/ExtendedAppUser'
+                type: array
+                description: Extended App Users
+                items:
+                  $ref: '#/components/schemas/ExtendedAppUser'
               example:
               - createdAt: 2018-04-18T23:19:14.802Z
                 displayName: My Display Name
@@ -1789,24 +1808,9 @@ paths:
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
                 lastUsed: 2018-04-14T08:34:21.633Z
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
         403:
           description: Forbidden
-          content:
-            application/json; extended:
-              schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
+          content:            
             application/json:
               schema:
                 required:
@@ -2084,14 +2088,18 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/Assignment'
-                - type: array
-                  description: Extended Assignment
-                  items:
-                    $ref: '#/components/schemas/ExtendedAssignment'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Assignment'
+              example:
+              - actorId: 115
+                roleId: 4
+            application/json; extended:
+              schema:
+                type: array
+                description: Extended Assignment
+                items:
+                  $ref: '#/components/schemas/ExtendedAssignment'
               example:
               - actor:
                   createdAt: 2018-04-18T23:19:14.802Z
@@ -2290,7 +2298,18 @@ paths:
         - name: forms
           in: query
           description: |-
-            _(introduced: Version 1.5)_ If set to true then endpoint also returns the Forms that the authenticated Actor is allowed to see, with those Forms nested within their corresponding Project under a new parameter `formList`. The returned Forms will match structure of Forms requested with extended metadata (including additional `lastSubmission` timestamp and `submissions` and `reviewStates` counts)
+            _(introduced: Version 1.5)_ 
+            
+            If set to true then endpoint also returns the Forms that the authenticated Actor is allowed to see, with those Forms nested within their corresponding Project under a new parameter `formList`. The returned Forms will match structure of Forms requested with extended metadata (including additional `lastSubmission` timestamp and `submissions` and `reviewStates` counts)
+          schema:
+            type: boolean
+          example: "true"
+        - name: datasets
+          in: query
+          description: |-
+            _(introduced: Version 2023.4)_ 
+            
+            If set to true then endpoint also returns the Datasets that the authenticated Actor is allowed to see, with those Datasets nested within their corresponding Project under a new parameter `datasetList`. The returned Datasets will match structure of Datasets requested with extended metadata (including additional `lastEntity` timestamp and `entities`)
           schema:
             type: boolean
           example: "true"
@@ -2300,15 +2319,22 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                - type: array
-                  description: Standard Response
-                  items:
-                    $ref: '#/components/schemas/Project'
-                - type: array
-                  description: Extended Response
-                  items:
-                    $ref: '#/components/schemas/ExtendedProject'
+                type: array
+                description: Standard Response
+                items:
+                  $ref: '#/components/schemas/Project'
+              example:
+              - id: 1
+                name: Default Project
+                description: Description of this Project to show on Central.
+                keyId: 3
+                archived: false
+            application/json; extended:
+              schema:
+                type: array
+                description: Extended Response
+                items:
+                  $ref: '#/components/schemas/ExtendedProject'
               example:
               - id: 1
                 name: Default Project
@@ -2319,6 +2345,7 @@ paths:
                 forms: 7
                 lastSubmission: 2018-04-18T03:04:51.695Z
                 datasets: 2
+                lastEntity: 2023-04-18T03:04:51.695Z
     post:
       tags:
       - Projects
@@ -2420,56 +2447,22 @@ paths:
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
+            application/json:
+              schema:
+                type: object
+                description: Standard Response
+                $ref: '#/components/schemas/Project'
+              example:
+                id: 1
+                name: Default Project
+                description: Description of this Project to show on Central.
+                keyId: 3
+                archived: false
             application/json; extended:
               schema:
-                required:
-                - appUsers
-                - datasets
-                - forms
-                - name
-                - verbs
                 type: object
-                properties:
-                  id:
-                    type: number
-                    description: The numerical ID of the Project.
-                  name:
-                    type: string
-                    description: The name of the Project.
-                  description:
-                    type: string
-                    description: The description of the Project, which is rendered
-                      as Markdown on Frontend.
-                  keyId:
-                    type: number
-                    description: If managed encryption is enabled on the project,
-                      the numeric ID of the encryption key as tracked by Central is
-                      given here.
-                  archived:
-                    type: boolean
-                    description: Whether the Project is archived or not. `null` is
-                      equivalent to `false`. All this does is sort the Project to
-                      the bottom of the list and disable management features in the
-                      web management application.
-                  appUsers:
-                    type: number
-                    description: The number of App Users created within this Project.
-                  forms:
-                    type: number
-                    description: The number of forms within this Project.
-                  lastSubmission:
-                    type: string
-                    description: ISO date format. The timestamp of the most recent
-                      submission to any form in this project, if any.
-                  datasets:
-                    type: number
-                    description: The number of Datasets within this Project.
-                  verbs:
-                    type: array
-                    description: The array of string verbs the authenticated Actor
-                      may perform on and within this Project.
-                    items:
-                      type: object
+                description: Extended Response
+                $ref: '#/components/schemas/ExtendedProjectWithVerbs'
               example:
                 id: 1
                 name: Default Project
@@ -2480,72 +2473,13 @@ paths:
                 forms: 7
                 lastSubmission: 2018-04-18T03:04:51.695Z
                 datasets: 2
+                lastEntity: 2023-04-18T03:04:51.695Z
                 verbs:
-                - form.create
-                - form.delete
-            application/json:
-              schema:
-                required:
-                - appUsers
-                - datasets
-                - forms
-                - name
-                - verbs
-                type: object
-                properties:
-                  id:
-                    type: number
-                    description: The numerical ID of the Project.
-                  name:
-                    type: string
-                    description: The name of the Project.
-                  description:
-                    type: string
-                    description: The description of the Project, which is rendered
-                      as Markdown on Frontend.
-                  keyId:
-                    type: number
-                    description: If managed encryption is enabled on the project,
-                      the numeric ID of the encryption key as tracked by Central is
-                      given here.
-                  archived:
-                    type: boolean
-                    description: Whether the Project is archived or not. `null` is
-                      equivalent to `false`. All this does is sort the Project to
-                      the bottom of the list and disable management features in the
-                      web management application.
-                  appUsers:
-                    type: number
-                    description: The number of App Users created within this Project.
-                  forms:
-                    type: number
-                    description: The number of forms within this Project.
-                  lastSubmission:
-                    type: string
-                    description: ISO date format. The timestamp of the most recent
-                      submission to any form in this project, if any.
-                  datasets:
-                    type: number
-                    description: The number of Datasets within this Project.
-                  verbs:
-                    type: array
-                    description: The array of string verbs the authenticated Actor
-                      may perform on and within this Project.
-                    items:
-                      type: object
+                  - "form.create"
+                  - "form.delete"
         403:
           description: Forbidden
           content:
-            application/json; extended:
-              schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
             application/json:
               schema:
                 required:
@@ -2995,13 +2929,17 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/Assignment'
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/ExtendedAssignment'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Assignment'
+              example:
+              - actorId: 115
+                roleId: 4
+            application/json; extended:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtendedAssignment'
               example:
               - actor:
                   createdAt: 2018-04-18T23:19:14.802Z
@@ -3222,13 +3160,18 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/FormSummaryAssignment'
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/ExtendedFormSummaryAssignment'
+                type: array
+                items:
+                  $ref: '#/components/schemas/FormSummaryAssignment'
+              example:
+              - actorId: 115
+                xmlFormId: simple
+                roleId: 4
+            application/json; extended:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtendedFormSummaryAssignment'
               example:
               - actor:
                   createdAt: 2018-04-18T23:19:14.802Z
@@ -3242,7 +3185,7 @@ paths:
         403:
           description: Forbidden
           content:
-            application/json; extended:
+            application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
               example:
@@ -3280,13 +3223,18 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/FormSummaryAssignment'
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/ExtendedFormSummaryAssignment'
+                type: array
+                items:
+                  $ref: '#/components/schemas/FormSummaryAssignment'
+              example:
+              - actorId: 115
+                xmlFormId: simple
+                roleId: 4
+            application/json; extended:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtendedFormSummaryAssignment'
               example:
               - actor:
                   createdAt: 2018-04-18T23:19:14.802Z
@@ -3332,13 +3280,26 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/Form'
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/ExtendedForm'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Form'
+              example:
+              - projectId: 1
+                xmlFormId: simple
+                name: Simple
+                version: "2.1"
+                enketoId: abcdef
+                hash: 51a93eab3a1974dbffc4c7913fa5a16a
+                keyId: 3
+                state: open
+                publishedAt: 2018-01-21T00:04:11.153Z
+                createdAt: 2018-01-19T23:58:03.395Z
+                updatedAt: 2018-03-21T12:45:02.312Z
+            application/json; extended:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtendedForm'
               example:
               - projectId: 1
                 xmlFormId: simple
@@ -3591,141 +3552,24 @@ paths:
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Form'
+              example:
+              - projectId: 1
+                xmlFormId: simple
+                name: Simple
+                version: "2.1"
+                enketoId: abcdef
+                hash: 51a93eab3a1974dbffc4c7913fa5a16a
+                keyId: 3
+                state: open
+                publishedAt: 2018-01-21T00:04:11.153Z
+                createdAt: 2018-01-19T23:58:03.395Z
+                updatedAt: 2018-03-21T12:45:02.312Z
             application/json; extended:
               schema:
-                required:
-                - createdAt
-                - entityRelated
-                - hash
-                - projectId
-                - reviewStates
-                - state
-                - submissions
-                - version
-                - xmlFormId
-                type: object
-                properties:
-                  projectId:
-                    type: number
-                    description: The `id` of the project this form belongs to.
-                  xmlFormId:
-                    type: string
-                    description: The `id` of this form as given in its XForms XML
-                      definition
-                  name:
-                    type: string
-                    description: The friendly name of this form. It is given by the
-                      `<title>` in the XForms XML definition.
-                  version:
-                    type: string
-                    description: The `version` of this form as given in its XForms
-                      XML definition. If no `version` was specified in the Form, a
-                      blank string will be given.
-                  enketoId:
-                    type: string
-                    description: If it exists, this is the survey ID of this Form
-                      on Enketo at `/-`. This will be the ID of the published version
-                      if it exists, otherwise it will be the draft ID. Only a cookie-authenticated
-                      user may access the preview through Enketo.
-                  hash:
-                    type: string
-                    description: An MD5 sum automatically computed based on the XForms
-                      XML definition. This is required for OpenRosa compliance.
-                  keyId:
-                    type: number
-                    description: If a public encryption key is present on the form,
-                      its numeric ID as tracked by Central is given here.
-                  state:
-                    type: string
-                    description: The present lifecycle status of this form. Controls
-                      whether it is available for download on survey clients or accepts
-                      new submissions.
-                    enum:
-                    - open
-                    - closing
-                    - closed
-                  publishedAt:
-                    type: string
-                    description: Indicates when a draft has most recently been published
-                      for this Form. If this value is `null`, this Form has never
-                      been published yet, and contains only a draft.
-                  createdAt:
-                    type: string
-                    description: ISO date format
-                  updatedAt:
-                    type: string
-                    description: ISO date format
-                  submissions:
-                    type: number
-                    description: The number of `Submission`s that have been submitted
-                      to this `Form`.
-                  reviewStates:
-                    required:
-                    - edited
-                    - hasIssues
-                    - received
-                    type: object
-                    properties:
-                      received:
-                        type: number
-                        description: The number of submissions receieved with no other
-                          review state.
-                      hasIssues:
-                        type: number
-                        description: The number of submissions marked as having issues.
-                      edited:
-                        type: number
-                        description: The number of edited submissions.
-                    description: Additional counts of the number of submissions in
-                      various states of review.
-                  lastSubmission:
-                    type: string
-                    description: ISO date format. The timestamp of the most recent
-                      submission, if any.
-                  createdBy:
-                    required:
-                    - createdAt
-                    - displayName
-                    - id
-                    - type
-                    type: object
-                    properties:
-                      createdAt:
-                        type: string
-                        description: ISO date format
-                      displayName:
-                        type: string
-                        description: All `Actor`s, regardless of type, have a display
-                          name
-                      id:
-                        type: number
-                      type:
-                        type: string
-                        description: the Type of this Actor; typically this will be
-                          `user`.
-                        enum:
-                        - user
-                        - field_key
-                        - public_link
-                        - singleUse
-                      updatedAt:
-                        type: string
-                        description: ISO date format
-                      deletedAt:
-                        type: string
-                        description: ISO date format
-                    description: The full information of the Actor who created this
-                      Form.
-                  excelContentType:
-                    type: string
-                    description: If the Form was created by uploading an Excel file,
-                      this field contains the MIME type of that file.
-                  entityRelated:
-                    type: boolean
-                    description: True only if this Form is related to a Dataset. In
-                      v2022.3, this means the Form's Submissions create Entities in
-                      a Dataset. In a future version, Submissions will also be able
-                      to update existing Entities.
+                $ref: '#/components/schemas/ExtendedForm'
               example:
                 projectId: 1
                 xmlFormId: simple
@@ -3752,154 +3596,9 @@ paths:
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
                 entityRelated: false
-            application/json:
-              schema:
-                required:
-                - createdAt
-                - entityRelated
-                - hash
-                - projectId
-                - reviewStates
-                - state
-                - submissions
-                - version
-                - xmlFormId
-                type: object
-                properties:
-                  projectId:
-                    type: number
-                    description: The `id` of the project this form belongs to.
-                  xmlFormId:
-                    type: string
-                    description: The `id` of this form as given in its XForms XML
-                      definition
-                  name:
-                    type: string
-                    description: The friendly name of this form. It is given by the
-                      `<title>` in the XForms XML definition.
-                  version:
-                    type: string
-                    description: The `version` of this form as given in its XForms
-                      XML definition. If no `version` was specified in the Form, a
-                      blank string will be given.
-                  enketoId:
-                    type: string
-                    description: If it exists, this is the survey ID of this Form
-                      on Enketo at `/-`. This will be the ID of the published version
-                      if it exists, otherwise it will be the draft ID. Only a cookie-authenticated
-                      user may access the preview through Enketo.
-                  hash:
-                    type: string
-                    description: An MD5 sum automatically computed based on the XForms
-                      XML definition. This is required for OpenRosa compliance.
-                  keyId:
-                    type: number
-                    description: If a public encryption key is present on the form,
-                      its numeric ID as tracked by Central is given here.
-                  state:
-                    type: string
-                    description: The present lifecycle status of this form. Controls
-                      whether it is available for download on survey clients or accepts
-                      new submissions.
-                    enum:
-                    - open
-                    - closing
-                    - closed
-                  publishedAt:
-                    type: string
-                    description: Indicates when a draft has most recently been published
-                      for this Form. If this value is `null`, this Form has never
-                      been published yet, and contains only a draft.
-                  createdAt:
-                    type: string
-                    description: ISO date format
-                  updatedAt:
-                    type: string
-                    description: ISO date format
-                  submissions:
-                    type: number
-                    description: The number of `Submission`s that have been submitted
-                      to this `Form`.
-                  reviewStates:
-                    required:
-                    - edited
-                    - hasIssues
-                    - received
-                    type: object
-                    properties:
-                      received:
-                        type: number
-                        description: The number of submissions receieved with no other
-                          review state.
-                      hasIssues:
-                        type: number
-                        description: The number of submissions marked as having issues.
-                      edited:
-                        type: number
-                        description: The number of edited submissions.
-                    description: Additional counts of the number of submissions in
-                      various states of review.
-                  lastSubmission:
-                    type: string
-                    description: ISO date format. The timestamp of the most recent
-                      submission, if any.
-                  createdBy:
-                    required:
-                    - createdAt
-                    - displayName
-                    - id
-                    - type
-                    type: object
-                    properties:
-                      createdAt:
-                        type: string
-                        description: ISO date format
-                      displayName:
-                        type: string
-                        description: All `Actor`s, regardless of type, have a display
-                          name
-                      id:
-                        type: number
-                      type:
-                        type: string
-                        description: the Type of this Actor; typically this will be
-                          `user`.
-                        enum:
-                        - user
-                        - field_key
-                        - public_link
-                        - singleUse
-                      updatedAt:
-                        type: string
-                        description: ISO date format
-                      deletedAt:
-                        type: string
-                        description: ISO date format
-                    description: The full information of the Actor who created this
-                      Form.
-                  excelContentType:
-                    type: string
-                    description: If the Form was created by uploading an Excel file,
-                      this field contains the MIME type of that file.
-                  entityRelated:
-                    type: boolean
-                    description: True only if this Form is related to a Dataset. In
-                      v2022.3, this means the Form's Submissions create Entities in
-                      a Dataset. In a future version, Submissions will also be able
-                      to update existing Entities.
         403:
           description: Forbidden
           content:
-            application/json; extended:
-              schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
             application/json:
               schema:
                 required:
@@ -5452,18 +5151,30 @@ paths:
         example: simple
       responses:
         200:
-          description: 'This is the Extended Metadata response, if requested via the
-            appropriate header:'
+          description: Ok
           content:
             application/json:
               schema:
-                oneOf:
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/Form'
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/ExtendedFormVersion'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Form'
+              example:
+              - projectId: 1
+                xmlFormId: simple
+                name: Simple
+                version: "2.1"
+                enketoId: abcdef
+                hash: 51a93eab3a1974dbffc4c7913fa5a16a
+                keyId: 3
+                state: open
+                publishedAt: 2018-01-21T00:04:11.153Z
+                createdAt: 2018-01-19T23:58:03.395Z
+                updatedAt: 2018-03-21T12:45:02.312Z
+            application/json; extended:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtendedFormVersion'
               example:
               - projectId: 1
                 xmlFormId: simple
@@ -5990,15 +5701,19 @@ paths:
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Assignment'
+              example:
+              - actorId: 115
+                roleId: 4
             application/json; extended:
               schema:
-                oneOf:
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/Assignment'
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/ExtendedAssignment'
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtendedAssignment'
               example:
               - actor:
                   createdAt: 2018-04-18T23:19:14.802Z
@@ -6234,18 +5949,28 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/PublicLink'
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/ExtendedPublicLink'
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicLink'
               example:
               - createdAt: 2018-04-18T23:19:14.802Z
-                displayName: My Display Name
+                displayName: Public Survey
                 id: 115
-                type: user
+                type: public_link
+                updatedAt: 2018-04-18T23:42:11.406Z
+                deletedAt: 2018-04-18T23:42:11.406Z
+                token: d1!E2GVHgpr4h9bpxxtqUJ7EVJ1Q$Dusm2RBXg8XyVJMCBCbvyE8cGacxUx3bcUT
+                once: false
+            application/json; extended:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtendedPublicLink'
+              example:
+              - createdAt: 2018-04-18T23:19:14.802Z
+                displayName: Public Survey
+                id: 115
+                type: public_link
                 updatedAt: 2018-04-18T23:42:11.406Z
                 deletedAt: 2018-04-18T23:42:11.406Z
                 token: d1!E2GVHgpr4h9bpxxtqUJ7EVJ1Q$Dusm2RBXg8XyVJMCBCbvyE8cGacxUx3bcUT
@@ -6554,13 +6279,30 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/Submission'
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/ExtendedSubmission'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Submission'
+              example:
+              - instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
+                submitterId: 23
+                deviceId: imei:123456
+                userAgent: Enketo/3.0.4
+                reviewState: approved
+                createdAt: 2018-01-19T23:58:03.395Z
+                updatedAt: 2018-03-21T12:45:02.312Z
+                currentVersion:
+                  instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
+                  instanceName: village third house
+                  submitterId: 23
+                  deviceId: imei:123456
+                  userAgent: Enketo/3.0.4
+                  createdAt: 2018-01-19T23:58:03.395Z
+                  current: true
+            application/json; extended:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtendedSubmission'
               example:
               - instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                 submitterId: 23
@@ -6824,122 +6566,28 @@ paths:
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Submission'
+              example:
+                instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
+                submitterId: 23
+                deviceId: imei:123456
+                userAgent: Enketo/3.0.4
+                reviewState: approved
+                createdAt: 2018-01-19T23:58:03.395Z
+                updatedAt: 2018-03-21T12:45:02.312Z
+                currentVersion:
+                  instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
+                  instanceName: village third house
+                  submitterId: 23
+                  deviceId: imei:123456
+                  userAgent: Enketo/3.0.4
+                  createdAt: 2018-01-19T23:58:03.395Z
+                  current: true
             application/json; extended:
               schema:
-                required:
-                - createdAt
-                - instanceId
-                - submitter
-                - submitterId
-                type: object
-                properties:
-                  instanceId:
-                    type: string
-                    description: The `instanceId` of the `Submission`, given by the
-                      Submission XML.
-                  submitterId:
-                    type: number
-                    description: The ID of the `Actor` (`App User`, `User`, or `Public
-                      Link`) that originally submitted this `Submission`.
-                  deviceId:
-                    type: string
-                    description: The self-identified `deviceId` of the device that
-                      collected the data, sent by it upon submission to the server.
-                      The initial submission `deviceId` will be returned here.
-                  userAgent:
-                    type: string
-                    description: The self-identified `userAgent` of the device that
-                      collected the data, sent by it upon submission to the server.
-                      The initial submission `userAgent` will be returned here.
-                  reviewState:
-                    type: string
-                    description: The current review state of the submission.
-                    enum:
-                    - null
-                    - edited
-                    - hasIssues
-                    - rejected
-                    - approved
-                    - approved
-                  createdAt:
-                    type: string
-                    description: ISO date format. The time that the server received
-                      the Submission.
-                  updatedAt:
-                    type: string
-                    description: ISO date format. `null` when the Submission is first
-                      created, then updated when the Submission's XML data or metadata
-                      is updated.
-                  currentVersion:
-                    required:
-                    - createdAt
-                    - current
-                    - instanceId
-                    - submitterId
-                    type: object
-                    properties:
-                      instanceId:
-                        type: string
-                        description: The `instanceId` of the `Submission` version,
-                          given by the Submission XML.
-                      instanceName:
-                        type: string
-                        description: The `instanceName`, if any, given by the Submission
-                          XML in the metadata section.
-                      submitterId:
-                        type: number
-                        description: The ID of the `Actor` (`App User`, `User`, or
-                          `Public Link`) that submitted this `Submission` version.
-                      deviceId:
-                        type: string
-                        description: The self-identified `deviceId` of the device
-                          that submitted the `Submission` version.
-                      userAgent:
-                        type: string
-                        description: The self-identified `userAgent` of the device
-                          that submitted the `Submission` version.
-                      createdAt:
-                        type: string
-                        description: ISO date format. The time that the server received
-                          the `Submission` version.
-                      current:
-                        type: boolean
-                        description: Whether the version is current or not.
-                    description: The current version of the `Submission`.
-                  submitter:
-                    required:
-                    - createdAt
-                    - displayName
-                    - id
-                    - type
-                    type: object
-                    properties:
-                      createdAt:
-                        type: string
-                        description: ISO date format
-                      displayName:
-                        type: string
-                        description: All `Actor`s, regardless of type, have a display
-                          name
-                      id:
-                        type: number
-                      type:
-                        type: string
-                        description: the Type of this Actor; typically this will be
-                          `user`.
-                        enum:
-                        - user
-                        - field_key
-                        - public_link
-                        - singleUse
-                      updatedAt:
-                        type: string
-                        description: ISO date format
-                      deletedAt:
-                        type: string
-                        description: ISO date format
-                    description: The full details of the `Actor` that submitted this
-                      `Submission`.
+                $ref: '#/components/schemas/ExtendedSubmission'
               example:
                 instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                 submitterId: 23
@@ -6963,266 +6611,14 @@ paths:
                   type: user
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
-            text/html:
-              schema:
-                required:
-                - createdAt
-                - instanceId
-                - submitter
-                - submitterId
-                type: object
-                properties:
-                  instanceId:
-                    type: string
-                    description: The `instanceId` of the `Submission`, given by the
-                      Submission XML.
-                  submitterId:
-                    type: number
-                    description: The ID of the `Actor` (`App User`, `User`, or `Public
-                      Link`) that originally submitted this `Submission`.
-                  deviceId:
-                    type: string
-                    description: The self-identified `deviceId` of the device that
-                      collected the data, sent by it upon submission to the server.
-                      The initial submission `deviceId` will be returned here.
-                  userAgent:
-                    type: string
-                    description: The self-identified `userAgent` of the device that
-                      collected the data, sent by it upon submission to the server.
-                      The initial submission `userAgent` will be returned here.
-                  reviewState:
-                    type: string
-                    description: The current review state of the submission.
-                    enum:
-                    - null
-                    - edited
-                    - hasIssues
-                    - rejected
-                    - approved
-                    - approved
-                  createdAt:
-                    type: string
-                    description: ISO date format. The time that the server received
-                      the Submission.
-                  updatedAt:
-                    type: string
-                    description: ISO date format. `null` when the Submission is first
-                      created, then updated when the Submission's XML data or metadata
-                      is updated.
-                  currentVersion:
-                    required:
-                    - createdAt
-                    - current
-                    - instanceId
-                    - submitterId
-                    type: object
-                    properties:
-                      instanceId:
-                        type: string
-                        description: The `instanceId` of the `Submission` version,
-                          given by the Submission XML.
-                      instanceName:
-                        type: string
-                        description: The `instanceName`, if any, given by the Submission
-                          XML in the metadata section.
-                      submitterId:
-                        type: number
-                        description: The ID of the `Actor` (`App User`, `User`, or
-                          `Public Link`) that submitted this `Submission` version.
-                      deviceId:
-                        type: string
-                        description: The self-identified `deviceId` of the device
-                          that submitted the `Submission` version.
-                      userAgent:
-                        type: string
-                        description: The self-identified `userAgent` of the device
-                          that submitted the `Submission` version.
-                      createdAt:
-                        type: string
-                        description: ISO date format. The time that the server received
-                          the `Submission` version.
-                      current:
-                        type: boolean
-                        description: Whether the version is current or not.
-                    description: The current version of the `Submission`.
-                  submitter:
-                    required:
-                    - createdAt
-                    - displayName
-                    - id
-                    - type
-                    type: object
-                    properties:
-                      createdAt:
-                        type: string
-                        description: ISO date format
-                      displayName:
-                        type: string
-                        description: All `Actor`s, regardless of type, have a display
-                          name
-                      id:
-                        type: number
-                      type:
-                        type: string
-                        description: the Type of this Actor; typically this will be
-                          `user`.
-                        enum:
-                        - user
-                        - field_key
-                        - public_link
-                        - singleUse
-                      updatedAt:
-                        type: string
-                        description: ISO date format
-                      deletedAt:
-                        type: string
-                        description: ISO date format
-                    description: The full details of the `Actor` that submitted this
-                      `Submission`.
-            application/json:
-              schema:
-                required:
-                - createdAt
-                - instanceId
-                - submitter
-                - submitterId
-                type: object
-                properties:
-                  instanceId:
-                    type: string
-                    description: The `instanceId` of the `Submission`, given by the
-                      Submission XML.
-                  submitterId:
-                    type: number
-                    description: The ID of the `Actor` (`App User`, `User`, or `Public
-                      Link`) that originally submitted this `Submission`.
-                  deviceId:
-                    type: string
-                    description: The self-identified `deviceId` of the device that
-                      collected the data, sent by it upon submission to the server.
-                      The initial submission `deviceId` will be returned here.
-                  userAgent:
-                    type: string
-                    description: The self-identified `userAgent` of the device that
-                      collected the data, sent by it upon submission to the server.
-                      The initial submission `userAgent` will be returned here.
-                  reviewState:
-                    type: string
-                    description: The current review state of the submission.
-                    enum:
-                    - null
-                    - edited
-                    - hasIssues
-                    - rejected
-                    - approved
-                    - approved
-                  createdAt:
-                    type: string
-                    description: ISO date format. The time that the server received
-                      the Submission.
-                  updatedAt:
-                    type: string
-                    description: ISO date format. `null` when the Submission is first
-                      created, then updated when the Submission's XML data or metadata
-                      is updated.
-                  currentVersion:
-                    required:
-                    - createdAt
-                    - current
-                    - instanceId
-                    - submitterId
-                    type: object
-                    properties:
-                      instanceId:
-                        type: string
-                        description: The `instanceId` of the `Submission` version,
-                          given by the Submission XML.
-                      instanceName:
-                        type: string
-                        description: The `instanceName`, if any, given by the Submission
-                          XML in the metadata section.
-                      submitterId:
-                        type: number
-                        description: The ID of the `Actor` (`App User`, `User`, or
-                          `Public Link`) that submitted this `Submission` version.
-                      deviceId:
-                        type: string
-                        description: The self-identified `deviceId` of the device
-                          that submitted the `Submission` version.
-                      userAgent:
-                        type: string
-                        description: The self-identified `userAgent` of the device
-                          that submitted the `Submission` version.
-                      createdAt:
-                        type: string
-                        description: ISO date format. The time that the server received
-                          the `Submission` version.
-                      current:
-                        type: boolean
-                        description: Whether the version is current or not.
-                    description: The current version of the `Submission`.
-                  submitter:
-                    required:
-                    - createdAt
-                    - displayName
-                    - id
-                    - type
-                    type: object
-                    properties:
-                      createdAt:
-                        type: string
-                        description: ISO date format
-                      displayName:
-                        type: string
-                        description: All `Actor`s, regardless of type, have a display
-                          name
-                      id:
-                        type: number
-                      type:
-                        type: string
-                        description: the Type of this Actor; typically this will be
-                          `user`.
-                        enum:
-                        - user
-                        - field_key
-                        - public_link
-                        - singleUse
-                      updatedAt:
-                        type: string
-                        description: ISO date format
-                      deletedAt:
-                        type: string
-                        description: ISO date format
-                    description: The full details of the `Actor` that submitted this
-                      `Submission`.
         301:
           description: Returns 301 with URL of the specific Submission version if `instanceId` of a Submission edit is provided
           content:
             text/html:
-              example: ""
+              example: "<Redirects to correct Submission URL>"
         403:
           description: Forbidden
           content:
-            application/json; extended:
-              schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-            text/html:
-              schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
             application/json:
               schema:
                 required:
@@ -7438,7 +6834,7 @@ paths:
       description: |-
         Currently, the only updatable _metadata_ on a Submission is its `reviewState`. To update the submission _data_ itself, please see [Updating Submission data](/central-api-submission-management/#updating-submission-data).
 
-        Starting with Version 2022.3, changing the `reviewState` of a Submission to `approved` can create an Entity in a Dataset if the corresponding Form maps Dataset Properties to Form Fields. If an Entity is created successfully then an `entity.create` event is logged in Audit logs, else `entity.create.error` is logged.
+        Starting with Version 2022.3, changing the `reviewState` of a Submission to `approved` can create an Entity in a Dataset if the corresponding Form maps Dataset Properties to Form Fields. If an Entity is created successfully then an `entity.create` event is logged in Audit logs, else `entity.error` is logged.
       operationId: Updating Submission metadata
       parameters:
       - name: projectId
@@ -8119,13 +7515,19 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/Audit'
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/ExtendedAudit'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Audit'
+              example:
+              - actorId: 42
+                action: form.create
+                acteeId: 85cb9aff-005e-4edd-9739-dc9c1a829c44
+                loggedAt: 2018-04-18T23:19:14.802Z
+            application/json; extended:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtendedAudit'
               example:
               - actorId: 42
                 action: form.create
@@ -8141,7 +7543,7 @@ paths:
         403:
           description: Forbidden
           content:
-            application/json; extended:
+            application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
               example:
@@ -8286,13 +7688,17 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/Comment'
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/ExtendedComment'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+              example:
+              - body: this is my comment
+                actorId: 42
+            application/json; extended:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtendedComment'
               example:
               - body: this is my comment
                 actorId: 42
@@ -8705,13 +8111,23 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/SubmissionVersion'
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/ExtendedSubmissionVersion'
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubmissionVersion'
+              example:
+              - instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
+                instanceName: village third house
+                submitterId: 23
+                deviceId: imei:123456
+                userAgent: Enketo/3.0.4
+                createdAt: 2018-01-19T23:58:03.395Z
+                current: true
+                formVersion: "1.0"
+            application/json; extended:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtendedSubmissionVersion'
               example:
               - instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                 instanceName: village third house
@@ -8783,82 +8199,21 @@ paths:
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionVersion'
+              example:
+                instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
+                instanceName: village third house
+                submitterId: 23
+                deviceId: imei:123456
+                userAgent: Enketo/3.0.4
+                createdAt: 2018-01-19T23:58:03.395Z
+                current: true
+                formVersion: "1.0"
             application/json; extended:
               schema:
-                required:
-                - createdAt
-                - current
-                - instanceId
-                - submitter
-                - submitterId
-                type: object
-                properties:
-                  instanceId:
-                    type: string
-                    description: The `instanceId` of the `Submission` version, given
-                      by the Submission XML.
-                  instanceName:
-                    type: string
-                    description: The `instanceName`, if any, given by the Submission
-                      XML in the metadata section.
-                  submitterId:
-                    type: number
-                    description: The ID of the `Actor` (`App User`, `User`, or `Public
-                      Link`) that submitted this `Submission` version.
-                  deviceId:
-                    type: string
-                    description: The self-identified `deviceId` of the device that
-                      submitted the `Submission` version.
-                  userAgent:
-                    type: string
-                    description: The self-identified `userAgent` of the device that
-                      submitted the `Submission` version.
-                  createdAt:
-                    type: string
-                    description: ISO date format. The time that the server received
-                      the `Submission` version.
-                  current:
-                    type: boolean
-                    description: Whether the version is current or not.
-                  submitter:
-                    required:
-                    - createdAt
-                    - displayName
-                    - id
-                    - type
-                    type: object
-                    properties:
-                      createdAt:
-                        type: string
-                        description: ISO date format
-                      displayName:
-                        type: string
-                        description: All `Actor`s, regardless of type, have a display
-                          name
-                      id:
-                        type: number
-                      type:
-                        type: string
-                        description: the Type of this Actor; typically this will be
-                          `user`.
-                        enum:
-                        - user
-                        - field_key
-                        - public_link
-                        - singleUse
-                      updatedAt:
-                        type: string
-                        description: ISO date format
-                      deletedAt:
-                        type: string
-                        description: ISO date format
-                    description: The full details of the `Actor` that submitted this
-                      version of the `Submission`.
-                  formVersion:
-                    type: string
-                    description: The version of the form the submission version was
-                      created against. Only returned with specific Submission Version
-                      requests.
+                $ref: '#/components/schemas/ExtendedSubmissionVersion'
               example:
                 instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                 instanceName: village third house
@@ -8875,82 +8230,6 @@ paths:
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
                 formVersion: "1.0"
-            application/json:
-              schema:
-                required:
-                - createdAt
-                - current
-                - instanceId
-                - submitter
-                - submitterId
-                type: object
-                properties:
-                  instanceId:
-                    type: string
-                    description: The `instanceId` of the `Submission` version, given
-                      by the Submission XML.
-                  instanceName:
-                    type: string
-                    description: The `instanceName`, if any, given by the Submission
-                      XML in the metadata section.
-                  submitterId:
-                    type: number
-                    description: The ID of the `Actor` (`App User`, `User`, or `Public
-                      Link`) that submitted this `Submission` version.
-                  deviceId:
-                    type: string
-                    description: The self-identified `deviceId` of the device that
-                      submitted the `Submission` version.
-                  userAgent:
-                    type: string
-                    description: The self-identified `userAgent` of the device that
-                      submitted the `Submission` version.
-                  createdAt:
-                    type: string
-                    description: ISO date format. The time that the server received
-                      the `Submission` version.
-                  current:
-                    type: boolean
-                    description: Whether the version is current or not.
-                  submitter:
-                    required:
-                    - createdAt
-                    - displayName
-                    - id
-                    - type
-                    type: object
-                    properties:
-                      createdAt:
-                        type: string
-                        description: ISO date format
-                      displayName:
-                        type: string
-                        description: All `Actor`s, regardless of type, have a display
-                          name
-                      id:
-                        type: number
-                      type:
-                        type: string
-                        description: the Type of this Actor; typically this will be
-                          `user`.
-                        enum:
-                        - user
-                        - field_key
-                        - public_link
-                        - singleUse
-                      updatedAt:
-                        type: string
-                        description: ISO date format
-                      deletedAt:
-                        type: string
-                        description: ISO date format
-                    description: The full details of the `Actor` that submitted this
-                      version of the `Submission`.
-                  formVersion:
-                    type: string
-                    description: The version of the form the submission version was
-                      created against. Only returned with specific Submission Version
-                      requests.
         403:
           description: Forbidden
           content:
@@ -9317,13 +8596,30 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/Submission'
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/ExtendedSubmission'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Submission'
+              example:
+              - instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
+                submitterId: 23
+                deviceId: imei:123456
+                userAgent: Enketo/3.0.4
+                reviewState: approved
+                createdAt: 2018-01-19T23:58:03.395Z
+                updatedAt: 2018-03-21T12:45:02.312Z
+                currentVersion:
+                  instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
+                  instanceName: village third house
+                  submitterId: 23
+                  deviceId: imei:123456
+                  userAgent: Enketo/3.0.4
+                  createdAt: 2018-01-19T23:58:03.395Z
+                  current: true
+            application/json; extended:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtendedSubmission'
               example:
               - instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                 submitterId: 23
@@ -10362,13 +9658,19 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - type: array
-                    items:
-                      $ref: '#/components/schemas/Dataset'
-                  - type: array
-                    items:
-                      $ref: '#/components/schemas/ExtendedDataset'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Dataset'
+              example:
+                - name: people
+                  createdAt: '2018-01-19T23:58:03.395Z'
+                  projectId: 1
+                  approvalRequired: true
+            application/json; extended:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtendedDataset'
               example:
                 - name: people
                   createdAt: '2018-01-19T23:58:03.395Z'
@@ -10376,19 +9678,10 @@ paths:
                   approvalRequired: true
                   lastEntity: '2018-04-18T03:04:51.695Z'
                   entities: 10
+                  conflicts: 2
         403:
           description: Forbidden
           content:
-            application/json; extended:
-              schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
             application/json:
               schema:
                 required:
@@ -10408,7 +9701,7 @@ paths:
       tags:
       - Dataset Management
       summary: Dataset Metadata
-      description: Returns the metadata of a Dataset including properties and forms
+      description: Returns the metadata of a published Dataset including properties and forms
         that create and consume the Dataset.
       operationId: Dataset Metadata
       parameters:
@@ -10432,15 +9725,17 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - type: array
-                    items:
-                      $ref: '#/components/schemas/DatasetMetadata'
+                type: array
+                items:
+                  $ref: '#/components/schemas/DatasetMetadata'
               example:
                 name: people
                 createdAt: '2018-01-19T23:58:03.395Z'
                 projectId: 1
                 approvalRequired: true
+                sourceForms:
+                - xmlFormId: treeRegistration
+                  name: Tree Registration
                 linkedForms:
                 - xmlFormId: simple
                   name: Simple
@@ -10510,15 +9805,17 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - type: array
-                    items:
-                      $ref: '#/components/schemas/DatasetMetadata'
+                type: array
+                items:
+                  $ref: '#/components/schemas/DatasetMetadata'
               example:
                 name: people
                 createdAt: '2018-01-19T23:58:03.395Z'
                 projectId: 1
                 approvalRequired: true
+                sourceForms:
+                - xmlFormId: treeRegistration
+                  name: Tree Registration
                 linkedForms:
                 - xmlFormId: simple
                   name: Simple
@@ -10587,10 +9884,9 @@ paths:
           content:
             text/csv:
               example: |
-                name,label,first_name,last_name,age,favorite_color
-                54a405a0-53ce-4748-9788-d23a30cc3afa,Amy Aardvark,Amy,Aardvark,45,
-                0ee79b8b-9711-4aa0-9b7b-ece0a109b1b2,Beth Baboon,Beth,Baboon,19,yellow
-                3fc9c54c-7d41-4258-b014-bfacedb95711,Cory Cat,Cory,Cat,,cyan
+                __id,label,geometry,species,circumference_cm,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version
+                2c1ee90b-dde8-434b-9985-2eefd8465339,666cm purpleheart,-29.281608 -67.624883 0 0,purpleheart,667,2023-05-31T19:49:28.902Z,22,Alice,1,2023-05-31T19:52:34.467Z,1
+                84ac3a03-9980-4098-93a5-b81fdc6ea749,555cm wallaba,18.921876 77.309451 0 0,wallaba,555,2023-05-31T19:49:20.152Z,22,Alice,0,,1
         403:
           description: Forbidden
           content:
@@ -10649,21 +9945,35 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - type: array
-                    description: Standard Response
-                    items:
-                      $ref: '#/components/schemas/EntitySummary'
-                  - type: array
-                    description: Extended Response
-                    items:
-                      $ref: '#/components/schemas/ExtendedEntitySummary'
+                type: array
+                description: Standard Response
+                items:
+                  $ref: '#/components/schemas/EntitySummary'
               example:
               - uuid: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                 createdAt: '2018-01-19T23:58:03.395Z'
                 updatedAt: '2018-03-21T12:45:02.312Z'
                 deletedAt: '2018-03-21T12:45:02.312Z'
                 creatorId: 1
+                currentVersion:
+                  label: John (88)
+                  current: true
+                  createdAt: '2018-03-21T12:45:02.312Z'
+                  creatorId: 1
+                  userAgent: Enketo/3.0.4
+            application/json; extended:
+              schema:
+                type: array
+                description: Extended Response
+                items:
+                  $ref: '#/components/schemas/ExtendedEntitySummary'
+              example:
+              - uuid: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
+                createdAt: '2018-01-19T23:58:03.395Z'
+                updatedAt: '2018-03-21T12:45:02.312Z'
+                deletedAt: '2018-03-21T12:45:02.312Z'
+                creatorId: 1
+                conflict: null
                 creator:
                   createdAt: '2018-04-18T23:19:14.802Z'
                   displayName: My Display Name
@@ -10677,6 +9987,7 @@ paths:
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   creator:
                     createdAt: '2018-04-18T23:19:14.802Z'
                     displayName: My Display Name
@@ -10749,12 +10060,14 @@ paths:
                 updatedAt: '2018-03-21T12:45:02.312Z'
                 deletedAt: '2018-03-21T12:45:02.312Z'
                 creatorId: 1
+                conflict: null
                 currentVersion:
                   label: John (88)
                   current: true
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   data:
                     firstName: John
                     age: '88'
@@ -10799,19 +10112,38 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - type: array
-                    items:
-                      $ref: '#/components/schemas/Entity'
-                  - type: array
-                    items:
-                      $ref: '#/components/schemas/ExtendedEntity'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Entity'
               example:
                 uuid: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                 createdAt: '2018-01-19T23:58:03.395Z'
                 updatedAt: '2018-03-21T12:45:02.312Z'
                 deletedAt: '2018-03-21T12:45:02.312Z'
                 creatorId: 1
+                conflict: null
+                currentVersion:
+                  label: John (88)
+                  current: true
+                  createdAt: '2018-03-21T12:45:02.312Z'
+                  creatorId: 1
+                  userAgent: Enketo/3.0.4
+                  conflictingProperties: null
+                  data:
+                    firstName: John
+                    age: '88'
+            application/json; extended:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtendedEntity'
+              example:
+                uuid: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
+                createdAt: '2018-01-19T23:58:03.395Z'
+                updatedAt: '2018-03-21T12:45:02.312Z'
+                deletedAt: '2018-03-21T12:45:02.312Z'
+                creatorId: 1
+                conflict: null
                 creator:
                   createdAt: '2018-04-18T23:19:14.802Z'
                   displayName: My Display Name
@@ -10825,6 +10157,7 @@ paths:
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   data:
                     firstName: John
                     age: '88'
@@ -10926,6 +10259,10 @@ paths:
         Use this API to update one or all properties of an Entity. It will throw `400 - Bad Request` if any of the updating properties doesn't exist in the dataset.
 
         To unset value of any property, you can set it to empty string (""). Setting it to `null` will throw an error.
+
+        **Resolve the conflict**
+
+        You can also use this endpoint to resolve the conflict by passing `resolve=true` query parameter. If you set `resolve` parameter then providing data in the body is optional, in that case only `conflict` status from the Entity will be cleared.
       operationId: Updating an Entity
       parameters:
       - name: projectId
@@ -10949,6 +10286,20 @@ paths:
         schema:
           type: string
         example: 54a405a0-53ce-4748-9788-d23a30cc3afa
+      - name: force
+        in: query
+        description: Flag to forcefully update the Entity
+        required: false
+        schema:
+          type: boolean
+        example: true
+      - name: resolve
+        in: query
+        description: Flag to resolve the conflict
+        required: false
+        schema:
+          type: boolean
+        example: true
       requestBody:
         content:
           '*/*':
@@ -10978,12 +10329,14 @@ paths:
                 updatedAt: '2018-03-21T12:45:02.312Z'
                 deletedAt: '2018-03-21T12:45:02.312Z'
                 creatorId: 1
+                conflict: null
                 currentVersion:
                   label: John (88)
                   current: true
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   data:
                     firstName: John
                     age: '88'
@@ -11053,21 +10406,33 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - type: array
-                    description: Standard Response
-                    items:
-                      $ref: '#/components/schemas/EntityVersion'
-                  - type: array
-                    description: Extended Response
-                    items:
-                      $ref: '#/components/schemas/ExtendedEntityVersion'
+                type: array
+                description: Standard Response
+                items:
+                  $ref: '#/components/schemas/EntityVersion'
               example:
                 - label: John (88)
                   current: true
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  conflictingProperties: null
+                  data:
+                    firstName: John
+                    age: '88'
+            application/json; extended:
+              schema:
+                type: array
+                description: Extended Response
+                items:
+                  $ref: '#/components/schemas/ExtendedEntityVersion'
+              example:
+                - label: John (88)
+                  current: true
+                  createdAt: '2018-03-21T12:45:02.312Z'
+                  creatorId: 1
+                  userAgent: Enketo/3.0.4
+                  conflictingProperties: null
                   data:
                     firstName: John
                     age: '88'
@@ -11081,16 +10446,6 @@ paths:
         403:
           description: Forbidden
           content:
-            application/json; extended:
-              schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
             application/json:
               schema:
                 required:
@@ -12078,7 +11433,7 @@ paths:
       description: |-
         The data documents are the straightforward JSON representation of each table of `Submission` data. They follow the [corresponding specification](http://docs.oasis-open.org/odata/odata-json-format/v4.01/odata-json-format-v4.01.html), but apart from the representation of geospatial data as GeoJSON rather than the ODK proprietary format, the output here should not be at all surprising. If you are looking for JSON output of Submission data, this is the best place to look.
 
-        The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. While paging is possible through these parameters, it will not greatly improve the performance of exporting data. ODK Central prefers to bulk-export all of its data at once if possible.
+        The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. If `$top` parameter is provided in the request then the response will include `@odata.nextLink` that you can use as is to fetch the next set of data. While paging is possible through these parameters, it will not greatly improve the performance of exporting data. ODK Central prefers to bulk-export all of its data at once if possible.
 
         As of ODK Central v1.1, the [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) is partially supported. In OData, you can use `$filter` to filter by any data field in the schema. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported. These supported elements may be combined in any way, but all other `$filter` features will cause an error.
 
@@ -12571,7 +11926,7 @@ paths:
       description: |-
         A data document is the straightforward JSON representation of all the `Entities` in a `Dataset`.
 
-        The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. While paging is possible through these parameters, it will not greatly improve the performance of exporting data. ODK Central prefers to bulk-export all of its data at once if possible.
+        The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. If `$top` parameter is provided in the request then the response will include `@odata.nextLink` that you can use as is to fetch the next set of data.
 
         The [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948)can be used to filter by any data field in the system-level schema, but not the Dataset properties. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported.
 
@@ -12585,6 +11940,7 @@ paths:
         | Entity Creator Actor ID | `__system/creatorId` |
         | Entity Timestamp        | `__system/createdAt` |
         | Entity Update Timestamp | `__system/updatedAt` |
+        | Entity Conflict         | `__system/conflict`  |
 
         Note that `createdAt` and `updatedAt` are time components. This means that any comparisons you make need to account for the full time of the entity. It might seem like `$filter=__system/createdAt le 2020-01-31` would return all results on or before 31 Jan 2020, but in fact only entities made before midnight of that day would be accepted. To include all of the month of January, you need to filter by either `$filter=__system/createdAt le 2020-01-31T23:59:59.999Z` or `$filter=__system/createdAt lt 2020-02-01`. Remember also that you can [query by a specific timezone](https://en.wikipedia.org/wiki/ISO_8601#Time_offsets_from_UTC).
 
@@ -12648,8 +12004,40 @@ paths:
         example: __id, label, name
       responses:
         200:
-          description: OK
-          content: {}
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityOdata'
+              example:
+                '@odata.context': https://your.odk.server/v1/projects/7/datasets/trees.svc/$metadata#Entities
+                value:
+                - __id: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
+                  label: 25cm purpleheart                  
+                  geometry: 32.7413996 -117.1394617 53.80000305175781 13.933,
+                  species: purpleheart,
+                  circumference_cm: 2
+                  __system:
+                    createdAt: '2022-12-09T19:41:16.478Z'
+                    creatorId: 39
+                    creatorName: Tree surveyor
+                    updates: 1,
+                    updatedAt: '2023-04-31T19:41:16.478Z'
+                    version: 1
+                    conflict: null
+                - __id: aeebd746-3b1e-4a24-ba9d-ed6547bd5ff1
+                  label: 345cm mora
+                  __system:
+                    createdAt: '2023-04-09T19:10:16.128Z'
+                    creatorId: 39
+                    creatorName: Tree surveyor
+                    updates: 1,
+                    updatedAt: '2023-04-31T19:41:16.478Z'
+                    version: 2
+                    conflict: null
+                  geometry: 47.722581 18.562111 0 0,
+                  species: mora,
+                  circumference_cm: 345            
         403:
           description: Forbidden
           content:
@@ -13488,16 +12876,26 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/Audit'
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/ExtendedAudit'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Audit'
+              example:
+              - actorId: 42
+                action: user.session.create
+                details:
+                  userAgent: Mozilla/5.0
+                acteeId: 85cb9aff-005e-4edd-9739-dc9c1a829c44
+                loggedAt: 2018-04-18T23:19:14.802Z
+            application/json; extended:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtendedAudit'
               example:
               - actorId: 42
                 action: form.create
+                details:
+                  userAgent: Mozilla/5.0
                 acteeId: 85cb9aff-005e-4edd-9739-dc9c1a829c44
                 loggedAt: 2018-04-18T23:19:14.802Z
                 actor:
@@ -13787,6 +13185,19 @@ components:
               type: number
               example: 2
               description: The number of Datasets within this Project.
+    ExtendedProjectWithVerbs:
+      allOf:
+        - $ref: '#/components/schemas/ExtendedProject'
+        - type: object
+          properties:
+            verbs:
+              type: array
+              items:
+                type: string
+              example:
+                - "form.create"
+                - "form.delete"
+              description: The array of string verbs the authenticated Actor may perform on and within this Project.
     EntitySummaryFields:
       type: object
       properties:
@@ -13810,6 +13221,17 @@ components:
           type: number
           description: The ID of the Actor (App User, User, or Public Link) that originally created the Entity.
           example: 1
+        conflict:
+          type: string
+          description: |-
+            Type of the conflict. 
+            
+            `hard`: baseVersion conflicts and multiple versions update the same property
+            
+            `soft`: baseVersion conflicts but data updates are independent
+          enum:
+            - soft
+            - hard
     EntityVersionFields:
       type: object
       properties:
@@ -13829,6 +13251,11 @@ components:
           type: string
           description: The self-identified `userAgent` of the device that created the `Entity` version.
           example: Enketo/3.0.4
+        conflictingProperties:
+          type: array
+          description: list of properties updated offline simultaneously.
+          items:
+            type: string
     EntitySummary:
       allOf: 
         - $ref: '#/components/schemas/EntitySummaryFields'
@@ -13901,6 +13328,39 @@ components:
           type: string
           description: The name of the property that is changed.
           example: name
+    EntityOdata:
+      type: object
+      properties:
+        '@odata.context':
+          type: string
+        value:
+          type: array
+          items:
+            type: object
+            properties:
+              __id:
+                type: string
+              label:
+                type: string
+              __system:
+                type: object
+                properties:
+                  createdAt:
+                    type: string
+                  creatorId:
+                    type: string
+                  creatorName:
+                    type: string
+                  updates:
+                    type: string
+                  updatedAt:
+                    type: string
+              geometry:
+                type: string
+              species:
+                type: string
+              circumference_cm:
+                type: string
     DataExample:
       type: object
       properties:
@@ -14124,6 +13584,10 @@ components:
           entities:
             type: number
             description: The number of Entities in the Dataset.
+            example: 10
+          conflicts:
+            type: number
+            description: The number of Entities that have conflicts.
             example: 10.0
     PatchAttachment:
       required:
@@ -14268,8 +13732,15 @@ components:
     DatasetMetadata:
       properties:
         linkedForms:
-          $ref: '#/components/schemas/EntitySummaryFields'
+          type: array
+          items:
+            $ref: '#/components/schemas/FormKeyValue'
           description: Forms that consume data from the Dataset
+        sourceForms:
+          type: array
+          items:
+            $ref: '#/components/schemas/FormKeyValue'
+          description: Forms that create Entities in the Dataset
         properties:
           type: array
           description: All properties of the Dataset

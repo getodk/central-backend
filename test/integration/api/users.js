@@ -574,7 +574,7 @@ describe('api: /users', () => {
                 global.inbox.length.should.equal(0);
                 email.to.should.eql([{ address: 'alice@getodk.org', name: '' }]);
                 email.subject.should.equal('ODK Central account email changed');
-                email.html.should.equal('<html>Hello!<p><p>We are emailing because you have an ODK Central account, and somebody has just changed the email address associated with the account from this one you are reading right now (alice@getodk.org) to a new address (david123@getodk.org).</p><p>If this was you, please feel free to ignore this email. Otherwise, please contact your local ODK system administrator immediately.</p></html>');
+                email.html.should.equal('<html>Hello!<p><p>We are emailing because you have an ODK Central account, and somebody has just changed the email address associated with the account from this one you are reading right now (alice@getodk.org) to a new address (david123@getodk.org).</p><p>If this is expected, you can ignore this email. If it is not expected, please contact your ODK system administrator immediately.</p></html>');
               })))));
     }
 

@@ -41,7 +41,11 @@ const bcrypt = require(appRoot + '/lib/util/crypto').password(_bcrypt);
 
 // set up our enketo mock.
 const { reset: resetEnketo, ...enketo } = require(appRoot + '/test/util/enketo');
-beforeEach(resetEnketo);
+// Initialize the mock before other setup that uses the mock, then reset the
+// mock after setup is complete and after each test.
+before(resetEnketo);
+after(resetEnketo);
+afterEach(resetEnketo);
 
 // set up odk analytics mock.
 const { ODKAnalytics } = require(appRoot + '/test/util/odk-analytics-mock');
@@ -83,7 +87,7 @@ const initialize = async () => {
     await migrator.destroy();
   }
 
-  return withDefaults({ db, bcrypt, context }).transacting(populate);
+  return withDefaults({ db, bcrypt, context, enketo, env }).transacting(populate);
 };
 
 // eslint-disable-next-line func-names, space-before-function-paren
@@ -216,4 +220,3 @@ const withClosedForm = (f) => async (service) => {
 };
 
 module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask, withClosedForm };
-

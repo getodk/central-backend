@@ -10,7 +10,9 @@ describe('task: reap-sessions', () => {
       .then((actor) => Promise.all([ 2000, 2001, 2002, 2003, 3000, 3001, 3002, 3003 ]
         .map((year) => Sessions.create(actor, new Date(`${year}-01-01`)))))
       .then(() => reapSessions())
-      .then(() => oneFirst(sql`select count(*) from sessions`))
+      .then(() => oneFirst(sql`
+SELECT count(*) FROM sessions
+JOIN actors ON actors.id = sessions."actorId" AND actors.type = 'actor'`))
       .then((count) => { count.should.equal(4); })));
 });
 
