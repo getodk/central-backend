@@ -1732,7 +1732,7 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should log error and not update if trying to set label to blank', testEntityUpdates(async (service, container) => {
+    it('should not update label if label is blank', testEntityUpdates(async (service, container) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
@@ -1745,14 +1745,9 @@ describe('Entities API', () => {
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(200)
         .then(({ body: person }) => {
-          should(person.currentVersion.baseVersion).be.null();
-        });
-
-      await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
-        .expect(200)
-        .then(({ body: logs }) => {
-          logs[0].should.be.an.Audit();
-          logs[0].action.should.be.eql('entity.error');
+          person.currentVersion.dataReceived.should.eql({ age: '85', first_name: 'Alicia' });
+          person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
+          person.currentVersion.label.should.equal('Johnny Doe');
         });
     }));
 
