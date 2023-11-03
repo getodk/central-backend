@@ -246,13 +246,13 @@ describe('api: /submission', () => {
         });
 
       await asAlice.get(`/v1/projects/1/forms/binaryType/submissions/both/attachments/${encodeURI('fîlé2')}`)
-        .expect(200)
-        .then(({ body }) => {
-          body.toString('utf8').should.be.eql('this is test file one');
+        .expect(307)
+        .then(({ headers }) => {
+          headers.location.should.be.eql('this is test file one');
         });
 
       await asAlice.get(`/v1/projects/1/forms/binaryType/submissions/both/attachments/${encodeURI('f😂le3صادق')}`)
-        .expect(200)
+        .expect(307)
         .then(({ body }) => {
           body.toString('utf8').should.be.eql('this is test file two');
         });
