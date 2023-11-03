@@ -9,6 +9,7 @@ const { omit } = require('ramda');
 const should = require('should');
 const { sql } = require('slonik');
 const { QueryOptions } = require('../../../lib/util/db');
+const { createConflict } = require('../fixtures/scenarios');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const Option = require(appRoot + '/lib/util/option');
@@ -67,7 +68,7 @@ describe('datasets and entities', () => {
           .then(({ body }) => {
             body[0].should.be.an.ExtendedDataset();
             body.map(({ createdAt, lastEntity, ...d }) => d).should.eql([
-              { name: 'people', projectId: 1, entities: 1, approvalRequired: false }
+              { name: 'people', projectId: 1, entities: 1, approvalRequired: false, conflicts: 0 }
             ]);
           });
       }));
@@ -113,7 +114,7 @@ describe('datasets and entities', () => {
               should(lastEntity).be.null();
               return d;
             }).should.eql([
-              { name: 'people', projectId: 1, entities: 0, approvalRequired: false }
+              { name: 'people', projectId: 1, entities: 0, approvalRequired: false, conflicts: 0 }
             ]);
           });
       }));
@@ -147,7 +148,7 @@ describe('datasets and entities', () => {
               lastEntity.should.not.be.null();
               return d;
             }).should.eql([
-              { name: 'people', projectId: 1, entities: 1, approvalRequired: false }
+              { name: 'people', projectId: 1, entities: 1, approvalRequired: false, conflicts: 0 }
             ]);
           });
       }));
@@ -171,6 +172,23 @@ describe('datasets and entities', () => {
 
         await exhaust(container);
 
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+          .send({ data: { age: '99' } })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // all properties changed
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
         await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1' WHERE TRUE`);
 
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
@@ -189,12 +207,14 @@ describe('datasets and entities', () => {
           .expect(200)
           .then(({ body }) => {
             body[0].should.be.an.ExtendedDataset();
-            body.map(({ createdAt, lastEntity, ...d }) => {
+            body.map(({ createdAt, lastEntity, conflicts, ...d }) => {
               lastEntity.should.not.startWith('1999');
               return d;
             }).should.eql([
               { name: 'people', projectId: 1, entities: 2, approvalRequired: false }
             ]);
+
+            body[0].conflicts.should.equal(1);
           });
       }));
 
@@ -340,17 +360,9 @@ describe('datasets and entities', () => {
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
-          .send({ reviewState: 'approved' })
-          .expect(200);
-
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
           .send(testData.instances.simpleEntity.two)
           .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two')
-          .send({ reviewState: 'approved' })
           .expect(200);
 
         await exhaust(container);
@@ -403,6 +415,63 @@ describe('datasets and entities', () => {
 
       }));
 
+      it('should stream csv of dataset with entities from multiple forms', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.multiPropertyEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyEntity
+            .replace('multiPropertyEntity', 'multiPropertyEntity2')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/draft/publish').expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/submissions')
+          .send(testData.instances.multiPropertyEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/submissions')
+          .send(testData.instances.multiPropertyEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity2/submissions')
+          .send(testData.instances.multiPropertyEntity.one
+            .replace('multiPropertyEntity', 'multiPropertyEntity2')
+            .replace('uuid:12345678-1234-4123-8234-123456789aaa', 'uuid:12345678-1234-4123-8234-123456789ccc')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/multiPropertyEntity/submissions/one')
+          .send({ reviewState: 'approved' });
+        await asAlice.patch('/v1/projects/1/forms/multiPropertyEntity/submissions/two')
+          .send({ reviewState: 'approved' });
+        await asAlice.patch('/v1/projects/1/forms/multiPropertyEntity2/submissions/one')
+          .send({ reviewState: 'approved' });
+
+        await exhaust(container);
+
+        const { text } = await asAlice.get('/v1/projects/1/datasets/foo/entities.csv');
+
+        const withOutTs = text.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g, '');
+        withOutTs.should.be.eql(
+          '__id,label,f_q1,e_q2,a_q3,c_q4,b_q1,d_q2,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+          '12345678-1234-4123-8234-123456789ccc,one,w,x,y,z,,,,5,Alice,0,,1\n'+
+          '12345678-1234-4123-8234-123456789bbb,two,,,c,d,a,b,,5,Alice,0,,1\n'+
+          '12345678-1234-4123-8234-123456789aaa,one,,,y,z,w,x,,5,Alice,0,,1\n'
+        );
+      }));
+
       it('should not return deleted entities', testService(async (service) => {
         const asAlice = await service.login('alice');
 
@@ -437,7 +506,7 @@ describe('datasets and entities', () => {
 
       }));
 
-      it('should return updated value correctly', testService(async (service) => {
+      it('should return updated value correctly (entity updated via API)', testService(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -472,6 +541,51 @@ describe('datasets and entities', () => {
         withOutTs.should.be.eql(
           '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
             '12345678-1234-4123-8234-111111111aaa,Robert Doe (expired),Robert,,,5,Alice,1,,2\n'
+        );
+
+      }));
+
+      it('should return updated value correctly (entity updated via submission)', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        // create form and submission to update entity
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200)
+          .then(r => r.text);
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(2);
+
+        const withOutTs = result.replace(isoRegex, '');
+        withOutTs.should.be.eql(
+          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-123456789abc,Alicia (85),Alicia,85,,5,Alice,1,,2\n'
         );
 
       }));
@@ -511,6 +625,42 @@ describe('datasets and entities', () => {
           .expect(304);
       }));
 
+      it('should filter the Entities', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111aaa',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        await createConflict(asAlice, container);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv?$filter=__system/conflict eq \'hard\'')
+          .expect(200)
+          .then(r => {
+            should.not.exist(r.get('ETag'));
+            return r.text;
+          });
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(2);
+
+        const withOutTs = result.replace(isoRegex, '');
+        withOutTs.should.be.eql(
+          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-123456789abc,Alicia (85),Alicia,85,,5,Alice,2,,3\n'
+        );
+
+      }));
     });
 
     describe('projects/:id/datasets/:name GET', () => {
@@ -601,6 +751,7 @@ describe('datasets and entities', () => {
               projectId: 1,
               approvalRequired: false,
               entities: 1,
+              conflicts: 0,
               linkedForms: [],
               sourceForms: [{ name: 'simpleEntity', xmlFormId: 'simpleEntity' }]
             });
@@ -711,6 +862,40 @@ describe('datasets and entities', () => {
                 'c_q4',
                 'f_q1',
                 'e_q2'
+              ]);
+          });
+      }));
+
+      it('should return dataset properties from multiple forms where later form publishes dataset', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.multiPropertyEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyEntity
+            .replace('multiPropertyEntity', 'multiPropertyEntity2')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/draft/publish');
+
+        await asAlice.get('/v1/projects/1/datasets/foo')
+          .expect(200)
+          .then(({ body }) => {
+            const { properties } = body;
+            properties.map((p) => p.name)
+              .should.be.containDeep([
+                'f_q1',
+                'e_q2',
+                'a_q3',
+                'c_q4',
+                'b_q1',
+                'd_q2',
               ]);
           });
       }));
@@ -1447,7 +1632,7 @@ describe('datasets and entities', () => {
               .then(({ headers, text }) => {
                 headers['content-disposition'].should.equal('attachment; filename="goodone.csv"; filename*=UTF-8\'\'goodone.csv');
                 headers['content-type'].should.equal('text/csv; charset=utf-8');
-                text.should.equal('name,label,version,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n');
+                text.should.equal('name,label,__version,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n');
               })))));
 
       it('should return entities csv for testing', testService(async (service, container) => {
@@ -1468,7 +1653,7 @@ describe('datasets and entities', () => {
 
         await service.get(`/v1/test/${token}/projects/1/forms/withAttachments/draft/attachments/goodone.csv`)
           .expect(200)
-          .then(({ text }) => { text.should.equal('name,label,version,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n'); });
+          .then(({ text }) => { text.should.equal('name,label,__version,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n'); });
 
       }));
 
@@ -1500,7 +1685,7 @@ describe('datasets and entities', () => {
         await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
           .expect(200)
           .then(({ text }) => {
-            text.should.equal('name,label,version,first_name,the.age\n' +
+            text.should.equal('name,label,__version,first_name,the.age\n' +
           '12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n');
           });
 
@@ -1562,7 +1747,7 @@ describe('datasets and entities', () => {
           .then(r => r.text);
 
         result.should.be.eql(
-          'name,label,version,first_name,age\n' +
+          'name,label,__version,first_name,age\n' +
           '12345678-1234-4123-8234-111111111aaa,Robert Doe (expired),2,Robert,\n'
         );
 
@@ -1642,7 +1827,7 @@ describe('datasets and entities', () => {
           .expect(200);
 
         result.text.should.be.eql(
-          'name,label,version,first_name,age\n' +
+          'name,label,__version,first_name,age\n' +
           '12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n'
         );
 
@@ -2085,7 +2270,7 @@ describe('datasets and entities', () => {
             .expect(400)
             .then(({ body }) => {
               body.code.should.equal(400.25);
-              body.details.reason.should.equal('Invalid Dataset property.');
+              body.details.reason.should.equal('Invalid entity property name.');
             }))));
 
       it('should return a Problem if the savetos reference invalid properties (extra whitespace)', testService((service) =>
@@ -2096,7 +2281,7 @@ describe('datasets and entities', () => {
             .expect(400)
             .then(({ body }) => {
               body.code.should.equal(400.25);
-              body.details.reason.should.equal('Invalid Dataset property.');
+              body.details.reason.should.equal('Invalid entity property name.');
             }))));
 
       it('should return the created form upon success', testService((service) =>
@@ -2156,7 +2341,7 @@ describe('datasets and entities', () => {
             .expect(400)
             .then(({ body }) => {
               body.code.should.be.eql(400.25);
-              body.message.should.be.eql('The entity definition within the form is invalid. Multiple Form Fields cannot be saved to a single Dataset Property.');
+              body.message.should.be.eql('The entity definition within the form is invalid. Multiple Form Fields cannot be saved to a single property.');
             }));
       }));
 
@@ -2343,7 +2528,7 @@ describe('datasets and entities', () => {
               .expect(400)
               .then(({ body }) => {
                 body.code.should.equal(400.25);
-                body.details.reason.should.equal('Invalid Dataset property.');
+                body.details.reason.should.equal('Invalid entity property name.');
               }));
         }));
       });
@@ -2424,6 +2609,138 @@ describe('datasets and entities', () => {
 
       }));
 
+      describe('uploading forms that UPDATE but do not create entities', () => {
+        it('should be able to add properties to datasets', testService(async (service) => {
+          const asAlice = await service.login('alice');
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.updateEntity
+              .replace('entities:saveto="first_name"', 'entities:saveto="nickname"'))
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([
+                {
+                  name: 'people',
+                  isNew: false,
+                  properties: [
+                    { name: 'first_name', isNew: false, inForm: false },
+                    { name: 'nickname', isNew: true, inForm: true },
+                    { name: 'age', isNew: false, inForm: true }
+                  ]
+                }
+              ]);
+            });
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish');
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([
+                {
+                  name: 'people',
+                  properties: [
+                    { name: 'first_name', inForm: false },
+                    { name: 'nickname', inForm: true },
+                    { name: 'age', inForm: true }
+                  ]
+                }
+              ]);
+            });
+        }));
+
+        it('should be able to have an update entity form with no savetos', testService(async (service) => {
+          const asAlice = await service.login('alice');
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.updateEntity
+              .replace('entities:saveto="first_name"', '')
+              .replace('entities:saveto="age"', ''))
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([
+                {
+                  name: 'people',
+                  isNew: false,
+                  properties: [
+                    { name: 'first_name', isNew: false, inForm: false },
+                    { name: 'age', isNew: false, inForm: false }
+                  ]
+                }
+              ]);
+            });
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish');
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([
+                {
+                  name: 'people',
+                  properties: [
+                    { name: 'first_name', inForm: false },
+                    { name: 'age', inForm: false }
+                  ]
+                }
+              ]);
+            });
+        }));
+
+        it('should create dataset if it does not exist and and log it', testService(async (service) => {
+          const asAlice = await service.login('alice');
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.updateEntity)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([
+                {
+                  name: 'people',
+                  isNew: true, // Dataset is new
+                  properties: [
+                    { name: 'first_name', isNew: true, inForm: true },
+                    { name: 'age', isNew: true, inForm: true }
+                  ]
+                }
+              ]);
+            });
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish');
+
+          await asAlice.get('/v1/projects/1/datasets/people')
+            .expect(200)
+            .then(({ body }) => {
+              body.name.should.be.eql('people');
+              body.properties.map(p => p.name).should.eql([ 'first_name', 'age' ]);
+            });
+
+          await asAlice.get('/v1/audits?action=dataset.create')
+            .expect(200)
+            .then(({ body: audits }) => {
+              audits[0].details.should.eql({ properties: ['first_name', 'age'] });
+            });
+        }));
+      });
     });
 
     describe('dataset property interaction with intermediate form schemas and purging uneeded drafts', () => {
@@ -3001,7 +3318,7 @@ describe('datasets and entities', () => {
             body.length.should.be.eql(1);
           });
 
-        const entityErrors = await container.Audits.get(new QueryOptions({ args: { action: 'entity.create.error' } }));
+        const entityErrors = await container.Audits.get(new QueryOptions({ args: { action: 'entity.error' } }));
 
         entityErrors.length.should.be.eql(1);
         entityErrors[0].details.errorMessage.should.match(/Required parameter label missing/);

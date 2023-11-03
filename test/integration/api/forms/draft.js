@@ -84,7 +84,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
 
       it('should request an enketoId while setting a new draft', testService(async (service, { env }) => {
         const asAlice = await service.login('alice');
-        global.enketo.token = '::ijklmnop';
+        global.enketo.enketoId = '::ijklmnop';
         await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
         global.enketo.callCount.should.equal(1);
         global.enketo.receivedUrl.startsWith(env.domain).should.be.true();
@@ -101,10 +101,10 @@ describe('api: /projects/:id/forms (drafts)', () => {
         await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
         await asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
           .expect(200);
-        global.enketo.callCount.should.equal(1);
-        global.enketo.token = '::ijklmnop';
-        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
         global.enketo.callCount.should.equal(2);
+        global.enketo.enketoId = '::ijklmnop';
+        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+        global.enketo.callCount.should.equal(3);
         global.enketo.receivedUrl.startsWith(env.domain).should.be.true();
         const match = global.enketo.receivedUrl.match(/\/v1\/test\/([a-z0-9$!]{64})\/projects\/1\/forms\/simple\/draft$/i);
         should.exist(match);
@@ -123,9 +123,9 @@ describe('api: /projects/:id/forms (drafts)', () => {
         should.not.exist(body.enketoId);
       }));
 
-      it('should stop waiting for Enketo after 0.5 seconds @slow', testService(async (service) => {
+      it('should wait for Enketo only briefly @slow', testService(async (service) => {
         const asAlice = await service.login('alice');
-        global.enketo.wait = (f) => { setTimeout(f, 501); };
+        global.enketo.wait = (done) => { setTimeout(done, 600); };
         await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
         const { body } = await asAlice.get('/v1/projects/1/forms/simple/draft')
           .expect(200);
@@ -137,7 +137,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
         global.enketo.state = 'error';
         await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
         global.enketo.callCount.should.equal(1);
-        global.enketo.token = '::ijklmnop';
+        global.enketo.enketoId = '::ijklmnop';
         await exhaust(container);
         global.enketo.callCount.should.equal(2);
         global.enketo.receivedUrl.startsWith(container.env.domain).should.be.true();
@@ -158,15 +158,14 @@ describe('api: /projects/:id/forms (drafts)', () => {
         global.enketo.callCount.should.equal(1);
       }));
 
-      it('should manage draft/published enketo tokens separately', testService((service, container) =>
+      it('should manage draft/published enketo tokens separately', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
             .set('Content-Type', 'application/xml')
             .send(testData.forms.simple2)
             .expect(200)
-            .then(() => exhaust(container))
             .then(() => {
-              global.enketo.token = '::ijklmnop';
+              global.enketo.enketoId = '::ijklmnop';
               return asAlice.post('/v1/projects/1/forms/simple2/draft')
                 .expect(200)
                 .then(() => Promise.all([
@@ -898,15 +897,14 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body.lastSubmission.should.be.a.recentIsoDate();
               })))));
 
-      it('should return the correct enketoId with extended draft', testService((service, container) =>
+      it('should return the correct enketoId with extended draft', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
             .set('Content-Type', 'application/xml')
             .send(testData.forms.simple2)
             .expect(200)
-            .then(() => exhaust(container))
             .then(() => {
-              global.enketo.token = '::ijklmnop';
+              global.enketo.enketoId = '::ijklmnop';
               return asAlice.post('/v1/projects/1/forms/simple2/draft')
                 .expect(200)
                 .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft')
@@ -1143,6 +1141,152 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   { name: 'goodtwo.mp3', type: 'audio', exists: false, blobExists: false, datasetExists: false }
                 ]);
               })))));
+
+      it('should request Enketo IDs when publishing for first time', testService(async (service, { env }) => {
+        const asAlice = await service.login('alice');
+
+        // Create a draft form.
+        global.enketo.state = 'error';
+        const { body: draft } = await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        global.enketo.callCount.should.equal(1);
+        should.not.exist(draft.enketoId);
+        should.not.exist(draft.enketoOnceId);
+
+        // Publish.
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+          .expect(200);
+        global.enketo.callCount.should.equal(2);
+        global.enketo.receivedUrl.should.equal(`${env.domain}/v1/projects/1`);
+        const { body: form } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        form.enketoId.should.equal('::abcdefgh');
+        form.enketoOnceId.should.equal('::::abcdefgh');
+      }));
+
+      it('should return with success even if request to Enketo fails', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        global.enketo.state = 'error';
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+          .expect(200);
+        const { body: form } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        should.not.exist(form.enketoId);
+        should.not.exist(form.enketoOnceId);
+      }));
+
+      it('should wait for Enketo only briefly @slow', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        global.enketo.wait = (done) => { setTimeout(done, 600); };
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+          .expect(200);
+        const { body: form } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        should.not.exist(form.enketoId);
+        should.not.exist(form.enketoOnceId);
+      }));
+
+      it('should request Enketo IDs when republishing if they are missing', testService(async (service, { env }) => {
+        const asAlice = await service.login('alice');
+
+        // First publish
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        global.enketo.state = 'error';
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+          .expect(200);
+        const { body: v1 } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        should.not.exist(v1.enketoId);
+        should.not.exist(v1.enketoOnceId);
+
+        // Republish
+        await asAlice.post('/v1/projects/1/forms/simple2/draft').expect(200);
+        global.enketo.callCount.should.equal(3);
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish?version=new')
+          .expect(200);
+        global.enketo.callCount.should.equal(4);
+        global.enketo.receivedUrl.should.equal(`${env.domain}/v1/projects/1`);
+        const { body: v2 } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        v2.enketoId.should.equal('::abcdefgh');
+        v2.enketoOnceId.should.equal('::::abcdefgh');
+      }));
+
+      it('should not request Enketo IDs when republishing if they are present', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        // First publish
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+          .expect(200);
+
+        // Republish
+        await asAlice.post('/v1/projects/1/forms/simple2/draft').expect(200);
+        global.enketo.callCount.should.equal(3);
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish?version=new')
+          .expect(200);
+        global.enketo.callCount.should.equal(3);
+        const { body: form } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        form.enketoId.should.equal('::abcdefgh');
+        form.enketoOnceId.should.equal('::::abcdefgh');
+      }));
+
+      it('should request Enketo IDs from worker if request from endpoint fails', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // First request to Enketo, from the endpoint
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        global.enketo.state = 'error';
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+          .expect(200);
+        const { body: beforeWorker } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        should.not.exist(beforeWorker.enketoId);
+        should.not.exist(beforeWorker.enketoOnceId);
+
+        // Second request, from the worker
+        global.enketo.callCount.should.equal(2);
+        await exhaust(container);
+        global.enketo.callCount.should.equal(3);
+        global.enketo.receivedUrl.should.equal(`${container.env.domain}/v1/projects/1`);
+        const { body: afterWorker } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        afterWorker.enketoId.should.equal('::abcdefgh');
+        afterWorker.enketoOnceId.should.equal('::::abcdefgh');
+      }));
+
+      it('should not request Enketo IDs from worker if request from endpoint succeeds', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+          .expect(200);
+        global.enketo.callCount.should.equal(2);
+        await exhaust(container);
+        global.enketo.callCount.should.equal(2);
+      }));
 
       it('should log the action in the audit log', testService((service, { Forms }) =>
         service.login('alice', (asAlice) =>

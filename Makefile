@@ -61,9 +61,14 @@ debug: base
 .PHONY: test
 test: lint
 	BCRYPT=no npx mocha --recursive --exit
+
 .PHONY: test-full
 test-full: lint
 	npx mocha --recursive --exit
+
+.PHONY: test-fast
+test-fast: node_version
+	BCRYPT=no npx mocha --recursive --exit --fgrep @slow --invert
 
 .PHONY: test-integration
 test-integration: node_version
@@ -96,3 +101,8 @@ rm-docker-postgres: stop-docker-postgres
 .PHONY: check-file-headers
 check-file-headers:
 	git ls-files | node lib/bin/check-file-headers.js
+
+.PHONY: api-docs
+api-docs:
+	(test "$(docker images -q odk-docs)" || docker build --file odk-docs.dockerfile -t odk-docs .) && \
+	docker run --rm -it -v ./docs/api.yaml:/docs/docs/_static/api-spec/central.yaml -p 8000:8000 odk-docs

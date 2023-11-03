@@ -1,3 +1,4 @@
+const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const { mergeRight } = require('ramda');
 const { sql } = require('slonik');
@@ -7,6 +8,7 @@ const request = require('supertest');
 const { noop } = require(appRoot + '/lib/util/util');
 const { task } = require(appRoot + '/lib/task/task');
 const authenticateUser = require('../util/authenticate-user');
+const testData = require('../data/xml');
 
 // knex things.
 const config = require('config');
@@ -39,7 +41,11 @@ const bcrypt = require(appRoot + '/lib/util/crypto').password(_bcrypt);
 
 // set up our enketo mock.
 const { reset: resetEnketo, ...enketo } = require(appRoot + '/test/util/enketo');
-beforeEach(resetEnketo);
+// Initialize the mock before other setup that uses the mock, then reset the
+// mock after setup is complete and after each test.
+before(resetEnketo);
+after(resetEnketo);
+afterEach(resetEnketo);
 
 // set up odk analytics mock.
 const { ODKAnalytics } = require(appRoot + '/test/util/odk-analytics-mock');
@@ -81,7 +87,7 @@ const initialize = async () => {
     await migrator.destroy();
   }
 
-  return withDefaults({ db, bcrypt, context }).transacting(populate);
+  return withDefaults({ db, bcrypt, context, enketo, env }).transacting(populate);
 };
 
 // eslint-disable-next-line func-names, space-before-function-paren
@@ -188,5 +194,29 @@ const testTask = (test) => () => new Promise((resolve, reject) => {
   });//.catch(Promise.resolve.bind(Promise));
 });
 
-module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask };
+// eslint-disable-next-line no-shadow
+const withClosedForm = (f) => async (service) => {
+  const asAlice = await service.login('alice');
 
+  await asAlice.post('/v1/projects/1/forms?publish=true')
+    .send(testData.forms.withAttachments)
+    .set('Content-Type', 'application/xml')
+    .expect(200);
+
+  await asAlice.patch('/v1/projects/1/forms/withAttachments')
+    .send({ state: 'closed' })
+    .expect(200);
+
+  await asAlice.post('/v1/projects/1/forms?publish=true')
+    .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+    .set('Content-Type', 'application/vnd.ms-excel')
+    .expect(200);
+
+  await asAlice.patch('/v1/projects/1/forms/simple2')
+    .send({ state: 'closed' })
+    .expect(200);
+
+  return f(service);
+};
+
+module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask, withClosedForm };

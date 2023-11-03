@@ -36,18 +36,18 @@ describe('worker', () => {
 
     it('should pass the container and event details to the job', testContainerFullTrx(async (container) => {
       const sentineledContainer = container.with({ testSentinel: 108 });
+      const event = { id: -1, action: 'test.event', details: { x: 42 } };
+
       let checked = false;
       const jobMap = { 'test.event': [ (c, e) => {
         c.testSentinel.should.equal(108);
         c.isTransacting.should.equal(true);
         c.should.not.equal(container);
-        // eslint-disable-next-line no-use-before-define
         e.should.equal(event);
         checked = true;
         return Promise.resolve();
       } ] };
 
-      const event = { id: -1, action: 'test.event', details: { x: 42 } };
       await promisify(runner(sentineledContainer, jobMap))(event);
       checked.should.equal(true);
     }));

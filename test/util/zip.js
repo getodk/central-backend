@@ -66,7 +66,7 @@ const zipStreamToFiles = (zipStream, callback) => {
 };
 
 // eslint-disable-next-line no-confusing-arrow
-const pZipStreamToFiles = (zipStream) => new Promise((resolve, reject) => zipStreamToFiles(zipStream, (err, result) => err ? reject(err) : resolve(result)));
+const pZipStreamToFiles = (zipStream) => new Promise((resolve, reject) => { zipStreamToFiles(zipStream, (err, result) => err ? reject(err) : resolve(result)); });
 
 module.exports = { zipStreamToFiles, pZipStreamToFiles };
 

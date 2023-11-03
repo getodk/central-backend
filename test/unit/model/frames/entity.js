@@ -18,7 +18,8 @@ describe('entity', () => {
       partial.should.have.property('aux');
       partial.aux.should.have.property('def').which.is.eql(new Entity.Def({
         data: { field: 'value' },
-        label: 'label'
+        label: 'label',
+        dataReceived: { field: 'value', label: 'label' }
       }));
       partial.aux.should.have.property('dataset', 'people');
     });
