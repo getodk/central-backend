@@ -3,103 +3,11 @@ const appRoot = require('app-root-path');
 const assert = require('assert');
 const { ConflictType } = require('../../../lib/data/entity');
 const { Entity } = require('../../../lib/model/frames');
-const { parseSubmissionXml, extractEntity, validateEntity, extractSelectedProperties, selectFields, diffEntityData, getDiffProp, getWithConflictDetails } = require(appRoot + '/lib/data/entity');
+const { parseSubmissionXml, extractEntity, extractSelectedProperties, selectFields, diffEntityData, getDiffProp, getWithConflictDetails } = require(appRoot + '/lib/data/entity');
 const { fieldsFor } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
 describe('extracting and validating entities', () => {
-  describe('validateEntity', () => {
-    it('should throw errors on when label is missing', () => {
-      const entity = {
-        system: {
-          id: '12345678-1234-4123-8234-123456789abc',
-          dataset: 'foo',
-        },
-        data: {}
-      };
-      assert.throws(() => { validateEntity(entity); }, (err) => {
-        err.problemCode.should.equal(400.2);
-        err.message.should.equal('Required parameter label missing.');
-        return true;
-      });
-    });
-
-    it('should throw errors when id is missing', () => {
-      (() => validateEntity({
-        system: {
-          label: 'foo',
-          id: '  ',
-          dataset: 'foo',
-        },
-        data: {}
-      })).should.throw(/Required parameter uuid missing/);
-    });
-
-    it('should throw errors when id is not a valid uuid', () => {
-      (() => validateEntity({
-        system: {
-          label: 'foo',
-          id: 'uuid:12123123',
-          dataset: 'foo',
-        },
-        data: {}
-      })).should.throw(/Invalid input data type: expected \(uuid\) to be \(valid UUID\)/);
-    });
-
-    it('should remove create property from system', () => {
-      const entity = {
-        system: {
-          create: '1',
-          id: '12345678-1234-4123-8234-123456789abc',
-          label: 'foo',
-          dataset: 'foo',
-        },
-        data: {}
-      };
-      validateEntity(entity).system.should.not.have.property('create');
-    });
-
-    it('should id property with uuid and remove uuid: prefix from the value', () => {
-      const entity = {
-        system: {
-          id: '12345678-1234-4123-8234-123456789abc',
-          label: 'foo',
-          dataset: 'foo',
-        },
-        data: {}
-      };
-      const validatedEntity = validateEntity(entity);
-
-      validatedEntity.system.should.not.have.property('id');
-      validatedEntity.system.should.have.property('uuid', '12345678-1234-4123-8234-123456789abc');
-    });
-
-    it('should throw error when baseVersion for update is missing', () => {
-      (() => validateEntity({
-        system: {
-          id: '12345678-1234-4123-8234-123456789abc',
-          label: 'foo',
-          dataset: 'foo',
-          update: '1'
-        },
-        data: {}
-      })).should.throw(/Required parameter baseVersion missing/);
-    });
-
-    it('should throw error when baseVersion is not an integer', () => {
-      (() => validateEntity({
-        system: {
-          id: '12345678-1234-4123-8234-123456789abc',
-          label: 'foo',
-          dataset: 'foo',
-          update: '1',
-          baseVersion: 'a'
-        },
-        data: {}
-      })).should.throw('Invalid input data type: expected (baseVersion) to be (integer)');
-    });
-  });
-
   describe('extract entity from submission: parseSubmissionXml', () => {
     // Used to compare entity structure when Object.create(null) used.
     beforeEach(() => {

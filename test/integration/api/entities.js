@@ -1107,6 +1107,22 @@ describe('Entities API', () => {
         });
     }));
 
+    it('should reject if uuid is not a valid uuid', testEntities(async (service) => {
+      // Use testEntities here vs. testDataset to prepopulate with 2 entities
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: 'bad_uuidv4',
+          label: 'Johnny Doe',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(400);
+    }));
+
     it('should reject if uuid is not unique', testEntities(async (service) => {
       // Use testEntities here vs. testDataset to prepopulate with 2 entities
       const asAlice = await service.login('alice');
