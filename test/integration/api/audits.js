@@ -382,6 +382,23 @@ describe('/audits', () => {
           data: { age: '77', first_name: 'Alan' }
         })
         .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // all properties changed
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+        .expect(200);
+
       await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(200)
         .then(({ body }) => {
@@ -391,11 +408,13 @@ describe('/audits', () => {
       await asAlice.get('/v1/audits?action=entity')
         .expect(200)
         .then(({ body }) => {
-          body.length.should.equal(4);
+          body.length.should.equal(6);
           body.map(a => a.action).should.eql([
             'entity.delete',
+            'entity.update.resolve',
             'entity.update.version',
-            'entity.create.error',
+            'entity.update.version',
+            'entity.error',
             'entity.create'
           ]);
         });

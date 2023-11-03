@@ -24,6 +24,8 @@ const defaults = {
   // The number of times that the mock has been called during the test, that is,
   // the number of requests that would be sent to Enketo
   callCount: 0,
+  // An object with a property for each argument passed to the create() method
+  createData: undefined,
   // The OpenRosa URL that was passed to the create() method
   receivedUrl: undefined,
   // An object with a property for each argument passed to the edit() method
@@ -57,8 +59,9 @@ const request = () => {
   });
 };
 
-const create = async (openRosaUrl) => {
+const create = async (openRosaUrl, xmlFormId, token) => {
   const { enketoId = '::abcdefgh' } = await request();
+  global.enketo.createData = { openRosaUrl, xmlFormId, token };
   global.enketo.receivedUrl = openRosaUrl;
   return { enketoId, enketoOnceId: '::::abcdefgh' };
 };
