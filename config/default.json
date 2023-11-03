@@ -33,19 +33,6 @@
         "version": "v2023.4.0_1"
       }
     }
-  },
-  "test": {
-    "database": {
-      "host": "localhost",
-      "user": "jubilant",
-      "password": "jubilant",
-      "database": "jubilant_test"
-    },
-    "email": {
-      "serviceAccount": "no-reply@getodk.org",
-      "transport": "json",
-      "transportOpts": { "newline": "unix" }
-    }
   }
 }
 

@@ -10,7 +10,7 @@ describe('db.stream()', () => {
   let pool;
 
   beforeEach(() => {
-    pool = slonikPool(config.get('test.database'));
+    pool = slonikPool(config.get('default.database'));
     db = {};
     queryFuncs(pool, db);
   });

@@ -6,7 +6,7 @@ node_modules: package.json
 
 .PHONY: test-oidc-integration
 test-oidc-integration: node_modules
-	TEST_AUTH=oidc NODE_CONFIG_ENV=oidc-integration-test make test-integration
+	NODE_CONFIG_ENV=oidc-integration-test BCRYPT=no TEST_AUTH=oidc npx mocha --recursive --exit ./test/integration
 
 .PHONY: test-oidc-e2e
 test-oidc-e2e: node_modules
@@ -60,11 +60,11 @@ debug: base
 
 .PHONY: test
 test: lint
-	BCRYPT=no npx mocha --recursive --exit
+	NODE_CONFIG_ENV=test BCRYPT=no npx mocha --recursive --exit
 
 .PHONY: test-full
 test-full: lint
-	npx mocha --recursive --exit
+	NODE_CONFIG_ENV=test npx mocha --recursive --exit
 
 .PHONY: test-fast
 test-fast: node_version
@@ -72,15 +72,15 @@ test-fast: node_version
 
 .PHONY: test-integration
 test-integration: node_version
-	BCRYPT=no npx mocha --recursive test/integration --exit
+	NODE_CONFIG_ENV=test BCRYPT=no npx mocha --recursive test/integration --exit
 
 .PHONY: test-unit
 test-unit: node_version
-	npx mocha --recursive test/unit --exit
+	NODE_CONFIG_ENV=test npx mocha --recursive test/unit --exit
 
 .PHONY: test-coverage
 test-coverage: node_version
-	npx nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --exit --recursive test
+	NODE_CONFIG_ENV=test npx nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --recursive --exit test
 
 .PHONY: lint
 lint: node_version
