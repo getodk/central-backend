@@ -1624,7 +1624,7 @@ describe('Entities API', () => {
           });
       }));
 
-      it('should reject if version does not match', testService(async (service, container) => {
+      it('should forcefully resolve the conflict', testService(async (service, container) => {
         await createConflict(service, container);
 
         const asAlice = await service.login('alice');
