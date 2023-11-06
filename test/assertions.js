@@ -18,8 +18,28 @@ should.Assertion.add('isoDate', function() {
 });
 
 should.Assertion.add('nullOrIsoDate', function() {
-  this.params = { operator: 'to be an ISO date string' };
+  this.params = { operator: 'to be null or an ISO date string' };
   if (this.obj != null) this.obj.should.be.an.isoDate();
+});
+
+should.Assertion.add('nullOrString', function() {
+  this.params = { operator: 'to be null or string' };
+  if (this.obj != null) this.obj.should.be.String();
+});
+
+should.Assertion.add('nullOrNumber', function() {
+  this.params = { operator: 'to be null or number' };
+  if (this.obj != null) this.obj.should.be.Number();
+});
+
+should.Assertion.add('nullOrArray', function() {
+  this.params = { operator: 'to be null or array' };
+  if (this.obj != null) this.obj.should.be.Array();
+});
+
+should.Assertion.add('nullOrObject', function() {
+  this.params = { operator: 'to be null or object' };
+  if (this.obj != null) this.obj.should.be.Object();
 });
 
 should.Assertion.add('recentIsoDate', function() {
@@ -362,9 +382,9 @@ should.Assertion.add('EntityDef', function assertEntityDef() {
   this.obj.should.have.property('current').which.is.a.Boolean();
   this.obj.should.have.property('createdAt').which.is.a.isoDate();
   this.obj.should.have.property('creatorId').which.is.a.Number();
-  this.obj.should.have.property('version');
-  this.obj.should.have.property('baseVersion');
-  this.obj.should.have.property('conflictingProperties');
+  this.obj.should.have.property('version').which.is.a.Number();
+  this.obj.should.have.property('baseVersion').which.is.nullOrNumber();
+  this.obj.should.have.property('conflictingProperties').which.is.nullOrArray();
   if (this.obj.userAgent !== null) this.obj.userAgent.should.be.a.String();
 });
 
@@ -379,15 +399,15 @@ should.Assertion.add('EntityDefFull', function assertEntityDefFull() {
   this.params = { operator: 'to be an Entity Def (version) including Conflict related fields' };
 
   this.obj.should.be.an.EntityDef();
-  this.obj.should.have.property('data');
-  this.obj.should.have.property('dataReceived');
-  this.obj.should.have.property('source');
-  this.obj.should.have.property('baseDiff');
-  this.obj.should.have.property('serverDiff');
-  this.obj.should.have.property('conflict');
-  this.obj.should.have.property('resolved');
-  this.obj.should.have.property('lastGoodVersion');
-  this.obj.should.have.property('relevantToConflict');
+  this.obj.should.have.property('data').which.is.nullOrObject();
+  this.obj.should.have.property('dataReceived').which.is.nullOrObject();
+  this.obj.should.have.property('source').which.is.nullOrObject();
+  this.obj.should.have.property('baseDiff').which.is.nullOrArray();
+  this.obj.should.have.property('serverDiff').which.is.nullOrArray();
+  this.obj.should.have.property('conflict').which.is.nullOrString();
+  this.obj.should.have.property('resolved').which.is.Boolean();
+  this.obj.should.have.property('lastGoodVersion').which.is.Boolean();
+  this.obj.should.have.property('relevantToConflict').which.is.Boolean();
 });
 
 should.Assertion.add('SourceType', function Source() {

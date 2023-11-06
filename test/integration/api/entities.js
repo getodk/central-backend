@@ -113,6 +113,7 @@ describe('Entities API', () => {
             p.should.be.an.Entity();
             p.should.have.property('currentVersion').which.is.an.EntityDef();
             p.currentVersion.should.not.have.property('data');
+            p.currentVersion.should.not.have.property('dataReceived');
           });
         });
     }));

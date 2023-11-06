@@ -10454,7 +10454,7 @@ paths:
                   conflictingProperties: null
                   baseDiff: []
                   serverDiff: []
-                  source: "// same as Audit.details - It is fluid; can be changed later on."
+                  source: "// Similar to Audit.details. This property is experimental and may change in the future."
                   data:
                     firstName: John
                     age: '88'
@@ -10483,7 +10483,7 @@ paths:
                   conflictingProperties: null
                   baseDiff: []
                   serverDiff: []
-                  source: "// same as Audit.details - It is fluid; can be changed later on."
+                  source: "// Similar to Audit.details. This property is experimental and may change in the future."
                   data:
                     firstName: John
                     age: '88'
@@ -13317,7 +13317,7 @@ components:
           example: 2
         baseVersion:
           type: number
-          description: The version number of the base Entity, which was used to make an update.
+          description: The version number of the version that was the "base version" of this version. The base version is the version that was shown to the data collector when they made their update.
           example: 1
     EntitySummary:
       allOf: 
@@ -13382,15 +13382,15 @@ components:
           properties:
             source:
               type: object
-              description: The source of the Entity version, like Submission or API request
+              description: The source of the Entity version, such as a Submission or an API request. This property is experimental and may change in the future.
               example: {event: {}, submissionCreate: {}, submission: {}}
             baseDiff:
               type: array
-              description: List of properties that are different between this version and base version
+              description: List of properties that are different between this version and its base version. Includes the label if it differs between the two versions.
               example: ['name', 'age']
             serverDiff:
               type: array
-              description: List of properties that are different between this version and the last version on the server
+              description: List of properties that are different between this version and the previous version on the server. Includes the label if it differs between the two versions.
               example: ['name', 'age']
             conflict:
               type: string
@@ -13404,11 +13404,11 @@ components:
               example: false
             lastGoodVersion:
               type: boolean
-              description: Is this version the last good known version?
+              description: Indicates whether this version is the last known good version. Currently, the last known good version is defined as the version immediately prior to the first unresolved conflict. If there is no conflict, or if all conflicts are resolved, then the current version is the last known good version. This property is experimental, as the definition of the last known good version may change in the future.
               example: false
             relevantToConflict:
               type: boolean
-              description: Is this version relevant for the conflict resolution?
+              description: Indicates whether this version includes information relevant to resolving a conflict. If so, it will be shown to the user during conflict resolution. This property is experimental, as we may redefine conflict relevance in the future.
               example: false
     ExtendedEntityVersionFull:
       allOf: 
