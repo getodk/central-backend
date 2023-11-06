@@ -113,6 +113,7 @@ describe('Entities API', () => {
             p.should.be.an.Entity();
             p.should.have.property('currentVersion').which.is.an.EntityDef();
             p.currentVersion.should.not.have.property('data');
+            p.currentVersion.should.not.have.property('dataReceived');
           });
         });
     }));
@@ -467,8 +468,7 @@ describe('Entities API', () => {
         .expect(200)
         .then(({ body: versions }) => {
           versions.forEach(v => {
-            v.should.be.an.EntityDef();
-            v.should.have.property('data');
+            v.should.be.an.EntityDefFull();
           });
 
           versions[1].data.should.be.eql({ age: '12', first_name: 'John' });
@@ -491,7 +491,7 @@ describe('Entities API', () => {
         .then(({ body: versions }) => {
           versions.forEach(v => {
             v.should.be.an.ExtendedEntityDef();
-            v.should.have.property('data');
+            v.should.be.an.EntityDefFull();
           });
 
           versions[0].creator.displayName.should.be.eql('Alice');
@@ -546,9 +546,10 @@ describe('Entities API', () => {
         .expect(200)
         .then(({ body: versions }) => {
           versions.forEach(v => {
-            v.should.be.an.EntityDef();
-            v.should.have.property('data');
+            v.should.be.an.EntityDefFull();
           });
+
+          versions.filter(v => v.relevantToConflict).map(v => v.version).should.eql([1, 2, 3, 4]);
 
           const thirdVersion = versions[2];
           thirdVersion.conflict.should.be.eql('soft');
@@ -606,6 +607,19 @@ describe('Entities API', () => {
             versions[1].lastGoodVersion.should.be.true();
             versions[2].conflictingProperties.should.be.eql(['age']);
           });
+      }));
+
+      it('should correctly set relevantToConflict field', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await createConflictOnV2(asAlice, container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+          .expect(200)
+          .then(({ body: versions }) => {
+            versions.filter(v => v.relevantToConflict).map(v => v.version).should.eql([2, 3, 4]);
+          });
+
       }));
 
       it('should return empty array when all conflicts are resolved', testEntities(async (service, container) => {
