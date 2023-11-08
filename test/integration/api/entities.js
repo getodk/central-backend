@@ -8,7 +8,6 @@ const { getById, createVersion } = require('../../../lib/model/query/entities');
 const Option = require('../../../lib/util/option');
 const { Entity } = require('../../../lib/model/frames');
 const { getOrNotFound } = require('../../../lib/util/promise');
-const { get } = require('../../../lib/model/query/datasets');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -1483,7 +1482,7 @@ describe('Entities API', () => {
 
       await exhaust(container);
 
-      const dataset = await get(1, 'people', true)(container).then(getOrNotFound);
+      const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
       const actorId = await container.oneFirst(sql`SELECT id FROM actors WHERE "displayName" = 'Alice'`);
 
       let secondTxWaiting = false;
@@ -1514,9 +1513,7 @@ describe('Entities API', () => {
             r.should.not.be.null();
           });
 
-        const updatedEntity = new Entity.Partial(entity, {
-          def: entity.aux.currentVersion.with({ label: 'Jane', data: { first_name: 'Jane' }, dataReceived: { first_name: 'Jane' } })
-        });
+        const updatedEntity = Entity.fromJson({ label: 'Jane', data: { first_name: 'Jane' } }, [{ name: 'first_name' }], dataset, entity);
 
         await createVersion({ id: dataset.id }, updatedEntity, null, entity.aux.currentVersion.version + 1, null, 1)(containerTx1)
           .then(() => {
@@ -1546,9 +1543,7 @@ describe('Entities API', () => {
             console.log('Tx2: entity fetched');
 
             entity.aux.currentVersion.version.should.be.eql(2);
-            const updatedEntity = new Entity.Partial(entity, {
-              def: entity.aux.currentVersion.with({ label: 'Robert', data: { first_name: 'Robert' }, dataReceived: { first_name: 'Robert' } })
-            });
+            const updatedEntity = Entity.fromJson({ label: 'Robert', data: { first_name: 'Robert' } }, [{ name: 'first_name' }], dataset, entity);
 
             await createVersion({ id: dataset.id }, updatedEntity, null, entity.aux.currentVersion.version + 1, null, 1)(containerTx2)
               .then(() => {
