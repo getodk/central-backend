@@ -81,11 +81,12 @@ describe('task: auditing', () => {
       // ditto above.
       // eslint-disable-next-line no-param-reassign
       Audits.log = () => Promise.reject(Problem.user.missingParameter({ field: 'test' }));
-      return auditing('testAction', Promise.reject(new Error()))
+      return auditing('testAction', Promise.reject(new Error('uhoh')))
         .then(identity, (result) => {
           // too difficult to test stderr output.
           process.exitCode.should.equal(1);
-          result.should.equal(true);
+          result.should.be.instanceOf(Error);
+          result.message.should.equal('uhoh');
         });
     }));
   });

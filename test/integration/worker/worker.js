@@ -84,9 +84,10 @@ describe('worker', () => {
       const hijackedContainer = container.with({ Sentry });
 
       const event = { id: -1, action: 'test.event', failures: 0 };
-      const jobMap = { 'test.event': [ () => Promise.reject(new Error()) ] };
+      const jobMap = { 'test.event': [ () => Promise.reject(new Error('uhoh')) ] };
       await promisify(runner(hijackedContainer, jobMap))(event);
-      captured.should.eql({ uh: 'oh' });
+      captured.should.be.instanceOf(Error);
+      captured.message.should.equal('uhoh');
     }));
 
     // ideally we'd test that the error gets written to stderr but i don't like
