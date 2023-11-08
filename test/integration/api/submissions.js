@@ -221,7 +221,7 @@ describe('api: /submission', () => {
                 ]);
               }))))));
 
-    it.only('should save attachments with unicode / non-english char', testService(async (service) => {
+    it('should save attachments with unicode / non-english char', testService(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
