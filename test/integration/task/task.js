@@ -55,8 +55,8 @@ describe('task: auditing', () => {
     it('should fault but passthrough on log failure', testTask(({ Audits }) => {
       // hijack Audit.log to crash. new container is made for each test so we don't have
       // to restore a working one.
-      // eslint-disable-next-line prefer-promise-reject-errors, no-param-reassign
-      Audits.log = () => Promise.reject(false);
+      // eslint-disable-next-line no-param-reassign
+      Audits.log = () => Promise.reject(new Error());
       return auditing('testAction', Promise.resolve(true))
         .then((result) => {
           // too difficult to test stderr output.
@@ -81,8 +81,7 @@ describe('task: auditing', () => {
       // ditto above.
       // eslint-disable-next-line no-param-reassign
       Audits.log = () => Promise.reject(Problem.user.missingParameter({ field: 'test' }));
-      // eslint-disable-next-line prefer-promise-reject-errors
-      return auditing('testAction', Promise.reject(true))
+      return auditing('testAction', Promise.reject(new Error()))
         .then(identity, (result) => {
           // too difficult to test stderr output.
           process.exitCode.should.equal(1);

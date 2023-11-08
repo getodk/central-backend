@@ -84,8 +84,7 @@ describe('worker', () => {
       const hijackedContainer = container.with({ Sentry });
 
       const event = { id: -1, action: 'test.event', failures: 0 };
-      // eslint-disable-next-line prefer-promise-reject-errors
-      const jobMap = { 'test.event': [ () => Promise.reject({ uh: 'oh' }) ] };
+      const jobMap = { 'test.event': [ () => Promise.reject(new Error()) ] };
       await promisify(runner(hijackedContainer, jobMap))(event);
       captured.should.eql({ uh: 'oh' });
     }));
@@ -98,8 +97,7 @@ describe('worker', () => {
       const hijackedContainer = container.with({ Sentry });
 
       const event = { id: -1, action: 'test.event', failures: 0 };
-      // eslint-disable-next-line prefer-promise-reject-errors
-      const jobMap = { 'test.event': [ () => Promise.reject({ uh: 'oh' }) ] };
+      const jobMap = { 'test.event': [ () => Promise.reject(new Error()) ] };
       await promisify(runner(hijackedContainer, jobMap))(event);
       // not hanging is the test here.
     }));
@@ -113,8 +111,7 @@ describe('worker', () => {
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
       const event = (await Audits.getLatestByAction('submission.attachment.update')).get();
 
-      // eslint-disable-next-line prefer-promise-reject-errors
-      const jobMap = { 'submission.attachment.update': [ () => Promise.reject({ uh: 'oh' }) ] };
+      const jobMap = { 'submission.attachment.update': [ () => Promise.reject(new Error()) ] };
       await promisify(runner(container, jobMap))(event);
       const after = (await Audits.getLatestByAction('submission.attachment.update')).get();
       should.not.exist(after.claimed);
@@ -131,8 +128,7 @@ describe('worker', () => {
 
       const jobMap = { 'submission.attachment.update': [
         ({ Audits: AuditQuery }) => AuditQuery.log(alice.actor, 'dummy.event', alice.actor),
-        // eslint-disable-next-line prefer-promise-reject-errors
-        () => Promise.reject({ uh: 'oh' }) ] };
+        () => Promise.reject(new Error()) ] };
       await promisify(runner(container, jobMap))(event);
 
       const dummyEvent = (await Audits.getLatestByAction('dummy.event'));
@@ -363,8 +359,8 @@ select count(*) from audits where action='submission.attachment.update' and proc
         if (q.sql.startsWith('\nwith q as')) {
           if (failed) return container.all(q);
           failed = true;
-          // eslint-disable-next-line prefer-promise-reject-errors, no-async-promise-executor
-          return new Promise(async (_, reject) => { await millis(5); reject('not this time'); });
+          // eslint-disable-next-line no-async-promise-executor
+          return new Promise(async (_, reject) => { await millis(5); reject(new Error()); });
         }
       };
       const jobMap = { 'submission.attachment.update': [ () => Promise.resolve() ] };
