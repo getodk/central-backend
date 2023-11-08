@@ -5,6 +5,7 @@ const { sql } = require('slonik');
 const should = require('should');
 const { QueryOptions, queryFuncs } = require('../../../lib/util/db');
 const { getById, createVersion } = require('../../../lib/model/query/entities');
+const { log } = require('../../../lib/model/query/audits');
 const Option = require('../../../lib/util/option');
 const { Entity } = require('../../../lib/model/frames');
 const { getOrNotFound } = require('../../../lib/util/promise');
@@ -1684,8 +1685,10 @@ describe('Entities API', () => {
       let entityLocked = false;
 
       const transaction1 = container.db.connect(connection => connection.transaction(async tx1 => {
-        const containerTx1 = { context: { auth: { actor: Option.of({ id: actorId }) } } };
+        const containerTx1 = { context: { auth: { actor: Option.of({ id: actorId }) }, headers: [] } };
         queryFuncs(tx1, containerTx1);
+
+        const logger = (action, actee, details) => log(containerTx1.context.auth.actor, action, actee, details);
 
         const entity = await getById(dataset.id, '12345678-1234-4123-8234-123456789abc', QueryOptions.forUpdate)(containerTx1).then(getOrNotFound);
 
@@ -1710,15 +1713,16 @@ describe('Entities API', () => {
 
         const updatedEntity = Entity.fromJson({ label: 'Jane', data: { first_name: 'Jane' } }, [{ name: 'first_name' }], dataset, entity);
 
-        await createVersion({ id: dataset.id }, updatedEntity, null, entity.aux.currentVersion.version + 1, null, 1)(containerTx1)
-          .then(() => {
-            console.log('Tx1: entity updated');
-          });
+        const savedEntity = await createVersion(dataset, updatedEntity, null, entity.aux.currentVersion.version + 1, null, 1)(containerTx1);
+        console.log('Tx1: entity updated');
+        await createVersion.audit(savedEntity, dataset, null, false)(logger)(containerTx1);
       }));
 
       const transaction2 = container.db.connect(connection => connection.transaction(async tx2 => {
-        const containerTx2 = { context: { auth: { actor: Option.of({ id: actorId }) } } };
+        const containerTx2 = { context: { auth: { actor: Option.of({ id: actorId }) }, headers: [] } };
         queryFuncs(tx2, containerTx2);
+
+        const logger = (action, actee, details) => log(containerTx2.context.auth.actor, action, actee, details);
 
         console.log('Tx2: waiting for 1st Tx to lock the row');
 
@@ -1740,10 +1744,11 @@ describe('Entities API', () => {
             entity.aux.currentVersion.version.should.be.eql(2);
             const updatedEntity = Entity.fromJson({ label: 'Robert', data: { first_name: 'Robert' } }, [{ name: 'first_name' }], dataset, entity);
 
-            await createVersion({ id: dataset.id }, updatedEntity, null, entity.aux.currentVersion.version + 1, null, 1)(containerTx2)
-              .then(() => {
-                console.log('Tx2: entity updated');
-              });
+            const savedEntity = await createVersion(dataset, updatedEntity, null, entity.aux.currentVersion.version + 1, null, 1)(containerTx2);
+
+            console.log('Tx2: entity updated');
+
+            await createVersion.audit(savedEntity, dataset, null, false)(logger)(containerTx2);
           });
 
         secondTxWaiting = true;
