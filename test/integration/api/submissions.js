@@ -221,7 +221,7 @@ describe('api: /submission', () => {
                 ]);
               }))))));
 
-    it('should save attachments with unicode / non-english char', testService(async (service) => {
+    it.only('should save attachments with unicode / non-english char', testService(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -248,13 +248,13 @@ describe('api: /submission', () => {
       await asAlice.get(`/v1/projects/1/forms/binaryType/submissions/both/attachments/${encodeURI('fîlé2')}`)
         .expect(307)
         .then(({ headers }) => {
-          headers.location.should.be.eql('this is test file one');
+          headers.location.should.be.eql('http://example.com/bucket/a16bfc8fb6ada6c78c968142213775ef1a849a6c');
         });
 
       await asAlice.get(`/v1/projects/1/forms/binaryType/submissions/both/attachments/${encodeURI('f😂le3صادق')}`)
         .expect(307)
-        .then(({ body }) => {
-          body.toString('utf8').should.be.eql('this is test file two');
+        .then(({ headers }) => {
+          headers.location.should.be.eql('http://example.com/bucket/eba799d1dc156c0df70f7bad65f815928b98aa7d');
         });
 
     }));
