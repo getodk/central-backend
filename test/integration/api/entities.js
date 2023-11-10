@@ -1,8 +1,14 @@
 const appRoot = require('app-root-path');
-const { testService } = require('../setup');
+const { testService, testServiceFullTrx } = require('../setup');
 const testData = require('../../data/xml');
 const { sql } = require('slonik');
 const should = require('should');
+const { QueryOptions, queryFuncs } = require('../../../lib/util/db');
+const { getById, createVersion } = require('../../../lib/model/query/entities');
+const { log } = require('../../../lib/model/query/audits');
+const Option = require('../../../lib/util/option');
+const { Entity } = require('../../../lib/model/frames');
+const { getOrNotFound } = require('../../../lib/util/promise');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -113,6 +119,7 @@ describe('Entities API', () => {
             p.should.be.an.Entity();
             p.should.have.property('currentVersion').which.is.an.EntityDef();
             p.currentVersion.should.not.have.property('data');
+            p.currentVersion.should.not.have.property('dataReceived');
           });
         });
     }));
@@ -467,8 +474,7 @@ describe('Entities API', () => {
         .expect(200)
         .then(({ body: versions }) => {
           versions.forEach(v => {
-            v.should.be.an.EntityDef();
-            v.should.have.property('data');
+            v.should.be.an.EntityDefFull();
           });
 
           versions[1].data.should.be.eql({ age: '12', first_name: 'John' });
@@ -491,7 +497,7 @@ describe('Entities API', () => {
         .then(({ body: versions }) => {
           versions.forEach(v => {
             v.should.be.an.ExtendedEntityDef();
-            v.should.have.property('data');
+            v.should.be.an.EntityDefFull();
           });
 
           versions[0].creator.displayName.should.be.eql('Alice');
@@ -546,9 +552,10 @@ describe('Entities API', () => {
         .expect(200)
         .then(({ body: versions }) => {
           versions.forEach(v => {
-            v.should.be.an.EntityDef();
-            v.should.have.property('data');
+            v.should.be.an.EntityDefFull();
           });
+
+          versions.filter(v => v.relevantToConflict).map(v => v.version).should.eql([1, 2, 3, 4]);
 
           const thirdVersion = versions[2];
           thirdVersion.conflict.should.be.eql('soft');
@@ -608,12 +615,26 @@ describe('Entities API', () => {
           });
       }));
 
+      it('should correctly set relevantToConflict field', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await createConflictOnV2(asAlice, container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+          .expect(200)
+          .then(({ body: versions }) => {
+            versions.filter(v => v.relevantToConflict).map(v => v.version).should.eql([2, 3, 4]);
+          });
+
+      }));
+
       it('should return empty array when all conflicts are resolved', testEntities(async (service, container) => {
         const asAlice = await service.login('alice');
 
         await createConflictOnV2(asAlice, container);
 
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+          .set('If-Match', '"4"')
           .expect(200);
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions?relevantToConflict=true')
@@ -629,6 +650,7 @@ describe('Entities API', () => {
         await createConflictOnV2(asAlice, container);
 
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+          .set('If-Match', '"4"')
           .expect(200);
 
         await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
@@ -656,6 +678,7 @@ describe('Entities API', () => {
         await createConflictOnV2(asAlice, container);
 
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+          .set('If-Match', '"4"')
           .expect(200);
 
         await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
@@ -1527,8 +1550,17 @@ describe('Entities API', () => {
 
         const asAlice = await service.login('alice');
 
+        const lastUpdatedAt = await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body }) => body.updatedAt);
+
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
-          .expect(200);
+          .set('If-Match', '"3"')
+          .expect(200)
+          .then(({ body }) => {
+            body.updatedAt.should.not.be.eql(lastUpdatedAt);
+            should(body.conflict).be.null();
+          });
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
           .set('X-Extended-Metadata', true)
@@ -1568,6 +1600,29 @@ describe('Entities API', () => {
           });
       }));
 
+      it('should not resolve without the flag', testService(async (service, container) => {
+        await createConflict(service, container);
+
+        const asAlice = await service.login('alice');
+
+        const asBob = await service.login('bob');
+
+        await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .send({ data: { first_name: 'John', age: '10' } })
+          .set('If-Match', '"3"')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .set('X-Extended-Metadata', true)
+          .expect(200)
+          .then(({ body: person }) => {
+            should(person.conflict).not.be.null();
+
+            person.currentVersion.data.age.should.be.eql('10');
+            person.currentVersion.data.first_name.should.be.eql('John');
+          });
+      }));
+
       it('should resolve the conflict and forcefully update the entity', testService(async (service, container) => {
         await createConflict(service, container);
 
@@ -1598,8 +1653,149 @@ describe('Entities API', () => {
           });
       }));
 
+      it('should reject if version does not match', testService(async (service, container) => {
+        await createConflict(service, container);
+
+        const asAlice = await service.login('alice');
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+          .set('If-Match', '"0"')
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.15);
+          });
+      }));
+
+      it('should forcefully resolve the conflict', testService(async (service, container) => {
+        await createConflict(service, container);
+
+        const asAlice = await service.login('alice');
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&force=true')
+          .expect(200)
+          .then(({ body }) => {
+            should(body.conflict).be.null();
+          });
+      }));
+
     });
 
+    /* eslint-disable no-console */
+    // This is explanatory test where two transaction tries to update the same Entity.
+    // `getById` creates an advisory lock which blocks other transactions to do the same.
+    // Once first transaction updates the Entity, only then second transaction is able
+    // to get the Entity.
+    it('should not allow parallel updates to the same Entity', testServiceFullTrx(async (service, container) => {
+
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
+      const actorId = await container.oneFirst(sql`SELECT id FROM actors WHERE "displayName" = 'Alice'`);
+
+      let secondTxWaiting = false;
+      let entityLocked = false;
+
+      const transaction1 = container.db.connect(connection => connection.transaction(async tx1 => {
+        const containerTx1 = { context: { auth: { actor: Option.of({ id: actorId }) }, headers: [] } };
+        queryFuncs(tx1, containerTx1);
+
+        const logger = (action, actee, details) => log(containerTx1.context.auth.actor, action, actee, details);
+
+        const entity = await getById(dataset.id, '12345678-1234-4123-8234-123456789abc', QueryOptions.forUpdate)(containerTx1).then(getOrNotFound);
+
+        entityLocked = true;
+        console.log('Tx1: entity fetched');
+
+        console.log('Tx1: waiting for 2nd tx to get started');
+        await new Promise(resolve => {
+          const intervalId = setInterval(async () => {
+            if (secondTxWaiting) {
+              clearInterval(intervalId);
+              resolve();
+            }
+          }, 1);
+        });
+
+        // Assert that other transaction is blocked
+        await tx1.any(sql`SELECT 1 FROM pg_stat_activity WHERE state = 'active' AND wait_event_type ='Lock'`)
+          .then(r => {
+            r.should.not.be.null();
+          });
+
+        const updatedEntity = Entity.fromJson({ label: 'Jane', data: { first_name: 'Jane' } }, [{ name: 'first_name' }], dataset, entity);
+
+        const savedEntity = await createVersion(dataset, updatedEntity, null, entity.aux.currentVersion.version + 1, null, 1)(containerTx1);
+        console.log('Tx1: entity updated');
+        await createVersion.audit(savedEntity, dataset, null, false)(logger)(containerTx1);
+      }));
+
+      const transaction2 = container.db.connect(connection => connection.transaction(async tx2 => {
+        const containerTx2 = { context: { auth: { actor: Option.of({ id: actorId }) }, headers: [] } };
+        queryFuncs(tx2, containerTx2);
+
+        const logger = (action, actee, details) => log(containerTx2.context.auth.actor, action, actee, details);
+
+        console.log('Tx2: waiting for 1st Tx to lock the row');
+
+        await new Promise(resolve => {
+          const intervalId = setInterval(() => {
+            if (entityLocked) {
+              clearInterval(intervalId);
+              resolve();
+            }
+          }, 1);
+        });
+
+        console.log('Tx2: looks like 1st tx has locked the row');
+
+        const promise = getById(dataset.id, '12345678-1234-4123-8234-123456789abc', QueryOptions.forUpdate)(containerTx2).then(getOrNotFound)
+          .then(async (entity) => {
+            console.log('Tx2: entity fetched');
+
+            entity.aux.currentVersion.version.should.be.eql(2);
+            const updatedEntity = Entity.fromJson({ label: 'Robert', data: { first_name: 'Robert' } }, [{ name: 'first_name' }], dataset, entity);
+
+            const savedEntity = await createVersion(dataset, updatedEntity, null, entity.aux.currentVersion.version + 1, null, 1)(containerTx2);
+
+            console.log('Tx2: entity updated');
+
+            await createVersion.audit(savedEntity, dataset, null, false)(logger)(containerTx2);
+          });
+
+        secondTxWaiting = true;
+
+        return promise;
+      }));
+
+      await Promise.all([transaction1, transaction2]);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .then(({ body: versions }) => {
+          versions[0].data.first_name.should.eql('Alice');
+          versions[0].version.should.eql(1);
+
+          // Created by Tx1
+          versions[1].data.first_name.should.eql('Jane');
+          versions[1].version.should.eql(2);
+
+          // Created by Tx2
+          versions[2].data.first_name.should.eql('Robert');
+          versions[2].version.should.eql(3);
+        });
+
+    }));
+    /* eslint-enable no-console */
   });
 
   describe('DELETE /datasets/:name/entities/:uuid', () => {
