@@ -1130,14 +1130,43 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should reject if uuid is not a valid uuid', testEntities(async (service) => {
-      // Use testEntities here vs. testDataset to prepopulate with 2 entities
+    it('should reject if uuid is not a valid uuid', testDataset(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/datasets/people/entities')
         .send({
           uuid: 'bad_uuidv4',
           label: 'Johnny Doe',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(400);
+    }));
+
+    it('should reject if label is blank', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: '',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(400);
+    }));
+
+
+    it('should reject if label is not provided', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
           data: {
             first_name: 'Johnny',
             age: '22'
@@ -1856,6 +1885,52 @@ describe('Entities API', () => {
 
   });
 
+  describe('create new entities from submissions', () => {
+    // More success and error cases in test/integration/worker/entity.js
+    it('should create entity', testEntityUpdates(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.three)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789bbb')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.label.should.equal('John (40)');
+          person.currentVersion.data.should.eql({ age: '40', first_name: 'John' });
+          person.currentVersion.version.should.equal(1);
+        });
+    }));
+
+    it('should not create entity if the label is missing in the submission', testEntityUpdates(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.three
+          .replace('<entities:label>John (40)</entities:label>', ''))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789bbb')
+        .expect(404);
+
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/three/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs[0].should.be.an.Audit();
+          logs[0].action.should.be.eql('entity.error');
+          logs[0].details.problem.problemCode.should.equal(400.2);
+          logs[0].details.errorMessage.should.equal('Required parameter label missing.');
+        });
+    }));
+  });
+
   describe('entity updates from submissions', () => {
     it('should process multiple updates in a row', testEntityUpdates(async (service, container) => {
       const asAlice = await service.login('alice');
@@ -2002,8 +2077,8 @@ describe('Entities API', () => {
         });
     }));
 
-    describe('not updating because of errors', () => {
-      // more checks of erros are found in worker/entity tests
+    describe('update error cases', () => {
+      // more checks of errors are found in worker/entity tests
       it('should log an error and not update if baseVersion is missing', testEntityUpdates(async (service, container) => {
         const asAlice = await service.login('alice');
 
@@ -2051,6 +2126,32 @@ describe('Entities API', () => {
             logs[0].action.should.be.eql('entity.error');
             logs[0].details.problem.problemCode.should.equal(404.9);
             logs[0].details.errorMessage.should.equal('Base version (2) does not exist for entity UUID (12345678-1234-4123-8234-123456789abc) in dataset (people).');
+          });
+      }));
+
+      it('should log an error and if baseVersion is not an integer', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('baseVersion="1"', 'baseVersion="not_an_integer"'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.version.should.equal(1);
+          });
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].should.be.an.Audit();
+            logs[0].action.should.be.eql('entity.error');
+            logs[0].details.problem.problemCode.should.equal(400.11);
+            logs[0].details.errorMessage.should.equal('Invalid input data type: expected (baseVersion) to be (integer)');
           });
       }));
     });

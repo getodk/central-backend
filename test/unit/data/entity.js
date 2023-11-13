@@ -333,33 +333,26 @@ describe('extracting and validating entities', () => {
         });
       });
 
-      it('should allow label to be missing (will be validated elsewhere in create case)', () => {
+      it('should reject if label is missing AND in create case (no existingEntity)', () => {
         const body = {
           uuid: '12345678-1234-4123-8234-123456789abc',
           data: { age: '88' }
         };
         const propertyNames = ['age'];
-        const entity = extractEntity(body, propertyNames);
-        should(entity).eql({
-          system: {
-            uuid: '12345678-1234-4123-8234-123456789abc'
-          },
-          data: { age: '88' }
+        assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
+          err.problemCode.should.equal(400.2);
+          err.message.should.equal('Required parameter label missing.');
+          return true;
         });
       });
 
-      it('should reject if required part of the request is missing or not a string', () => {
+      it('should reject if required part of the request is null or not a string in create', () => {
         // These are JSON entity validation errors so they use a newer 400 bad request problem
         const requests = [
           [
             { uuid: '12345678-1234-4123-8234-123456789abc', label: 1234, data: { first_name: 'Alice' } },
             400.11,
             'Invalid input data type: expected (label) to be (string)'
-          ],
-          [
-            { uuid: '12345678-1234-4123-8234-123456789abc' },
-            400.28,
-            'The entity is invalid. No entity data or label provided.'
           ],
           [
             { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Label', data: { first_name: 'Alice', age: 99 } },
@@ -412,28 +405,6 @@ describe('extracting and validating entities', () => {
         });
       });
 
-      it('should allow only label to be updated without changing data', () => {
-        const existingEntity = {
-          system: {
-            uuid: '12345678-1234-4123-8234-123456789abc',
-            label: 'Alice (88)',
-          },
-          data: { first_name: 'Alice' }
-        };
-        const body = {
-          label: 'New Label'
-        };
-        const propertyNames = ['first_name'];
-        const entity = extractEntity(body, propertyNames, existingEntity);
-        should(entity).eql({
-          system: {
-            label: 'New Label',
-            uuid: '12345678-1234-4123-8234-123456789abc'
-          },
-          data: { first_name: 'Alice' }
-        });
-      });
-
       it('should allow updating properties not included in earlier version of entity', () => {
         const existingEntity = {
           system: {
@@ -456,7 +427,61 @@ describe('extracting and validating entities', () => {
         });
       });
 
-      it('should reject if required part of the request is missing or not a string', () => {
+      it('should allow only label to be updated without changing data', () => {
+        const existingEntity = {
+          system: {
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Alice (88)',
+          },
+          data: { first_name: 'Alice' }
+        };
+        const body = {
+          label: 'New Label'
+        };
+        const propertyNames = ['first_name'];
+        const entity = extractEntity(body, propertyNames, existingEntity);
+        should(entity).eql({
+          system: {
+            label: 'New Label',
+            uuid: '12345678-1234-4123-8234-123456789abc'
+          },
+          data: { first_name: 'Alice' }
+        });
+      });
+
+      it('should allow label to be missing and use label of existing entity', () => {
+        const existingEntity = { system: { uuid: '12345678-1234-4123-8234-123456789abc', label: 'previous_label' }, data: {} };
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          data: { age: '88' }
+        };
+        const propertyNames = ['age'];
+        const entity = extractEntity(body, propertyNames, existingEntity);
+        should(entity).eql({
+          system: {
+            label: 'previous_label',
+            uuid: '12345678-1234-4123-8234-123456789abc'
+          },
+          data: { age: '88' }
+        });
+      });
+
+      it('should reject if blank label provided in update', () => {
+        const existingEntity = { system: { uuid: '12345678-1234-4123-8234-123456789abc', label: 'previous_label' }, data: {} };
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: '',
+          data: { age: '88' }
+        };
+        const propertyNames = ['age'];
+        assert.throws(() => { extractEntity(body, propertyNames, existingEntity); }, (err) => {
+          err.problemCode.should.equal(400.8);
+          err.message.should.match('Unexpected label value (empty string); Label cannot be blank.');
+          return true;
+        });
+      });
+
+      it('should reject if required part of the request is missing or not a string in update', () => {
         const requests = [
           [
             {},
@@ -465,10 +490,6 @@ describe('extracting and validating entities', () => {
           [
             { label: null },
             400.28, 'The entity is invalid. No entity data or label provided.'
-          ],
-          [
-            { label: '' },
-            400.8, 'Unexpected label value (empty string); Label cannot be blank.'
           ],
           [
             { data: { first_name: 'Alice', age: 99 } },
