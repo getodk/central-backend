@@ -2203,6 +2203,8 @@ describe('Entities API', () => {
           .expect(200)
           .then(({ body: logs }) => {
             logs[0].action.should.be.eql('entity.error');
+            logs[0].details.problem.problemCode.should.be.eql(400.2);
+            logs[0].details.errorMessage.should.be.eql('Required parameter label missing.')
             logs[1].action.should.be.eql('submission.create');
           });
       }));
