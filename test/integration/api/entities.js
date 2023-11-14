@@ -2184,6 +2184,27 @@ describe('Entities API', () => {
           });
       }));
 
+      it('should perform an upsert with blank label', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // This update should work even with no label
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('update="1"', 'create="1" update="1"')
+            .replace('<label>Alicia (85)</label>', ''))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.dataReceived.should.eql({ age: '85', first_name: 'Alicia' });
+            person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
+            person.currentVersion.label.should.equal('Johnny Doe');
+          });
+      }));
+
       it('should have create error if failed to update non-existent entity but still had error with create (e.g blank label)', testEntityUpdates(async (service, container) => {
         const asAlice = await service.login('alice');
 
@@ -2204,7 +2225,7 @@ describe('Entities API', () => {
           .then(({ body: logs }) => {
             logs[0].action.should.be.eql('entity.error');
             logs[0].details.problem.problemCode.should.be.eql(400.2);
-            logs[0].details.errorMessage.should.be.eql('Required parameter label missing.')
+            logs[0].details.errorMessage.should.be.eql('Required parameter label missing.');
             logs[1].action.should.be.eql('submission.create');
           });
       }));

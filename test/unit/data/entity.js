@@ -75,28 +75,45 @@ describe('extracting and validating entities', () => {
 
       it('should return null for label if updating and label not provided', () => {
         const entity = { system: { update: '1', } };
-        should.not.exist(extractLabelFromSubmission(entity));
+        should.not.exist(extractLabelFromSubmission(entity, { update: true }));
       });
 
       it('should return null for label if updating and label is empty', () => {
         const entity = { system: { update: '1', label: '' } };
-        should.not.exist(extractLabelFromSubmission(entity));
+        should.not.exist(extractLabelFromSubmission(entity, { update: true }));
+      });
+
+      it('should return null when label is missing, create and update are both true, but on the update path', () => {
+        // could be an upsert entity with no label.
+        // if the update failed, the creation would then fail because of the label.
+        // system create/update are ignored.
+        const entity = { system: { create: 'true', update: 'true' } };
+        should.not.exist(extractLabelFromSubmission(entity, { update: true }));
+      });
+
+      it('should complain if label is empty, system create and update are both true, but on the create path', () => {
+        const entity = { system: { create: '1', label: '' } };
+        assert.throws(() => { extractLabelFromSubmission(entity); }, (err) => {
+          err.problemCode.should.equal(400.2);
+          err.message.should.equal('Required parameter label missing.');
+          return true;
+        });
       });
 
       // The 3 following cases shouldn't come up
       it('should return label when neither create nor update is specified', () => {
         const entity = { system: { unknown_action: 'true', label: 'the_label' } };
-        extractLabelFromSubmission(entity).should.equal('the_label');
+        extractLabelFromSubmission(entity, { action: 'foo' }).should.equal('the_label');
       });
 
       it('should return empty label when neither create nor update is specified', () => {
         const entity = { system: { unknown_action: 'true', label: '' } };
-        extractLabelFromSubmission(entity).should.equal('');
+        extractLabelFromSubmission(entity, { action: 'foo' }).should.equal('');
       });
 
       it('should return null when label is null label when neither create nor update is specified', () => {
         const entity = { system: { unknown_action: 'true' } };
-        should.not.exist(extractLabelFromSubmission(entity));
+        should.not.exist(extractLabelFromSubmission(entity, { action: 'foo' }));
       });
     });
 
