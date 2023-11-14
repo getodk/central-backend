@@ -2280,6 +2280,7 @@ describe('Entities API', () => {
           .expect(200)
           .then(({ body: logs }) => {
             logs[0].action.should.be.eql('entity.error');
+            logs[0].details.errorMessage.should.be.eql('Base version (99) does not exist for entity UUID (12345678-1234-4123-8234-123456789abc) in dataset (people).');
             logs[1].action.should.be.eql('submission.create');
           });
       }));
