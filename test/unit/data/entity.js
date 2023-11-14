@@ -3,100 +3,145 @@ const appRoot = require('app-root-path');
 const assert = require('assert');
 const { ConflictType } = require('../../../lib/data/entity');
 const { Entity } = require('../../../lib/model/frames');
-const { parseSubmissionXml, extractEntity, validateEntity, extractSelectedProperties, selectFields, diffEntityData, getDiffProp, getWithConflictDetails } = require(appRoot + '/lib/data/entity');
+const { normalizeUuid, extractLabelFromSubmission, extractBaseVersionFromSubmission, parseSubmissionXml, extractEntity, extractSelectedProperties, selectFields, diffEntityData, getDiffProp, getWithConflictDetails } = require(appRoot + '/lib/data/entity');
 const { fieldsFor } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
 describe('extracting and validating entities', () => {
-  describe('validateEntity', () => {
-    it('should throw errors on when label is missing', () => {
-      const entity = {
-        system: {
-          id: '12345678-1234-4123-8234-123456789abc',
-          dataset: 'foo',
-        },
-        data: {}
-      };
-      assert.throws(() => { validateEntity(entity); }, (err) => {
-        err.problemCode.should.equal(400.2);
-        err.message.should.equal('Required parameter label missing.');
-        return true;
+  describe('helper functions', () => {
+    describe('normalizeUuid', () => {
+      it('should return uuid in standard v4 format', () =>
+        normalizeUuid('12345678-1234-4123-8234-123456789abc').should.equal('12345678-1234-4123-8234-123456789abc'));
+
+      it('should return lowercase uuid', () =>
+        normalizeUuid('12345678-1234-4123-8234-123456789ABC').should.equal('12345678-1234-4123-8234-123456789abc'));
+
+      it('should return uuid with uuid: prefix stripped', () =>
+        normalizeUuid('uuid:12345678-1234-4123-8234-123456789abc').should.equal('12345678-1234-4123-8234-123456789abc'));
+
+      it('should return uuid with uupercase UUID: prefix stripped', () =>
+        normalizeUuid('UUID:12345678-1234-4123-8234-123456789abc').should.equal('12345678-1234-4123-8234-123456789abc'));
+
+      it('should return problem if null passed in as arg', () =>
+        assert.throws(() => { normalizeUuid(null); }, (err) => {
+          err.problemCode.should.equal(400.2);
+          err.message.should.equal('Required parameter uuid missing.');
+          return true;
+        }));
+
+      it('should return problem if undefined passed in as arg', () =>
+        assert.throws(() => { normalizeUuid(undefined); }, (err) => {
+          err.problemCode.should.equal(400.2);
+          err.message.should.equal('Required parameter uuid missing.');
+          return true;
+        }));
+
+      it('should return problem if invalid uuid passed in', () =>
+        assert.throws(() => { normalizeUuid('this_is_not_a_valid_uuid'); }, (err) => {
+          err.problemCode.should.equal(400.11);
+          err.message.should.equal('Invalid input data type: expected (uuid) to be (valid UUID)');
+          return true;
+        }));
+    });
+
+    describe('extractLabelFromSubmission', () => {
+      it('should return label when creating new entity (create = 1)', () => {
+        const entity = { system: { create: '1', label: 'the_label' } };
+        extractLabelFromSubmission(entity).should.equal('the_label');
+      });
+
+      it('should return label when creating new entity (create = true)', () => {
+        const entity = { system: { create: 'true', label: 'the_label' } };
+        extractLabelFromSubmission(entity).should.equal('the_label');
+      });
+
+      it('should complain if label is missing when creating entity', () => {
+        const entity = { system: { create: '1' } };
+        assert.throws(() => { extractLabelFromSubmission(entity); }, (err) => {
+          err.problemCode.should.equal(400.2);
+          err.message.should.equal('Required parameter label missing.');
+          return true;
+        });
+      });
+
+      it('should complain if label is empty when creating entity', () => {
+        const entity = { system: { create: '1', label: '' } };
+        assert.throws(() => { extractLabelFromSubmission(entity); }, (err) => {
+          err.problemCode.should.equal(400.2);
+          err.message.should.equal('Required parameter label missing.');
+          return true;
+        });
+      });
+
+      it('should return null for label if updating and label not provided', () => {
+        const entity = { system: { update: '1', } };
+        should.not.exist(extractLabelFromSubmission(entity));
+      });
+
+      it('should return null for label if updating and label is empty', () => {
+        const entity = { system: { update: '1', label: '' } };
+        should.not.exist(extractLabelFromSubmission(entity));
+      });
+
+      // The 3 following cases shouldn't come up
+      it('should return label when neither create nor update is specified', () => {
+        const entity = { system: { unknown_action: 'true', label: 'the_label' } };
+        extractLabelFromSubmission(entity).should.equal('the_label');
+      });
+
+      it('should return empty label when neither create nor update is specified', () => {
+        const entity = { system: { unknown_action: 'true', label: '' } };
+        extractLabelFromSubmission(entity).should.equal('');
+      });
+
+      it('should return null when label is null label when neither create nor update is specified', () => {
+        const entity = { system: { unknown_action: 'true' } };
+        should.not.exist(extractLabelFromSubmission(entity));
       });
     });
 
-    it('should throw errors when id is missing', () => {
-      (() => validateEntity({
-        system: {
-          label: 'foo',
-          id: '  ',
-          dataset: 'foo',
-        },
-        data: {}
-      })).should.throw(/Required parameter uuid missing/);
-    });
+    describe('extractBaseVersionFromSubmission', () => {
+      it('should extract integer base version when update is true', () => {
+        const entity = { system: { update: '1', baseVersion: '99' } };
+        extractBaseVersionFromSubmission(entity).should.equal(99);
+      });
 
-    it('should throw errors when id is not a valid uuid', () => {
-      (() => validateEntity({
-        system: {
-          label: 'foo',
-          id: 'uuid:12123123',
-          dataset: 'foo',
-        },
-        data: {}
-      })).should.throw(/Invalid input data type: expected \(uuid\) to be \(valid UUID\)/);
-    });
+      it('not return base version if create is true because it is not relevant', () => {
+        const entity = { system: { create: '1', baseVersion: '99' } };
+        should.not.exist(extractBaseVersionFromSubmission(entity));
+      });
 
-    it('should remove create property from system', () => {
-      const entity = {
-        system: {
-          create: '1',
-          id: '12345678-1234-4123-8234-123456789abc',
-          label: 'foo',
-          dataset: 'foo',
-        },
-        data: {}
-      };
-      validateEntity(entity).system.should.not.have.property('create');
-    });
+      it('not return base version if neither create nor update are provided', () => {
+        const entity = { system: { baseVersion: '99' } };
+        should.not.exist(extractBaseVersionFromSubmission(entity));
+      });
 
-    it('should id property with uuid and remove uuid: prefix from the value', () => {
-      const entity = {
-        system: {
-          id: '12345678-1234-4123-8234-123456789abc',
-          label: 'foo',
-          dataset: 'foo',
-        },
-        data: {}
-      };
-      const validatedEntity = validateEntity(entity);
+      it('should complain if baseVersion is missing when update is true (update = 1)', () => {
+        const entity = { system: { update: '1' } };
+        assert.throws(() => { extractBaseVersionFromSubmission(entity); }, (err) => {
+          err.problemCode.should.equal(400.2);
+          err.message.should.equal('Required parameter baseVersion missing.');
+          return true;
+        });
+      });
 
-      validatedEntity.system.should.not.have.property('id');
-      validatedEntity.system.should.have.property('uuid', '12345678-1234-4123-8234-123456789abc');
-    });
+      it('should complain if baseVersion is missing when update is true (update = true)', () => {
+        const entity = { system: { update: 'true' } };
+        assert.throws(() => { extractBaseVersionFromSubmission(entity); }, (err) => {
+          err.problemCode.should.equal(400.2);
+          err.message.should.equal('Required parameter baseVersion missing.');
+          return true;
+        });
+      });
 
-    it('should throw error when baseVersion for update is missing', () => {
-      (() => validateEntity({
-        system: {
-          id: '12345678-1234-4123-8234-123456789abc',
-          label: 'foo',
-          dataset: 'foo',
-          update: '1'
-        },
-        data: {}
-      })).should.throw(/Required parameter baseVersion missing/);
-    });
-
-    it('should throw error when baseVersion is not an integer', () => {
-      (() => validateEntity({
-        system: {
-          id: '12345678-1234-4123-8234-123456789abc',
-          label: 'foo',
-          dataset: 'foo',
-          update: '1',
-          baseVersion: 'a'
-        },
-        data: {}
-      })).should.throw('Invalid input data type: expected (baseVersion) to be (integer)');
+      it('should complain if baseVersion not an integer', () => {
+        const entity = { system: { update: '1', baseVersion: 'ten' } };
+        assert.throws(() => { extractBaseVersionFromSubmission(entity); }, (err) => {
+          err.problemCode.should.equal(400.11);
+          err.message.should.equal('Invalid input data type: expected (baseVersion) to be (integer)');
+          return true;
+        });
+      });
     });
   });
 
@@ -274,18 +319,40 @@ describe('extracting and validating entities', () => {
         });
       });
 
-      it('should reject if required part of the request is missing or not a string', () => {
+      it('should reject if label is blank', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: '',
+          data: { age: '88' }
+        };
+        const propertyNames = ['age'];
+        assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
+          err.problemCode.should.equal(400.8);
+          err.message.should.equal('Unexpected label value (empty string); Label cannot be blank.');
+          return true;
+        });
+      });
+
+      it('should reject if label is missing AND in create case (no existingEntity)', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          data: { age: '88' }
+        };
+        const propertyNames = ['age'];
+        assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
+          err.problemCode.should.equal(400.2);
+          err.message.should.equal('Required parameter label missing.');
+          return true;
+        });
+      });
+
+      it('should reject if required part of the request is null or not a string in create', () => {
         // These are JSON entity validation errors so they use a newer 400 bad request problem
         const requests = [
           [
             { uuid: '12345678-1234-4123-8234-123456789abc', label: 1234, data: { first_name: 'Alice' } },
             400.11,
             'Invalid input data type: expected (label) to be (string)'
-          ],
-          [
-            { uuid: '12345678-1234-4123-8234-123456789abc' },
-            400.28,
-            'The entity is invalid. No entity data or label provided.'
           ],
           [
             { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Label', data: { first_name: 'Alice', age: 99 } },
@@ -338,28 +405,6 @@ describe('extracting and validating entities', () => {
         });
       });
 
-      it('should allow only label to be updated without changing data', () => {
-        const existingEntity = {
-          system: {
-            uuid: '12345678-1234-4123-8234-123456789abc',
-            label: 'Alice (88)',
-          },
-          data: { first_name: 'Alice' }
-        };
-        const body = {
-          label: 'New Label'
-        };
-        const propertyNames = ['first_name'];
-        const entity = extractEntity(body, propertyNames, existingEntity);
-        should(entity).eql({
-          system: {
-            label: 'New Label',
-            uuid: '12345678-1234-4123-8234-123456789abc'
-          },
-          data: { first_name: 'Alice' }
-        });
-      });
-
       it('should allow updating properties not included in earlier version of entity', () => {
         const existingEntity = {
           system: {
@@ -382,7 +427,61 @@ describe('extracting and validating entities', () => {
         });
       });
 
-      it('should reject if required part of the request is missing or not a string', () => {
+      it('should allow only label to be updated without changing data', () => {
+        const existingEntity = {
+          system: {
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Alice (88)',
+          },
+          data: { first_name: 'Alice' }
+        };
+        const body = {
+          label: 'New Label'
+        };
+        const propertyNames = ['first_name'];
+        const entity = extractEntity(body, propertyNames, existingEntity);
+        should(entity).eql({
+          system: {
+            label: 'New Label',
+            uuid: '12345678-1234-4123-8234-123456789abc'
+          },
+          data: { first_name: 'Alice' }
+        });
+      });
+
+      it('should allow label to be missing and use label of existing entity', () => {
+        const existingEntity = { system: { uuid: '12345678-1234-4123-8234-123456789abc', label: 'previous_label' }, data: {} };
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          data: { age: '88' }
+        };
+        const propertyNames = ['age'];
+        const entity = extractEntity(body, propertyNames, existingEntity);
+        should(entity).eql({
+          system: {
+            label: 'previous_label',
+            uuid: '12345678-1234-4123-8234-123456789abc'
+          },
+          data: { age: '88' }
+        });
+      });
+
+      it('should reject if blank label provided in update', () => {
+        const existingEntity = { system: { uuid: '12345678-1234-4123-8234-123456789abc', label: 'previous_label' }, data: {} };
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: '',
+          data: { age: '88' }
+        };
+        const propertyNames = ['age'];
+        assert.throws(() => { extractEntity(body, propertyNames, existingEntity); }, (err) => {
+          err.problemCode.should.equal(400.8);
+          err.message.should.match('Unexpected label value (empty string); Label cannot be blank.');
+          return true;
+        });
+      });
+
+      it('should reject if required part of the request is missing or not a string in update', () => {
         const requests = [
           [
             {},
@@ -391,10 +490,6 @@ describe('extracting and validating entities', () => {
           [
             { label: null },
             400.28, 'The entity is invalid. No entity data or label provided.'
-          ],
-          [
-            { label: '' },
-            400.2, 'Required parameter label missing.'
           ],
           [
             { data: { first_name: 'Alice', age: 99 } },

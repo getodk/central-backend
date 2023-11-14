@@ -454,7 +454,6 @@ describe('worker: entity', () => {
   });
 
   describe('should catch problems updating entity', () => {
-    // TODO: these errors are getting logged as entity.error audit events
     describe('validation errors', () => {
       it('should fail because UUID is invalid', testService(async (service, container) => {
         const asAlice = await service.login('alice');
