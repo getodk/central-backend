@@ -396,7 +396,7 @@ module.exports = {
     updateEntity: `<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
   <h:head>
-    <model entities:entities-version="2022.1.0">
+    <model entities:entities-version="2023.1.0">
       <instance>
         <data id="updateEntity" orx:version="1.0">
           <name/>
