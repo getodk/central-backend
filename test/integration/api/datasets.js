@@ -1986,7 +1986,6 @@ describe('datasets and entities', () => {
             .then(() => asAlice.get('/v1/projects/1/forms/multiPropertyEntity/draft/dataset-diff')
               .expect(200)
               .then(({ body }) => {
-                //console.log(body);
                 body.should.be.eql([
                   {
                     name: 'foo',
@@ -3323,6 +3322,228 @@ describe('datasets and entities', () => {
         entityErrors.length.should.be.eql(1);
         entityErrors[0].details.errorMessage.should.match(/Required parameter label missing/);
 
+      }));
+
+      it('should use latest version of submission in pending submissions', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // submission is edited to create different entity
+        await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send(testData.instances.simpleEntity.one
+            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:12345678-1234-4123-8234-123456789bbb"')
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200)
+          .then(({ body }) => body.approvalRequired.should.be.false());
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].uuid.should.equal('12345678-1234-4123-8234-123456789bbb');
+          });
+      }));
+
+      it('should use latest version of submission (updated to not create entity) in pending submissions', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // submission is edited to create different entity
+        await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send(testData.instances.simpleEntity.one
+            .replace('create="1"', 'create="0"')
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200)
+          .then(({ body }) => body.approvalRequired.should.be.false());
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(0);
+          });
+      }));
+
+      it('should do something reasonable with pending submissions when they contain entity updates', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // can use update form to make dataset populate via api
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        // populate one entity
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        // I also want one actual submission create that needs approval to run
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .expect(200);
+
+        // send update submissions!
+        // this is an update so it will be processed without needing to be approved.
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.three)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // this will also process the create entity submission, but it wont make an entity
+        await exhaust(container);
+
+        // at this point, the main entity has been updated
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.age.should.equal('55');
+            person.currentVersion.version.should.equal(2);
+          });
+
+        // the second entity has not yet been created because it needs submission approval
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa')
+          .expect(404);
+
+        // send next two submission
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.three
+            .replace('<instanceID>three</instanceID>', '<instanceID>four</instanceID>')
+            .replace('<age>55</age>', '<age>66</age>'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // send next submission
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.three
+            .replace('<instanceID>three</instanceID>', '<instanceID>five</instanceID>')
+            .replace('<age>55</age>', '<age>77</age>'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // exhaust hasn't run yet so the one create submission and two update submissions count as pending
+        // central has no way to know if a submission is a create or update until it reads the submission
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: false })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.be.eql(400.29);
+            body.details.count.should.be.eql(3);
+          });
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200)
+          .then(({ body }) => body.approvalRequired.should.be.false());
+
+        // send another submission
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.three
+            .replace('<instanceID>three</instanceID>', '<instanceID>six</instanceID>')
+            .replace('<age>55</age>', '<age>888</age>'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // at this point, none of the new submissions have been processed
+        // the unprocessed audit log looks like this with the datset.update event between some submission events
+        const unprocessedAudits = await container.Audits.get(new QueryOptions({ condition: { processed: null } }));
+        unprocessedAudits.map(a => a.action).should.eql([
+          'submission.create',
+          'dataset.update',
+          'submission.create',
+          'submission.create'
+        ]);
+
+        await exhaust(container);
+
+        // main entity with many updates
+        // events should all look like submission.create events (vs. dataset update events)
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            const updateDetails = logs.filter(log => log.action === 'entity.update.version').map(log => log.details);
+            updateDetails.length.should.equal(4);
+            updateDetails.filter(d => d.sourceEvent.action === 'submission.create').length.should.equal(4);
+            updateDetails.map(d => d.submission.instanceId).should.eql([
+              'six', 'five', 'four', 'three'
+            ]);
+          });
+
+        // other entity that was created
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.equal('entity.create');
+            logs[0].details.submission.xmlFormId.should.equal('simpleEntity');
+            logs[0].details.submission.instanceId.should.equal('two');
+            logs[0].details.sourceEvent.action.should.equal('submission.create');
+          });
+
+        // only one entity def should have a source with a non-null parent id
+        // the submission that only created an entity
+        const defSourceParentIds = await container.all(sql`
+        select eds.details->'submission'->'instanceId' as "submissionInstanceId"
+        from entity_defs as ed
+        join entity_def_sources as eds on ed."sourceId" = eds.id
+        where eds.details->'parentEventId' is not null`);
+        defSourceParentIds.length.should.equal(1);
+        defSourceParentIds[0].submissionInstanceId.should.equal('two');
       }));
     });
   });
