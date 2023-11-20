@@ -3324,6 +3324,89 @@ describe('datasets and entities', () => {
 
       }));
 
+      it('should use latest version of submission in pending submissions', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // submission is edited to create different entity
+        await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send(testData.instances.simpleEntity.one
+            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:12345678-1234-4123-8234-123456789bbb"')
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200)
+          .then(({ body }) => body.approvalRequired.should.be.false());
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].uuid.should.equal('12345678-1234-4123-8234-123456789bbb');
+          });
+      }));
+
+      it('should use latest version of submission (updated to not create entity) in pending submissions', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // submission is edited to create different entity
+        await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send(testData.instances.simpleEntity.one
+            .replace('create="1"', 'create="0"')
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200)
+          .then(({ body }) => body.approvalRequired.should.be.false());
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(0);
+          });
+      }));
+
       it('should do something reasonable with pending submissions when they contain entity updates', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
@@ -3350,10 +3433,6 @@ describe('datasets and entities', () => {
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity)
           .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        await asAlice.patch('/v1/projects/1/datasets/people')
-          .send({ approvalRequired: true })
           .expect(200);
 
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
