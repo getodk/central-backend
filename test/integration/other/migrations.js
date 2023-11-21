@@ -892,8 +892,8 @@ describe.skip('database migration: 20231002-01-add-conflict-details.js', functio
 
     // Create two entity defs
     await container.run(sql`
-      INSERT INTO entity_defs ("entityId", "createdAt", "creatorId", "current", "label", "data")
-      VALUES (${newEntity.id}, now(), 5, true, 'some label', '{"foo": "bar"}')`);
+      INSERT INTO entity_defs ("entityId", "createdAt", "creatorId", "current", "label", "data", "version")
+      VALUES (${newEntity.id}, now(), 5, false, 'some label', '{"foo": "bar"}', 1)`);
 
     await container.run(sql`
       INSERT INTO entity_defs ("entityId", "createdAt", "creatorId", "current", "label", "data", "version")
