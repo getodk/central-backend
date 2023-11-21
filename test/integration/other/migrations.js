@@ -866,3 +866,46 @@ describe('database migrations from 20230802: delete orphan submissions', functio
 
   }));
 });
+
+describe.skip('database migration: 20231002-01-add-conflict-details.js', function test() {
+  this.timeout(20000);
+
+  it('should update dataReceived and baseVersion of existing entity defs', testServiceFullTrx(async (service, container) => {
+    await upToMigration('20231002-01-add-conflict-details.js', false);
+    await populateUsers(container);
+    await populateForms(container);
+
+    const asAlice = await service.login('alice');
+
+    await asAlice.post('/v1/projects/1/forms?publish=true')
+      .set('Content-Type', 'application/xml')
+      .send(testData.forms.simpleEntity)
+      .expect(200);
+
+    const dsId = await container.oneFirst(sql`select id from datasets limit 1`);
+
+    // Create the entity in the DB directly because application code has changed.
+    const newEntity = await container.one(sql`
+    INSERT INTO entities (uuid, "datasetId", "creatorId", "createdAt")
+    VALUES (${uuid()}, ${dsId}, 5, now())
+    RETURNING "id"`);
+
+    // Create two entity defs
+    await container.run(sql`
+      INSERT INTO entity_defs ("entityId", "createdAt", "creatorId", "current", "label", "data")
+      VALUES (${newEntity.id}, now(), 5, true, 'some label', '{"foo": "bar"}')`);
+
+    await container.run(sql`
+      INSERT INTO entity_defs ("entityId", "createdAt", "creatorId", "current", "label", "data", "version")
+      VALUES (${newEntity.id}, now(), 5, true, 'other label', '{"x": "y", "a": "b"}', 2)`);
+
+    // run migration: fill in dataReceived and baseVersion based on existing version
+    await up();
+
+    const defs = await container.all(sql`select data, label, version, "baseVersion", "dataReceived" from entity_defs order by id`);
+    defs[0].dataReceived.should.eql({ foo: 'bar', label: 'some label' });
+    defs[0].should.have.property('baseVersion').which.is.eql(null);
+    defs[1].dataReceived.should.eql({ a: 'b', x: 'y', label: 'other label' });
+    defs[1].should.have.property('baseVersion').which.is.eql(1);
+  }));
+});
