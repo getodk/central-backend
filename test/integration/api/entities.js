@@ -233,6 +233,11 @@ describe('Entities API', () => {
             age: '88',
             first_name: 'Alice'
           });
+          person.currentVersion.should.have.property('dataReceived').which.is.eql({
+            age: '88',
+            first_name: 'Alice',
+            label: 'Alice (88)'
+          });
         });
     }));
 
@@ -274,6 +279,11 @@ describe('Entities API', () => {
           person.currentVersion.should.have.property('data').which.is.eql({
             age: '85',
             first_name: 'Alicia'
+          });
+          person.currentVersion.should.have.property('dataReceived').which.is.eql({
+            age: '85',
+            first_name: 'Alicia',
+            label: 'Alicia (85)'
           });
         });
     }));
@@ -1126,6 +1136,11 @@ describe('Entities API', () => {
           person.currentVersion.should.have.property('data').which.is.eql({
             first_name: 'Johnny',
             age: '22'
+          });
+          person.currentVersion.should.have.property('dataReceived').which.is.eql({
+            first_name: 'Johnny',
+            age: '22',
+            label: 'Johnny Doe'
           });
         });
     }));
