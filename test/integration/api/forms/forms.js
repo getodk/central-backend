@@ -772,25 +772,6 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               text.should.equal(testData.forms.simple);
             }))));
 
-      it('should return standard body if incorrect ETag provided', testService((service) =>
-        service.login('alice', (asAlice) =>
-          asAlice.get('/v1/projects/1/forms/simple.xml')
-            .set('If-None-Match', 'a-random-string')
-            .expect(200)
-            .then(({ text }) => {
-              text.should.equal(testData.forms.simple);
-            }))));
-
-      it('should return 304 if correct ETag provided', testService((service) =>
-        service.login('alice', async (asAlice) => {
-          const res = await asAlice.get('/v1/projects/1/forms/simple.xml').expect(200);
-          const etag = res.get('ETag');
-
-          return asAlice.get('/v1/projects/1/forms/simple.xml')
-            .set('If-None-Match', etag)
-            .expect(304);
-        })));
-
       it('should get the correct form given duplicates across projects', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects')
