@@ -348,16 +348,6 @@ describe('Entities API', () => {
         });
     }));
 
-    // From a previous iteration where the etag WAS the entity base version
-    it.skip('should return 304 not changed ', testEntities(async (service) => {
-      const asAlice = await service.login('alice');
-
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
-        .set('If-None-Match', '"1"')
-        .expect(304);
-    }));
-
-
     it('should return an Entity with SOFT conflict', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
