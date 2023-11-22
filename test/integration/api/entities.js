@@ -224,11 +224,11 @@ describe('Entities API', () => {
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(200)
-        .then(({ body: person, headers }) => {
-          headers.etag.should.be.eql('"1"');
+        .then(({ body: person }) => {
 
           person.should.be.an.Entity();
           person.should.have.property('currentVersion').which.is.an.EntityDef();
+          person.currentVersion.should.have.property('version').which.is.equal(1);
           person.currentVersion.should.have.property('data').which.is.eql({
             age: '88',
             first_name: 'Alice'
@@ -347,15 +347,6 @@ describe('Entities API', () => {
           });
         });
     }));
-
-    it('should return 304 not changed ', testEntities(async (service) => {
-      const asAlice = await service.login('alice');
-
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
-        .set('If-None-Match', '"1"')
-        .expect(304);
-    }));
-
 
     it('should return an Entity with SOFT conflict', testService(async (service, container) => {
       const asAlice = await service.login('alice');
@@ -520,9 +511,8 @@ describe('Entities API', () => {
     it('should return all versions of the Entity - Conflicts', testEntities(async (service, container) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
         .send({ data: { age: '12' } })
-        .set('If-Match', '"1"')
         .expect(200);
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -585,14 +575,12 @@ describe('Entities API', () => {
     describe('relevantToConflict', () => {
 
       const createConflictOnV2 = async (user, container) => {
-        await user.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        await user.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
           .send({ data: { age: '12' } })
-          .set('If-Match', '"1"')
           .expect(200);
 
-        await user.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        await user.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=2')
           .send({ data: { age: '18' } })
-          .set('If-Match', '"2"')
           .expect(200);
 
         await user.post('/v1/projects/1/forms?publish=true')
@@ -643,8 +631,7 @@ describe('Entities API', () => {
 
         await createConflictOnV2(asAlice, container);
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
-          .set('If-Match', '"4"')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&baseVersion=4')
           .expect(200);
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions?relevantToConflict=true')
@@ -659,8 +646,7 @@ describe('Entities API', () => {
 
         await createConflictOnV2(asAlice, container);
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
-          .set('If-Match', '"4"')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&baseVersion=4')
           .expect(200);
 
         await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
@@ -687,8 +673,7 @@ describe('Entities API', () => {
 
         await createConflictOnV2(asAlice, container);
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
-          .set('If-Match', '"4"')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&baseVersion=4')
           .expect(200);
 
         await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
@@ -1296,8 +1281,7 @@ describe('Entities API', () => {
 
     it('should reject if version does not match', testEntities(async (service) => {
       const asAlice = await service.login('alice');
-      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
-        .set('If-Match', '"0"')
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=0')
         .expect(409)
         .then(({ body }) => {
           body.code.should.equal(409.15);
@@ -1370,8 +1354,7 @@ describe('Entities API', () => {
         const asAlice = await service.login('alice');
         const newData = { age: '77', first_name: 'Alan' };
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
-          .set('If-Match', '"1"')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
           .send({
             data: { age: '77', first_name: 'Alan' }
           })
@@ -1598,8 +1581,7 @@ describe('Entities API', () => {
           .expect(200)
           .then(({ body }) => body.updatedAt);
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
-          .set('If-Match', '"3"')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&baseVersion=3')
           .expect(200)
           .then(({ body }) => {
             body.updatedAt.should.not.be.eql(lastUpdatedAt);
@@ -1621,9 +1603,8 @@ describe('Entities API', () => {
 
         const asBob = await service.login('bob');
 
-        await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+        await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&baseVersion=3')
           .send({ data: { first_name: 'John', age: '10' } })
-          .set('If-Match', '"3"')
           .expect(200);
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
@@ -1651,9 +1632,8 @@ describe('Entities API', () => {
 
         const asBob = await service.login('bob');
 
-        await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=3')
           .send({ data: { first_name: 'John', age: '10' } })
-          .set('If-Match', '"3"')
           .expect(200);
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
@@ -1702,8 +1682,7 @@ describe('Entities API', () => {
 
         const asAlice = await service.login('alice');
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
-          .set('If-Match', '"0"')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&baseVersion=0')
           .expect(409)
           .then(({ body }) => {
             body.code.should.equal(409.15);
