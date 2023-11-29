@@ -2864,6 +2864,71 @@ describe('datasets and entities', () => {
           person.currentVersion.should.have.property('data').which.is.eql({ first_name: 'Robert', hometown: 'Seattle' });
         });
     }));
+
+    // cb#551 issue, <entity/> tag has no children
+    it('should allow update where no label or no properties are updated', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      const form = `<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" create="" update="" baseVersion="" />
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'First Label',
+          data: { age: '11' }
+        })
+        .expect(200);
+
+      const sub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="brokenForm" version="1.0">
+        <meta>
+          <instanceID>one</instanceID>
+          <orx:instanceName>one</orx:instanceName>
+          <entity baseVersion="1" dataset="people" id="12345678-1234-4123-8234-123456789abc" update="1" />
+        </meta>
+      </data>`;
+
+      await asAlice.post('/v1/projects/1/forms/brokenForm/submissions')
+        .send(sub)
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .expect(200)
+        .then(({ body: versions }) => {
+          versions[1].version.should.equal(2);
+          versions[1].baseVersion.should.equal(1);
+          versions[1].label.should.equal('First Label');
+          versions[1].data.should.eql({ age: '11' });
+          versions[1].dataReceived.should.eql({});
+        });
+
+      await asAlice.get('/v1/projects/1/forms/brokenForm/submissions/one/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs[0].action.should.equal('entity.update.version');
+        });
+    }));
   });
 
   describe('dataset and entities should have isolated lifecycle', () => {

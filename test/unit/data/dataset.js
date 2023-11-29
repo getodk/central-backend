@@ -210,6 +210,93 @@ describe('parsing dataset from entity block', () => {
       fields[2].path.should.equal('/hometown');
       should.not.exist(fields[2].propertyName);
     }));
+
+  it('should figure out type of entity block from form def', async () => {
+    const form = (entityBlock) => `<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="1.0">
+                <age/>
+                <meta>
+                  ${entityBlock}
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+    const noChildEntity = '<entity dataset="people" id="" create="" update="" baseVersion=""/>';
+    await getFormFields(form(noChildEntity)).then((fields) => {
+      fields[0].name.should.equal('age');
+      fields[0].path.should.equal('/age');
+      fields[0].type.should.equal('int');
+
+      fields[1].name.should.equal('meta');
+      fields[1].path.should.equal('/meta');
+      fields[1].type.should.equal('structure');
+
+      fields[2].name.should.equal('entity');
+      fields[2].path.should.equal('/meta/entity');
+      fields[2].type.should.equal('unknown'); // should possibly be 'structure'
+    });
+
+    const emptyEntity = '<entity dataset="people" id="" create="" update="" baseVersion=""></entity>';
+    await getFormFields(form(emptyEntity)).then((fields) => {
+      fields[0].name.should.equal('age');
+      fields[0].path.should.equal('/age');
+      fields[0].type.should.equal('int');
+
+      fields[1].name.should.equal('meta');
+      fields[1].path.should.equal('/meta');
+      fields[1].type.should.equal('structure');
+
+      fields[2].name.should.equal('entity');
+      fields[2].path.should.equal('/meta/entity');
+      fields[2].type.should.equal('unknown'); // should possibly be 'structure'
+    });
+
+    const nonEmptyEntity = '<entity dataset="people" id="" create="" update="" baseVersion=""><label/></entity>';
+    await getFormFields(form(nonEmptyEntity)).then((fields) => {
+      fields[0].name.should.equal('age');
+      fields[0].path.should.equal('/age');
+      fields[0].type.should.equal('int');
+
+      fields[1].name.should.equal('meta');
+      fields[1].path.should.equal('/meta');
+      fields[1].type.should.equal('structure');
+
+      fields[2].name.should.equal('entity');
+      fields[2].path.should.equal('/meta/entity');
+      fields[2].type.should.equal('structure'); // is type structure because it contains a child
+
+      fields[3].name.should.equal('label');
+      fields[3].path.should.equal('/meta/entity/label');
+      fields[3].type.should.equal('unknown'); // should possibly be something other than unknown (unknown bc no binding)
+    });
+
+    const nonEmptyLabel = '<entity dataset="people" id="" create="" update="" baseVersion=""><label></label></entity>';
+    await getFormFields(form(nonEmptyLabel)).then((fields) => {
+      fields[0].name.should.equal('age');
+      fields[0].path.should.equal('/age');
+      fields[0].type.should.equal('int');
+
+      fields[1].name.should.equal('meta');
+      fields[1].path.should.equal('/meta');
+      fields[1].type.should.equal('structure');
+
+      fields[2].name.should.equal('entity');
+      fields[2].path.should.equal('/meta/entity');
+      fields[2].type.should.equal('structure'); // is type structure because it contains a child
+
+      fields[3].name.should.equal('label');
+      fields[3].path.should.equal('/meta/entity/label');
+      fields[3].type.should.equal('unknown'); // should possibly be something other than unknown (unknown bc no children and no binding)
+    });
+  });
 });
 
 describe('dataset name validation', () => {

@@ -66,7 +66,7 @@ describe('submission field streamer', () => {
       should.config.checkProtoEql = true;
     });
 
-    it('should include structural fields', (done) => {
+    it('should include structural fields (like entity block) with attribtues', (done) => {
       fieldsFor(testData.forms.simpleEntity).then((fields) =>
         submissionXmlToFieldStream(fields, testData.instances.simpleEntity.one, true).pipe(toObjects((error, result) => {
           result.should.eql([
@@ -97,7 +97,7 @@ describe('submission field streamer', () => {
         })));
     });
 
-    it('should include empty nodes if specified in fields', (done) => {
+    it('should include empty nodes if specified', (done) => {
       fieldsFor(testData.forms.simpleEntity).then((fields) =>
         submissionXmlToFieldStream(fields, testData.instances.simpleEntity.one.replace('<age>88</age>', '<age></age>'), false, true).pipe(toObjects((error, result) => {
           result.should.eql([
@@ -120,6 +120,78 @@ describe('submission field streamer', () => {
           ]);
           done();
         })));
+    });
+
+    it('should include structural attribtues and empty nodes', (done) => {
+      fieldsFor(testData.forms.simpleEntity).then((fields) =>
+        submissionXmlToFieldStream(fields, testData.instances.simpleEntity.one.replace('<age>88</age>', '<age></age>'), true, true).pipe(toObjects((error, result) => {
+          result.should.eql([
+            { field: new MockField({ order: 4, name: 'entity', path: '/meta/entity', type: 'structure', attrs: {
+              create: '1',
+              dataset: 'people',
+              id: 'uuid:12345678-1234-4123-8234-123456789abc'
+            } }), text: null },
+            { field: new MockField({ order: 5, name: 'label', path: '/meta/entity/label', type: 'unknown' }), text: 'Alice (88)' },
+            { field: new MockField({ order: 0, name: 'name', path: '/name', type: 'string', propertyName: 'first_name' }), text: 'Alice' },
+            { field: new MockField({ order: 1, name: 'age', path: '/age', type: 'int', propertyName: 'age' }), text: '' },
+            { field: new MockField({ order: 2, name: 'hometown', path: '/hometown', type: 'string' }), text: 'Chicago' }
+          ]);
+          done();
+        })));
+    });
+
+    it('should handle attributes on entity tag with no children', async () => {
+      const form = `<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="1.0">
+                <age/>
+                <meta>
+                  <entity dataset="people" id="" create="" update="" baseVersion="" />
+                </meta>
+              </data>
+              <other/>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      const fields = await fieldsFor(form);
+      fields.map(f => f.name).should.eql(['age', 'meta', 'entity']);
+      fields.map(f => f.type).should.eql(['int', 'structure', 'unknown']);
+
+      const sub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="brokenForm" version="1.0">
+        <meta>
+          <instanceID>one</instanceID>
+          <orx:instanceName>one</orx:instanceName>
+          <entity baseVersion="1" dataset="people" id="12345678-1234-4123-8234-123456789abc" update="1"/>
+        </meta>
+        <age>88</age>
+      </data>`;
+
+      await submissionXmlToFieldStream(fields, sub, true, true).pipe(toObjects((error, result) => {
+        result[0].field.name.should.equal('entity');
+        //result[0].field.should.have.property('attrs');
+      }));
+
+      const sub2 = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="brokenForm" version="1.0">
+        <meta>
+          <instanceID>one</instanceID>
+          <orx:instanceName>one</orx:instanceName>
+          <entity baseVersion="1" dataset="people" id="12345678-1234-4123-8234-123456789abc" update="1">
+            <label>foo</label>
+          </entity>
+        </meta>
+        <age>88</age>
+      </data>`;
+
+      await submissionXmlToFieldStream(fields, sub2, true, true).pipe(toObjects((error, result) => {
+        result[0].field.name.should.equal('entity');
+        //result[0].field.should.have.property('attrs');
+      }));
     });
   });
 });
