@@ -8,11 +8,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18.17.0]
+        node-version: [20.10.0]
     services:
       # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
       postgres:
-        image: postgres:14.6
+        image: postgres:14.10
         env:
           POSTGRES_PASSWORD: odktest
         ports:
