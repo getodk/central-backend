@@ -2984,6 +2984,72 @@ describe('datasets and entities', () => {
           body.message.should.be.equal('The form you have uploaded attempts to change the type of the field at /meta/entity. In a previous version, it had the type unknown. Please either return that field to its previous type, or rename the field so it lives at a new path.');
         });
     }));
+
+    // cb#553 issue, forms with and without entity label show different fields
+    // (because entity has type 'unknown' instead of 'structure')
+    it('should allow update where no label or no properties are updated', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const form = `<?xml version="1.0"?>
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="updateWithoutLabel" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" update="" baseVersion="" />
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Form with label nested under entity
+      const form2 = `<?xml version="1.0"?>
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="updateWithLabel" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" update="" baseVersion="">
+                    <label/>
+                  </entity>
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form2)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Compare form fields
+      await asAlice.get('/v1/projects/1/forms/updateWithoutLabel/fields?odata=true')
+        .then(({ body }) => {
+          body[2].path.should.equal('/meta/entity');
+          body[2].type.should.equal('unknown'); // TODO: update code so this becomes "structure"
+        });
+
+      await asAlice.get('/v1/projects/1/forms/updateWithLabel/fields?odata=true')
+        .then(({ body }) => {
+          body[2].path.should.equal('/meta/entity');
+          body[2].type.should.equal('structure');
+        });
+    }));
   });
 
   describe('dataset and entities should have isolated lifecycle', () => {
