@@ -2929,6 +2929,61 @@ describe('datasets and entities', () => {
           logs[0].action.should.equal('entity.update.version');
         });
     }));
+
+    // cb#552 issue, can't add label to entity update form that previously didnt have label
+    it('should allow update where no label or no properties are updated', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const form = `<?xml version="1.0"?>
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" create="" update="" baseVersion="" />
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      const form2 = `<?xml version="1.0"?>
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="2.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" create="" update="" baseVersion="">
+                    <label/>
+                  </entity>
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // TODO: fix code so this returns 200
+      await asAlice.post('/v1/projects/1/forms/brokenForm/draft')
+        .send(form2)
+        .set('Content-Type', 'application/xml')
+        .expect(400)
+        .then(({ body }) => {
+          body.message.should.be.equal('The form you have uploaded attempts to change the type of the field at /meta/entity. In a previous version, it had the type unknown. Please either return that field to its previous type, or rename the field so it lives at a new path.');
+        });
+    }));
   });
 
   describe('dataset and entities should have isolated lifecycle', () => {
