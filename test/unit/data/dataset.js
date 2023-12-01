@@ -241,7 +241,7 @@ describe('parsing dataset from entity block', () => {
 
       fields[2].name.should.equal('entity');
       fields[2].path.should.equal('/meta/entity');
-      fields[2].type.should.equal('unknown'); // should possibly be 'structure'
+      fields[2].type.should.equal('structure');
     });
 
     const emptyEntity = '<entity dataset="people" id="" create="" update="" baseVersion=""></entity>';
@@ -256,7 +256,7 @@ describe('parsing dataset from entity block', () => {
 
       fields[2].name.should.equal('entity');
       fields[2].path.should.equal('/meta/entity');
-      fields[2].type.should.equal('unknown'); // should possibly be 'structure'
+      fields[2].type.should.equal('structure');
     });
 
     const nonEmptyEntity = '<entity dataset="people" id="" create="" update="" baseVersion=""><label/></entity>';

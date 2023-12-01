@@ -2,7 +2,7 @@ const should = require('should');
 const appRoot = require('app-root-path');
 const { filter } = require('ramda');
 const { toObjects } = require('streamtest').v2;
-const { submissionXmlToFieldStream, submissionXmlToEntityFieldStream, getSelectMultipleResponses, _hashedTree, _diffObj, _diffArray, diffSubmissions, _symbols } = require(appRoot + '/lib/data/submission');
+const { submissionXmlToFieldStream, getSelectMultipleResponses, _hashedTree, _diffObj, _diffArray, diffSubmissions, _symbols } = require(appRoot + '/lib/data/submission');
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
@@ -66,9 +66,9 @@ describe('submission field streamer', () => {
       should.config.checkProtoEql = true;
     });
 
-    it('should include structural fields (like entity block) with attribtues', (done) => {
+    it('should include structural fields with attributes', (done) => {
       fieldsFor(testData.forms.simpleEntity).then((fields) =>
-        submissionXmlToEntityFieldStream(fields, testData.instances.simpleEntity.one).pipe(toObjects((error, result) => {
+        submissionXmlToFieldStream(fields, testData.instances.simpleEntity.one, true).pipe(toObjects((error, result) => {
           result.should.eql([
             { field: new MockField({ order: 4, name: 'entity', path: '/meta/entity', type: 'structure', attrs: {
               create: '1',
@@ -84,9 +84,22 @@ describe('submission field streamer', () => {
         })));
     });
 
+    it('should not include structural fields', (done) => {
+      fieldsFor(testData.forms.simpleEntity).then((fields) =>
+        submissionXmlToFieldStream(fields, testData.instances.simpleEntity.one, false).pipe(toObjects((error, result) => {
+          result.should.eql([
+            { field: new MockField({ order: 5, name: 'label', path: '/meta/entity/label', type: 'unknown' }), text: 'Alice (88)' },
+            { field: new MockField({ order: 0, name: 'name', path: '/name', type: 'string', propertyName: 'first_name' }), text: 'Alice' },
+            { field: new MockField({ order: 1, name: 'age', path: '/age', type: 'int', propertyName: 'age' }), text: '88' },
+            { field: new MockField({ order: 2, name: 'hometown', path: '/hometown', type: 'string' }), text: 'Chicago' }
+          ]);
+          done();
+        })));
+    });
+
     it('should include structural elements with attributes and empty nodes', (done) => {
       fieldsFor(testData.forms.simpleEntity).then((fields) =>
-        submissionXmlToEntityFieldStream(fields, testData.instances.simpleEntity.one.replace('<age>88</age>', '<age></age>')).pipe(toObjects((error, result) => {
+        submissionXmlToFieldStream(fields, testData.instances.simpleEntity.one.replace('<age>88</age>', '<age></age>'), true, true).pipe(toObjects((error, result) => {
           result.should.eql([
             { field: new MockField({ order: 4, name: 'entity', path: '/meta/entity', type: 'structure', attrs: {
               create: '1',
@@ -102,7 +115,7 @@ describe('submission field streamer', () => {
         })));
     });
 
-    it('should include structural nodes even with no attributes', async () => {
+    it('should not return structural nodes when they have no attributes', async () => {
       const form = `<?xml version="1.0"?>
       <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
@@ -141,10 +154,13 @@ describe('submission field streamer', () => {
         </person>
       </data>`;
 
-      await submissionXmlToEntityFieldStream(fields, sub).pipe(toObjects((error, result) => {
+      await submissionXmlToFieldStream(fields, sub, true, true).pipe(toObjects((error, result) => {
         result.should.eql([
-          { field: new MockField({ order: 3, name: 'entity', path: '/meta/entity', type: 'structure', attrs: {} }), text: null },
+          // /meta/entity field is not present because it has no attribtues, which means it isn't used later by parseSubmissionXml
+          // which is good, because it wont try to access non-existent entity attributes.
+          // the entity system data stuff will be set to null and will log an appropriate error.
           { field: new MockField({ order: 4, name: 'label', path: '/meta/entity/label', type: 'unknown' }), text: 'foo' },
+          // /person is also not included because it is a structural node with no attributes. but it's child is included.
           { field: new MockField({ order: 1, name: 'age', path: '/person/age', type: 'int', propertyName: 'age' }), text: '88' },
         ]);
       }));
@@ -171,7 +187,7 @@ describe('submission field streamer', () => {
 
       const fields = await fieldsFor(form);
       fields.map(f => f.name).should.eql(['age', 'meta', 'entity']);
-      fields.map(f => f.type).should.eql(['int', 'structure', 'unknown']);
+      fields.map(f => f.type).should.eql(['int', 'structure', 'structure']);
 
       const sub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="brokenForm" version="1.0">
         <meta>
@@ -182,9 +198,9 @@ describe('submission field streamer', () => {
         <age>88</age>
       </data>`;
 
-      await submissionXmlToEntityFieldStream(fields, sub).pipe(toObjects((error, result) => {
+      await submissionXmlToFieldStream(fields, sub, true, true).pipe(toObjects((error, result) => {
         result.should.eql([
-          { field: new MockField({ order: 2, name: 'entity', path: '/meta/entity', type: 'unknown', attrs: {
+          { field: new MockField({ order: 2, name: 'entity', path: '/meta/entity', type: 'structure', attrs: {
             update: '1',
             baseVersion: '1',
             dataset: 'people',

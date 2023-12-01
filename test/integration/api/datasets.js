@@ -2975,14 +2975,10 @@ describe('datasets and entities', () => {
         .set('Content-Type', 'application/xml')
         .expect(200);
 
-      // TODO: fix code so this returns 200
       await asAlice.post('/v1/projects/1/forms/brokenForm/draft')
         .send(form2)
         .set('Content-Type', 'application/xml')
-        .expect(400)
-        .then(({ body }) => {
-          body.message.should.be.equal('The form you have uploaded attempts to change the type of the field at /meta/entity. In a previous version, it had the type unknown. Please either return that field to its previous type, or rename the field so it lives at a new path.');
-        });
+        .expect(200);
     }));
 
     // cb#553 issue, forms with and without entity label show different fields
@@ -3041,13 +3037,68 @@ describe('datasets and entities', () => {
       await asAlice.get('/v1/projects/1/forms/updateWithoutLabel/fields?odata=true')
         .then(({ body }) => {
           body[2].path.should.equal('/meta/entity');
-          body[2].type.should.equal('unknown'); // TODO: update code so this becomes "structure"
+          body[2].type.should.equal('structure');
         });
 
       await asAlice.get('/v1/projects/1/forms/updateWithLabel/fields?odata=true')
         .then(({ body }) => {
           body[2].path.should.equal('/meta/entity');
           body[2].type.should.equal('structure');
+        });
+    }));
+
+    it('should gracefully handle error if incoming entity tag in sub has no attributes', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      const form = `<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" update="" baseVersion="" />
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'First Label',
+          data: { age: '11' }
+        })
+        .expect(200);
+
+      const sub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="brokenForm" version="1.0">
+        <meta>
+          <instanceID>one</instanceID>
+          <orx:instanceName>one</orx:instanceName>
+          <entity/>
+        </meta>
+      </data>`;
+
+      await asAlice.post('/v1/projects/1/forms/brokenForm/submissions')
+        .send(sub)
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/forms/brokenForm/submissions/one/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs[0].action.should.equal('entity.error');
+          logs[0].details.errorMessage.should.equal('Required parameter dataset missing.');
         });
     }));
   });
