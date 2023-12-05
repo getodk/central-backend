@@ -78,7 +78,7 @@ describe('empty entity structure field', () => {
         });
     }));
 
-    it.skip('should check diff when form version changes to add label', testService(async (service) => {
+    it('should check diff when form version changes to add label', testService(async (service) => {
       const form2 = emptyEntityForm
         .replace('<entity dataset="people" id="" create="" update="" baseVersion="" />',
           '<entity dataset="people" id="" create="" update="" baseVersion=""><label/></entity>')
@@ -151,11 +151,14 @@ describe('empty entity structure field', () => {
         .set('X-Extended-Metadata', true)
         .expect(200)
         .then(({ body }) => {
-          console.log(body.one2);
+          // TODO: it shouldn't actually equal this
+          body.one2[2].should.eql({ new: '\n        ', path: [ 'meta', 'entity', 'entity' ] });
+
+          //console.log(body.one2);
           // not great:
           // { new: 'foo', path: [ 'meta', 'entity', 'label' ] }, // entity label looks good
           // { new: '\n      ', path: [ 'meta', 'entity', 'entity' ] }, // entity path looks wonky
-          console.log(body.one3);
+          //console.log(body.one3);
           // not great: entity path is wonky, label is weird - saw this when indentation in xml was off
           // this whole case where we remove a structural field is also kind of weird, though
           // editing a submission with an earlier form version is also weird
