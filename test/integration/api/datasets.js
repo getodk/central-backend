@@ -3546,5 +3546,246 @@ describe('datasets and entities', () => {
         defSourceParentIds[0].submissionInstanceId.should.equal('two');
       }));
     });
+
+    describe('central issue #547, reprocessing submissions that had previous entity errors', () => {
+      it('should not reprocess submission that previously generated entity.error', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Upload form that creates an entity list and publish it
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Configure the entity list to create entities on submission approval
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        // Create a submission that fails to create an entity (bad UUID)
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one
+            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:invalid_uuid"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Approve the submission.
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs.filter((log => log.action === 'entity.error')).length.should.equal(1);
+          });
+
+        // Mark the submission as "has issues".
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'hasIssues' })
+          .expect(200);
+
+        // Change the entity list and select yes to processing pending submissions.
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200);
+
+        await exhaust(container);
+
+        // Observe that the submission that failed to create an entity has NOT been reprocessed.
+        // There is only one entity.error before the update.
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs.filter((log => log.action === 'entity.error')).length.should.equal(1);
+
+            const actions = logs.map(log => log.action);
+            actions.should.eql([
+              'submission.update', // set to hasIssue
+              'entity.error', // first processing
+              'submission.update', // approval
+              'submission.create'
+            ]);
+          });
+      }));
+
+      it('should reprocess submission that was edited after previously generating entity.error', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Upload form that creates an entity list and publish it
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Configure the entity list to create entities on submission approval
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        // Create a submission that fails to create an entity (bad UUID)
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one
+            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:invalid_uuid"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Approve the submission.
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        // Observe that it created an error
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs.filter((log => log.action === 'entity.error')).length.should.equal(1);
+          });
+
+        // Update the submission to resolve the error
+        await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send(testData.instances.simpleEntity.one
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Do not approve the submission yet
+        // Check the unprocessed submissions
+        const ds = await container.Datasets.get(1, 'people').then(o => o.get());
+        const subs = await container.Datasets.getUnprocessedSubmissions(ds.id);
+        subs.length.should.equal(1);
+
+        // Change the entity list and select yes to processing pending submissions.
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200);
+
+        await exhaust(container);
+
+        // Observe that the entity has now been created
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+          });
+
+        // Observe that the submission that failed to create an entity HAS been reprocessed.
+        // There is only one entity.error before the update.
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs.filter((log => log.action === 'entity.error')).length.should.equal(1);
+
+            const actions = logs.map(log => log.action);
+            actions.should.eql([
+              'entity.create', // second processing
+              'submission.update.version', // submission edited
+              'entity.error', // first processing
+              'submission.update', // approval
+              'submission.create'
+            ]);
+          });
+      }));
+
+      it('should not reprocessed an update caught up in the pending submission scenario ', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Upload form that creates an entity list and publish it
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Upload form that updates an entity list and publish it
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Configure the entity list to create entities on submission approval
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        // Create a submission that would create an entity on approval. Don't approve it yet.
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Create a submission that would update the entity created by the previous submission
+        // (which doesn't exist yet because it hasn't been approved)
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // Observe that the update was processed immediately but resulted in an entity.error
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.equal('entity.error');
+          });
+
+        // Observe that the entity was not created or updated yet
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(404);
+
+        // Change the entity list and select yes to processing pending submissions.
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200);
+
+        await exhaust(container);
+
+        // Observe that the submission that failed to update an entity has not been reprocessed
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.equal('entity.error');
+          });
+
+        // There was no second update attempt because the entity was not reprocessed
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+          .then(({ body: versions }) => {
+            versions.length.should.equal(1);
+          });
+
+        // Edit the submission so the new def will update the entity
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // Observe that now the entity has been updated
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+          .then(({ body: versions }) => {
+            versions.length.should.equal(2);
+          });
+
+        // Observe that the entity's audit says it was updated by the new edited submission
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .then(({ body: logs }) => {
+            logs[0].details.submission.instanceId.should.equal('one2');
+          });
+
+        // Observe that the submission's audit log makes sense
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one2/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.equal('entity.update.version');
+          });
+      }));
+    });
   });
 });
