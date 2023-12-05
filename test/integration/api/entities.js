@@ -691,6 +691,44 @@ describe('Entities API', () => {
             versions.map(v => v.resolved).should.eql([false, false, false, true, false]);
           });
       }));
+
+      it('should return correct response for conflict after second resolution', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+        await createConflictOnV2(asAlice, container);
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&baseVersion=4')
+          .expect(200);
+
+        // Create v5 based on v3, then resolve it.
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.two
+            .replace('baseVersion="1"', 'baseVersion="3"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&baseVersion=5')
+          .expect(200);
+
+        // Create v6 based on v3, but don't resolve it.
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.three
+            .replace('baseVersion="1"', 'baseVersion="3"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+
+        const { body: versions } = await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+          .expect(200);
+        versions.length.should.equal(6);
+        versions[5].conflict.should.equal('hard');
+        versions.map(version => version.resolved)
+          .should.eql([false, false, false, true, true, false]);
+        versions.filter(version => version.lastGoodVersion)
+          .map(version => version.version)
+          .should.eql([5]);
+        versions.filter(version => version.relevantToConflict)
+          .map(version => version.version)
+          .should.eql([3, 5, 6]);
+      }));
     });
   });
 
