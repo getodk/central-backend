@@ -2865,7 +2865,7 @@ describe('datasets and entities', () => {
         });
     }));
 
-    // cb#551 issue, <entity/> tag has no children
+    // c#551 issue, <entity/> tag has no children
     it('should allow update where no label or no properties are updated', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
@@ -2930,7 +2930,7 @@ describe('datasets and entities', () => {
         });
     }));
 
-    // cb#552 issue, can't add label to entity update form that previously didnt have label
+    // c#552 issue, can't add label to entity update form that previously didnt have label
     it('should allow update where no label or no properties are updated', testService(async (service) => {
       const asAlice = await service.login('alice');
 
@@ -2981,8 +2981,8 @@ describe('datasets and entities', () => {
         .expect(200);
     }));
 
-    // cb#553 issue, forms with and without entity label show different fields
-    // (because entity has type 'unknown' instead of 'structure')
+    // c#553 issue, forms with and without entity label show different fields
+    // (because entity was previously type 'unknown' instead of 'structure')
     it('should allow update where no label or no properties are updated', testService(async (service) => {
       const asAlice = await service.login('alice');
 
