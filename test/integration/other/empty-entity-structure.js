@@ -192,6 +192,28 @@ describe('empty entity structure field', () => {
         });
     }));
 
+    it('should show odata metadata', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      // first version of the form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(emptyEntityForm)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Is this ComplexType without an inner property OK for OData clients?
+      const complexTypeOdata = `<ComplexType Name="meta">
+        <Property Name="entity" Type="org.opendatakit.user.emptyEntity.meta.entity"/>
+      </ComplexType>
+      <ComplexType Name="meta.entity">
+      </ComplexType>`;
+
+      await asAlice.get('/v1/projects/1/forms/emptyEntity.svc/$metadata')
+        .expect(200)
+        .then(({ text }) => {
+          text.should.containEql(complexTypeOdata);
+        });
+    }));
+
     it('should show submissions in odata when label added', testService(async (service) => {
       const asAlice = await service.login('alice');
       // first version of the form
