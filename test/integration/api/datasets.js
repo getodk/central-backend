@@ -1496,6 +1496,357 @@ describe('datasets and entities', () => {
                     .then(attachment => {
                       should(attachment.value.datasetId).be.null();
                     })))))));
+
+      describe('autolink when publishing form that creates and consumes new dataset', () => {
+        it.skip('should autolink on upload new form and simultaneously publish', testService(async (service, { Forms, FormAttachments }) => {
+          // this path of directly publishing a form on upload isn't possible in central
+          // so it's not going to be supported. if it were, logic would go around line #170 in
+          // lib/model/query/forms.js in Forms.createNew after the dataset is published.
+          const asAlice = await service.login('alice');
+
+          // update form that consumes dataset
+          const updateForm = `<?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+            <h:head>
+              <model entities:entities-version="2023.1.0">
+                <instance>
+                  <data id="updateEntity" orx:version="1.0">
+                    <person/>
+                    <name/>
+                    <age/>
+                    <hometown/>
+                    <meta>
+                      <entity dataset="people" id="" update="" baseVersion="">
+                        <label/>
+                      </entity>
+                    </meta>
+                  </data>
+                </instance>
+                <instance id="people" src="jr://file-csv/people.csv"/>
+                <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+                <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+              </model>
+            </h:head>
+          </h:html>`;
+
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(updateForm)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await Forms.getByProjectAndXmlFormId(1, 'updateEntity')
+            .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+              .then(attachment => {
+                should(attachment.value.datasetId).not.be.null();
+              }));
+        }));
+
+        it('should autolink when first publishing a draft', testService(async (service, { Forms, FormAttachments }) => {
+          const asAlice = await service.login('alice');
+
+          // update form that consumes dataset
+          const updateForm = `<?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+            <h:head>
+              <model entities:entities-version="2023.1.0">
+                <instance>
+                  <data id="updateEntity" orx:version="1.0">
+                    <person/>
+                    <name/>
+                    <age/>
+                    <hometown/>
+                    <meta>
+                      <entity dataset="people" id="" update="" baseVersion="">
+                        <label/>
+                      </entity>
+                    </meta>
+                  </data>
+                </instance>
+                <instance id="people" src="jr://file-csv/people.csv"/>
+                <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+                <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+              </model>
+            </h:head>
+          </h:html>`;
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(updateForm)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await Forms.getByProjectAndXmlFormId(1, 'updateEntity')
+            .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+              .then(attachment => {
+                should(attachment.value.datasetId).not.be.null();
+              }));
+        }));
+
+        it('should not autolink if attachment already filled in', testService(async (service, { Forms, FormAttachments }) => {
+          const asAlice = await service.login('alice');
+
+          // update form that consumes dataset
+          const updateForm = `<?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+            <h:head>
+              <model entities:entities-version="2023.1.0">
+                <instance>
+                  <data id="updateEntity" orx:version="1.0">
+                    <person/>
+                    <name/>
+                    <age/>
+                    <hometown/>
+                    <meta>
+                      <entity dataset="people" id="" update="" baseVersion="">
+                        <label/>
+                      </entity>
+                    </meta>
+                  </data>
+                </instance>
+                <instance id="people" src="jr://file-csv/people.csv"/>
+                <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+                <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+              </model>
+            </h:head>
+          </h:html>`;
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(updateForm)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/attachments/people.csv')
+            .send('test,csv\n1,2')
+            .set('Content-Type', 'text/csv')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await Forms.getByProjectAndXmlFormId(1, 'updateEntity')
+            .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+              .then(attachment => {
+                should(attachment.value.blobId).not.be.null();
+                should(attachment.value.datasetId).be.null();
+              }));
+        }));
+
+        it('should not autolink if attachment isnt the dataset in question', testService(async (service, { Forms, FormAttachments }) => {
+          const asAlice = await service.login('alice');
+
+          const updateForm = `<?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+            <h:head>
+              <model entities:entities-version="2023.1.0">
+                <instance>
+                  <data id="updateEntity" orx:version="1.0">
+                    <person/>
+                    <name/>
+                    <age/>
+                    <hometown/>
+                    <meta>
+                      <entity dataset="students" id="" update="" baseVersion="">
+                        <label/>
+                      </entity>
+                    </meta>
+                  </data>
+                </instance>
+                <instance id="people" src="jr://file-csv/people.csv"/>
+                <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+                <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+              </model>
+            </h:head>
+          </h:html>`;
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(updateForm)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await Forms.getByProjectAndXmlFormId(1, 'updateEntity')
+            .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+              .then(attachment => {
+                should(attachment.value.datasetId).be.null();
+              }));
+        }));
+
+        it('should not autolink if dataset already published because it will be attached already if dataset made before', testService(async (service, { Forms, FormAttachments }) => {
+          const asAlice = await service.login('alice');
+
+          // upload form that makes people dataset already
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          const updateForm = `<?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+            <h:head>
+              <model entities:entities-version="2023.1.0">
+                <instance>
+                  <data id="updateEntity" orx:version="1.0">
+                    <person/>
+                    <name/>
+                    <age/>
+                    <hometown/>
+                    <meta>
+                      <entity dataset="people" id="" update="" baseVersion="">
+                        <label/>
+                      </entity>
+                    </meta>
+                  </data>
+                </instance>
+                <instance id="people" src="jr://file-csv/people.csv"/>
+                <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+                <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+              </model>
+            </h:head>
+          </h:html>`;
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(updateForm)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // this is true even before the form is published
+          await Forms.getByProjectAndXmlFormId(1, 'updateEntity')
+            .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+              .then(attachment => {
+                should(attachment.value.datasetId).not.be.null();
+              }));
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await Forms.getByProjectAndXmlFormId(1, 'updateEntity')
+            .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+              .then(attachment => {
+                should(attachment.value.datasetId).not.be.null();
+              }));
+        }));
+
+        it('should autolink if dataset already published but it was created after the form draft', testService(async (service, { Forms, FormAttachments }) => {
+          const asAlice = await service.login('alice');
+
+          const updateForm = `<?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+            <h:head>
+              <model entities:entities-version="2023.1.0">
+                <instance>
+                  <data id="updateEntity" orx:version="1.0">
+                    <person/>
+                    <name/>
+                    <age/>
+                    <hometown/>
+                    <meta>
+                      <entity dataset="people" id="" update="" baseVersion="">
+                        <label/>
+                      </entity>
+                    </meta>
+                  </data>
+                </instance>
+                <instance id="people" src="jr://file-csv/people.csv"/>
+                <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+                <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+              </model>
+            </h:head>
+          </h:html>`;
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(updateForm)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // upload form that makes people dataset already
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // because the form was uploaded before the dataset was created, this will be null
+          await Forms.getByProjectAndXmlFormId(1, 'updateEntity')
+            .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+              .then(attachment => {
+                should(attachment.value.datasetId).be.null();
+              }));
+
+          // we COULD/DO auto-link here but since a Central user can still see the draft, and could
+          // potentially see the new dataset now, I also think maybe they should to explicitly link it themselves.
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await Forms.getByProjectAndXmlFormId(1, 'updateEntity')
+            .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+              .then(attachment => {
+                should(attachment.value.datasetId).not.be.null();
+              }));
+        }));
+
+        it('should not autolink if the update form doesnt consume dataset', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // this form creates a dataset to update but it's not propertly attached to the form
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.updateEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/datasets/people')
+            .set('X-Extended-Metadata', 'true')
+            .expect(200)
+            .then(({ body }) => {
+              body.linkedForms.length.should.equal(0);
+            });
+        }));
+
+        it('should not autolink if form doesnt create dataset', testService(async (service, { Forms, FormAttachments }) => {
+          const asAlice = await service.login('alice');
+
+          const updateForm = `<?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+            <h:head>
+              <model entities:entities-version="2023.1.0">
+                <instance>
+                  <data id="updateEntity" orx:version="1.0">
+                    <person/>
+                    <name/>
+                    <age/>
+                    <hometown/>
+                    <meta>
+                      <instanceID/>
+                    </meta>
+                  </data>
+                </instance>
+                <instance id="people" src="jr://file-csv/people.csv"/>
+                <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+                <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+              </model>
+            </h:head>
+          </h:html>`;
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(updateForm)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await Forms.getByProjectAndXmlFormId(1, 'updateEntity')
+            .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+              .then(attachment => {
+                should(attachment.value.datasetId).be.null();
+              }));
+        }));
+      });
     });
 
     // these scenario will never happen by just using APIs, adding following tests for safety
