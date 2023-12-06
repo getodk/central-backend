@@ -2866,7 +2866,7 @@ describe('datasets and entities', () => {
     }));
 
     // c#551 issue, <entity/> tag has no children
-    it('should allow update where no label or no properties are updated', testService(async (service, container) => {
+    it('should allow update where no label or no properties are updated and entity block is childless', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       const form = `<?xml version="1.0"?>
@@ -2931,7 +2931,7 @@ describe('datasets and entities', () => {
     }));
 
     // c#552 issue, can't add label to entity update form that previously didnt have label
-    it('should allow update where no label or no properties are updated', testService(async (service) => {
+    it('should allow label to be added to entity block in new version of form', testService(async (service) => {
       const asAlice = await service.login('alice');
 
       const form = `<?xml version="1.0"?>
@@ -2983,7 +2983,7 @@ describe('datasets and entities', () => {
 
     // c#553 issue, forms with and without entity label show different fields
     // (because entity was previously type 'unknown' instead of 'structure')
-    it('should allow update where no label or no properties are updated', testService(async (service) => {
+    it('should show same field type (structure) for meta/entity tag with and without children', testService(async (service) => {
       const asAlice = await service.login('alice');
 
       const form = `<?xml version="1.0"?>
@@ -3038,12 +3038,17 @@ describe('datasets and entities', () => {
         .then(({ body }) => {
           body[2].path.should.equal('/meta/entity');
           body[2].type.should.equal('structure');
+
+          body.length.should.equal(3);
         });
 
       await asAlice.get('/v1/projects/1/forms/updateWithLabel/fields?odata=true')
         .then(({ body }) => {
           body[2].path.should.equal('/meta/entity');
           body[2].type.should.equal('structure');
+
+          body[3].path.should.equal('/meta/entity/label');
+          body.length.should.equal(4);
         });
     }));
 
