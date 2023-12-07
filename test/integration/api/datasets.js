@@ -1583,6 +1583,7 @@ describe('datasets and entities', () => {
               body[0].exists.should.be.true();
               body[0].blobExists.should.be.true();
               body[0].datasetExists.should.be.false();
+              body[0].updatedAt.should.not.be.null();
             });
         }));
 
@@ -1650,6 +1651,7 @@ describe('datasets and entities', () => {
               body[0].exists.should.be.true();
               body[0].blobExists.should.be.false();
               body[0].datasetExists.should.be.true();
+              body[0].should.not.have.property('updatedAt'); // linked to dataset when created, never updated
             });
 
           await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
@@ -1661,6 +1663,7 @@ describe('datasets and entities', () => {
               body[0].exists.should.be.true();
               body[0].blobExists.should.be.false();
               body[0].datasetExists.should.be.true();
+              body[0].should.not.have.property('updatedAt'); // linked to dataset when created, never updated
             });
         }));
 
