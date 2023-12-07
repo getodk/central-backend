@@ -2864,6 +2864,248 @@ describe('datasets and entities', () => {
           person.currentVersion.should.have.property('data').which.is.eql({ first_name: 'Robert', hometown: 'Seattle' });
         });
     }));
+
+    // c#551 issue, <entity/> tag has no children
+    it('should allow update where no label or no properties are updated and entity block is childless', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      const form = `<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" create="" update="" baseVersion="" />
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'First Label',
+          data: { age: '11' }
+        })
+        .expect(200);
+
+      const sub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="brokenForm" version="1.0">
+        <meta>
+          <instanceID>one</instanceID>
+          <orx:instanceName>one</orx:instanceName>
+          <entity baseVersion="1" dataset="people" id="12345678-1234-4123-8234-123456789abc" update="1" />
+        </meta>
+      </data>`;
+
+      await asAlice.post('/v1/projects/1/forms/brokenForm/submissions')
+        .send(sub)
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .expect(200)
+        .then(({ body: versions }) => {
+          versions[1].version.should.equal(2);
+          versions[1].baseVersion.should.equal(1);
+          versions[1].label.should.equal('First Label');
+          versions[1].data.should.eql({ age: '11' });
+          versions[1].dataReceived.should.eql({});
+        });
+
+      await asAlice.get('/v1/projects/1/forms/brokenForm/submissions/one/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs[0].action.should.equal('entity.update.version');
+        });
+    }));
+
+    // c#552 issue, can't add label to entity update form that previously didnt have label
+    it('should allow label to be added to entity block in new version of form', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const form = `<?xml version="1.0"?>
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" create="" update="" baseVersion="" />
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      const form2 = `<?xml version="1.0"?>
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="2.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" create="" update="" baseVersion="">
+                    <label/>
+                  </entity>
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/brokenForm/draft')
+        .send(form2)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+    }));
+
+    // c#553 issue, forms with and without entity label show different fields
+    // (because entity was previously type 'unknown' instead of 'structure')
+    it('should show same field type (structure) for meta/entity tag with and without children', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const form = `<?xml version="1.0"?>
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="updateWithoutLabel" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" update="" baseVersion="" />
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Form with label nested under entity
+      const form2 = `<?xml version="1.0"?>
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="updateWithLabel" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" update="" baseVersion="">
+                    <label/>
+                  </entity>
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form2)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Compare form fields
+      await asAlice.get('/v1/projects/1/forms/updateWithoutLabel/fields?odata=true')
+        .then(({ body }) => {
+          body[2].path.should.equal('/meta/entity');
+          body[2].type.should.equal('structure');
+
+          body.length.should.equal(3);
+        });
+
+      await asAlice.get('/v1/projects/1/forms/updateWithLabel/fields?odata=true')
+        .then(({ body }) => {
+          body[2].path.should.equal('/meta/entity');
+          body[2].type.should.equal('structure');
+
+          body[3].path.should.equal('/meta/entity/label');
+          body.length.should.equal(4);
+        });
+    }));
+
+    it('should gracefully handle error if incoming entity tag in sub has no attributes', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      const form = `<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" update="" baseVersion="" />
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'First Label',
+          data: { age: '11' }
+        })
+        .expect(200);
+
+      const sub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="brokenForm" version="1.0">
+        <meta>
+          <instanceID>one</instanceID>
+          <orx:instanceName>one</orx:instanceName>
+          <entity/>
+        </meta>
+      </data>`;
+
+      await asAlice.post('/v1/projects/1/forms/brokenForm/submissions')
+        .send(sub)
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/forms/brokenForm/submissions/one/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs[0].action.should.equal('entity.error');
+          logs[0].details.errorMessage.should.equal('Required parameter dataset missing.');
+        });
+    }));
   });
 
   describe('dataset and entities should have isolated lifecycle', () => {

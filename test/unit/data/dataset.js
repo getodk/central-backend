@@ -210,6 +210,72 @@ describe('parsing dataset from entity block', () => {
       fields[2].path.should.equal('/hometown');
       should.not.exist(fields[2].propertyName);
     }));
+
+  it('should alawys parse entity field as type structure', async () => {
+    const form = (entityBlock) => `<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="1.0">
+                <age/>
+                <meta>
+                  ${entityBlock}
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+    // Entity block has no children
+    const noChildEntity = '<entity dataset="people" id="" create="" update="" baseVersion=""/>';
+    await getFormFields(form(noChildEntity)).then((fields) => {
+      fields[2].name.should.equal('entity');
+      fields[2].path.should.equal('/meta/entity');
+      fields[2].type.should.equal('structure');
+    });
+
+    // Entity block has no children
+    const emptyEntity = '<entity dataset="people" id="" create="" update="" baseVersion=""></entity>';
+    await getFormFields(form(emptyEntity)).then((fields) => {
+      fields[2].name.should.equal('entity');
+      fields[2].path.should.equal('/meta/entity');
+      fields[2].type.should.equal('structure');
+    });
+
+    // Entity block has whitespace
+    const emptyEntityWhitespace = '<entity dataset="people" id="" create="" update="" baseVersion="">  </entity>';
+    await getFormFields(form(emptyEntityWhitespace)).then((fields) => {
+      fields[2].name.should.equal('entity');
+      fields[2].path.should.equal('/meta/entity');
+      fields[2].type.should.equal('structure');
+    });
+
+    // Entity block is not empty (most common case)
+    const nonEmptyEntity = '<entity dataset="people" id="" create="" update="" baseVersion=""><label/></entity>';
+    await getFormFields(form(nonEmptyEntity)).then((fields) => {
+      fields[2].name.should.equal('entity');
+      fields[2].path.should.equal('/meta/entity');
+      fields[2].type.should.equal('structure');
+
+      fields[3].name.should.equal('label');
+      fields[3].path.should.equal('/meta/entity/label');
+      fields[3].type.should.equal('unknown'); // label is unknown because there is no child and no bind
+    });
+
+    const nonEmptyLabel = '<entity dataset="people" id="" create="" update="" baseVersion=""><label>foo</label></entity>';
+    await getFormFields(form(nonEmptyLabel)).then((fields) => {
+      fields[2].name.should.equal('entity');
+      fields[2].path.should.equal('/meta/entity');
+      fields[2].type.should.equal('structure'); // is type structure because it contains a child
+
+      fields[3].name.should.equal('label');
+      fields[3].path.should.equal('/meta/entity/label');
+      fields[3].type.should.equal('unknown'); // type unknown because no child node and no bind
+    });
+  });
 });
 
 describe('dataset name validation', () => {
