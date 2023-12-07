@@ -4,6 +4,7 @@ on: push
 
 jobs:
   oidc-e2e-test:
+    timeout-minutes: 6
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
