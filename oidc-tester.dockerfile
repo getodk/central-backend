@@ -8,7 +8,7 @@
 # See: https://hub.docker.com/_/node
 # See: https://wiki.debian.org/DebianReleases#Codenames
 # See: https://en.wikipedia.org/wiki/Debian_version_history
-FROM node:18.17.0-bullseye
+FROM node:20.10-bullseye
 
 RUN apt-get update && apt-get install wait-for-it && rm -rf /var/lib/apt/lists/*
 

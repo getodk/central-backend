@@ -28,7 +28,7 @@ ODK Central Backend is, first and foremost, a RESTful HTTP API server that manag
 
 ## Setting up a development environment
 
-1. Install Node.js 18 (other versions will not work).
+1. Install Node.js 20 (other versions will not work).
 2. Install PostgreSQL 14 (older versions will not work).
 3. Set up the database. This can be done manually (see "Setting up the database manually"), or by running `make run-docker-postgres` if you have Docker installed.
 4. Go to the repository root in a command line (where this README is) and run `make` with no arguments. This will install all npm dependencies and run all necessary migrations on the database; see the [makefile](Makefile) for details.
