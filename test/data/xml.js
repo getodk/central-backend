@@ -603,23 +603,23 @@ module.exports = {
                   <entities:label>Alice (88)</entities:label>
                 </entities:entity>
                 <orx:instanceName>one</orx:instanceName>
-                </meta>
-                <name>Alice</name>
-                <age>88</age>
-                <hometown>Chicago</hometown>
-                </data>`,
+              </meta>
+              <name>Alice</name>
+              <age>88</age>
+              <hometown>Chicago</hometown>
+            </data>`,
       two: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
               <meta>
                 <instanceID>two</instanceID>
                 <entities:entity dataset="people" id="uuid:12345678-1234-4123-8234-123456789aaa" create="1">
-                <entities:label>Jane (30)</entities:label>
+                  <entities:label>Jane (30)</entities:label>
                 </entities:entity>
                 <orx:instanceName>two</orx:instanceName>
-            </meta>
-            <name>Jane</name>
-            <age>30</age>
-            <hometown>Boston</hometown>
-          </data>`,
+              </meta>
+              <name>Jane</name>
+              <age>30</age>
+              <hometown>Boston</hometown>
+            </data>`,
       three: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
           <meta>
             <instanceID>three</instanceID>
