@@ -4155,6 +4155,76 @@ describe('datasets and entities', () => {
       }));
     });
 
+    it('should not let submission edits get caught in pending submission count', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Upload form that creates an entity list and publish it
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Configure the entity list to create entities on submission approval
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      // Populate one entity
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Johnny Doe',
+          data: { first_name: 'Johnny', age: '22' }
+        })
+        .expect(200);
+
+      // Upload form that updates entities
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Send submission
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Observe that entity was updated
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.data.age.should.equal('85');
+          person.currentVersion.version.should.equal(2);
+        });
+
+      // Edit the submission
+      await asAlice.patch('/v1/projects/1/forms/updateEntity/submissions/one')
+        .send(testData.instances.updateEntity.one
+          .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2')
+          .replace('<age>85</age>', '<age>99</age>'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Should do nothing
+      await exhaust(container);
+
+      // Observe that nothing else happened with the entity
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.data.age.should.equal('85');
+          person.currentVersion.version.should.equal(2);
+        });
+
+      // count return 200 instead of 400 error with pending submission count
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: false })
+        .expect(200);
+    }));
+
     describe('central issue #547, reprocessing submissions that had previous entity errors', () => {
       it('should not reprocess submission that previously generated entity.error', testService(async (service, container) => {
         const asAlice = await service.login('alice');
