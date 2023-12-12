@@ -218,6 +218,38 @@ describe('datasets and entities', () => {
           });
       }));
 
+      it('should exclude deleted entities', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Johnny Doe'
+          })
+          .expect(200);
+        await asAlice.get('/v1/projects/1/datasets')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].entities.should.equal(1);
+            body[0].lastEntity.should.be.an.isoDate();
+          });
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+        await asAlice.get('/v1/projects/1/datasets')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].entities.should.equal(0);
+            should.not.exist(body[0].lastEntity);
+          });
+      }));
+
       it('should return the correct count for multiple dataset', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
