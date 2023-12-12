@@ -5,7 +5,7 @@ const { createReadStream, readFileSync } = require('fs');
 
 const { promisify } = require('util');
 const testData = require('../../data/xml');
-const { runner, exhaust } = require(appRoot + '/lib/worker/worker');
+const { exhaust, workerQueue } = require(appRoot + '/lib/worker/worker');
 
 const geoForm = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <h:head>
@@ -305,7 +305,7 @@ describe('analytics task queries', function () {
         let event = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
         // eslint-disable-next-line prefer-promise-reject-errors
         const jobMap = { 'submission.attachment.update': [ () => Promise.reject({ uh: 'oh' }) ] };
-        await promisify(runner(container, jobMap))(event);
+        await promisify(workerQueue(container, jobMap).run)(event);
 
         // should still be 0 because the failure count is only at 1, needs to be at 5 to count
         event = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
@@ -377,7 +377,7 @@ describe('analytics task queries', function () {
       // eslint-disable-next-line prefer-promise-reject-errors
       const jobMap = { 'submission.attachment.update': [ () => Promise.reject({ uh: 'oh' }) ] };
       const eventOne = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
-      await promisify(runner(container, jobMap))(eventOne);
+      await promisify(workerQueue(container, jobMap).run)(eventOne);
 
       // making this look like it failed 5 times
       await asAlice.post('/v1/projects/1/submission')
