@@ -82,6 +82,46 @@ describe('api: /datasets/:name.svc', () => {
         });
     }));
 
+    it('should return entity data that matches spec', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 1);
+
+      await createConflict(asAlice, container);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities')
+        .expect(200)
+        .then(({ body }) => {
+          const entity = body.value[0];
+
+          // properties
+          entity.first_name.should.equal('Alicia');
+          entity.age.should.equal('85');
+
+          // label
+          entity.label.should.equal('Alicia (85)');
+
+          // id
+          entity.__id.should.equal('12345678-1234-4123-8234-123456789abc');
+
+          // metadata/__system data
+          // if any of these change, they should also be updated in the emdx template
+          entity.should.have.property('__system');
+          entity.__system.creatorId.should.equal('5');
+          entity.__system.creatorName.should.equal('Alice');
+          entity.__system.createdAt.should.be.a.recentIsoDate();
+          entity.__system.updatedAt.should.be.a.recentIsoDate();
+          entity.__system.updates.should.equal(2);
+          entity.__system.version.should.equal(3);
+          entity.__system.conflict.should.equal('hard');
+        });
+    }));
+
     it('should return count of entities', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
@@ -465,6 +505,8 @@ describe('api: /datasets/:name.svc', () => {
         <Property Name="creatorName" Type="Edm.String"/>        
         <Property Name="updates" Type="Edm.Int64"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="version" Type="Edm.Int64"/>
+        <Property Name="conflict" Type="Edm.String"/>
       </ComplexType>
     </Schema>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.people">    
