@@ -69,9 +69,10 @@ const testEntityUpdates = (test) => testService(async (service, container) => {
     })
     .expect(200);
 
-  // create form and submission to update entity
+  // create a form that can update or create an entity
   await asAlice.post('/v1/projects/1/forms?publish=true')
-    .send(testData.forms.updateEntity)
+    .send(testData.forms.updateEntity
+      .replace('update=""', 'update="" create=""'))
     .set('Content-Type', 'application/xml')
     .expect(200);
 
@@ -2808,5 +2809,62 @@ describe('Entities API', () => {
           });
       }));
     });
+  });
+
+  describe('permitted entity actions', () => {
+    it('should result in an error for an update from a create form', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await exhaust(container);
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one
+          .replace('<instanceID>one</instanceID>', '<instanceID>another</instanceID>')
+          .replace('create="1"', 'update="1"'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await exhaust(container);
+      const { body: audits } = await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/another/audits')
+        .expect(200);
+      const actions = audits.map(audit => audit.action);
+      actions.should.eql(['entity.error', 'submission.create']);
+      audits[0].details.should.containEql({
+        problem: {
+          problemCode: 403.2,
+          problemDetails: { action: 'update', permitted: ['create'] }
+        },
+        errorMessage: 'The submission attempts an entity update, but the form does not permit that action. The form permits the following actions: create.'
+      });
+    }));
+
+    it('should result in an error for a create from an update form', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one
+          .replace('update="1"', 'create="1"'))
+        .expect(200);
+      await exhaust(container);
+      const { body: audits } = await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+        .expect(200);
+      const actions = audits.map(audit => audit.action);
+      actions.should.eql(['entity.error', 'submission.create']);
+      audits[0].details.should.containEql({
+        problem: {
+          problemCode: 403.2,
+          problemDetails: { action: 'create', permitted: ['update'] }
+        },
+        errorMessage: 'The submission attempts an entity create, but the form does not permit that action. The form permits the following actions: update.'
+      });
+    }));
   });
 });
