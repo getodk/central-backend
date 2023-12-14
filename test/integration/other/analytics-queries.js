@@ -1537,6 +1537,12 @@ describe('analytics task queries', function () {
       await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
         .send({ data: { age: '2' } });
 
+      // Make another conflict via submission and then resolve it
+      await createTestForm(service, container, testData.forms.updateEntity, 1);
+      await submitToForm(service, 'alice', 1, 'updateEntity', testData.instances.updateEntity.one);
+      await exhaust(container);
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true&resolve=true');
+
       // Link both Datasets to a Form
       await createTestForm(service, container, testData.forms.withAttachments
         .replace(/goodone/g, 'people')
@@ -1553,7 +1559,7 @@ describe('analytics task queries', function () {
 
       firstDataset.should.be.eql({
         num_properties: 2,
-        num_creation_forms: 1,
+        num_creation_forms: 2,
         num_followup_forms: 1,
         num_entities: {
           total: 2, // made one Entity ancient
@@ -1564,9 +1570,23 @@ describe('analytics task queries', function () {
           recent: 1
         },
         num_entity_updates: {
+          total: 3,
+          recent: 2
+        },
+        num_entity_updates_sub: {
+          total: 1,
+          recent: 1
+        },
+        num_entity_updates_api: {
           total: 2,
           recent: 1
-        }
+        },
+        num_entities_updated: {
+          total: 1,
+          recent: 1
+        },
+        num_entity_conflicts: 1,
+        num_entity_conflicts_resolved: 1
       });
 
       secondDataset.should.be.eql({
@@ -1584,7 +1604,21 @@ describe('analytics task queries', function () {
         num_entity_updates: {
           total: 0,
           recent: 0
-        }
+        },
+        num_entity_updates_sub: {
+          total: 0,
+          recent: 0
+        },
+        num_entity_updates_api: {
+          total: 0,
+          recent: 0
+        },
+        num_entities_updated: {
+          total: 0,
+          recent: 0
+        },
+        num_entity_conflicts: 0,
+        num_entity_conflicts_resolved: 0
       });
 
       // Assert that a Project without a Dataset returns an empty array
