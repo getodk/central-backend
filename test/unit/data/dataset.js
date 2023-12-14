@@ -185,7 +185,7 @@ describe('parsing dataset from entity block', () => {
                 <meta>
                   <entities:entity create="">
                     <label/>
-                  <entities:entity>
+                  </entities:entity>
                 </meta>
               </data>
             </instance>
@@ -323,20 +323,26 @@ describe('dataset name validation', () => {
       .replace('people', '   people ')).then((res) =>
       res.get().name.should.eql('people')));
 
-  it('should reject names with .', () => {
-    validateDatasetName('this.that').should.equal(false);
-  });
-
   it('should reject empty name', () => {
     validateDatasetName('').should.equal(false);
   });
 
-  it('should reject blank string name', () => {
-    validateDatasetName('   ').should.equal(false);
+  it('should reject name that is all whitespace', () => {
+    const name = '   ';
+    validateDatasetName(name).should.equal(false);
+    const xml = testData.forms.simpleEntity.replace('people', name);
+    return getDataset(xml).should.be.rejectedWith(Problem, {
+      problemCode: 400.25,
+      message: 'The entity definition within the form is invalid. Invalid dataset name.'
+    });
   });
 
-  it('should reject name with whitepsace', () => {
+  it('should reject name with internal whitespace', () => {
     validateDatasetName('white space').should.equal(false);
+  });
+
+  it('should reject names with .', () => {
+    validateDatasetName('this.that').should.equal(false);
   });
 
   it('should reject names starting with disallowed characters', () => {
@@ -403,7 +409,7 @@ describe('property name validation', () => {
   });
 
   it('should allow name with unicode letters', () => {
-    validateDatasetName('bébés').should.equal(true);
+    validatePropertyName('bébés').should.equal(true);
   });
 
   // REJECT
@@ -458,6 +464,6 @@ describe('property name validation', () => {
   });
 
   it('should reject name with unicode', () => {
-    validateDatasetName('unicode÷divide').should.equal(false);
+    validatePropertyName('unicode÷divide').should.equal(false);
   });
 });
