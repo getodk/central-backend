@@ -11895,6 +11895,8 @@ paths:
                                 <Property Name="creatorName" Type="Edm.String"/>
                                 <Property Name="updates" Type="Edm.Int64"/>
                                 <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
+                                <Property Name="version" Type="Edm.Int64"/>
+                                <Property Name="conflict" Type="Edm.String"/>
                             </ComplexType>
                         </Schema>
                         <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.trees">
