@@ -41,12 +41,13 @@ info:
     **Added**:
 
     - Central now supports _Entity Updates via Submissions_ as part of our continued work on Entity-Based Data Collection!
-      * Submissions for Entity Updates specify, among other things, an Entity's target `baseVersion`, which is used to track conflicts
-    - Entities accessed via the API have additional information about conflicts (when multiple Submissions updating the same Entity)
+      * Submissions for Entity Updates specify which properties/label to update with new values and an Entity's target `baseVersion`, which is used to track conflicts
+    - Entities accessed via the API have additional information about conflicts (when multiple Submissions update the same Entity)
       * Each [Entity](/central-api-entity-management/#getting-entity-details) now has a `conflict` field, which is either:
-        * `hard` (`baseVersion` conflicts and multiple versions update the same property)
-        * `soft` (`baseVersion` conflicts but data updates are independent)
-        * `null`
+        * `null`. The Entity does not have conflicting versions.
+        * `soft`. The Entity has a version that was based on a version other than the version immediately prior to it. (The specified `baseVerson` was not the latest version on the server.)
+        * `hard`. The Entity has a version that was based on a version other than the version immediately prior to it. Further, that version updated the same property as another update.
+        * If an Entity has a conflict, it can be marked as resolved. After that, the conflict field will be null until a new conflicting version is received.
       * Each Entity Version (`currentVersion` or list of versions) has new fields `baseVersion`, `dataReceived`, and `conflictingProperties`
     - [Datasets](/central-api-dataset-management/#datasets) extended metadata now has a `conflicts` field, which counts number of Entities currently in conflict
     - Entity conflicts can be resolved using the existing [PATCH](/central-api-entity-management/#updating-an-entity) endpoint, with or without new data
@@ -10112,7 +10113,21 @@ paths:
       tags:
       - Entity Management
       summary: Getting Entity Details
-      description: This returns the metadata and current data of an Entity
+      description: |-
+        This returns the metadata and current data of an Entity.
+
+        The data and label of an Entity are found in the `currentVersion` object under `data` and `label` respectively. The `currentVersion` object also contains version-specific metadata fields such as `version`, `baseVersion`, details about conflicts that version introduced, etc. See the [versions](/central-api-entity-management/#listing-versions) endpoint for more details.
+
+        The Entity also contains top-level system metadata such as `uuid`, `createdAt` and `updatedAt` timestamps, and `creatorId` (or full `creator` if extended metadata is requested).
+
+        **Conflicts**
+
+        An Entity's metadata also has a `conflict` field, which indicates the current conflict status of the Entity. The value of a conflict can either be:
+          * `null`. The Entity does not have conflicting versions.
+          * `soft`. The Entity has a version that was based on a version other than the version immediately prior to it. (The specified `baseVerson` was not the latest version on the server.)
+          * `hard`. The Entity has a version that was based on a version other than the version immediately prior to it. Further, that version updated the same property as another update.
+
+        If an Entity has a conflict, it can be marked as resolved. After that, the conflict field will be null until a new conflicting version is received.
       operationId: Getting Entity Details
       parameters:
       - name: projectId
