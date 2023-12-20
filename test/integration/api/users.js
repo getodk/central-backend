@@ -402,6 +402,12 @@ describe('api: /users', () => {
             asAlice.post('/v1/users/reset/verify')
               .send({ new: 'coolpassword' })
               .expect(403))));
+
+        it('should fail the request if email field is sent blank in request body', testService((service) =>
+          service.login('alice', (asAlice) =>
+            asAlice.post('/v1/users/reset/initiate')
+              .send({ email: '' })
+              .expect(400))));
       });
     }
   });
