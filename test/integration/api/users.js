@@ -407,7 +407,11 @@ describe('api: /users', () => {
           service.login('alice', (asAlice) =>
             asAlice.post('/v1/users/reset/initiate')
               .send({ email: '' })
-              .expect(400))));
+              .expect(400)
+              .then(({ body: { code, details } }) => {
+                details.should.eql({ field: 'email' });
+                code.should.eql(400.2);
+              }))));
       });
     }
   });
