@@ -2081,6 +2081,88 @@ describe('Entities API', () => {
 
   });
 
+  // Bulk API operations
+  describe.only('POST /datasets/:name/entities/upload', () => {
+    it('should return notfound if the dataset does not exist', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/nonexistent/entities/upload')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot write', testDataset(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.post('/v1/projects/1/datasets/people/entities/upload')
+        .expect(403);
+    }));
+
+    it.skip('should reject malformed json', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/upload')
+        .send({ broken: 'json' })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.31);
+        });
+    }));
+
+    it('should reject creating new entity if dataset not yet published', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people')
+        .expect(404);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/upload')
+        .send({
+          fix: 'this'
+        })
+        .expect(404);
+    }));
+
+    it('should create an Entity', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/upload')
+        .send({
+          source: {
+            filename: 'people.csv',
+            filesize: 100,
+          },
+          entities: [
+            {
+              uuid: '12345678-1234-4123-8234-111111111aaa', // TODO: don't require UUIDs
+              label: 'Johnny Doe',
+              data: {
+                first_name: 'Johnny',
+                age: '22'
+              }
+            },
+            {
+              uuid: '12345678-1234-4123-8234-111111111bbb',
+              label: 'Alice',
+              data: {
+                first_name: 'Alice',
+                age: '44'
+              }
+            },
+          ]
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.numEntities.should.equal(2);
+        });
+    }));
+
+    // TODO: test for source... it('should create an Entity Source', testDataset(async (service) => {
+  });
+
+  // Special scenarios
   describe('create new entities from submissions', () => {
     // More success and error cases in test/integration/worker/entity.js
     it('should create entity', testEntityUpdates(async (service, container) => {
