@@ -8,6 +8,13 @@ node_modules: package.json
 test-oidc-integration: node_modules
 	TEST_AUTH=oidc NODE_CONFIG_ENV=oidc-integration-test make test-integration
 
+.PHONY: test-s3-integration
+test-s3-integration: node_modules
+	 docker run -v "${PWD}/s3-dev/minio-config/:/root/.mc/" --network=host minio/mc admin user add local odk-central-dev topSecret123 && \
+	 docker run -v "${PWD}/s3-dev/minio-config/:/root/.mc/" --network=host minio/mc mb --ignore-existing local/odk-central-bucket && \
+	(docker run -v "${PWD}/s3-dev/minio-config/:/root/.mc/" --network=host minio/mc admin policy attach local readwrite --user odk-central-dev || true) && \
+	NODE_CONFIG_ENV=s3-blob-storage-development make test-integration
+
 .PHONY: test-oidc-e2e
 test-oidc-e2e: node_modules
 	cd oidc-dev && \
