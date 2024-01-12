@@ -21,17 +21,9 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       minio:
-        image: quay.io/minio/minio:14.6
-        env:
-          POSTGRES_PASSWORD: odktest
-        ports:
-          - 9000:9000
-          - 9001:9001
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+        # see: https://github.com/minio/minio/discussions/16099
+        image: minio/minio:edge-cicd
+        options: --health-cmd "curl -s http://localhost:9000/minio/health/live"
     steps:
     - uses: actions/checkout@v3
     - name: Use Node.js 18
