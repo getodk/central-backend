@@ -46,7 +46,7 @@ fake-s3-server:
 	# default admin credentials: minioadmin:minioadmin
 	# see: https://hub.docker.com/r/minio/minio/
 	docker run --rm -p 9000:9000 -p 9001:9001 \
-	  quay.io/minio/minio server /data --console-address ":9001"
+	  minio/minio server /data --console-address ":9001"
 
 .PHONY: fake-oidc-server-ci
 fake-oidc-server-ci:
