@@ -110,6 +110,10 @@ run-docker-postgres: stop-docker-postgres
 stop-docker-postgres:
 	docker stop odk-postgres14 || true
 
+.PHONY: reset-docker-db
+reset-docker-db:
+	node lib/bin/drop-docker-databases.js && node lib/bin/create-docker-databases.js
+
 .PHONY: rm-docker-postgres
 rm-docker-postgres: stop-docker-postgres
 	docker rm odk-postgres14 || true
