@@ -20,6 +20,18 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      minio:
+        image: quay.io/minio/minio:14.6
+        env:
+          POSTGRES_PASSWORD: odktest
+        ports:
+          - 9000:9000
+          - 9001:9001
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
     - uses: actions/checkout@v3
     - name: Use Node.js 18
@@ -28,10 +40,5 @@ jobs:
         node-version: 18.17.0
         cache: 'npm'
     - run: npm ci --legacy-peer-deps
-    - run: make fake-s3-server-ci > fake-s3-server.log &
-    - run: sleep 30
     - run: node lib/bin/create-docker-databases.js
     - run: make test-s3-integration
-    - name: Fake S3 Server Logs
-      if: always()
-      run: "! [[ -f ./fake-s3-server.log ]] || cat ./fake-s3-server.log"
