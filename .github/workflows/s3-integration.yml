@@ -42,5 +42,5 @@ jobs:
         cache: 'npm'
     - run: npm ci --legacy-peer-deps
     - run: node lib/bin/create-docker-databases.js
-    - run: node lib/bin/ci-create-minio-user.js
+    - run: NODE_CONFIG_ENV=s3-blob-storage-development node lib/bin/ci-create-minio-user.js
     - run: make test-s3-integration
