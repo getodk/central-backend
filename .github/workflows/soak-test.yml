@@ -1,0 +1,40 @@
+name: Soak Test
+
+on: push
+
+jobs:
+  soak-test:
+    # TODO should we use the same container as circle & central?
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.17.0]
+    services:
+      # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
+      postgres:
+        image: postgres:14.6
+        env:
+          POSTGRES_PASSWORD: odktest
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    - run: npm ci --legacy-peer-deps
+    - run: node lib/bin/create-docker-databases.js
+    - name: Soak Test
+      timeout-minutes: 10
+      run: ./soak-tester/scripts/ci-soak-test
+    - name: Backend Logs
+      if: always()
+      run: "! [[ -f ./backend.log ]] || cat ./backend.log"
