@@ -26,6 +26,8 @@ jobs:
         env:
           MINIO_ROOT_USER: odk-central-dev
           MINIO_ROOT_PASSWORD: topSecret123
+        ports:
+          - 9000:9000
         options: >-
           --health-cmd "curl -s http://localhost:9000/minio/health/live"
           --health-interval 10s
