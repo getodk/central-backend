@@ -37,6 +37,7 @@
     "padded-blocks": "off",
     "prefer-object-spread": "off",
     "prefer-template": "off",
+    "quotes": [ "error", "single", { "avoidEscape": true } ],
     "space-infix-ops": "off",
     "spaced-comment": "off"
   }
