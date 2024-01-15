@@ -23,11 +23,14 @@ test-oidc-e2e: node_modules
 dev-oidc: base
 	NODE_CONFIG_ENV=oidc-development npx nodemon --watch lib --watch config lib/bin/run-server.js
 
-.PHONY: dev-s3
-dev-s3: base
+.PHONY: fake-s3-accounts
+fake-s3-accounts:
 	 docker run -v "${PWD}/s3-dev/minio-config/:/root/.mc/" --network=host minio/mc admin user add local odk-central-dev topSecret123 && \
 	 docker run -v "${PWD}/s3-dev/minio-config/:/root/.mc/" --network=host minio/mc mb --ignore-existing local/odk-central-bucket && \
-	(docker run -v "${PWD}/s3-dev/minio-config/:/root/.mc/" --network=host minio/mc admin policy attach local readwrite --user odk-central-dev || true) && \
+	(docker run -v "${PWD}/s3-dev/minio-config/:/root/.mc/" --network=host minio/mc admin policy attach local readwrite --user odk-central-dev || true)
+
+.PHONY: dev-s3
+dev-s3: fake-s3-accounts base
 	NODE_CONFIG_ENV=s3-blob-storage-development node lib/bin/minio-test.js && \
 	NODE_CONFIG_ENV=s3-blob-storage-development npx nodemon --watch lib --watch config lib/bin/run-server.js
 
