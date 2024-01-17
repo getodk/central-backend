@@ -454,7 +454,7 @@ describe('api: /submission', () => {
                 body.toString('utf8').should.equal('this is test file one');
               }))))));
 
-    it('should successfully save additionally POSTed attachment binary data', testService((service) =>
+    it('should successfully save additionally POSTed attachment binary data', testService((service, container) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
