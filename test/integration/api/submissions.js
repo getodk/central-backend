@@ -477,7 +477,6 @@ describe('api: /submission', () => {
                   headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
                   body.toString('utf8').should.equal('this is test file two');
                 }))
-              // FIXME this test extension should ONLY run if s3 is enabled
               .then(() => {
                 if (!process.env.TEST_S3) return;
                 return exhaustBlobs(container)
