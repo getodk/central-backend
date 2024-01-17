@@ -61,6 +61,7 @@
     "semver": "^7.5.3",
     "should": "~13",
     "streamtest": "~1.2",
+    "superagent": "~8.0",
     "supertest": "^6.3.3",
     "tmp": "~0.2"
   }

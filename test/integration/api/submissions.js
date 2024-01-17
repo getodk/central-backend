@@ -488,17 +488,13 @@ describe('api: /submission', () => {
                       headers['content-type'].should.equal('text/plain; charset=utf-8');
                       should(headers['content-disposition']).be.undefined();
 
-                      const location = headers['location'];
+                      const { location } = headers;
                       location.should.match(/^http:\/\/localhost:9000\/odk-central-bucket\/blob_md5_25bdb03b7942881c279788575997efba_sha_eba799d1dc156c0df70f7bad65f815928b98aa7d\?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=odk-central-dev%2F\d{8}%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=\d{8}T\d{6}Z&X-Amz-Expires=60&X-Amz-SignedHeaders=host&X-Amz-Signature=[0-9a-f]{64}$/);
-                      console.log('body:', body);
                       body.should.deepEqual({}); // not sure why
 
                       return superagent.get(location);
                     })
                     .then((res) => {
-                      console.log('res:', res);
-                      console.log('res.statusCode:', res.statusCode);
-                      console.log('res.status:', res.status);
                       const { status, headers, body } = res;
                       status.should.equal(200);
                       headers['content-type'].should.equal('image/jpeg');
@@ -506,7 +502,7 @@ describe('api: /submission', () => {
                       //headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
                       body.toString('utf8').should.equal('this is test file two');
                     }));
-                }))))));
+              }))))));
 
     it('should accept encrypted submissions, with attachments', testService((service) =>
       service.login('alice', (asAlice) =>
