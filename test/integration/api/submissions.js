@@ -497,8 +497,7 @@ describe('api: /submission', () => {
                       const { status, headers, body } = res;
                       status.should.equal(200);
                       headers['content-type'].should.equal('image/jpeg');
-                      //FIXME we should preserve the original filename if we can
-                      //headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+                      headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
                       body.toString('utf8').should.equal('this is test file two');
                     }));
               }))))));
