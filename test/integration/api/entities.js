@@ -923,86 +923,195 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should return instanceId even when submission is deleted', testEntities(async (service, container) => {
-      const asAlice = await service.login('alice');
+    describe('entity source within an audit event', () => {
+      it('should not include submission or source event when entity created or updated via API', testService(async (service) => {
+        const asAlice = await service.login('alice');
 
-      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
-        .expect(200);
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
 
-      await container.Forms.purge(true);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
-        .expect(200)
-        .then(({ body: logs }) => {
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].details.should.not.have.property('submission');
+            logs[0].details.should.not.have.property('sourceEvent');
+          });
 
-          logs[0].should.be.an.Audit();
-          logs[0].action.should.be.eql('entity.create');
-          logs[0].actor.displayName.should.be.eql('Alice');
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+          .send({ label: 'two' })
+          .expect(200);
 
-          logs[0].details.sourceEvent.should.be.an.Audit();
-          logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
-          logs[0].details.sourceEvent.loggedAt.should.be.isoDate();
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].details.should.not.have.property('submission');
+            logs[0].details.should.not.have.property('sourceEvent');
+          });
+      }));
 
-          logs[0].details.should.not.have.property('submission');
+      it('should return source when entity created via submission approval', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
 
-          logs[0].details.submissionCreate.details.instanceId.should.be.eql('one');
-          logs[0].details.submissionCreate.actor.displayName.should.be.eql('Alice');
-          logs[0].details.submissionCreate.loggedAt.should.be.isoDate();
-        });
-    }));
+        // testEntities creates an entity on submission approval
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].details.submission.should.be.a.Submission();
+            logs[0].details.submission.instanceId.should.be.eql('one');
+            logs[0].details.submission.xmlFormId.should.be.eql('simpleEntity');
+            logs[0].details.submission.currentVersion.instanceName.should.be.eql('one');
 
-    it('should return instanceId even when form is deleted', testEntities(async (service) => {
-      const asAlice = await service.login('alice');
+            logs[0].details.sourceEvent.should.be.an.Audit();
+            logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
+            logs[0].details.sourceEvent.action.should.be.eql('submission.update');
+          });
+      }));
 
-      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
-        .expect(200);
+      it('should return source when entity created via submission creation', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
-        .expect(200)
-        .then(({ body: logs }) => {
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
 
-          logs[0].should.be.an.Audit();
-          logs[0].action.should.be.eql('entity.create');
-          logs[0].actor.displayName.should.be.eql('Alice');
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
 
-          logs[0].details.sourceEvent.should.be.an.Audit();
-          logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
-          logs[0].details.sourceEvent.loggedAt.should.be.isoDate();
+        await exhaust(container);
 
-          logs[0].details.should.not.have.property('submission');
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].details.submission.should.be.a.Submission();
+            logs[0].details.submission.instanceId.should.be.eql('one');
+            logs[0].details.submission.xmlFormId.should.be.eql('simpleEntity');
+            logs[0].details.submission.currentVersion.instanceName.should.be.eql('one');
 
-          logs[0].details.submissionCreate.details.instanceId.should.be.eql('one');
-          logs[0].details.submissionCreate.actor.displayName.should.be.eql('Alice');
-          logs[0].details.submissionCreate.loggedAt.should.be.isoDate();
-        });
-    }));
+            logs[0].details.sourceEvent.should.be.an.Audit();
+            logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
+            logs[0].details.sourceEvent.action.should.be.eql('submission.create');
+          });
+      }));
 
-    // It's not possible to purge audit logs via API.
-    // However System Administrators can purge/archive audit logs via SQL
-    // to save disk space and improve performance
-    it('should return entity audits even when submission and its logs are deleted', testEntities(async (service, container) => {
-      const asAlice = await service.login('alice');
+      it('should return source when entity updated via submission', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
 
-      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
-        .expect(200);
+        // testEntityUpdates does the following: creates dataset, creates update form. test needs to submit update.
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
 
-      await container.Forms.purge(true);
+        await exhaust(container);
 
-      await container.run(sql`DELETE FROM audits WHERE action like 'submission%'`);
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].details.submission.should.be.a.Submission();
+            logs[0].details.submission.instanceId.should.be.eql('one');
+            logs[0].details.submission.xmlFormId.should.be.eql('updateEntity');
+            logs[0].details.submission.currentVersion.instanceName.should.be.eql('one');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
-        .expect(200)
-        .then(({ body: logs }) => {
+            logs[0].details.sourceEvent.should.be.an.Audit();
+            logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
+            logs[0].details.sourceEvent.action.should.be.eql('submission.create');
+          });
+      }));
 
-          logs[0].should.be.an.Audit();
-          logs[0].action.should.be.eql('entity.create');
-          logs[0].actor.displayName.should.be.eql('Alice');
+      it('should return instanceId even when submission is deleted', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
 
-          logs[0].details.should.not.have.property('approval');
-          logs[0].details.should.not.have.property('submission');
-          logs[0].details.should.not.have.property('submissionCreate');
-        });
-    }));
+        await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+          .expect(200);
+
+        await container.Forms.purge(true);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].should.be.an.Audit();
+            logs[0].action.should.be.eql('entity.create');
+            logs[0].actor.displayName.should.be.eql('Alice');
+
+            logs[0].details.sourceEvent.should.be.an.Audit();
+            logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
+            logs[0].details.sourceEvent.loggedAt.should.be.isoDate();
+
+            logs[0].details.submission.instanceId.should.be.eql('one');
+            logs[0].details.submission.actor.displayName.should.be.eql('Alice');
+            logs[0].details.submission.createdAt.should.be.isoDate();
+
+            // submission is only a stub so it doesn't have things like instanceName or currentVersion
+            logs[0].details.submission.should.not.have.property('instanceName');
+            logs[0].details.submission.should.not.have.property('currentVersion');
+          });
+      }));
+
+      it('should return instanceId even when form is deleted', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].should.be.an.Audit();
+            logs[0].action.should.be.eql('entity.create');
+            logs[0].actor.displayName.should.be.eql('Alice');
+
+            logs[0].details.sourceEvent.should.be.an.Audit();
+            logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
+            logs[0].details.sourceEvent.loggedAt.should.be.isoDate();
+
+            logs[0].details.submission.instanceId.should.be.eql('one');
+            logs[0].details.submission.actor.displayName.should.be.eql('Alice');
+            logs[0].details.submission.createdAt.should.be.isoDate();
+
+            // submission is only a stub so it doesn't have things like instanceName or currentVersion
+            logs[0].details.submission.should.not.have.property('instanceName');
+            logs[0].details.submission.should.not.have.property('currentVersion');
+          });
+      }));
+
+      // It's not possible to purge audit logs via API.
+      // However System Administrators can purge/archive audit logs via SQL
+      // to save disk space and improve performance
+      it('should return entity audits even when submission and its logs are deleted', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+          .expect(200);
+
+        await container.Forms.purge(true);
+
+        await container.run(sql`DELETE FROM audits WHERE action like 'submission%'`);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+
+            logs[0].should.be.an.Audit();
+            logs[0].action.should.be.eql('entity.create');
+            logs[0].actor.displayName.should.be.eql('Alice');
+
+            logs[0].details.should.not.have.property('approval');
+            logs[0].details.should.not.have.property('submission');
+            logs[0].details.should.not.have.property('submissionCreate');
+          });
+      }));
+    });
 
     it('should return right approval details when we have multiple approvals', testService(async (service, container) => {
       const asAlice = await service.login('alice');
