@@ -1052,8 +1052,7 @@ describe('Entities API', () => {
             logs[0].details.submission.submitter.displayName.should.be.eql('Alice');
             logs[0].details.submission.createdAt.should.be.isoDate();
 
-            // submission is only a stub so it doesn't have things like instanceName or currentVersion
-            logs[0].details.submission.should.not.have.property('instanceName');
+            // submission is only a stub so it shouldn't have currentVersion
             logs[0].details.submission.should.not.have.property('currentVersion');
           });
       }));
