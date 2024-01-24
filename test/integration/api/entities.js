@@ -841,14 +841,14 @@ describe('Entities API', () => {
           logs[0].details.entity.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
           logs[0].actor.displayName.should.be.eql('Bob');
 
-          logs[0].details.submission.should.be.a.Submission();
-          logs[0].details.submission.xmlFormId.should.be.eql('updateEntity');
-          logs[0].details.submission.currentVersion.instanceName.should.be.eql('one');
-          logs[0].details.submission.currentVersion.submitter.displayName.should.be.eql('Bob');
-          logs[0].details.sourceEvent.should.be.an.Audit();
-          logs[0].details.sourceEvent.actor.displayName.should.be.eql('Bob');
-          logs[0].details.sourceEvent.loggedAt.should.be.isoDate();
-          logs[0].details.sourceEvent.action.should.be.eql('submission.create');
+          logs[0].details.source.submission.should.be.a.Submission();
+          logs[0].details.source.submission.xmlFormId.should.be.eql('updateEntity');
+          logs[0].details.source.submission.currentVersion.instanceName.should.be.eql('one');
+          logs[0].details.source.submission.currentVersion.submitter.displayName.should.be.eql('Bob');
+          logs[0].details.source.event.should.be.an.Audit();
+          logs[0].details.source.event.actor.displayName.should.be.eql('Bob');
+          logs[0].details.source.event.loggedAt.should.be.isoDate();
+          logs[0].details.source.event.action.should.be.eql('submission.create');
 
           logs[1].should.be.an.Audit();
           logs[1].action.should.be.eql('entity.update.version');
@@ -859,15 +859,15 @@ describe('Entities API', () => {
           logs[2].action.should.be.eql('entity.create');
           logs[2].actor.displayName.should.be.eql('Alice');
 
-          logs[2].details.sourceEvent.should.be.an.Audit();
-          logs[2].details.sourceEvent.actor.displayName.should.be.eql('Alice');
-          logs[2].details.sourceEvent.loggedAt.should.be.isoDate();
-          logs[2].details.sourceEvent.action.should.be.eql('submission.update');
+          logs[2].details.source.event.should.be.an.Audit();
+          logs[2].details.source.event.actor.displayName.should.be.eql('Alice');
+          logs[2].details.source.event.loggedAt.should.be.isoDate();
+          logs[2].details.source.event.action.should.be.eql('submission.update');
 
-          logs[2].details.submission.should.be.a.Submission();
-          logs[2].details.submission.xmlFormId.should.be.eql('simpleEntity');
-          logs[2].details.submission.currentVersion.instanceName.should.be.eql('one');
-          logs[2].details.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
+          logs[2].details.source.submission.should.be.a.Submission();
+          logs[2].details.source.submission.xmlFormId.should.be.eql('simpleEntity');
+          logs[2].details.source.submission.currentVersion.instanceName.should.be.eql('one');
+          logs[2].details.source.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
         });
     }));
 
@@ -917,9 +917,9 @@ describe('Entities API', () => {
           logs[0].action.should.be.eql('entity.create');
           logs[0].actor.displayName.should.be.eql('Alice');
 
-          logs[0].details.submission.should.be.a.Submission();
-          logs[0].details.submission.xmlFormId.should.be.eql('simpleEntity');
-          logs[0].details.submission.currentVersion.instanceName.should.be.eql('new instance name');
+          logs[0].details.source.submission.should.be.a.Submission();
+          logs[0].details.source.submission.xmlFormId.should.be.eql('simpleEntity');
+          logs[0].details.source.submission.currentVersion.instanceName.should.be.eql('new instance name');
         });
     }));
 
@@ -942,8 +942,7 @@ describe('Entities API', () => {
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
           .expect(200)
           .then(({ body: logs }) => {
-            logs[0].details.should.not.have.property('submission');
-            logs[0].details.should.not.have.property('sourceEvent');
+            logs[0].details.should.not.have.property('source');
           });
 
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
@@ -953,8 +952,7 @@ describe('Entities API', () => {
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
           .expect(200)
           .then(({ body: logs }) => {
-            logs[0].details.should.not.have.property('submission');
-            logs[0].details.should.not.have.property('sourceEvent');
+            logs[0].details.should.not.have.property('source');
           });
       }));
 
@@ -965,14 +963,14 @@ describe('Entities API', () => {
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
           .expect(200)
           .then(({ body: logs }) => {
-            logs[0].details.submission.should.be.a.Submission();
-            logs[0].details.submission.instanceId.should.be.eql('one');
-            logs[0].details.submission.xmlFormId.should.be.eql('simpleEntity');
-            logs[0].details.submission.currentVersion.instanceName.should.be.eql('one');
+            logs[0].details.source.submission.should.be.a.Submission();
+            logs[0].details.source.submission.instanceId.should.be.eql('one');
+            logs[0].details.source.submission.xmlFormId.should.be.eql('simpleEntity');
+            logs[0].details.source.submission.currentVersion.instanceName.should.be.eql('one');
 
-            logs[0].details.sourceEvent.should.be.an.Audit();
-            logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
-            logs[0].details.sourceEvent.action.should.be.eql('submission.update');
+            logs[0].details.source.event.should.be.an.Audit();
+            logs[0].details.source.event.actor.displayName.should.be.eql('Alice');
+            logs[0].details.source.event.action.should.be.eql('submission.update');
           });
       }));
 
@@ -993,14 +991,14 @@ describe('Entities API', () => {
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
           .expect(200)
           .then(({ body: logs }) => {
-            logs[0].details.submission.should.be.a.Submission();
-            logs[0].details.submission.instanceId.should.be.eql('one');
-            logs[0].details.submission.xmlFormId.should.be.eql('simpleEntity');
-            logs[0].details.submission.currentVersion.instanceName.should.be.eql('one');
+            logs[0].details.source.submission.should.be.a.Submission();
+            logs[0].details.source.submission.instanceId.should.be.eql('one');
+            logs[0].details.source.submission.xmlFormId.should.be.eql('simpleEntity');
+            logs[0].details.source.submission.currentVersion.instanceName.should.be.eql('one');
 
-            logs[0].details.sourceEvent.should.be.an.Audit();
-            logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
-            logs[0].details.sourceEvent.action.should.be.eql('submission.create');
+            logs[0].details.source.event.should.be.an.Audit();
+            logs[0].details.source.event.actor.displayName.should.be.eql('Alice');
+            logs[0].details.source.event.action.should.be.eql('submission.create');
           });
       }));
 
@@ -1018,14 +1016,14 @@ describe('Entities API', () => {
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
           .expect(200)
           .then(({ body: logs }) => {
-            logs[0].details.submission.should.be.a.Submission();
-            logs[0].details.submission.instanceId.should.be.eql('one');
-            logs[0].details.submission.xmlFormId.should.be.eql('updateEntity');
-            logs[0].details.submission.currentVersion.instanceName.should.be.eql('one');
+            logs[0].details.source.submission.should.be.a.Submission();
+            logs[0].details.source.submission.instanceId.should.be.eql('one');
+            logs[0].details.source.submission.xmlFormId.should.be.eql('updateEntity');
+            logs[0].details.source.submission.currentVersion.instanceName.should.be.eql('one');
 
-            logs[0].details.sourceEvent.should.be.an.Audit();
-            logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
-            logs[0].details.sourceEvent.action.should.be.eql('submission.create');
+            logs[0].details.source.event.should.be.an.Audit();
+            logs[0].details.source.event.actor.displayName.should.be.eql('Alice');
+            logs[0].details.source.event.action.should.be.eql('submission.create');
           });
       }));
 
@@ -1044,16 +1042,16 @@ describe('Entities API', () => {
             logs[0].action.should.be.eql('entity.create');
             logs[0].actor.displayName.should.be.eql('Alice');
 
-            logs[0].details.sourceEvent.should.be.an.Audit();
-            logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
-            logs[0].details.sourceEvent.loggedAt.should.be.isoDate();
+            logs[0].details.source.event.should.be.an.Audit();
+            logs[0].details.source.event.actor.displayName.should.be.eql('Alice');
+            logs[0].details.source.event.loggedAt.should.be.isoDate();
 
-            logs[0].details.submission.instanceId.should.be.eql('one');
-            logs[0].details.submission.submitter.displayName.should.be.eql('Alice');
-            logs[0].details.submission.createdAt.should.be.isoDate();
+            logs[0].details.source.submission.instanceId.should.be.eql('one');
+            logs[0].details.source.submission.submitter.displayName.should.be.eql('Alice');
+            logs[0].details.source.submission.createdAt.should.be.isoDate();
 
             // submission is only a stub so it shouldn't have currentVersion
-            logs[0].details.submission.should.not.have.property('currentVersion');
+            logs[0].details.source.submission.should.not.have.property('currentVersion');
           });
       }));
 
@@ -1070,17 +1068,17 @@ describe('Entities API', () => {
             logs[0].action.should.be.eql('entity.create');
             logs[0].actor.displayName.should.be.eql('Alice');
 
-            logs[0].details.sourceEvent.should.be.an.Audit();
-            logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
-            logs[0].details.sourceEvent.loggedAt.should.be.isoDate();
+            logs[0].details.source.event.should.be.an.Audit();
+            logs[0].details.source.event.actor.displayName.should.be.eql('Alice');
+            logs[0].details.source.event.loggedAt.should.be.isoDate();
 
-            logs[0].details.submission.instanceId.should.be.eql('one');
-            logs[0].details.submission.submitter.displayName.should.be.eql('Alice');
-            logs[0].details.submission.createdAt.should.be.isoDate();
+            logs[0].details.source.submission.instanceId.should.be.eql('one');
+            logs[0].details.source.submission.submitter.displayName.should.be.eql('Alice');
+            logs[0].details.source.submission.createdAt.should.be.isoDate();
 
             // submission is only a stub so it doesn't have things like instanceName or currentVersion
-            logs[0].details.submission.should.not.have.property('instanceName');
-            logs[0].details.submission.should.not.have.property('currentVersion');
+            logs[0].details.source.submission.should.not.have.property('instanceName');
+            logs[0].details.source.submission.should.not.have.property('currentVersion');
           });
       }));
 
@@ -1169,15 +1167,15 @@ describe('Entities API', () => {
           logs[0].action.should.be.eql('entity.create');
           logs[0].actor.displayName.should.be.eql('Alice');
 
-          logs[0].details.sourceEvent.should.be.an.Audit();
-          logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
-          logs[0].details.sourceEvent.loggedAt.should.be.isoDate();
-          logs[0].details.sourceEvent.notes.should.be.eql('create entity'); // this confirms that it's the second approval
+          logs[0].details.source.event.should.be.an.Audit();
+          logs[0].details.source.event.actor.displayName.should.be.eql('Alice');
+          logs[0].details.source.event.loggedAt.should.be.isoDate();
+          logs[0].details.source.event.notes.should.be.eql('create entity'); // this confirms that it's the second approval
 
-          logs[0].details.submission.should.be.a.Submission();
-          logs[0].details.submission.xmlFormId.should.be.eql('simpleEntity');
-          logs[0].details.submission.currentVersion.instanceName.should.be.eql('one');
-          logs[0].details.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
+          logs[0].details.source.submission.should.be.a.Submission();
+          logs[0].details.source.submission.xmlFormId.should.be.eql('simpleEntity');
+          logs[0].details.source.submission.currentVersion.instanceName.should.be.eql('one');
+          logs[0].details.source.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
         });
 
     }));
