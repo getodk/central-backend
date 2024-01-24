@@ -1,6 +1,8 @@
 const { readFileSync } = require('fs');
 const appPath = require('app-root-path');
 const { sql } = require('slonik');
+// eslint-disable-next-line import/no-extraneous-dependencies
+const superagent = require('superagent');
 const testData = require('../../data/xml');
 const { testService } = require('../setup');
 
@@ -15,7 +17,7 @@ describe('blob query module', () => {
         .then(() => container.oneFirst(sql`select count(*) from blobs`))
         .then((count) => count.should.equal(1)))));
 
-  it('should handle blob collisions with different filenames', testService((service, container) =>
+  it('should handle blob collisions with different filenames (mp4 first)', testService((service, container) =>
     // One one instance of the form, two files are uploaded
     // On another instance of the form (different id), one file is uploaded
     // and it creates another reference to one of the blobs with a different
@@ -50,8 +52,94 @@ describe('blob query module', () => {
           )
           .attach('my_file2.mp4', Buffer.from('this is test file one'), { filename: 'my_file2.mp4' })
           .expect(201))
+        .then(() => asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+            .send(Buffer.from('this is test file one'))
+            .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            .expect(200)))
         .then(() => container.oneFirst(sql`select count(*) from blobs`))
         .then((count) => count.should.equal(2))
+        .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+          .expect(200)
+          .then(({ headers, body }) => {
+            headers['content-type'].should.equal('video/mp4');
+            headers['content-disposition'].should.equal('attachment; filename="my_file1.mp4"; filename*=UTF-8\'\'my_file1.mp4');
+            headers['etag'].should.equal('W/"15-oWv8j7atpseMloFCITd17xqEmmw"'); // eslint-disable-line dot-notation
+            body.toString('utf8').should.equal('this is test file one');
+          }))
+        .then(() => asAlice.get('/v1/projects/1/forms/binaryType2/submissions/bone/attachments/my_file2.mp4')
+          .expect(200)
+          .then(({ headers, body }) => {
+            headers['content-type'].should.equal('video/mp4');
+            headers['content-disposition'].should.equal('attachment; filename="my_file2.mp4"; filename*=UTF-8\'\'my_file2.mp4');
+            headers['etag'].should.equal('W/"15-oWv8j7atpseMloFCITd17xqEmmw"'); // eslint-disable-line dot-notation
+            body.toString('utf8').should.equal('this is test file one');
+          }))
+        .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xlsx')
+          .expect(200) // FIXME this fails because the blob is not found in the DB
+          .then(({ headers, text }) => {
+            headers['content-type'].should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx"; filename*=UTF-8\'\'simple2.xlsx');
+            headers['etag'].should.equal('W/"15-oWv8j7atpseMloFCITd17xqEmmw"'); // eslint-disable-line dot-notation
+            text.toString('utf8').should.equal('this is test file one');
+          })))));
+
+  it('should handle blob collisions with different filenames (xlsx first)', testService((service, container) =>
+    // One one instance of the form, two files are uploaded
+    // On another instance of the form (different id), one file is uploaded
+    // and it creates another reference to one of the blobs with a different
+    // filename.
+    service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200)
+        .then(() => container.oneFirst(sql`select count(*) from blobs`))
+        .then((count) => count.should.equal(0))
+        .then(() => asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+            .send(Buffer.from('this is test file one'))
+            .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            .expect(200)))
+        .then(() => asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+          .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+          .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+          .expect(201))
+        .then(() => container.oneFirst(sql`select count(*) from blobs`))
+        .then((count) => count.should.equal(2))
+        .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType.replace('id="binaryType"', 'id="binaryType2"'))
+          .expect(200))
+        .then(() => asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach(
+            'xml_submission_file',
+            Buffer.from(testData.instances.binaryType.one
+              .replace('id="binaryType"', 'id="binaryType2"')
+              .replace('<file1>my_file1.mp4</file1>', '<file1>my_file2.mp4</file1>')),
+            { filename: 'data.xml' },
+          )
+          .attach('my_file2.mp4', Buffer.from('this is test file one'), { filename: 'my_file2.mp4' })
+          .expect(201))
+        .then(() => container.oneFirst(sql`select count(*) from blobs`))
+        .then((count) => count.should.equal(2))
+        .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xlsx')
+          .expect(200) // FIXME this fails because the blob is not found in the DB
+          .then(({ headers, text }) => {
+            headers['content-type'].should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx"; filename*=UTF-8\'\'simple2.xlsx');
+            headers['etag'].should.equal('W/"15-oWv8j7atpseMloFCITd17xqEmmw"'); // eslint-disable-line dot-notation
+            text.toString('utf8').should.equal('this is test file one');
+          }))
         .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
           .expect(200)
           .then(({ headers, body }) => {
