@@ -3825,10 +3825,10 @@ describe('datasets and entities', () => {
             logs[0].action.should.be.eql('entity.create');
             logs[0].actor.displayName.should.be.eql('Alice');
 
-            logs[0].details.submission.should.be.a.Submission();
-            logs[0].details.submission.xmlFormId.should.be.eql('simpleEntity');
-            logs[0].details.submission.currentVersion.instanceName.should.be.eql('one');
-            logs[0].details.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
+            logs[0].details.source.submission.should.be.a.Submission();
+            logs[0].details.source.submission.xmlFormId.should.be.eql('simpleEntity');
+            logs[0].details.source.submission.currentVersion.instanceName.should.be.eql('one');
+            logs[0].details.source.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
           });
 
 
@@ -4159,8 +4159,8 @@ describe('datasets and entities', () => {
           .then(({ body: logs }) => {
             const updateDetails = logs.filter(log => log.action === 'entity.update.version').map(log => log.details);
             updateDetails.length.should.equal(4);
-            updateDetails.filter(d => d.sourceEvent.action === 'submission.create').length.should.equal(4);
-            updateDetails.map(d => d.submission.instanceId).should.eql([
+            updateDetails.filter(d => d.source.event.action === 'submission.create').length.should.equal(4);
+            updateDetails.map(d => d.source.submission.instanceId).should.eql([
               'six', 'five', 'four', 'three'
             ]);
           });
@@ -4170,9 +4170,9 @@ describe('datasets and entities', () => {
           .expect(200)
           .then(({ body: logs }) => {
             logs[0].action.should.equal('entity.create');
-            logs[0].details.submission.xmlFormId.should.equal('simpleEntity');
-            logs[0].details.submission.instanceId.should.equal('two');
-            logs[0].details.sourceEvent.action.should.equal('submission.create');
+            logs[0].details.source.submission.xmlFormId.should.equal('simpleEntity');
+            logs[0].details.source.submission.instanceId.should.equal('two');
+            logs[0].details.source.event.action.should.equal('submission.create');
           });
 
         // only one entity def should have a source with a non-null parent id
@@ -4486,7 +4486,7 @@ describe('datasets and entities', () => {
         // Observe that the entity's audit says it was updated by the new edited submission
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
           .then(({ body: logs }) => {
-            logs[0].details.submission.instanceId.should.equal('one2');
+            logs[0].details.source.submission.instanceId.should.equal('one2');
           });
 
         // Observe that the submission's audit log makes sense

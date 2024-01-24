@@ -13436,7 +13436,7 @@ components:
             source:
               type: object
               description: The source of the Entity version, such as a Submission or an API request. This property is experimental and may change in the future.
-              example: {event: {}, submissionCreate: {}, submission: {}}
+              example: {event: {}, submission: {}}
             baseDiff:
               type: array
               description: List of properties that are different between this version and its base version. Includes the label if it differs between the two versions.

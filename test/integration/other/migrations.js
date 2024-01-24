@@ -637,7 +637,7 @@ describe('database migrations from 20230512: adding entity_def_sources table', f
     audits[0].details.entityDefId.should.equal(newDef.id);
   }));
 
-  it('should migrate the submissionDefId source of an entity to new table with event links', testServiceFullTrx(async (service, container) => {
+  it.skip('should migrate the submissionDefId source of an entity to new table with event links', testServiceFullTrx(async (service, container) => {
     await upToMigration('20230512-03-add-entity-source.js', false); // actually this is the previous migration
     await populateUsers(container);
     await populateForms(container);

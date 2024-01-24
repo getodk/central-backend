@@ -954,7 +954,7 @@ describe('worker: entity', () => {
         .expect(200)
         .then(({ body: logs }) => {
           logs[0].action.should.be.eql('entity.update.version');
-          logs[0].details.sourceEvent.action.should.be.eql('submission.create');
+          logs[0].details.source.event.action.should.be.eql('submission.create');
         });
     }));
 
