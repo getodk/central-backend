@@ -28,7 +28,7 @@ Instead of `make dev`, run both `make dev-oidc` and `make fake-oidc-server`.
 
 We use OpenAPI specification for API documentation. It is located at `docs/api.yaml`. 
 
-You can run `make api-docs` to preview the document.
+You can run `make api-docs` to preview the document. This will use Docker to build the entire Central docs, which contain the API docs under the "Developers" section.
 
 ## Guidelines
 

@@ -218,6 +218,38 @@ describe('datasets and entities', () => {
           });
       }));
 
+      it('should exclude deleted entities', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Johnny Doe'
+          })
+          .expect(200);
+        await asAlice.get('/v1/projects/1/datasets')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].entities.should.equal(1);
+            body[0].lastEntity.should.be.an.isoDate();
+          });
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+        await asAlice.get('/v1/projects/1/datasets')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].entities.should.equal(0);
+            should.not.exist(body[0].lastEntity);
+          });
+      }));
+
       it('should return the correct count for multiple dataset', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
@@ -1496,6 +1528,372 @@ describe('datasets and entities', () => {
                     .then(attachment => {
                       should(attachment.value.datasetId).be.null();
                     })))))));
+
+      describe('autolink when publishing form that creates and consumes new dataset', () => {
+        // update form that consumes dataset
+        const updateForm = `<?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+          <h:head>
+            <model entities:entities-version="2023.1.0">
+              <instance>
+                <data id="updateEntity" orx:version="1.0">
+                  <person/>
+                  <name/>
+                  <age/>
+                  <hometown/>
+                  <meta>
+                    <entity dataset="people" id="" update="" baseVersion="">
+                      <label/>
+                    </entity>
+                  </meta>
+                </data>
+              </instance>
+              <instance id="people" src="jr://file-csv/people.csv"/>
+              <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+              <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+            </model>
+          </h:head>
+        </h:html>`;
+
+        it('should NOT autolink on upload new form and simultaneously publish', testService(async (service) => {
+          // this path of directly publishing a form on upload isn't possible in central
+          // so it's not going to be supported. if it were, logic would go around line #170 in
+          // lib/model/query/forms.js in Forms.createNew after the dataset is published.
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(updateForm)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].datasetExists.should.be.false();
+            });
+        }));
+
+        it('should autolink when first publishing a draft', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(updateForm)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].exists.should.be.true();
+              body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.true();
+            });
+        }));
+
+        it('should not autolink if attachment already filled in', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(updateForm)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/attachments/people.csv')
+            .send('test,csv\n1,2')
+            .set('Content-Type', 'text/csv')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].exists.should.be.true();
+              body[0].blobExists.should.be.true();
+              body[0].datasetExists.should.be.false();
+              body[0].updatedAt.should.not.be.null();
+            });
+        }));
+
+        it('should not autolink if attachment isnt the dataset in question', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          const differentDataset = `<?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+            <h:head>
+              <model entities:entities-version="2023.1.0">
+                <instance>
+                  <data id="updateEntity" orx:version="1.0">
+                    <person/>
+                    <name/>
+                    <age/>
+                    <hometown/>
+                    <meta>
+                      <entity dataset="students" id="" update="" baseVersion="">
+                        <label/>
+                      </entity>
+                    </meta>
+                  </data>
+                </instance>
+                <instance id="people" src="jr://file-csv/people.csv"/>
+                <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+                <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+              </model>
+            </h:head>
+          </h:html>`;
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(differentDataset)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].exists.should.be.false();
+              body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.false();
+            });
+        }));
+
+        it('should not autolink if dataset already published because it will be attached already if dataset made before', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // upload form that makes people dataset already
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(updateForm)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].exists.should.be.true();
+              body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.true();
+              body[0].should.not.have.property('updatedAt'); // linked to dataset when created, never updated
+            });
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].exists.should.be.true();
+              body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.true();
+              body[0].should.not.have.property('updatedAt'); // linked to dataset when created, never updated
+            });
+        }));
+
+        it('should autolink if dataset already published but it was created after the form draft', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(updateForm)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // upload form that makes people dataset already
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // because the form was uploaded before the dataset was created, this will be null
+          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].exists.should.be.false();
+              body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.false();
+            });
+
+          // we DO auto-link here but since a Central user can still see the draft, and could
+          // potentially see the new dataset now, we might want to change this behavior to NOT
+          // auto-link and have the user explicitly link it themselves.
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].exists.should.be.true();
+              body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.true();
+            });
+        }));
+
+        it('should not autolink if the update form doesnt consume dataset', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // this form creates a dataset to update but it's not propertly attached to the form
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.updateEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+            .then(({ body }) => {
+              body.length.should.equal(0);
+            });
+
+          await asAlice.get('/v1/projects/1/datasets/people')
+            .set('X-Extended-Metadata', 'true')
+            .expect(200)
+            .then(({ body }) => {
+              body.linkedForms.length.should.equal(0);
+            });
+        }));
+
+        it('should not autolink if form doesnt create dataset', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          const noDataset = `<?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+            <h:head>
+              <model entities:entities-version="2023.1.0">
+                <instance>
+                  <data id="updateEntity" orx:version="1.0">
+                    <person/>
+                    <name/>
+                    <age/>
+                    <hometown/>
+                    <meta>
+                      <instanceID/>
+                    </meta>
+                  </data>
+                </instance>
+                <instance id="people" src="jr://file-csv/people.csv"/>
+                <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+                <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+              </model>
+            </h:head>
+          </h:html>`;
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(noDataset)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].exists.should.be.false();
+              body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.false();
+            });
+        }));
+
+        it('should not autolink on create/consume dataset if .csv extention doesnt match case', testService(async (service) => {
+          // we probably want this to be case insensitive but that change will come later.
+          const asAlice = await service.login('alice');
+
+          const caseChange = `<?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+            <h:head>
+              <model entities:entities-version="2023.1.0">
+                <instance>
+                  <data id="updateEntity" orx:version="1.0">
+                    <person/>
+                    <name/>
+                    <age/>
+                    <hometown/>
+                    <meta>
+                      <entity dataset="people" id="" update="" baseVersion="">
+                        <label/>
+                      </entity>
+                    </meta>
+                  </data>
+                </instance>
+                <instance id="people" src="jr://file-csv/people.CSV"/>
+                <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+                <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+              </model>
+            </h:head>
+          </h:html>`;
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(caseChange)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.CSV');
+              body[0].exists.should.be.false();
+              body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.false();
+            });
+        }));
+
+        it('should not autolink on draft consume-only form if .csv extention doesnt match case', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // upload form that makes people dataset already
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          const caseChange = `<?xml version="1.0"?>
+            <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+              <h:head>
+                <model entities:entities-version="2023.1.0">
+                  <instance>
+                    <data id="updateEntity" orx:version="1.0">
+                      <person/>
+                      <name/>
+                      <age/>
+                      <hometown/>
+                      <meta>
+                        <instanceID/>
+                      </meta>
+                    </data>
+                  </instance>
+                  <instance id="people" src="jr://file-csv/people.CSV"/>
+                  <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+                  <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+                </model>
+              </h:head>
+            </h:html>`;
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(caseChange)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.CSV');
+              body[0].exists.should.be.false();
+              body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.false();
+            });
+        }));
+      });
     });
 
     // these scenario will never happen by just using APIs, adding following tests for safety
@@ -1986,7 +2384,6 @@ describe('datasets and entities', () => {
             .then(() => asAlice.get('/v1/projects/1/forms/multiPropertyEntity/draft/dataset-diff')
               .expect(200)
               .then(({ body }) => {
-                //console.log(body);
                 body.should.be.eql([
                   {
                     name: 'foo',
@@ -2865,6 +3262,248 @@ describe('datasets and entities', () => {
           person.currentVersion.should.have.property('data').which.is.eql({ first_name: 'Robert', hometown: 'Seattle' });
         });
     }));
+
+    // c#551 issue, <entity/> tag has no children
+    it('should allow update where no label or no properties are updated and entity block is childless', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      const form = `<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" create="" update="" baseVersion="" />
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'First Label',
+          data: { age: '11' }
+        })
+        .expect(200);
+
+      const sub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="brokenForm" version="1.0">
+        <meta>
+          <instanceID>one</instanceID>
+          <orx:instanceName>one</orx:instanceName>
+          <entity baseVersion="1" dataset="people" id="12345678-1234-4123-8234-123456789abc" update="1" />
+        </meta>
+      </data>`;
+
+      await asAlice.post('/v1/projects/1/forms/brokenForm/submissions')
+        .send(sub)
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .expect(200)
+        .then(({ body: versions }) => {
+          versions[1].version.should.equal(2);
+          versions[1].baseVersion.should.equal(1);
+          versions[1].label.should.equal('First Label');
+          versions[1].data.should.eql({ age: '11' });
+          versions[1].dataReceived.should.eql({});
+        });
+
+      await asAlice.get('/v1/projects/1/forms/brokenForm/submissions/one/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs[0].action.should.equal('entity.update.version');
+        });
+    }));
+
+    // c#552 issue, can't add label to entity update form that previously didnt have label
+    it('should allow label to be added to entity block in new version of form', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const form = `<?xml version="1.0"?>
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" create="" update="" baseVersion="" />
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      const form2 = `<?xml version="1.0"?>
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="2.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" create="" update="" baseVersion="">
+                    <label/>
+                  </entity>
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/brokenForm/draft')
+        .send(form2)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+    }));
+
+    // c#553 issue, forms with and without entity label show different fields
+    // (because entity was previously type 'unknown' instead of 'structure')
+    it('should show same field type (structure) for meta/entity tag with and without children', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const form = `<?xml version="1.0"?>
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="updateWithoutLabel" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" update="" baseVersion="" />
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Form with label nested under entity
+      const form2 = `<?xml version="1.0"?>
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="updateWithLabel" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" update="" baseVersion="">
+                    <label/>
+                  </entity>
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form2)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Compare form fields
+      await asAlice.get('/v1/projects/1/forms/updateWithoutLabel/fields?odata=true')
+        .then(({ body }) => {
+          body[2].path.should.equal('/meta/entity');
+          body[2].type.should.equal('structure');
+
+          body.length.should.equal(3);
+        });
+
+      await asAlice.get('/v1/projects/1/forms/updateWithLabel/fields?odata=true')
+        .then(({ body }) => {
+          body[2].path.should.equal('/meta/entity');
+          body[2].type.should.equal('structure');
+
+          body[3].path.should.equal('/meta/entity/label');
+          body.length.should.equal(4);
+        });
+    }));
+
+    it('should gracefully handle error if incoming entity tag in sub has no attributes', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      const form = `<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" update="" baseVersion="" />
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'First Label',
+          data: { age: '11' }
+        })
+        .expect(200);
+
+      const sub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="brokenForm" version="1.0">
+        <meta>
+          <instanceID>one</instanceID>
+          <orx:instanceName>one</orx:instanceName>
+          <entity/>
+        </meta>
+      </data>`;
+
+      await asAlice.post('/v1/projects/1/forms/brokenForm/submissions')
+        .send(sub)
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/forms/brokenForm/submissions/one/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs[0].action.should.equal('entity.error');
+          logs[0].details.errorMessage.should.equal('Required parameter dataset missing.');
+        });
+    }));
   });
 
   describe('dataset and entities should have isolated lifecycle', () => {
@@ -3323,6 +3962,539 @@ describe('datasets and entities', () => {
         entityErrors.length.should.be.eql(1);
         entityErrors[0].details.errorMessage.should.match(/Required parameter label missing/);
 
+      }));
+
+      it('should use latest version of submission in pending submissions', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // submission is edited to create different entity
+        await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send(testData.instances.simpleEntity.one
+            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:12345678-1234-4123-8234-123456789bbb"')
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200)
+          .then(({ body }) => body.approvalRequired.should.be.false());
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].uuid.should.equal('12345678-1234-4123-8234-123456789bbb');
+          });
+      }));
+
+      it('should use latest version of submission (updated to not create entity) in pending submissions', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // submission is edited to create different entity
+        await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send(testData.instances.simpleEntity.one
+            .replace('create="1"', 'create="0"')
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200)
+          .then(({ body }) => body.approvalRequired.should.be.false());
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(0);
+          });
+      }));
+
+      it('should do something reasonable with pending submissions when they contain entity updates', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // can use update form to make dataset populate via api
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        // populate one entity
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        // I also want one actual submission create that needs approval to run
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .expect(200);
+
+        // send update submissions!
+        // this is an update so it will be processed without needing to be approved.
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.three)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // this will also process the create entity submission, but it wont make an entity
+        await exhaust(container);
+
+        // at this point, the main entity has been updated
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.age.should.equal('55');
+            person.currentVersion.version.should.equal(2);
+          });
+
+        // the second entity has not yet been created because it needs submission approval
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa')
+          .expect(404);
+
+        // send next two submission
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.three
+            .replace('<instanceID>three</instanceID>', '<instanceID>four</instanceID>')
+            .replace('<age>55</age>', '<age>66</age>'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // send next submission
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.three
+            .replace('<instanceID>three</instanceID>', '<instanceID>five</instanceID>')
+            .replace('<age>55</age>', '<age>77</age>'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // exhaust hasn't run yet so the one create submission and two update submissions count as pending
+        // central has no way to know if a submission is a create or update until it reads the submission
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: false })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.be.eql(400.29);
+            body.details.count.should.be.eql(3);
+          });
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200)
+          .then(({ body }) => body.approvalRequired.should.be.false());
+
+        // send another submission
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.three
+            .replace('<instanceID>three</instanceID>', '<instanceID>six</instanceID>')
+            .replace('<age>55</age>', '<age>888</age>'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // at this point, none of the new submissions have been processed
+        // the unprocessed audit log looks like this with the datset.update event between some submission events
+        const unprocessedAudits = await container.Audits.get(new QueryOptions({ condition: { processed: null } }));
+        unprocessedAudits.map(a => a.action).should.eql([
+          'submission.create',
+          'dataset.update',
+          'submission.create',
+          'submission.create'
+        ]);
+
+        await exhaust(container);
+
+        // main entity with many updates
+        // events should all look like submission.create events (vs. dataset update events)
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            const updateDetails = logs.filter(log => log.action === 'entity.update.version').map(log => log.details);
+            updateDetails.length.should.equal(4);
+            updateDetails.filter(d => d.sourceEvent.action === 'submission.create').length.should.equal(4);
+            updateDetails.map(d => d.submission.instanceId).should.eql([
+              'six', 'five', 'four', 'three'
+            ]);
+          });
+
+        // other entity that was created
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.equal('entity.create');
+            logs[0].details.submission.xmlFormId.should.equal('simpleEntity');
+            logs[0].details.submission.instanceId.should.equal('two');
+            logs[0].details.sourceEvent.action.should.equal('submission.create');
+          });
+
+        // only one entity def should have a source with a non-null parent id
+        // the submission that only created an entity
+        const defSourceParentIds = await container.all(sql`
+        select eds.details->'submission'->'instanceId' as "submissionInstanceId"
+        from entity_defs as ed
+        join entity_def_sources as eds on ed."sourceId" = eds.id
+        where eds.details->'parentEventId' is not null`);
+        defSourceParentIds.length.should.equal(1);
+        defSourceParentIds[0].submissionInstanceId.should.equal('two');
+      }));
+    });
+
+    it('should not let submission edits get caught in pending submission count', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Upload form that creates an entity list and publish it
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Configure the entity list to create entities on submission approval
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      // Populate one entity
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Johnny Doe',
+          data: { first_name: 'Johnny', age: '22' }
+        })
+        .expect(200);
+
+      // Upload form that updates entities
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Send submission
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Observe that entity was updated
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.data.age.should.equal('85');
+          person.currentVersion.version.should.equal(2);
+        });
+
+      // Edit the submission
+      await asAlice.patch('/v1/projects/1/forms/updateEntity/submissions/one')
+        .send(testData.instances.updateEntity.one
+          .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2')
+          .replace('<age>85</age>', '<age>99</age>'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Should do nothing
+      await exhaust(container);
+
+      // Observe that nothing else happened with the entity
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.data.age.should.equal('85');
+          person.currentVersion.version.should.equal(2);
+        });
+
+      // count return 200 instead of 400 error with pending submission count
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: false })
+        .expect(200);
+    }));
+
+    describe('central issue #547, reprocessing submissions that had previous entity errors', () => {
+      it('should not reprocess submission that previously generated entity.error', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Upload form that creates an entity list and publish it
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Configure the entity list to create entities on submission approval
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        // Create a submission that fails to create an entity (bad UUID)
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one
+            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:invalid_uuid"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Approve the submission.
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs.filter((log => log.action === 'entity.error')).length.should.equal(1);
+          });
+
+        // Mark the submission as "has issues".
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'hasIssues' })
+          .expect(200);
+
+        // Change the entity list and select yes to processing pending submissions.
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200);
+
+        await exhaust(container);
+
+        // Observe that the submission that failed to create an entity has NOT been reprocessed.
+        // There is only one entity.error before the update.
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs.filter((log => log.action === 'entity.error')).length.should.equal(1);
+
+            const actions = logs.map(log => log.action);
+            actions.should.eql([
+              'submission.update', // set to hasIssue
+              'entity.error', // first processing
+              'submission.update', // approval
+              'submission.create'
+            ]);
+          });
+      }));
+
+      it('should reprocess submission that was edited after previously generating entity.error', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Upload form that creates an entity list and publish it
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Configure the entity list to create entities on submission approval
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        // Create a submission that fails to create an entity (bad UUID)
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one
+            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:invalid_uuid"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Approve the submission.
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        // Observe that it created an error
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs.filter((log => log.action === 'entity.error')).length.should.equal(1);
+          });
+
+        // Update the submission to resolve the error
+        await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send(testData.instances.simpleEntity.one
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Do not approve the submission yet
+        // Check the unprocessed submissions
+        const ds = await container.Datasets.get(1, 'people').then(o => o.get());
+        const subs = await container.Datasets.getUnprocessedSubmissions(ds.id);
+        subs.length.should.equal(1);
+
+        // Change the entity list and select yes to processing pending submissions.
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200);
+
+        await exhaust(container);
+
+        // Observe that the entity has now been created
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+          });
+
+        // Observe that the submission that failed to create an entity HAS been reprocessed.
+        // There is only one entity.error before the update.
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs.filter((log => log.action === 'entity.error')).length.should.equal(1);
+
+            const actions = logs.map(log => log.action);
+            actions.should.eql([
+              'entity.create', // second processing
+              'submission.update.version', // submission edited
+              'entity.error', // first processing
+              'submission.update', // approval
+              'submission.create'
+            ]);
+          });
+      }));
+
+      it('should not reprocessed an update caught up in the pending submission scenario ', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Upload form that creates an entity list and publish it
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Upload form that updates an entity list and publish it
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Configure the entity list to create entities on submission approval
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        // Create a submission that would create an entity on approval. Don't approve it yet.
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Create a submission that would update the entity created by the previous submission
+        // (which doesn't exist yet because it hasn't been approved)
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // Observe that the update was processed immediately but resulted in an entity.error
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.equal('entity.error');
+          });
+
+        // Observe that the entity was not created or updated yet
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(404);
+
+        // Change the entity list and select yes to processing pending submissions.
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200);
+
+        await exhaust(container);
+
+        // Observe that the submission that failed to update an entity has not been reprocessed
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.equal('entity.error');
+          });
+
+        // There was no second update attempt because the entity was not reprocessed
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+          .then(({ body: versions }) => {
+            versions.length.should.equal(1);
+          });
+
+        // Edit the submission so the new def will update the entity
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // Observe that now the entity has been updated
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+          .then(({ body: versions }) => {
+            versions.length.should.equal(2);
+          });
+
+        // Observe that the entity's audit says it was updated by the new edited submission
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .then(({ body: logs }) => {
+            logs[0].details.submission.instanceId.should.equal('one2');
+          });
+
+        // Observe that the submission's audit log makes sense
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one2/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.equal('entity.update.version');
+          });
       }));
     });
   });

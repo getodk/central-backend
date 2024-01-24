@@ -69,9 +69,10 @@ const testEntityUpdates = (test) => testService(async (service, container) => {
     })
     .expect(200);
 
-  // create form and submission to update entity
+  // create a form that can update or create an entity
   await asAlice.post('/v1/projects/1/forms?publish=true')
-    .send(testData.forms.updateEntity)
+    .send(testData.forms.updateEntity
+      .replace('update=""', 'update="" create=""'))
     .set('Content-Type', 'application/xml')
     .expect(200);
 
@@ -224,14 +225,19 @@ describe('Entities API', () => {
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(200)
-        .then(({ body: person, headers }) => {
-          headers.etag.should.be.eql('"1"');
+        .then(({ body: person }) => {
 
           person.should.be.an.Entity();
           person.should.have.property('currentVersion').which.is.an.EntityDef();
+          person.currentVersion.should.have.property('version').which.is.equal(1);
           person.currentVersion.should.have.property('data').which.is.eql({
             age: '88',
             first_name: 'Alice'
+          });
+          person.currentVersion.should.have.property('dataReceived').which.is.eql({
+            age: '88',
+            first_name: 'Alice',
+            label: 'Alice (88)'
           });
         });
     }));
@@ -274,6 +280,11 @@ describe('Entities API', () => {
           person.currentVersion.should.have.property('data').which.is.eql({
             age: '85',
             first_name: 'Alicia'
+          });
+          person.currentVersion.should.have.property('dataReceived').which.is.eql({
+            age: '85',
+            first_name: 'Alicia',
+            label: 'Alicia (85)'
           });
         });
     }));
@@ -337,15 +348,6 @@ describe('Entities API', () => {
           });
         });
     }));
-
-    it('should return 304 not changed ', testEntities(async (service) => {
-      const asAlice = await service.login('alice');
-
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
-        .set('If-None-Match', '"1"')
-        .expect(304);
-    }));
-
 
     it('should return an Entity with SOFT conflict', testService(async (service, container) => {
       const asAlice = await service.login('alice');
@@ -510,9 +512,8 @@ describe('Entities API', () => {
     it('should return all versions of the Entity - Conflicts', testEntities(async (service, container) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
         .send({ data: { age: '12' } })
-        .set('If-Match', '"1"')
         .expect(200);
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -575,14 +576,12 @@ describe('Entities API', () => {
     describe('relevantToConflict', () => {
 
       const createConflictOnV2 = async (user, container) => {
-        await user.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        await user.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
           .send({ data: { age: '12' } })
-          .set('If-Match', '"1"')
           .expect(200);
 
-        await user.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        await user.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=2')
           .send({ data: { age: '18' } })
-          .set('If-Match', '"2"')
           .expect(200);
 
         await user.post('/v1/projects/1/forms?publish=true')
@@ -633,8 +632,7 @@ describe('Entities API', () => {
 
         await createConflictOnV2(asAlice, container);
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
-          .set('If-Match', '"4"')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&baseVersion=4')
           .expect(200);
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions?relevantToConflict=true')
@@ -649,8 +647,7 @@ describe('Entities API', () => {
 
         await createConflictOnV2(asAlice, container);
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
-          .set('If-Match', '"4"')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&baseVersion=4')
           .expect(200);
 
         await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
@@ -677,8 +674,7 @@ describe('Entities API', () => {
 
         await createConflictOnV2(asAlice, container);
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
-          .set('If-Match', '"4"')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&baseVersion=4')
           .expect(200);
 
         await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
@@ -695,6 +691,44 @@ describe('Entities API', () => {
             // resolved flag is true only for the old conflict
             versions.map(v => v.resolved).should.eql([false, false, false, true, false]);
           });
+      }));
+
+      it('should return correct response for conflict after second resolution', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+        await createConflictOnV2(asAlice, container);
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&baseVersion=4')
+          .expect(200);
+
+        // Create v5 based on v3, then resolve it.
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.two
+            .replace('baseVersion="1"', 'baseVersion="3"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&baseVersion=5')
+          .expect(200);
+
+        // Create v6 based on v3, but don't resolve it.
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.three
+            .replace('baseVersion="1"', 'baseVersion="3"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+
+        const { body: versions } = await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+          .expect(200);
+        versions.length.should.equal(6);
+        versions[5].conflict.should.equal('hard');
+        versions.map(version => version.resolved)
+          .should.eql([false, false, false, true, true, false]);
+        versions.filter(version => version.lastGoodVersion)
+          .map(version => version.version)
+          .should.eql([5]);
+        versions.filter(version => version.relevantToConflict)
+          .map(version => version.version)
+          .should.eql([3, 5, 6]);
       }));
     });
   });
@@ -1127,7 +1161,57 @@ describe('Entities API', () => {
             first_name: 'Johnny',
             age: '22'
           });
+          person.currentVersion.should.have.property('dataReceived').which.is.eql({
+            first_name: 'Johnny',
+            age: '22',
+            label: 'Johnny Doe'
+          });
         });
+    }));
+
+    it('should reject if uuid is not a valid uuid', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: 'bad_uuidv4',
+          label: 'Johnny Doe',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(400);
+    }));
+
+    it('should reject if label is blank', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: '',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(400);
+    }));
+
+
+    it('should reject if label is not provided', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(400);
     }));
 
     it('should reject if uuid is not unique', testEntities(async (service) => {
@@ -1236,8 +1320,7 @@ describe('Entities API', () => {
 
     it('should reject if version does not match', testEntities(async (service) => {
       const asAlice = await service.login('alice');
-      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
-        .set('If-Match', '"0"')
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=0')
         .expect(409)
         .then(({ body }) => {
           body.code.should.equal(409.15);
@@ -1310,13 +1393,13 @@ describe('Entities API', () => {
         const asAlice = await service.login('alice');
         const newData = { age: '77', first_name: 'Alan' };
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
-          .set('If-Match', '"1"')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
           .send({
             data: { age: '77', first_name: 'Alan' }
           })
           .expect(200)
           .then(({ body: person }) => {
+            person.currentVersion.dataReceived.should.eql({ age: '77', first_name: 'Alan' });
             person.currentVersion.should.have.property('data').which.is.eql(newData);
             // label hasn't been updated
             person.currentVersion.should.have.property('label').which.is.equal('Alice (88)');
@@ -1326,6 +1409,7 @@ describe('Entities API', () => {
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
           .expect(200)
           .then(({ body: person }) => {
+            person.currentVersion.dataReceived.should.eql({ age: '77', first_name: 'Alan' });
             person.currentVersion.should.have.property('data').which.is.eql(newData);
             person.currentVersion.should.have.property('label').which.is.equal('Alice (88)');
           });
@@ -1360,6 +1444,7 @@ describe('Entities API', () => {
           .then(({ body: person }) => {
             person.currentVersion.should.have.property('data').which.is.eql(newData);
             person.currentVersion.should.have.property('label').which.is.equal('Arnold (66)');
+            person.currentVersion.dataReceived.should.eql({ label: 'Arnold (66)' });
           });
       }));
 
@@ -1381,6 +1466,7 @@ describe('Entities API', () => {
           .then(({ body: person }) => {
             person.currentVersion.should.have.property('label').which.is.eql('New Label');
             person.currentVersion.dataReceived.should.have.property('label').which.is.eql('New Label');
+            person.currentVersion.dataReceived.should.eql({ label: 'New Label' });
           });
       }));
 
@@ -1420,6 +1506,7 @@ describe('Entities API', () => {
           .expect(200)
           .then(({ body: person }) => {
             person.currentVersion.should.have.property('data').which.is.eql(newData);
+            person.currentVersion.dataReceived.should.eql({ city: 'Toronto' });
           });
       }));
 
@@ -1441,6 +1528,7 @@ describe('Entities API', () => {
           .expect(200)
           .then(({ body: person }) => {
             person.currentVersion.should.have.property('data').which.is.eql(newData);
+            person.currentVersion.dataReceived.should.eql({ first_name: '' });
           });
       }));
 
@@ -1532,8 +1620,7 @@ describe('Entities API', () => {
           .expect(200)
           .then(({ body }) => body.updatedAt);
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
-          .set('If-Match', '"3"')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&baseVersion=3')
           .expect(200)
           .then(({ body }) => {
             body.updatedAt.should.not.be.eql(lastUpdatedAt);
@@ -1555,9 +1642,8 @@ describe('Entities API', () => {
 
         const asBob = await service.login('bob');
 
-        await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
+        await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&baseVersion=3')
           .send({ data: { first_name: 'John', age: '10' } })
-          .set('If-Match', '"3"')
           .expect(200);
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
@@ -1585,9 +1671,8 @@ describe('Entities API', () => {
 
         const asBob = await service.login('bob');
 
-        await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        await asBob.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=3')
           .send({ data: { first_name: 'John', age: '10' } })
-          .set('If-Match', '"3"')
           .expect(200);
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
@@ -1636,8 +1721,7 @@ describe('Entities API', () => {
 
         const asAlice = await service.login('alice');
 
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true')
-          .set('If-Match', '"0"')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&baseVersion=0')
           .expect(409)
           .then(({ body }) => {
             body.code.should.equal(409.15);
@@ -1834,6 +1918,52 @@ describe('Entities API', () => {
 
   });
 
+  describe('create new entities from submissions', () => {
+    // More success and error cases in test/integration/worker/entity.js
+    it('should create entity', testEntityUpdates(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.three)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789bbb')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.label.should.equal('John (40)');
+          person.currentVersion.data.should.eql({ age: '40', first_name: 'John' });
+          person.currentVersion.version.should.equal(1);
+        });
+    }));
+
+    it('should not create entity if the label is missing in the submission', testEntityUpdates(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.three
+          .replace('<entities:label>John (40)</entities:label>', ''))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789bbb')
+        .expect(404);
+
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/three/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs[0].should.be.an.Audit();
+          logs[0].action.should.be.eql('entity.error');
+          logs[0].details.problem.problemCode.should.equal(400.2);
+          logs[0].details.errorMessage.should.equal('Required parameter label missing.');
+        });
+    }));
+  });
+
   describe('entity updates from submissions', () => {
     it('should process multiple updates in a row', testEntityUpdates(async (service, container) => {
       const asAlice = await service.login('alice');
@@ -1865,12 +1995,11 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should update label', testEntityUpdates(async (service, container) => {
+    it('should update data and label', testEntityUpdates(async (service, container) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
-        .send(testData.instances.updateEntity.one
-          .replace('<label>Alicia (85)</label>', '<label>new label</label>'))
+        .send(testData.instances.updateEntity.one)
         .expect(200);
 
       await exhaust(container);
@@ -1878,18 +2007,19 @@ describe('Entities API', () => {
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(200)
         .then(({ body: person }) => {
-          person.currentVersion.label.should.equal('new label');
+          person.currentVersion.dataReceived.should.eql({ age: '85', first_name: 'Alicia', label: 'Alicia (85)' });
+          person.currentVersion.label.should.equal('Alicia (85)');
           person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
         });
     }));
 
-    it.skip('should set label to blank', testEntityUpdates(async (service, container) => {
-      // TODO: fix the entity label update logic to make this test pass.
+    it('should update only the label', testEntityUpdates(async (service, container) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
         .send(testData.instances.updateEntity.one
-          .replace('<label>Alicia (85)</label>', '<label></label>'))
+          .replace('<name>Alicia</name>', '')
+          .replace('<age>85</age>', ''))
         .expect(200);
 
       await exhaust(container);
@@ -1897,7 +2027,9 @@ describe('Entities API', () => {
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(200)
         .then(({ body: person }) => {
-          person.currentVersion.label.should.equal('');
+          person.currentVersion.dataReceived.should.eql({ label: 'Alicia (85)' });
+          person.currentVersion.label.should.equal('Alicia (85)');
+          person.currentVersion.data.should.eql({ age: '22', first_name: 'Johnny' });
         });
     }));
 
@@ -1914,12 +2046,32 @@ describe('Entities API', () => {
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(200)
         .then(({ body: person }) => {
+          person.currentVersion.dataReceived.should.eql({ age: '85', first_name: 'Alicia' });
+          person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
           person.currentVersion.label.should.equal('Johnny Doe');
         });
     }));
 
-    it.skip('should set field to blank', testEntityUpdates(async (service, container) => {
-      // TODO: fix update logic to make this test pass
+    it('should not update label if label is blank', testEntityUpdates(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one
+          .replace('<label>Alicia (85)</label>', '<label></label>'))
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.dataReceived.should.eql({ age: '85', first_name: 'Alicia' });
+          person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
+          person.currentVersion.label.should.equal('Johnny Doe');
+        });
+    }));
+
+    it('should set field to blank', testEntityUpdates(async (service, container) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
@@ -1932,6 +2084,8 @@ describe('Entities API', () => {
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(200)
         .then(({ body: person }) => {
+          person.currentVersion.dataReceived.should.eql({ label: 'Alicia (85)', first_name: 'Alicia', age: '' });
+          person.currentVersion.data.first_name.should.eql('Alicia');
           person.currentVersion.data.age.should.eql('');
         });
     }));
@@ -1941,7 +2095,6 @@ describe('Entities API', () => {
 
       await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
         .send(testData.instances.updateEntity.one
-          .replace('<age>85</age>', '<age>22</age>')
           .replace('<name>Alicia</name>', '')) // original first_name in entity is Johnny
         .expect(200);
 
@@ -1950,8 +2103,768 @@ describe('Entities API', () => {
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(200)
         .then(({ body: person }) => {
-          person.currentVersion.data.should.eql({ age: '22', first_name: 'Johnny' });
+          person.currentVersion.dataReceived.should.eql({ label: 'Alicia (85)', age: '85' });
+          person.currentVersion.data.first_name.should.equal('Johnny'); // original first name
+          person.currentVersion.data.should.eql({ age: '85', first_name: 'Johnny' });
+          person.currentVersion.label.should.equal('Alicia (85)');
         });
+    }));
+
+    describe('update error cases', () => {
+      // more checks of errors are found in worker/entity tests
+      it('should log an error and not update if baseVersion is missing', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('baseVersion="1"', ''))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            should(person.currentVersion.baseVersion).be.null();
+          });
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].should.be.an.Audit();
+            logs[0].action.should.be.eql('entity.error');
+          });
+      }));
+
+      it('should log an error and not update if baseVersion in submission does not exist', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('baseVersion="1"', 'baseVersion="2"'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            should(person.currentVersion.baseVersion).be.null();
+          });
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].should.be.an.Audit();
+            logs[0].action.should.be.eql('entity.error');
+            logs[0].details.problem.problemCode.should.equal(404.9);
+            logs[0].details.errorMessage.should.equal('Base version (2) does not exist for entity UUID (12345678-1234-4123-8234-123456789abc) in dataset (people).');
+          });
+      }));
+
+      it('should log an error and if baseVersion is not an integer', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('baseVersion="1"', 'baseVersion="not_an_integer"'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.version.should.equal(1);
+          });
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].should.be.an.Audit();
+            logs[0].action.should.be.eql('entity.error');
+            logs[0].details.problem.problemCode.should.equal(400.11);
+            logs[0].details.errorMessage.should.equal('Invalid input data type: expected (baseVersion) to be (integer)');
+          });
+      }));
+    });
+
+    describe('create and update in a single submission', () => {
+      it('should create an entity if it does not yet exist', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('update="1"', 'create="1" update="1"')
+            .replace('id="12345678-1234-4123-8234-123456789abc"', 'id="12345678-1234-4123-8234-123456789aaa"'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('entity.create');
+            logs[1].action.should.be.eql('submission.create');
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
+            person.currentVersion.label.should.equal('Alicia (85)');
+            person.currentVersion.version.should.equal(1);
+          });
+      }));
+
+      it('should perform an upsert with blank label', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // This update should work even with no label
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('update="1"', 'create="1" update="1"')
+            .replace('<label>Alicia (85)</label>', ''))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.dataReceived.should.eql({ age: '85', first_name: 'Alicia' });
+            person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
+            person.currentVersion.label.should.equal('Johnny Doe');
+          });
+      }));
+
+      it('should have create error if failed to update non-existent entity but still had error with create (e.g blank label)', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('update="1"', 'create="1" update="1"')
+            .replace('id="12345678-1234-4123-8234-123456789abc"', 'id="12345678-1234-4123-8234-123456789aaa"')
+            .replace('<label>Alicia (85)</label>', ''))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa')
+          .expect(404);
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('entity.error');
+            logs[0].details.problem.problemCode.should.be.eql(400.2);
+            logs[0].details.errorMessage.should.be.eql('Required parameter label missing.');
+            logs[1].action.should.be.eql('submission.create');
+          });
+      }));
+
+      it('should update an entity if it does exist', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('update="1"', 'create="1" update="1"'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
+            person.currentVersion.label.should.equal('Alicia (85)');
+            person.currentVersion.version.should.equal(2);
+          });
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('entity.update.version');
+            logs[1].action.should.be.eql('submission.create');
+          });
+      }));
+
+      it('should fail both update and create if uuid exists and base version is wrong', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('update="1"', 'create="1" update="1"')
+            .replace('baseVersion="1"', 'baseVersion="99"'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            // Not updated
+            person.currentVersion.version.should.equal(1);
+            person.currentVersion.data.should.eql({ age: '22', first_name: 'Johnny' });
+            person.currentVersion.label.should.equal('Johnny Doe');
+          });
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('entity.error');
+            logs[0].details.errorMessage.should.be.eql('Base version (99) does not exist for entity UUID (12345678-1234-4123-8234-123456789abc) in dataset (people).');
+            logs[1].action.should.be.eql('submission.create');
+          });
+      }));
+
+      it('should fail both update and create on error like invalid uuid', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('update="1"', 'create="1" update="1"')
+            .replace('id="12345678-1234-4123-8234-123456789abc"', 'id="not_a_valid_uuid"'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            // Not updated
+            person.currentVersion.version.should.equal(1);
+            person.currentVersion.data.should.eql({ age: '22', first_name: 'Johnny' });
+            person.currentVersion.label.should.equal('Johnny Doe');
+          });
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('entity.error');
+            logs[1].action.should.be.eql('submission.create');
+          });
+      }));
+    });
+
+    // 10 examples described in central issue #517
+    describe('only take one entity action per submission', () => {
+      // Example 1
+      it('should create an entity from submission edited to have create flag', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one
+            .replace('create="1"', 'create="0"'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(404);
+
+        await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .set('Content-Type', 'text/xml')
+          .send(testData.instances.simpleEntity.one
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('entity.create');
+            logs[1].action.should.be.eql('submission.update.version');
+            logs[2].action.should.be.eql('submission.create');
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '88', first_name: 'Alice' });
+            person.currentVersion.label.should.equal('Alice (88)');
+            person.currentVersion.version.should.equal(1);
+          });
+      }));
+
+      // Example 2
+      it('should create an entity from approved submission edited to have create flag', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one
+            .replace('create="1"', 'create="0"'))
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(404);
+
+        await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .set('Content-Type', 'text/xml')
+          .send(testData.instances.simpleEntity.one
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('entity.create');
+            logs[1].action.should.be.eql('submission.update');
+            logs[2].action.should.be.eql('submission.update.version');
+            logs[3].action.should.be.eql('submission.update');
+            logs[4].action.should.be.eql('submission.create');
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '88', first_name: 'Alice' });
+            person.currentVersion.label.should.equal('Alice (88)');
+            person.currentVersion.version.should.equal(1);
+          });
+      }));
+
+      // Example 3
+      it('should not create second entity with new uuid from edited submission', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+
+        await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .set('Content-Type', 'text/xml')
+          .send(testData.instances.simpleEntity.one
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2')
+            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:12345678-1234-4123-8234-123456789aaa"'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa')
+          .expect(404);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('submission.update.version');
+            logs[1].action.should.be.eql('entity.create');
+            logs[2].action.should.be.eql('submission.create');
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '88', first_name: 'Alice' });
+            person.currentVersion.label.should.equal('Alice (88)');
+            person.currentVersion.version.should.equal(1);
+          });
+      }));
+
+      // Example 4
+      // update is not well-formed, doesn't include baseVersion, but it doesn't run
+      it('should not update a entity from edited sub if sub already created entity', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+
+        await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .set('Content-Type', 'text/xml')
+          .send(testData.instances.simpleEntity.one
+            .replace('create="1"', 'update="1"')
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2')
+            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:12345678-1234-4123-8234-123456789aaa"'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('submission.update.version');
+            logs[1].action.should.be.eql('entity.create');
+            logs[2].action.should.be.eql('submission.create');
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '88', first_name: 'Alice' });
+            person.currentVersion.label.should.equal('Alice (88)');
+            person.currentVersion.version.should.equal(1);
+          });
+      }));
+
+      // Example 5
+      it('should not update same entity from edited sub if sub already created entity', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+
+        await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .set('Content-Type', 'text/xml')
+          .send(testData.instances.simpleEntity.one
+            .replace('create="1"', 'update="1"')
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('submission.update.version');
+            logs[1].action.should.be.eql('entity.create');
+            logs[2].action.should.be.eql('submission.create');
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '88', first_name: 'Alice' });
+            person.currentVersion.label.should.equal('Alice (88)');
+            person.currentVersion.version.should.equal(1);
+          });
+      }));
+
+      // Example 6
+      it('should update entity when submission is edited to set update to true', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Forms already in place
+        // one entity exists already
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('update="1"', 'update="0"'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '22', first_name: 'Johnny' });
+            person.currentVersion.label.should.equal('Johnny Doe');
+            person.currentVersion.version.should.equal(1);
+          });
+
+        await asAlice.put('/v1/projects/1/forms/updateEntity/submissions/one')
+          .set('Content-Type', 'text/xml')
+          .send(testData.instances.updateEntity.one
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('entity.update.version');
+            logs[1].action.should.be.eql('submission.update.version');
+            logs[2].action.should.be.eql('submission.create');
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
+            person.currentVersion.label.should.equal('Alicia (85)');
+            person.currentVersion.version.should.equal(2);
+          });
+      }));
+
+      // Example 7
+      it('should not update different entity when submission previously updated an entity', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
+            person.currentVersion.label.should.equal('Alicia (85)');
+            person.currentVersion.version.should.equal(2);
+          });
+
+        await asAlice.put('/v1/projects/1/forms/updateEntity/submissions/one')
+          .set('Content-Type', 'text/xml')
+          .send(testData.instances.updateEntity.one
+            .replace('id="12345678-1234-4123-8234-123456789abc"', 'id="12345678-1234-4123-8234-123456789aaa"')
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('submission.update.version');
+            logs[1].action.should.be.eql('entity.update.version');
+            logs[2].action.should.be.eql('submission.create');
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
+            person.currentVersion.label.should.equal('Alicia (85)');
+            person.currentVersion.version.should.equal(2);
+          });
+      }));
+
+      // Example 8
+      it('should not re-update entity when submission previously updated an entity', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
+            person.currentVersion.label.should.equal('Alicia (85)');
+            person.currentVersion.version.should.equal(2);
+          });
+
+        await asAlice.put('/v1/projects/1/forms/updateEntity/submissions/one')
+          .set('Content-Type', 'text/xml')
+          .send(testData.instances.updateEntity.one
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('submission.update.version');
+            logs[1].action.should.be.eql('entity.update.version');
+            logs[2].action.should.be.eql('submission.create');
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
+            person.currentVersion.label.should.equal('Alicia (85)');
+            person.currentVersion.version.should.equal(2);
+          });
+      }));
+
+      // Example 9
+      it('should update entity after editing submission to reference valid entity', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // this entity uuid does not exist to be updated
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('id="12345678-1234-4123-8234-123456789abc"', 'id="12345678-1234-4123-8234-123456789aaa"'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '22', first_name: 'Johnny' });
+            person.currentVersion.label.should.equal('Johnny Doe');
+            person.currentVersion.version.should.equal(1);
+          });
+
+        // now this points to an entity uuid that does exist
+        await asAlice.put('/v1/projects/1/forms/updateEntity/submissions/one')
+          .set('Content-Type', 'text/xml')
+          .send(testData.instances.updateEntity.one
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('entity.update.version');
+            logs[1].action.should.be.eql('submission.update.version');
+            logs[2].action.should.be.eql('entity.error');
+            logs[3].action.should.be.eql('submission.create');
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
+            person.currentVersion.label.should.equal('Alicia (85)');
+            person.currentVersion.version.should.equal(2);
+          });
+      }));
+
+      // Example 10
+      it('should not create entity after sub updates an entity', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
+            person.currentVersion.label.should.equal('Alicia (85)');
+            person.currentVersion.version.should.equal(2);
+          });
+
+        // this says to create a new entity
+        await asAlice.put('/v1/projects/1/forms/updateEntity/submissions/one')
+          .set('Content-Type', 'text/xml')
+          .send(testData.instances.updateEntity.one
+            .replace('update="1"', 'create="1"')
+            .replace('id="12345678-1234-4123-8234-123456789abc"', 'id="12345678-1234-4123-8234-123456789aaa"')
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('submission.update.version');
+            logs[1].action.should.be.eql('entity.update.version');
+            logs[2].action.should.be.eql('submission.create');
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
+            person.currentVersion.label.should.equal('Alicia (85)');
+            person.currentVersion.version.should.equal(2);
+          });
+      }));
+    });
+  });
+
+  describe('permitted entity actions', () => {
+    it('should result in an error for an update from a create form', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await exhaust(container);
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one
+          .replace('<instanceID>one</instanceID>', '<instanceID>another</instanceID>')
+          .replace('create="1"', 'update="1"'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await exhaust(container);
+      const { body: audits } = await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/another/audits')
+        .expect(200);
+      const actions = audits.map(audit => audit.action);
+      actions.should.eql(['entity.error', 'submission.create']);
+      audits[0].details.should.containEql({
+        problem: {
+          problemCode: 403.2,
+          problemDetails: { action: 'update', permitted: ['create'] }
+        },
+        errorMessage: 'The submission attempts an entity update, but the form does not permit that action. The form permits the following actions: create.'
+      });
+    }));
+
+    it('should result in an error for a create from an update form', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one
+          .replace('update="1"', 'create="1"'))
+        .expect(200);
+      await exhaust(container);
+      const { body: audits } = await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+        .expect(200);
+      const actions = audits.map(audit => audit.action);
+      actions.should.eql(['entity.error', 'submission.create']);
+      audits[0].details.should.containEql({
+        problem: {
+          problemCode: 403.2,
+          problemDetails: { action: 'create', permitted: ['update'] }
+        },
+        errorMessage: 'The submission attempts an entity create, but the form does not permit that action. The form permits the following actions: update.'
+      });
     }));
   });
 });
