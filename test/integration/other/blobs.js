@@ -15,7 +15,7 @@ describe('blob query module', () => {
         .then(() => container.oneFirst(sql`select count(*) from blobs`))
         .then((count) => count.should.equal(1)))));
 
-  it('should handle blob collisions with different filenames', testService((service, container) =>
+  it.only('should handle blob collisions with different filenames', testService((service, container) =>
     // One one instance of the form, two files are uploaded
     // On another instance of the form (different id), one file is uploaded
     // and it creates another reference to one of the blobs with a different

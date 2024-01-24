@@ -451,8 +451,12 @@ describe('api: /submission', () => {
               .then(({ headers, body }) => {
                 headers['content-type'].should.equal('video/mp4');
                 headers['content-disposition'].should.equal('attachment; filename="my_file1.mp4"; filename*=UTF-8\'\'my_file1.mp4');
+                headers['etag'].should.equal('"75f5701abfe7de8202cecaa0ca753f29"'); // eslint-disable-line dot-notation
                 body.toString('utf8').should.equal('this is test file one');
-              }))))));
+              }))
+            .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+              .set('If-None-Match', '"75f5701abfe7de8202cecaa0ca753f29"')
+              .expect(304))))));
 
     it('should successfully save additionally POSTed attachment binary data', testService((service, container) =>
       service.login('alice', (asAlice) =>
@@ -475,7 +479,7 @@ describe('api: /submission', () => {
                 .then(({ headers, body }) => {
                   headers['content-type'].should.equal('image/jpeg');
                   headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
-                  headers.etag.should.equal('"25bdb03b7942881c279788575997efba"');
+                  headers['etag'].should.equal('"25bdb03b7942881c279788575997efba"'); // eslint-disable-line dot-notation
                   body.toString('utf8').should.equal('this is test file two');
                 }))
               .then(() => {
@@ -502,7 +506,10 @@ describe('api: /submission', () => {
                       headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
                       headers.etag.should.equal('"25bdb03b7942881c279788575997efba"');
                       body.toString('utf8').should.equal('this is test file two');
-                    }));
+                    })
+                    .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
+                      .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
+                      .expect(304)));
               }))))));
 
     it('should accept encrypted submissions, with attachments', testService((service) =>
