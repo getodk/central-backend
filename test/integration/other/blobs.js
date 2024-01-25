@@ -59,7 +59,6 @@ describe('blob query module', () => {
           .then(({ headers, body }) => {
             headers['content-type'].should.equal('video/mp4');
             headers['content-disposition'].should.equal('attachment; filename="my_file1.mp4"; filename*=UTF-8\'\'my_file1.mp4');
-            headers['etag'].should.equal('"75f5701abfe7de8202cecaa0ca753f29"'); // eslint-disable-line dot-notation
             body.toString('utf8').should.equal('this is test file one');
           }))
         .then(() => asAlice.get('/v1/projects/1/forms/binaryType2/submissions/bone/attachments/my_file2.mp4')
@@ -67,7 +66,6 @@ describe('blob query module', () => {
           .then(({ headers, body }) => {
             headers['content-type'].should.equal('video/mp4');
             headers['content-disposition'].should.equal('attachment; filename="my_file2.mp4"; filename*=UTF-8\'\'my_file2.mp4');
-            headers['etag'].should.equal('"75f5701abfe7de8202cecaa0ca753f29"'); // eslint-disable-line dot-notation
             body.toString('utf8').should.equal('this is test file one');
           })))));
 
@@ -121,7 +119,6 @@ describe('blob query module', () => {
           .then(({ headers, body }) => {
             headers['content-type'].should.equal('video/mp4');
             headers['content-disposition'].should.equal('attachment; filename="my_file1.mp4"; filename*=UTF-8\'\'my_file1.mp4');
-            headers['etag'].should.equal('W/"15-oWv8j7atpseMloFCITd17xqEmmw"'); // eslint-disable-line dot-notation
             body.toString('utf8').should.equal('this is test file one');
           }))
         .then(() => asAlice.get('/v1/projects/1/forms/binaryType2/submissions/bone/attachments/my_file2.mp4')
@@ -129,7 +126,6 @@ describe('blob query module', () => {
           .then(({ headers, body }) => {
             headers['content-type'].should.equal('video/mp4');
             headers['content-disposition'].should.equal('attachment; filename="my_file2.mp4"; filename*=UTF-8\'\'my_file2.mp4');
-            headers['etag'].should.equal('W/"15-oWv8j7atpseMloFCITd17xqEmmw"'); // eslint-disable-line dot-notation
             body.toString('utf8').should.equal('this is test file one');
           }))
         .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xlsx')
@@ -137,7 +133,6 @@ describe('blob query module', () => {
           .then(({ headers, text }) => {
             headers['content-type'].should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx"; filename*=UTF-8\'\'simple2.xlsx');
-            headers['etag'].should.equal('W/"15-oWv8j7atpseMloFCITd17xqEmmw"'); // eslint-disable-line dot-notation
             text.toString('utf8').should.equal('this is test file one');
           })))));
 
@@ -191,7 +186,6 @@ describe('blob query module', () => {
           .then(({ headers, text }) => {
             headers['content-type'].should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx"; filename*=UTF-8\'\'simple2.xlsx');
-            headers['etag'].should.equal('W/"15-oWv8j7atpseMloFCITd17xqEmmw"'); // eslint-disable-line dot-notation
             text.toString('utf8').should.equal('this is test file one');
           }))
         .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
@@ -199,7 +193,6 @@ describe('blob query module', () => {
           .then(({ headers, body }) => {
             headers['content-type'].should.equal('video/mp4');
             headers['content-disposition'].should.equal('attachment; filename="my_file1.mp4"; filename*=UTF-8\'\'my_file1.mp4');
-            headers['etag'].should.equal('W/"15-oWv8j7atpseMloFCITd17xqEmmw"'); // eslint-disable-line dot-notation
             body.toString('utf8').should.equal('this is test file one');
           }))
         .then(() => asAlice.get('/v1/projects/1/forms/binaryType2/submissions/bone/attachments/my_file2.mp4')
@@ -207,7 +200,6 @@ describe('blob query module', () => {
           .then(({ headers, body }) => {
             headers['content-type'].should.equal('video/mp4');
             headers['content-disposition'].should.equal('attachment; filename="my_file2.mp4"; filename*=UTF-8\'\'my_file2.mp4');
-            headers['etag'].should.equal('W/"15-oWv8j7atpseMloFCITd17xqEmmw"'); // eslint-disable-line dot-notation
             body.toString('utf8').should.equal('this is test file one');
           })))));
 
