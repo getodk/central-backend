@@ -854,6 +854,7 @@ describe('Entities API', () => {
           logs[1].action.should.be.eql('entity.update.version');
           logs[1].details.entity.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
           logs[1].actor.displayName.should.be.eql('Bob');
+          logs[1].details.source.should.be.eql({});
 
           logs[2].should.be.an.Audit();
           logs[2].action.should.be.eql('entity.create');
@@ -942,7 +943,7 @@ describe('Entities API', () => {
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
           .expect(200)
           .then(({ body: logs }) => {
-            logs[0].details.should.not.have.property('source');
+            logs[0].details.source.should.eql({});
           });
 
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
@@ -952,7 +953,7 @@ describe('Entities API', () => {
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
           .expect(200)
           .then(({ body: logs }) => {
-            logs[0].details.should.not.have.property('source');
+            logs[0].details.source.should.eql({});
           });
       }));
 
