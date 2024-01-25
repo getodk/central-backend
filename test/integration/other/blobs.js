@@ -1,8 +1,6 @@
 const { readFileSync } = require('fs');
 const appPath = require('app-root-path');
 const { sql } = require('slonik');
-// eslint-disable-next-line import/no-extraneous-dependencies
-const superagent = require('superagent');
 const testData = require('../../data/xml');
 const { testService } = require('../setup');
 
