@@ -2100,8 +2100,13 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should create two Entities', testDataset(async (service) => {
+    it('should create Entities in bulk', testDataset(async (service) => {
       const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .then(({ body }) => {
+          body.length.should.equal(0);
+        });
 
       await asAlice.post('/v1/projects/1/datasets/people/entities')
         .send({
@@ -2130,11 +2135,58 @@ describe('Entities API', () => {
         })
         .expect(200)
         .then(({ body }) => {
-          body.numEntities.should.equal(2);
+          body.success.should.be.true();
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .then(({ body }) => {
+          body.length.should.equal(2);
         });
     }));
 
-    // TODO: test for source... it('should create an Entity Source', testDataset(async (service) => {
+    describe('entity source when created through bulk append', () => {
+      it('should create entities that share the same source', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-111111111aaa',
+                label: 'Johnny Doe',
+                data: {
+                  first_name: 'Johnny',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-1234-4123-8234-111111111bbb',
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/versions')
+          .then(({ body: versions }) => {
+            versions[0].source.should.eql({ name: 'people.csv', size: 100, userAgent: 'central/tests' });
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111bbb/versions')
+          .then(({ body: versions }) => {
+            versions[0].source.should.eql({ name: 'people.csv', size: 100, userAgent: 'central/tests' });
+          });
+      }));
+    });
   });
 
   // Special scenarios
