@@ -1,5 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
+// eslint-disable-next-line import/no-extraneous-dependencies
 const superagent = require('superagent');
 const uuid = require('uuid').v4;
 const { sql } = require('slonik');
