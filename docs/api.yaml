@@ -4562,6 +4562,8 @@ paths:
       description: If a Draft Form was created with an Excel file (`.xls` or `.xlsx`),
         you can get that file back by adding `.xls` or `.xlsx` as appropriate to the
         Draft Form resource path.
+
+        This endpoint supports `ETag`, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, it returns a value in `ETag` header, you can pass this value in the header `If-None-Match` of subsequent requests. If the file has not been changed since the previous request, you will receive `304 Not Modified` response otherwise you'll get the latest file.
       operationId: Retrieving Draft Form XLS(X)
       parameters:
       - name: projectId
@@ -4581,6 +4583,11 @@ paths:
       responses:
         200:
           description: OK
+          headers:
+            ETag:
+              schema:
+                type: string
+                description: content version identifier
           content:
             application/xml:
               example: |
@@ -4674,6 +4681,8 @@ paths:
         (attachment with a filename or Dataset name) and `Content-Type` (based on
         the type supplied at upload time or `text/csv` in the case of a linked Dataset)
         will be given.
+
+        This endpoint supports `ETag`, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, it returns a value in `ETag` header, you can pass this value in the header `If-None-Match` of subsequent requests. If the file has not been changed since the previous request, you will receive `304 Not Modified` response otherwise you'll get the latest file.
       operationId: Downloading a Draft Form Attachment
       parameters:
       - name: projectId
@@ -4704,6 +4713,10 @@ paths:
             Content-Disposition:
               schema:
                 type: string
+            ETag:
+              schema:
+                type: string
+                description: content version identifier
           content:
             '{the MIME type of the attachment file itself or text/csv for a Dataset}':
               example: |
@@ -5375,6 +5388,8 @@ paths:
       description: If a Form Version was created with an Excel file (`.xls` or `.xlsx`),
         you can get that file back by adding `.xls` or `.xlsx` as appropriate to the
         Form Version resource path.
+
+        This endpoint supports `ETag` header, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, the endpoint returns a value in `ETag` header. If you pass that value in the `If-None-Match` header of a subsequent request, then if the file has not been changed since the previous request, you will receive `304 Not Modified` response; otherwise you'll get the latest file.
       operationId: Retrieving Form Version XLS(X)
       parameters:
       - name: projectId
@@ -5402,6 +5417,10 @@ paths:
       responses:
         200:
           description: OK
+            ETag:
+              schema:
+                type: string
+                description: content version identifier
           content:
             application/xml:
               example: |
@@ -7878,6 +7897,8 @@ paths:
       summary: Downloading an Attachment
       description: The `Content-Type` and `Content-Disposition` will be set appropriately
         based on the file itself when requesting an attachment file download.
+
+        This endpoint supports `ETag`, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, it returns a value in `ETag` header, you can pass this value in the header `If-None-Match` of subsequent requests. If the file has not been changed since the previous request, you will receive `304 Not Modified` response otherwise you'll get the latest file.
       operationId: Downloading an Attachment
       parameters:
       - name: projectId
@@ -7915,6 +7936,10 @@ paths:
             Content-Disposition:
               schema:
                 type: string
+            ETag:
+              schema:
+                type: string
+                description: content version identifier
           content:
             '{the MIME type of the attachment file itself}':
               example: |
@@ -8426,6 +8451,8 @@ paths:
       description: It is important to note that this endpoint returns whatever is
         _currently_ uploaded against the _particular version_ of the _Submission_.
         It will not track overwritten attachments.
+
+        This endpoint supports `ETag`, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, it returns a value in `ETag` header, you can pass this value in the header `If-None-Match` of subsequent requests. If the file has not been changed since the previous request, you will receive `304 Not Modified` response otherwise you'll get the latest file.
       operationId: Downloading a Version's Attachment
       parameters:
       - name: projectId
@@ -8471,6 +8498,10 @@ paths:
             Content-Disposition:
               schema:
                 type: string
+            ETag:
+              schema:
+                type: string
+                description: content version identifier
           content:
             '{the MIME type of the attachment file itself}':
               example: |
