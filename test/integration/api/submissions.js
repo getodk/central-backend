@@ -503,8 +503,7 @@ describe('api: /submission', () => {
 
                       return superagent.get(location);
                     })
-                    .then((res) => {
-                      const { status, headers, body } = res;
+                    .then(({ status, headers, body }) => {
                       status.should.equal(200);
                       headers['content-type'].should.equal('image/jpeg');
                       headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
