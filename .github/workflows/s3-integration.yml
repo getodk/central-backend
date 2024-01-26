@@ -4,6 +4,7 @@ on: push
 
 jobs:
   s3-integration-test:
+    timeout-minutes: 4
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     services:
