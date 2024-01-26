@@ -2082,57 +2082,32 @@ describe('Entities API', () => {
   });
 
   // Bulk API operations
-  describe.only('POST /datasets/:name/entities/upload', () => {
-    it('should return notfound if the dataset does not exist', testDataset(async (service) => {
+  describe('POST /datasets/:name/entities', () => {
+    // Tests that one would expect to find here are found above because this is additional
+    // functionality of an existing endpoint:
+    // - should return notfound if the dataset does not exist
+    // - should reject if the user cannot write
+    // - should reject creating new entity if dataset not yet published
+
+    it('should reject malformed json', testDataset(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.post('/v1/projects/1/datasets/nonexistent/entities/upload')
-        .expect(404);
-    }));
-
-    it('should reject if the user cannot write', testDataset(async (service) => {
-      const asChelsea = await service.login('chelsea');
-
-      await asChelsea.post('/v1/projects/1/datasets/people/entities/upload')
-        .expect(403);
-    }));
-
-    it.skip('should reject malformed json', testDataset(async (service) => {
-      const asAlice = await service.login('alice');
-
-      await asAlice.post('/v1/projects/1/datasets/people/entities/upload')
-        .send({ broken: 'json' })
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send([{ broken: 'json' }])
         .expect(400)
         .then(({ body }) => {
           body.code.should.equal(400.31);
         });
     }));
 
-    it('should reject creating new entity if dataset not yet published', testService(async (service) => {
+    it('should create two Entities', testDataset(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.post('/v1/projects/1/forms')
-        .send(testData.forms.simpleEntity)
-        .expect(200);
-
-      await asAlice.get('/v1/projects/1/datasets/people')
-        .expect(404);
-
-      await asAlice.post('/v1/projects/1/datasets/people/entities/upload')
-        .send({
-          fix: 'this'
-        })
-        .expect(404);
-    }));
-
-    it('should create an Entity', testDataset(async (service) => {
-      const asAlice = await service.login('alice');
-
-      await asAlice.post('/v1/projects/1/datasets/people/entities/upload')
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
         .send({
           source: {
-            filename: 'people.csv',
-            filesize: 100,
+            name: 'people.csv',
+            size: 100,
           },
           entities: [
             {
