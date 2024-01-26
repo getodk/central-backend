@@ -8,10 +8,9 @@ node_modules: package.json
 test-oidc-integration: node_modules
 	TEST_AUTH=oidc NODE_CONFIG_ENV=oidc-integration-test make test-integration
 
-# TODO rename config file?
 .PHONY: test-s3-integration
 test-s3-integration: node_version
-	TEST_S3=true NODE_CONFIG_ENV=s3-blob-storage-development make test-integration
+	TEST_S3=true NODE_CONFIG_ENV=s3-dev make test-integration
 
 .PHONY: test-oidc-e2e
 test-oidc-e2e: node_modules
@@ -32,8 +31,8 @@ fake-s3-accounts:
 
 .PHONY: dev-s3
 dev-s3: fake-s3-accounts base
-	NODE_CONFIG_ENV=s3-blob-storage-development node lib/bin/minio-test.js && \
-	NODE_CONFIG_ENV=s3-blob-storage-development npx nodemon --watch lib --watch config lib/bin/run-server.js
+	NODE_CONFIG_ENV=s3-dev node lib/bin/minio-test.js && \
+	NODE_CONFIG_ENV=s3-dev npx nodemon --watch lib --watch config lib/bin/run-server.js
 
 .PHONY: fake-oidc-server
 fake-oidc-server:
