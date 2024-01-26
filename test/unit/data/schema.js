@@ -785,6 +785,35 @@ describe('form schema', () => {
           stack.pop();
         }));
 
+      it('should navigate in and out of empty structures', async () => {
+        const form = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+            <h:head>
+              <model entities:entities-version="2023.1.0">
+                <instance>
+                  <data id="emptyEntity" orx:version="1.0">
+                    <meta>
+                      <entity dataset="people" id="" create="" update="" baseVersion="" />
+                    </meta>
+                    <age/>
+                  </data>
+                  <other/>
+                </instance>
+                <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+                <bind nodeset="/data/location/hometown" type="string" entities:saveto="hometown"/>
+              </model>
+            </h:head>
+          </h:html>`;
+        const fields = await fieldsFor(form);
+        const stack = new SchemaStack(fields);
+        stack.push('data');
+        stack.push('meta').should.eql(new MockField({ name: 'meta', path: '/meta', type: 'structure', order: 0 }));
+        stack.push('entity').should.eql(new MockField({ name: 'entity', path: '/meta/entity', type: 'structure', order: 1 }));
+        stack.children().should.eql([]);
+        stack.pop('entity').should.eql(new MockField({ name: 'entity', path: '/meta/entity', type: 'structure', order: 1 }));
+        stack.pop('meta').should.eql(new MockField({ name: 'meta', path: '/meta', type: 'structure', order: 0 }));
+        stack.push('age').should.eql(new MockField({ name: 'age', path: '/age', type: 'int', order: 2, propertyName: 'age' }));
+      });
+
       it('should ignore children of unknown repeats', () => fieldsFor(testData.forms.doubleRepeat)
         .then((fields) => {
           const stack = new SchemaStack(fields.filter((field) => field.path !== ('/children/child')));
