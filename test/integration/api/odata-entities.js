@@ -455,6 +455,83 @@ describe('api: /datasets/:name.svc', () => {
 
         });
     }));
+
+    it('should return entities in specified order', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 3);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/createdAt asc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.age).should.eql(['1', '2', '3']);
+          body.value[0].__system.createdAt.should.be.lessThan(body.value[2].__system.createdAt);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/createdAt desc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.age).should.eql(['3', '2', '1']);
+          body.value[0].__system.createdAt.should.be.greaterThan(body.value[2].__system.createdAt);
+        });
+    }));
+
+    it('should return entities with order specified in multiple clauses', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+      await createSubmissions(asBob, container, 2, 2);
+      await createSubmissions(asAlice, container, 2, 4);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/creatorId desc, __system/createdAt asc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.creatorId).should.eql(['6', '6', '5', '5', '5', '5']);
+          body.value.map((e) => e.age).should.eql(['3', '4', '1', '2', '5', '6']);
+        });
+    }));
+
+    it('should combine orderby with other filters', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      const lastEntity = await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$top=1')
+        .expect(200)
+        .then(({ body }) => body.value[0]);
+
+      await createSubmissions(asAlice, container, 4, 2);
+
+      await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/createdAt desc&$filter=__system/createdAt gt ${lastEntity.__system.createdAt}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.eql(4);
+          body.value[0].__system.createdAt.should.be.greaterThan(body.value[3].__system.createdAt);
+        });
+
+      await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/createdAt asc&$filter=__system/createdAt gt ${lastEntity.__system.createdAt}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.eql(4);
+          body.value[0].__system.createdAt.should.be.lessThan(body.value[3].__system.createdAt);
+        });
+    }));
   });
 
   describe('GET service document', () => {
