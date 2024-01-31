@@ -4756,8 +4756,6 @@ paths:
         To upload a binary to an expected file slot, `POST` the binary to its endpoint. Supply a `Content-Type` MIME-type header if you have one.
 
         As of version 2022.3, if there is already a Dataset linked to this attachment, it will be unlinked and replaced with the uploaded file.
-
-        This endpoint supports `ETag` header, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, the endpoint returns a value in `ETag` header. If you pass that value in the `If-None-Match` header of a subsequent request, then if the file has not been changed since the previous request, you will receive `304 Not Modified` response; otherwise you'll get the latest file.
       operationId: Uploading a Draft Form Attachment
       parameters:
       - name: projectId
