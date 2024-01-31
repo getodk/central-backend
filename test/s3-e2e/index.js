@@ -7,12 +7,12 @@
 // including this file, may be copied, modified, propagated, or distributed
 // except according to the terms contained in the LICENSE file.
 
-import fs from 'node:fs';
-import fetch, { fileFromSync } from 'node-fetch';
-import _ from 'lodash';
-import { v4 as uuid } from 'uuid';
-import { basename } from 'node:path';
-import { program } from 'commander';
+const fs = require('node:fs');
+const fetch = require('node-fetch');
+const _ = require('lodash');
+const uuid = require('uuid').v4;
+const { basename } = require('node:path');
+const { program } = require('commander');
 
 const _log = (...args) => console.log(`[${new Date().toISOString()}]`, '[soak-tester]', ...args);
 const log  = (...args) => true  && _log('INFO',   ...args);
