@@ -498,7 +498,7 @@ describe('api: /submission', () => {
                       should(headers.etag).be.undefined();
 
                       const { location } = headers;
-                      location.should.match(/^http:\/\/localhost:9000\/odk-central-bucket\/blob_md5_25bdb03b7942881c279788575997efba_sha_eba799d1dc156c0df70f7bad65f815928b98aa7d\?Content-Disposition=attachment%3B%20filename%3D%22here_is_file2\.jpg%22%3B%20filename%2A%3DUTF-8%27%27here_is_file2\.jpg&Content-Type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=odk-central-dev%2F\d{8}%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=\d{8}T\d{6}Z&X-Amz-Expires=60&X-Amz-SignedHeaders=host&X-Amz-Signature=[0-9a-f]{64}$/);
+                      location.should.match(/^http:\/\/localhost:9000\/odk-central-bucket\/blob_md5_25bdb03b7942881c279788575997efba_sha_eba799d1dc156c0df70f7bad65f815928b98aa7d\?response-content-disposition=attachment%3B%20filename%3D%22here_is_file2\.jpg%22%3B%20filename%2A%3DUTF-8%27%27here_is_file2\.jpg&response-content-type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=odk-central-dev%2F\d{8}%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=\d{8}T\d{6}Z&X-Amz-Expires=60&X-Amz-SignedHeaders=host&X-Amz-Signature=[0-9a-f]{64}$/);
                       body.should.deepEqual({}); // not sure why
 
                       return superagent.get(location);
