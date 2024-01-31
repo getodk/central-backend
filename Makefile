@@ -31,7 +31,6 @@ fake-s3-accounts:
 
 .PHONY: dev-s3
 dev-s3: fake-s3-accounts base
-	NODE_CONFIG_ENV=s3-dev node lib/bin/minio-test.js && \
 	NODE_CONFIG_ENV=s3-dev npx nodemon --watch lib --watch config lib/bin/run-server.js
 
 .PHONY: fake-oidc-server
