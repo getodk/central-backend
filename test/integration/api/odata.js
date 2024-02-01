@@ -1190,6 +1190,83 @@ describe('api: /forms/:id.svc', () => {
         });
     }));
 
+    describe('orderby', () => {
+      it('should return submissions in specified order', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        const asBob = await service.login('bob');
+
+        await asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+          .send(testData.instances.withrepeat.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        await asBob.post('/v1/projects/1/forms/withrepeat/submissions')
+          .send(testData.instances.withrepeat.two)
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+          .send(testData.instances.withrepeat.three)
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        // extra submission not in form that shouldn't be returned
+        await asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$orderby=__system/submitterId asc')
+          .expect(200)
+          .then(({ body }) => {
+            body.value.map((e) => e.__system.submitterId).should.eql(['5', '5', '6']);
+            body.value.map((e) => e.age).should.eql([30, 38, 34]);
+          });
+
+        await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$orderby=__system/submitterId desc')
+          .expect(200)
+          .then(({ body }) => {
+            body.value.map((e) => e.__system.submitterId).should.eql(['6', '5', '5']);
+            body.value.map((e) => e.age).should.eql([34, 38, 30]);
+          });
+      }));
+
+      it('should combine orderby and other things like filtering', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        const asBob = await service.login('bob');
+
+        await asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+          .send(testData.instances.withrepeat.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        await asBob.post('/v1/projects/1/forms/withrepeat/submissions')
+          .send(testData.instances.withrepeat.two)
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+          .send(testData.instances.withrepeat.three)
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/withrepeat/submissions/rone')
+          .send({ reviewState: 'rejected' })
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/withrepeat/submissions/rtwo')
+          .send({ reviewState: 'rejected' })
+          .expect(200);
+
+        await asAlice.get("/v1/projects/1/forms/withrepeat.svc/Submissions?$orderby=__system/submitterId asc&$filter=__system/reviewState eq 'rejected'")
+          .expect(200)
+          .then(({ body }) => {
+            body.value.map((e) => e.__system.submitterId).should.eql(['5', '6']);
+            body.value.map((e) => e.age).should.eql([30, 34]);
+          });
+      }));
+    });
+
     it('should count correctly while windowing', testService((service) =>
       service.login('alice', (asAlice) =>
         service.login('bob', (asBob) =>
