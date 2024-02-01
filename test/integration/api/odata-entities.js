@@ -502,6 +502,34 @@ describe('api: /datasets/:name.svc', () => {
         });
     }));
 
+    it('should return entities in stable order', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+      await createSubmissions(asBob, container, 2, 2);
+      await createSubmissions(asAlice, container, 2, 4);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/creatorId desc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.creatorId).should.eql(['6', '6', '5', '5', '5', '5']);
+          body.value.map((e) => e.age).should.eql(['4', '3', '6', '5', '2', '1']);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/creatorId asc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.creatorId).should.eql(['5', '5', '5', '5', '6', '6']);
+          body.value.map((e) => e.age).should.eql(['1', '2', '5', '6', '3', '4']);
+        });
+    }));
+
     it('should combine orderby with other filters', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 

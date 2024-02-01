@@ -10,11 +10,11 @@
 const appRoot = require('app-root-path');
 const assert = require('assert');
 const { sql } = require('slonik');
-const { odataFilter: _odataFilter, odataSort: _odataSort } = require(appRoot + '/lib/data/odata-filter');
+const { odataFilter: _odataFilter, odataOrderBy: _odataOrderBy } = require(appRoot + '/lib/data/odata-filter');
 const { odataToColumnMap } = require(appRoot + '/lib/data/submission');
 
 const odataFilter = (exp) => _odataFilter(exp, odataToColumnMap);
-const odataSort = (exp) => _odataSort(exp, odataToColumnMap);
+const odataOrderBy = (exp, stableOrderColumn = null) => _odataOrderBy(exp, odataToColumnMap, stableOrderColumn);
 
 describe('OData filter query transformer', () => {
   it('should transform binary expressions', () => {
@@ -76,27 +76,27 @@ describe('OData filter query transformer', () => {
 
 describe('OData orderby/sort query transformer', () => {
   it('should transform order by queries', () => {
-    odataSort('__system/updatedAt desc').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC`);
-    odataSort('__system/updatedAt DESC').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC`);
-    odataSort('__system/updatedAt   asc').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC`);
-    odataSort('  __system/updatedAt   AsC ').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC`);
+    odataOrderBy('__system/updatedAt desc').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC`);
+    odataOrderBy('__system/updatedAt DESC').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC`);
+    odataOrderBy('__system/updatedAt   asc').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC`);
+    odataOrderBy('  __system/updatedAt   AsC ').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC`);
   });
 
   it('should combine multiple sort operators', () => {
-    odataSort('__system/updatedAt desc, __system/submissionDate ASC').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC,${sql.identifier([ 'submissions', 'createdAt' ])} ASC`);
+    odataOrderBy('__system/updatedAt desc, __system/submissionDate ASC').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC,${sql.identifier([ 'submissions', 'createdAt' ])} ASC`);
   });
 
   it('should handle no asc/desc provided', () => {
-    odataSort('__system/updatedAt').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC`);
+    odataOrderBy('__system/updatedAt').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC`);
   });
 
   // Technically it should follow the spec and do this but it's not implemented
   it('should NOT handle more complex filters in an orderby clause', () => {
-    odataSort('__system/submitterId ne 5 desc ').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'submitterId' ])} DESC`);
+    odataOrderBy('__system/submitterId ne 5 desc ').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'submitterId' ])} DESC`);
   });
 
   it('should reject unparseable expressions', () => {
-    assert.throws(() => { odataSort('hello my dear'); }, (err) => {
+    assert.throws(() => { odataOrderBy('hello my dear'); }, (err) => {
       err.problemCode.should.equal(501.5);
       err.message.should.equal('The given OData filter expression references fields not supported by this server: hello at 0');
       return true;
@@ -104,7 +104,7 @@ describe('OData orderby/sort query transformer', () => {
   });
 
   it('should reject unrecognized field names', () => {
-    assert.throws(() => { odataSort('myfield asc'); }, (err) => {
+    assert.throws(() => { odataOrderBy('myfield asc'); }, (err) => {
       err.problemCode.should.equal(501.5);
       err.message.should.equal('The given OData filter expression references fields not supported by this server: myfield at 0');
       return true;
@@ -112,6 +112,10 @@ describe('OData orderby/sort query transformer', () => {
   });
 
   it('should ignore unsupported operators and default to DESC', () => {
-    odataSort('__system/updatedAt UP').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC`);
+    odataOrderBy('__system/updatedAt UP').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC`);
+  });
+
+  it('should add last sort clause to insure stable sort order', () => {
+    odataOrderBy('__system/updatedAt asc', 'entities.id').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC,${sql.identifier([ 'entities', 'id' ])} ASC`);
   });
 });
