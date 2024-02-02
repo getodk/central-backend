@@ -1266,6 +1266,46 @@ describe('api: /forms/:id.svc', () => {
           });
       }));
 
+      it('should return null values at the correct end of list with orderby', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        const asBob = await service.login('bob');
+
+        await asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+          .send(testData.instances.withrepeat.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        await asBob.post('/v1/projects/1/forms/withrepeat/submissions')
+          .send(testData.instances.withrepeat.two)
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+          .send(testData.instances.withrepeat.three)
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/withrepeat/submissions/rone')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/withrepeat/submissions/rtwo')
+          .send({ reviewState: 'rejected' })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$orderby=__system/reviewState asc')
+          .expect(200)
+          .then(({ body }) => {
+            body.value.map((e) => e.__system.reviewState).should.eql([ null, 'approved', 'rejected' ]);
+          });
+
+        await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$orderby=__system/reviewState desc')
+          .expect(200)
+          .then(({ body }) => {
+            body.value.map((e) => e.__system.reviewState).should.eql([ 'rejected', 'approved', null ]);
+          });
+      }));
+
       it('should reject if both orderby and skiptoken are used together', testService(async (service) => {
         const asAlice = await service.login('alice');
 

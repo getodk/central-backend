@@ -76,23 +76,23 @@ describe('OData filter query transformer', () => {
 
 describe('OData orderby/sort query transformer', () => {
   it('should transform order by queries', () => {
-    odataOrderBy('__system/updatedAt desc').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC`);
-    odataOrderBy('__system/updatedAt DESC').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC`);
-    odataOrderBy('__system/updatedAt   DESC  ').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC`);
-    odataOrderBy('__system/updatedAt   asc').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC`);
-    odataOrderBy('  __system/updatedAt   AsC ').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC`);
+    odataOrderBy('__system/updatedAt desc').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC NULLS LAST`);
+    odataOrderBy('__system/updatedAt DESC').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC NULLS LAST`);
+    odataOrderBy('__system/updatedAt   DESC  ').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC NULLS LAST`);
+    odataOrderBy('__system/updatedAt   asc').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC NULLS FIRST`);
+    odataOrderBy('  __system/updatedAt   AsC ').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC NULLS FIRST`);
   });
 
   it('should default to ASC if no sort order provided', () => {
-    odataOrderBy('__system/updatedAt').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC`);
+    odataOrderBy('__system/updatedAt').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC NULLS FIRST`);
   });
 
   it('should ignore things after sort order', () => {
-    odataOrderBy('  __system/updatedAt ASC DESC OTHER STUFF ').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC`);
+    odataOrderBy('  __system/updatedAt ASC DESC OTHER STUFF ').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC NULLS FIRST`);
   });
 
   it('should combine multiple sort operators', () => {
-    odataOrderBy('__system/updatedAt desc, __system/submissionDate ASC').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC,${sql.identifier([ 'submissions', 'createdAt' ])} ASC`);
+    odataOrderBy('__system/updatedAt desc, __system/submissionDate ASC').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC NULLS LAST,${sql.identifier([ 'submissions', 'createdAt' ])} ASC NULLS FIRST`);
   });
 
 
@@ -129,10 +129,10 @@ describe('OData orderby/sort query transformer', () => {
   });
 
   it('should add last sort clause to insure stable sort order', () => {
-    odataOrderBy('__system/updatedAt asc', 'entities.id').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC,${sql.identifier([ 'entities', 'id' ])} ASC`);
+    odataOrderBy('__system/updatedAt asc', 'entities.id').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC NULLS FIRST,${sql.identifier([ 'entities', 'id' ])} ASC NULLS FIRST`);
   });
 
   it('should use first sort order for stable sort order', () => {
-    odataOrderBy('__system/updatedAt desc, __system/submitterId asc', 'entities.id').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC,${sql.identifier([ 'submissions', 'submitterId' ])} ASC,${sql.identifier([ 'entities', 'id' ])} DESC`);
+    odataOrderBy('__system/updatedAt desc, __system/submitterId asc', 'entities.id').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC NULLS LAST,${sql.identifier([ 'submissions', 'submitterId' ])} ASC NULLS FIRST,${sql.identifier([ 'entities', 'id' ])} DESC NULLS LAST`);
   });
 });

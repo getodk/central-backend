@@ -530,6 +530,82 @@ describe('api: /datasets/:name.svc', () => {
         });
     }));
 
+    it('should return sorted null values in the correct order', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+      await createConflict(asAlice, container);
+
+      // Default sort order is asc
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/conflict')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.conflict).should.eql([ null, null, 'hard' ]);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/conflict asc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.conflict).should.eql([ null, null, 'hard' ]);
+        });
+
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/conflict desc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.conflict).should.eql([ 'hard', null, null ]);
+        });
+    }));
+
+    it('should return sorted null values in the correct order in any clause', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+      await createSubmissions(asBob, container, 2, 2);
+      await createConflict(asAlice, container);
+
+      // Default sort order is asc
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/creatorId asc,__system/conflict')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.creatorId).should.eql(['5', '5', '5', '6', '6']);
+          body.value.map((e) => e.__system.conflict).should.eql([ null, null, 'hard', null, null ]);
+        });
+
+      // Default sort order is asc
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/creatorId asc,__system/conflict asc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.creatorId).should.eql(['5', '5', '5', '6', '6']);
+          body.value.map((e) => e.__system.conflict).should.eql([ null, null, 'hard', null, null ]);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/creatorId asc,__system/conflict desc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.creatorId).should.eql(['5', '5', '5', '6', '6']);
+          body.value.map((e) => e.__system.conflict).should.eql([ 'hard', null, null, null, null ]);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/creatorId desc,__system/conflict desc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.creatorId).should.eql(['6', '6', '5', '5', '5']);
+          body.value.map((e) => e.__system.conflict).should.eql([ null, null, 'hard', null, null ]);
+        });
+    }));
+
     it('should combine orderby with other filters', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
