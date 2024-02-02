@@ -30,7 +30,7 @@ jobs:
         cache: 'npm'
     - run: npm ci --legacy-peer-deps
     - run: node lib/bin/create-docker-databases.js
-    - name: Soak Test
+    - name: E2E Test
       timeout-minutes: 10
       run: ./test/s3-e2e/scripts/ci-s3-e2e-test
     - name: Backend Logs
