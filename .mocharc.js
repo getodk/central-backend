@@ -1,5 +1,5 @@
 module.exports = {
   ignore: [
-    'test/soak/*',
+    'test/e2e/*',
   ],
 };

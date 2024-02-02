@@ -20,7 +20,7 @@ const LOG_LEVELS = ['DEBUG', 'INFO', 'WARN', 'ERROR', 'REPORT']
 const logLevel = process.env.LOG_LEVEL || 'INFO';
 const _log = (level, ...args) => {
   if(LOG_LEVELS.indexOf(logLevel) > LOG_LEVELS.indexOf(level)) return;
-  console.log(`[${new Date().toISOString()}]`, '[s3-e2e-test]', ...args);
+  console.log(`[${new Date().toISOString()}]`, '[test/e2e/s3]', ...args);
 };
 const log  = (...args) => _log('INFO',   ...args);
 log.debug  = (...args) => _log('DEBUG',  ...args);
@@ -36,7 +36,7 @@ program
 program.parse();
 const { serverUrl, userEmail, userPassword } = program.opts();
 
-const attDir = 'test/s3-e2e/test-attachments';
+const attDir = 'test/e2e/s3/test-attachments';
 const BIGFILE = `${attDir}/big.bin`;
 
 let bearerToken;
@@ -65,7 +65,7 @@ async function runTest() {
   const { id:projectId } = await apiPostJson('projects', { name:`soak-test-${new Date().toISOString().replace(/\..*/, '')}` });
 
   log.info('Uploading form...');
-  const { xmlFormId } = await apiPostFile(`projects/${projectId}/forms`, 'test/s3-e2e/test-form.xml');
+  const { xmlFormId } = await apiPostFile(`projects/${projectId}/forms`, 'test/e2e/s3/test-form.xml');
 
   log.info('Uploading attachments...');
   await Promise.all(

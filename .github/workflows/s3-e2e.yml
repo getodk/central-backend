@@ -49,7 +49,7 @@ jobs:
     - run: NODE_CONFIG_ENV=s3-dev node lib/bin/ci-s3-setup.js
     - name: E2E Test
       timeout-minutes: 10
-      run: ./test/s3-e2e/scripts/ci-s3-e2e-test
+      run: ./test/e2e/s3/ci
     - name: Backend Logs
       if: always()
       run: "! [[ -f ./backend.log ]] || cat ./backend.log"
