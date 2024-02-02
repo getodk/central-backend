@@ -22,9 +22,9 @@ log.error  = (...args) => true  && _log('ERROR',  ...args);
 log.report = (...args) => true  && _log('REPORT', ...args);
 
 program
-    .option('-s, --server-url <serverUrl>', 'URL of ODK Central server', 'http://localhost:8989')
+    .option('-s, --server-url <serverUrl>', 'URL of ODK Central server', 'http://localhost:8383')
     .option('-u, --user-email <userEmail>', 'Email of central user', 'x@example.com')
-    .option('-P, --user-password <userPassword>', 'Password of central user', 'secret')
+    .option('-P, --user-password <userPassword>', 'Password of central user', 'topSecret123')
     ;
 program.parse();
 const { serverUrl, userEmail, userPassword } = program.opts();
@@ -68,7 +68,7 @@ async function runTest() {
 
 function apiPostFile(path, filePath) {
   const mimeType = mimetypeFor(filePath);
-  const blob = fileFromSync(filePath, mimeType);
+  const blob = fs.readFileSync(filePath);
   return apiPost(path, blob, { 'Content-Type':mimeType });
 }
 
@@ -102,4 +102,23 @@ async function apiFetch(method, path, body, extraHeaders) {
 
 function base64(s) {
   return Buffer.from(s).toString('base64');
+}
+
+function mimetypeFor(f) {
+  const extension = fileExtensionFrom(f);
+  log.debug('fileExtensionFrom()', f, '->', extension);
+  switch(extension) {
+    case 'xls' : return 'application/vnd.ms-excel';
+    case 'xlsx': return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    case 'xml' : return 'application/xml';
+    default: throw new Error(`Unsure what mime type to use for: ${f}`);
+  }
+}
+
+function fileExtensionFrom(f) {
+  try {
+    return basename(f).match(/\.([^.]*)$/)[1];
+  } catch(err) {
+    throw new Error(`Could not get file extension from filename '${f}'!`);
+  }
 }
