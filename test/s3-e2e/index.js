@@ -50,8 +50,8 @@ async function runTest() {
     log.info('big.bin exists; skipping generation');
   } else {
     log.info('Generating big.bin...');
-    let remaining = 100_000_000;
-    const batchSize = 100_000;
+    let remaining = 100000000;
+    const batchSize = 100000;
     do {
       fs.appendFileSync(BIGFILE, randomBytes(batchSize));
     } while((remaining-=batchSize) > 0);
@@ -91,7 +91,7 @@ async function runTest() {
   log.report('All OK.');
 
   function allRedirect(attachments) {
-    const TIMEOUT = 120_000; // ms
+    const TIMEOUT = 120000; // ms
     const timeout = Date.now() + TIMEOUT;
 
     return new Promise((resolve, reject) => {
