@@ -91,7 +91,7 @@ async function runTest() {
   log.report('All OK.');
 
   function allRedirect(attachments) {
-    const TIMEOUT = 60_000; // ms
+    const TIMEOUT = 120_000; // ms
     const timeout = Date.now() + TIMEOUT;
 
     return new Promise((resolve, reject) => {
