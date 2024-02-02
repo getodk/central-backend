@@ -24,6 +24,19 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      minio:
+        # see: https://github.com/minio/minio/discussions/16099
+        image: minio/minio:edge-cicd
+        env:
+          MINIO_ROOT_USER: odk-central-dev
+          MINIO_ROOT_PASSWORD: topSecret123
+        ports:
+          - 9000:9000
+        options: >-
+          --health-cmd "curl -s http://localhost:9000/minio/health/live"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
     - uses: actions/checkout@v3
     - name: Use Node.js 20
@@ -33,6 +46,7 @@ jobs:
         cache: 'npm'
     - run: npm ci --legacy-peer-deps
     - run: node lib/bin/create-docker-databases.js
+    - run: NODE_CONFIG_ENV=s3-dev node lib/bin/ci-s3-setup.js
     - name: E2E Test
       timeout-minutes: 10
       run: ./test/s3-e2e/scripts/ci-s3-e2e-test
