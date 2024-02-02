@@ -7,10 +7,10 @@
 // including this file, may be copied, modified, propagated, or distributed
 // except according to the terms contained in the LICENSE file.
 
+/* eslint-disable */
+
 const fs = require('node:fs');
 const fetch = require('node-fetch');
-const _ = require('lodash');
-const uuid = require('uuid').v4;
 const { randomBytes } = require('node:crypto');
 const { basename } = require('node:path');
 const { program } = require('commander');
