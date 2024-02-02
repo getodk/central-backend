@@ -9,6 +9,11 @@
 
 /* eslint-disable */
 
+// FIXME a lot of this code is shared with soak-tester.  Refactor to share, possibly by moving
+// soak-tester into test/e2e/soak, and moving common code into e.g. test/e2e/util.  The request
+// handling, tracking of bearer token etc. could be nicely wrapped up in an api session object.
+
+
 const fs = require('node:fs');
 const fetch = require('node-fetch');
 const { randomBytes } = require('node:crypto');
