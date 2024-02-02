@@ -31,7 +31,6 @@ describe('task: runner', () => {
   });
 
   it('should print success object to stdout', () => runScript(success)
-    // eslint-disable-next-line quotes
     .then(([ , stdout ]) => stdout.should.equal(`'{"test":"result"}'\n`)));
 
   it('should print failure details to stderr and exit nonzero', () => runScript(failure)
