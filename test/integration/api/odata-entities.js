@@ -321,6 +321,63 @@ describe('api: /datasets/:name.svc', () => {
         });
     }));
 
+    it('should NOT filter by label', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$filter=label eq \'Alice\'')
+        .expect(501)
+        .then(({ body }) => {
+          body.message.should.eql('The given OData filter expression references fields not supported by this server: label at 0');
+        });
+    }));
+
+    it('should NOT filter by id', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$filter=__id eq \'1234\'')
+        .expect(501)
+        .then(({ body }) => {
+          body.message.should.eql('The given OData filter expression references fields not supported by this server: __id at 0');
+        });
+    }));
+
+    it('should NOT filter by name/uuid', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$filter=uuid eq \'1234\'')
+        .expect(501)
+        .then(({ body }) => {
+          body.message.should.eql('The given OData filter expression references fields not supported by this server: uuid at 0');
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$filter=name eq \'1234\'')
+        .expect(501)
+        .then(({ body }) => {
+          body.message.should.eql('The given OData filter expression references fields not supported by this server: name at 0');
+        });
+    }));
+
     it('should return filtered entities with pagination', testService(async (service, container) => {
       const asAlice = await service.login('alice');
       const asBob = await service.login('bob');
@@ -379,14 +436,29 @@ describe('api: /datasets/:name.svc', () => {
 
       await createSubmissions(asAlice, container, 2);
 
-      await container.run(sql`UPDATE entities SET "createdAt" = '2020-01-01'`);
-
-      await createSubmissions(asAlice, container, 2, 2);
-
       await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$select=__id')
         .expect(200)
         .then(({ body }) => {
-          body.value.length.should.be.eql(4);
+          body.value.map((e) => Object.keys(e).should.eql(['__id']));
+          body.value.length.should.be.eql(2);
+        });
+    }));
+
+    it('should return selected user-defined only', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$select=age')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => Object.keys(e).should.eql(['age']));
+          body.value.length.should.be.eql(2);
         });
     }));
 
