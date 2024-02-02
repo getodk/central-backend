@@ -78,27 +78,36 @@ describe('OData orderby/sort query transformer', () => {
   it('should transform order by queries', () => {
     odataOrderBy('__system/updatedAt desc').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC`);
     odataOrderBy('__system/updatedAt DESC').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC`);
+    odataOrderBy('__system/updatedAt   DESC  ').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC`);
     odataOrderBy('__system/updatedAt   asc').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC`);
     odataOrderBy('  __system/updatedAt   AsC ').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC`);
+  });
+
+  it('should default to ASC if no sort order provided', () => {
+    odataOrderBy('__system/updatedAt').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC`);
+  });
+
+  it('should ignore things after sort order', () => {
+    odataOrderBy('  __system/updatedAt ASC DESC OTHER STUFF ').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC`);
   });
 
   it('should combine multiple sort operators', () => {
     odataOrderBy('__system/updatedAt desc, __system/submissionDate ASC').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC,${sql.identifier([ 'submissions', 'createdAt' ])} ASC`);
   });
 
-  it('should handle no asc/desc provided', () => {
-    odataOrderBy('__system/updatedAt').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC`);
-  });
 
-  // Technically it should follow the spec and do this but it's not implemented
-  it('should NOT handle more complex filters in an orderby clause', () => {
-    odataOrderBy('__system/submitterId ne 5 desc ').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'submitterId' ])} DESC`);
+  it('should NOT handle more complex filters in an orderby clause because sort order validation fails', () => {
+    assert.throws(() => { odataOrderBy('__system/submitterId ne 5 desc '); }, (err) => {
+      err.problemCode.should.equal(501.5);
+      err.message.should.equal('The given OData filter expression references fields not supported by this server: ne');
+      return true;
+    });
   });
 
   it('should reject unparseable expressions', () => {
     assert.throws(() => { odataOrderBy('hello my dear'); }, (err) => {
       err.problemCode.should.equal(501.5);
-      err.message.should.equal('The given OData filter expression references fields not supported by this server: hello at 0');
+      err.message.should.equal('The given OData filter expression references fields not supported by this server: hello');
       return true;
     });
   });
@@ -106,16 +115,24 @@ describe('OData orderby/sort query transformer', () => {
   it('should reject unrecognized field names', () => {
     assert.throws(() => { odataOrderBy('myfield asc'); }, (err) => {
       err.problemCode.should.equal(501.5);
-      err.message.should.equal('The given OData filter expression references fields not supported by this server: myfield at 0');
+      err.message.should.equal('The given OData filter expression references fields not supported by this server: myfield');
       return true;
     });
   });
 
-  it('should ignore unsupported operators and default to DESC', () => {
-    odataOrderBy('__system/updatedAt UP').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC`);
+  it('should reject unrecognized sort orders', () => {
+    assert.throws(() => { odataOrderBy('__system/updatedAt UP'); }, (err) => {
+      err.problemCode.should.equal(501.5);
+      err.message.should.equal('The given OData filter expression references fields not supported by this server: UP');
+      return true;
+    });
   });
 
   it('should add last sort clause to insure stable sort order', () => {
     odataOrderBy('__system/updatedAt asc', 'entities.id').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} ASC,${sql.identifier([ 'entities', 'id' ])} ASC`);
+  });
+
+  it('should use first sort order for stable sort order', () => {
+    odataOrderBy('__system/updatedAt desc, __system/submitterId asc', 'entities.id').should.eql(sql`ORDER BY ${sql.identifier([ 'submissions', 'updatedAt' ])} DESC,${sql.identifier([ 'submissions', 'submitterId' ])} ASC,${sql.identifier([ 'entities', 'id' ])} DESC`);
   });
 });

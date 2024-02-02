@@ -1265,6 +1265,30 @@ describe('api: /forms/:id.svc', () => {
             body.value.map((e) => e.age).should.eql([30, 34]);
           });
       }));
+
+      it('should reject if both orderby and skiptoken are used together', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+          .send(testData.instances.withrepeat.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        const token = await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$top=1')
+          .expect(200)
+          .then(({ body }) => {
+            const tokenData = {
+              instanceId: body.value[0].__id,
+            };
+            return encodeURIComponent(QueryOptions.getSkiptoken(tokenData));
+          });
+
+        await asAlice.get(`/v1/projects/1/forms/withrepeat.svc/Submissions?$orderby=__system/submitterId&$skiptoken=${token}`)
+          .expect(501)
+          .then(({ body }) => {
+            body.message.should.be.eql('The requested feature using $orderby and $skiptoken together is not supported by this server.');
+          });
+      }));
     });
 
     it('should count correctly while windowing', testService((service) =>

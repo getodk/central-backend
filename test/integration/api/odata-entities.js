@@ -560,6 +560,32 @@ describe('api: /datasets/:name.svc', () => {
           body.value[0].__system.createdAt.should.be.lessThan(body.value[3].__system.createdAt);
         });
     }));
+
+    it('should reject if orderby used with skiptoken', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      const token = await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$top=1')
+        .expect(200)
+        .then(({ body }) => {
+          const tokenData = {
+            uuid: body.value[0].__id,
+          };
+          return encodeURIComponent(QueryOptions.getSkiptoken(tokenData));
+        });
+
+      await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/createdAt desc&%24skiptoken=${token}`)
+        .expect(501)
+        .then(({ body }) => {
+          body.message.should.be.eql('The requested feature using $orderby and $skiptoken together is not supported by this server.');
+        });
+    }));
   });
 
   describe('GET service document', () => {
