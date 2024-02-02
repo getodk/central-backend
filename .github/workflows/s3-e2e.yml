@@ -32,7 +32,7 @@ jobs:
     - run: node lib/bin/create-docker-databases.js
     - name: E2E Test
       timeout-minutes: 10
-      run: ./test/s3-e2e/scripts/ci-s3-e2e-test
+      run: LOG_LEVEL=DEBUG ./test/s3-e2e/scripts/ci-s3-e2e-test
     - name: Backend Logs
       if: always()
       run: "! [[ -f ./backend.log ]] || cat ./backend.log"
