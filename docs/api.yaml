@@ -40,15 +40,27 @@ info:
 
     **Added**:
 
-    - Entities accessed via API now have conflict and version-specific conflictingProperties fields
+    - Central now supports _Entity Updates via Submissions_ as part of our continued work on Entity-Based Data Collection!
+      * Submissions for Entity Updates specify which properties/label to update with new values and an Entity's target `baseVersion`, which is used to track conflicts
+    - Entities accessed via the API have additional information about conflicts (when multiple Submissions update the same Entity)
+      * Each [Entity](/central-api-entity-management/#getting-entity-details) now has a `conflict` field, which is either:
+        * `null`. The Entity does not have conflicting versions.
+        * `soft`. The Entity has a version that was based on a version other than the version immediately prior to it. (The specified `baseVerson` was not the latest version on the server.)
+        * `hard`. The Entity has a version that was based on a version other than the version immediately prior to it. Further, that version updated the same property as another update.
+        * If an Entity has a conflict, it can be marked as resolved. After that, the conflict field will be null until a new conflicting version is received.
+      * Each Entity Version (`currentVersion` or list of versions) has new fields `baseVersion`, `dataReceived`, and `conflictingProperties`
+    - [Datasets](/central-api-dataset-management/#datasets) extended metadata now has a `conflicts` field, which counts number of Entities currently in conflict
+    - Entity conflicts can be resolved using the existing [PATCH](/central-api-entity-management/#updating-an-entity) endpoint, with or without new data
+    - New `relevantToConflict` query parameter on [GET entities/:uuid/versions](/central-api-entity-management/#listing-versions)
 
-      * Conflicts are either `hard` (baseVersion conflicts and multiple versions update the same property), `soft` (baseVersion conflicts but data updates are independent), or `null`
 
     **Changed**:
 
-    - Conflicts can be resolved using the [PATCH entity](/central-api-entity-management/#updating-an-entity) endpoint with or without new data
+    - Dataset entity list [entities.csv](/central-api-dataset-management/#download-dataset) can now be filtered
+    - Entity Update [PATCH](/central-api-entity-management/#updating-an-entity) endpoint now expects `baseVersion` query parameter or `force` flag
 
-    ### ODK Central v2023.4
+
+    ## ODK Central v2023.4
 
     **Added**:
 
@@ -67,14 +79,14 @@ info:
     - New endpoint [PATCH /projects/:id/datasets/:name](/central-api-dataset-management/#update-dataset-metadata) to change whether approval of Submission is required to create an Entity.
     - New [Entities](/central-api-entity-management) endpoints for richer Entity-Based Data Collection workflows. These endpoints provide ways of accessing Entities, as well as the ability to _create_, _update_ and _soft-delete_ Entities via the API!
       
-      * New endpoint [GET /projects/:id/datasets/:name/entities](/central-api-entities/#entities-metadata) for listing Entities within a Dataset.
-      * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid](/central-api-entities/#getting-entity-details) for getting the metadata, or details, about a specific Entity.
-      * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/versions](/central-api-entities/#listing-versions) for listing the versions of an Entity.
-      * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/diffs](/central-api-entities/#getting-changes-between-versions) for getting the changes between versions of an Entity.
-      * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/audits](/central-api-entities/#entity-audit-log) for getting the server audit logs about a specific Entity.
-      * New endpoint [POST /projects/:id/datasets/:name/entities](/central-api-entities/#creating-an-entity) for creating an Entity from JSON.
-      * New endpoint [PATCH /projects/:id/datasets/:name/entities/:uuid](/central-api-entities/#updating-an-entity) for updating the data or label of an Entity.
-      * New endpoint [DELETE /projects/:id/datasets/:name/entities/:uuid](/central-api-entities/#deleting-an-entity) for soft-deleting an Entity.
+      * New endpoint [GET /projects/:id/datasets/:name/entities](/central-api-entity-management/#entities-metadata) for listing Entities within a Dataset.
+      * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid](/central-api-entity-management/#getting-entity-details) for getting the metadata, or details, about a specific Entity.
+      * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/versions](/central-api-entity-management/#listing-versions) for listing the versions of an Entity.
+      * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/diffs](/central-api-entity-management/#getting-changes-between-versions) for getting the changes between versions of an Entity.
+      * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/audits](/central-api-entity-management/#entity-audit-log) for getting the server audit logs about a specific Entity.
+      * New endpoint [POST /projects/:id/datasets/:name/entities](/central-api-entity-management/#creating-an-entity) for creating an Entity from JSON.
+      * New endpoint [PATCH /projects/:id/datasets/:name/entities/:uuid](/central-api-entity-management/#updating-an-entity) for updating the data or label of an Entity.
+      * New endpoint [DELETE /projects/:id/datasets/:name/entities/:uuid](/central-api-entity-management/#deleting-an-entity) for soft-deleting an Entity.
 
     **Changed**:
 
@@ -4550,6 +4562,8 @@ paths:
       description: If a Draft Form was created with an Excel file (`.xls` or `.xlsx`),
         you can get that file back by adding `.xls` or `.xlsx` as appropriate to the
         Draft Form resource path.
+
+        This endpoint supports `ETag`, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, it returns a value in `ETag` header, you can pass this value in the header `If-None-Match` of subsequent requests. If the file has not been changed since the previous request, you will receive `304 Not Modified` response otherwise you'll get the latest file.
       operationId: Retrieving Draft Form XLS(X)
       parameters:
       - name: projectId
@@ -4569,6 +4583,11 @@ paths:
       responses:
         200:
           description: OK
+          headers:
+            ETag:
+              schema:
+                type: string
+                description: content version identifier
           content:
             application/xml:
               example: |
@@ -4662,6 +4681,8 @@ paths:
         (attachment with a filename or Dataset name) and `Content-Type` (based on
         the type supplied at upload time or `text/csv` in the case of a linked Dataset)
         will be given.
+
+        This endpoint supports `ETag`, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, it returns a value in `ETag` header, you can pass this value in the header `If-None-Match` of subsequent requests. If the file has not been changed since the previous request, you will receive `304 Not Modified` response otherwise you'll get the latest file.
       operationId: Downloading a Draft Form Attachment
       parameters:
       - name: projectId
@@ -4692,6 +4713,10 @@ paths:
             Content-Disposition:
               schema:
                 type: string
+            ETag:
+              schema:
+                type: string
+                description: content version identifier
           content:
             '{the MIME type of the attachment file itself or text/csv for a Dataset}':
               example: |
@@ -5363,6 +5388,8 @@ paths:
       description: If a Form Version was created with an Excel file (`.xls` or `.xlsx`),
         you can get that file back by adding `.xls` or `.xlsx` as appropriate to the
         Form Version resource path.
+
+        This endpoint supports `ETag` header, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, the endpoint returns a value in `ETag` header. If you pass that value in the `If-None-Match` header of a subsequent request, then if the file has not been changed since the previous request, you will receive `304 Not Modified` response; otherwise you'll get the latest file.
       operationId: Retrieving Form Version XLS(X)
       parameters:
       - name: projectId
@@ -5390,6 +5417,10 @@ paths:
       responses:
         200:
           description: OK
+            ETag:
+              schema:
+                type: string
+                description: content version identifier
           content:
             application/xml:
               example: |
@@ -7866,6 +7897,8 @@ paths:
       summary: Downloading an Attachment
       description: The `Content-Type` and `Content-Disposition` will be set appropriately
         based on the file itself when requesting an attachment file download.
+
+        This endpoint supports `ETag`, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, it returns a value in `ETag` header, you can pass this value in the header `If-None-Match` of subsequent requests. If the file has not been changed since the previous request, you will receive `304 Not Modified` response otherwise you'll get the latest file.
       operationId: Downloading an Attachment
       parameters:
       - name: projectId
@@ -7903,6 +7936,10 @@ paths:
             Content-Disposition:
               schema:
                 type: string
+            ETag:
+              schema:
+                type: string
+                description: content version identifier
           content:
             '{the MIME type of the attachment file itself}':
               example: |
@@ -8414,6 +8451,8 @@ paths:
       description: It is important to note that this endpoint returns whatever is
         _currently_ uploaded against the _particular version_ of the _Submission_.
         It will not track overwritten attachments.
+
+        This endpoint supports `ETag`, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, it returns a value in `ETag` header, you can pass this value in the header `If-None-Match` of subsequent requests. If the file has not been changed since the previous request, you will receive `304 Not Modified` response otherwise you'll get the latest file.
       operationId: Downloading a Version's Attachment
       parameters:
       - name: projectId
@@ -8459,6 +8498,10 @@ paths:
             Content-Disposition:
               schema:
                 type: string
+            ETag:
+              schema:
+                type: string
+                description: content version identifier
           content:
             '{the MIME type of the attachment file itself}':
               example: |
@@ -9853,6 +9896,8 @@ paths:
 
         The CSV format closely matches the [OData Dataset Service](/central-api-odata-endpoints/#odata-dataset-service) format, with columns for system properties such as `__id` (the Entity UUID), `__createdAt`, `__creatorName`, etc., the Entity Label `label`, and the Dataset/Entity Properties themselves. If any Property for an given Entity is blank (e.g. it was not captured by that Form or was left blank), that field of the CSV is blank.
 
+        The `$filter` querystring parameter can be used to filter on system-level properties, similar to how filtering in the [OData Dataset Service](/central-api-odata-endpoints/#odata-dataset-service) works.
+
         This endpoint supports `ETag` header, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, the endpoint returns a value in the ETag header. If you pass that value in the If-None-Match header of a subsequent request, then if the Dataset has not been changed since the previous request, you will receive `304 Not Modified` response; otherwise you'll get the new data.
       operationId: Download Dataset
       parameters:
@@ -9870,6 +9915,12 @@ paths:
         schema:
           type: string
         example: people
+      - name: $filter
+        in: query
+        description: If provided, will filter responses to those matching the query. Only system-level Entity fields are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+        schema:
+          type: string
+        example: __system/conflict eq \'hard\'
       responses:
         200:
           description: OK
@@ -10015,7 +10066,7 @@ paths:
         
         Value type of all properties is `string`.
 
-        You can provide header `X-Action-Notes` to store the metadata about the request. The metadata can retrieved using [Entity Audit Log](/central-api-entities/#entity-audit-log)
+        You can provide header `X-Action-Notes` to store the metadata about the request. The metadata can retrieved using [Entity Audit Log](/central-api-entity-management/#entity-audit-log)
       operationId: Creating an Entity
       parameters:
       - name: projectId
@@ -10093,7 +10144,21 @@ paths:
       tags:
       - Entity Management
       summary: Getting Entity Details
-      description: This returns the metadata and current data of an Entity
+      description: |-
+        This returns the metadata and current data of an Entity.
+
+        The data and label of an Entity are found in the `currentVersion` object under `data` and `label` respectively. The `currentVersion` object also contains version-specific metadata fields such as `version`, `baseVersion`, details about conflicts that version introduced, etc. See the [versions](/central-api-entity-management/#listing-versions) endpoint for more details.
+
+        The Entity also contains top-level system metadata such as `uuid`, `createdAt` and `updatedAt` timestamps, and `creatorId` (or full `creator` if extended metadata is requested).
+
+        **Conflicts**
+
+        An Entity's metadata also has a `conflict` field, which indicates the current conflict status of the Entity. The value of a conflict can either be:
+          * `null`. The Entity does not have conflicting versions.
+          * `soft`. The Entity has a version that was based on a version other than the version immediately prior to it. (The specified `baseVerson` was not the latest version on the server.)
+          * `hard`. The Entity has a version that was based on a version other than the version immediately prior to it. Further, that version updated the same property as another update.
+
+        If an Entity has a conflict, it can be marked as resolved. After that, the conflict field will be null until a new conflicting version is received.
       operationId: Getting Entity Details
       parameters:
       - name: projectId
@@ -10224,7 +10289,7 @@ paths:
       summary: Deleting an Entity
       description: Use this API to delete an Entity. With this API, Entity is soft-deleted,
         which means it is still in the database and you can retreive it by passing
-        `?deleted=true` to [GET /projects/:id/datasets/:name/entities](/central-api-entities/#entities-metadata).
+        `?deleted=true` to [GET /projects/:id/datasets/:name/entities](/central-api-entity-management/#entities-metadata).
         In the future, we will provide a way to restore deleted entities and purge
         deleted entities.
       operationId: Deleting an Entity
@@ -10279,13 +10344,15 @@ paths:
       - Entity Management
       summary: Updating an Entity
       description: |-
-        Use this API to update one or all properties of an Entity. It will throw `400 - Bad Request` if any of the updating properties doesn't exist in the dataset.
+        This endpoint is used to update the label or the properties (passed as JSON in the request body) of an Entity. You only need to include the properties you wish to update. To unset the value of any property, you can set it to empty string (""). The label must be a non-empty string. Setting a property to `null` will throw an error. Attempting to update a property that doesn't exist in the Dataset will throw an error. 
 
-        To unset value of any property, you can set it to empty string (""). Setting it to `null` will throw an error.
+        **Specifying a base version**
 
-        **Resolve the conflict**
+        You must either provide the query parameter `baseVersion` or use the `force=true` query paramater. You cannot cause a new Entity conflict via the API, which is why when specifying `baseVersion`, it must match the current version of the Entity on the server. This acts as a check to ensure you are not trying to update based on stale data. If you wish to update the Entity regardless of the current state, then you can use the `force` flag. 
 
-        You can also use this endpoint to resolve the conflict by passing `resolve=true` query parameter. If you set `resolve` parameter then providing data in the body is optional, in that case only `conflict` status from the Entity will be cleared.
+        **Resolving a conflict**
+
+        You can also use this endpoint to resolve an Entity conflict by passing the `resolve=true` query parameter, in which case providing data in the request body is optional. When not providing new data, only the `conflict` status from the Entity will be cleared and no new version will be created. When providing data, the `conflict` will be cleared and an updated version of the Entity will be added.
       operationId: Updating an Entity
       parameters:
       - name: projectId
@@ -10309,6 +10376,13 @@ paths:
         schema:
           type: string
         example: 54a405a0-53ce-4748-9788-d23a30cc3afa
+      - name: baseVersion
+        in: query
+        description: The base version of the Entity you are applying the update to (must match the latest version on the server)
+        required: false
+        schema:
+          type: integer
+        example: 2
       - name: force
         in: query
         description: Flag to forcefully update the Entity
@@ -10406,6 +10480,8 @@ paths:
         This returns the Entity metadata and data for every version of this Entity, in ascending creation order.
 
         This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to return a `creator` data object alongside the `creatorId` Actor ID reference.
+
+        There is an optional query flag `relevantToConflict` that returns the subset of past versions of an Entity that are relevant to the Entity's current conflict. This includes the latest version, the base version, the previous server version, and any other versions since the last time the Entity was in a conflict-free state. If the Entity is not in conflict, zero versions are returned.
       operationId: Listing Entity Versions
       parameters:
       - name: projectId
@@ -10429,6 +10505,12 @@ paths:
         schema:
           type: string
         example: 54a405a0-53ce-4748-9788-d23a30cc3afa
+      - name: relevantToConflict
+        in: query
+        description: Flag to return only the versions of the entity that are relevant to the current conflict.
+        schema:
+          type: boolean
+        example: true
       responses:
         200:
           description: OK
@@ -11859,6 +11941,8 @@ paths:
                                 <Property Name="creatorName" Type="Edm.String"/>
                                 <Property Name="updates" Type="Edm.Int64"/>
                                 <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
+                                <Property Name="version" Type="Edm.Int64"/>
+                                <Property Name="conflict" Type="Edm.String"/>
                             </ComplexType>
                         </Schema>
                         <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.trees">
@@ -11983,7 +12067,7 @@ paths:
 
         The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. If `$top` parameter is provided in the request then the response will include `@odata.nextLink` that you can use as is to fetch the next set of data.
 
-        The [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948)can be used to filter by any data field in the system-level schema, but not the Dataset properties. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported.
+        The [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) can be used to filter by any data field in the system-level schema, but not the Dataset properties. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported.
 
         The fields you can query against are as follows:
 
@@ -13383,7 +13467,7 @@ components:
             source:
               type: object
               description: The source of the Entity version, such as a Submission or an API request. This property is experimental and may change in the future.
-              example: {event: {}, submissionCreate: {}, submission: {}}
+              example: {event: {}, submission: {}}
             baseDiff:
               type: array
               description: List of properties that are different between this version and its base version. Includes the label if it differs between the two versions.

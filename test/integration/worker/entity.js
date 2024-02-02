@@ -454,7 +454,6 @@ describe('worker: entity', () => {
   });
 
   describe('should catch problems updating entity', () => {
-    // TODO: these errors are getting logged as entity.error audit events
     describe('validation errors', () => {
       it('should fail because UUID is invalid', testService(async (service, container) => {
         const asAlice = await service.login('alice');
@@ -955,7 +954,7 @@ describe('worker: entity', () => {
         .expect(200)
         .then(({ body: logs }) => {
           logs[0].action.should.be.eql('entity.update.version');
-          logs[0].details.sourceEvent.action.should.be.eql('submission.create');
+          logs[0].details.source.event.action.should.be.eql('submission.create');
         });
     }));
 

@@ -4,7 +4,7 @@ const { promisify } = require('util');
 const { DateTime, Duration } = require('luxon');
 const { sql } = require('slonik');
 const { testContainerFullTrx, testContainer } = require('../setup');
-const { runner, checker, worker } = require(appRoot + '/lib/worker/worker');
+const { workerQueue } = require(appRoot + '/lib/worker/worker');
 const { Audit } = require(appRoot + '/lib/model/frames');
 const { insert } = require(appRoot + '/lib/util/db');
 
@@ -16,7 +16,7 @@ describe('worker', () => {
     it('should return false and do nothing if no event is given', () => {
       let called = false;
       const reschedule = () => { called = true; };
-      runner({})(null, reschedule).should.equal(false);
+      workerQueue({}).run(null, reschedule).should.equal(false);
       called.should.equal(false);
     });
 
@@ -24,14 +24,16 @@ describe('worker', () => {
       let called = false;
       const reschedule = () => { called = true; };
       const event = { action: 'test.event' };
-      runner({}, { other: [ () => Promise.resolve(42) ] })(event, reschedule).should.equal(false);
+      const queue = workerQueue({}, { other: [ () => Promise.resolve(42) ] });
+      queue.run(event, reschedule).should.equal(false);
       called.should.equal(false);
     });
 
     it('should return true if a job is matched', (done) => {
       const jobMap = { 'test.event': [] };
       const container = { transacting() { return Promise.resolve(); } };
-      runner(container, jobMap)({ action: 'test.event' }, done).should.equal(true);
+      const queue = workerQueue(container, jobMap);
+      queue.run({ action: 'test.event' }, done).should.equal(true);
     });
 
     it('should pass the container and event details to the job', testContainerFullTrx(async (container) => {
@@ -48,7 +50,7 @@ describe('worker', () => {
         return Promise.resolve();
       } ] };
 
-      await promisify(runner(sentineledContainer, jobMap))(event);
+      await promisify(workerQueue(sentineledContainer, jobMap).run)(event);
       checked.should.equal(true);
     }));
 
@@ -62,7 +64,7 @@ describe('worker', () => {
       ] };
 
       const event = { id: -1, action: 'test.event' };
-      await promisify(runner(container, jobMap))(event);
+      await promisify(workerQueue(container, jobMap).run)(event);
       count.should.equal(2);
     }));
 
@@ -73,7 +75,7 @@ describe('worker', () => {
       const event = (await Audits.getLatestByAction('submission.attachment.create')).get();
 
       const jobMap = { 'submission.attachment.create': [ () => Promise.resolve() ] };
-      await promisify(runner(container, jobMap))(event);
+      await promisify(workerQueue(container, jobMap).run)(event);
       const after = (await Audits.getLatestByAction('submission.attachment.create')).get();
       after.processed.should.be.a.recentDate();
     }));
@@ -85,7 +87,7 @@ describe('worker', () => {
 
       const event = { id: -1, action: 'test.event', failures: 0 };
       const jobMap = { 'test.event': [ () => Promise.reject(new Error('uhoh')) ] };
-      await promisify(runner(hijackedContainer, jobMap))(event);
+      await promisify(workerQueue(hijackedContainer, jobMap).run)(event);
       captured.should.be.instanceOf(Error);
       captured.message.should.equal('uhoh');
     }));
@@ -99,7 +101,7 @@ describe('worker', () => {
 
       const event = { id: -1, action: 'test.event', failures: 0 };
       const jobMap = { 'test.event': [ () => Promise.reject(new Error()) ] };
-      await promisify(runner(hijackedContainer, jobMap))(event);
+      await promisify(workerQueue(hijackedContainer, jobMap).run)(event);
       // not hanging is the test here.
     }));
 
@@ -113,7 +115,7 @@ describe('worker', () => {
       const event = (await Audits.getLatestByAction('submission.attachment.update')).get();
 
       const jobMap = { 'submission.attachment.update': [ () => Promise.reject(new Error()) ] };
-      await promisify(runner(container, jobMap))(event);
+      await promisify(workerQueue(container, jobMap).run)(event);
       const after = (await Audits.getLatestByAction('submission.attachment.update')).get();
       should.not.exist(after.claimed);
       should.not.exist(after.processed);
@@ -130,7 +132,7 @@ describe('worker', () => {
       const jobMap = { 'submission.attachment.update': [
         ({ Audits: AuditQuery }) => AuditQuery.log(alice.actor, 'dummy.event', alice.actor),
         () => Promise.reject(new Error()) ] };
-      await promisify(runner(container, jobMap))(event);
+      await promisify(workerQueue(container, jobMap).run)(event);
 
       const dummyEvent = (await Audits.getLatestByAction('dummy.event'));
       dummyEvent.isDefined().should.be.false();
@@ -140,7 +142,6 @@ describe('worker', () => {
       should.not.exist(after.processed);
       after.failures.should.equal(1);
       after.lastFailure.should.be.a.recentDate();
-
     }));
   });
 
@@ -148,7 +149,7 @@ describe('worker', () => {
   // the only event that is not automarked as processed upon initial audit logging.
   describe('checker', () => {
     it('should return null if there are no unprocessed events', testContainer(async (container) => {
-      const check = checker(container);
+      const { check } = workerQueue(container);
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'test.event', alice.actor);
@@ -156,7 +157,7 @@ describe('worker', () => {
     }));
 
     it('should mark the event as claimed', testContainer(async (container) => {
-      const check = checker(container);
+      const { check } = workerQueue(container);
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
@@ -167,7 +168,7 @@ describe('worker', () => {
     }));
 
     it('should not mark any other events as claimed', testContainer(async (container) => {
-      const check = checker(container);
+      const { check } = workerQueue(container);
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
@@ -184,7 +185,7 @@ describe('worker', () => {
     }));
 
     it('should return the oldest eligible event', testContainer(async (container) => {
-      const check = checker(container);
+      const { check } = workerQueue(container);
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor, { is: 'oldest' });
@@ -195,7 +196,7 @@ describe('worker', () => {
     }));
 
     it('should not return a recently failed event', testContainer(async (container) => {
-      const check = checker(container);
+      const { check } = workerQueue(container);
       const { Users, run } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await run(insert(new Audit({
@@ -209,7 +210,7 @@ describe('worker', () => {
     }));
 
     it('should retry a previously failed event after some time', testContainer(async (container) => {
-      const check = checker(container);
+      const { check } = workerQueue(container);
       const { Users, run } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await run(insert(new Audit({
@@ -224,7 +225,7 @@ describe('worker', () => {
     }));
 
     it('should not return a repeatedly failed event', testContainer(async (container) => {
-      const check = checker(container);
+      const { check } = workerQueue(container);
       const { Users, run } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await run(insert(new Audit({
@@ -238,7 +239,7 @@ describe('worker', () => {
     }));
 
     it('should claim a stale/hung event', testContainer(async (container) => {
-      const check = checker(container);
+      const { check } = workerQueue(container);
       const { Users, run } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await run(insert(new Audit({
@@ -252,7 +253,7 @@ describe('worker', () => {
     }));
   });
 
-  describe('worker', () => {
+  describe('loop', () => {
     const millis = (x) => new Promise((done) => { setTimeout(done, x); });
 
     it('should run a full loop right away', testContainerFullTrx(async (container) => {
@@ -262,7 +263,7 @@ describe('worker', () => {
 
       let ran;
       const jobMap = { 'submission.attachment.update': [ () => { ran = true; return Promise.resolve(); } ] };
-      const cancel = worker(container, jobMap);
+      const cancel = workerQueue(container, jobMap).loop();
 
       // eslint-disable-next-line no-await-in-loop
       while ((await Audits.getLatestByAction('submission.attachment.update')).get().processed == null)
@@ -281,7 +282,7 @@ describe('worker', () => {
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
 
       const jobMap = { 'submission.attachment.update': [ () => Promise.resolve() ] };
-      const cancel = worker(container, jobMap);
+      const cancel = workerQueue(container, jobMap).loop();
 
       // eslint-disable-next-line no-await-in-loop
       while ((await container.oneFirst(sql`
@@ -299,7 +300,7 @@ select count(*) from audits where action='submission.attachment.update' and proc
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
 
       const jobMap = { 'submission.attachment.update': [ () => Promise.resolve() ] };
-      const cancel = worker(container, jobMap, 50);
+      const cancel = workerQueue(container, jobMap).loop(50);
 
       // eslint-disable-next-line no-await-in-loop
       while ((await container.oneFirst(sql`
@@ -335,7 +336,7 @@ select count(*) from audits where action='submission.attachment.update' and proc
         }
       };
       const jobMap = { 'submission.attachment.update': [ () => Promise.resolve() ] };
-      const cancel = worker(hijacked, jobMap, 10);
+      const cancel = workerQueue(hijacked, jobMap).loop(10);
 
       // eslint-disable-next-line no-await-in-loop
       while ((await Audits.getLatestByAction('submission.attachment.update')).get().processed == null)
@@ -365,7 +366,7 @@ select count(*) from audits where action='submission.attachment.update' and proc
         }
       };
       const jobMap = { 'submission.attachment.update': [ () => Promise.resolve() ] };
-      const cancel = worker(hijacked, jobMap, 10);
+      const cancel = workerQueue(hijacked, jobMap).loop(10);
 
       // eslint-disable-next-line no-await-in-loop
       while ((await Audits.getLatestByAction('submission.attachment.update')).get().processed == null)
@@ -398,7 +399,7 @@ select count(*) from audits where action='submission.attachment.update' and proc
         checks.should.equal(1);
         throw new Error('oh no!');
       } ] };
-      const cancel = worker(hijacked, jobMap);
+      const cancel = workerQueue(hijacked, jobMap).loop();
 
       // eslint-disable-next-line no-await-in-loop
       while ((await Audits.getLatestByAction('submission.attachment.update')).get().lastFailure == null)

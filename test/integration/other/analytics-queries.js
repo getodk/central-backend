@@ -5,7 +5,7 @@ const { createReadStream, readFileSync } = require('fs');
 
 const { promisify } = require('util');
 const testData = require('../../data/xml');
-const { runner, exhaust } = require(appRoot + '/lib/worker/worker');
+const { exhaust, workerQueue } = require(appRoot + '/lib/worker/worker');
 
 const geoForm = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <h:head>
@@ -304,7 +304,7 @@ describe('analytics task queries', function () {
         // fail the processing of this latest event
         let event = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
         const jobMap = { 'submission.attachment.update': [ () => Promise.reject(new Error()) ] };
-        await promisify(runner(container, jobMap))(event);
+        await promisify(workerQueue(container, jobMap).run)(event);
 
         // should still be 0 because the failure count is only at 1, needs to be at 5 to count
         event = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
@@ -375,7 +375,7 @@ describe('analytics task queries', function () {
 
       const jobMap = { 'submission.attachment.update': [ () => Promise.reject(new Error()) ] };
       const eventOne = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
-      await promisify(runner(container, jobMap))(eventOne);
+      await promisify(workerQueue(container, jobMap).run)(eventOne);
 
       // making this look like it failed 5 times
       await asAlice.post('/v1/projects/1/submission')
@@ -1019,6 +1019,179 @@ describe('analytics task queries', function () {
       datasets[0].num_entity_updates_recent.should.be.equal(1);
     }));
 
+    it('should calculate entity updates through different sources like API and submission', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three);
+      await exhaust(container);
+
+      await createTestForm(service, container, testData.forms.updateEntity, 1);
+      await submitToForm(service, 'alice', 1, 'updateEntity', testData.instances.updateEntity.one);
+      await exhaust(container);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ data: { age: '2', first_name: 'John' }, label: 'John (12)' })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
+        .send({ data: { age: '1' } })
+        .expect(200);
+
+      // let's set date of entity update to long time ago
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.update.version'`);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
+        .send({ data: { age: '2' } })
+        .expect(200);
+
+      await submitToForm(service, 'alice', 1, 'updateEntity', testData.instances.updateEntity.two);
+      await exhaust(container);
+
+      const datasets = await container.Analytics.getDatasets();
+
+      datasets[0].num_entity_updates_api_total.should.be.equal(3);
+      datasets[0].num_entity_updates_api_recent.should.be.equal(1);
+      datasets[0].num_entity_updates_sub_total.should.be.equal(2);
+      datasets[0].num_entity_updates_sub_recent.should.be.equal(1);
+
+      datasets[0].num_entity_updates_total.should.be.equal(datasets[0].num_entity_updates_api_total + datasets[0].num_entity_updates_sub_total);
+      datasets[0].num_entity_updates_recent.should.be.equal(datasets[0].num_entity_updates_api_recent + datasets[0].num_entity_updates_sub_recent);
+    }));
+
+    it('should calculate number of entities ever updated vs. update actions applied', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one); // abc
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two); // aaa
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three); // bbb
+      await exhaust(container);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ data: { age: '2', first_name: 'John' }, label: 'John (12)' })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
+        .send({ data: { age: '1' } })
+        .expect(200);
+
+      // let's set date of entity update to long time ago
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.update.version'`);
+
+      // let's set entity updatedAt to a long time ago, too
+      await container.run(sql`UPDATE entities SET "updatedAt" = '1999-1-1' WHERE "uuid" = '12345678-1234-4123-8234-123456789abc'`);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
+        .send({ data: { age: '2' } })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
+        .send({ data: { age: '3' } })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
+        .send({ data: { age: '4' } })
+        .expect(200);
+
+      // entity abc has been updated once, in the past
+      // entity aaa has been updated many times (once in the past, 3 times recently)
+      // entity bbb has never been updated
+
+      const datasets = await container.Analytics.getDatasets();
+
+      // 3 entities total
+      datasets[0].num_entities_total.should.be.equal(3);
+
+      // 2 entities ever updated
+      datasets[0].num_entities_updated_total.should.be.equal(2);
+      datasets[0].num_entities_updated_recent.should.be.equal(1);
+
+      // 5 update events
+      datasets[0].num_entity_updates_total.should.be.equal(5);
+      datasets[0].num_entity_updates_recent.should.be.equal(3);
+    }));
+
+    it('should calculate number of entities ever with conflict, and which are currently resolved', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await createTestForm(service, container, testData.forms.updateEntity, 1);
+      await exhaust(container);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Aaa',
+          data: { first_name: 'Aaa', age: '22' }
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789aaa',
+          label: 'Bbb',
+          data: { first_name: 'Bbb', age: '22' }
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789bbb',
+          label: 'Bbb',
+          data: { first_name: 'Bbb', age: '22' }
+        })
+        .expect(200);
+
+      // create first conflict on abc
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ data: { age: '99' } })
+        .expect(200);
+
+      // .one updates name and age
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // create soft conflict
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
+        .send({ data: { first_name: 'Aaa 2' } })
+        .expect(200);
+
+      // .three updates age
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.three.replace('12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&force=true')
+        .expect(200);
+
+      const datasets = await container.Analytics.getDatasets();
+
+      // 3 entities total
+      datasets[0].num_entities_total.should.be.equal(3);
+      datasets[0].num_entity_conflicts.should.be.equal(2);
+      datasets[0].num_entity_conflicts_resolved.should.be.equal(1);
+
+      // putting abc back into conflict makes current resolved count get set to 0 again
+      // .two updates label
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const datasets2 = await container.Analytics.getDatasets();
+      datasets2[0].num_entity_conflicts.should.be.equal(2);
+      datasets2[0].num_entity_conflicts_resolved.should.be.equal(0);
+    }));
+
     it('should return right dataset of each projects', testService(async (service, container) => {
 
       const asAlice = await service.login('alice');
@@ -1362,6 +1535,12 @@ describe('analytics task queries', function () {
       await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
         .send({ data: { age: '2' } });
 
+      // Make another conflict via submission and then resolve it
+      await createTestForm(service, container, testData.forms.updateEntity, 1);
+      await submitToForm(service, 'alice', 1, 'updateEntity', testData.instances.updateEntity.one);
+      await exhaust(container);
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true&resolve=true');
+
       // Link both Datasets to a Form
       await createTestForm(service, container, testData.forms.withAttachments
         .replace(/goodone/g, 'people')
@@ -1378,7 +1557,7 @@ describe('analytics task queries', function () {
 
       firstDataset.should.be.eql({
         num_properties: 2,
-        num_creation_forms: 1,
+        num_creation_forms: 2,
         num_followup_forms: 1,
         num_entities: {
           total: 2, // made one Entity ancient
@@ -1389,9 +1568,23 @@ describe('analytics task queries', function () {
           recent: 1
         },
         num_entity_updates: {
+          total: 3,
+          recent: 2
+        },
+        num_entity_updates_sub: {
+          total: 1,
+          recent: 1
+        },
+        num_entity_updates_api: {
           total: 2,
           recent: 1
-        }
+        },
+        num_entities_updated: {
+          total: 1,
+          recent: 1
+        },
+        num_entity_conflicts: 1,
+        num_entity_conflicts_resolved: 1
       });
 
       secondDataset.should.be.eql({
@@ -1409,7 +1602,21 @@ describe('analytics task queries', function () {
         num_entity_updates: {
           total: 0,
           recent: 0
-        }
+        },
+        num_entity_updates_sub: {
+          total: 0,
+          recent: 0
+        },
+        num_entity_updates_api: {
+          total: 0,
+          recent: 0
+        },
+        num_entities_updated: {
+          total: 0,
+          recent: 0
+        },
+        num_entity_conflicts: 0,
+        num_entity_conflicts_resolved: 0
       });
 
       // Assert that a Project without a Dataset returns an empty array
