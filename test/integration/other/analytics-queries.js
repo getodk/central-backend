@@ -1,11 +1,19 @@
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
-const { testService, testContainer } = require('../setup');
+const { testService, testContainer, testContainerFullTrx, testServiceFullTrx } = require('../setup');
 const { createReadStream, readFileSync } = require('fs');
 
 const { promisify } = require('util');
 const testData = require('../../data/xml');
-const { exhaust, workerQueue } = require(appRoot + '/lib/worker/worker');
+const { exhaust:_exhaust, exhaustBlobs, workerQueue } = require(appRoot + '/lib/worker/worker');
+const exhaust = async container => {
+  if (process.env.TEST_S3) {
+    // In the real world, there's currently no guarantee that blobs will be
+    // uploaded to S3 before submission.attachment.update is processed.
+    await maybeExhaustBlobs(container);
+  }
+  return _exhaust(container);
+};
 
 const geoForm = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <h:head>
