@@ -573,6 +573,32 @@ describe('Entities API', () => {
         });
     }));
 
+    it('should get version source even when there is no corresponding create/update event', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .expect(200)
+        .then(({ body: versions }) => {
+          versions[0].should.have.property('source');
+          versions[0].source.submission.instanceId.should.equal('one');
+          versions[0].source.submission.should.have.property('currentVersion');
+          versions[0].source.event.action.should.equal('submission.update');
+        });
+
+      // this is simulating an entity version that doesnt have a corresponding create event
+      // e.g. made through bulk create (coming soon)
+      // but that can still look up source details directly from source table
+      await container.run(sql`delete from audits where action = 'entity.create'`);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .expect(200)
+        .then(({ body: versions }) => {
+          versions[0].should.have.property('source');
+          versions[0].source.should.eql({ submission: { instanceId: 'one' } });
+        });
+
+    }));
+
     describe('relevantToConflict', () => {
 
       const createConflictOnV2 = async (user, container) => {

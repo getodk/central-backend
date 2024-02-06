@@ -36,6 +36,14 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
+    ## ODK Central v2024.1
+
+    **Added**:
+
+    - OData Data Document for requests of Submissions and Entities now allow use of `$orderby`.
+    - ETag headers on all Blobs.
+
+
     ## ODK Central v2023.5
 
     **Added**:
@@ -556,7 +564,6 @@ tags:
 
     * The actual data documents, linked from the Service Document, are a simple JSON representation of the submission data or entity, conforming to the schema we describe in our Metadata Document.
 
-    As our focus is on the bulk-export of data from ODK Central so that more advanced analysis tools can handle the data themselves, we do not support most of the features at the Intermediate and above conformance levels, like `$sort` or `$filter`.
 - name: System Endpoints
   description: There are some resources available for getting or setting system information
     and configuration. You can set the [Usage Reporting configuration](/central-api-system-endpoints/#usage-reporting-configuration)
@@ -5417,6 +5424,7 @@ paths:
       responses:
         200:
           description: OK
+          headers:
             ETag:
               schema:
                 type: string
@@ -11572,7 +11580,7 @@ paths:
 
         The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. If `$top` parameter is provided in the request then the response will include `@odata.nextLink` that you can use as is to fetch the next set of data. While paging is possible through these parameters, it will not greatly improve the performance of exporting data. ODK Central prefers to bulk-export all of its data at once if possible.
 
-        As of ODK Central v1.1, the [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) is partially supported. In OData, you can use `$filter` to filter by any data field in the schema. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported. These supported elements may be combined in any way, but all other `$filter` features will cause an error.
+        As of ODK Central v1.1, the [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) is partially supported. In OData, you can use `$filter` to filter by certain data fields in the schema. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported. These supported elements may be combined in any way, but all other `$filter` features will cause an error.
 
         The fields you can query against are as follows:
 
@@ -11598,6 +11606,8 @@ paths:
         + `$select` and `$expand` can't be used together.
 
         + Child properties of repeats can't be requested using `$select`
+
+        As of ODK Central v2024.1, the [`$orderby` query parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358952) is now supported, and can sort on the same fields as `$filter`, noted above. The order can be specified as `ASC` (ascending) or `DESC` (descending), which are case-insensitive. Multiple sort expressions can be used together, separated by commas, e.g. `$orderby=__system/submitterId ASC, __system/reviewState DESC`.
 
         As the vast majority of clients only support the JSON OData format, that is the only format ODK Central offers.
       operationId: Data Document
@@ -11663,6 +11673,12 @@ paths:
         schema:
           type: string
         example: year(__system/submissionDate) lt year(now())
+      - name: '%24orderby'
+        in: query
+        description: If provided, will sort responses according to specified order expression. Only the same fields as `$filter` above can be used to sort. Multiple expressions can be used together.
+        schema:
+          type: string
+        example: __system/submitterId asc, __system/updatedAt desc
       - name: '%24expand'
         in: query
         description: Repetitions, which should get expanded. Currently, only `*` is
@@ -12067,15 +12083,12 @@ paths:
 
         The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. If `$top` parameter is provided in the request then the response will include `@odata.nextLink` that you can use as is to fetch the next set of data.
 
-        The [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) can be used to filter by any data field in the system-level schema, but not the Dataset properties. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported.
+        The [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) can be used to filter certain data fields in the system-level schema, but not the Dataset properties. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported.
 
         The fields you can query against are as follows:
 
         | Entity Metadata         | OData Field Name     |
         | ------------------------| -------------------- |
-        | Entity UUID             | `__id`               |
-        | Entity Name (same as UUID) | `name`            |
-        | Entity Label            | `label`              |
         | Entity Creator Actor ID | `__system/creatorId` |
         | Entity Timestamp        | `__system/createdAt` |
         | Entity Update Timestamp | `__system/updatedAt` |
@@ -12086,6 +12099,8 @@ paths:
         Please see the [OData documentation](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) on `$filter` [operations](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinFilterOperations) and [functions](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinQueryFunctions) for more information.
 
         The [`$select` query parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358942) will return just the fields you specify and is supported on `__id`, `__system`, `__system/creatorId`, `__system/createdAt` and `__system/updatedAt`, as well as on user defined properties.
+
+        The [`$orderby` query parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358952) will return Entities sorted by different fields, which come from the same list used by `$filter`, as noted above. The order can be specified as `ASC` (ascending) or `DESC` (descending), which are case-insensitive. Multiple sort expressions can be used together, separated by commas, e.g. `$orderby=__system/creatorId ASC, __system/conflict DESC`.
 
         As the vast majority of clients only support the JSON OData format, that is the only format ODK Central offers.
       operationId: Data Document for Dataset
@@ -12135,6 +12150,12 @@ paths:
         schema:
           type: string
         example: year(__system/createdAt) lt year(now())
+      - name: '%24orderby'
+        in: query
+        description: If provided, will sort responses according to specified order expression. Only the same fields as `$filter` above can be used to sort. Multiple expressions can be used together.
+        schema:
+          type: string
+        example: __system/creatorId asc, __system/updatedAt desc
       - name: '%24select'
         in: query
         description: If provided, will return only the selected fields.

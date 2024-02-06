@@ -657,7 +657,7 @@ describe('endpoints', () => {
       });
 
       it('should reject requests for unsupported OData features', () => {
-        const request = createRequest({ url: '/odata.svc?$orderby=magic' });
+        const request = createRequest({ url: '/odata.svc?$inlineCount=magic' });
         return odataPreprocessor('json')(null, new Context(request), request)
           .should.be.rejectedWith(Problem, { problemCode: 501.1 });
       });
