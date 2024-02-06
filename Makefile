@@ -25,7 +25,7 @@ dev-oidc: base
 
 .PHONY: fake-s3-accounts
 fake-s3-accounts: node_version
-	NODE_CONFIG_ENV=s3-dev node lib/bin/ci-s3-setup.js
+	NODE_CONFIG_ENV=s3-dev node lib/bin/s3-create-bucket.js
 
 .PHONY: dev-s3
 dev-s3: fake-s3-accounts base

@@ -46,7 +46,7 @@ jobs:
         cache: 'npm'
     - run: npm ci --legacy-peer-deps
     - run: node lib/bin/create-docker-databases.js
-    - run: NODE_CONFIG_ENV=s3-dev node lib/bin/ci-s3-setup.js
+    - run: NODE_CONFIG_ENV=s3-dev node lib/bin/s3-create-bucket.js
     - name: E2E Test
       timeout-minutes: 10
       run: ./test/e2e/s3/ci
