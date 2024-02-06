@@ -1,7 +1,0 @@
-# N.B.:
-# > Only one .eslintignore file can be used at a time, so .eslintignore files
-# > other than the one in the current working directory are not used.
-# > - https://eslint.org/docs/latest/use/configure/ignore
-
-# minio docker volume:
-/s3-dev/minio-config/
