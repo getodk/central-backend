@@ -2138,11 +2138,218 @@ describe('Entities API', () => {
           body.success.should.be.true();
         });
 
+      // Entity list has more entities!
       await asAlice.get('/v1/projects/1/datasets/people/entities')
         .then(({ body }) => {
           body.length.should.equal(2);
         });
+
+      // Most recent event IS bulk create
+      await asAlice.get('/v1/audits')
+        .then(({ body }) => {
+          body[0].action.should.equal('entity.bulk.create');
+          body[0].details.count.should.equal(2);
+        });
     }));
+
+    describe('bulk create errors', () => {
+      it('should not create any entities if one is invalid (missing label)', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-111111111aaa',
+                label: '', // label cannot be empty
+                data: {
+                  first_name: 'Johnny',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-1234-4123-8234-111111111bbb',
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.8);
+            body.message.should.equal('Unexpected label value (empty string); Label cannot be blank.');
+          });
+
+        // Entity list is still empty
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(0);
+          });
+
+        // Most recent event is not a bulk create event
+        await asAlice.get('/v1/audits')
+          .then(({ body }) => {
+            body[0].action.should.not.equal('entity.bulk.create');
+          });
+      }));
+
+      it('should not create any entities if one is invalid (invalid property)', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-111111111aaa',
+                label: 'John Doe',
+                data: {
+                  extra_property_not_in_dataset: 'Not Good',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-1234-4123-8234-111111111bbb',
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.28);
+            body.message.should.equal('The entity is invalid. You specified the dataset property [extra_property_not_in_dataset] which does not exist.');
+          });
+
+        // Entity list is still empty
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(0);
+          });
+
+        // Most recent event is not a bulk create event
+        await asAlice.get('/v1/audits')
+          .then(({ body }) => {
+            body[0].action.should.not.equal('entity.bulk.create');
+          });
+      }));
+
+      it('should not create any entities if one is invalid (invalid UUID)', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-111111111aaa',
+                label: 'John Doe',
+                data: {
+                  first_name: 'John',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-not-real-uuid', // invalid uuid
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.11);
+            body.message.should.equal('Invalid input data type: expected (uuid) to be (valid UUID)');
+          });
+
+        // Entity list is still empty
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(0);
+          });
+
+        // Most recent event is not a bulk create event
+        await asAlice.get('/v1/audits')
+          .then(({ body }) => {
+            body[0].action.should.not.equal('entity.bulk.create');
+          });
+      }));
+
+      it('should not create any entities there is a UUID collision', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(2);
+          });
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-123456789abc', // collision
+                label: 'John Doe',
+                data: {
+                  first_name: 'John',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-1234-4123-8234-111111111bbb',
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.3);
+            body.message.should.equal('A resource already exists with uuid value(s) of 12345678-1234-4123-8234-123456789abc.');
+          });
+
+        // Entity list is still same length as before
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(2); // same as before
+          });
+
+        // Most recent event is not a bulk create event
+        await asAlice.get('/v1/audits')
+          .then(({ body }) => {
+            body[0].action.should.not.equal('entity.bulk.create');
+          });
+      }));
+    });
 
     describe('entity source when created through bulk append', () => {
       it('should create entities that share the same source', testDataset(async (service) => {
