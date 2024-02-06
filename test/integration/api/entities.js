@@ -2394,6 +2394,166 @@ describe('Entities API', () => {
           });
       }));
     });
+
+    describe('entity audit events when created through bulk append', () => {
+      it('should return bulk create event in the audit log for an entity', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-111111111aaa',
+                label: 'Johnny Doe',
+                data: {
+                  first_name: 'Johnny',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-1234-4123-8234-111111111bbb',
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa?force=true')
+          .send({ data: { age: '33' } })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/audits')
+          .then(({ body: logs }) => {
+            // update event
+            logs[0].action.should.equal('entity.update.version');
+            logs[0].details.source.should.eql({});
+            logs[0].details.entity.should.eql({ uuid: '12345678-1234-4123-8234-111111111aaa', dataset: 'people' });
+
+            // bulk create event
+            logs[1].action.should.equal('entity.bulk.create');
+            logs[1].details.source.should.eql({ name: 'people.csv', size: 100, userAgent: 'central/tests' });
+            logs[1].details.count.should.eql(2); // number of entities created
+
+            logs.length.should.equal(2);
+          });
+      }));
+
+      // this test is relevant to bulk events because the audit query is shared
+      it('should fetch the correct events for a conflict resolution (no new version)', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // second version
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+          .send({ data: { age: '12' } })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // third version: hard conflict - all properties are changed
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // resolve conflict without making new version
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&force=true')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+          .expect(200)
+          .then(({ body: versions }) => {
+            versions.length.should.equal(3);
+            //console.log('versions', versions);
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs.length.should.equal(4);
+            logs.map(e => e.action).should.eql([
+              'entity.update.resolve',
+              'entity.update.version',
+              'entity.update.version',
+              'entity.create'
+            ]);
+            logs[0].details.source.should.have.property('event');
+            //event and source of resolve seems to be the submission create event of that def/version when it should probably be null (api event that didnt create a new version)
+          });
+      }));
+
+      // this test is relevant to bulk events because the audit query is shared
+      it('should fetch the correct events for a conflict resolution that does add a new version', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // second version
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+          .send({ data: { age: '12' } })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // third version: hard conflict - all properties are changed
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // resolve conflict without making new version
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&force=true')
+          .send({ data: { age: '28' } })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+          .expect(200)
+          .then(({ body: versions }) => {
+            versions.length.should.equal(4);
+            //console.log('versions', versions);
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs.length.should.equal(5);
+            logs.map(e => e.action).should.eql([
+              'entity.update.resolve',
+              'entity.update.version',
+              'entity.update.version',
+              'entity.update.version',
+              'entity.create'
+            ]);
+            logs[0].details.source.should.not.have.property('event');
+            logs[0].details.source.should.eql({});
+            logs[0].details.entity.should.eql({ uuid: '12345678-1234-4123-8234-123456789abc', dataset: 'people' });
+
+            logs[1].details.source.should.not.have.property('event');
+            logs[1].details.source.should.eql({});
+            logs[1].details.entity.should.eql({ uuid: '12345678-1234-4123-8234-123456789abc', dataset: 'people' });
+
+            logs[0].details.entityId.should.eql(logs[1].details.entityId);
+            logs[0].details.entityDefId.should.eql(logs[1].details.entityDefId);
+            // update and resolve are technically the same event and the source of both are empty because it was an API call
+          });
+      }));
+    });
   });
 
   // Special scenarios
