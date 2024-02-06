@@ -19,6 +19,7 @@ make base
 echo "$userPassword" | node ./lib/bin/cli.js user-create  -u "$userEmail"
 node ./lib/bin/cli.js user-promote -u "$userEmail"
 
+NODE_CONFIG_ENV=s3-dev node lib/bin/s3-create-bucket.js
 NODE_CONFIG_ENV=s3-dev make run >backend.log 2>&1 &
 
 log 'Waiting for backend to start...'
