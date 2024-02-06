@@ -24,10 +24,8 @@ dev-oidc: base
 	NODE_CONFIG_ENV=oidc-development npx nodemon --watch lib --watch config lib/bin/run-server.js
 
 .PHONY: fake-s3-accounts
-fake-s3-accounts:
-	 docker run -v "${PWD}/s3-dev/minio-config/:/root/.mc/" --network=host minio/mc admin user add local odk-central-dev topSecret123 && \
-	 docker run -v "${PWD}/s3-dev/minio-config/:/root/.mc/" --network=host minio/mc mb --ignore-existing local/odk-central-bucket && \
-	(docker run -v "${PWD}/s3-dev/minio-config/:/root/.mc/" --network=host minio/mc admin policy attach local readwrite --user odk-central-dev || true)
+fake-s3-accounts: node_version
+	NODE_CONFIG_ENV=s3-dev node lib/bin/ci-s3-setup.js
 
 .PHONY: dev-s3
 dev-s3: fake-s3-accounts base
@@ -44,8 +42,11 @@ fake-s3-server:
 	# run an ephemeral, s3-compatible local store
 	# default admin credentials: minioadmin:minioadmin
 	# see: https://hub.docker.com/r/minio/minio/
-	docker run --rm -p 9000:9000 -p 9001:9001 \
-	  minio/minio server /data --console-address ":9001"
+	docker run --rm \
+		-p 9000:9000 -p 9001:9001 \
+		-e MINIO_ROOT_USER=odk-central-dev \
+		-e MINIO_ROOT_PASSWORD=topSecret123 \
+		minio/minio server /data --console-address ":9001"
 
 .PHONY: fake-oidc-server-ci
 fake-oidc-server-ci:
