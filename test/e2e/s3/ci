@@ -5,14 +5,7 @@ serverUrl="http://localhost:8383"
 userEmail="x@example.com"
 userPassword="secret1234"
 
-log() {
-  echo "[test/e2e/s3/ci] $*"
-}
-
-fail_job() {
-  log 'Job failed.'
-  exit 1
-}
+log() { echo "[test/e2e/s3/ci] $*"; }
 
 make base
 
@@ -30,7 +23,7 @@ node test/e2e/s3/index.js -s "$serverUrl" -P "$userPassword"
 
 if ! curl -s -o /dev/null "$serverUrl"; then
   log 'Backend died.'
-  fail_job
+  exit 1
 fi
 
 log "Test completed OK."
