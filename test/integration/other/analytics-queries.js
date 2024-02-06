@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
-const { testService, testContainer, testContainerFullTrx, testServiceFullTrx } = require('../setup');
+const { testService, testContainer } = require('../setup');
 const { createReadStream, readFileSync } = require('fs');
 
 const { promisify } = require('util');
