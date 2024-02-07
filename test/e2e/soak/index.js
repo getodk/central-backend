@@ -14,7 +14,7 @@ const { program } = require('commander');
 
 const SUITE_NAME = 'test/e2e/soak';
 const log = require('../util/logger')(SUITE_NAME);
-const apiClient = require('../util/api-client');
+const { apiClient } = require('../util/api');
 
 program
     .option('-s, --server-url <serverUrl>', 'URL of ODK Central server', 'http://localhost:8989')

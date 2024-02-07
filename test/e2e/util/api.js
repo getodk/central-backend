@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const fetch = require('node-fetch'); // TODO replace with native fetch
 const { basename } = require('node:path');
 
-module.exports = async (suiteName, { serverUrl, userEmail, userPassword, logPath }) => {
+async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPath }) {
   const log = require('./logger')(suiteName);
 
   let bearerToken;
@@ -104,7 +104,7 @@ module.exports = async (suiteName, { serverUrl, userEmail, userPassword, logPath
     if(!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
     return res;
   }
-};
+}
 
 function base64(s) {
   return Buffer.from(s).toString('base64');
@@ -152,4 +152,5 @@ class Redirect {
   get location() { return this.props.location; }
   get headers()  { return this.props.headers; }
 }
-module.exports.Redirect = Redirect;
+
+module.exports.Redirect = { apiClient, mimetypeFor, Redirect };

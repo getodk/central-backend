@@ -23,8 +23,7 @@ const should = require('should');
 
 const SUITE_NAME = 'test/e2e/s3';
 const log = require('../util/logger')(SUITE_NAME);
-const apiClient = require('../util/api-client');
-const { Redirect } = apiClient;
+const { apiClient, mimetypeFor, Redirect } = require('../util/api');
 
 program
     .option('-s, --server-url <serverUrl>', 'URL of ODK Central server', 'http://localhost:8383')
