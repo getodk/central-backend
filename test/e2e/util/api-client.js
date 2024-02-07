@@ -5,9 +5,11 @@ const { basename } = require('node:path');
 module.exports = async (suiteName, { serverUrl, userEmail, userPassword, logPath }) => {
   const log = require('./logger')(suiteName);
 
+  let bearerToken;
+
   log.info('Creating session...');
   const { token } = await apiPostJson('sessions', { email:userEmail, password:userPassword }, { Authorization:null });
-  const bearerToken = token;
+  bearerToken = token;
 
   return {
     apiGet,
@@ -96,6 +98,7 @@ module.exports = async (suiteName, { serverUrl, userEmail, userPassword, logPath
     });
     log.debug(method, res.url, '->', res.status);
 
+    // eslint-disable-next-line no-use-before-define
     if(isRedirected(res)) return new Redirect(res);
     if(!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
     return res;
