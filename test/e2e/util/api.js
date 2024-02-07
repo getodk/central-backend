@@ -153,4 +153,4 @@ class Redirect {
   get headers()  { return this.props.headers; }
 }
 
-module.exports.Redirect = { apiClient, mimetypeFor, Redirect };
+module.exports = { apiClient, mimetypeFor, Redirect };
