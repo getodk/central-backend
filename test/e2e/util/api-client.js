@@ -9,6 +9,7 @@ module.exports = async (suiteName, { serverUrl, userEmail, userPassword, logPath
 
   log.info('Creating session...');
   const { token } = await apiPostJson('sessions', { email:userEmail, password:userPassword }, { Authorization:null });
+  // eslint-disable-next-line prefer-const
   bearerToken = token;
 
   return {
