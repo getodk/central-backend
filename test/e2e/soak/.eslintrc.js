@@ -1,3 +1,4 @@
+/* eslint-disable quote-props */
 module.exports = {
   env: {
     commonjs: true,
@@ -6,7 +7,7 @@ module.exports = {
   },
   extends: 'eslint:recommended',
   parserOptions: {
-    ecmaVersion: "latest",
+    ecmaVersion: 'latest',
   },
   rules: {
     'indent': 'off',
