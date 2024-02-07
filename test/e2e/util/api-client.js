@@ -1,5 +1,5 @@
 const fs = require('node:fs');
-const fetch = require('node-fetch');
+const fetch = require('node-fetch'); // TODO replace with native fetch
 const { basename } = require('node:path');
 
 module.exports = async (suiteName, { serverUrl, userEmail, userPassword, logPath }) => {
