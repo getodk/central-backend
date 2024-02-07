@@ -21,17 +21,10 @@ const { basename } = require('node:path');
 const { program } = require('commander');
 const should = require('should');
 
-const LOG_LEVELS = ['DEBUG', 'INFO', 'WARN', 'ERROR', 'REPORT']
-const logLevel = process.env.LOG_LEVEL || 'INFO';
-const _log = (level, ...args) => {
-  if(LOG_LEVELS.indexOf(logLevel) > LOG_LEVELS.indexOf(level)) return;
-  console.log(`[${new Date().toISOString()}]`, '[test/e2e/s3]', ...args);
-};
-const log  = (...args) => _log('INFO',   ...args);
-log.debug  = (...args) => _log('DEBUG',  ...args);
-log.info   = log;
-log.error  = (...args) => _log('ERROR',  ...args);
-log.report = (...args) => _log('REPORT', ...args);
+const SUITE_NAME = 'test/e2e/s3';
+const log = require('../util/logger')(SUITE_NAME);
+const apiClient = require('../util/api-client');
+const { Redirect } = apiClient;
 
 program
     .option('-s, --server-url <serverUrl>', 'URL of ODK Central server', 'http://localhost:8383')
@@ -44,7 +37,7 @@ const { serverUrl, userEmail, userPassword } = program.opts();
 const attDir = 'test/e2e/s3/test-attachments';
 const BIGFILE = `${attDir}/big.bin`;
 
-let bearerToken;
+let api;
 
 runTest();
 
@@ -62,30 +55,28 @@ async function runTest() {
     } while((remaining-=batchSize) > 0);
   }
 
-  log.info('Creating session...');
-  const { token } = await apiPostJson('sessions', { email:userEmail, password:userPassword }, { Authorization:null });
-  bearerToken = token;
+  api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
 
   log.info('Creating project...');
-  const { id:projectId } = await apiPostJson('projects', { name:`soak-test-${new Date().toISOString().replace(/\..*/, '')}` });
+  const { id:projectId } = await api.apiPostJson('projects', { name:`soak-test-${new Date().toISOString().replace(/\..*/, '')}` });
 
   log.info('Uploading form...');
-  const { xmlFormId } = await apiPostFile(`projects/${projectId}/forms`, 'test/e2e/s3/test-form.xml');
+  const { xmlFormId } = await api.apiPostFile(`projects/${projectId}/forms`, 'test/e2e/s3/test-form.xml');
 
   log.info('Uploading attachments...');
   await Promise.all(
     fs.readdirSync(attDir)
       .filter(f => !f.startsWith('.'))
-      .map(f => apiPostFile(`projects/${projectId}/forms/${xmlFormId}/draft/attachments/${f}`, `${attDir}/${f}`)),
+      .map(f => api.apiPostFile(`projects/${projectId}/forms/${xmlFormId}/draft/attachments/${f}`, `${attDir}/${f}`)),
   );
 
   log('Downloading attachments list...');
-  const attachments = await apiGet(`projects/${projectId}/forms/${xmlFormId}/attachments`);
+  const attachments = await api.apiGet(`projects/${projectId}/forms/${xmlFormId}/attachments`);
 
   log.debug('Got attachments list:', attachments);
   await allRedirect(attachments);
   for(const att of attachments) {
-    const res = await apiRawHead(`projects/${projectId}/forms/${xmlFormId}/attachments/${att.name}`);
+    const res = await api.apiRawHead(`projects/${projectId}/forms/${xmlFormId}/attachments/${att.name}`);
     if(!(res instanceof Redirect) || res.status !== 307) {
       throw new Error(`Unexpected redirect for attachment ${JSON.stringify(att)}: ${res}`);
     }
@@ -105,7 +96,7 @@ async function runTest() {
       async function check() {
         for(const att of attachments) {
           log.debug('allRedirect()', 'checking attachment:', att.name);
-          const res = await apiRawHead(`projects/${projectId}/forms/${xmlFormId}/attachments/${att.name}`);
+          const res = await api.apiRawHead(`projects/${projectId}/forms/${xmlFormId}/attachments/${att.name}`);
           if(!(res instanceof Redirect)) {
             log.debug('allRedirect()', 'Attachment did not redirect:', att.name);
             if(Date.now() > timeout) reject(new Error(`Timeout out after ${TIMEOUT/1000}s.`));
@@ -145,101 +136,10 @@ async function assertFileEqualsFetch({ name }, url) {
   log.info('File', name, 'matched content fetched from', url);
 }
 
-function apiPostFile(path, filePath) {
-  const mimeType = mimetypeFor(filePath);
-  const blob = fs.readFileSync(filePath);
-  return apiPost(path, blob, { 'Content-Type':mimeType });
-}
-
-function apiPostJson(path, body, headers) {
-  return apiPost(path, JSON.stringify(body), { 'Content-Type':'application/json', ...headers });
-}
-
-async function apiPost(path, body, headers) {
-  const res = await apiFetch('POST', path, body, headers);
-  return res.json();
-}
-
-function apiRawHead(path, headers) {
-  return apiFetch('HEAD', path, undefined, headers);
-}
-
-function apiRawGet(path, headers) {
-  return apiFetch('GET', path, undefined, headers);
-}
-
-async function apiGet(path, headers) {
-  const res = await apiFetch('GET', path, undefined, headers);
-  return res.json();
-}
-
-async function apiFetch(method, path, body, extraHeaders) {
-  const url = `${serverUrl}/v1/${path}`;
-
-  const Authorization = bearerToken ? `Bearer ${bearerToken}` : `Basic ${base64(`${userEmail}:${userPassword}`)}`;
-
-  const headers = { Authorization, ...extraHeaders };
-  // unset null/undefined Authorization value to prevent fetch() from stringifying it:
-  if(headers.Authorization == null) delete headers.Authorization;
-
-  const res = await fetch(url, {
-    method,
-    body,
-    headers,
-    redirect: 'manual',
-  });
-  log.debug(method, res.url, '->', res.status);
-
-  if(isRedirected(res)) return new Redirect(res);
-  if(!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
-
-  return res;
-}
-
-function base64(s) {
-  return Buffer.from(s).toString('base64');
-}
-
-function mimetypeFor(f) {
-  // For more, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types
-  const extension = fileExtensionFrom(f);
-  log.debug('fileExtensionFrom()', f, '->', extension);
-  switch(extension) {
-    case 'bin' : return 'application/octet-stream';
-    case 'jpg' : return 'image/jpeg';
-    case 'png' : return 'image/png';
-    case 'svg' : return 'image/svg+xml';
-    case 'txt' : return 'text/plain';
-    case 'xls' : return 'application/vnd.ms-excel';
-    case 'xlsx': return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-    case 'xml' : return 'application/xml';
-    default: throw new Error(`Unsure what mime type to use for: ${f}`);
-  }
-}
-
 function fileExtensionFrom(f) {
   try {
     return basename(f).match(/\.([^.]*)$/)[1];
   } catch(err) {
     throw new Error(`Could not get file extension from filename '${f}'!`);
   }
-}
-
-function isRedirected(res) {
-  // should support res.redirected, but maybe old version
-  // See: https://www.npmjs.com/package/node-fetch#responseredirected
-  return res.redirected || (res.status >=300 && res.status < 400);
-}
-
-class Redirect {
-  constructor(res) {
-    this.props = Object.freeze({
-      status:   res.status,
-      location: res.headers.get('location'),
-      headers:  Object.freeze(res.headers.raw()),
-    });
-  }
-  get status()   { return this.props.status; }
-  get location() { return this.props.location; }
-  get headers()  { return this.props.headers; }
 }
