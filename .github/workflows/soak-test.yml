@@ -32,7 +32,7 @@ jobs:
     - run: node lib/bin/create-docker-databases.js
     - name: Soak Test
       timeout-minutes: 10
-      run: ./soak-tester/scripts/ci-soak-test
+      run: ./test/e2e/soak/ci
     - name: Backend Logs
       if: always()
       run: "! [[ -f ./backend.log ]] || cat ./backend.log"
