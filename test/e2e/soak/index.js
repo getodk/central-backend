@@ -46,7 +46,7 @@ async function soakTest() {
   api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword, logPath });
 
   log.info('Creating project...');
-  const { id:projectId } = await api.apipostJson('projects', { name:`soak-test-${new Date().toISOString().replace(/\..*/, '')}` });
+  const { id:projectId } = await api.apiPostJson('projects', { name:`soak-test-${new Date().toISOString().replace(/\..*/, '')}` });
 
   log.info('Uploading form...');
   const { xmlFormId:formId } = await api.apiPostFile(`projects/${projectId}/forms`, formPath);
