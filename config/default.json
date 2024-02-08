@@ -15,7 +15,7 @@
     },
     "xlsform": {
       "host": "localhost",
-      "port": 5000
+      "port": 5001
     },
     "enketo": {
       "url": "http://localhost:8005/-",
@@ -30,7 +30,7 @@
       "analytics": {
         "url": "https://data.getodk.cloud/v1/key/eOZ7S4bzyUW!g1PF6dIXsnSqktRuewzLTpmc6ipBtRq$LDfIMTUKswCexvE0UwJ9/projects/1/forms/odk-analytics/submissions",
         "formId": "odk-analytics",
-        "version": "v2023.4.0_1"
+        "version": "v2023.5.0_1"
       }
     }
   },

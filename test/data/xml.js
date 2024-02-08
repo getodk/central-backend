@@ -396,7 +396,7 @@ module.exports = {
     updateEntity: `<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
   <h:head>
-    <model entities:entities-version="2022.1.0">
+    <model entities:entities-version="2023.1.0">
       <instance>
         <data id="updateEntity" orx:version="1.0">
           <name/>
@@ -603,23 +603,23 @@ module.exports = {
                   <entities:label>Alice (88)</entities:label>
                 </entities:entity>
                 <orx:instanceName>one</orx:instanceName>
-                </meta>
-                <name>Alice</name>
-                <age>88</age>
-                <hometown>Chicago</hometown>
-                </data>`,
+              </meta>
+              <name>Alice</name>
+              <age>88</age>
+              <hometown>Chicago</hometown>
+            </data>`,
       two: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
               <meta>
                 <instanceID>two</instanceID>
                 <entities:entity dataset="people" id="uuid:12345678-1234-4123-8234-123456789aaa" create="1">
-                <entities:label>Jane (30)</entities:label>
+                  <entities:label>Jane (30)</entities:label>
                 </entities:entity>
                 <orx:instanceName>two</orx:instanceName>
-            </meta>
-            <name>Jane</name>
-            <age>30</age>
-            <hometown>Boston</hometown>
-          </data>`,
+              </meta>
+              <name>Jane</name>
+              <age>30</age>
+              <hometown>Boston</hometown>
+            </data>`,
       three: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
           <meta>
             <instanceID>three</instanceID>
@@ -691,6 +691,15 @@ module.exports = {
             <label>Alicia - 85</label>
           </entity>
         </meta>
+      </data>`,
+      three: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="updateEntity" version="1.0">
+        <meta>
+          <instanceID>three</instanceID>
+          <orx:instanceName>three</orx:instanceName>
+          <entity dataset="people" id="12345678-1234-4123-8234-123456789abc" baseVersion="1" update="1">
+          </entity>
+        </meta>
+        <age>55</age>
       </data>`
     },
     groupRepeat: {

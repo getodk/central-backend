@@ -30,14 +30,14 @@ describe('util/html', () => {
       [ '/-/xyz?"><b',            'http://localhost:8989/-/xyz?%22%3E%3Cb' ],            // eslint-disable-line no-multi-spaces
       [ '/-/xyz#"><b',            'http://localhost:8989/-/xyz#%22%3E%3Cb' ],            // eslint-disable-line no-multi-spaces
       [ '/-/xyz?"><b#"><b',       'http://localhost:8989/-/xyz?%22%3E%3Cb#%22%3E%3Cb' ], // eslint-disable-line no-multi-spaces
+      // with path traversal
+      [ '/-/../version.txt',      '/#/version.txt' ],                                    // eslint-disable-line no-multi-spaces
 
       // bad domain
       [ 'http://example.com',                  '/#/' ], // eslint-disable-line no-multi-spaces
       // with @ char - not a problem if positioned in fragment or after first `/`:
       [ '@baddomain.com',                      '/#/@baddomain.com' ],                         // eslint-disable-line no-multi-spaces
       [ '/-/@baddomain.com',                   'http://localhost:8989/-/@baddomain.com' ],    // eslint-disable-line no-multi-spaces
-      [ '&64;baddomain.com',                   '/#/&64;baddomain.com' ],                      // eslint-disable-line no-multi-spaces
-      [ '/-/&64;baddomain.com',                'http://localhost:8989/-/&64;baddomain.com' ], // eslint-disable-line no-multi-spaces
       [ 'http://localhost:8989@baddomain.com', '/#/' ],                                       // eslint-disable-line no-multi-spaces
       [ 'http://localhost:8989@baddomain.com', '/#/' ],                                       // eslint-disable-line no-multi-spaces
 

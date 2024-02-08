@@ -7,14 +7,14 @@
 // including this file, may be copied, modified, propagated, or distributed
 // except according to the terms contained in the LICENSE file.
 
-import fs from 'node:fs';
-import fetch, { fileFromSync } from 'node-fetch';
-import _ from 'lodash';
-import { v4 as uuid } from 'uuid';
-import { basename } from 'node:path';
-import { program } from 'commander';
+const fs = require('node:fs');
+const fetch = require('node-fetch');
+const _ = require('lodash');
+const uuid = require('uuid').v4;
+const { basename } = require('node:path');
+const { program } = require('commander');
 
-const _log = (...args) => console.log(`[${new Date().toISOString()}]`, '[soak-tester]', ...args);
+const _log = (...args) => console.log(`[${new Date().toISOString()}]`, '[test/e2e/soak]', ...args);
 const log  = (...args) => true  && _log('INFO',   ...args);
 log.debug  = (...args) => false && _log('DEBUG',  ...args);
 log.info   = log;
@@ -196,7 +196,7 @@ function reportWarning(message) {
 
 function apiPostFile(path, filePath) {
   const mimeType = mimetypeFor(filePath);
-  const blob = fileFromSync(filePath, mimeType);
+  const blob = fs.readFileSync(filePath);
   return apiPost(path, blob, { 'Content-Type':mimeType });
 }
 
