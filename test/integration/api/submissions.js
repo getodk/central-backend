@@ -1583,6 +1583,7 @@ describe('api: /forms/:id/submissions', () => {
               .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
               .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
               .expect(201))
+            .then(() => process.env.TEST_S3 && exhaustBlobs(container))
             .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.containDeep([
