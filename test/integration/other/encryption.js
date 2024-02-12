@@ -11,6 +11,7 @@ const { Form, Key, Submission, Actor } = require(appRoot + '/lib/model/frames');
 const { mapSequential } = require(appRoot + '/test/util/util');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const authenticateUser = require('../../util/authenticate-user');
+const { exhaustBlobs } = require(appRoot + '/lib/worker/worker');
 
 describe('managed encryption', () => {
   describe('lock management', () => {
@@ -325,6 +326,7 @@ describe('managed encryption', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
+          .then(() => process.env.TEST_S3 && exhaustBlobs(container))
           .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
             .then((result) => {
               result.filenames.length.should.equal(4);
