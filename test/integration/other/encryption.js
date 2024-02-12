@@ -313,7 +313,7 @@ describe('managed encryption', () => {
               result['simple.csv'].should.be.an.EncryptedSimpleCsv();
             })))));
 
-    it('should decrypt attached files successfully', testService((service) =>
+    it('should decrypt attached files successfully', testService((service, container) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
           .send({ passphrase: 'supersecret', hint: 'it is a secret' })
@@ -326,7 +326,10 @@ describe('managed encryption', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then(() => process.env.TEST_S3 && exhaustBlobs(container))
+          .then(async (keyId) => {
+            if (process.env.TEST_S3) await exhaustBlobs(container);
+            return keyId;
+          })
           .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
             .then((result) => {
               result.filenames.length.should.equal(4);
