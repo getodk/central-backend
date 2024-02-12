@@ -1567,7 +1567,7 @@ describe('api: /forms/:id/submissions', () => {
               lines[1].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0,').should.equal(true);
             })))));
 
-    it('should return a zipfile with the relevant attachments', testService((service) =>
+    it('should return a zipfile with the relevant attachments', testService((service, container) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
