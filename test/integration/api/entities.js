@@ -2116,7 +2116,7 @@ describe('Entities API', () => {
           },
           entities: [
             {
-              uuid: '12345678-1234-4123-8234-111111111aaa', // TODO: don't require UUIDs
+              uuid: '12345678-1234-4123-8234-111111111aaa',
               label: 'Johnny Doe',
               data: {
                 first_name: 'Johnny',
@@ -2149,6 +2149,52 @@ describe('Entities API', () => {
         .then(({ body }) => {
           body[0].action.should.equal('entity.bulk.create');
           body[0].details.count.should.equal(2);
+        });
+    }));
+
+
+    it('should generate uuids for entities when no uuid is provided', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .then(({ body }) => {
+          body.length.should.equal(0);
+        });
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people.csv',
+            size: 100,
+          },
+          entities: [
+            {
+              uuid: '12345678-1234-4123-8234-111111111aaa',
+              label: 'Johnny Doe',
+              data: {
+                first_name: 'Johnny',
+                age: '22'
+              }
+            },
+            {
+              label: 'Alice',
+              data: {
+                first_name: 'Alice',
+                age: '44'
+              }
+            },
+          ]
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
+
+      // Used provided UUID and generated other UUID
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .then(({ body }) => {
+          body[0].uuid.should.equal('12345678-1234-4123-8234-111111111aaa');
+          body[1].uuid.should.be.a.uuid();
         });
     }));
 
