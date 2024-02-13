@@ -1302,6 +1302,36 @@ describe('Entities API', () => {
         });
     }));
 
+    it('should generate uuid if one is not provided', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          label: 'Johnny Doe',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(200)
+        .then(({ body: person }) => {
+          person.should.be.an.Entity();
+          person.uuid.should.be.a.uuid();
+          person.creatorId.should.equal(5);
+          person.should.have.property('currentVersion').which.is.an.EntityDef();
+          person.currentVersion.should.have.property('label').which.equals('Johnny Doe');
+          person.currentVersion.should.have.property('data').which.is.eql({
+            first_name: 'Johnny',
+            age: '22'
+          });
+          person.currentVersion.should.have.property('dataReceived').which.is.eql({
+            first_name: 'Johnny',
+            age: '22',
+            label: 'Johnny Doe'
+          });
+        });
+    }));
+
     it('should reject if uuid is not a valid uuid', testDataset(async (service) => {
       const asAlice = await service.login('alice');
 
@@ -2093,6 +2123,27 @@ describe('Entities API', () => {
           logs[0].action.should.be.eql('entity.error');
           logs[0].details.problem.problemCode.should.equal(400.2);
           logs[0].details.errorMessage.should.equal('Required parameter label missing.');
+        });
+    }));
+
+    it('should not create entity if the uuid is missing in the submission', testDataset(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one
+          .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id=""'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs[0].should.be.an.Audit();
+          logs[0].action.should.be.eql('entity.error');
+          logs[0].details.problem.problemCode.should.equal(400.2);
+          logs[0].details.errorMessage.should.equal('Required parameter uuid missing.');
         });
     }));
   });
