@@ -22,7 +22,7 @@ log "Waiting for odk-central-backend to start..."
 wait-for-it localhost:8383 --strict --timeout=60 -- echo '[oidc-tester] odk-central-backend is UP!'
 
 log "Creating test users..." # _after_ migrations have been run
-cd ..
+cd ../../..
 node lib/bin/cli.js --email alice@example.com user-create
 cd -
 log "Test users created."
