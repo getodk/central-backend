@@ -9,7 +9,7 @@ services:
   odk-central-oidc-tester:
     build:
       dockerfile: oidc-tester.dockerfile
-      context: ../
+      context: ../../..
       # expose playwright results
     environment:
       DEBUG: pw:api
