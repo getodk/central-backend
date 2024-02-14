@@ -8,7 +8,7 @@
 // except according to the terms contained in the LICENSE file.
 
 module.exports = {
-  extends: '../../.eslintrc.json',
+  extends: '../../../../.eslintrc.json',
   env: {
     browser: true, // for page.waitForFunction() code
   },

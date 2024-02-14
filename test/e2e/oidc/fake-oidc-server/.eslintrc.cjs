@@ -8,7 +8,7 @@
 // except according to the terms contained in the LICENSE file.
 
 module.exports = {
-  extends: '../../.eslintrc.json',
+  extends: '../../../../.eslintrc.json',
   rules: {
     // This rule does not work if the node_modules directory has not been
     // populated.  If this rule is enabled here, `npm clean-install` will need
