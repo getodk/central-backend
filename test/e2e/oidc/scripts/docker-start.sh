@@ -16,7 +16,7 @@ wait-for-it odk-central-oidc-tester-postgres:5432 --strict --timeout=60 -- echo 
 
 log "Starting services..."
 (cd fake-oidc-server && node index.js) &
-(cd .. && make base && NODE_TLS_REJECT_UNAUTHORIZED=0 node lib/bin/run-server.js) &
+(cd ../../.. && make base && NODE_TLS_REJECT_UNAUTHORIZED=0 node lib/bin/run-server.js) &
 
 log "Waiting for odk-central-backend to start..."
 wait-for-it localhost:8383 --strict --timeout=60 -- echo '[oidc-tester] odk-central-backend is UP!'
