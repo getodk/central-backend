@@ -33,12 +33,6 @@ const xlsform = require(appRoot + '/test/util/xlsform');
 // set up our sentry mock.
 const Sentry = require(appRoot + '/lib/external/sentry').init();
 
-// set up our bcrypt module; possibly mock or not based on params.
-const _bcrypt = (process.env.BCRYPT === 'no')
-  ? require('../util/bcrypt-mock')
-  : require('bcrypt');
-const bcrypt = require(appRoot + '/lib/util/crypto').password(_bcrypt);
-
 // set up our enketo mock.
 const { reset: resetEnketo, ...enketo } = require(appRoot + '/test/util/enketo');
 // Initialize the mock before other setup that uses the mock, then reset the
@@ -87,7 +81,7 @@ const initialize = async () => {
     await migrator.destroy();
   }
 
-  return withDefaults({ db, bcrypt, context, enketo, env }).transacting(populate);
+  return withDefaults({ db, context, enketo, env }).transacting(populate);
 };
 
 // eslint-disable-next-line func-names, space-before-function-paren
@@ -143,7 +137,7 @@ const augment = (service) => {
 // FINAL TEST WRAPPERS
 
 
-const baseContainer = withDefaults({ db, mail, env, xlsform, bcrypt, enketo, Sentry, odkAnalytics, context });
+const baseContainer = withDefaults({ db, mail, env, xlsform, enketo, Sentry, odkAnalytics, context });
 
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then

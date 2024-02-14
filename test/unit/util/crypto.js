@@ -2,38 +2,38 @@ const appRoot = require('app-root-path');
 const { readFileSync } = require('fs');
 const should = require('should');
 const streamTest = require('streamtest').v2;
-const bcrypt = require('bcrypt');
 const crypto = require(appRoot + '/lib/util/crypto');
 
 describe('util/crypto', () => {
-  describe('hashPassword/verifyPassword @slow', () => {
-    const password = crypto.password(bcrypt);
+  describe('hashPassword/verifyPassword', () => {
+    const { hashPassword, verifyPassword } = crypto;
+
     // we do not actually verify the hashing itself, as:
     // 1. it is entirely performed by bcrypt, which has is own tests.
     // 2. bcrypt is intentionally slow, and we would like unit tests to be fast.
 
     it('should always return a Promise', () => {
-      password.hash('').should.be.a.Promise();
-      password.hash('password').should.be.a.Promise();
-      password.verify('password', 'hashhash').should.be.a.Promise();
+      hashPassword('').should.be.a.Promise();
+      hashPassword('password').should.be.a.Promise();
+      hashPassword('password', 'hashhash').should.be.a.Promise();
     });
 
     it('should return a Promise of null given a blank plaintext', (done) => {
-      password.hash('').then((result) => {
+      hashPassword('').then((result) => {
         should(result).equal(null);
         done();
       });
     });
 
     it('should not attempt to verify empty plaintext', (done) => {
-      password.verify('', '$2a$12$hCRUXz/7Hx2iKPLCduvrWugC5Q/j5e3bX9KvaYvaIvg/uvFYEpzSy').then((result) => {
+      verifyPassword('', '$2a$12$hCRUXz/7Hx2iKPLCduvrWugC5Q/j5e3bX9KvaYvaIvg/uvFYEpzSy').then((result) => {
         result.should.equal(false);
         done();
       });
     });
 
     it('should not attempt to verify empty hash', (done) => {
-      password.verify('password', '').then((result) => {
+      verifyPassword('password', '').then((result) => {
         result.should.equal(false);
         done();
       });

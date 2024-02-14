@@ -311,8 +311,7 @@ describe('analytics task queries', function () {
 
         // fail the processing of this latest event
         let event = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
-        // eslint-disable-next-line prefer-promise-reject-errors
-        const jobMap = { 'submission.attachment.update': [ () => Promise.reject({ uh: 'oh' }) ] };
+        const jobMap = { 'submission.attachment.update': [ () => Promise.reject(new Error()) ] };
         await promisify(workerQueue(container, jobMap).run)(event);
 
         // should still be 0 because the failure count is only at 1, needs to be at 5 to count
@@ -382,8 +381,7 @@ describe('analytics task queries', function () {
         .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
         .expect(201);
 
-      // eslint-disable-next-line prefer-promise-reject-errors
-      const jobMap = { 'submission.attachment.update': [ () => Promise.reject({ uh: 'oh' }) ] };
+      const jobMap = { 'submission.attachment.update': [ () => Promise.reject(new Error()) ] };
       const eventOne = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
       await promisify(workerQueue(container, jobMap).run)(eventOne);
 
