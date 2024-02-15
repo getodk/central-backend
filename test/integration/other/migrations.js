@@ -954,3 +954,36 @@ testMigration('20240215-01-entity-delete-verb.js', () => {
     after.viewer.should.not.containEql('entity.delete');
   }));
 });
+
+testMigration('20240215-02-dedupe-verbs.js', () => {
+  it('should remove duplicate submission.update verb', testServiceFullTrx(async (service) => {
+    const verbsByRole = async () => {
+      const { body: roles } = await service.get('/v1/roles').expect(200);
+      const bySystem = {};
+      for (const role of roles) bySystem[role.system] = role.verbs;
+      return bySystem;
+    };
+
+    const before = await verbsByRole();
+    before.admin.length.should.equal(49);
+    before.admin.filter(verb => verb === 'submission.update').length.should.equal(2);
+    before.manager.length.should.equal(34);
+    before.manager.filter(verb => verb === 'submission.update').length.should.equal(2);
+    before.viewer.length.should.equal(9);
+
+    await up();
+
+    const after = await verbsByRole();
+    after.admin.length.should.equal(48);
+    after.admin.should.eqlInAnyOrder([...new Set(before.admin)]);
+    after.manager.length.should.equal(33);
+    after.manager.should.eqlInAnyOrder([...new Set(before.manager)]);
+    after.viewer.length.should.equal(9);
+  }));
+
+  it('should result in unique verbs for all roles', testServiceFullTrx(async (service) => {
+    await up();
+    const { body: roles } = await service.get('/v1/roles').expect(200);
+    for (const { verbs } of roles) verbs.should.eql([...new Set(verbs)]);
+  }));
+});
