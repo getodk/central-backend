@@ -114,14 +114,14 @@ function mimetypeFor(f) {
   // For more, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types
   const extension = extname(f);
   switch(extension) {
-    case 'bin' : return 'application/octet-stream';
-    case 'jpg' : return 'image/jpeg';
-    case 'png' : return 'image/png';
-    case 'svg' : return 'image/svg+xml';
-    case 'txt' : return 'text/plain';
-    case 'xls' : return 'application/vnd.ms-excel';
-    case 'xlsx': return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-    case 'xml' : return 'application/xml';
+    case '.bin' : return 'application/octet-stream';
+    case '.jpg' : return 'image/jpeg';
+    case '.png' : return 'image/png';
+    case '.svg' : return 'image/svg+xml';
+    case '.txt' : return 'text/plain';
+    case '.xls' : return 'application/vnd.ms-excel';
+    case '.xlsx': return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    case '.xml' : return 'application/xml';
     default: throw new Error(`Unsure what mime type to use for: ${f}`);
   }
 }
