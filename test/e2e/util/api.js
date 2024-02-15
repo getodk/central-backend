@@ -1,7 +1,6 @@
 const fs = require('node:fs');
 const { extname } = require('node:path');
 const fetch = require('node-fetch'); // TODO replace with native fetch
-const { basename } = require('node:path');
 
 async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPath }) {
   const log = require('./logger')(suiteName);
