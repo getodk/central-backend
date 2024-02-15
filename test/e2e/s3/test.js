@@ -83,7 +83,6 @@ describe('s3 support', () => {
           for(const att of attachments) {
             log.debug('assertAllRedirect()', 'checking attachment:', att.name);
             const res = await api.apiRawHead(`projects/${projectId}/forms/${xmlFormId}/attachments/${att.name}`);
-            console.log(res);
             if(!(res instanceof Redirect)) {
               log.debug('assertAllRedirect()', 'Attachment did not redirect:', att.name);
               if(Date.now() > timeout) reject(new Error(`Timeout out after ${TIMEOUT/1000}s.`));
