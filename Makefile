@@ -14,7 +14,7 @@ test-s3-integration: fake-s3-accounts
 
 .PHONY: test-oidc-e2e
 test-oidc-e2e: node_version
-	cd oidc-dev && \
+	cd test/e2e/oidc && \
 	docker compose down && \
 	docker compose build && \
 	docker compose up --exit-code-from odk-central-oidc-tester
@@ -33,13 +33,13 @@ dev-s3: fake-s3-accounts base
 
 .PHONY: fake-oidc-server
 fake-oidc-server:
-	cd oidc-dev/fake-oidc-server && \
+	cd test/e2e/oidc/fake-oidc-server && \
 	npm clean-install && \
 	FAKE_OIDC_ROOT_URL=http://localhost:9898 npx nodemon index.js
 
 .PHONY: fake-oidc-server-ci
 fake-oidc-server-ci:
-	cd oidc-dev/fake-oidc-server && \
+	cd test/e2e/oidc/fake-oidc-server && \
 	npm clean-install && \
 	FAKE_OIDC_ROOT_URL=http://localhost:9898 node index.js
 
