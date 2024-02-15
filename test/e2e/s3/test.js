@@ -35,7 +35,7 @@ describe('s3 support', () => {
   before(async () => {
   });
 
-  it('should ___TODO___', async function() {
+  it('should shift submission attachments to s3', async function() {
     this.timeout(TIMEOUT*2);
 
     // given
