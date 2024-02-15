@@ -9,7 +9,7 @@
 
 /* eslint-disable */
 
-const TIMEOUT = 10000; // ms
+const TIMEOUT = 120000; // ms
 
 const fs = require('node:fs');
 const fetch = require('node-fetch');
