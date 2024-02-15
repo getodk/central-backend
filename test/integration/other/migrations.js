@@ -36,7 +36,7 @@ const testMigration = (filename, tests, options = {}) => {
   const { only = false, skip = false } = options;
   const f = only ? describe.only : (skip ? describe.skip : describe);
   // eslint-disable-next-line func-names, space-before-function-paren
-  f(`migrations: ${filename}`, function() {
+  f(`database migrations: ${filename}`, function() {
     this.timeout(20000);
 
     beforeEach(() => upToMigration(filename, false));
