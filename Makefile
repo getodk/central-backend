@@ -37,6 +37,12 @@ fake-oidc-server:
 	npm clean-install && \
 	FAKE_OIDC_ROOT_URL=http://localhost:9898 npx nodemon index.js
 
+.PHONY: fake-oidc-server-ci
+fake-oidc-server-ci:
+	cd oidc-dev/fake-oidc-server && \
+	npm clean-install && \
+	FAKE_OIDC_ROOT_URL=http://localhost:9898 node index.js
+
 .PHONY: fake-s3-server
 fake-s3-server:
 	# run an ephemeral, s3-compatible local store
@@ -47,12 +53,6 @@ fake-s3-server:
 		-e MINIO_ROOT_USER=odk-central-dev \
 		-e MINIO_ROOT_PASSWORD=topSecret123 \
 		minio/minio server /data --console-address ":9001"
-
-.PHONY: fake-oidc-server-ci
-fake-oidc-server-ci:
-	cd oidc-dev/fake-oidc-server && \
-	npm clean-install && \
-	FAKE_OIDC_ROOT_URL=http://localhost:9898 node index.js
 
 .PHONY: node_version
 node_version: node_modules
