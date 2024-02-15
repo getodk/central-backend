@@ -10,6 +10,9 @@ const exhaust = async container => {
   if (process.env.TEST_S3) {
     // In the real world, there's currently no guarantee that blobs will be
     // uploaded to S3 before submission.attachment.update is processed.
+    // REVIEW: this results in non-deterministic tests.  An alternative approach
+    // would be separate tests explicitly checking for different combinations of
+    // blobs being in db vs s3.
     await maybeExhaustBlobs(container);
   }
   return _exhaust(container);
