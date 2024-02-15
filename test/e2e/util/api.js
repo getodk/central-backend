@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+const { extname } = require('node:path');
 const fetch = require('node-fetch'); // TODO replace with native fetch
 const { basename } = require('node:path');
 
@@ -112,7 +113,7 @@ function base64(s) {
 
 function mimetypeFor(f) {
   // For more, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types
-  const extension = fileExtensionFrom(f);
+  const extension = extname(f);
   switch(extension) {
     case 'bin' : return 'application/octet-stream';
     case 'jpg' : return 'image/jpeg';
@@ -123,14 +124,6 @@ function mimetypeFor(f) {
     case 'xlsx': return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
     case 'xml' : return 'application/xml';
     default: throw new Error(`Unsure what mime type to use for: ${f}`);
-  }
-}
-
-function fileExtensionFrom(f) {
-  try {
-    return basename(f).match(/\.([^.]*)$/)[1];
-  } catch(err) {
-    throw new Error(`Could not get file extension from filename '${f}'!`);
   }
 }
 

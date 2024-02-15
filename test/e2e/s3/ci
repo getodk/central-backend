@@ -19,7 +19,8 @@ log 'Waiting for backend to start...'
 timeout 30 bash -c "while ! curl -s -o /dev/null $serverUrl; do sleep 1; done"
 log 'Backend started!'
 
-node test/e2e/s3/index.js -s "$serverUrl" -P "$userPassword"
+cd test/e2e/s3
+npx mocha test.js
 
 if ! curl -s -o /dev/null "$serverUrl"; then
   log 'Backend died.'
