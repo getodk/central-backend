@@ -2343,12 +2343,26 @@ describe('Entities API', () => {
           });
       }));
 
-      it('should not create any entities there is a UUID collision', testEntities(async (service) => {
+      it('should not create any entities there is a UUID collision', testServiceFullTrx(async (service) => {
         const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc', // collision
+            label: 'John Doe',
+            data: {
+              first_name: 'John',
+              age: '22'
+            }
+          });
 
         await asAlice.get('/v1/projects/1/datasets/people/entities')
           .then(({ body }) => {
-            body.length.should.equal(2);
+            body.length.should.equal(1);
           });
 
         await asAlice.post('/v1/projects/1/datasets/people/entities')
@@ -2386,7 +2400,7 @@ describe('Entities API', () => {
         // Entity list is still same length as before
         await asAlice.get('/v1/projects/1/datasets/people/entities')
           .then(({ body }) => {
-            body.length.should.equal(2); // same as before
+            body.length.should.equal(1); // same as before
           });
 
         // Most recent event is not a bulk create event
