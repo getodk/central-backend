@@ -2039,7 +2039,7 @@ describe('Entities API', () => {
         .expect(404);
     }));
 
-    it('should reject if the user cannot read', testEntities(async (service) => {
+    it('should reject if the user cannot delete', testEntities(async (service) => {
       const asChelsea = await service.login('chelsea');
 
       await asChelsea.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')

@@ -547,7 +547,7 @@ describe('api: /projects', () => {
     it('should return notfound if the project does not exist', testService((service) =>
       service.delete('/v1/projects/99').expect(404)));
 
-    it('should reject unless the user can update', testService((service) =>
+    it('should reject unless the user can delete', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.delete('/v1/projects/1').expect(403))));
 
