@@ -8,14 +8,11 @@
 // except according to the terms contained in the LICENSE file.
 
 module.exports = {
-  extends: '../../.eslintrc.json',
-  env: {
-    browser: true, // for page.waitForFunction() code
-  },
+  extends: '../../../../.eslintrc.json',
   rules: {
     // This rule does not work if the node_modules directory has not been
-    // populated.  Downloading playwright is quite slow, so it's probably better
-    // we don't have to do that before linting.
+    // populated.  If this rule is enabled here, `npm clean-install` will need
+    // to be run in this directory before eslint is run.
     'import/no-unresolved': 'off',
   },
 };
