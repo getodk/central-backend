@@ -6,7 +6,7 @@ log() {
 
 export NODE_CONFIG_ENV=oidc-e2e
 
-if [[ "${CI-}" = true ]]; then
+if [[ ${CI-} = true ]]; then
   log "Configuring DNS..."
   echo '127.0.0.1 fake-oidc-server.example.net' | sudo tee --append /etc/hosts
   echo '127.0.0.1      odk-central.example.org' | sudo tee --append /etc/hosts
