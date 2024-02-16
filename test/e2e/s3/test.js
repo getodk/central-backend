@@ -63,7 +63,7 @@ describe('s3 support', () => {
         .map(f => api.apiPostFile(
           `projects/${projectId}/forms/${xmlFormId}/draft/attachments/${f}`,
           `${attDir}/${f}`,
-        ));
+        ))
     );
 
     return form.xmlFormId;
