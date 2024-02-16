@@ -9,7 +9,13 @@ if [[ "${CI-}" = true ]]; then
   # N.B. configuring DNS is done at runtime because Docker prevents write access before then.
   echo '127.0.0.1 fake-oidc-server.example.net' | sudo tee --append /etc/hosts
   echo '127.0.0.1      odk-central.example.org' | sudo tee --append /etc/hosts
-  log "DNS configured."
+
+  log "Installing apt dependencies..."
+  sudo apt-get install -y wait-for-it
+
+  log "Creating database users..."
+  npm ci --legacy-peer-deps
+  node lib/bin/create-docker-databases.js
 
   log "Starting services..."
   (cd test/e2e/oidc/fake-oidc-server && npm ci && node index.js) &
