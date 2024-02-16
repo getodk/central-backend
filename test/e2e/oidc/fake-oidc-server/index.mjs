@@ -7,10 +7,10 @@
 // including this file, may be copied, modified, propagated, or distributed
 // except according to the terms contained in the LICENSE file.
 
-const Provider = require('oidc-provider');
-const Path = require('node:path');
-const fs = require('node:fs');
-const https = require('node:https');
+import Provider from 'oidc-provider';
+import Path from 'node:path';
+import fs from 'node:fs';
+import https from 'node:https';
 
 const port = 9898;
 const rootUrl = process.env.FAKE_OIDC_ROOT_URL || 'https://fake-oidc-server.example.net:9898';
@@ -20,7 +20,7 @@ const loadJson = path => JSON.parse(fs.readFileSync(path, { encoding: 'utf8' }))
 const ACCOUNTS_JSON_PATH = Path.resolve('./accounts.json');
 const ACCOUNTS = loadJson(ACCOUNTS_JSON_PATH);
 
-const pkg = loadJson('./package.json');
+const pkg = loadJson('../../../../package.json');
 // eslint-disable-next-line no-console
 const log = (...args) => console.error(pkg.name, new Date().toISOString(), 'INFO', ...args);
 log.info = log;
