@@ -4,6 +4,8 @@ log() {
   echo "[oidc-tester] $*"
 }
 
+export NODE_CONFIG_ENV=oidc-e2e
+
 if [[ "${CI-}" = true ]]; then
   log "Configuring DNS..."
   # N.B. configuring DNS is done at runtime because Docker prevents write access before then.
@@ -32,8 +34,12 @@ log "Creating test users..." # _after_ migrations have been run
 node lib/bin/cli.js --email alice@example.com user-create
 log "Test users created."
 
-log "Running playwright tests..."
 cd test/e2e/oidc/playwright-tests
+npm ci
+log "Playwright: $(npx playwright --version)"
+log "Installing playwright deps..."
+npx playwright install --with-deps
+log "Running playwright tests..."
 npx playwright test
 
 log "Tests completed OK!"
