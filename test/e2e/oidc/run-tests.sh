@@ -4,8 +4,6 @@ log() {
   echo "[oidc-tester] $*"
 }
 
-export NODE_CONFIG_ENV=oidc-tester-docker
-
 if [[ "${CI-}" = true ]]; then
   log "Configuring DNS..."
   # N.B. configuring DNS is done at runtime because Docker prevents write access before then.
