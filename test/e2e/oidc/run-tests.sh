@@ -37,7 +37,8 @@ log "Waiting for odk-central-backend to start..."
 wait-for-it localhost:8383 --strict --timeout=60 -- echo '[oidc-tester] odk-central-backend is UP!'
 
 if ! [[ "${CREATE_USERS-}" = false ]]; then
-  log "Creating test users..." # _after_ migrations have been run
+  log "Creating test users..."
+  make base # migrate db before creating users
   node lib/bin/cli.js --email alice@example.com user-create
   log "Test users created."
 fi
