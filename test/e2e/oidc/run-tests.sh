@@ -24,7 +24,7 @@ fi
 
 if [[ ${START_SERVICES-} = true ]]; then
   log "Starting background services..."
-  (make fake-oidc-server-ci) &
+  (FAKE_OIDC_ROOT_URL=https://fake-oidc-server.example.net:9898 make fake-oidc-server-ci) &
   (NODE_TLS_REJECT_UNAUTHORIZED=0 make run) &
 else
   log "Skipping service startup.  Set START_SERVICES=true for managed services."

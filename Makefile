@@ -24,7 +24,7 @@ fake-oidc-server:
 .PHONY: fake-oidc-server-ci
 fake-oidc-server-ci:
 	cd test/e2e/oidc/fake-oidc-server && \
-	FAKE_OIDC_ROOT_URL=https://fake-oidc-server.example.net:9898 node index.mjs
+	node index.mjs
 
 .PHONY: node_version
 node_version: node_modules
