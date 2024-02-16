@@ -10,10 +10,7 @@ test-oidc-integration: node_version
 
 .PHONY: test-oidc-e2e
 test-oidc-e2e: node_version
-	cd test/e2e/oidc && \
-	docker compose down && \
-	docker compose build && \
-	docker compose up --exit-code-from odk-central-oidc-tester
+	test/e2e/oidc/run-tests.sh
 
 .PHONY: dev-oidc
 dev-oidc: base
