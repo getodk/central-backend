@@ -32,9 +32,6 @@ const BIGFILE = `${attDir}/big.bin`;
 describe('s3 support', () => {
   let api, projectId, xmlFormId;
 
-  before(async () => {
-  });
-
   it('should shift submission attachments to s3', async function() {
     this.timeout(TIMEOUT*2);
 
