@@ -37,20 +37,9 @@ describe('s3 support', () => {
 
     // given
     bigFileExists();
-
     api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
-
-    const project = await api.apiPostJson('projects', { name:`soak-test-${new Date().toISOString().replace(/\..*/, '')}` });
-    projectId = project.id;
-
-    const xml = await api.apiPostFile(`projects/${projectId}/forms`, './test-form.xml');
-    xmlFormId = xml.xmlFormId;
-
-    await Promise.all(
-      fs.readdirSync(attDir)
-        .filter(f => !f.startsWith('.'))
-        .map(f => api.apiPostFile(`projects/${projectId}/forms/${xmlFormId}/draft/attachments/${f}`, `${attDir}/${f}`)),
-    );
+    projectId = await createProject();
+    xmlFormId = await uploadFormWithAttachments('test-form.xml');
 
     // when
     const attachments = await api.apiGet(`projects/${projectId}/forms/${xmlFormId}/attachments`);
@@ -59,6 +48,26 @@ describe('s3 support', () => {
     await assertAllRedirect(attachments);
     await assertAllDownloadsMatchOriginal(attachments);
   });
+
+  function createProject() {
+    const project = await api.apiPostJson('projects', { name:`s3-test-${new Date().toISOString().replace(/\..*/, '')}` });
+    return project.id;
+  }
+
+  function uploadFormWithAttachments(xmlFilePath) {
+    const form = await api.apiPostFile(`projects/${projectId}/forms`, xmlFilePath);
+
+    await Promise.all(
+      fs.readdirSync(attDir)
+        .filter(f => !f.startsWith('.'))
+        .map(f => api.apiPostFile(
+          `projects/${projectId}/forms/${xmlFormId}/draft/attachments/${f}`,
+          `${attDir}/${f}`,
+        ));
+    );
+
+    return form.xmlFormId;
+  }
 
   function assertAllRedirect(attachments) {
     const timeout = Date.now() + TIMEOUT;
