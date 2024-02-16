@@ -50,12 +50,15 @@ describe('s3 support', () => {
   });
 
   async function createProject() {
-    const project = await api.apiPostJson('projects', { name:`s3-test-${new Date().toISOString().replace(/\..*/, '')}` });
+    const project = await api.apiPostJson(
+      'projects',
+      { name:`s3-test-${new Date().toISOString().replace(/\..*/, '')}` },
+    );
     return project.id;
   }
 
   async function uploadFormWithAttachments(xmlFilePath) {
-    const form = await api.apiPostFile(`projects/${projectId}/forms`, xmlFilePath);
+    const { xmlFormId } = await api.apiPostFile(`projects/${projectId}/forms`, xmlFilePath);
 
     await Promise.all(
       fs.readdirSync(attDir)
@@ -66,7 +69,7 @@ describe('s3 support', () => {
         ))
     );
 
-    return form.xmlFormId;
+    return xmlFormId;
   }
 
   function assertAllRedirect(attachments) {
