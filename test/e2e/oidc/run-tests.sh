@@ -25,7 +25,7 @@ fi
 if [[ ${START_SERVICES-} = true ]]; then
   log "Starting background services..."
   (cd test/e2e/oidc/fake-oidc-server && npm ci && node index.js) &
-  (NODE_TLS_REJECT_UNAUTHORIZED=0 node lib/bin/run-server.js) &
+  (NODE_TLS_REJECT_UNAUTHORIZED=0 make run) &
 else
   log "Skipping service startup.  Set START_SERVICES=true for managed services."
 fi
@@ -38,7 +38,6 @@ wait-for-it localhost:8383 --strict --timeout=60 -- echo '[oidc-tester] odk-cent
 
 if ! [[ "${CREATE_USERS-}" = false ]]; then
   log "Creating test users..."
-  make base # migrate db before creating users
   node lib/bin/cli.js --email alice@example.com user-create
   log "Test users created."
 fi
