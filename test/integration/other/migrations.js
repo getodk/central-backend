@@ -34,7 +34,9 @@ const down = () => withTestDatabase((migrator) =>
 
 const testMigration = (filename, tests, options = {}) => {
   const { only = false, skip = false } = options;
-  const f = only ? describe.only : (skip ? describe.skip : describe);
+  const f = only
+    ? describe.only.bind(describe)
+    : (skip ? describe.skip.bind(describe) : describe);
   // eslint-disable-next-line func-names, space-before-function-paren
   f(`database migrations: ${filename}`, function() {
     this.timeout(20000);
