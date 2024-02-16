@@ -13,7 +13,9 @@ if [[ "${CI-}" = true ]]; then
 
   log "Starting services..."
   (cd test/e2e/oidc/fake-oidc-server && npm ci && node index.js) &
-  (make base && NODE_TLS_REJECT_UNAUTHORIZED=0 node lib/bin/run-server.js) &
+  make base
+  node lib/bin/create-docker-databases.js
+  (NODE_TLS_REJECT_UNAUTHORIZED=0 node lib/bin/run-server.js) &
 else
   log "!!! WARN: skipping DNS configuration!"
   log "!!! WARN: You may need to manually edit you /etc/hosts file."
