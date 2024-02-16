@@ -36,7 +36,7 @@ wait-for-it localhost:9898 --strict --timeout=60 -- echo '[oidc-tester] fake-oid
 log "Waiting for odk-central-backend to start..."
 wait-for-it localhost:8383 --strict --timeout=60 -- echo '[oidc-tester] odk-central-backend is UP!'
 
-if ! [[ "${CREATE_USERS-}" = false ]]; then
+if ! [[ ${CREATE_USERS-} = false ]]; then
   log "Creating test users..."
   node lib/bin/cli.js --email alice@example.com user-create
   log "Test users created."
