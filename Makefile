@@ -19,13 +19,11 @@ dev-oidc: base
 .PHONY: fake-oidc-server
 fake-oidc-server:
 	cd test/e2e/oidc/fake-oidc-server && \
-	npm clean-install && \
 	FAKE_OIDC_ROOT_URL=http://localhost:9898 npx nodemon index.js
 
 .PHONY: fake-oidc-server-ci
 fake-oidc-server-ci:
 	cd test/e2e/oidc/fake-oidc-server && \
-	npm clean-install && \
 	FAKE_OIDC_ROOT_URL=http://localhost:9898 node index.js
 
 .PHONY: node_version

@@ -24,7 +24,7 @@ fi
 
 if [[ ${START_SERVICES-} = true ]]; then
   log "Starting background services..."
-  (cd test/e2e/oidc/fake-oidc-server && node index.js) &
+  (make fake-oidc-server-ci) &
   (NODE_TLS_REJECT_UNAUTHORIZED=0 make run) &
 else
   log "Skipping service startup.  Set START_SERVICES=true for managed services."
