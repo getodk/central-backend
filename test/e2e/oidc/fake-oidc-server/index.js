@@ -7,10 +7,10 @@
 // including this file, may be copied, modified, propagated, or distributed
 // except according to the terms contained in the LICENSE file.
 
-const Provider require('oidc-provider');
-const Path require('node:path');
-const fs require('node:fs');
-const https require('node:https');
+const Provider = require('oidc-provider');
+const Path = require('node:path');
+const fs = require('node:fs');
+const https = require('node:https');
 
 const port = 9898;
 const rootUrl = process.env.FAKE_OIDC_ROOT_URL || 'https://fake-oidc-server.example.net:9898';
