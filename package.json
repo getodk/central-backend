@@ -46,12 +46,14 @@
     "yauzl": "~2.10"
   },
   "devDependencies": {
+    "@playwright/test": "^1.41.2",
     "@sinonjs/fake-timers": "^9.1.2",
     "app-root-path": "~3",
     "eslint": "^8.44.0",
     "eslint-config-airbnb-base": "~15",
     "eslint-plugin-import": "~2.25",
     "fetch-cookie": "^2.1.0",
+    "http-proxy-middleware": "^2.0.6",
     "lodash": "^4.17.21",
     "mocha": "^10.2.0",
     "nock": "^13.3.1",
