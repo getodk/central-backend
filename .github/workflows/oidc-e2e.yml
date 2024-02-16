@@ -16,7 +16,7 @@ jobs:
       postgres:
         image: postgres:14.10
         env:
-          POSTGRES_PASSWORD: jubilant
+          POSTGRES_PASSWORD: odktest
         ports:
           - 5432:5432
         # Set health checks to wait until postgres has started
