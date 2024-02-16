@@ -20,6 +20,7 @@ if [[ "${CI-}" = true ]]; then
   node lib/bin/create-docker-databases.js
 
   START_SERVICES=true
+  INSTALL_PLAYWRIGHT_DEPS=true
 fi
 
 if [[ ${START_SERVICES-} = true ]]; then
@@ -44,8 +45,10 @@ fi
 
 cd test/e2e/oidc/playwright-tests
 log "Playwright: $(npx playwright --version)"
-log "Installing playwright deps..."
-npx playwright install --with-deps
+if [[ ${INSTALL_PLAYWRIGHT_DEPS-} = true ]]; then
+  log "Installing playwright deps..."
+  npx playwright install --with-deps
+fi
 log "Running playwright tests..."
 npx playwright test
 
