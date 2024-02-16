@@ -32,6 +32,8 @@ jobs:
       with:
         node-version: 20.10.0
         cache: 'npm'
+    - run: npm ci --legacy-peer-deps
+    - run: node lib/bin/create-docker-databases.js
     - run: sudo apt-get install -y wait-for-it
     - run: make test-oidc-e2e
     - name: Archive playwright screenshots
