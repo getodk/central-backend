@@ -19,9 +19,15 @@ if [[ "${CI-}" = true ]]; then
   npm ci --legacy-peer-deps
   node lib/bin/create-docker-databases.js
 
-  log "Starting services..."
+  START_SERVICES=true
+fi
+
+if [[ ${START_SERVICES-} = true ]]; then
+  log "Starting background services..."
   (cd test/e2e/oidc/fake-oidc-server && npm ci && node index.js) &
   (NODE_TLS_REJECT_UNAUTHORIZED=0 node lib/bin/run-server.js) &
+else
+  log "Skipping service startup.  Set START_SERVICES=true for managed services."
 fi
 
 log "Waiting for fake-oidc-server to start..."
@@ -30,9 +36,11 @@ wait-for-it localhost:9898 --strict --timeout=60 -- echo '[oidc-tester] fake-oid
 log "Waiting for odk-central-backend to start..."
 wait-for-it localhost:8383 --strict --timeout=60 -- echo '[oidc-tester] odk-central-backend is UP!'
 
-log "Creating test users..." # _after_ migrations have been run
-node lib/bin/cli.js --email alice@example.com user-create
-log "Test users created."
+if ! [[ "${CREATE_USERS-}" = false ]]; then
+  log "Creating test users..." # _after_ migrations have been run
+  node lib/bin/cli.js --email alice@example.com user-create
+  log "Test users created."
+fi
 
 cd test/e2e/oidc/playwright-tests
 npm ci
