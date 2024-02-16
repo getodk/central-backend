@@ -36,16 +36,7 @@ describe('s3 support', () => {
     this.timeout(TIMEOUT*2);
 
     // given
-    if(fs.existsSync(BIGFILE)) {
-      log.info('big.bin exists; skipping generation');
-    } else {
-      log.info('Generating big.bin...');
-      let remaining = 100000000;
-      const batchSize = 100000;
-      do {
-        fs.appendFileSync(BIGFILE, randomBytes(batchSize));
-      } while((remaining-=batchSize) > 0);
-    }
+    bigFileExists();
 
     api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
 
@@ -130,3 +121,16 @@ describe('s3 support', () => {
     }
   }
 });
+
+function bigFileExists() {
+  if(fs.existsSync(BIGFILE)) {
+    log.info('big.bin exists; skipping generation');
+  } else {
+    log.info('Generating big.bin...');
+    let remaining = 100000000;
+    const batchSize = 100000;
+    do {
+      fs.appendFileSync(BIGFILE, randomBytes(batchSize));
+    } while((remaining-=batchSize) > 0);
+  }
+}
