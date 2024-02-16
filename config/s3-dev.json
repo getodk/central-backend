@@ -4,7 +4,8 @@
       "server": "http://localhost:9000",
       "accessKey": "odk-central-dev",
       "secretKey": "topSecret123",
-      "bucketName": "odk-central-bucket"
+      "bucketName": "odk-central-bucket",
+      "requestTimeout": 60000
     }
   }
 }
