@@ -16,8 +16,7 @@ describe('worker', () => {
     it('should return false and do nothing if no event is given', () => {
       let called = false;
       const reschedule = () => { called = true; };
-      const container = process.env.TEST_S3 ? { db: { query: () => ({ rows: [] }) } } : {};
-      workerQueue(container).run(null, reschedule).should.equal(false);
+      workerQueue({}).run(null, reschedule).should.equal(false);
       called.should.equal(false);
     });
 
