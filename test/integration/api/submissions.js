@@ -10,7 +10,8 @@ const testData = require('../../data/xml');
 const { pZipStreamToFiles } = require('../../util/zip');
 const { map } = require('ramda');
 const { Form } = require(appRoot + '/lib/model/frames');
-const { exhaust, exhaustBlobs } = require(appRoot + '/lib/worker/worker');
+const { exhaust } = require(appRoot + '/lib/worker/worker');
+const { exhaustBlobs } = require(appRoot + '/lib/blob-worker');
 
 // utilities used for versioning instances
 const withSimpleIds = (deprecatedId, instanceId) => testData.instances.simple.one
