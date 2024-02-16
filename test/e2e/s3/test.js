@@ -49,12 +49,12 @@ describe('s3 support', () => {
     await assertAllDownloadsMatchOriginal(attachments);
   });
 
-  function createProject() {
+  async function createProject() {
     const project = await api.apiPostJson('projects', { name:`s3-test-${new Date().toISOString().replace(/\..*/, '')}` });
     return project.id;
   }
 
-  function uploadFormWithAttachments(xmlFilePath) {
+  async function uploadFormWithAttachments(xmlFilePath) {
     const form = await api.apiPostFile(`projects/${projectId}/forms`, xmlFilePath);
 
     await Promise.all(
