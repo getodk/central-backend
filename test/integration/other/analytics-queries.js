@@ -6,7 +6,7 @@ const { createReadStream, readFileSync } = require('fs');
 const { promisify } = require('util');
 const testData = require('../../data/xml');
 const { exhaust: _exhaust, workerQueue } = require(appRoot + '/lib/worker/worker');
-const { maybeExhaustBlobs } = require(appRoot + '/lib/blob-worker');
+const { maybeExhaustBlobs } = require(appRoot + '/lib/util/s3');
 const exhaust = async container => {
   if (process.env.TEST_S3) {
     // In the real world, there's currently no guarantee that blobs will be

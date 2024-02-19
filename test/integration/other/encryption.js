@@ -11,7 +11,7 @@ const { Form, Key, Submission, Actor } = require(appRoot + '/lib/model/frames');
 const { mapSequential } = require(appRoot + '/test/util/util');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const authenticateUser = require('../../util/authenticate-user');
-const { exhaustBlobs } = require(appRoot + '/lib/blob-worker');
+const { exhaustBlobs } = require(appRoot + '/lib/util/s3');
 
 describe('managed encryption', () => {
   describe('lock management', () => {
