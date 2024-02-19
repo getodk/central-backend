@@ -59,21 +59,16 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
     const res = await apiFetch(method, path, body, headers);
 
     return new Promise((resolve, reject) => {
-      try {
-        let bytes = 0;
-        res.body.on('data', data => bytes += data.length);
-        res.body.on('error', reject);
+      let bytes = 0;
+      res.body.on('data', data => bytes += data.length);
+      res.body.on('error', reject);
 
-        const file = fs.createWriteStream(`${logPath}/${filenamePrefix}.${n.toString().padStart(9, '0')}.dump`);
-        res.body.on('end', () => file.close(() => resolve(bytes)));
+      const file = fs.createWriteStream(`${logPath}/${filenamePrefix}.${n.toString().padStart(9, '0')}.dump`);
+      res.body.on('end', () => file.close(() => resolve(bytes)));
 
-        file.on('error', reject);
+      file.on('error', reject);
 
-        res.body.pipe(file);
-      } catch(err) {
-        console.log(err);
-        process.exit(99);
-      }
+      res.body.pipe(file);
     });
   }
 
