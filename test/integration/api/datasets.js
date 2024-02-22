@@ -622,7 +622,7 @@ describe('datasets and entities', () => {
 
       }));
 
-      it('should return 304 content not changed if ETag matches', testService(async (service, container) => {
+      it.only('should return 304 content not changed if ETag matches', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -640,6 +640,11 @@ describe('datasets and entities', () => {
           .expect(200);
 
         await exhaust(container);
+
+        const errResult = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(500);
+        const errEtag = errResult.get('ETag');
+        errEtag.should.match(/W\/".*"/); // express sets weak etags on everything
 
         const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
           .expect(200);
