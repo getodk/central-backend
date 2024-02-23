@@ -2089,7 +2089,7 @@ describe('Entities API', () => {
     // - should reject if the user cannot write
     // - should reject creating new entity if dataset not yet published
 
-    it('should reject malformed json', testDataset(async (service) => {
+    it('should reject malformed entity object json', testDataset(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/datasets/people/entities')
@@ -2098,6 +2098,18 @@ describe('Entities API', () => {
         .then(({ body }) => {
           body.code.should.equal(400.31);
           body.message.should.equal('Expected parameters: (label, uuid, data). Got (broken).');
+        });
+    }));
+
+    it('should reject malformed contents of entity array', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ entities: ['1', '2', '3'] })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.31);
+          body.message.should.equal('Expected parameters: (label, uuid, data). Got (0).');
         });
     }));
 
