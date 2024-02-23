@@ -613,6 +613,23 @@ describe('/audits', () => {
         .then(({ body }) => {
           body.success.should.be.true();
         });
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people.csv',
+            size: 100,
+          },
+          entities: [
+            {
+              label: 'Johnny Doe',
+              data: {
+                first_name: 'Johnny',
+                age: '22'
+              }
+            }
+          ]
+        })
+        .expect(200);
 
       await asAlice.get('/v1/audits?action=nonverbose')
         .expect(200)
