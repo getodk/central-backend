@@ -2093,10 +2093,35 @@ describe('Entities API', () => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/datasets/people/entities')
-        .send([{ broken: 'json' }])
+        .send({ entities: [{ broken: 'json' }] })
         .expect(400)
         .then(({ body }) => {
           body.code.should.equal(400.31);
+          body.message.should.equal('Expected parameters: (label, uuid, data). Got (broken).');
+        });
+    }));
+
+    it('should reject malformed entities array', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ entities: 'not an array' })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.31);
+          body.message.should.equal('Expected parameters: (entities: [...]). Got (not an array).');
+        });
+    }));
+
+    it('should reject empty entities array', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ entities: [] })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.31);
+          body.message.should.equal('Expected parameters: (entities: [...]). Got (empty array).');
         });
     }));
 
@@ -2142,6 +2167,23 @@ describe('Entities API', () => {
       await asAlice.get('/v1/projects/1/datasets/people/entities')
         .then(({ body }) => {
           body.length.should.equal(2);
+          body[0].uuid.should.equal('12345678-1234-4123-8234-111111111aaa');
+          body[0].currentVersion.label.should.equal('Johnny Doe');
+          body[1].uuid.should.equal('12345678-1234-4123-8234-111111111bbb');
+          body[1].currentVersion.label.should.equal('Alice');
+        });
+
+      // Check data and dataRecieved of each entity
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa')
+        .then(({ body }) => {
+          body.currentVersion.data.should.eql({ age: '22', first_name: 'Johnny' });
+          body.currentVersion.dataReceived.should.eql({ age: '22', label: 'Johnny Doe', first_name: 'Johnny' });
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111bbb')
+        .then(({ body }) => {
+          body.currentVersion.data.should.eql({ age: '44', first_name: 'Alice' });
+          body.currentVersion.dataReceived.should.eql({ age: '44', label: 'Alice', first_name: 'Alice' });
         });
 
       // Most recent event IS bulk create
@@ -2529,7 +2571,7 @@ describe('Entities API', () => {
 
         await exhaust(container);
 
-        // resolve conflict without making new version
+        // resolve conflict while simultaneously making new version
         await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&force=true')
           .expect(200);
 
@@ -2537,7 +2579,6 @@ describe('Entities API', () => {
           .expect(200)
           .then(({ body: versions }) => {
             versions.length.should.equal(3);
-            //console.log('versions', versions);
           });
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
@@ -2586,7 +2627,6 @@ describe('Entities API', () => {
           .expect(200)
           .then(({ body: versions }) => {
             versions.length.should.equal(4);
-            //console.log('versions', versions);
           });
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
