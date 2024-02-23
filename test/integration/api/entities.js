@@ -2202,7 +2202,8 @@ describe('Entities API', () => {
       await asAlice.get('/v1/audits')
         .then(({ body }) => {
           body[0].action.should.equal('entity.bulk.create');
-          body[0].details.count.should.equal(2);
+          // the main item stored in the event details is a reference to the entity source id.
+          body[0].details.should.have.property('sourceId');
         });
     }));
 
@@ -2466,11 +2467,86 @@ describe('Entities API', () => {
     });
 
     describe('entity source when created through bulk append', () => {
-      it('should create entities that share the same source', testDataset(async (service) => {
+      it('should throw an error if no source is provided', testDataset(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/datasets/people/entities')
           .set('User-Agent', 'central/tests')
+          .send({
+            entities: [{
+              label: 'Alice',
+              data: { first_name: 'Alice' }
+            }]
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.2);
+            body.message.should.equal('Required parameter source missing.');
+          });
+      }));
+
+      it('should throw an error if source name is missing', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {},
+            entities: [{
+              label: 'Alice',
+              data: { first_name: 'Alice' }
+            }]
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.2);
+            body.message.should.equal('Required parameter source.name missing.');
+          });
+      }));
+
+      it('should save source details in entity version source', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-111111111aaa',
+                label: 'Alice',
+                data: { first_name: 'Alice' }
+              },
+              {
+                label: 'Emily',
+                data: { first_name: 'Emily' }
+              },
+              {
+                label: 'Jane',
+                data: { first_name: 'Jane' }
+              }
+            ]
+          })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/versions')
+          .then(({ body: versions }) => {
+            versions[0].source.should.eql({ name: 'people.csv', size: 100, count: 3, userAgent: 'central/tests' });
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/audits')
+          .then(({ body: logs }) => {
+            logs[0].details.source.should.eql({ name: 'people.csv', size: 100, count: 3, userAgent: 'central/tests' });
+          });
+      }));
+
+      it('should create entities that share the same source', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
           .send({
             source: {
               name: 'people.csv',
@@ -2497,14 +2573,14 @@ describe('Entities API', () => {
           })
           .expect(200);
 
-        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/versions')
-          .then(({ body: versions }) => {
-            versions[0].source.should.eql({ name: 'people.csv', size: 100, userAgent: 'central/tests' });
-          });
+        const aaaSource = await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/versions')
+          .then(({ body: versions }) => versions[0].source);
+
+        aaaSource.should.eql({ name: 'people.csv', size: 100, count: 2, userAgent: null });
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111bbb/versions')
           .then(({ body: versions }) => {
-            versions[0].source.should.eql({ name: 'people.csv', size: 100, userAgent: 'central/tests' });
+            versions[0].source.should.eql(aaaSource);
           });
       }));
     });
@@ -2554,8 +2630,7 @@ describe('Entities API', () => {
 
             // bulk create event
             logs[1].action.should.equal('entity.bulk.create');
-            logs[1].details.source.should.eql({ name: 'people.csv', size: 100, userAgent: 'central/tests' });
-            logs[1].details.count.should.eql(2); // number of entities created
+            logs[1].details.source.should.eql({ name: 'people.csv', size: 100, count: 2, userAgent: 'central/tests' });
 
             logs.length.should.equal(2);
           });
