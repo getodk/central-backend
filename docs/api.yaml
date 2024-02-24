@@ -40,12 +40,15 @@ info:
 
     **Added**:
 
+    - Bulk Entity Creation!
+      * The existing [Entity Create](/central-api-entity-management/#creating-entities) endpoint now also accepts a list of Entities to append to a Dataset.
+      * The `uuid` property is no longer required and Central will generate a UUID for each new Entity if needed.
     - OData Data Document for requests of Submissions and Entities now allow use of `$orderby`.
     - ETag headers on all Blobs.
 
     **Changed**:
 
-    - The [Entity Create](/central-api-entity-management/#creating-an-entity) endpoint will now generate a UUID if the `uuid` parameter is not provided.
+    - The [Entity Create](/central-api-entity-management/#creating-entities) endpoint will now generate a UUID if the `uuid` parameter is not provided.
 
 
     ## ODK Central v2023.5
@@ -96,7 +99,7 @@ info:
       * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/versions](/central-api-entity-management/#listing-versions) for listing the versions of an Entity.
       * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/diffs](/central-api-entity-management/#getting-changes-between-versions) for getting the changes between versions of an Entity.
       * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/audits](/central-api-entity-management/#entity-audit-log) for getting the server audit logs about a specific Entity.
-      * New endpoint [POST /projects/:id/datasets/:name/entities](/central-api-entity-management/#creating-an-entity) for creating an Entity from JSON.
+      * New endpoint [POST /projects/:id/datasets/:name/entities](/central-api-entity-management/#creating-entities) for creating an Entity from JSON.
       * New endpoint [PATCH /projects/:id/datasets/:name/entities/:uuid](/central-api-entity-management/#updating-an-entity) for updating the data or label of an Entity.
       * New endpoint [DELETE /projects/:id/datasets/:name/entities/:uuid](/central-api-entity-management/#deleting-an-entity) for soft-deleting an Entity.
 
@@ -10070,15 +10073,35 @@ paths:
     post:
       tags:
       - Entity Management
-      summary: Creating an Entity
+      summary: Creating Entities
       description: |-
-        Creates an Entity in the Dataset. The request body takes a JSON representation of the Entity, which has the following properties:
+        Creates one or more Entities in the Dataset.
+        
+        For creating **a single Entity**, the request body takes a JSON representation of the Entity, which has the following properties:
 
           1. A `data` object containing values for the user-defined Dataset properties. (Not all properties have to have values.)
           2. A `label` property, which cannot be blank or an empty string. (This is used as a human-readable label in Forms that consume Entities.)
           3. An optional `uuid` property. If the `uuid` is not specified, Central will generate a UUID for an Entity with the provided data and label.
-        
-        Value type of all properties is `string`.
+      
+        `
+          {
+            "label": "John Doe",
+            "data": {
+              "firstName": "John",
+              "age": "22"
+            }
+          }
+        `
+
+        The value type of all properties is `string`.
+
+        For creating **multiple Entities** in bulk, the request body takes an array `entities` containing a list of Entity objects as described above. The bulk entity version also takes a `source` property with a required `name` field and optional `size`, for example to capture the filename and size of a bulk upload source.
+
+        `
+          {
+            "entities": [...], "source": {"name": "file.csv", "size": 100}
+          }
+        `
 
         You can provide header `X-Action-Notes` to store the metadata about the request. The metadata can retrieved using [Entity Audit Log](/central-api-entity-management/#entity-audit-log)
       operationId: Creating an Entity
@@ -10100,23 +10123,27 @@ paths:
       requestBody:
         content:
           '*/*':
-            schema:              
-              type: object
-              properties:
-                uuid:
-                  type: string
-                  description: The `uuid` of the Entity that uniquely identifies the Entity.
-                label:
-                  type: string
-                  description: Label of the Entity
-                data:
-                  $ref: '#/components/schemas/DataExample'
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/EntityCreateSingle'
+                - $ref: '#/components/schemas/EntityCreateBulk'
             example:
-              uuid: 54a405a0-53ce-4748-9788-d23a30cc3afa
-              label: John Doe (88)
-              data:
-                firstName: John
-                age: '88'
+              entities:
+                -
+                  uuid: 54a405a0-53ce-4748-9788-d23a30cc3afa
+                  label: John Doe (22)
+                  data:
+                    firstName: John
+                    age: '22'
+                -
+                  uuid: 0c3a7922-b611-42ca-a961-944e09fa9aa2
+                  label: Amy Jane (38)
+                  data:
+                    firstName: Amy
+                    age: '38'
+              source:
+                name: my_dataset.csv
+                size: 100
       responses:
         200:
           description: OK
@@ -13547,6 +13574,18 @@ components:
           type: string
           description: The name of the property that is changed.
           example: name
+    EntityBulkSource:
+      type: object
+      properties:
+        name:
+          type: string
+          description: A name to identify the bulk source, filename or API run
+          example: myfile.csv
+        size:
+          type: number
+          description: Optional, meant to indicate filesize (in MB)
+          example: 100
+      description: An object describing the source of this bulk create action.
     EntityOdata:
       type: object
       properties:
@@ -13580,6 +13619,27 @@ components:
                 type: string
               circumference_cm:
                 type: string
+    EntityCreateSingle:
+      type: object
+      properties:
+        uuid:
+          type: string
+          description: (Optional) The `uuid` of the Entity that uniquely identifies the Entity.
+        label:
+          type: string
+          description: Label of the Entity
+        data:
+          $ref: '#/components/schemas/DataExample'
+    EntityCreateBulk:
+      type: object
+      properties:
+        entities:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityCreateSingle'
+          description: A list of Entities
+        source:
+          $ref: '#/components/schemas/EntityBulkSource'
     DataExample:
       type: object
       properties:
