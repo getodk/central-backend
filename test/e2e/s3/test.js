@@ -43,6 +43,7 @@ describe('s3 support', () => {
 
     // when
     const attachments = await api.apiGet(`projects/${projectId}/forms/${xmlFormId}/attachments`);
+    // TODO assert all expected attachments are listed
 
     // then
     await assertAllRedirect(attachments);
