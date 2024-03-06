@@ -319,7 +319,8 @@ returning *`);
       const query = insertMany([ new T({ x: 2 }), new T({ y: 3 }) ]);
       query.sql.should.be.eql(`
   INSERT INTO dogs ("x","y")
-  SELECT * FROM unnest($1::"text"[], $2::"text"[]) AS t`);
+  SELECT * FROM unnest($1::"text"[], $2::"text"[]) AS t
+  RETURNING *`);
       query.values.should.be.eql([
         [2, null],
         [null, 3]
@@ -331,7 +332,8 @@ returning *`);
       const query = insertMany([ new U({ x: new Date('2000-01-01') }), new U() ]);
       query.sql.should.be.eql(`
   INSERT INTO dogs ("createdAt", "x")
-  SELECT clock_timestamp(), * FROM unnest($1::"timestamptz"[]) AS t`);
+  SELECT clock_timestamp(), * FROM unnest($1::"timestamptz"[]) AS t
+  RETURNING *`);
       query.values.should.be.eql([
         ['2000-01-01T00:00:00.000Z', null]
       ]);
