@@ -195,6 +195,49 @@ describe('Entities API', () => {
           person.currentVersion.creator.createdAt.should.match(/2021/);
         });
     }));
+
+    it('should return entities in stable order', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          label: 'Foo',
+          data: {
+            first_name: 'Foo',
+          }
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111bbb',
+          label: 'Bar',
+          data: {
+            first_name: 'Bar',
+          }
+        })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body: people }) => {
+          people.map(p => p.currentVersion.label).should.eql(['Bar', 'Foo']);
+        });
+
+      // Update Foo
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa?baseVersion=1')
+        .send({ data: { age: '12' } })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body: people }) => {
+          people.map(p => p.currentVersion.label).should.eql(['Bar', 'Foo']);
+        });
+    }));
   });
 
   describe('GET /datasets/:name/entities/:uuid', () => {
@@ -2082,7 +2125,7 @@ describe('Entities API', () => {
   });
 
   // Bulk API operations
-  describe('POST /datasets/:name/entities', () => {
+  describe('POST /datasets/:name/entities (bulk creation)', () => {
     // Tests that one would expect to find here are found above because this is additional
     // functionality of an existing endpoint:
     // - should return notfound if the dataset does not exist
@@ -2179,10 +2222,10 @@ describe('Entities API', () => {
       await asAlice.get('/v1/projects/1/datasets/people/entities')
         .then(({ body }) => {
           body.length.should.equal(2);
-          body[0].uuid.should.equal('12345678-1234-4123-8234-111111111aaa');
-          body[0].currentVersion.label.should.equal('Johnny Doe');
-          body[1].uuid.should.equal('12345678-1234-4123-8234-111111111bbb');
-          body[1].currentVersion.label.should.equal('Alice');
+          body[0].uuid.should.equal('12345678-1234-4123-8234-111111111bbb');
+          body[0].currentVersion.label.should.equal('Alice');
+          body[1].uuid.should.equal('12345678-1234-4123-8234-111111111aaa');
+          body[1].currentVersion.label.should.equal('Johnny Doe');
         });
 
       // Check data and dataRecieved of each entity
@@ -2248,8 +2291,8 @@ describe('Entities API', () => {
       // Used provided UUID and generated other UUID
       await asAlice.get('/v1/projects/1/datasets/people/entities')
         .then(({ body }) => {
-          body[0].uuid.should.equal('12345678-1234-4123-8234-111111111aaa');
-          body[1].uuid.should.be.a.uuid();
+          body[0].uuid.should.be.a.uuid();
+          body[1].uuid.should.equal('12345678-1234-4123-8234-111111111aaa');
         });
     }));
 
