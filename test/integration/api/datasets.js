@@ -15,6 +15,54 @@ const { exhaust } = require(appRoot + '/lib/worker/worker');
 const Option = require(appRoot + '/lib/util/option');
 
 describe('datasets and entities', () => {
+  describe('creating datasets and properties via the API', () => {
+    describe.only('projects/:id/datasets POST', () => {
+      it('should create a new dataset', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({
+            name: 'trees'
+          })
+          .expect(200)
+          .then(({ body }) => {
+            console.log('body', body);
+          });
+
+        await asAlice.get('/v1/projects/1/datasets')
+          .then(({ body }) => {
+            console.log('datasets', body);
+          });
+
+        await asAlice.post('/v1/projects/1/datasets/trees/entities')
+          .send({
+            label: 'joshua',
+            data: {}
+          })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/trees/entities')
+          .then(({ body }) => {
+            console.log('entities', body)
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/trees/entities.csv')
+          .then(({ text }) => {
+            console.log('csv', text);
+          });
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({
+            name: 'trees'
+          })
+          .expect(409)
+          .then(({ body }) => {
+            console.log('body', body);
+          });
+      }));
+    });
+  });
+
   describe('listing and downloading datasets', () => {
     describe('projects/:id/datasets GET', () => {
       it('should reject if the user cannot list datasets', testService((service) =>
