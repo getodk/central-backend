@@ -721,7 +721,7 @@ describe('api: /submission', () => {
                     ]);
                   }),
                 asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
-                  .then(({ body }) => { console.log('body:', body); body.toString('utf8').should.equal('this is test file two two'); })
+                  .then(({ body }) => { body.toString('utf8').should.equal('this is test file two two'); })
               ]))))));
 
       it('should upsert attachments', testService((service) =>
