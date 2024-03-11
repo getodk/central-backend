@@ -83,7 +83,7 @@ describe('s3 support', () => {
       async function check() {
         try {
           for(const att of attachments) {
-            log.debug('assertAllRedirect()', 'checking attachment:', att.name);
+            log.info('assertAllRedirect()', 'checking attachment:', att.name);
             const res = await api.apiRawHead(`projects/${projectId}/forms/${xmlFormId}/attachments/${att.name}`);
             if(!(res instanceof Redirect)) {
               log.debug('assertAllRedirect()', 'Attachment did not redirect:', att.name);
@@ -94,6 +94,7 @@ describe('s3 support', () => {
               }
               return;
             }
+            log.info('assertAllRedirect()', '  Looks OK.');
           }
         } catch (err) {
           reject(err);
@@ -116,7 +117,7 @@ describe('s3 support', () => {
 
   async function assertDownloadMatchesOriginal({ name }, url) {
     const filepath = `${attDir}/${name}`;
-    log.debug('assertDownloadMatchesOriginal()', { filepath, url });
+    log.info('assertDownloadMatchesOriginal()', name);
 
     const res = await fetch(url);
     should.ok(res.ok);
@@ -132,6 +133,7 @@ describe('s3 support', () => {
     // Comparing streams might be faster; this is acceptably fast at the moment.
     for(let i=0; i<fileContent.length; ++i) {
       should.equal(resContent[i], fileContent[i]);
+      log.info('assertDownloadMatchesOriginal()', '  Looks OK.');
     }
   }
 });
