@@ -1,7 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 // eslint-disable-next-line import/no-extraneous-dependencies
-const superagent = require('superagent');
 const uuid = require('uuid').v4;
 const { sql } = require('slonik');
 const { createReadStream, readFileSync } = require('fs');
@@ -1582,7 +1581,7 @@ describe('api: /forms/:id/submissions', () => {
               lines[1].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0,').should.equal(true);
             })))));
 
-    it('should return a zipfile with the relevant attachments', testService((service, container) =>
+    it('should return a zipfile with the relevant attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -1597,8 +1596,26 @@ describe('api: /forms/:id/submissions', () => {
               .set('X-OpenRosa-Version', '1.0')
               .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
               .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201))))));
+
+    it('should return a zipfile with the relevant attachments if s3 is enabled', testService((service, container) => {
+      s3mock.enable(container);
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+            .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
               .expect(201))
-            .then(() => process.env.TEST_S3 && exhaustBlobs(container))
+            .then(() => s3mock.exhaustBlobs())
             .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.containDeep([
@@ -1615,7 +1632,8 @@ describe('api: /forms/:id/submissions', () => {
                 csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
                 csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,2,2,,,,0,');
                 csv.length.should.equal(3); // newline at end
-              }))))));
+              }))));
+    }));
 
     it('should filter attachments by the query', testService((service) =>
       service.login('alice', (asAlice) =>
