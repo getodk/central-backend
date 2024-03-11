@@ -34,6 +34,10 @@ class S3mock {
     if (content == null) throw new Error('Blob content not found.');
     return Promise.resolve(content);
   }
+
+  urlForBlob(filename, { md5, sha, contentType }) {
+    return `s3://mock/${md5}/${sha}/${filename}?contentType=${contentType}`;
+  }
 }
 
 global.s3mock = new S3mock();
