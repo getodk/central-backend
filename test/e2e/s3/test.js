@@ -51,7 +51,7 @@ describe('s3 support', () => {
     await assertNoneRedirect(actualAttachments);
 
     // when
-    execSync('node lib/bin/s3 upload-pending', { cwd: '../../..' });
+    execSync('node lib/bin/s3 upload-pending', { cwd: '../../..', env: { NODE_CONFIG_ENV: 's3-dev' } });
 
     // then
     await assertAllRedirect(actualAttachments);
