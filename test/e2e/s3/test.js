@@ -48,12 +48,18 @@ describe('s3 support', () => {
     should.deepEqual(actualAttachments.map(a => a.name).sort(), expectedAttachments);
 
     // then
+    should.equal(cli('count-blobs pending'), 11);
+    should.equal(cli('count-blobs uploaded'), 0);
+    // and
     await assertNoneRedirect(actualAttachments);
 
     // when
-    uploadBlobs();
+    cli('upload-pending');
 
     // then
+    should.equal(cli('count-blobs pending'), 0);
+    should.equal(cli('count-blobs uploaded'), 11);
+    // and
     await assertAllRedirect(actualAttachments);
     await assertAllDownloadsMatchOriginal(actualAttachments);
   });
@@ -128,8 +134,8 @@ describe('s3 support', () => {
     // Comparing streams might be faster; this is acceptably fast at the moment.
     for(let i=0; i<fileContent.length; ++i) {
       should.equal(resContent[i], fileContent[i]);
-      log.info('assertDownloadMatchesOriginal()', '  Looks OK.');
     }
+    log.info('assertDownloadMatchesOriginal()', '  Looks OK.');
   }
 });
 
@@ -146,9 +152,10 @@ function bigFileExists() {
   }
 }
 
-function uploadBlobs() {
-  const cmd = 'node lib/bin/s3 upload-pending';
-  log.info('uploadBlobs()', 'calling:', cmd);
-  const res = execSync(cmd, { cwd: '../../..', env: { NODE_CONFIG_ENV: 's3-dev' } });
-  log.info('uploadBlobs()', 'returned:', res.toString());
+function cli(cmd) {
+  cmd = `node lib/bin/s3 ${cmd}`;
+  log.info('cli()', 'calling:', cmd);
+  const res = execSync(cmd, { cwd: '../../..', env: { NODE_CONFIG_ENV: 's3-dev' } }).toString();
+  log.info('cli()', 'returned:', res);
+  return res;
 }
