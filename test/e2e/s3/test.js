@@ -150,5 +150,5 @@ function uploadBlobs() {
   const cmd = 'node lib/bin/s3 upload-pending';
   log.info('uploadBlobs()', 'calling:', cmd);
   const res = execSync(cmd, { cwd: '../../..', env: { NODE_CONFIG_ENV: 's3-dev' } });
-  log.info('uploadBlobs()', 'returned:', res);
+  log.info('uploadBlobs()', 'returned:', res.toString());
 }
