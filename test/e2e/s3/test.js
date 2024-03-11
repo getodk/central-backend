@@ -29,16 +29,15 @@ const userPassword = 'secret1234';
 const attDir = './test-attachments';
 const BIGFILE = `${attDir}/big.bin`;
 
-const expectedAttachments = fs.readdirSync(attDir).filter(f => !f.startsWith('.')).sort();
-
 describe('s3 support', () => {
-  let api, projectId, xmlFormId;
+  let api, expectedAttachments, projectId, xmlFormId;
 
   it('should shift submission attachments to s3', async function() {
     this.timeout(TIMEOUT*2);
 
     // given
     bigFileExists();
+    expectedAttachments = fs.readdirSync(attDir).filter(f => !f.startsWith('.')).sort();
     api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
     projectId = await createProject();
     xmlFormId = await uploadFormWithAttachments('test-form.xml');
