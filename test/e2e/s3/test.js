@@ -82,7 +82,7 @@ describe('s3 support', () => {
       async function check() {
         try {
           for(const att of attachments) {
-            log.info('assertAllRedirect()', 'checking attachment:', att.name);
+            log.debug('assertAllRedirect()', 'checking attachment:', att.name);
             const res = await api.apiRawHead(`projects/${projectId}/forms/${xmlFormId}/attachments/${att.name}`);
             if(!(res instanceof Redirect)) {
               log.debug('assertAllRedirect()', 'Attachment did not redirect:', att.name);
@@ -93,7 +93,7 @@ describe('s3 support', () => {
               }
               return;
             }
-            log.info('assertAllRedirect()', '  Looks OK.');
+            log.info('assertAllRedirect()', 'Found attachment in s3:', att.name);
           }
         } catch (err) {
           reject(err);
