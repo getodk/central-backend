@@ -45,7 +45,7 @@ describe('s3 support', () => {
 
     // when
     const actualAttachments = await api.apiGet(`projects/${projectId}/forms/${xmlFormId}/attachments`);
-    assert.deepEqual(actualAttachments.map(a => a.name).sort(), expectedAttachments);
+    should.deepEqual(actualAttachments.map(a => a.name).sort(), expectedAttachments);
 
     // then
     await assertAllRedirect(actualAttachments);
