@@ -13,6 +13,7 @@ const TIMEOUT = 120000; // ms
 
 const { execSync } = require('node:child_process');
 const fs = require('node:fs');
+const fetch = require('node-fetch');
 const { randomBytes } = require('node:crypto');
 const { basename } = require('node:path');
 const { program } = require('commander');
@@ -128,8 +129,8 @@ describe('s3 support', () => {
     // Comparing streams might be faster; this is acceptably fast at the moment.
     for(let i=0; i<fileContent.length; ++i) {
       should.equal(resContent[i], fileContent[i]);
-      log.info('assertDownloadMatchesOriginal()', '  Looks OK.');
     }
+    log.info('assertDownloadMatchesOriginal()', '  Looks OK.');
   }
 });
 
