@@ -11,6 +11,7 @@
 
 const TIMEOUT = 120000; // ms
 
+const { execSync } = require('node:child_process');
 const fs = require('node:fs');
 const fetch = require('node-fetch');
 const { randomBytes } = require('node:crypto');
@@ -47,6 +48,12 @@ describe('s3 support', () => {
     should.deepEqual(actualAttachments.map(a => a.name).sort(), expectedAttachments);
 
     // then
+    await assertNoneRedirect(actualAttachments);
+
+    // when
+    execSync('node lib/bin/s3 upload-pending');
+
+    // then
     await assertAllRedirect(actualAttachments);
     await assertAllDownloadsMatchOriginal(actualAttachments);
   });
@@ -73,34 +80,23 @@ describe('s3 support', () => {
     return xmlFormId;
   }
 
-  function assertAllRedirect(attachments) {
-    const timeout = Date.now() + TIMEOUT;
+  async function assertAllRedirect(attachments) {
+    for(const att of attachments) {
+      log.info('assertAllRedirect()', 'checking attachment:', att.name);
+      const res = await api.apiRawHead(`projects/${projectId}/forms/${xmlFormId}/attachments/${att.name}`);
+      should.ok(res instanceof Redirect, `${att.name} is not a redirect - returned HTTP status: ${res.status}`);
+      log.info('assertAllRedirect()', '  Looks OK.');
+    }
+  }
 
-    return new Promise((resolve, reject) => {
-      setImmediate(check);
-
-      async function check() {
-        try {
-          for(const att of attachments) {
-            log.debug('assertAllRedirect()', 'checking attachment:', att.name);
-            const res = await api.apiRawHead(`projects/${projectId}/forms/${xmlFormId}/attachments/${att.name}`);
-            if(!(res instanceof Redirect)) {
-              log.debug('assertAllRedirect()', 'Attachment did not redirect:', att.name);
-              if(Date.now() > timeout) reject(new Error(`Timeout out after ${TIMEOUT/1000}s.`));
-              else {
-                log.debug('Sleeping...');
-                setTimeout(check, 500);
-              }
-              return;
-            }
-            log.info('assertAllRedirect()', 'Found attachment in s3:', att.name);
-          }
-        } catch (err) {
-          reject(err);
-        }
-        resolve(); // all redirected
-      }
-    });
+  async function assertNoneRedirect(attachments) {
+    for(const att of attachments) {
+      log.info('assertNoneRedirect()', 'checking attachment:', att.name);
+      const res = await api.apiRawHead(`projects/${projectId}/forms/${xmlFormId}/attachments/${att.name}`);
+      should.ok(!(res instanceof Redirect), `${att.name} is a redirect!`);
+      should.equal(res.status, 200);
+      log.info('assertNoneRedirect()', '  Looks OK.');
+    }
   }
 
   async function assertAllDownloadsMatchOriginal(attachments) {
