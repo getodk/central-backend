@@ -48,12 +48,18 @@ describe('s3 support', () => {
     should.deepEqual(actualAttachments.map(a => a.name).sort(), expectedAttachments);
 
     // then
+    should.equal(cli('count-blobs pending'), 11);
+    should.equal(cli('count-blobs uploaded'), 0);
+    // and
     await assertNoneRedirect(actualAttachments);
 
     // when
-    uploadBlobs();
+    cli('upload-blobs');
 
     // then
+    should.equal(cli('count-blobs pending'), 0);
+    should.equal(cli('count-blobs uploaded'), 11);
+    // and
     await assertAllRedirect(actualAttachments);
     await assertAllDownloadsMatchOriginal(actualAttachments);
   });
@@ -147,9 +153,9 @@ function bigFileExists() {
   }
 }
 
-function uploadBlobs() {
-  const cmd = 'node lib/bin/s3 upload-pending';
-  log.info('uploadBlobs()', 'calling:', cmd);
-  const res = execSync(cmd, { cwd: '../../..', env: { NODE_CONFIG_ENV: 's3-dev' } });
-  log.info('uploadBlobs()', 'returned:', res.toString());
+function cli(cmd) {
+  log.info('cli()', 'calling:', cmd);
+  const res = execSync(cmd, { cwd: '../../..', env: { NODE_CONFIG_ENV: 's3-dev' } }).toString();
+  log.info('cli()', 'returned:', res);
+  return res;
 }
