@@ -51,7 +51,7 @@ describe('s3 support', () => {
     await assertNoneRedirect(actualAttachments);
 
     // when
-    execSync('node lib/bin/s3 upload-pending', { cwd: '../../..', env: { NODE_CONFIG_ENV: 's3-dev' } });
+    uploadBlobs();
 
     // then
     await assertAllRedirect(actualAttachments);
@@ -144,4 +144,11 @@ function bigFileExists() {
       fs.appendFileSync(BIGFILE, randomBytes(batchSize));
     } while((remaining-=batchSize) > 0);
   }
+}
+
+function uploadBlobs() {
+  const cmd = 'node lib/bin/s3 upload-pending';
+  log.info('uploadBlobs()', 'calling:', cmd);
+  const res = execSync(cmd, { cwd: '../../..', env: { NODE_CONFIG_ENV: 's3-dev' } });
+  log.info('uploadBlobs()', 'returned:', res);
 }
