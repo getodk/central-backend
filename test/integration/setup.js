@@ -41,6 +41,10 @@ before(resetEnketo);
 after(resetEnketo);
 afterEach(resetEnketo);
 
+// set up our s3 mock
+const { s3, reset: resetS3 } = require(appRoot + '/test/util/s3-mock');
+beforeEach(resetS3);
+
 // set up odk analytics mock.
 const { ODKAnalytics } = require(appRoot + '/test/util/odk-analytics-mock');
 const odkAnalytics = new ODKAnalytics();
@@ -81,7 +85,7 @@ const initialize = async () => {
     await migrator.destroy();
   }
 
-  return withDefaults({ db, context, enketo, env }).transacting(populate);
+  return withDefaults({ db, context, enketo, env, s3 }).transacting(populate);
 };
 
 // eslint-disable-next-line func-names, space-before-function-paren
@@ -137,7 +141,7 @@ const augment = (service) => {
 // FINAL TEST WRAPPERS
 
 
-const baseContainer = withDefaults({ db, mail, env, xlsform, enketo, Sentry, odkAnalytics, context });
+const baseContainer = withDefaults({ db, mail, env, xlsform, enketo, Sentry, odkAnalytics, context, s3 });
 
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
