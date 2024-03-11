@@ -90,7 +90,6 @@ describe('s3 support', () => {
     for(const att of attachments) {
       log.info('assertAllRedirect()', 'checking attachment:', att.name);
       const res = await api.apiRawHead(`projects/${projectId}/forms/${xmlFormId}/attachments/${att.name}`);
-      log.info('assertAllRedirect()', 'res:', res);
       should.ok(res instanceof Redirect, `${att.name} is not a redirect - returned HTTP status: ${res.status}`);
       log.info('assertAllRedirect()', '  Looks OK.');
     }

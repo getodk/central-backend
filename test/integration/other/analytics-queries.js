@@ -5,19 +5,9 @@ const { createReadStream, readFileSync } = require('fs');
 
 const { promisify } = require('util');
 const testData = require('../../data/xml');
-const { exhaust: _exhaust, workerQueue } = require(appRoot + '/lib/worker/worker');
-const { maybeExhaustBlobs } = require(appRoot + '/lib/util/s3');
-const exhaust = async container => {
-  if (process.env.TEST_S3) {
-    // In the real world, there's currently no guarantee that blobs will be
-    // uploaded to S3 before submission.attachment.update is processed.
-    // REVIEW: this results in non-deterministic tests.  An alternative approach
-    // would be separate tests explicitly checking for different combinations of
-    // blobs being in db vs s3.
-    await maybeExhaustBlobs(container);
-  }
-  return _exhaust(container);
-};
+const { exhaust, workerQueue } = require(appRoot + '/lib/worker/worker');
+
+// TODO potentially any test with exhaust() needs an additional version using s3
 
 const geoForm = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <h:head>

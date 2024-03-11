@@ -1,7 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 // eslint-disable-next-line import/no-extraneous-dependencies
-const superagent = require('superagent');
 const uuid = require('uuid').v4;
 const { sql } = require('slonik');
 const { createReadStream, readFileSync } = require('fs');
@@ -11,7 +10,6 @@ const { pZipStreamToFiles } = require('../../util/zip');
 const { map } = require('ramda');
 const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
-const { exhaustBlobs } = require(appRoot + '/lib/util/s3');
 
 // utilities used for versioning instances
 const withSimpleIds = (deprecatedId, instanceId) => testData.instances.simple.one
@@ -460,7 +458,7 @@ describe('api: /submission', () => {
               .set('If-None-Match', '"75f5701abfe7de8202cecaa0ca753f29"')
               .expect(304))))));
 
-    it('should successfully save additionally POSTed attachment binary data', testService((service, container) =>
+    it('should successfully save additionally POSTed attachment binary data', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -486,35 +484,50 @@ describe('api: /submission', () => {
                 }))
               .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
                 .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
+                .expect(304)))))));
+
+    it('should successfully save additionally POSTed attachment binary data with s3 enabled', testService((service, container) => {
+      s3mock.enable(container);
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201)
+              .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
+                .expect(200)
+                .then(({ headers, body }) => {
+                  headers['content-type'].should.equal('image/jpeg');
+                  headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+                  headers['etag'].should.equal('"25bdb03b7942881c279788575997efba"'); // eslint-disable-line dot-notation
+                  body.toString('utf8').should.equal('this is test file two');
+                }))
+              .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
+                .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
                 .expect(304))
-              .then(() => {
-                if (!process.env.TEST_S3) return;
-                return exhaustBlobs(container)
-                  .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
-                    .expect(307)
-                    .then(({ headers, body }) => {
-                      // FIXME content-type should not be present at all, but response.removeHeader() does not seem to have an effect
-                      headers['content-type'].should.equal('text/plain; charset=utf-8');
-                      should(headers['content-disposition']).be.undefined();
-                      should(headers.etag).be.undefined();
+              .then(() => s3mock.exhaustBlobs()
+                .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
+                  .expect(307)
+                  .then(({ headers, body }) => {
+                    // FIXME content-type should not be present at all, but response.removeHeader() does not seem to have an effect
+                    headers['content-type'].should.equal('text/plain; charset=utf-8');
+                    should(headers['content-disposition']).be.undefined();
+                    should(headers.etag).be.undefined();
 
-                      const { location } = headers;
-                      location.should.match(/^http:\/\/localhost:9000\/odk-central-bucket\/blob_md5_25bdb03b7942881c279788575997efba_sha_eba799d1dc156c0df70f7bad65f815928b98aa7d\?response-content-disposition=attachment%3B%20filename%3D%22here_is_file2\.jpg%22%3B%20filename%2A%3DUTF-8%27%27here_is_file2\.jpg&response-content-type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=odk-central-dev%2F\d{8}%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=\d{8}T\d{6}Z&X-Amz-Expires=60&X-Amz-SignedHeaders=host&X-Amz-Signature=[0-9a-f]{64}$/);
-                      body.should.deepEqual({}); // not sure why
-
-                      return superagent.get(location);
-                    })
-                    .then(({ status, headers, body }) => {
-                      status.should.equal(200);
-                      headers['content-type'].should.equal('image/jpeg');
-                      headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
-                      headers.etag.should.equal('"25bdb03b7942881c279788575997efba"');
-                      body.toString('utf8').should.equal('this is test file two');
-                    })
-                    .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
-                      .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
-                      .expect(304)));
-              }))))));
+                    const { location } = headers;
+                    location.should.equal('s3://mock/25bdb03b7942881c279788575997efba/eba799d1dc156c0df70f7bad65f815928b98aa7d/here_is_file2.jpg?contentType=image/jpeg');
+                    body.should.deepEqual({}); // not sure why
+                  }))))));
+    }));
 
     it('should accept encrypted submissions, with attachments', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -1568,7 +1581,7 @@ describe('api: /forms/:id/submissions', () => {
               lines[1].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0,').should.equal(true);
             })))));
 
-    it('should return a zipfile with the relevant attachments', testService((service, container) =>
+    it('should return a zipfile with the relevant attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -1583,8 +1596,26 @@ describe('api: /forms/:id/submissions', () => {
               .set('X-OpenRosa-Version', '1.0')
               .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
               .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201))))));
+
+    it('should return a zipfile with the relevant attachments if s3 is enabled', testService((service, container) => {
+      s3mock.enable(container);
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+            .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
               .expect(201))
-            .then(() => process.env.TEST_S3 && exhaustBlobs(container))
+            .then(() => s3mock.exhaustBlobs())
             .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.containDeep([
@@ -1601,7 +1632,8 @@ describe('api: /forms/:id/submissions', () => {
                 csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
                 csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,2,2,,,,0,');
                 csv.length.should.equal(3); // newline at end
-              }))))));
+              }))));
+    }));
 
     it('should filter attachments by the query', testService((service) =>
       service.login('alice', (asAlice) =>

@@ -8,10 +8,6 @@ node_modules: package.json
 test-oidc-integration: node_version
 	TEST_AUTH=oidc NODE_CONFIG_ENV=oidc-integration-test make test-integration
 
-.PHONY: test-s3-integration
-test-s3-integration: fake-s3-accounts
-	TEST_S3=true NODE_CONFIG_ENV=s3-dev make test-integration
-
 .PHONY: test-oidc-e2e
 test-oidc-e2e: node_version
 	cd test/e2e/oidc && \
