@@ -54,7 +54,7 @@ describe('s3 support', () => {
     await assertNoneRedirect(actualAttachments);
 
     // when
-    cli('upload-blobs');
+    cli('upload-pending');
 
     // then
     should.equal(cli('count-blobs pending'), 0);
