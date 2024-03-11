@@ -12,7 +12,6 @@
 const TIMEOUT = 120000; // ms
 
 const { execSync } = require('node:child_process');
-const fetch = require('node:fetch');
 const fs = require('node:fs');
 const { randomBytes } = require('node:crypto');
 const { basename } = require('node:path');
