@@ -42,8 +42,7 @@ after(resetEnketo);
 afterEach(resetEnketo);
 
 // set up our s3 mock
-const { s3, reset: resetS3 } = require(appRoot + '/test/util/s3-mock');
-beforeEach(resetS3);
+const { s3 } = require(appRoot + '/test/util/s3-mock');
 
 // set up odk analytics mock.
 const { ODKAnalytics } = require(appRoot + '/test/util/odk-analytics-mock');
@@ -98,6 +97,7 @@ let mustReinitAfter;
 beforeEach(() => {
   // eslint-disable-next-line keyword-spacing
   if(mustReinitAfter) throw new Error(`Failed to reinitalize after previous test: '${mustReinitAfter}'.  You may need to increase your mocha timeout.`);
+  s3.reset();
 });
 // eslint-disable-next-line func-names, space-before-function-paren
 afterEach(async function() {

@@ -38,4 +38,4 @@ class S3mock {
 
 global.s3mock = new S3mock();
 
-module.exports = { reset: global.s3mock.reset, s3: global.s3mock };
+module.exports = { s3: global.s3mock };
