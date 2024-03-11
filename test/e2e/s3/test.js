@@ -29,6 +29,8 @@ const userPassword = 'secret1234';
 const attDir = './test-attachments';
 const BIGFILE = `${attDir}/big.bin`;
 
+const expectedAttachments = fs.readdirSync(attDir).filter(f => !f.startsWith('.')).sort();
+
 describe('s3 support', () => {
   let api, projectId, xmlFormId;
 
@@ -42,12 +44,12 @@ describe('s3 support', () => {
     xmlFormId = await uploadFormWithAttachments('test-form.xml');
 
     // when
-    const attachments = await api.apiGet(`projects/${projectId}/forms/${xmlFormId}/attachments`);
-    // TODO assert all expected attachments are listed
+    const actualAttachments = await api.apiGet(`projects/${projectId}/forms/${xmlFormId}/attachments`);
+    assert.deepEqual(actualAttachments.map(a => a.name).sort(), expectedAttachments);
 
     // then
-    await assertAllRedirect(attachments);
-    await assertAllDownloadsMatchOriginal(attachments);
+    await assertAllRedirect(actualAttachments);
+    await assertAllDownloadsMatchOriginal(actualAttachments);
   });
 
   async function createProject() {
@@ -62,8 +64,7 @@ describe('s3 support', () => {
     const { xmlFormId } = await api.apiPostFile(`projects/${projectId}/forms`, xmlFilePath);
 
     await Promise.all(
-      fs.readdirSync(attDir)
-        .filter(f => !f.startsWith('.'))
+      expectedAttachments
         .map(f => api.apiPostFile(
           `projects/${projectId}/forms/${xmlFormId}/draft/attachments/${f}`,
           `${attDir}/${f}`,
