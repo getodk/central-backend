@@ -195,6 +195,49 @@ describe('Entities API', () => {
           person.currentVersion.creator.createdAt.should.match(/2021/);
         });
     }));
+
+    it('should return entities in stable order', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          label: 'Foo',
+          data: {
+            first_name: 'Foo',
+          }
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111bbb',
+          label: 'Bar',
+          data: {
+            first_name: 'Bar',
+          }
+        })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body: people }) => {
+          people.map(p => p.currentVersion.label).should.eql(['Bar', 'Foo']);
+        });
+
+      // Update Foo
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa?baseVersion=1')
+        .send({ data: { age: '12' } })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body: people }) => {
+          people.map(p => p.currentVersion.label).should.eql(['Bar', 'Foo']);
+        });
+    }));
   });
 
   describe('GET /datasets/:name/entities/:uuid', () => {
@@ -2039,7 +2082,7 @@ describe('Entities API', () => {
         .expect(404);
     }));
 
-    it('should reject if the user cannot read', testEntities(async (service) => {
+    it('should reject if the user cannot delete', testEntities(async (service) => {
       const asChelsea = await service.login('chelsea');
 
       await asChelsea.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
@@ -2081,6 +2124,669 @@ describe('Entities API', () => {
 
   });
 
+  // Bulk API operations
+  describe('POST /datasets/:name/entities (bulk creation)', () => {
+    // Tests that one would expect to find here are found above because this is additional
+    // functionality of an existing endpoint:
+    // - should return notfound if the dataset does not exist
+    // - should reject if the user cannot write
+    // - should reject creating new entity if dataset not yet published
+
+    it('should reject malformed entity object json', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ entities: [{ broken: 'json' }] })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.31);
+          body.message.should.equal('Expected parameters: (label, uuid, data). Got (broken).');
+        });
+    }));
+
+    it('should reject malformed contents of entity array', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ entities: ['1', '2', '3'] })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.31);
+          body.message.should.equal('Expected parameters: (label, uuid, data). Got (0).');
+        });
+    }));
+
+    it('should reject malformed entities array', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ entities: 'not an array' })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.31);
+          body.message.should.equal('Expected parameters: (entities: [...]). Got (not an array).');
+        });
+    }));
+
+    it('should reject empty entities array', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ entities: [] })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.31);
+          body.message.should.equal('Expected parameters: (entities: [...]). Got (empty array).');
+        });
+    }));
+
+    it('should create Entities in bulk', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .then(({ body }) => {
+          body.length.should.equal(0);
+        });
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people.csv',
+            size: 100,
+          },
+          entities: [
+            {
+              uuid: '12345678-1234-4123-8234-111111111aaa',
+              label: 'Johnny Doe',
+              data: {
+                first_name: 'Johnny',
+                age: '22'
+              }
+            },
+            {
+              uuid: '12345678-1234-4123-8234-111111111bbb',
+              label: 'Alice',
+              data: {
+                first_name: 'Alice',
+                age: '44'
+              }
+            },
+          ]
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
+
+      // Entity list has more entities!
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .then(({ body }) => {
+          body.length.should.equal(2);
+          body[0].uuid.should.equal('12345678-1234-4123-8234-111111111bbb');
+          body[0].currentVersion.label.should.equal('Alice');
+          body[1].uuid.should.equal('12345678-1234-4123-8234-111111111aaa');
+          body[1].currentVersion.label.should.equal('Johnny Doe');
+        });
+
+      // Check data and dataRecieved of each entity
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa')
+        .then(({ body }) => {
+          body.currentVersion.data.should.eql({ age: '22', first_name: 'Johnny' });
+          body.currentVersion.dataReceived.should.eql({ age: '22', label: 'Johnny Doe', first_name: 'Johnny' });
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111bbb')
+        .then(({ body }) => {
+          body.currentVersion.data.should.eql({ age: '44', first_name: 'Alice' });
+          body.currentVersion.dataReceived.should.eql({ age: '44', label: 'Alice', first_name: 'Alice' });
+        });
+
+      // Most recent event IS bulk create
+      await asAlice.get('/v1/audits')
+        .then(({ body }) => {
+          body[0].action.should.equal('entity.bulk.create');
+          // the main item stored in the event details is a reference to the entity source id.
+          body[0].details.should.have.property('sourceId');
+        });
+    }));
+
+
+    it('should generate uuids for entities when no uuid is provided', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .then(({ body }) => {
+          body.length.should.equal(0);
+        });
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people.csv',
+            size: 100,
+          },
+          entities: [
+            {
+              uuid: '12345678-1234-4123-8234-111111111aaa',
+              label: 'Johnny Doe',
+              data: {
+                first_name: 'Johnny',
+                age: '22'
+              }
+            },
+            {
+              label: 'Alice',
+              data: {
+                first_name: 'Alice',
+                age: '44'
+              }
+            },
+          ]
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
+
+      // Used provided UUID and generated other UUID
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .then(({ body }) => {
+          body[0].uuid.should.be.a.uuid();
+          body[1].uuid.should.equal('12345678-1234-4123-8234-111111111aaa');
+        });
+    }));
+
+    describe('bulk create errors', () => {
+      it('should not create any entities if one is invalid (missing label)', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-111111111aaa',
+                label: '', // label cannot be empty
+                data: {
+                  first_name: 'Johnny',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-1234-4123-8234-111111111bbb',
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.8);
+            body.message.should.equal('Unexpected label value (empty string); Label cannot be blank.');
+          });
+
+        // Entity list is still empty
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(0);
+          });
+
+        // Most recent event is not a bulk create event
+        await asAlice.get('/v1/audits')
+          .then(({ body }) => {
+            body[0].action.should.not.equal('entity.bulk.create');
+          });
+      }));
+
+      it('should not create any entities if one is invalid (invalid property)', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-111111111aaa',
+                label: 'John Doe',
+                data: {
+                  extra_property_not_in_dataset: 'Not Good',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-1234-4123-8234-111111111bbb',
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.28);
+            body.message.should.equal('The entity is invalid. You specified the dataset property [extra_property_not_in_dataset] which does not exist.');
+          });
+
+        // Entity list is still empty
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(0);
+          });
+
+        // Most recent event is not a bulk create event
+        await asAlice.get('/v1/audits')
+          .then(({ body }) => {
+            body[0].action.should.not.equal('entity.bulk.create');
+          });
+      }));
+
+      it('should not create any entities if one is invalid (invalid UUID)', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-111111111aaa',
+                label: 'John Doe',
+                data: {
+                  first_name: 'John',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-not-real-uuid', // invalid uuid
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.11);
+            body.message.should.equal('Invalid input data type: expected (uuid) to be (valid UUID)');
+          });
+
+        // Entity list is still empty
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(0);
+          });
+
+        // Most recent event is not a bulk create event
+        await asAlice.get('/v1/audits')
+          .then(({ body }) => {
+            body[0].action.should.not.equal('entity.bulk.create');
+          });
+      }));
+
+      it('should not create any entities there is a UUID collision', testServiceFullTrx(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc', // collision
+            label: 'John Doe',
+            data: {
+              first_name: 'John',
+              age: '22'
+            }
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(1);
+          });
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-123456789abc', // collision
+                label: 'John Doe',
+                data: {
+                  first_name: 'John',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-1234-4123-8234-111111111bbb',
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.3);
+            body.message.should.equal('A resource already exists with uuid value(s) of 12345678-1234-4123-8234-123456789abc.');
+          });
+
+        // Entity list is still same length as before
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(1); // same as before
+          });
+
+        // Most recent event is not a bulk create event
+        await asAlice.get('/v1/audits')
+          .then(({ body }) => {
+            body[0].action.should.not.equal('entity.bulk.create');
+          });
+      }));
+    });
+
+    describe('entity source when created through bulk append', () => {
+      it('should throw an error if no source is provided', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            entities: [{
+              label: 'Alice',
+              data: { first_name: 'Alice' }
+            }]
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.2);
+            body.message.should.equal('Required parameter source missing.');
+          });
+      }));
+
+      it('should throw an error if source name is missing', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {},
+            entities: [{
+              label: 'Alice',
+              data: { first_name: 'Alice' }
+            }]
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.2);
+            body.message.should.equal('Required parameter source.name missing.');
+          });
+      }));
+
+      it('should save source details in entity version source', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-111111111aaa',
+                label: 'Alice',
+                data: { first_name: 'Alice' }
+              },
+              {
+                label: 'Emily',
+                data: { first_name: 'Emily' }
+              },
+              {
+                label: 'Jane',
+                data: { first_name: 'Jane' }
+              }
+            ]
+          })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/versions')
+          .then(({ body: versions }) => {
+            versions[0].source.should.eql({ name: 'people.csv', size: 100, count: 3, userAgent: 'central/tests' });
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/audits')
+          .then(({ body: logs }) => {
+            logs[0].details.source.should.eql({ name: 'people.csv', size: 100, count: 3, userAgent: 'central/tests' });
+          });
+      }));
+
+      it('should create entities that share the same source', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-111111111aaa',
+                label: 'Johnny Doe',
+                data: {
+                  first_name: 'Johnny',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-1234-4123-8234-111111111bbb',
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(200);
+
+        const aaaSource = await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/versions')
+          .then(({ body: versions }) => versions[0].source);
+
+        aaaSource.should.eql({ name: 'people.csv', size: 100, count: 2, userAgent: null });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111bbb/versions')
+          .then(({ body: versions }) => {
+            versions[0].source.should.eql(aaaSource);
+          });
+      }));
+    });
+
+    describe('entity audit events when created through bulk append', () => {
+      it('should return bulk create event in the audit log for an entity', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-111111111aaa',
+                label: 'Johnny Doe',
+                data: {
+                  first_name: 'Johnny',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-1234-4123-8234-111111111bbb',
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa?force=true')
+          .send({ data: { age: '33' } })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/audits')
+          .then(({ body: logs }) => {
+            // update event
+            logs[0].action.should.equal('entity.update.version');
+            logs[0].details.source.should.eql({});
+            logs[0].details.entity.should.eql({ uuid: '12345678-1234-4123-8234-111111111aaa', dataset: 'people' });
+
+            // bulk create event
+            logs[1].action.should.equal('entity.bulk.create');
+            logs[1].details.source.should.eql({ name: 'people.csv', size: 100, count: 2, userAgent: 'central/tests' });
+
+            logs.length.should.equal(2);
+          });
+      }));
+
+      // this test is relevant to bulk events because the audit query is shared
+      it('should fetch the correct events for a conflict resolution (no new version)', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // second version
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+          .send({ data: { age: '12' } })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // third version: hard conflict - all properties are changed
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // resolve conflict while simultaneously making new version
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&force=true')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+          .expect(200)
+          .then(({ body: versions }) => {
+            versions.length.should.equal(3);
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs.length.should.equal(4);
+            logs.map(e => e.action).should.eql([
+              'entity.update.resolve',
+              'entity.update.version',
+              'entity.update.version',
+              'entity.create'
+            ]);
+            logs[0].details.source.should.have.property('event');
+            //event and source of resolve seems to be the submission create event of that def/version when it should probably be null (api event that didnt create a new version)
+          });
+      }));
+
+      // this test is relevant to bulk events because the audit query is shared
+      it('should fetch the correct events for a conflict resolution that does add a new version', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // second version
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+          .send({ data: { age: '12' } })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // third version: hard conflict - all properties are changed
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // resolve conflict without making new version
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&force=true')
+          .send({ data: { age: '28' } })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+          .expect(200)
+          .then(({ body: versions }) => {
+            versions.length.should.equal(4);
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs.length.should.equal(5);
+            logs.map(e => e.action).should.eql([
+              'entity.update.resolve',
+              'entity.update.version',
+              'entity.update.version',
+              'entity.update.version',
+              'entity.create'
+            ]);
+            logs[0].details.source.should.not.have.property('event');
+            logs[0].details.source.should.eql({});
+            logs[0].details.entity.should.eql({ uuid: '12345678-1234-4123-8234-123456789abc', dataset: 'people' });
+
+            logs[1].details.source.should.not.have.property('event');
+            logs[1].details.source.should.eql({});
+            logs[1].details.entity.should.eql({ uuid: '12345678-1234-4123-8234-123456789abc', dataset: 'people' });
+
+            logs[0].details.entityId.should.eql(logs[1].details.entityId);
+            logs[0].details.entityDefId.should.eql(logs[1].details.entityDefId);
+            // update and resolve are technically the same event and the source of both are empty because it was an API call
+          });
+      }));
+    });
+  });
+
+  // Special scenarios
   describe('create new entities from submissions', () => {
     // More success and error cases in test/integration/worker/entity.js
     it('should create entity', testEntityUpdates(async (service, container) => {

@@ -87,7 +87,7 @@ test: lint
 
 .PHONY: test-fast
 test-fast: node_version
-	BCRYPT=no npx mocha --recursive --exit --fgrep @slow --invert
+	BCRYPT=insecure npx mocha --recursive --exit --fgrep @slow --invert
 
 .PHONY: test-integration
 test-integration: node_version

@@ -3,7 +3,7 @@ const appRoot = require('app-root-path');
 const assert = require('assert');
 const { ConflictType } = require('../../../lib/data/entity');
 const { Entity } = require('../../../lib/model/frames');
-const { normalizeUuid, extractLabelFromSubmission, extractBaseVersionFromSubmission, parseSubmissionXml, extractEntity, extractSelectedProperties, selectFields, diffEntityData, getDiffProp, getWithConflictDetails } = require(appRoot + '/lib/data/entity');
+const { normalizeUuid, extractLabelFromSubmission, extractBaseVersionFromSubmission, parseSubmissionXml, extractEntity, extractBulkSource, extractSelectedProperties, selectFields, diffEntityData, getDiffProp, getWithConflictDetails } = require(appRoot + '/lib/data/entity');
 const { fieldsFor } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
@@ -844,6 +844,71 @@ describe('extracting and validating entities', () => {
       const result = getWithConflictDetails(defs, audits, true);
 
       result.map(v => v.version).should.eql([2, 3, 4, 5]);
+    });
+  });
+
+  describe('extract bulk source from API request: extractBulkSource', () => {
+    // Used to compare entity structure when Object.create(null) used.
+    beforeEach(() => {
+      should.config.checkProtoEql = false;
+    });
+    afterEach(() => {
+      should.config.checkProtoEql = true;
+    });
+
+    it('should return source object', () => {
+      const source = { name: 'myfile.csv', size: 300 };
+      const count = 99;
+      const userAgent = 'ua';
+      extractBulkSource(source, count, userAgent).should.eql({ name: 'myfile.csv', size: 300, count: 99, userAgent: 'ua' });
+    });
+
+    it('should turn userAgent to null if empty string or null', () => {
+      const source = { name: 'myfile.csv', size: 300 };
+      const count = 99;
+
+      should(extractBulkSource(source, count, '').userAgent).be.null();
+      should(extractBulkSource(source, count, null).userAgent).be.null();
+      extractBulkSource(source, count, ' ').userAgent.should.eql(' ');
+    });
+
+    it('should reject if source is null', () =>
+      assert.throws(() => { extractBulkSource(null, 0, null); }, (err) => {
+        err.problemCode.should.equal(400.2);
+        err.message.should.equal('Required parameter source missing.');
+        return true;
+      }));
+
+    it('should reject if source does not have a name field', () => {
+      const source = { something: 'not name' };
+      assert.throws(() => { extractBulkSource(source, 1, null); }, (err) => {
+        err.problemCode.should.equal(400.2);
+        err.message.should.equal('Required parameter source.name missing.');
+        return true;
+      });
+    });
+
+    it('should reject if source name is not a string', () => {
+      const source = { name: 123 };
+      assert.throws(() => { extractBulkSource(source, 1, null); }, (err) => {
+        err.problemCode.should.equal(400.11);
+        err.message.should.equal('Invalid input data type: expected (name) to be (string)');
+        return true;
+      });
+    });
+
+    it('should reject if source size is not a number', () => {
+      const source = { name: 'myfile.csv', size: '123' };
+      assert.throws(() => { extractBulkSource(source, 1, null); }, (err) => {
+        err.problemCode.should.equal(400.11);
+        err.message.should.equal('Invalid input data type: expected (size) to be (number)');
+        return true;
+      });
+    });
+
+    it('should allow size to be optional', () => {
+      const source = { name: 'myfile.csv' };
+      extractBulkSource(source, 1, 'ua').should.eql({ name: 'myfile.csv', count: 1, userAgent: 'ua' });
     });
   });
 });
