@@ -557,19 +557,19 @@ tags:
     * But Central does not require a `Date` header field. You may set it if you wish, but it will have no effect on Central.
 - name: OData Endpoints
   description: |-
-    [OData](http://www.odata.org/) is an emerging standard for the formal description and transfer of data between web services. In its most ambitious form, it aims to be _the_ standard way for any REST or REST-like API to enable interoperability with other services, not unlike the API Blueprint format this document is written in. However, in practical usage today it is primarily a way for data-centric web services to describe and transfer their data to various clients for deeper analysis or presentation.
+    [OData](http://www.odata.org/) is a standard for sharing data and its schema between web services. It allows for interoperability with tools like Excel, Power BI or Tableau. If you want to use your data in a service that does not support the OData standard but does support JSON data sources, you can use the [data document](/central-api-odata-endpoints/#data-document) directly.
 
-    ODK Central implements the [4.0 Minimal Conformance level](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#_Toc505771292) of the specification. Our goal is to enable data analysis and reporting through powerful third-party tools, sending them the data over OData, rather than attempt to create our own analysis tools. Today, our implementation primarily targets [Microsoft Power BI](https://docs.microsoft.com/en-us/power-bi/desktop-connect-odata) and [Tableau](https://onlinehelp.tableau.com/current/pro/desktop/en-us/examples_odata.html), two tools with reasonably robust free offerings that provide versatile analysis and visualization of data.
+    ODK Central implements the [4.0 Minimal Conformance level](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#_Toc505771292) of the specification. Our goal is to enable data analysis and reporting through powerful third-party tools, sending them the data over OData, rather than attempt to create our own analysis tools. Our implementation primarily targets [Microsoft Power BI](https://docs.microsoft.com/en-us/power-bi/desktop-connect-odata) and [Tableau](https://onlinehelp.tableau.com/current/pro/desktop/en-us/examples_odata.html), two tools with reasonably robust free offerings that provide versatile analysis and visualization of data.
 
-    While OData itself supports data of any sort of structure, Power BI and Tableau both think in terms of relational tables. This presents an interesting challenge for representing ODK's `group` and `repeat` structures in OData. Our current solution is to treat every `repeat` in the `Form` definition as its own relational table, and we invent stable join IDs to relate the tables together.
+    While OData itself supports data of any sort of structure, Power BI and Tableau both think in terms of relational tables. Our current solution for representing ODK's `repeat` structures in OData is to treat every `repeat` in the `Form` definition as its own relational table, and we compute stable join IDs to relate the tables together.
 
     In general, the OData standard protocol consists of three API endpoints:
 
     * The **Service Document** describes the available resources in the service. We provide one of these for every `Form` in the system. As of version 2023.2, we also provide one for every `Dataset`.
 
-    * The **Metadata Document** is a formal XML-based EDMX schema description of every data object we might return. It is linked in every OData response.
+    * The **Metadata Document** defines the data schema using [an XML-based standard](https://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html#sec_Introduction). It is linked in every OData response.
 
-    * The actual data documents, linked from the Service Document, are a simple JSON representation of the submission data or entity, conforming to the schema we describe in our Metadata Document.
+    * The **data documents**, linked from the Service Document, are a simple JSON representation of the Submission or Entity data, conforming to the schema we describe in our Metadata Document.
 
 - name: System Endpoints
   description: There are some resources available for getting or setting system information
@@ -769,11 +769,11 @@ tags:
 - name: OData Form Service
   x-parent-tag: OData Endpoints
   description: |-
-    ODK Central presents one OData service for every `Form` it knows about. To access the OData service, simply add `.svc` to the resource URL for the given Form.
+    ODK Central presents one OData service for every `Form` it knows about. To access the OData service, add `.svc` to the resource URL for the given Form.
 - name: OData Dataset Service
   x-parent-tag: OData Endpoints
   description: |-
-    ODK Central presents one OData service for every `Dataset` as a way to get an OData feed of `Entities`. To access the OData service, simply add `.svc` to the resource URL for the given Dataset.
+    ODK Central presents one OData service for every `Dataset` as a way to get an OData feed of `Entities`. To access the OData service, add `.svc` to the resource URL for the given Dataset.
 - name: Draft Testing
   x-parent-tag: OData Endpoints
   description: |-
@@ -11459,9 +11459,9 @@ paths:
       - OData Form Service
       summary: Metadata Document
       description: |-
-        The Metadata Document describes, in [EDMX CSDL](http://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html), the schema of all the data you can retrieve from the OData Form Service in question (essentially, this is the XForms form schema translated into the OData format). EDMX/CSDL is very similar in concept to UML: there are objects, they have properties, and some of those properties are relationships to other objects.
+        The Metadata Document describes, in [EDMX CSDL](http://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html), the schema of all the data you can retrieve from the OData Form Service in question. This is essentially the XForms form schema translated into the OData format. EDMX/CSDL defines schemas in terms of objects, their properties, and relationships to other objects.
 
-        If you are writing a tool to analyze your own data, whose schema you already know and understand, there is very little reason to touch this endpoint at all. You can likely skip ahead to the data documents themselves and work directly with the simple JSON output returned by those endpoints. This endpoint is more useful for authors of tools which seek to generically work with arbitrary data whose schemas they cannot know in advance.
+        If you are writing a tool to analyze your own data, whose schema you already know and understand, there is very little reason to touch this endpoint. You can likely skip ahead to the data documents themselves and work directly with the simple JSON output returned by those endpoints. This endpoint is more useful for authors of tools which seek to generically work with arbitrary data whose schemas they cannot know in advance.
 
         In general, the way we model the XForms schema in OData terms is to represent `group`s as `ComplexType`s, and `repeat`s as `EntityType`s. In the world of OData, the primary difference between these two types is that Entity Types require Primary Keys, while Complex Types do not. This fits well with the way XForms surveys tend to be structured.
 
@@ -11609,7 +11609,7 @@ paths:
       - OData Form Service
       summary: Data Document
       description: |-
-        The data documents are the straightforward JSON representation of each table of `Submission` data. They follow the [corresponding specification](http://docs.oasis-open.org/odata/odata-json-format/v4.01/odata-json-format-v4.01.html), but apart from the representation of geospatial data as GeoJSON rather than the ODK proprietary format, the output here should not be at all surprising. If you are looking for JSON output of Submission data, this is the best place to look.
+        The data documents are JSON representations of each table of `Submission` data. They follow the [corresponding specification](http://docs.oasis-open.org/odata/odata-json-format/v4.01/odata-json-format-v4.01.html), but apart from the representation of geospatial data as GeoJSON rather than the ODK proprietary format, the output here should not be surprising. If you are looking for JSON output of Submission data, this is the best place to look.
 
         The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. If `$top` parameter is provided in the request then the response will include `@odata.nextLink` that you can use as is to fetch the next set of data. While paging is possible through these parameters, it will not greatly improve the performance of exporting data. ODK Central prefers to bulk-export all of its data at once if possible.
 
