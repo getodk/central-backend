@@ -1,6 +1,5 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-// eslint-disable-next-line import/no-extraneous-dependencies
 const uuid = require('uuid').v4;
 const { sql } = require('slonik');
 const { createReadStream, readFileSync } = require('fs');
