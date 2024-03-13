@@ -15,8 +15,43 @@ const { exhaust } = require(appRoot + '/lib/worker/worker');
 const Option = require(appRoot + '/lib/util/option');
 
 describe('datasets and entities', () => {
+
   describe('creating datasets and properties via the API', () => {
     describe('projects/:id/datasets POST', () => {
+      it('should reject if user cannot create datasets', testService(async (service) => {
+        const asChelsea = await service.login('chelsea');
+
+        await asChelsea.post('/v1/projects/1/datasets')
+          .send({
+            name: 'trees'
+          })
+          .expect(403);
+      }));
+
+      it('should reject dataset name is not provided', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({})
+          .expect(400)
+          .then(({ body }) => {
+            body.message.should.equal('Required parameter name missing.');
+          });
+      }));
+
+      it('should reject dataset name is invalid', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({
+            name: '__not_allowed'
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.message.should.equal('Unexpected name value __not_allowed; This is not a valid dataset name.');
+          });
+      }));
+
       it('should create a new dataset', testService(async (service) => {
         const asAlice = await service.login('alice');
 
@@ -29,15 +64,75 @@ describe('datasets and entities', () => {
         await asAlice.get('/v1/projects/1/datasets')
           .then(({ body }) => {
             body[0].name.should.equal('trees');
+            body[0].createdAt.should.be.an.isoDate();
           });
       }));
 
-      // TODO:
-      // can't recreate dataset that already exists
-      // name validation
+      it('should reject if creating a dataset that already exists', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({
+            name: 'trees'
+          })
+          .expect(200);
+
+        // Second time
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({
+            name: 'trees'
+          })
+          .expect(409);
+      }));
+
+      it('should add label-only entity to dataset, all via API', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({
+            name: 'trees'
+          })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/trees/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789aaa',
+            label: 'Willow',
+            data: {}
+          })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/trees/entities')
+          .then(({ body }) => {
+            body.length.should.equal(1);
+          });
+
+        const result = await asAlice.get('/v1/projects/1/datasets/trees/entities.csv')
+          .expect(200)
+          .then(r => r.text);
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(1);
+
+        const withOutTs = result.replace(isoRegex, '');
+        withOutTs.should.be.eql(
+          '__id,label,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-123456789aaa,Willow,,5,Alice,0,,1\n'
+        );
+      }));
     });
 
-    describe('projects/:id/datasets/:dataset POST', () => {
+    describe('projects/:id/datasets/:dataset/properties POST', () => {
+      it('should reject user does not have dataset update access', testService(async (service) => {
+        const asChelsea = await service.login('chelsea');
+
+        await asChelsea.post('/v1/projects/1/datasets')
+          .send({ name: 'trees' })
+          .expect(403);
+
+      }));
+
       it('should add properties to a dataset', testService(async (service) => {
         const asAlice = await service.login('alice');
 
@@ -55,24 +150,63 @@ describe('datasets and entities', () => {
 
         await asAlice.post('/v1/projects/1/datasets/trees/entities')
           .send({
-            label: 'joshua',
-            data: { age: '12' }
+            label: 'redwood',
+            data: { height: '120' }
           })
           .expect(400)
           .then(({ body }) => {
-            body.message.should.equal('The entity is invalid. You specified the dataset property [age] which does not exist.');
+            body.message.should.equal('The entity is invalid. You specified the dataset property [height] which does not exist.');
           });
 
         await asAlice.post('/v1/projects/1/datasets/trees/properties')
           .send({
-            name: 'age'
+            name: 'height'
           })
           .expect(200);
 
         await asAlice.get('/v1/projects/1/datasets/trees')
           .then(({ body }) => {
-            body.properties[0].name.should.equal('age');
+            body.properties[0].name.should.equal('height');
             body.sourceForms.should.eql([]);
+          });
+
+        await asAlice.post('/v1/projects/1/datasets/trees/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789aaa',
+            label: 'redwood',
+            data: { height: '120' }
+          })
+          .expect(200);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/trees/entities.csv')
+          .expect(200)
+          .then(r => r.text);
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(1);
+
+        const withOutTs = result.replace(isoRegex, '');
+        withOutTs.should.be.eql(
+          '__id,label,height,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-123456789aaa,redwood,120,,5,Alice,0,,1\n'
+        );
+      }));
+
+      it('should reject if property name is invalid', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'trees' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({
+            name: 'name'
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.message.should.equal('Unexpected name value name; This is not a valid property name.');
           });
       }));
     });
