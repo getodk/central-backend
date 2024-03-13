@@ -39,7 +39,7 @@ class S3mock {
 
   getContentFor({ md5, sha }) {
     if (this.error.onDownload) {
-      return Promise.reject('Mock error when trying to download blob.');
+      return Promise.reject(new Error('Mock error when trying to download blob.'));
     }
 
     const content = this.s3bucket[md5+sha];
