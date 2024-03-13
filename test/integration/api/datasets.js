@@ -121,6 +121,23 @@ describe('datasets and entities', () => {
             '12345678-1234-4123-8234-123456789aaa,Willow,,5,Alice,0,,1\n'
         );
       }));
+
+      it('should log an event in the audit log for creating a new dataset', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({
+            name: 'trees'
+          })
+          .expect(200);
+
+        await asAlice.get('/v1/audits')
+          .then(({ body: logs }) => {
+            logs[0].action.should.equal('dataset.create');
+            logs[0].actorId.should.equal(5);
+            logs[0].details.properties.should.eql([]);
+          });
+      }));
     });
 
     describe('projects/:id/datasets/:dataset/properties POST', () => {
@@ -207,6 +224,29 @@ describe('datasets and entities', () => {
           .expect(400)
           .then(({ body }) => {
             body.message.should.equal('Unexpected name value name; This is not a valid property name.');
+          });
+      }));
+
+      it('should log an event for creating a new dataset property', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({
+            name: 'trees'
+          })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({
+            name: 'circumference'
+          })
+          .expect(200);
+
+        await asAlice.get('/v1/audits')
+          .then(({ body: logs }) => {
+            logs[0].action.should.equal('dataset.update');
+            logs[0].actorId.should.equal(5);
+            logs[0].details.properties.should.eql([ 'circumference' ]);
           });
       }));
     });
