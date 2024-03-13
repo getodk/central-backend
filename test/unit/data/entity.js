@@ -39,7 +39,7 @@ describe('extracting and validating entities', () => {
       it('should return problem if invalid uuid passed in', () =>
         assert.throws(() => { normalizeUuid('this_is_not_a_valid_uuid'); }, (err) => {
           err.problemCode.should.equal(400.11);
-          err.message.should.equal('Invalid input data type: expected (uuid) to be (valid UUID)');
+          err.message.should.equal('Invalid input data type: expected (uuid) to be (valid version 4 UUID)');
           return true;
         }));
     });
