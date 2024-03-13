@@ -486,7 +486,7 @@ describe('api: /submission', () => {
                 .expect(304)))))));
 
     it('should successfully save additionally POSTed attachment binary data with s3 enabled', testService((service, container) => {
-      s3mock.enable(container);
+      global.s3mock.enable(container);
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -513,7 +513,7 @@ describe('api: /submission', () => {
               .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
                 .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
                 .expect(304))
-              .then(() => s3mock.exhaustBlobs()
+              .then(() => global.s3mock.exhaustBlobs()
                 .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
                   .expect(307)
                   .then(({ headers, body }) => {
@@ -1598,7 +1598,7 @@ describe('api: /forms/:id/submissions', () => {
               .expect(201))))));
 
     it('should return a zipfile with the relevant attachments if s3 is enabled', testService((service, container) => {
-      s3mock.enable(container);
+      global.s3mock.enable(container);
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -1614,7 +1614,7 @@ describe('api: /forms/:id/submissions', () => {
               .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
               .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
               .expect(201))
-            .then(() => s3mock.exhaustBlobs())
+            .then(() => global.s3mock.exhaustBlobs())
             .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.containDeep([

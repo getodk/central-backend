@@ -336,7 +336,7 @@ describe('managed encryption', () => {
             })))));
 
     it('should decrypt attached files successfully when s3 enabled', testService((service, container) => {
-      s3mock.enable(container);
+      global.s3mock.enable(container);
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
           .send({ passphrase: 'supersecret', hint: 'it is a secret' })
@@ -349,7 +349,7 @@ describe('managed encryption', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then((keyId) => s3mock.exhaustBlobs()
+          .then((keyId) => global.s3mock.exhaustBlobs()
             .then(() => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
               .then((result) => {
                 result.filenames.length.should.equal(4);
