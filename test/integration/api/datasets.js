@@ -16,7 +16,7 @@ const Option = require(appRoot + '/lib/util/option');
 
 describe('datasets and entities', () => {
   describe('creating datasets and properties via the API', () => {
-    describe.only('projects/:id/datasets POST', () => {
+    describe('projects/:id/datasets POST', () => {
       it('should create a new dataset', testService(async (service) => {
         const asAlice = await service.login('alice');
 
@@ -24,40 +24,55 @@ describe('datasets and entities', () => {
           .send({
             name: 'trees'
           })
-          .expect(200)
-          .then(({ body }) => {
-            console.log('body', body);
-          });
+          .expect(200);
 
         await asAlice.get('/v1/projects/1/datasets')
           .then(({ body }) => {
-            console.log('datasets', body);
+            body[0].name.should.equal('trees');
           });
+      }));
 
-        await asAlice.post('/v1/projects/1/datasets/trees/entities')
-          .send({
-            label: 'joshua',
-            data: {}
-          })
-          .expect(200);
+      // TODO:
+      // can't recreate dataset that already exists
+      // name validation
+    });
 
-        await asAlice.get('/v1/projects/1/datasets/trees/entities')
-          .then(({ body }) => {
-            console.log('entities', body)
-          });
-
-        await asAlice.get('/v1/projects/1/datasets/trees/entities.csv')
-          .then(({ text }) => {
-            console.log('csv', text);
-          });
+    describe('projects/:id/datasets/:dataset POST', () => {
+      it('should add properties to a dataset', testService(async (service) => {
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/datasets')
           .send({
             name: 'trees'
           })
-          .expect(409)
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/trees')
           .then(({ body }) => {
-            console.log('body', body);
+            body.properties.should.eql([]);
+            body.sourceForms.should.eql([]);
+          });
+
+        await asAlice.post('/v1/projects/1/datasets/trees/entities')
+          .send({
+            label: 'joshua',
+            data: { age: '12' }
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.message.should.equal('The entity is invalid. You specified the dataset property [age] which does not exist.');
+          });
+
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({
+            name: 'age'
+          })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/trees')
+          .then(({ body }) => {
+            body.properties[0].name.should.equal('age');
+            body.sourceForms.should.eql([]);
           });
       }));
     });
@@ -3702,6 +3717,29 @@ describe('datasets and entities', () => {
           .expect(200);
 
         dataset.body.approvalRequired.should.equal(true);
+
+      }));
+
+      it('should disallow writing/changing other dataset properties', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true, name: 'frogs' })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/frogs')
+          .expect(404);
+
+        await asAlice.get('/v1/projects/1/datasets/people')
+          .expect(200)
+          .then(({ body }) => {
+            body.name.should.equal('people');
+          });
 
       }));
 
