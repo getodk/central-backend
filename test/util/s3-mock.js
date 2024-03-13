@@ -15,8 +15,12 @@ class S3mock {
     this.s3bucket = {};
   }
 
+  insert({ md5, sha, content }) {
+    this.s3bucket[md5+sha] = content;
+  }
+
   async exhaustBlobs() {
-    const blobs = await this.container.db.many(sql`
+    const blobs = await this.container.db.any(sql`
       SELECT * FROM blobs WHERE s3_status='pending'
     `);
     await this.container.db.query(sql`
@@ -24,9 +28,7 @@ class S3mock {
         SET s3_status='uploaded', content=NULL
         WHERE s3_status='pending'
     `);
-    for (const { md5, sha, content } of blobs) {
-      this.s3bucket[md5+sha] = content;
-    }
+    blobs.forEach(this.insert);
   }
 
   getContentFor({ md5, sha }) {
@@ -37,6 +39,10 @@ class S3mock {
 
   urlForBlob(filename, { md5, sha, contentType }) {
     return `s3://mock/${md5}/${sha}/${filename}?contentType=${contentType}`;
+  }
+
+  deleteObjFor({ md5, sha }) {
+    delete this.s3bucket[md5+sha];
   }
 }
 
