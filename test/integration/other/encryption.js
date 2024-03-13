@@ -346,19 +346,40 @@ describe('managed encryption', () => {
             .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
             .then((send) => send(testData.instances.simple.one, { alpha: 'hello this is file alpha', beta: 'and beta' })
               .then(() => send(testData.instances.simple.two, { charlie: 'file charlie is right here' }))))
+          .then(() => global.s3mock.exhaustBlobs())
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then((keyId) => global.s3mock.exhaustBlobs()
-            .then(() => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
-              .then((result) => {
-                result.filenames.length.should.equal(4);
-                result.filenames.should.containDeep([ 'simple.csv', 'media/alpha', 'media/beta', 'media/charlie' ]);
+          .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
+            .then((result) => {
+              result.filenames.length.should.equal(4);
+              result.filenames.should.containDeep([ 'simple.csv', 'media/alpha', 'media/beta', 'media/charlie' ]);
 
-                result['media/alpha'].should.equal('hello this is file alpha');
-                result['media/beta'].should.equal('and beta');
-                result['media/charlie'].should.equal('file charlie is right here');
-              }))));
+              result['media/alpha'].should.equal('hello this is file alpha');
+              result['media/beta'].should.equal('and beta');
+              result['media/charlie'].should.equal('file charlie is right here');
+            })));
+    }));
+
+    it('should handle s3 issues gracefully', testService((service, container) => {
+      global.s3mock.enable(container);
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple.xml')
+            .expect(200)
+            .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
+            .then((send) => send(testData.instances.simple.one, { alpha: 'hello this is file alpha', beta: 'and beta' })
+              .then(() => send(testData.instances.simple.two, { charlie: 'file charlie is right here' }))))
+          .then(() => global.s3mock.exhaustBlobs())
+          .then(() => { global.s3mock.error.onDownload = true; })
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
+            .expect(200)
+            .then(({ body }) => body[0].id))
+          .then((keyId) => asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`)
+            .then(() => should.fail('should have thrown'))
+            .catch((err) => err.message.should.equal('aborted'))));
     }));
 
     it('should strip .enc suffix from decrypted attachments', testService((service) =>
