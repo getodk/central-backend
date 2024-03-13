@@ -2024,6 +2024,68 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 `);
             })))));
 
+    it('should return adhoc-processed consolidated client audit log attachments if uploaded to s3', testService((service, container) => {
+      global.s3mock.enable(container);
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => { global.s3mock.error.onDownload = true; })
+          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
+            .then((result) => {
+              result.filenames.should.eql([
+                'audits.csv',
+                'audits - audit.csv'
+              ]);
+
+              result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
+one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
+one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
+one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,
+one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
+two,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
+two,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
+two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+`);
+            })));
+    }));
+
+    it('should gracefully handle error if client audit s3 download fails', testService((service, container) => {
+      global.s3mock.enable(container);
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => global.s3mock.exhaustBlobs())
+          .then(() => { global.s3mock.error.onDownload = true; })
+          .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip')
+            .then(() => should.fail('should have thrown'))
+            .catch(err => err.message.should.equal('aborted'))));
+    }));
+
     it('should return consolidated client audit log filtered by user', testService((service) =>
       service.login('alice', (asAlice) =>
         service.login('bob', (asBob) =>
