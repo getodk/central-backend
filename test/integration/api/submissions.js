@@ -1595,7 +1595,24 @@ describe('api: /forms/:id/submissions', () => {
               .set('X-OpenRosa-Version', '1.0')
               .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
               .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
-              .expect(201))))));
+              .expect(201))
+            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'))
+              .then((result) => {
+                result.filenames.should.containDeep([
+                  'binaryType.csv',
+                  'media/my_file1.mp4',
+                  'media/here_is_file2.jpg'
+                ]);
+
+                result['media/my_file1.mp4'].should.equal('this is test file one');
+                result['media/here_is_file2.jpg'].should.equal('this is test file two');
+
+                // we also check the csv for the sake of verifying the attachments counts.
+                const csv = result['binaryType.csv'].split('\n');
+                csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+                csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,2,2,,,,0,');
+                csv.length.should.equal(3); // newline at end
+              }))))));
 
     it('should return a zipfile with the relevant attachments if s3 is enabled', testService((service, container) => {
       global.s3mock.enable(container);
