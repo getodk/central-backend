@@ -8,6 +8,7 @@ class S3mock {
   reset() {
     delete this.container;
     delete this.s3bucket;
+    delete this.error;
   }
 
   isEnabled() {
@@ -17,6 +18,7 @@ class S3mock {
   enable(container) {
     this.container = container;
     this.s3bucket = {};
+    this.error = {};
   }
 
   insert({ md5, sha, content }) {
@@ -36,6 +38,10 @@ class S3mock {
   }
 
   getContentFor({ md5, sha }) {
+    if (this.error.onDownload) {
+      return Promise.reject('Mock error when trying to download blob.');
+    }
+
     const content = this.s3bucket[md5+sha];
     if (content == null) throw new Error('Blob content not found.');
     return Promise.resolve(content);

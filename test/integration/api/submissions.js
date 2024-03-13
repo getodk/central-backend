@@ -1651,6 +1651,32 @@ describe('api: /forms/:id/submissions', () => {
               }))));
     }));
 
+    it('should handle s3 errors when trying to construct zipfile', testService((service, container) => {
+      global.s3mock.enable(container);
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+            .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201))
+            .then(() => global.s3mock.exhaustBlobs())
+            .then(() => { global.s3mock.error.onDownload = true; })
+            .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip')
+              .then(({ statusCode, res }) => {
+                statusCode.should.equal(200); // stream errors can't change response code
+                res.trailers.should.deepEqual({ status: 'Error' });
+              }))));
+    }));
+
     it('should filter attachments by the query', testService((service) =>
       service.login('alice', (asAlice) =>
         service.login('bob', (asBob) =>
