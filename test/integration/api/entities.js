@@ -2425,7 +2425,7 @@ describe('Entities API', () => {
           .expect(400)
           .then(({ body }) => {
             body.code.should.equal(400.11);
-            body.message.should.equal('Invalid input data type: expected (uuid) to be (valid UUID)');
+            body.message.should.equal('Invalid input data type: expected (uuid) to be (valid version 4 UUID)');
           });
 
         // Entity list is still empty
