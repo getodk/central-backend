@@ -1,6 +1,10 @@
 const { sql } = require('slonik');
 
 class S3mock {
+  constructor() {
+    this.insert = this.insert.bind(this);
+  }
+
   reset() {
     delete this.container;
     delete this.s3bucket;
