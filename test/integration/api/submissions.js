@@ -1671,10 +1671,8 @@ describe('api: /forms/:id/submissions', () => {
             .then(() => global.s3mock.exhaustBlobs())
             .then(() => { global.s3mock.error.onDownload = true; })
             .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip')
-              .then(({ statusCode, res }) => {
-                statusCode.should.equal(200); // stream errors can't change response code
-                res.trailers.should.deepEqual({ status: 'Error' });
-              }))));
+              .then(() => should.fail('Should have thrown an error.'))
+              .catch(err => err.message.should.equal('aborted')))));
     }));
 
     it('should filter attachments by the query', testService((service) =>
