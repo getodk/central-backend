@@ -28,14 +28,27 @@ describe('datasets and entities', () => {
           .expect(403);
       }));
 
-      it('should reject dataset name is not provided', testService(async (service) => {
+      it('should reject if dataset name is not provided', testService(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/datasets')
           .send({})
           .expect(400)
           .then(({ body }) => {
-            body.message.should.equal('Required parameter name missing.');
+            body.message.should.equal('Unexpected name value undefined; This is not a valid dataset name.');
+          });
+      }));
+
+      it('should reject if dataset name is null', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({
+            name: null
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.message.should.equal('Unexpected name value null; This is not a valid dataset name.');
           });
       }));
 
@@ -52,19 +65,36 @@ describe('datasets and entities', () => {
           });
       }));
 
-      it('should create a new dataset', testService(async (service) => {
+      it('should create a new dataset and return dataset', testService(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/datasets')
           .send({
             name: 'trees'
           })
-          .expect(200);
-
-        await asAlice.get('/v1/projects/1/datasets')
+          .expect(200)
           .then(({ body }) => {
-            body[0].name.should.equal('trees');
-            body[0].createdAt.should.be.an.isoDate();
+            body.should.be.a.Dataset();
+            body.name.should.equal('trees');
+            body.properties.should.eql([]);
+            body.approvalRequired.should.eql(false);
+          });
+      }));
+
+      it('should allow approvalRequired to be set on new dataset', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({
+            name: 'trees',
+            approvalRequired: true,
+          })
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.a.Dataset();
+            body.name.should.equal('trees');
+            body.properties.should.eql([]);
+            body.approvalRequired.should.eql(true);
           });
       }));
 
@@ -92,7 +122,10 @@ describe('datasets and entities', () => {
           .send({
             name: 'trees'
           })
-          .expect(200);
+          .expect(200)
+          .then(({ body }) => {
+            console.log('just made new dataset', body);
+          });
 
         await asAlice.post('/v1/projects/1/datasets/trees/entities')
           .send({
@@ -132,9 +165,12 @@ describe('datasets and entities', () => {
           .expect(200);
 
         await asAlice.get('/v1/audits')
+          .set('X-Extended-Metadata', 'true')
           .then(({ body: logs }) => {
             logs[0].action.should.equal('dataset.create');
             logs[0].actorId.should.equal(5);
+            logs[0].actee.should.be.a.Dataset();
+            logs[0].actee.name.should.equal('trees');
             logs[0].details.properties.should.eql([]);
           });
       }));
@@ -150,7 +186,26 @@ describe('datasets and entities', () => {
 
       }));
 
-      it('should add properties to a dataset', testService(async (service) => {
+      it('should add property to dataset and return success', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({
+            name: 'trees'
+          })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({
+            name: 'height'
+          })
+          .expect(200)
+          .then(({ body }) => {
+            body.success.should.be.true();
+          });
+      }));
+
+      it('should accept entities with properties after properties have been added', testService(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/datasets')
@@ -227,6 +282,38 @@ describe('datasets and entities', () => {
           });
       }));
 
+      it('should reject if property name is not provided', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'trees' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({})
+          .expect(400)
+          .then(({ body }) => {
+            body.message.should.equal('Unexpected name value undefined; This is not a valid property name.');
+          });
+      }));
+
+      it('should reject if property name is null', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'trees' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({
+            name: null
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.message.should.equal('Unexpected name value null; This is not a valid property name.');
+          });
+      }));
+
       it('should log an event for creating a new dataset property', testService(async (service) => {
         const asAlice = await service.login('alice');
 
@@ -243,9 +330,12 @@ describe('datasets and entities', () => {
           .expect(200);
 
         await asAlice.get('/v1/audits')
+          .set('X-Extended-Metadata', 'true')
           .then(({ body: logs }) => {
             logs[0].action.should.equal('dataset.update');
             logs[0].actorId.should.equal(5);
+            logs[0].actee.should.be.a.Dataset();
+            logs[0].actee.name.should.equal('trees');
             logs[0].details.properties.should.eql([ 'circumference' ]);
           });
       }));
