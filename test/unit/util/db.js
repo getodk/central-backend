@@ -291,10 +291,10 @@ returning *`);
     });
 
     it('should deal with strange data input types', () => {
-      insert(new T({ x: { test: true }, y: undefined, z: new Date('2000-01-01') }))
+      insert(new T({ x: { test: true }, y: undefined, z: new Date('2000-01-01'), w: Object.assign(Object.create(null), { foo: 'bar' }) }))
         .should.eql(sql`
-insert into frames ("x","y","z")
-values (${'{"test":true}'},${null},${'2000-01-01T00:00:00.000Z'})
+insert into frames ("x","y","z","w")
+values (${'{"test":true}'},${null},${'2000-01-01T00:00:00.000Z'},${'{"foo":"bar"}'})
 returning *`);
     });
 
