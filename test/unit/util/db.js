@@ -291,10 +291,10 @@ returning *`);
     });
 
     it('should deal with strange data input types', () => {
-      insert(new T({ x: { test: true }, y: undefined, z: new Date('2000-01-01') }))
+      insert(new T({ x: { test: true }, y: undefined, z: new Date('2000-01-01'), w: Object.assign(Object.create(null), { foo: 'bar' }) }))
         .should.eql(sql`
-insert into frames ("x","y","z")
-values (${'{"test":true}'},${null},${'2000-01-01T00:00:00.000Z'})
+insert into frames ("x","y","z","w")
+values (${'{"test":true}'},${null},${'2000-01-01T00:00:00.000Z'},${'{"foo":"bar"}'})
 returning *`);
     });
 
@@ -319,8 +319,7 @@ returning *`);
       const query = insertMany([ new T({ x: 2 }), new T({ y: 3 }) ]);
       query.sql.should.be.eql(`
   INSERT INTO dogs ("x","y")
-  SELECT * FROM unnest($1::"text"[], $2::"text"[]) AS t
-  RETURNING *`);
+  SELECT * FROM unnest($1::"text"[], $2::"text"[]) AS t`);
       query.values.should.be.eql([
         [2, null],
         [null, 3]
@@ -332,8 +331,7 @@ returning *`);
       const query = insertMany([ new U({ x: new Date('2000-01-01') }), new U() ]);
       query.sql.should.be.eql(`
   INSERT INTO dogs ("createdAt", "x")
-  SELECT clock_timestamp(), * FROM unnest($1::"timestamptz"[]) AS t
-  RETURNING *`);
+  SELECT clock_timestamp(), * FROM unnest($1::"timestamptz"[]) AS t`);
       query.values.should.be.eql([
         ['2000-01-01T00:00:00.000Z', null]
       ]);
