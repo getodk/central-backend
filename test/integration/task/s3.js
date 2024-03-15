@@ -17,15 +17,49 @@ describe.only('task: s3', () => {
       await uploadPending();
 
       // then
-      Object.keys(global.s3mock.s3bucket).should.equal(0);
+      assertUploadCount(0);
     }));
 
     it('should uploading pending blobs, and ignore others', testTask(() => {
-      TODO();
+      // given
+      global.s3mock.enable(container);
+      // and
+      await aBlobExistsWith({ status:'pending' });
+      await aBlobExistsWith({ status:'uploaded' });
+      await aBlobExistsWith({ status:'failed' });
+      await aBlobExistsWith({ status:'pending' });
+      await aBlobExistsWith({ status:'uploaded' });
+      await aBlobExistsWith({ status:'failed' });
+
+      // when
+      await uploadPending();
+
+      // then
+      assertUploadCount(2);
     }));
 
     it('should return error if uploading fails', testTask(() => {
-      TODO();
+      // given
+      global.s3mock.enable(container);
+      global.s3mock.error.onUpload = true;
+      // and
+      await aBlobExistsWith({ status:'pending' });
+
+      // when
+      try {
+        await uploadPending();
+        should.fail('should have thrown');
+      } catch(err) {
+        // then
+        err.message.should.equal('TODO');
+      }
+
+      // and
+      assertUploadCount(0);
     }));
   });
+
+  function assertUploadCount(expected) {
+    Object.keys(global.s3mock.s3bucket).should.equal(expected);
+  }
 });
