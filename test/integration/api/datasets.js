@@ -122,10 +122,7 @@ describe('datasets and entities', () => {
           .send({
             name: 'trees'
           })
-          .expect(200)
-          .then(({ body }) => {
-            console.log('just made new dataset', body);
-          });
+          .expect(200);
 
         await asAlice.post('/v1/projects/1/datasets/trees/entities')
           .send({
