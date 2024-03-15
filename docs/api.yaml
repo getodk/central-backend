@@ -43,6 +43,7 @@ info:
     - Bulk Entity Creation!
       * The existing [Entity Create](/central-api-entity-management/#creating-entities) endpoint now also accepts a list of Entities to append to a Dataset.
       * The `uuid` property is no longer required and Central will generate a UUID for each new Entity if needed.
+    - Create Datasets (Entity Lists) and add Properties via the API!
     - OData Data Document for requests of Submissions and Entities now allow use of `$orderby`.
     - ETag headers on all Blobs.
 
@@ -9735,6 +9736,73 @@ paths:
                   lastEntity: '2018-04-18T03:04:51.695Z'
                   entities: 10
                   conflicts: 2
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+              example:
+                code: "403.1"
+                message: The authenticated actor does not have rights to perform that
+                  action.
+    post:
+      tags:
+      - Dataset Management
+      summary: Creating Datasets
+      description: Creates a new Dataset with a specified name within a project. (add more)
+      operationId: Creating Datasets
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      requestBody:
+          content:
+            '*/*':
+              schema:
+                required:
+                - name
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: The desired name of the Dataset.
+                  approvalRequired:
+                    type: boolean
+                    description: Control whether a Submission should be approved before an Entity is created from it.
+                    required: false
+                example:
+                  name: Trees
+                  approvalRequired: false
+          required: false
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DatasetMetadata'
+              example:
+                name: people
+                createdAt: '2018-01-19T23:58:03.395Z'
+                projectId: 1
+                approvalRequired: false
+                sourceForms: []
+                linkedForms: []
+                properties: []
         403:
           description: Forbidden
           content:
