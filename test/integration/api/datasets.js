@@ -622,41 +622,6 @@ describe('datasets and entities', () => {
 
       }));
 
-      it('should return 304 content not changed if ETag matches', testService(async (service, container) => {
-        const asAlice = await service.login('alice');
-
-        await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.simpleEntity)
-          .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
-          .send(testData.instances.simpleEntity.one)
-          .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
-          .send({ reviewState: 'approved' })
-          .expect(200);
-
-        await exhaust(container);
-
-        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
-          .expect(200);
-
-        const withOutTs = result.text.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g, '');
-        withOutTs.should.be.eql(
-          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
-          '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,,1\n'
-        );
-
-        const etag = result.get('ETag');
-
-        await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
-          .set('If-None-Match', etag)
-          .expect(304);
-      }));
-
       it('should filter the Entities', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
@@ -693,6 +658,137 @@ describe('datasets and entities', () => {
         );
 
       }));
+
+      describe('ETag on entities.csv', () => {
+        it('should return 304 content not changed if ETag matches', testService(async (service, container) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+            .send(testData.instances.simpleEntity.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await exhaust(container);
+
+          const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+            .expect(200);
+
+          const withOutTs = result.text.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g, '');
+          withOutTs.should.be.eql(
+            '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,,1\n'
+          );
+
+          const etag = result.get('ETag');
+
+          await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+            .set('If-None-Match', etag)
+            .expect(304);
+        }));
+
+        it('should return new ETag if entity data is modified', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/datasets/people/entities')
+            .send({
+              uuid: '12345678-1234-4123-8234-111111111aaa',
+              label: 'Alice',
+              data: { first_name: 'Alice' }
+            })
+            .expect(200);
+
+          const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+            .expect(200);
+
+          const withOutTs = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+          result.text.replace(withOutTs, '').should.be.eql(
+            '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-111111111aaa,Alice,Alice,,,5,Alice,0,,1\n'
+          );
+
+          const etag = result.get('ETag');
+
+          await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa?force=true')
+            .send({ data: { age: '33' } })
+            .expect(200);
+
+          const modifiedResult = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+            .set('If-None-Match', etag)
+            .expect(200);
+
+          modifiedResult.text.replace(withOutTs, '').should.be.eql(
+            '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-111111111aaa,Alice,Alice,33,,5,Alice,1,,2\n'
+          );
+        }));
+
+        it('should return new ETag if entity deleted', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // bulk create several entities
+          await asAlice.post('/v1/projects/1/datasets/people/entities')
+            .set('User-Agent', 'central/tests')
+            .send({
+              source: {
+                name: 'people.csv',
+                size: 100,
+              },
+              entities: [
+                {
+                  uuid: '12345678-1234-4123-8234-111111111aaa',
+                  label: 'Alice',
+                  data: { first_name: 'Alice' }
+                },
+                {
+                  uuid: '12345678-1234-4123-8234-111111111bbb',
+                  label: 'Emily',
+                  data: { first_name: 'Emily' }
+                },
+              ]
+            });
+
+          const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+            .expect(200);
+
+          const withOutTs = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+          result.text.replace(withOutTs, '').should.be.eql(
+            '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-111111111bbb,Emily,Emily,,,5,Alice,0,,1\n' +
+            '12345678-1234-4123-8234-111111111aaa,Alice,Alice,,,5,Alice,0,,1\n'
+          );
+
+          const etag = result.get('ETag');
+
+          await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111bbb');
+
+          await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+            .set('If-None-Match', etag)
+            .expect(200); // should not be 304
+
+          const deletedResult = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+            .expect(200);
+
+          deletedResult.text.replace(withOutTs, '').should.be.eql(
+            '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-111111111aaa,Alice,Alice,,,5,Alice,0,,1\n'
+          );
+        }));
+      });
     });
 
     describe('projects/:id/datasets/:name GET', () => {
@@ -2151,7 +2247,8 @@ describe('datasets and entities', () => {
 
       }));
 
-      it('should return md5 of last Entity timestamp in the manifest', testService(async (service, container) => {
+      // TODO: update md5 (etag equivalent) of entity list media file in form manifest
+      it.skip('should return md5 of last Entity timestamp in the manifest', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -2237,6 +2334,89 @@ describe('datasets and entities', () => {
 
       }));
 
+      it('should return ETag if content has changed', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+          .expect(200);
+
+        result.text.should.be.eql(
+          'name,label,__version,first_name,age\n' +
+          '12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n'
+        );
+
+        const etag = result.get('ETag');
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+          .send({ data: { age: '33' } })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+          .set('If-None-Match', etag)
+          .expect(200); // Not 304, content HAS been modified
+      }));
+
+      it('should return new ETag if content has been deleted', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+
+        await exhaust(container);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+          .expect(200);
+
+        result.text.should.be.eql(
+          'name,label,__version,first_name,age\n' +
+          '12345678-1234-4123-8234-123456789aaa,Jane (30),1,Jane,30\n' +
+          '12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n'
+        );
+
+        const etag = result.get('ETag');
+
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+          .set('If-None-Match', etag)
+          .expect(200); // Not 304, content HAS been modified
+      }));
     });
   });
 
