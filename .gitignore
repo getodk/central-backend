@@ -10,3 +10,4 @@ node_modules/
 /.eslintcache
 /.pgbadger/
 .vscode
+/junit-reports/

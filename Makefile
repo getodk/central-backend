@@ -62,6 +62,10 @@ debug: base
 test: lint
 	BCRYPT=insecure npx mocha --recursive --exit
 
+.PHONY: test-ci
+test-ci: lint
+	BCRYPT=insecure npx mocha --recursive --exit --reporter test/ci-mocha-reporter.js
+
 .PHONY: test-fast
 test-fast: node_version
 	BCRYPT=insecure npx mocha --recursive --exit --fgrep @slow --invert
