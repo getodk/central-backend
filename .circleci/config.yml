@@ -16,3 +16,4 @@ jobs:
       - run: node lib/bin/create-docker-databases.js
       - run: make test-ci
       - store_test_results:
+          path: .
