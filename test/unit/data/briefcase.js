@@ -7,6 +7,8 @@ const { fieldsFor } = require(appRoot + '/test/util/schema');
 const { streamBriefcaseCsvs } = require(appRoot + '/lib/data/briefcase');
 const { zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 
+const disabledS3 = { isEnabled: () => false };
+
 
 // these are a little closer to integration tests than unit tests, by virtue of
 // the complexity of recursive in-zip csv file generation. hard to test unitly.
@@ -26,7 +28,7 @@ const withAttachments = (present, expected, row) => ({ ...row, aux: { ...row.aux
 
 const callAndParse = (inStream, formXml, xmlFormId, callback) => {
   fieldsFor(formXml).then((fields) => {
-    zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, xmlFormId)), callback);
+    zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(disabledS3, inStream, fields, xmlFormId)), callback);
   });
 };
 
@@ -406,7 +408,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     fieldsFor(testData.forms.selectMultiple).then((fields) => {
-      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] })), (err, result) => {
+      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(disabledS3, inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] })), (err, result) => {
         // eslint-disable-next-line keyword-spacing
         if(err) return done(err);
 
@@ -509,7 +511,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     fieldsFor(formXml).then((fields) => {
-      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'structuredform', undefined, undefined, false, { groupPaths: false })), (err, result) => {
+      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(disabledS3, inStream, fields, 'structuredform', undefined, undefined, false, { groupPaths: false })), (err, result) => {
         // eslint-disable-next-line keyword-spacing
         if(err) return done(err);
 
@@ -532,7 +534,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     fieldsFor(testData.forms.selectMultiple).then((fields) => {
-      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] }, undefined, false, { groupPaths: false })), (err, result) => {
+      zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(disabledS3, inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] }, undefined, false, { groupPaths: false })), (err, result) => {
         // eslint-disable-next-line keyword-spacing
         if(err) return done(err);
 

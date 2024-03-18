@@ -4,6 +4,8 @@ const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
 const { streamAttachments } = require(appRoot + '/lib/data/attachments');
 const { zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 
+const disabledS3 = { isEnabled: () => false };
+
 describe('.zip attachments streaming', () => {
   it('should stream the contents to files at the appropriate paths', (done) => {
     const inStream = streamTest.fromObjects([
@@ -11,7 +13,7 @@ describe('.zip attachments streaming', () => {
       { row: { instanceId: 'subone', name: 'secondfile.ext', content: 'this is my second file' } },
       { row: { instanceId: 'subtwo', name: 'thirdfile.ext', content: 'this is my third file' } }
     ]);
-    zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream)), (err, result) => {
+    zipStreamToFiles(zipStreamFromParts(streamAttachments(disabledS3, inStream)), (err, result) => {
       // eslint-disable-next-line keyword-spacing
       if(err) return done(err);
 
@@ -37,7 +39,7 @@ describe('.zip attachments streaming', () => {
       { row: { instanceId: 'subone', name: '../secondfile.ext', content: 'this is my second file' } },
       { row: { instanceId: 'subone', name: './.secondfile.ext', content: 'this is my duplicate second file' } },
     ]);
-    zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream)), (err, result) => {
+    zipStreamToFiles(zipStreamFromParts(streamAttachments(disabledS3, inStream)), (err, result) => {
       // eslint-disable-next-line keyword-spacing
       if(err) return done(err);
 
@@ -55,7 +57,7 @@ describe('.zip attachments streaming', () => {
     const inStream = streamTest.fromObjects([
       { row: { instanceId: 'subone', name: 'firstfile.ext.enc', content: 'this is my first file' } }
     ]);
-    zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream)), (err, result) => {
+    zipStreamToFiles(zipStreamFromParts(streamAttachments(disabledS3, inStream)), (err, result) => {
       // eslint-disable-next-line keyword-spacing
       if(err) return done(err);
 
@@ -68,7 +70,7 @@ describe('.zip attachments streaming', () => {
     const inStream = streamTest.fromObjects([
       { row: { instanceId: 'subone', name: 'firstfile.ext.enc', content: 'this is my first file' } }
     ]);
-    zipStreamToFiles(zipStreamFromParts(streamAttachments(inStream, () => {})), (err, result) => {
+    zipStreamToFiles(zipStreamFromParts(streamAttachments(disabledS3, inStream, () => {})), (err, result) => {
       // eslint-disable-next-line keyword-spacing
       if(err) return done(err);
 

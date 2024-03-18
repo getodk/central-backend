@@ -7,6 +7,8 @@ const { promisify } = require('util');
 const testData = require('../../data/xml');
 const { exhaust, workerQueue } = require(appRoot + '/lib/worker/worker');
 
+// TODO potentially any test with exhaust() needs an additional version using s3
+
 const geoForm = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <h:head>
     <h:title>Simple Geo</h:title>
