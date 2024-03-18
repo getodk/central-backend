@@ -1,11 +1,11 @@
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const should = require('should');
+const { sql } = require('slonik');
 // eslint-disable-next-line import/no-extraneous-dependencies
 const superagent = require('superagent');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
-// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects/:id/forms (versions)', () => {
@@ -384,5 +384,119 @@ describe('api: /projects/:id/forms (versions)', () => {
                 })))));
       });
     });
+  });
+
+  // These tests relate to adding new drafts with the same or different field
+  // structure will reuse or change an intermedia form schema representation.
+  describe('intermediate form schema', () => {
+    it('should not make additional form schemas for a form with unchanged fields', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Submit to first version of form
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .set('Content-Type', 'application/xml')
+        .send(testData.instances.simple.one);
+
+      // Upload new version with same schema
+      await asAlice.post('/v1/projects/1/forms/simple/draft')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="2"'))
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simple/draft/publish');
+
+      // Submit to second version of form
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .set('Content-Type', 'application/xml')
+        .send(testData.instances.simple.two.replace('id="simple"', 'id="simple" version="2"'))
+        .expect(200);
+
+      const fieldsBySchema = await container.all(sql`
+      select count(*), "schemaId" from form_fields
+      where "formId"=1
+      group by "schemaId"`);
+      fieldsBySchema.length.should.equal(1); // There should be only one schema
+      fieldsBySchema[0].count.should.equal(4); // There should be four fields for that schema
+
+      const defsBySchema = await container.all(sql`
+      select count(*), "schemaId" from form_defs
+      where "formId"=1
+      group by "schemaId"`);
+      defsBySchema.length.should.equal(1);
+      defsBySchema[0].count.should.equal(2);
+
+      // Check that two subs are there and export properly
+      const lines = await asAlice.get('/v1/projects/1/forms/simple/submissions.csv')
+        .expect(200)
+        .then(({ text }) => text.split('\n'));
+      lines[0].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+      lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+        .should.equal(',two,Bob,34,two,5,Alice,0,0,,,,0,2');
+      lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+        .should.equal(',one,Alice,30,one,5,Alice,0,0,,,,0,');
+    }));
+
+    it('should make additional form schema when fields change', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Submit to first version of form
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .set('Content-Type', 'application/xml')
+        .send(testData.instances.simple.one);
+
+      // Upload new version with different schema (1 field removed)
+      await asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simple
+          .replace('id="simple"', 'id="simple" version="2"')
+          .replace('<age/>', ''))
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simple/draft/publish');
+
+      // Submit to second version of form
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .set('Content-Type', 'application/xml')
+        .send(testData.instances.simple.two
+          .replace('id="simple"', 'id="simple" version="2"')
+          .replace('<age>34</age>', ''))
+        .expect(200);
+
+      const fieldsBySchema = await container.all(sql`
+      select count(*), "schemaId" from form_fields
+      where "formId"=1
+      group by "schemaId"
+      order by "schemaId" asc`);
+      fieldsBySchema.length.should.equal(2); // There should be two schemas
+      fieldsBySchema[0].count.should.equal(4); // There should be four fields for that schema
+      fieldsBySchema[1].count.should.equal(3);
+
+      const defsBySchema = await container.all(sql`
+      select count(*), "schemaId" from form_defs
+      where "formId"=1
+      group by "schemaId"
+      order by "schemaId" asc`);
+      defsBySchema.length.should.equal(2);
+      defsBySchema[0].count.should.equal(1);
+      defsBySchema[0].count.should.equal(1);
+
+      // Check that two subs are there and export properly
+      let lines = await asAlice.get('/v1/projects/1/forms/simple/submissions.csv')
+        .expect(200)
+        .then(({ text }) => text.split('\n'));
+      lines[0].should.equal('SubmissionDate,meta-instanceID,name,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+      lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+        .should.equal(',two,Bob,two,5,Alice,0,0,,,,0,2');
+      lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+        .should.equal(',one,Alice,one,5,Alice,0,0,,,,0,');
+
+      // Check that two subs are there and export properly
+      lines = await asAlice.get('/v1/projects/1/forms/simple/submissions.csv?deletedFields=true')
+        .expect(200)
+        .then(({ text }) => text.split('\n'));
+      lines[0].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+      lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+        .should.equal(',two,Bob,,two,5,Alice,0,0,,,,0,2');
+      lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+        .should.equal(',one,Alice,30,one,5,Alice,0,0,,,,0,');
+    }));
   });
 });

@@ -1,9 +1,6 @@
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require
-const { getOrElse, getOrReject, getOrNotFound, timebound } = require(appRoot + '/lib/util/promise');
-// eslint-disable-next-line import/no-dynamic-require
+const { getOrElse, getOrReject, getOrNotFound, timebound, runSequentially } = require(appRoot + '/lib/util/promise');
 const Option = require(appRoot + '/lib/util/option');
-// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
 
 describe('getOr', () => {
@@ -100,3 +97,31 @@ describe('timebound @slow', () => {
   });
 });
 
+describe('runSequentially', () => {
+  it('should return an empty array when passed an empty array', async () => {
+    const result = await runSequentially([]);
+    result.should.be.eql([]);
+  });
+
+  it('returns the results of the functions in order when passed an array of functions', async () => {
+    const fn1 = () => Promise.resolve('result1');
+    const fn2 = () => Promise.resolve('result2');
+    const fn3 = () => Promise.resolve('result3');
+
+    const result = await runSequentially([fn1, fn2, fn3]);
+
+    result.should.be.eql(['result1', 'result2', 'result3']);
+  });
+
+  it('should throw error if any of the functions throws an error', async () => {
+    const fn1 = () => Promise.resolve('result1');
+    const fn2 = () => Promise.reject(new Error('result2'));
+    const fn3 = () => Promise.resolve('result3');
+
+    try {
+      await runSequentially([fn1, fn2, fn3]);
+    } catch (err) {
+      err.message.should.equal('result2');
+    }
+  });
+});

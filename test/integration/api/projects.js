@@ -4,6 +4,8 @@ const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { QueryOptions } = require('../../../lib/util/db');
+const { Actor } = require('../../../lib/model/frames');
+const { createConflict } = require('../fixtures/scenarios');
 // eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -60,19 +62,20 @@ describe('api: /projects', () => {
                 body[0].name.should.equal('Default Project');
               }))))));
 
-    it('should return the correct project verbs when multiply assigned', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
-          .then((aliceId) => asAlice.post('/v1/projects/1/assignments/manager/' + aliceId)
-            .expect(200)
-            .then(() => asAlice.get('/v1/projects/1')
-              .set('X-Extended-Metadata', 'true')
-              .expect(200)
-              .then(({ body }) => {
-                body.verbs.length.should.be.greaterThan(39);
-                body.should.be.a.Project();
-                body.name.should.equal('Default Project');
-              }))))));
+    it('should return the correct project verbs when multiply assigned', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: alice } = await asAlice.get('/v1/users/current')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/assignments/manager/' + alice.id)
+        .expect(200);
+      const { body: project } = await asAlice.get('/v1/projects/1')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200);
+      const { body: admin } = await asAlice.get('/v1/roles/admin').expect(200);
+      project.verbs.should.eqlInAnyOrder(admin.verbs);
+      project.should.be.a.Project();
+      project.name.should.equal('Default Project');
+    }));
 
     it('should order projects appropriately', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -102,45 +105,63 @@ describe('api: /projects', () => {
                   body[3].archived.should.equal(true);
                 })))))));
 
-    it('should return extended metadata if requested', testService((service) =>
-      service.login('alice', (asAlice) => Promise.all([
-        asAlice.post('/v1/projects/1/app-users')
-          .send({ displayName: 'test 1' })
-          .expect(200),
-        asAlice.post('/v1/projects/1/app-users')
-          .send({ displayName: 'test 2' })
-          .expect(200),
-        asAlice.post('/v1/projects/1/forms/simple/submissions')
-          .send(testData.instances.simple.one)
+    it('should return extended metadata if requested', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
           .set('Content-Type', 'application/xml')
-          .expect(200),
-        asAlice.post('/v1/projects/1/forms/simple/submissions')
-          .send(testData.instances.simple.two)
-          .set('Content-Type', 'application/xml')
-          .expect(200),
-        asAlice.post('/v1/projects')
-          .send({ name: 'A Test Project' })
-          .set('Content-Type', 'application/json')
           .expect(200)
-      ])
-        .then(() => asAlice.get('/v1/projects')
-          .set('X-Extended-Metadata', 'true')
-          .expect(200)
-          .then(({ body }) => {
-            body.length.should.equal(2);
-            body[0].should.be.an.ExtendedProject();
-            body[1].should.be.an.ExtendedProject();
+          .then(() => Promise.all([
+            asAlice.post('/v1/projects/1/app-users')
+              .send({ displayName: 'test 1' })
+              .expect(200),
+            asAlice.post('/v1/projects/1/app-users')
+              .send({ displayName: 'test 2' })
+              .expect(200),
+            asAlice.post('/v1/projects/1/forms/simple/submissions')
+              .send(testData.instances.simple.one)
+              .set('Content-Type', 'application/xml')
+              .expect(200),
+            asAlice.post('/v1/projects/1/forms/simple/submissions')
+              .send(testData.instances.simple.two)
+              .set('Content-Type', 'application/xml')
+              .expect(200),
+            asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+              .send(testData.instances.simpleEntity.one)
+              .set('Content-Type', 'application/xml')
+              .expect(200),
+            asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+              .send(testData.instances.simpleEntity.two)
+              .set('Content-Type', 'application/xml')
+              .expect(200),
+            asAlice.post('/v1/projects')
+              .send({ name: 'A Test Project' })
+              .set('Content-Type', 'application/json')
+              .expect(200)
+          ])
+            .then(() => exhaust(container))
+            .then(() => asAlice.get('/v1/projects')
+              .set('X-Extended-Metadata', 'true')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(2);
+                body[0].should.be.an.ExtendedProject();
+                body[1].should.be.an.ExtendedProject();
 
-            body[0].name.should.equal('A Test Project');
-            body[0].forms.should.equal(0);
-            body[0].appUsers.should.equal(0);
-            should.not.exist(body[0].lastSubmission);
+                body[0].name.should.equal('A Test Project');
+                body[0].forms.should.equal(0);
+                body[0].appUsers.should.equal(0);
+                should.not.exist(body[0].lastSubmission);
+                should.not.exist(body[0].lastEntity);
 
-            body[1].name.should.equal('Default Project');
-            body[1].forms.should.equal(2);
-            body[1].appUsers.should.equal(2);
-            body[1].lastSubmission.should.be.a.recentIsoDate();
-          })))));
+                body[1].name.should.equal('Default Project');
+                body[1].forms.should.equal(3);
+                body[1].appUsers.should.equal(2);
+                body[1].lastSubmission.should.be.a.recentIsoDate();
+
+                body[1].datasets.should.equal(1);
+                body[1].lastEntity.should.be.a.recentIsoDate();
+              }))))));
 
     it('should return extended metadata if requested', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -287,40 +308,56 @@ describe('api: /projects', () => {
             body.should.be.a.Project();
           }))));
 
-    it('should return extended metadata if requested', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.get('/v1/projects/1')
-          .set('X-Extended-Metadata', 'true')
+    it('should return extended metadata if requested', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.an.ExtendedProject();
+          body.forms.should.equal(2);
+          body.datasets.should.equal(0);
+          should.not.exist(body.lastSubmission);
+        });
+
+      await Promise.all([
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200),
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.two)
+          .set('Content-Type', 'application/xml')
           .expect(200)
-          .then(({ body }) => {
-            body.should.be.an.ExtendedProject();
-            body.forms.should.equal(2);
-            body.datasets.should.equal(0);
-            should.not.exist(body.lastSubmission);
-          })
-          .then(() => Promise.all([
-            asAlice.post('/v1/projects/1/forms/simple/submissions')
-              .send(testData.instances.simple.one)
-              .set('Content-Type', 'application/xml')
-              .expect(200),
-            asAlice.post('/v1/projects/1/forms/simple/submissions')
-              .send(testData.instances.simple.two)
-              .set('Content-Type', 'application/xml')
-              .expect(200)
-          ]))
-          .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
-            .send(testData.forms.simpleEntity)
-            .set('Content-Type', 'application/xml')
-            .expect(200))
-          .then(() => asAlice.get('/v1/projects/1')
-            .set('X-Extended-Metadata', 'true')
-            .expect(200)
-            .then(({ body }) => {
-              body.should.be.an.ExtendedProject();
-              body.forms.should.equal(3);
-              body.datasets.should.equal(1);
-              body.lastSubmission.should.be.a.recentIsoDate();
-            })))));
+      ]);
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.an.ExtendedProject();
+          body.forms.should.equal(3);
+          body.datasets.should.equal(0); // Form that created dataset is not published yet
+          body.lastSubmission.should.be.a.recentIsoDate();
+        });
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          body.datasets.should.equal(1);
+        });
+
+    }));
 
     it('should not count deleted app users', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -347,28 +384,29 @@ describe('api: /projects', () => {
           .expect(200)
           .then(({ body }) => { should.not.exist(body.verbs); }))));
 
-    it('should return verb information with extended metadata (alice)', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.get('/v1/projects/1')
-          .set('X-Extended-Metadata', 'true')
-          .expect(200)
-          .then(({ body }) => {
-            body.verbs.should.be.an.Array();
-            body.verbs.length.should.be.greaterThan(39);
-            body.verbs.should.containDeep([ 'user.password.invalidate', 'project.delete' ]);
-          }))));
+    it('should return verb information with extended metadata (alice)', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: project } = await asAlice.get('/v1/projects/1')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200);
+      project.verbs.should.be.an.Array();
+      const { body: admin } = await asAlice.get('/v1/roles/admin').expect(200);
+      project.verbs.should.eql(admin.verbs);
+      project.verbs.should.containDeep([ 'user.password.invalidate', 'project.delete' ]);
+    }));
 
-    it('should return verb information with extended metadata (bob)', testService((service) =>
-      service.login('bob', (asBob) =>
-        asBob.get('/v1/projects/1')
-          .set('X-Extended-Metadata', 'true')
-          .expect(200)
-          .then(({ body }) => {
-            body.verbs.should.be.an.Array();
-            body.verbs.length.should.be.lessThan(28);
-            body.verbs.should.containDeep([ 'assignment.create', 'project.delete', 'dataset.list' ]);
-            body.verbs.should.not.containDeep([ 'project.create' ]);
-          }))));
+    it('should return verb information with extended metadata (bob)', testService(async (service) => {
+      const asBob = await service.login('bob');
+      const { body: project } = await asBob.get('/v1/projects/1')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200);
+      project.verbs.should.be.an.Array();
+      const { body: manager } = await asBob.get('/v1/roles/manager')
+        .expect(200);
+      project.verbs.should.eql(manager.verbs);
+      project.verbs.should.containDeep([ 'assignment.create', 'project.delete', 'dataset.list' ]);
+      project.verbs.should.not.containDeep([ 'project.create' ]);
+    }));
 
     it('should return verb information with extended metadata (data collector only)', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -382,13 +420,11 @@ describe('api: /projects', () => {
               .expect(200)
               .then(({ body }) => {
                 body.verbs.should.eqlInAnyOrder([
-                  // eslint-disable-next-line no-multi-spaces
-                  'project.read',      // from role(s): formfill
-                  // eslint-disable-next-line no-multi-spaces
-                  'form.list',         // from role(s): formfill
-                  // eslint-disable-next-line no-multi-spaces
-                  'form.read',         // from role(s): formfill
-                  'submission.create', // from role(s): formfill
+                  // following verbs from role: formfill
+                  'project.read',
+                  'open_form.list',
+                  'open_form.read',
+                  'submission.create',
                 ]);
               }))))));
 
@@ -406,21 +442,21 @@ describe('api: /projects', () => {
               .expect(200)
               .then(({ body }) => {
                 body.verbs.should.eqlInAnyOrder([
-                  // eslint-disable-next-line no-multi-spaces
-                  'project.read',      // from role(s): formfill, viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'form.list',         // from role(s): formfill, viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'form.read',         // from role(s): formfill, viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'submission.read',   // from role(s): viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'submission.list',   // from role(s): viewer
-                  'submission.create', // from role(s): formfill
-                  // eslint-disable-next-line no-multi-spaces
-                  'dataset.list',      // from role(s): viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'entity.list',      // from role(s): viewer
+                  // following roles from formfill + viewer:
+                  'project.read',
+                  // following roles from formfill only:
+                  'open_form.list',
+                  'open_form.read',
+                  'submission.create',
+                  // following roles from viewer only:
+                  'form.list',
+                  'form.read',
+                  'submission.read',
+                  'submission.list',
+                  'dataset.list',
+                  'dataset.read',
+                  'entity.list',
+                  'entity.read'
                 ]);
               }))))));
   });
@@ -513,7 +549,7 @@ describe('api: /projects', () => {
     it('should return notfound if the project does not exist', testService((service) =>
       service.delete('/v1/projects/99').expect(404)));
 
-    it('should reject unless the user can update', testService((service) =>
+    it('should reject unless the user can delete', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.delete('/v1/projects/1').expect(403))));
 
@@ -626,6 +662,22 @@ describe('api: /projects', () => {
               })
           ])))));
 
+    it('should reuse the draft token and enketoId of an existing draft', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+      const { body: draft1 } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+        .expect(200);
+      should.exist(draft1.draftToken);
+      should.exist(draft1.enketoId);
+      await asAlice.post('/v1/projects/1/key')
+        .send({ passphrase: 'supersecret' })
+        .expect(200);
+      const { body: draft2 } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+        .expect(200);
+      should(draft2.draftToken).equal(draft1.draftToken);
+      should(draft2.enketoId).equal(draft1.enketoId);
+    }));
+
     it('should modify only the draft if there is no published version', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
@@ -684,6 +736,52 @@ describe('api: /projects', () => {
               text.should.match(/<submission base64RsaPublicKey="[a-zA-Z0-9+/]{392}"\/>/);
             })))));
 
+    it('should delete draft submissions on project encryption', testService(async (service) => {
+
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simple2)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple2/draft/submissions')
+        .send(testData.instances.simple2.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/key')
+        .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/simple2/draft')
+        .set('X-Extended-Metadata', 'true')
+        .then(({ body }) => {
+          body.submissions.should.be.eql(0);
+        });
+    }));
+
+    it('should not delete live submissions on project encryption', testService(async (service) => {
+
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/key')
+        .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/simple')
+        .set('X-Extended-Metadata', 'true')
+        .then(({ body }) => {
+          body.submissions.should.be.eql(1);
+        });
+    }));
+
+
     it('should log the action in the audit log', testService((service, { Audits, Projects, Users }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
@@ -699,6 +797,20 @@ describe('api: /projects', () => {
             log.acteeId.should.equal(project.acteeId);
             log.details.should.eql({ data: { keyId: project.keyId } });
           }))));
+
+    it('should not throw form warnings', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+        .send(testData.forms.simple.replace(/age/g, 'address'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/key')
+        .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+        .expect(200);
+
+    }));
   });
 
   describe('/:id PUT', () => {
@@ -860,7 +972,7 @@ describe('api: /projects', () => {
           })
           .expect(501)))); // 501 not implemented
 
-    it('should log the action in the audit log', testService((service, { Audits, Forms, Projects }) =>
+    it('should log the action in the audit log', testService((service, { Audits, Forms, Projects, Auth }) =>
       service.login('bob', (asBob) =>
         asBob.put('/v1/projects/1')
           .set('Content-Type', 'application/json')
@@ -874,11 +986,13 @@ describe('api: /projects', () => {
           .expect(200)
           .then(() => Promise.all([
             asBob.get('/v1/users/current').expect(200).then(({ body }) => body),
-            Projects.getById(1).then((o) => o.get())
-              .then((project) => Forms.getByProjectId(project.id)),
             Audits.get(new QueryOptions({ args: { action: 'form.update' } }))
           ]))
-          .then(([ bob, forms, audits ]) => {
+          .then(async ([ bob, audits ]) => {
+            const actor = new Actor(bob);
+            const forms = await Projects.getById(1).then((o) => o.get())
+              .then((project) => Forms.getByProjectId(Auth.by(actor), project.id));
+
             audits.length.should.equal(2);
 
             const simpleAudit = audits.find((a) => a.acteeId === forms[0].acteeId);
@@ -1286,62 +1400,59 @@ describe('api: /projects', () => {
                 .then((o) => { o.isDefined().should.equal(false); })
             ])))))));
   });
-
-  describe('/:id/datasets GET', () => {
-    it('should return the datasets of Default project', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.simpleEntity)
-          .set('Content-Type', 'application/xml')
-          .expect(200)
-          .then(() =>
-            asAlice.get('/v1/projects/1/datasets')
-              .expect(200)
-              .then(({ body }) => {
-                body.map(({ id, createdAt, ...d }) => d).should.eql([
-                  { name: 'people', projectId: 1, revisionNumber: 0 }
-                ]);
-              })))));
-
-    it('should not return draft datasets', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
-          .send(testData.forms.simpleEntity)
-          .set('Content-Type', 'application/xml')
-          .expect(200)
-          .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
-            .send(testData.forms.simpleEntity
-              .replace(/simpleEntity/, 'simpleEntity2')
-              .replace(/people/, 'student'))
-            .expect(200)
-            .then(() =>
-              asAlice.get('/v1/projects/1/datasets')
-                .expect(200)
-                .then(({ body }) => {
-                  body.map(({ id, createdAt, ...d }) => d).should.eql([
-                    { name: 'student', projectId: 1, revisionNumber: 0 }
-                  ]);
-                }))))));
-  });
 });
 
 // Nested extended forms
 describe('api: /projects?forms=true', () => {
   describe('GET', () => {
-    it('should return projects with verbs and nested extended forms', testService((service) =>
-      service.login('alice', (asAlice) => asAlice.get('/v1/projects?forms=true')
+    it('should return projects with verbs and nested extended forms', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: projects } = await asAlice.get('/v1/projects?forms=true')
+        .expect(200);
+      projects.length.should.equal(1);
+      projects[0].should.be.a.Project();
+      const { body: admin } = await asAlice.get('/v1/roles/admin').expect(200);
+      projects[0].verbs.should.eqlInAnyOrder(admin.verbs);
+      const { formList } = projects[0];
+      formList.length.should.equal(2);
+      const form = formList[0];
+      form.should.be.a.ExtendedForm();
+      form.name.should.equal('Simple');
+      form.reviewStates.received.should.equal(0);
+    }));
+
+    it('should return projects with datasets', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.get('/v1/projects?datasets=true')
         .expect(200)
         .then(({ body }) => {
-          body.length.should.equal(1);
-          body[0].should.be.a.Project();
-          const { formList, verbs } = body[0];
-          verbs.length.should.equal(42);
-          formList.length.should.equal(2);
-          const form = formList[0];
-          form.should.be.a.ExtendedForm();
-          form.name.should.equal('Simple');
-          form.reviewStates.received.should.equal(0);
-        }))));
+          body[0].datasetList.length.should.equal(1);
+          body[0].datasetList[0].name.should.equal('people');
+          body[0].datasetList[0].should.be.an.ExtendedDataset();
+        });
+    }));
+
+    it('should return projects with forms and datasets', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.get('/v1/projects?datasets=true&forms=true')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].datasetList.length.should.equal(1);
+          body[0].formList.length.should.equal(3);
+        });
+    }));
 
     it('should not return projects/forms not assigned to user', testService((service) =>
       service.login('chelsea', (asChelsea) => asChelsea.get('/v1/projects?forms=true')
@@ -1349,6 +1460,22 @@ describe('api: /projects?forms=true', () => {
         .then(({ body }) => {
           body.length.should.equal(0);
         }))));
+
+    it('should not return projects/datasets not assigned to user', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const asChelsea = await service.login('chelsea');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asChelsea.get('/v1/projects?datasets=true')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(0);
+        });
+    }));
 
     it('should return all forms including drafts to managers and above', testService((service) =>
       service.login('alice', (asAlice) => asAlice.post('/v1/projects/1/forms')
@@ -1376,6 +1503,25 @@ describe('api: /projects?forms=true', () => {
             formList.length.should.equal(2);
           }))))));
 
+    it('should not return datasets to data collectors', testService(async (service, { Users }) => {
+      const asAlice = await service.login('alice');
+      const asChelsea = await service.login('chelsea');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      const chelsea = await Users.getByEmail('chelsea@getodk.org').then((o) => o.get());
+      await asAlice.post(`/v1/projects/1/assignments/formfill/${chelsea.actorId}`);
+
+      await asChelsea.get('/v1/projects?datasets=true')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].datasetList.length.should.equal(0);
+        });
+    }));
+
     // project 1: 2 published forms, bob = manager
     // project 2: 1 published, 1 draft, bob = data collector
     it('should return multiple projects with forms', testService((service, { Users }) =>
@@ -1393,18 +1539,22 @@ describe('api: /projects?forms=true', () => {
             .expect(200))
           .then(() => Users.getByEmail('bob@getodk.org').then((o) => o.get()))
           .then((bob) => asAlice.post(`/v1/projects/${body.id}/assignments/formfill/${bob.actorId}`)))
-        .then(() => service.login('bob', (asBob) => asBob.get('/v1/projects?forms=true')
-          .expect(200)
-          .then(({ body }) => {
-            body.length.should.equal(2);
-            // First project
-            body[0].formList.length.should.equal(2);
-            body[0].verbs.length.should.equal(27);
-            // Second project
-            body[1].formList.length.should.equal(1);
-            body[1].verbs.length.should.be.lessThan(5); // 4 for data collector
-            body[1].formList[0].name.should.equal('Simple 2');
-          }))))));
+        .then(() => service.login('bob', (asBob) =>
+          Promise.all([
+            asBob.get('/v1/projects?forms=true').expect(200),
+            asBob.get('/v1/roles/manager').expect(200),
+            asBob.get('/v1/roles/formfill').expect(200)
+          ])
+            .then(([{ body }, { body: manager }, { body: formfill }]) => {
+              body.length.should.equal(2);
+              // First project
+              body[0].formList.length.should.equal(2);
+              body[0].verbs.should.eqlInAnyOrder(manager.verbs);
+              // Second project
+              body[1].formList.length.should.equal(1);
+              body[1].verbs.should.eqlInAnyOrder(formfill.verbs);
+              body[1].formList[0].name.should.equal('Simple 2');
+            }))))));
 
     it('should set project data from formList even on non-extended projects', testService((service) =>
       service.login('alice', (asAlice) => asAlice.post('/v1/projects/1/forms/simple/submissions')
@@ -1429,6 +1579,61 @@ describe('api: /projects?forms=true', () => {
             form.reviewStates.received.should.equal(2);
           })))));
 
+    it('should set project data from datasetList even on non-extended projects', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.multiPropertyEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          label: 'Johnny Doe',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/foo/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111bbb',
+          label: 'Johnny Doe',
+          data: {
+            b_q1: 'Johnny'
+          }
+        })
+        .expect(200);
+
+      await createConflict(asAlice, container);
+
+      await asAlice.get('/v1/projects?datasets=true')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+          const project = body[0];
+          project.should.be.a.Project();
+          project.datasets.should.equal(2);
+          project.lastEntity.should.be.eql(body[0].datasetList[1].lastEntity);
+          const dataset = body[0].datasetList[0];
+          dataset.should.be.a.ExtendedDataset();
+          dataset.name.should.equal('foo');
+
+          body[0].datasetList[1].conflicts.should.equal(1);
+        });
+    }));
+
     it('should return verbs for multiple roles', testService((service) =>
       service.login('alice', (asAlice) =>
         service.login('chelsea', (asChelsea) =>
@@ -1444,21 +1649,21 @@ describe('api: /projects?forms=true', () => {
                 body.length.should.equal(1);
                 const { verbs } = body[0];
                 verbs.should.eqlInAnyOrder([
-                  // eslint-disable-next-line no-multi-spaces
-                  'form.list',         // from role(s): formfill, viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'form.read',         // from role(s): formfill, viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'project.read',      // from role(s): formfill, viewer
-                  'submission.create', // from role(s): formfill
-                  // eslint-disable-next-line no-multi-spaces
-                  'submission.list',   // from role(s): viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'submission.read',   // from role(s): viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'dataset.list',     // from role(s): viewer
-                  // eslint-disable-next-line no-multi-spaces
-                  'entity.list'      // from role(s): viewer
+                  // following roles from formfill + viewer:
+                  'project.read',
+                  // following roles from formfill only:
+                  'open_form.list',
+                  'open_form.read',
+                  'submission.create',
+                  // following roles from viewer only:
+                  'form.list',
+                  'form.read',
+                  'submission.read',
+                  'submission.list',
+                  'dataset.list',
+                  'dataset.read',
+                  'entity.list',
+                  'entity.read'
                 ]);
               }))))));
   });
@@ -1489,21 +1694,22 @@ describe('api: /projects?forms=true', () => {
             const project = body[0];
             project.id.should.equal(1);
             project.verbs.should.eqlInAnyOrder([
-              // eslint-disable-next-line no-multi-spaces
-              'project.read',     // from role(s): viewer
-              // eslint-disable-next-line no-multi-spaces
-              'form.list',        // from role(s): viewer
-              // eslint-disable-next-line no-multi-spaces
-              'form.read',        // from role(s): viewer, app-user
-              // eslint-disable-next-line no-multi-spaces
-              'submission.read',  // from role(s): viewer
-              // eslint-disable-next-line no-multi-spaces
-              'submission.list',  // from role(s): viewer
-              'submission.create', // from role(s): app-user
-              // eslint-disable-next-line no-multi-spaces
-              'dataset.list',  // from role(s): viewer
-              // eslint-disable-next-line no-multi-spaces
-              'entity.list'   // from role(s): viewer
+              // following roles from app-user + viewer:
+              //none
+
+              // following roles from app-user only:
+              'open_form.read',
+              'submission.create',
+              // following roles from viewer only:
+              'project.read',
+              'form.list',
+              'form.read',
+              'submission.read',
+              'submission.list',
+              'dataset.list',
+              'dataset.read',
+              'entity.list',
+              'entity.read'
             ]);
           }))))));
 });

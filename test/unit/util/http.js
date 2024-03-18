@@ -1,6 +1,5 @@
 const should = require('should');
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require
 const http = require(appRoot + '/lib/util/http');
 
 describe('util/http', () => {
@@ -18,6 +17,25 @@ describe('util/http', () => {
       isTrue('').should.equal(false);
       isTrue(null).should.equal(false);
       isTrue(undefined).should.equal(false);
+      isTrue(2).should.equal(false);
+    });
+  });
+
+  describe('isFalse', () => {
+    const { isFalse } = http;
+    it('should return true for falsey strings', () => {
+      isFalse('FALSE').should.equal(true);
+      isFalse('False').should.equal(true);
+      isFalse('false').should.equal(true);
+    });
+
+    it('should return false for all other values', () => {
+      isFalse('no').should.equal(false);
+      isFalse('off').should.equal(false);
+      isFalse('').should.equal(false);
+      isFalse(null).should.equal(false);
+      isFalse(undefined).should.equal(false);
+      isFalse(2).should.equal(false);
     });
   });
 

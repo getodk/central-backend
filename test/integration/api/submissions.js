@@ -1,14 +1,13 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const uuid = require('uuid/v4');
+const uuid = require('uuid').v4;
 const { sql } = require('slonik');
 const { createReadStream, readFileSync } = require('fs');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { pZipStreamToFiles } = require('../../util/zip');
-// eslint-disable-next-line import/no-dynamic-require
+const { map } = require('ramda');
 const { Form } = require(appRoot + '/lib/model/frames');
-// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 // utilities used for versioning instances
@@ -82,7 +81,10 @@ describe('api: /submission', () => {
         asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
           .attach('xml_submission_file', Buffer.from('<data id="simple" version="-1"><orx:meta><orx:instanceID>one</orx:instanceID></orx:meta></data>'), { filename: 'data.xml' })
-          .expect(404))));
+          .expect(404)
+          .then(({ text }) => {
+            text.should.match(/The form version specified in this submission/);
+          }))));
 
     it('should save the submission to the appropriate form', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -218,6 +220,44 @@ describe('api: /submission', () => {
                   { name: 'my_file1.mp4', exists: true }
                 ]);
               }))))));
+
+    it('should save attachments with unicode / non-english char', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.unicode), { filename: 'data.xml' })
+        .attach('fîlé2', Buffer.from('this is test file one'), { filename: 'fîlé2.bin' })
+        .attach('f😂le3صادق', Buffer.from('this is test file two'), { filename: 'f😂le3صادق' })
+        .expect(201);
+
+      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql([
+            { name: 'fîlé2', exists: true },
+            { name: 'f😂le3صادق', exists: true }
+          ]);
+        });
+
+      await asAlice.get(`/v1/projects/1/forms/binaryType/submissions/both/attachments/${encodeURI('fîlé2')}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.toString('utf8').should.be.eql('this is test file one');
+        });
+
+      await asAlice.get(`/v1/projects/1/forms/binaryType/submissions/both/attachments/${encodeURI('f😂le3صادق')}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.toString('utf8').should.be.eql('this is test file two');
+        });
+
+    }));
 
     it('should not fail given identical attachments', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -410,8 +450,12 @@ describe('api: /submission', () => {
               .then(({ headers, body }) => {
                 headers['content-type'].should.equal('video/mp4');
                 headers['content-disposition'].should.equal('attachment; filename="my_file1.mp4"; filename*=UTF-8\'\'my_file1.mp4');
+                headers['etag'].should.equal('"75f5701abfe7de8202cecaa0ca753f29"'); // eslint-disable-line dot-notation
                 body.toString('utf8').should.equal('this is test file one');
-              }))))));
+              }))
+            .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+              .set('If-None-Match', '"75f5701abfe7de8202cecaa0ca753f29"')
+              .expect(304))))));
 
     it('should successfully save additionally POSTed attachment binary data', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -434,8 +478,12 @@ describe('api: /submission', () => {
                 .then(({ headers, body }) => {
                   headers['content-type'].should.equal('image/jpeg');
                   headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+                  headers['etag'].should.equal('"25bdb03b7942881c279788575997efba"'); // eslint-disable-line dot-notation
                   body.toString('utf8').should.equal('this is test file two');
-                })))))));
+                }))
+              .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
+                .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
+                .expect(304)))))));
 
     it('should accept encrypted submissions, with attachments', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -542,7 +590,8 @@ describe('api: /submission', () => {
                 body.value[0].name.should.equal('Alyssa');
               })))));
 
-      it('should accept submission update for a closing form', testService((service) =>
+      // TODO should be re-instated as part of https://github.com/getodk/central-backend/issues/469
+      it.skip('should accept submission update for a closing form', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/submission')
             .set('X-OpenRosa-Version', '1.0')
@@ -560,7 +609,8 @@ describe('api: /submission', () => {
                 body.value[0].name.should.equal('Alyssa');
               })))));
 
-      it('should accept submission update for a closed form', testService((service) =>
+      // TODO should be re-instated as part of https://github.com/getodk/central-backend/issues/469
+      it.skip('should accept submission update for a closed form', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/submission')
             .set('X-OpenRosa-Version', '1.0')
@@ -709,7 +759,8 @@ describe('api: /submission', () => {
                 .expect(404)
             ]))))));
 
-    it('should save a submission for the draft of a closing form', testService((service) =>
+    // TODO should be re-instated as part of https://github.com/getodk/central-backend/issues/469
+    it.skip('should save a submission for the draft of a closing form', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple')
           .send({ state: 'closing' })
@@ -737,7 +788,8 @@ describe('api: /submission', () => {
                 .expect(404)
             ]))))));
 
-    it('should save a submission for the draft of a closed form', testService((service) =>
+    // TODO should be re-instated as part of https://github.com/getodk/central-backend/issues/469
+    it.skip('should save a submission for the draft of a closed form', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple')
           .send({ state: 'closed' })
@@ -928,7 +980,11 @@ describe('api: /forms/:id/submissions', () => {
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(Buffer.from('<data id="simple" version="-1"><meta><instanceID>one</instanceID></meta></data>'))
           .set('Content-Type', 'text/xml')
-          .expect(404))));
+          .expect(404)
+          .then(({ body }) => {
+            body.code.should.equal(404.6);
+            body.message.should.match(/The form version specified in this submission/);
+          }))));
 
     it('should submit if all details are provided', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -1085,6 +1141,15 @@ describe('api: /forms/:id/submissions', () => {
             asAlice.get('/v1/projects/1/forms/simple/submissions/one').expect(404),
             asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one').expect(200)
           ])))));
+
+    it('should accept even if the version in the submission is wrong', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(Buffer.from('<data id="simple" version="-1"><meta><instanceID>one</instanceID></meta></data>'))
+            .set('Content-Type', 'application/xml')
+            .expect(200)))));
   });
 
   describe('/:instanceId PUT', () => {
@@ -1112,11 +1177,21 @@ describe('api: /forms/:id/submissions', () => {
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'application/xml')
+          .set('user-agent', 'node1')
           .expect(200)
           .then(() => asAlice.put('/v1/projects/1/forms/simple/submissions/one')
             .set('Content-Type', 'text/xml')
             .send(withSimpleIds('one', 'two'))
-            .expect(200))
+            .set('user-agent', 'node2')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.a.Submission();
+              body.instanceId.should.be.eql('one');
+              body.currentVersion.instanceId.should.be.eql('two');
+
+              body.userAgent.should.be.eql('node1');
+              body.currentVersion.userAgent.should.be.eql('node2');
+            }))
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one.xml')
             .expect(200)
             .then(({ text }) => { text.should.equal(withSimpleIds('one', 'two')); })))));
@@ -1227,11 +1302,12 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/edit')
             .expect(302))
           .then(() => {
-            global.enketoEditData.openRosaUrl.should.equal('http://localhost:8989/v1/projects/1');
-            global.enketoEditData.domain.should.equal('http://localhost:8989');
-            global.enketoEditData.logicalId.should.equal('both');
-            global.enketoEditData.attachments.length.should.equal(2);
-            global.enketoEditData.token.should.be.a.token();
+            const { editData } = global.enketo;
+            editData.openRosaUrl.should.equal('http://localhost:8989/v1/projects/1');
+            editData.domain.should.equal('http://localhost:8989');
+            editData.logicalId.should.equal('both');
+            editData.attachments.length.should.equal(2);
+            editData.token.should.be.a.token();
           }))));
   });
 
@@ -1306,34 +1382,35 @@ describe('api: /forms/:id/submissions', () => {
               result['simple.csv'].should.be.a.SimpleCsv();
             })))));
 
-    it('should include all repeat rows @slow', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(`
+    it('should include all repeat rows @slow', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(`
 <?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
 <h:head><h:title>single-repeat-1-instance-10qs</h:title><model odk:xforms-version="1.0.0">
 <instance><data id="single-repeat-1-instance-10qs"><q1/><q2/><q3/><q4/><q5/><q6/><q7/><q8/><q9/><q10/><q11/><q12/><q13/><q14/><q15/><q16/><q17/><q18/><q19/><q20/><q21/><repeat jr:template=""><q22/><q23/><q24/><q25/><q26/><q27/><q28/><q29/><q30/><q31/><q32/><q33/><q34/><q35/><q36/><q37/><q38/><q39/><q40/><q41/></repeat><repeat><q22/><q23/><q24/><q25/><q26/><q27/><q28/><q29/><q30/><q31/><q32/><q33/><q34/><q35/><q36/><q37/><q38/><q39/><q40/><q41/></repeat><q42/><q43/><q44/><q45/><q46/><q47/><q48/><q49/><q50/><meta><instanceID/></meta></data></instance>
 <bind nodeset="/data/q1" type="string"/><bind nodeset="/data/q2" type="string"/><bind nodeset="/data/q3" type="string"/><bind nodeset="/data/q4" type="string"/><bind nodeset="/data/q5" type="string"/><bind nodeset="/data/q6" type="string"/><bind nodeset="/data/q7" type="string"/><bind nodeset="/data/q8" type="string"/><bind nodeset="/data/q9" type="string"/><bind nodeset="/data/q10" type="string"/><bind nodeset="/data/q11" type="string"/><bind nodeset="/data/q12" type="string"/><bind nodeset="/data/q13" type="string"/><bind nodeset="/data/q14" type="string"/><bind nodeset="/data/q15" type="string"/><bind nodeset="/data/q16" type="string"/><bind nodeset="/data/q17" type="string"/><bind nodeset="/data/q18" type="string"/><bind nodeset="/data/q19" type="string"/><bind nodeset="/data/q20" type="string"/><bind nodeset="/data/q21" type="string"/><bind nodeset="/data/repeat/q22" type="string"/><bind nodeset="/data/repeat/q23" type="string"/><bind nodeset="/data/repeat/q24" type="string"/><bind nodeset="/data/repeat/q25" type="string"/><bind nodeset="/data/repeat/q26" type="string"/><bind nodeset="/data/repeat/q27" type="string"/><bind nodeset="/data/repeat/q28" type="string"/><bind nodeset="/data/repeat/q29" type="string"/><bind nodeset="/data/repeat/q30" type="string"/><bind nodeset="/data/repeat/q31" type="string"/><bind nodeset="/data/repeat/q32" type="string"/><bind nodeset="/data/repeat/q33" type="string"/><bind nodeset="/data/repeat/q34" type="string"/><bind nodeset="/data/repeat/q35" type="string"/><bind nodeset="/data/repeat/q36" type="string"/><bind nodeset="/data/repeat/q37" type="string"/><bind nodeset="/data/repeat/q38" type="string"/><bind nodeset="/data/repeat/q39" type="string"/><bind nodeset="/data/repeat/q40" type="string"/><bind nodeset="/data/repeat/q41" type="string"/><bind nodeset="/data/q42" type="string"/><bind nodeset="/data/q43" type="string"/><bind nodeset="/data/q44" type="string"/><bind nodeset="/data/q45" type="string"/><bind nodeset="/data/q46" type="string"/><bind nodeset="/data/q47" type="string"/><bind nodeset="/data/q48" type="string"/><bind nodeset="/data/q49" type="string"/><bind nodeset="/data/q50" type="string"/><bind jr:preload="uid" nodeset="/data/meta/instanceID" readonly="true()" type="string"/></model></h:head>
 <h:body><input ref="/data/q1"><label>Q1</label></input><input ref="/data/q2"><label>Q2</label></input><input ref="/data/q3"><label>Q3</label></input><input ref="/data/q4"><label>Q4</label></input><input ref="/data/q5"><label>Q5</label></input><input ref="/data/q6"><label>Q6</label></input><input ref="/data/q7"><label>Q7</label></input><input ref="/data/q8"><label>Q8</label></input><input ref="/data/q9"><label>Q9</label></input><input ref="/data/q10"><label>Q10</label></input><input ref="/data/q11"><label>Q11</label></input><input ref="/data/q12"><label>Q12</label></input><input ref="/data/q13"><label>Q13</label></input><input ref="/data/q14"><label>Q14</label></input><input ref="/data/q15"><label>Q15</label></input><input ref="/data/q16"><label>Q16</label></input><input ref="/data/q17"><label>Q17</label></input><input ref="/data/q18"><label>Q18</label></input><input ref="/data/q19"><label>Q19</label></input><input ref="/data/q20"><label>Q20</label></input><input ref="/data/q21"><label>Q21</label></input><group ref="/data/repeat"><label>Repeat</label><repeat nodeset="/data/repeat"><input ref="/data/repeat/q22"><label>Q22</label></input><input ref="/data/repeat/q23"><label>Q23</label></input><input ref="/data/repeat/q24"><label>Q24</label></input><input ref="/data/repeat/q25"><label>Q25</label></input><input ref="/data/repeat/q26"><label>Q26</label></input><input ref="/data/repeat/q27"><label>Q27</label></input><input ref="/data/repeat/q28"><label>Q28</label></input><input ref="/data/repeat/q29"><label>Q29</label></input><input ref="/data/repeat/q30"><label>Q30</label></input><input ref="/data/repeat/q31"><label>Q31</label></input><input ref="/data/repeat/q32"><label>Q32</label></input><input ref="/data/repeat/q33"><label>Q33</label></input><input ref="/data/repeat/q34"><label>Q34</label></input><input ref="/data/repeat/q35"><label>Q35</label></input><input ref="/data/repeat/q36"><label>Q36</label></input><input ref="/data/repeat/q37"><label>Q37</label></input><input ref="/data/repeat/q38"><label>Q38</label></input><input ref="/data/repeat/q39"><label>Q39</label></input><input ref="/data/repeat/q40"><label>Q40</label></input><input ref="/data/repeat/q41"><label>Q41</label></input></repeat></group><input ref="/data/q42"><label>Q42</label></input><input ref="/data/q43"><label>Q43</label></input><input ref="/data/q44"><label>Q44</label></input><input ref="/data/q45"><label>Q45</label></input><input ref="/data/q46"><label>Q46</label></input><input ref="/data/q47"><label>Q47</label></input><input ref="/data/q48"><label>Q48</label></input><input ref="/data/q49"><label>Q49</label></input><input ref="/data/q50"><label>Q50</label></input></h:body></h:html>`)
-          .set('Content-Type', 'text/xml')
-          .expect(200)
-          .then(() => Promise.all((new Array(50)).fill(null).map(() =>
-            asAlice.post('/v1/projects/1/forms/single-repeat-1-instance-10qs/submissions')
-              .send(`<data id="single-repeat-1-instance-10qs">
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+      for (let i = 0; i < 50; i += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        await asAlice.post('/v1/projects/1/forms/single-repeat-1-instance-10qs/submissions')
+          .send(`<data id="single-repeat-1-instance-10qs">
   <meta><instanceID>${uuid()}</instanceID></meta>
   ${[ 1, 2, 3, 4, 5, 6, 7, 8, 9 ].map((q) => `<q${q}>${uuid()}</q${q}>`).join('')}
   <repeat>${[ 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 ].map((q) => `<q${q}>${uuid()}</q${q}>`).join('')}</repeat>
   ${[ 42, 43, 44, 45, 46, 47, 48, 49, 50 ].map((q) => `<q${q}>${uuid()}</q${q}>`).join('')}
   </data>`)
-              .set('Content-Type', 'text/xml')
-              .expect(200)))
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/single-repeat-1-instance-10qs/submissions.csv.zip'))
-              .then((result) => {
-                result.filenames.should.eql([ 'single-repeat-1-instance-10qs.csv', 'single-repeat-1-instance-10qs-repeat.csv' ]);
-                result['single-repeat-1-instance-10qs.csv'].split('\n').length.should.equal(52);
-                result['single-repeat-1-instance-10qs-repeat.csv'].split('\n').length.should.equal(52);
-              }))))));
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+      }
+      const result = await pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/single-repeat-1-instance-10qs/submissions.csv.zip'));
+      result.filenames.should.eql([ 'single-repeat-1-instance-10qs.csv', 'single-repeat-1-instance-10qs-repeat.csv' ]);
+      result['single-repeat-1-instance-10qs.csv'].split('\n').length.should.equal(52);
+      result['single-repeat-1-instance-10qs-repeat.csv'].split('\n').length.should.equal(52);
+    }));
 
     it('should not include data from other forms', testService((service) =>
       service.login('alice', (asAlice) => Promise.all([
@@ -1571,11 +1648,11 @@ describe('api: /forms/:id/submissions', () => {
             .then((result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
               const lines = result['selectMultiple.csv'].split('\n');
-              lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+              lines[0].should.equal('SubmissionDate,meta-instanceID,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0,');
+                .should.equal(',two,b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0,');
               lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0,');
+                .should.equal(',one,a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0,');
             })))));
 
     it('should omit multiples it does not know about', testService((service) =>
@@ -1593,11 +1670,11 @@ describe('api: /forms/:id/submissions', () => {
             .then((result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
               const lines = result['selectMultiple.csv'].split('\n');
-              lines[0].should.equal('SubmissionDate,q1,g1-q2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+              lines[0].should.equal('SubmissionDate,meta-instanceID,q1,g1-q2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',b,m x,two,5,Alice,0,0,,,,0,');
+                .should.equal(',two,b,m x,two,5,Alice,0,0,,,,0,');
               lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',a b,x y z,one,5,Alice,0,0,,,,0,');
+                .should.equal(',one,a b,x y z,one,5,Alice,0,0,,,,0,');
             })))));
 
     it('should split select multiples and filter given both options', testService((service, container) =>
@@ -1631,7 +1708,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
             .set('Content-Type', 'application/xml')
             .send(testData.instances.simple.two))
-          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
             .set('Content-Type', 'application/xml')
             .send(`
               <?xml version="1.0"?>
@@ -1737,11 +1814,11 @@ describe('api: /forms/:id/submissions', () => {
             .then((result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
               const lines = result['selectMultiple.csv'].split('\n');
-              lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,q2,q2/m,q2/x,q2/y,q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+              lines[0].should.equal('SubmissionDate,instanceID,q1,q1/a,q1/b,q2,q2/m,q2/x,q2/y,q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0,');
+                .should.equal(',two,b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0,');
               lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0,');
+                .should.equal(',one,a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0,');
             })))));
 
     it('should properly count present attachments', testService((service) =>
@@ -1789,10 +1866,8 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => exhaust(container))
           .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
             .then((result) => {
-              result.filenames.should.containDeep([
+              result.filenames.should.eql([
                 'audits.csv',
-                'media/audit.csv',
-                'media/log.csv',
                 'audits - audit.csv'
               ]);
 
@@ -1828,10 +1903,8 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(201))
           .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
             .then((result) => {
-              result.filenames.should.containDeep([
+              result.filenames.should.eql([
                 'audits.csv',
-                'media/audit.csv',
-                'media/log.csv',
                 'audits - audit.csv'
               ]);
 
@@ -1866,9 +1939,8 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .expect(201))
             .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip?$filter=__system/submitterId eq 5'))
               .then((result) => {
-                result.filenames.should.containDeep([
+                result.filenames.should.eql([
                   'audits.csv',
-                  'media/audit.csv',
                   'audits - audit.csv'
                 ]);
 
@@ -1903,9 +1975,8 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
             .expect(201))
           .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip?$filter=__system/reviewState eq \'approved\''))
             .then((result) => {
-              result.filenames.should.containDeep([
+              result.filenames.should.eql([
                 'audits.csv',
-                'media/audit.csv',
                 'audits - audit.csv'
               ]);
 
@@ -1939,9 +2010,8 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
             .expect(200)
             .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
               .then((result) => {
-                result.filenames.should.containDeep([
+                result.filenames.should.eql([
                   'audits.csv',
-                  'media/audit.csv',
                   'audits - audit.csv'
                 ]);
 
@@ -1972,9 +2042,8 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200)
             .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
               .then((result) => {
-                result.filenames.should.containDeep([
+                result.filenames.should.eql([
                   'audits.csv',
-                  'media/audit.csv',
                   'audits - audit.csv'
                 ]);
 
@@ -2001,9 +2070,8 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200)
             .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
               .then((result) => {
-                result.filenames.should.containDeep([
+                result.filenames.should.eql([
                   'audits.csv',
-                  'media/audit.csv',
                   'audits - audit.csv'
                 ]);
 
@@ -2031,9 +2099,8 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
             .expect(200)
             .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
               .then((result) => {
-                result.filenames.should.containDeep([
+                result.filenames.should.eql([
                   'audits.csv',
-                  'media/audit.csv',
                   'audits - audit.csv'
                 ]);
 
@@ -2070,9 +2137,8 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
               .expect(200)
               .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
                 .then((result) => {
-                  result.filenames.should.containDeep([
+                  result.filenames.should.eql([
                     'audits.csv',
-                    'media/audit.csv',
                     'audits - audit.csv'
                   ]);
 
@@ -2182,11 +2248,11 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             // eslint-disable-next-line no-multi-spaces
             .then(({ text }) =>  {
               const lines = text.split('\n');
-              lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+              lines[0].should.equal('SubmissionDate,meta-instanceID,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0,');
+                .should.equal(',two,b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0,');
               lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0,');
+                .should.equal(',one,a b,1,1,x y z,0,1,1,1,one,5,Alice,0,0,,,,0,');
             })))));
 
     it('should omit group paths if ?groupPaths=false is given', testService((service) =>
@@ -2211,6 +2277,125 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               body[0].actee.xmlFormId.should.equal('simple');
               should.not.exist(body[0].details);
             })))));
+
+    describe('different versions of form schema', () => {
+      it('should export deleted fields and values if ?deletedFields=true', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .set('Content-Type', 'application/xml')
+            .send(testData.instances.simple.one)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+              .set('Content-Type', 'application/xml')
+              .send(testData.instances.simple.two))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+              .set('Content-Type', 'application/xml')
+              .send(`
+                <?xml version="1.0"?>
+                <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+                  <h:head>
+                    <model>
+                      <instance>
+                        <data id="simple" version="2">
+                          <meta><instanceID/></meta>
+                          <name/>
+                        </data>
+                      </instance>
+                      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+                      <bind nodeset="/data/name" type="string"/>
+                    </model>
+                  </h:head>
+                </h:html>`)
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish').expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft').expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=3').expect(200)) // introduce a new version with same schema as before
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+              .set('Content-Type', 'application/xml')
+              .send(testData.instances.simple.three.replace('id="simple"', 'id="simple" version="3"')))
+            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?deletedFields=true'))
+              .then((result) => {
+                result.filenames.should.containDeep([ 'simple.csv' ]);
+                const lines = result['simple.csv'].split('\n');
+                lines[0].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+                lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                  .should.equal(',three,Chelsea,38,three,5,Alice,0,0,,,,0,3');
+                lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                  .should.equal(',two,Bob,34,two,5,Alice,0,0,,,,0,');
+                lines[3].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                  .should.equal(',one,Alice,30,one,5,Alice,0,0,,,,0,');
+              })))));
+
+      it('should split select multiple values if ?splitSelectMultiples=true', testService((service, container) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.selectMultiple)
+            .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/draft').expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/draft/publish?version=2').expect(200)) // introduce a new version with same schema as before
+            .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/draft?ignoreWarnings=true')
+              .set('Content-Type', 'application/xml')
+              .send(`
+                <?xml version="1.0"?>
+                <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+                  <h:head>
+                    <model>
+                      <instance>
+                        <data id="selectMultiple" version='3'>
+                          <meta><instanceID/></meta>
+                          <q1/>
+                          <g1><q2/></g1>
+                          <q3/>
+                        </data>
+                      </instance>
+                      <bind nodeset="/data/meta/instanceID" type="string"/>
+                      <bind nodeset="/data/q1" type="string"/>
+                      <bind nodeset="/data/g1/q2" type="string"/>
+                      <bind nodeset="/data/q3" type="string"/>
+                    </model>
+                  </h:head>
+                  <h:body>
+                    <select ref="/data/q1"><label>one</label></select>
+                    <group ref="/data/g1">
+                      <label>group</label>
+                      <select ref="/data/g1/q2"><label>two</label></select>
+                    </group>
+                    <select ref="/data/q3"><label>three</label></select>
+                  </h:body>
+                </h:html>`)
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/draft/publish').expect(200)) // new different schema
+            .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+              .set('Content-Type', 'application/xml')
+              .send(testData.instances.selectMultiple.one))
+            .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+              .set('Content-Type', 'application/xml')
+              .send(testData.instances.selectMultiple.two))
+            .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+              .set('Content-Type', 'application/xml')
+              .send(`
+                <data id="selectMultiple" version="3">
+                  <orx:meta><orx:instanceID>three</orx:instanceID></orx:meta>
+                  <q1>a b</q1>
+                  <g1>
+                    <q2>m</q2>
+                  </g1>
+                  <q3>z</q3>
+                </data>
+              `).expect(200))
+            .then(() => exhaust(container))
+            .then(() => asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv?splitSelectMultiples=true')
+              .expect(200)
+              .then(({ text }) => {
+                const lines = text.split('\n');
+                lines[0].should.equal('SubmissionDate,meta-instanceID,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,q3,q3/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+                lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                  .should.equal(',three,a b,1,1,m,1,0,0,0,z,1,three,5,Alice,0,0,,,,0,3');
+                lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                  .should.equal(',two,b,0,1,m x,1,1,0,0,,0,two,5,Alice,0,0,,,,0,');
+                lines[3].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
+                  .should.equal(',one,a b,1,1,x y z,0,1,1,1,,0,one,5,Alice,0,0,,,,0,');
+              })))));
+    });
   });
 
   describe('[draft] .csv.zip', () => {
@@ -2350,11 +2535,11 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .then((result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
               const lines = result['selectMultiple.csv'].split('\n');
-              lines[0].should.equal('SubmissionDate,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+              lines[0].should.equal('SubmissionDate,meta-instanceID,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',b,0,1,m x,1,1,0,0,two,,,0,0,,,,0,');
+                .should.equal(',two,b,0,1,m x,1,1,0,0,two,,,0,0,,,,0,');
               lines[2].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
-                .should.equal(',a b,1,1,x y z,0,1,1,1,one,,,0,0,,,,0,');
+                .should.equal(',one,a b,1,1,x y z,0,1,1,1,one,,,0,0,,,,0,');
             })))));
   });
 
@@ -2584,7 +2769,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .replace(/PublicKey="[a-z0-9+/]+"/i, 'PublicKey="keytwo"')
               .replace('working3', 'working4'))
           ]))
-          .then(([ form, partial ]) => Forms.createVersion(partial, form))
+          .then(([ form, partial ]) => Forms.createVersion(partial, form, false))
           .then(() => asAlice.get('/v1/projects/1/forms/encrypted/submissions/keys')
             .expect(200)
             .then(({ body }) => {
@@ -2792,7 +2977,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             asChelsea.get('/v1/projects/1/forms/simple/submissions/one/audits')
               .expect(403))))));
 
-    it('should return all audit logs on the submission', testService((service, { oneFirst }) =>
+    it('should return all audit logs on the submission', testService((service, { oneFirst, all }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
@@ -2806,19 +2991,37 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .set('Content-Type', 'text/xml')
             .expect(200))
           .then(() => oneFirst(sql`select id from submissions`))
-          .then((submissionId) => asAlice.get('/v1/projects/1/forms/simple/submissions/one/audits')
+          .then((submissionId) => all(sql`SELECT id FROM submission_defs WHERE "submissionId" = ${submissionId} ORDER BY id desc`)
+            .then(map(o => o.id))
+            .then(submissionDefIds => asAlice.get('/v1/projects/1/forms/simple/submissions/one/audits')
+              .expect(200)
+              .then(({ body }) => {
+                body.length.should.equal(3);
+                for (const audit of body) audit.should.be.an.Audit();
+                body[0].action.should.equal('submission.update.version');
+                body[0].details.should.eql({ instanceId: 'two', submissionId, submissionDefId: submissionDefIds[0] });
+                body[1].action.should.equal('submission.update');
+                body[1].details.reviewState.should.equal('rejected');
+                body[1].details.submissionId.should.equal(submissionId);
+                should.exist(body[1].details.submissionDefId);
+                body[2].action.should.equal('submission.create');
+                body[2].details.should.eql({ instanceId: 'one', submissionId, submissionDefId: submissionDefIds[1] });
+              }))))));
+
+    it('should not expand actor when not extended', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .expect(200)
+          .then(() => asAlice.patch('/v1/projects/1/forms/simple/submissions/one')
+            .send({ reviewState: 'rejected' })
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/audits')
             .expect(200)
             .then(({ body }) => {
-              body.length.should.equal(3);
-              for (const audit of body) audit.should.be.an.Audit();
-              body[0].action.should.equal('submission.update.version');
-              body[0].details.should.eql({ instanceId: 'two', submissionId });
-              body[1].action.should.equal('submission.update');
-              body[1].details.reviewState.should.equal('rejected');
-              body[1].details.submissionId.should.equal(submissionId);
-              should.exist(body[1].details.submissionDefId);
-              body[2].action.should.equal('submission.create');
-              body[2].details.should.eql({ instanceId: 'one', submissionId });
+              should.not.exist(body[0].actor);
+              body[0].actorId.should.equal(5);
             })))));
 
     it('should expand actor on extended', testService((service) =>
@@ -2837,6 +3040,142 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               body[0].actor.should.be.an.Actor();
               body[0].actor.displayName.should.equal('Alice');
             })))));
+
+    describe('submission audits about entity events', () => {
+      it('should return full entity in details of an event about an entity', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .set('X-Extended-Metadata', true)
+          .expect(200)
+          .then(({ body }) => {
+            const entityCreate = body[0];
+            entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+            entityCreate.details.entity.should.be.an.Entity();
+            entityCreate.details.entity.currentVersion.should.be.an.EntityDef();
+          });
+      }));
+
+      it('should not return basic entity details when extended metadata not set', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body }) => {
+            const entityCreate = body[0];
+            entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+            entityCreate.details.entity.dataset.should.equal('people');
+            entityCreate.details.entity.should.not.have.property('currentVersion');
+          });
+      }));
+
+      it('should return updated entity in currentVersion', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+          .send({ label: 'New Label' })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .set('X-Extended-Metadata', true)
+          .expect(200)
+          .then(({ body }) => {
+            const entityCreate = body[0];
+            entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+            entityCreate.details.entity.currentVersion.label.should.equal('New Label');
+          });
+      }));
+
+      it('should return entity uuid and dataset only when entity is soft-deleted', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc');
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .set('X-Extended-Metadata', true)
+          .expect(200)
+          .then(({ body }) => {
+            const entityCreate = body[0];
+            entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+            entityCreate.details.entity.dataset.should.equal('people');
+            entityCreate.details.entity.should.not.have.property('currentVersion');
+            entityCreate.details.entity.should.not.be.an.Entity();
+          });
+      }));
+
+      it('should return entity uuid and dataset when entity is (manually) purged', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // cascade on delete isn't set up for entitites so let's ruthlessly delete all the entities
+        await container.run(sql`delete from entity_defs`);
+        await container.run(sql`delete from entities`);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .set('X-Extended-Metadata', true)
+          .expect(200)
+          .then(({ body }) => {
+            const entityCreate = body[0];
+            entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+            entityCreate.details.entity.dataset.should.equal('people');
+            entityCreate.details.entity.should.not.be.an.Entity();
+          });
+      }));
+    });
   });
 
   describe('/:instanceId.xml GET', () => {
@@ -3029,6 +3368,48 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               body.should.be.an.ExtendedSubmission();
               body.submitter.displayName.should.equal('Alice');
             })))));
+
+    // cb#858
+    it('should not mince object properties', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asBob.put('/v1/projects/1/forms/simple/submissions/one')
+        .set('Content-Type', 'text/xml')
+        .send(withSimpleIds('one', 'two'))
+        .expect(200);
+
+      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01' WHERE "displayName" = 'Alice'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01' WHERE "displayName" = 'Bob'`);
+
+      await container.run(sql`UPDATE submissions SET "createdAt" = '2022-01-01', "updatedAt" = '2023-01-01'`);
+
+      await container.run(sql`UPDATE submission_defs SET "createdAt" = '2022-01-01' WHERE "instanceId" = 'one'`);
+      await container.run(sql`UPDATE submission_defs SET "createdAt" = '2023-01-01' WHERE "instanceId" = 'two'`);
+
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.an.ExtendedSubmission();
+
+          body.createdAt.should.match(/2022/);
+          body.updatedAt.should.match(/2023/);
+
+          body.submitter.displayName.should.equal('Alice');
+          body.submitter.createdAt.should.match(/2020/);
+
+          body.currentVersion.createdAt.should.match(/2023/);
+
+          body.currentVersion.submitter.displayName.should.equal('Bob');
+          body.currentVersion.submitter.createdAt.should.match(/2021/);
+        });
+    }));
 
     it('should redirect to the version if the referenced instanceID is out of date', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -3810,11 +4191,12 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
         asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one.replace(/<\/meta>/, '<orx:instanceName>custom name</orx:instanceName></meta>'))
           .set('Content-Type', 'text/xml')
+          .set('User-Agent', 'central-tests/1')
           .expect(200)
           .then(() => asAlice.put('/v1/projects/1/forms/simple/submissions/one?deviceID=updateDevice')
             .send(withSimpleIds('one', 'two'))
             .set('Content-Type', 'text/xml')
-            .set('User-Agent', 'central/tests')
+            .set('User-Agent', 'central-tests/2')
             .expect(200))
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions')
             .expect(200)
@@ -3828,9 +4210,9 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               body[1].instanceName.should.equal('custom name');
 
               body[0].deviceId.should.equal('updateDevice');
-              body[0].userAgent.should.equal('central/tests');
               (body[1].deviceId == null).should.equal(true);
-              body[1].userAgent.should.equal('node-superagent/3.8.3');
+              body[0].userAgent.should.equal('central-tests/2');
+              body[1].userAgent.should.equal('central-tests/1');
             })))));
 
     it('should return extended submission details', testService((service) =>

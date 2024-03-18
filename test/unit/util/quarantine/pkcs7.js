@@ -1,6 +1,5 @@
 require('should');
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require
 const { ge, unpadPkcs7 } = require(appRoot + '/lib/util/quarantine/pkcs7');
 
 describe('crypto: pkcs7 padding decoding', () => {

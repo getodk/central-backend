@@ -5,9 +5,7 @@ const { writeFile, symlink } = require('fs');
 const { join } = require('path');
 const { exec } = require('child_process');
 const { identity } = require('ramda');
-// eslint-disable-next-line import/no-dynamic-require
 const { auditing, emailing } = require(appRoot + '/lib/task/task');
-// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
 const tmp = require('tmp');
 
@@ -21,17 +19,18 @@ describe('task: runner', () => {
     const Problem = require('./lib/util/problem');
     run(Promise.reject(Problem.internal.emptyResponse()));
   `;
-  const runScript = (script) => new Promise((resolve) => tmp.dir((_, dirpath) => {
-    const scriptPath = join(dirpath, 'script.js');
-    writeFile(scriptPath, script, () =>
-      symlink(join(appRoot.toString(), 'node_modules'), join(dirpath, 'node_modules'), () =>
-        symlink(join(appRoot.toString(), 'lib'), join(dirpath, 'lib'), () =>
-          exec(`${process.argv0} ${scriptPath}`, (error, stdout, stderr) =>
-            resolve([ error, stdout, stderr ])))));
-  }));
+  const runScript = (script) => new Promise((resolve) => {
+    tmp.dir((_, dirpath) => {
+      const scriptPath = join(dirpath, 'script.js');
+      writeFile(scriptPath, script, () =>
+        symlink(join(appRoot.toString(), 'node_modules'), join(dirpath, 'node_modules'), () =>
+          symlink(join(appRoot.toString(), 'lib'), join(dirpath, 'lib'), () =>
+            exec(`${process.argv0} ${scriptPath}`, (error, stdout, stderr) =>
+              resolve([error, stdout, stderr])))));
+    });
+  });
 
   it('should print success object to stdout', () => runScript(success)
-    // eslint-disable-next-line quotes
     .then(([ , stdout ]) => stdout.should.equal(`'{"test":"result"}'\n`)));
 
   it('should print failure details to stderr and exit nonzero', () => runScript(failure)
@@ -55,8 +54,8 @@ describe('task: auditing', () => {
     it('should fault but passthrough on log failure', testTask(({ Audits }) => {
       // hijack Audit.log to crash. new container is made for each test so we don't have
       // to restore a working one.
-      // eslint-disable-next-line prefer-promise-reject-errors, no-param-reassign
-      Audits.log = () => Promise.reject(false);
+      // eslint-disable-next-line no-param-reassign
+      Audits.log = () => Promise.reject(new Error());
       return auditing('testAction', Promise.resolve(true))
         .then((result) => {
           // too difficult to test stderr output.
@@ -81,12 +80,12 @@ describe('task: auditing', () => {
       // ditto above.
       // eslint-disable-next-line no-param-reassign
       Audits.log = () => Promise.reject(Problem.user.missingParameter({ field: 'test' }));
-      // eslint-disable-next-line prefer-promise-reject-errors
-      return auditing('testAction', Promise.reject(true))
+      return auditing('testAction', Promise.reject(new Error('uhoh')))
         .then(identity, (result) => {
           // too difficult to test stderr output.
           process.exitCode.should.equal(1);
-          result.should.equal(true);
+          result.should.be.instanceOf(Error);
+          result.message.should.equal('uhoh');
         });
     }));
   });
@@ -98,11 +97,11 @@ describe('task: emailing', () => {
       .then(() => { global.inbox.length.should.equal(0); })));
 
   it('should send an email on task failure', testTask(() =>
-    emailing('backupFailed', Promise.reject(Problem.user.missingParameter({ field: 'test' })))
+    emailing('accountReset', Promise.reject(Problem.user.missingParameter({ field: 'test' })))
       .then(identity, () => {
         const email = global.inbox.pop();
         email.to.should.eql([{ address: 'no-reply@getodk.org', name: '' }]);
-        email.subject.should.equal('ODK Central backup failed');
+        email.subject.should.equal('ODK Central account password reset');
       }).should.be.fulfilled()));
 });
 

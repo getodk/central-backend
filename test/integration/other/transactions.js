@@ -1,16 +1,10 @@
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
-// eslint-disable-next-line import/no-dynamic-require
 const { testContainerFullTrx } = require(appRoot + '/test/integration/setup');
-// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
-// eslint-disable-next-line import/no-dynamic-require
 const { Frame } = require(appRoot + '/lib/model/frame');
-// eslint-disable-next-line import/no-dynamic-require
 const { injector } = require(appRoot + '/lib/model/container');
-// eslint-disable-next-line import/no-dynamic-require
 const { endpointBase } = require(appRoot + '/lib/http/endpoint');
-// eslint-disable-next-line import/no-dynamic-require
 const { noop } = require(appRoot + '/lib/util/util');
 
 describe('transaction integration', () => {
@@ -42,7 +36,7 @@ describe('transaction integration', () => {
 });
 
 // resolves in ms ms
-const sometime = (ms) => new Promise((done) => setTimeout(done, ms));
+const sometime = (ms) => new Promise((done) => { setTimeout(done, ms); });
 
 describe('enketo worker transaction', () => {
   it('should not allow a write conflict @slow', testContainerFullTrx(async (container) => {
@@ -52,7 +46,7 @@ describe('enketo worker transaction', () => {
     await Audits.log(null, 'form.update.publish', simple);
 
     let flush;
-    global.enketoWait = (f) => { flush = f; };
+    global.enketo.wait = (f) => { flush = f; };
     const workerTicket = exhaust(container);
     // eslint-disable-next-line no-await-in-loop
     while (flush == null) await sometime(50);

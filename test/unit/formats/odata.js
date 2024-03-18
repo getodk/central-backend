@@ -1,11 +1,11 @@
 const appRoot = require('app-root-path');
+const { getFieldTree, getChildren } = require('../../../lib/formats/odata');
 const streamTest = require('streamtest').v2;
-// eslint-disable-next-line import/no-dynamic-require
 const { serviceDocumentFor, edmxFor, rowStreamToOData, singleRowToOData, selectFields } = require(appRoot + '/lib/formats/odata');
-// eslint-disable-next-line import/no-dynamic-require
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
-// eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
+const should = require('should');
+const { QueryOptions } = require('../../../lib/util/db');
 
 // Helpers to deal with repeated system metadata generation.
 const submitter = { id: 5, displayName: 'Alice' };
@@ -575,10 +575,10 @@ describe('odata message composition', () => {
         const query = { $top: '3', $skip: '2' };
         const inRows = streamTest.fromObjects(instances(6)); // make it close to check the off-by-one.
         fieldsFor(testData.forms.simple)
-          .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=2', query, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=2', query, inRows, 10, 8))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             const resultObj = JSON.parse(result);
-            resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24skip=5');
+            resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24top=3&%24skiptoken=01e30%3D');
             done();
           })));
       });
@@ -587,10 +587,10 @@ describe('odata message composition', () => {
         const query = { $top: '3', $skip: '2', $wkt: 'true', $count: 'true' };
         const inRows = streamTest.fromObjects(instances(6)); // make it close to check the off-by-one.
         fieldsFor(testData.forms.simple)
-          .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=2&$wkt=true&$count=true', query, inRows))
+          .then((fields) => rowStreamToOData(fields, 'Submissions', 'http://localhost:8989', '/simple.svc/Submissions?$top=3&$skip=2&$wkt=true&$count=true', query, inRows, 10, 8))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             const resultObj = JSON.parse(result);
-            resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24skip=5&%24wkt=true&%24count=true');
+            resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24top=3&%24wkt=true&%24count=true&%24skiptoken=01e30%3D');
             done();
           })));
       });
@@ -667,7 +667,6 @@ describe('odata message composition', () => {
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             JSON.parse(result).should.eql({
               '@odata.context': 'http://localhost:8989/simple.svc/$metadata#Submissions',
-              '@odata.nextLink': 'http://localhost:8989/simple.svc/Submissions?%24skip=2',
               value: [
                 { __id: 'one', __system, meta: { instanceID: 'one' }, name: 'Alice', age: 30 },
                 { __id: 'two', __system, meta: { instanceID: 'two' }, name: 'Bob', age: 34 },
@@ -744,7 +743,7 @@ describe('odata message composition', () => {
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             JSON.parse(result).should.eql({
               '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
-              '@odata.nextLink': 'http://localhost:8989/withrepeat.svc/Submissions.children.child?%24skip=2',
+              '@odata.nextLink': 'http://localhost:8989/withrepeat.svc/Submissions.children.child?%24top=2&%24skiptoken=01eyJyZXBlYXRJZCI6ImM3NmQwY2NjNmQ1ZGEyMzZiZTdiOTNiOTg1YTgwNDEzZDJlM2UxNzIifQ%3D%3D',
               value: [{
                 __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d',
                 '__Submissions-id': 'two',
@@ -801,12 +800,40 @@ describe('odata message composition', () => {
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             JSON.parse(result).should.eql({
               '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
-              '@odata.nextLink': 'http://localhost:8989/withrepeat.svc/Submissions.children.child?%24skip=2',
+              '@odata.nextLink': 'http://localhost:8989/withrepeat.svc/Submissions.children.child?%24top=1&%24skiptoken=01eyJyZXBlYXRJZCI6ImM3NmQwY2NjNmQ1ZGEyMzZiZTdiOTNiOTg1YTgwNDEzZDJlM2UxNzIifQ%3D%3D',
               value: [{
                 __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172',
                 '__Submissions-id': 'two',
                 name: 'Blaine',
                 age: 6
+              }]
+            });
+            done();
+          })));
+      });
+
+      it('should offset subtable row data by skipToken', (done) => {
+        const query = { $skiptoken: QueryOptions.getSkiptoken({ instanceId: 'two', repeatId: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d' }) };
+        const inRows = streamTest.fromObjects([
+          mockSubmission('one', testData.instances.withrepeat.one),
+          mockSubmission('two', testData.instances.withrepeat.two),
+          mockSubmission('three', testData.instances.withrepeat.three)
+        ]);
+        fieldsFor(testData.forms.withrepeat)
+          .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows))
+          .then((stream) => stream.pipe(streamTest.toText((_, result) => {
+            JSON.parse(result).should.eql({
+              '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
+              value: [{
+                __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172',
+                '__Submissions-id': 'two',
+                name: 'Blaine',
+                age: 6
+              }, {
+                __id: 'beaedcdba519e6e6b8037605c9ae3f6a719984fa',
+                '__Submissions-id': 'three',
+                name: 'Candace',
+                age: 2
               }]
             });
             done();
@@ -898,7 +925,7 @@ describe('odata message composition', () => {
           return singleRowToOData(fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child?$top=1", query)
             .then(JSON.parse)
             .then((result) => {
-              result['@odata.nextLink'].should.equal("http://localhost:8989/withrepeat.svc/Submissions('two')/children/child?%24skip=1");
+              result['@odata.nextLink'].should.equal("http://localhost:8989/withrepeat.svc/Submissions('two')/children/child?%24top=1&%24skiptoken=01eyJyZXBlYXRJZCI6ImNmOWExYjVjYzgzYzZkNjI3MGMxZWI5ODg2MGQyOTRlYWM1ZDUyNmQifQ%3D%3D");
             });
         });
       });
@@ -911,7 +938,7 @@ describe('odata message composition', () => {
           return singleRowToOData(fields, submission, 'http://localhost:8989', "/withrepeat.svc/Submissions('two')/children/child?$top=1&$wkt=true", query)
             .then(JSON.parse)
             .then((result) => {
-              result['@odata.nextLink'].should.equal("http://localhost:8989/withrepeat.svc/Submissions('two')/children/child?%24wkt=true&%24skip=1");
+              result['@odata.nextLink'].should.equal("http://localhost:8989/withrepeat.svc/Submissions('two')/children/child?%24top=1&%24wkt=true&%24skiptoken=01eyJyZXBlYXRJZCI6ImNmOWExYjVjYzgzYzZkNjI3MGMxZWI5ODg2MGQyOTRlYWM1ZDUyNmQifQ%3D%3D");
             });
         });
       });
@@ -1008,7 +1035,7 @@ describe('odata message composition', () => {
             .then((result) => {
               result.should.eql({
                 '@odata.context': 'http://localhost:8989/doubleRepeat.svc/$metadata#Submissions.children.child.toys.toy',
-                '@odata.nextLink': "http://localhost:8989/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?%24skip=2",
+                '@odata.nextLink': "http://localhost:8989/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?%24top=2&%24skiptoken=01eyJyZXBlYXRJZCI6IjhkMmRjN2JkM2U5N2E2OTBjMDgxM2U2NDY2NThlNTEwMzhlYjQxNDQifQ%3D%3D",
                 value: [{
                   __id: 'a9058d7b2ed9557205ae53f5b1dc4224043eca2a',
                   '__Submissions-children-child-id': 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
@@ -1061,7 +1088,7 @@ describe('odata message composition', () => {
             .then((result) => {
               result.should.eql({
                 '@odata.context': 'http://localhost:8989/doubleRepeat.svc/$metadata#Submissions.children.child.toys.toy',
-                '@odata.nextLink': "http://localhost:8989/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?%24skip=3",
+                '@odata.nextLink': "http://localhost:8989/doubleRepeat.svc/Submissions('double')/children/child('b6e93a81a53eed0566e65e472d4a4b9ae383ee6d')/toys/toy?%24top=2&%24skiptoken=01eyJyZXBlYXRJZCI6ImI3MTZkZDhiNzlhNGM5MzY5ZDZiMWU3YTljOWQ1NWFjMThkYTEzMTkifQ%3D%3D",
                 value: [{
                   __id: '8d2dc7bd3e97a690c0813e646658e51038eb4144',
                   '__Submissions-children-child-id': 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
@@ -1094,14 +1121,19 @@ describe('odata message composition', () => {
         (() => selectFields({ $select: 'address' }, 'Submissions')(fields)).should.throw('Could not find a property named \'address\'');
       }));
 
-    it('should not throw error if __id is requested for non-submissions table', () => fieldsFor(testData.forms.simple)
+    it('should not throw error if __id is requested for non-submissions table', () => fieldsFor(testData.forms.withrepeat)
       .then((fields) => {
-        (() => selectFields({ $select: '__id' }, 'Submissions.Children')(fields)).should.not.throw();
+        (() => selectFields({ $select: '__id' }, 'Submissions.children')(fields)).should.not.throw();
       }));
 
     it('should not throw error if system properties are requested for submissions table', () => fieldsFor(testData.forms.simple)
       .then((fields) => {
         (() => selectFields({ $select: '__id, __system/status' }, 'Submissions')(fields)).should.not.throw();
+      }));
+
+    it('should throw error if system properties are requested for non-submissions table', () => fieldsFor(testData.forms.withrepeat)
+      .then((fields) => {
+        (() => selectFields({ $select: '__id, __system/status' }, 'Submissions.children')(fields)).should.throw('Could not find a property named \'__system/status\'');
       }));
 
     it('should throw error if unknown system property is requested', () => fieldsFor(testData.forms.simple)
@@ -1135,5 +1167,52 @@ describe('odata message composition', () => {
         filteredFields.length.should.equal(2);
       }));
   });
+
+  describe('getFieldTree', () => {
+    it('should make the tree', () => {
+      const fields = [
+        new MockField({ path: '/home', name: 'home', type: 'structure' }),
+        new MockField({ path: '/home/address', name: 'address', type: 'structure' }),
+        new MockField({ path: '/home/address/country', name: 'country', type: 'text' }),
+        new MockField({ path: '/home/address/province', name: 'province', type: 'text' }),
+        new MockField({ path: '/home/address/city', name: 'city', type: 'text' })
+      ];
+
+      const tree = getFieldTree(fields);
+      should(tree['/home'].parent).be.null();
+      tree['/home'].children.map(c => c.value.name).should.be.eql(['address']);
+
+      tree['/home/address'].parent.value.name.should.be.eql('home');
+      tree['/home/address'].children.map(c => c.value.name).should.be.eql(['country', 'province', 'city']);
+
+      tree['/home/address/country'].parent.value.name.should.be.eql('address');
+      tree['/home/address/country'].children.should.be.eql([]);
+
+      tree['/home/address/province'].parent.value.name.should.be.eql('address');
+      tree['/home/address/province'].children.should.be.eql([]);
+
+      tree['/home/address/city'].parent.value.name.should.be.eql('address');
+      tree['/home/address/city'].children.should.be.eql([]);
+    });
+  });
+
+  describe('getChildren', () => {
+    it('should return all children recursively', () => {
+      const fields = [
+        new MockField({ path: '/home', name: 'home', type: 'structure' }),
+        new MockField({ path: '/home/address', name: 'address', type: 'structure' }),
+        new MockField({ path: '/home/address/country', name: 'country', type: 'text' }),
+        new MockField({ path: '/home/address/province', name: 'province', type: 'text' }),
+        new MockField({ path: '/home/address/city', name: 'city', type: 'text' })
+      ];
+
+      const tree = getFieldTree(fields);
+
+      const children = getChildren(tree['/home']);
+
+      Array.from(children.values()).map(c => c.name).should.be.eql(['address', 'country', 'province', 'city']);
+    });
+  });
+
 });
 

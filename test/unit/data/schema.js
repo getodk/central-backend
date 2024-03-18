@@ -1,10 +1,7 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-// eslint-disable-next-line import/no-dynamic-require
-const { getFormFields, sanitizeFieldsForOdata, SchemaStack, merge, expectedFormAttachments, injectPublicKey, addVersionSuffix, setVersion } = require(appRoot + '/lib/data/schema');
-// eslint-disable-next-line import/no-dynamic-require
+const { getFormFields, sanitizeFieldsForOdata, SchemaStack, merge, compare, expectedFormAttachments, injectPublicKey, addVersionSuffix, setVersion } = require(appRoot + '/lib/data/schema');
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
-// eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
 
 describe('form schema', () => {
@@ -524,6 +521,171 @@ describe('form schema', () => {
         ]);
       });
     });
+
+    describe('datasets', () => {
+      it('should ignore entities:saveto in bindings on structural nodes', () => { // gh cb#670
+        // binds must have a 'type' attribute to be picked up by XML parsing.
+        const xml = `
+          <?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+            <h:head>
+              <model>
+                <instance>
+                  <data id="form">
+                    <name/>
+                    <occupation>
+                      <title/>
+                      <dates>
+                        <joined/>
+                        <departed/>
+                      </dates>
+                      <salary/>
+                    </occupation>
+                  </data>
+                </instance>
+                <bind nodeset="/data/name" type="string"/>
+                <bind nodeset="/data/occupation" relevant="/data/name='liz'" entities:saveto="occupation"/>
+                <bind nodeset="/data/occupation/title" type="string"/>
+                <bind nodeset="/data/occupation/dates" relevant="true()"/>
+                <bind nodeset="/data/occupation/dates/joined" type="date"/>
+                <bind nodeset="/data/occupation/dates/departed" type="date"/>
+                <bind nodeset="/data/occupation/salary" type="decimal"/>
+              </model>
+            </h:head>
+          </h:html>`;
+        return getFormFields(xml).then((schema) => {
+          schema.should.eql([
+            { name: 'name', path: '/name', type: 'string', order: 0 },
+            { name: 'occupation', path: '/occupation', type: 'structure', order: 1 },
+            { name: 'title', path: '/occupation/title', type: 'string', order: 2 },
+            { name: 'dates', path: '/occupation/dates', type: 'structure', order: 3 },
+            { name: 'joined', path: '/occupation/dates/joined', type: 'date', order: 4 },
+            { name: 'departed', path: '/occupation/dates/departed', type: 'date', order: 5 },
+            { name: 'salary', path: '/occupation/salary', type: 'decimal', order: 6 }
+          ]);
+        });
+      });
+
+      it('should reject binds on fields in repeats', () => { // gh cb#670
+        const xml = `
+          <?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+            <h:head>
+              <model>
+                <instance>
+                  <data id="form">
+                    <name/>
+                    <children>
+                      <child>
+                        <name/>
+                        <toy>
+                          <name/>
+                        </toy>
+                      </child>
+                    </children>
+                  </data>
+                </instance>
+                <bind nodeset="/data/name" type="string" entities:saveto="parent_name"/>
+                <bind nodeset="/data/children/child/name" type="string" entities:saveto="child_name"/>
+                <bind nodeset="/data/children/child/toy/name" type="string"/>
+              </model>
+            </h:head>
+            <h:body>
+              <input ref="/data/name">
+                <label>What is your name?</label>
+              </input>
+              <group ref="/data/children/child">
+                <label>Child</label>
+                <repeat nodeset="/data/children/child">
+                  <input ref="/data/children/child/name">
+                    <label>What is the child's name?</label>
+                  </input>
+                  <group ref="/data/children/child/toy">
+                    <label>Child</label>
+                    <repeat nodeset="/data/children/child/toy">
+                      <input ref="/data/children/child/toy/name">
+                        <label>What is the toy's name?</label>
+                      </input>
+                    </repeat>
+                  </group>
+                </repeat>
+              </group>
+            </h:body>
+          </h:html>`;
+        return getFormFields(xml).should.be.rejected().then((p) => p.problemCode.should.equal(400.25));
+      });
+
+      it('should reject binds on fields in nested repeats inside groups', () => { // gh cb#670
+        const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+          <h:head>
+            <h:title>Repeat Children Entities</h:title>
+            <model entities:entities-version="2022.1.0" odk:xforms-version="1.0.0">
+              <instance>
+                <data id="repeat_entity" version="1">
+                  <num_children/>
+                  <children>
+                    <child jr:template="">
+                      <child_name/>
+                      <possessions>
+                        <toys jr:template="">
+                          <toy/>
+                        </toys>
+                      </possessions>
+                    </child>
+                  </children>
+                  <meta>
+                    <instanceID/>
+                    <instanceName/>
+                    <entity create="1" dataset="children" id="">
+                      <label/>
+                    </entity>
+                  </meta>
+                </data>
+              </instance>
+              <bind nodeset="/data/num_children" type="int"/>
+              <bind nodeset="/data/children/child/child_name" type="string"/>
+              <bind entities:saveto="toy_name" nodeset="/data/children/child/possessions/toys/toy" type="string"/>
+              <bind jr:preload="uid" nodeset="/data/meta/instanceID" readonly="true()" type="string"/>
+              <bind calculate=" /data/num_children " nodeset="/data/meta/instanceName" type="string"/>
+              <bind calculate="1" nodeset="/data/meta/entity/@create" readonly="true()" type="string"/>
+              <bind nodeset="/data/meta/entity/@id" readonly="true()" type="string"/>
+              <setvalue event="odk-instance-first-load" readonly="true()" ref="/data/meta/entity/@id" type="string" value="uuid()"/>
+              <bind calculate="concat(&quot;Num children:&quot;,  /data/num_children )" nodeset="/data/meta/entity/label" readonly="true()" type="string"/>
+            </model>
+          </h:head>
+          <h:body>
+            <input ref="/data/num_children">
+              <label>Num Children</label>
+            </input>
+            <group ref="/data/children">
+              <label>Children</label>
+              <group ref="/data/children/child">
+                <label>Child</label>
+                <repeat nodeset="/data/children/child">
+                  <input ref="/data/children/child/child_name">
+                    <label>Child Name</label>
+                  </input>
+                  <group ref="/data/children/child/possessions">
+                    <label>Posessions</label>
+                    <group ref="/data/children/child/possessions/toys">
+                      <label>Toys</label>
+                      <repeat nodeset="/data/children/child/possessions/toys">
+                        <input ref="/data/children/child/possessions/toys/toy">
+                          <label>Toy</label>
+                        </input>
+                      </repeat>
+                    </group>
+                  </group>
+                </repeat>
+              </group>
+            </group>
+          </h:body>
+        </h:html>`;
+        return getFormFields(xml).should.be.rejected().then((p) => p.problemCode.should.equal(400.25));
+      });
+    });
   });
 
   describe('SchemaStack', () => {
@@ -622,6 +784,35 @@ describe('form schema', () => {
           stack.push('child').should.eql(new MockField({ name: 'child', path: '/child', order: 3, type: 'repeat' }));
           stack.pop();
         }));
+
+      it('should navigate in and out of empty structures', async () => {
+        const form = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+            <h:head>
+              <model entities:entities-version="2023.1.0">
+                <instance>
+                  <data id="emptyEntity" orx:version="1.0">
+                    <meta>
+                      <entity dataset="people" id="" create="" update="" baseVersion="" />
+                    </meta>
+                    <age/>
+                  </data>
+                  <other/>
+                </instance>
+                <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+                <bind nodeset="/data/location/hometown" type="string" entities:saveto="hometown"/>
+              </model>
+            </h:head>
+          </h:html>`;
+        const fields = await fieldsFor(form);
+        const stack = new SchemaStack(fields);
+        stack.push('data');
+        stack.push('meta').should.eql(new MockField({ name: 'meta', path: '/meta', type: 'structure', order: 0 }));
+        stack.push('entity').should.eql(new MockField({ name: 'entity', path: '/meta/entity', type: 'structure', order: 1 }));
+        stack.children().should.eql([]);
+        stack.pop('entity').should.eql(new MockField({ name: 'entity', path: '/meta/entity', type: 'structure', order: 1 }));
+        stack.pop('meta').should.eql(new MockField({ name: 'meta', path: '/meta', type: 'structure', order: 0 }));
+        stack.push('age').should.eql(new MockField({ name: 'age', path: '/age', type: 'int', order: 2, propertyName: 'age' }));
+      });
 
       it('should ignore children of unknown repeats', () => fieldsFor(testData.forms.doubleRepeat)
         .then((fields) => {
@@ -1133,6 +1324,110 @@ describe('form schema', () => {
         new MockField({ name: 'name', order: 7, path: '/name', type: 'string' })
       ]);
     }));
+  });
+
+  describe('compare', () => {
+    it('should say two forms with the same schemas do match', () => Promise.all([
+      fieldsFor(testData.forms.simple),
+      fieldsFor(testData.forms.simple2) // same form structure but different xmlFormId
+    ]).then(([ a, b ]) => {
+      compare(a, b).should.be.true();
+    }));
+
+    it('should say two forms with the different schemas do not match', () => Promise.all([
+      fieldsFor(testData.forms.simple),
+      fieldsFor(testData.forms.withrepeat)
+    ]).then(([ a, b ]) => {
+      compare(a, b).should.be.false();
+    }));
+
+    it('should say two forms with the different schemas of same size do not match', () => Promise.all([
+      fieldsFor(testData.forms.simple),
+      fieldsFor(testData.forms.simple.replace(/age/g, 'address'))
+    ]).then(([ a, b ]) => {
+      compare(a, b).should.be.false();
+      compare(b, a).should.be.false(); // try both directions
+    }));
+
+    it('should say selectMultiple matches selectMultiple', () => Promise.all([
+      fieldsFor(testData.forms.selectMultiple),
+      fieldsFor(testData.forms.selectMultiple)
+    ]).then(([ a, b ]) => {
+      compare(a, b).should.be.true();
+      compare(b, a).should.be.true(); // try both directions
+    }));
+
+    // this doesn't actually come up, but compare() ought to handle it
+    it('should compare fields with selectMultiple=false and =null or undefined', () => {
+      // comparing false and null (should match)
+      // comparing false and undefined (should match)
+      const a = [
+        {
+          name: 'q1',
+          path: '/q1',
+          order: 0,
+          type: 'string',
+          selectMultiple: false
+        },
+        {
+          name: 'q2',
+          path: '/q2',
+          order: 0,
+          type: 'string',
+          selectMultiple: false
+        }
+      ];
+      const b = [
+        {
+          name: 'q1',
+          path: '/q1',
+          order: 0,
+          type: 'string',
+          selectMultiple: null
+        },
+        {
+          name: 'q2',
+          path: '/q2',
+          order: 0,
+          type: 'string'
+          // selectMultple is undefined
+        }
+      ];
+      compare(a, b).should.be.true();
+      compare(b, a).should.be.true(); // try both directions
+    });
+
+    it('should say select1 and selectMultiple are different', () => {
+      const selectOne = `<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+        <h:head>
+          <model>
+            <instance>
+              <data id="selectMultiple">
+                <q1/>
+                <g1><q2/></g1>
+              </data>
+            </instance>
+            <bind nodeset="/data/q1" type="string"/>
+            <bind nodeset="/data/g1/q2" type="string"/>
+          </model>
+        </h:head>
+        <h:body>
+          <select1 ref="/data/q1"><label>one</label></select1>
+          <group ref="/data/g1">
+            <label>group</label>
+            <select1 ref="/data/g1/q2"><label>two</label></select1>
+          </group>
+        </h:body>
+      </h:html>`;
+      return Promise.all([
+        fieldsFor(testData.forms.selectMultiple),
+        fieldsFor(selectOne)
+      ]).then(([ a, b ]) => {
+        compare(a, b).should.be.false();
+        compare(b, a).should.be.false(); // try both directions
+      });
+    });
   });
 
   describe('expectedFormAttachments', () => {

@@ -1,9 +1,11 @@
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
 const { testService, testContainer } = require('../setup');
-// eslint-disable-next-line import/no-dynamic-require
-const { createReadStream } = require('fs');
+const { createReadStream, readFileSync } = require('fs');
+
+const { promisify } = require('util');
 const testData = require('../../data/xml');
+const { exhaust, workerQueue } = require(appRoot + '/lib/worker/worker');
 
 const geoForm = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <h:head>
@@ -69,6 +71,12 @@ const createTestForm = (service, container, xml, projectId) =>
       .send(xml)
       .then(({ body }) => body.xmlFormId));
 
+const approvalRequired = (service, projectId, datasetName) =>
+  service.login('alice', (asAlice) =>
+    asAlice.patch(`/v1/projects/${projectId}/datasets/${datasetName}`)
+      .send({ approvalRequired: true })
+      .expect(200));
+
 const createPublicLink = (service, projectId, xmlFormId) =>
   service.login('alice', (asAlice) =>
     asAlice.post(`/v1/projects/${projectId}/forms/${xmlFormId}/public-links`)
@@ -94,7 +102,11 @@ const submitToForm = (service, user, projectId, xmlFormId, xml, deviceId = 'abcd
 ////////////////////////////////////////////////////////////////////////////////
 // Tests!
 ////////////////////////////////////////////////////////////////////////////////
-describe('analytics task queries', () => {
+// eslint-disable-next-line func-names
+describe('analytics task queries', function () {
+  // increasing timeouts on this set of tests
+  this.timeout(8000);
+
   describe('general server metrics', () => {
     it('should count audit log entries', testContainer(async (container) => {
       // recent "now" audits
@@ -120,7 +132,7 @@ describe('analytics task queries', () => {
     }));
 
     // eslint-disable-next-line no-multi-spaces
-    it('should count encrypted projects',  testService(async (service, container) => {
+    it('should count encrypted projects', testService(async (service, container) => {
       // encrypted project that has recent activity
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one);
 
@@ -195,15 +207,6 @@ describe('analytics task queries', () => {
       res.database_size.should.be.above(0); // Probably around 13 MB?
     }));
 
-    it('should determine whether backups are enabled', testContainer(async ({ Analytics, Configs }) => {
-      let res = await Analytics.backupsEnabled();
-      res.backups_configured.should.equal(0);
-      // eslint-disable-next-line object-curly-spacing
-      await Configs.set('backups.main', {detail: 'dummy'});
-      res = await Analytics.backupsEnabled();
-      res.backups_configured.should.equal(1);
-    }));
-
     it('should check database configurations', testContainer(async ({ Analytics }) => {
       // only localhost (dev) and postgres (docker) should count as not external
       Analytics.databaseExternal('localhost').should.equal(0);
@@ -215,6 +218,187 @@ describe('analytics task queries', () => {
       Analytics.databaseExternal(undefined).should.equal(1);
       Analytics.databaseExternal(null).should.equal(1);
     }));
+
+    describe('counting client audits', () => {
+      it('should count the total number of client audit submission attachments', testService(async (service, { Analytics }) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200);
+
+        // the one sub with good client audit attachment
+        await asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+          .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+          .expect(201);
+
+        // client audit attachment is missing
+        await asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+          .expect(201);
+
+        // another attachment that is not a client audit
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.one), { filename: 'data.xml' })
+            .attach('my_file1.mp4', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'my_file1.mp4' })
+            .expect(201));
+
+        const res = await Analytics.countClientAuditAttachments();
+        res.should.equal(1);
+      }));
+
+      it('should count client audit attachments that failed processing', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // encrypt default project and send one encrypted client audit attachment
+        const { extractPubkey, extractVersion, sendEncrypted } = require(appRoot + '/test/util/crypto-odk');
+        await asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.clientAudits)
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/audits.xml')
+            .expect(200)
+            .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
+            .then((send) => send(testData.instances.clientAudits.one, { 'audit.csv.enc': readFileSync(appRoot + '/test/data/audit.csv') })));
+
+        await exhaust(container);
+
+        // at this point there should be 0 failed
+        await container.Analytics.countClientAuditProcessingFailed()
+          .then((res) => res.should.equal(0));
+
+        // but there will be 0 rows in the clients audits table bc encrypted ones dont get extracted
+        await container.Analytics.countClientAuditRows()
+          .then((res) => res.should.equal(0));
+
+        // make a new project to not encrypt
+        const newProjectId = await asAlice.post('/v1/projects')
+          .set('Content-Type', 'application/json')
+          .send({ name: 'Test Project' })
+          .expect(200)
+          .then(({ body }) => body.id);
+
+        await asAlice.post(`/v1/projects/${newProjectId}/forms?publish=true`)
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200);
+
+        // submit a new submission with client audit attachment
+        await asAlice.post(`/v1/projects/${newProjectId}/submission`)
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+          .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+          .expect(201);
+
+        // fail the processing of this latest event
+        let event = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
+        const jobMap = { 'submission.attachment.update': [ () => Promise.reject(new Error()) ] };
+        await promisify(workerQueue(container, jobMap).run)(event);
+
+        // should still be 0 because the failure count is only at 1, needs to be at 5 to count
+        event = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
+        event.failures.should.equal(1);
+        await container.Analytics.countClientAuditProcessingFailed()
+          .then((res) => res.should.equal(0));
+
+        // there should still be 0 extracted client audit rows
+        await container.Analytics.countClientAuditRows()
+          .then((res) => res.should.equal(0));
+
+        // manually upping failure count to 5
+        await container.run(sql`update audits set failures = 5, "loggedAt" = '1999-01-01' where id = ${event.id}`);
+
+        await container.Analytics.countClientAuditProcessingFailed()
+          .then((res) => res.should.equal(1));
+
+        await container.Analytics.auditLogs()
+          .then((res) => {
+            res.any_failure.should.equal(1);
+            res.failed5.should.equal(1);
+            res.unprocessed.should.equal(0);
+          });
+      }));
+
+      it('should count the number of rows extracted from client audit attachments', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+          .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+          .expect(201);
+
+        await asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+          .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+          .expect(201);
+
+        await container.Analytics.countClientAuditRows()
+          .then((res) => res.should.equal(0));
+
+        await exhaust(container);
+
+        await container.Analytics.countClientAuditRows()
+          .then((res) => res.should.equal(8));
+      }));
+    });
+
+    it('should count failed audits', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.clientAudits)
+        .expect(200);
+
+      // making the processing of this attachment fail once
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+        .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+        .expect(201);
+
+      const jobMap = { 'submission.attachment.update': [ () => Promise.reject(new Error()) ] };
+      const eventOne = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
+      await promisify(workerQueue(container, jobMap).run)(eventOne);
+
+      // making this look like it failed 5 times
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+        .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+        .expect(201);
+
+
+      // we haven't run exhaust(container so there are some unprocessed events)
+      const eventTwo = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
+      await container.run(sql`update audits set failures = 5 where id = ${eventTwo.id}`);
+
+      const eventSubCreate = (await container.Audits.getLatestByAction('submission.create')).get();
+      await container.run(sql`update audits set "loggedAt" = '2000-01-01T00:00Z' where id = ${eventSubCreate.id}`);
+
+      await container.Analytics.auditLogs()
+        .then((res) => {
+          res.any_failure.should.equal(2);
+          res.failed5.should.equal(1);
+          res.unprocessed.should.equal(1);
+        });
+    }));
   });
 
   describe('user metrics', () => {
@@ -222,7 +406,7 @@ describe('analytics task queries', () => {
       // default project has 1 manager already (bob) with no activity
       await createTestUser(service, container, 'Manager1', 'manager', 1);
       // eslint-disable-next-line no-trailing-spaces
-      
+
       // compute metrics
       const res = await container.Analytics.countUsersPerRole();
 
@@ -233,7 +417,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id][row.system] = {recent: row.recent, total: row.total};
+        projects[id][row.system] = { recent: row.recent, total: row.total };
       }
 
       projects['1'].manager.total.should.equal(2);
@@ -254,7 +438,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id][row.system] = {recent: row.recent, total: row.total};
+        projects[id][row.system] = { recent: row.recent, total: row.total };
       }
 
       projects['1'].viewer.total.should.equal(2);
@@ -275,7 +459,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id][row.system] = {recent: row.recent, total: row.total};
+        projects[id][row.system] = { recent: row.recent, total: row.total };
       }
 
       projects['1'].formfill.total.should.equal(2);
@@ -335,7 +519,7 @@ describe('analytics task queries', () => {
 
       const res = await container.Analytics.countForms();
       // eslint-disable-next-line no-trailing-spaces
-      
+
       const projects = {};
       for (const row of res) {
         const id = row.projectId;
@@ -343,7 +527,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id] = {recent: row.recent, total: row.total};
+        projects[id] = { recent: row.recent, total: row.total };
       }
 
       projects['1'].total.should.equal(2);
@@ -377,7 +561,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id] = {recent: row.audit_recent, total: row.audit_total};
+        projects[id] = { recent: row.audit_recent, total: row.audit_total };
       }
 
       projects['1'].total.should.equal(0);
@@ -398,7 +582,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id] = {recent: row.geo_recent, total: row.geo_total};
+        projects[id] = { recent: row.geo_recent, total: row.geo_total };
       }
 
       projects['1'].total.should.equal(1);
@@ -418,7 +602,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id] = {recent: row.recent, total: row.total};
+        projects[id] = { recent: row.recent, total: row.total };
       }
 
       projects['1'].total.should.equal(0);
@@ -473,11 +657,11 @@ describe('analytics task queries', () => {
 
       // one deleted unpublished form reused (in the same project)
       await service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
           .send(testData.forms.simple2)
           .set('Content-Type', 'application/xml')
           .then(() => asAlice.delete('/v1/projects/1/forms/simple2'))
-          .then(() => asAlice.post('/v1/projects/1/forms')
+          .then(() => asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
             .send(testData.forms.simple2)
             .set('Content-Type', 'application/xml')));
 
@@ -488,11 +672,11 @@ describe('analytics task queries', () => {
           .send(testData.forms.simple)
           .set('Content-Type', 'application/xml')
           .then(() => asAlice.delete(`/v1/projects/${proj2}/forms/simple`))
-          .then(() => asAlice.post(`/v1/projects/${proj2}/forms?publish=true`)
+          .then(() => asAlice.post(`/v1/projects/${proj2}/forms?publish=true&ignoreWarnings=true`)
             .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="two"'))
             .set('Content-Type', 'application/xml'))
           .then(() => asAlice.delete(`/v1/projects/${proj2}/forms/simple`))
-          .then(() => asAlice.post(`/v1/projects/${proj2}/forms?publish=true`)
+          .then(() => asAlice.post(`/v1/projects/${proj2}/forms?publish=true&ignoreWarnings=true`)
             .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="three"'))
             .set('Content-Type', 'application/xml')));
 
@@ -539,7 +723,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id][row.reviewState] = {recent: row.recent, total: row.total};
+        projects[id][row.reviewState] = { recent: row.recent, total: row.total };
       }
 
       projects['1'].approved.recent.should.equal(1);
@@ -569,7 +753,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id][row.reviewState] = {recent: row.recent, total: row.total};
+        projects[id][row.reviewState] = { recent: row.recent, total: row.total };
       }
 
       projects['1'].rejected.recent.should.equal(1);
@@ -598,7 +782,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id][row.reviewState] = {recent: row.recent, total: row.total};
+        projects[id][row.reviewState] = { recent: row.recent, total: row.total };
       }
 
       projects['1'].hasIssues.recent.should.equal(1);
@@ -627,7 +811,7 @@ describe('analytics task queries', () => {
           projects[id] = {};
         }
         // eslint-disable-next-line object-curly-spacing
-        projects[id][row.reviewState] = {recent: row.recent, total: row.total};
+        projects[id][row.reviewState] = { recent: row.recent, total: row.total };
       }
 
       projects['1'].edited.recent.should.equal(1);
@@ -720,6 +904,321 @@ describe('analytics task queries', () => {
     }));
   });
 
+  describe('dataset metrics', () => {
+    it('should return datasets ID', testService(async (service, container) => {
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await createTestForm(service, container, testData.forms.simpleEntity.replace(/people|simpleEntity/g, 'employees'), 1);
+
+      const datasets = await container.Analytics.getDatasets();
+      datasets.length.should.be.equal(2);
+      datasets[0].id.should.not.be.equal(datasets[1].id);
+    }));
+
+    it('should calculate properties', testService(async (service, container) => {
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await createTestForm(service, container, testData.forms.simpleEntity
+        .replace(/simpleEntity/g, 'simpleEntity2')
+        .replace(/age/g, 'gender'), 1);
+
+      const datasets = await container.Analytics.getDatasets();
+      datasets[0].num_properties.should.be.equal(3);
+    }));
+
+    it('should calculate creation forms', testService(async (service, container) => {
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await createTestForm(service, container, testData.forms.simpleEntity
+        .replace(/simpleEntity/g, 'simpleEntity2')
+        .replace(/age/g, 'gender'), 1);
+
+      const datasets = await container.Analytics.getDatasets();
+      datasets[0].num_creation_forms.should.be.equal(2);
+    }));
+
+    it('should calculate followup forms', testService(async (service, container) => {
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await createTestForm(service, container, testData.forms.withAttachments.replace(/goodone/g, 'people'), 1);
+      const datasets = await container.Analytics.getDatasets();
+      datasets[0].num_followup_forms.should.be.equal(1);
+    }));
+
+    it('should calculate entities', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one').send({ reviewState: 'approved' });
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two);
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two').send({ reviewState: 'approved' });
+      await exhaust(container);
+
+      await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1' WHERE TRUE`);
+
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three);
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/three').send({ reviewState: 'approved' });
+      await exhaust(container);
+
+      const datasets = await container.Analytics.getDatasets();
+
+      datasets[0].num_entities_total.should.be.equal(3);
+      datasets[0].num_entities_recent.should.be.equal(1);
+    }));
+
+    it('should calculate failed entities', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await approvalRequired(service, 1, 'people');
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one').send({ reviewState: 'approved' });
+
+      // let's pass invalid UUID
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two.replace(/aaa/, 'xxx'));
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two').send({ reviewState: 'approved' });
+      await exhaust(container);
+
+      // let's set date of entity errors to long time ago
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.error'`);
+
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three.replace(/bbb/, 'xxx'));
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/three').send({ reviewState: 'approved' });
+      await exhaust(container);
+
+      const datasets = await container.Analytics.getDatasets();
+
+      datasets[0].num_failed_entities_total.should.be.equal(2);
+      datasets[0].num_failed_entities_recent.should.be.equal(1);
+    }));
+
+    it('should calculate entity updates', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three);
+      await exhaust(container);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ data: { age: '2', first_name: 'John' }, label: 'John (12)' })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
+        .send({ data: { age: '1' } })
+        .expect(200);
+
+      // let's set date of entity update to long time ago
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.update.version'`);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
+        .send({ data: { age: '2' } })
+        .expect(200);
+
+      const datasets = await container.Analytics.getDatasets();
+
+      datasets[0].num_entity_updates_total.should.be.equal(3);
+      datasets[0].num_entity_updates_recent.should.be.equal(1);
+    }));
+
+    it('should calculate entity updates through different sources like API and submission', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three);
+      await exhaust(container);
+
+      await createTestForm(service, container, testData.forms.updateEntity, 1);
+      await submitToForm(service, 'alice', 1, 'updateEntity', testData.instances.updateEntity.one);
+      await exhaust(container);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ data: { age: '2', first_name: 'John' }, label: 'John (12)' })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
+        .send({ data: { age: '1' } })
+        .expect(200);
+
+      // let's set date of entity update to long time ago
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.update.version'`);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
+        .send({ data: { age: '2' } })
+        .expect(200);
+
+      await submitToForm(service, 'alice', 1, 'updateEntity', testData.instances.updateEntity.two);
+      await exhaust(container);
+
+      const datasets = await container.Analytics.getDatasets();
+
+      datasets[0].num_entity_updates_api_total.should.be.equal(3);
+      datasets[0].num_entity_updates_api_recent.should.be.equal(1);
+      datasets[0].num_entity_updates_sub_total.should.be.equal(2);
+      datasets[0].num_entity_updates_sub_recent.should.be.equal(1);
+
+      datasets[0].num_entity_updates_total.should.be.equal(datasets[0].num_entity_updates_api_total + datasets[0].num_entity_updates_sub_total);
+      datasets[0].num_entity_updates_recent.should.be.equal(datasets[0].num_entity_updates_api_recent + datasets[0].num_entity_updates_sub_recent);
+    }));
+
+    it('should calculate number of entities ever updated vs. update actions applied', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one); // abc
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two); // aaa
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three); // bbb
+      await exhaust(container);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ data: { age: '2', first_name: 'John' }, label: 'John (12)' })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
+        .send({ data: { age: '1' } })
+        .expect(200);
+
+      // let's set date of entity update to long time ago
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.update.version'`);
+
+      // let's set entity updatedAt to a long time ago, too
+      await container.run(sql`UPDATE entities SET "updatedAt" = '1999-1-1' WHERE "uuid" = '12345678-1234-4123-8234-123456789abc'`);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
+        .send({ data: { age: '2' } })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
+        .send({ data: { age: '3' } })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
+        .send({ data: { age: '4' } })
+        .expect(200);
+
+      // entity abc has been updated once, in the past
+      // entity aaa has been updated many times (once in the past, 3 times recently)
+      // entity bbb has never been updated
+
+      const datasets = await container.Analytics.getDatasets();
+
+      // 3 entities total
+      datasets[0].num_entities_total.should.be.equal(3);
+
+      // 2 entities ever updated
+      datasets[0].num_entities_updated_total.should.be.equal(2);
+      datasets[0].num_entities_updated_recent.should.be.equal(1);
+
+      // 5 update events
+      datasets[0].num_entity_updates_total.should.be.equal(5);
+      datasets[0].num_entity_updates_recent.should.be.equal(3);
+    }));
+
+    it('should calculate number of entities ever with conflict, and which are currently resolved', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await createTestForm(service, container, testData.forms.updateEntity, 1);
+      await exhaust(container);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Aaa',
+          data: { first_name: 'Aaa', age: '22' }
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789aaa',
+          label: 'Bbb',
+          data: { first_name: 'Bbb', age: '22' }
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789bbb',
+          label: 'Bbb',
+          data: { first_name: 'Bbb', age: '22' }
+        })
+        .expect(200);
+
+      // create first conflict on abc
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ data: { age: '99' } })
+        .expect(200);
+
+      // .one updates name and age
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // create soft conflict
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
+        .send({ data: { first_name: 'Aaa 2' } })
+        .expect(200);
+
+      // .three updates age
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.three.replace('12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&force=true')
+        .expect(200);
+
+      const datasets = await container.Analytics.getDatasets();
+
+      // 3 entities total
+      datasets[0].num_entities_total.should.be.equal(3);
+      datasets[0].num_entity_conflicts.should.be.equal(2);
+      datasets[0].num_entity_conflicts_resolved.should.be.equal(1);
+
+      // putting abc back into conflict makes current resolved count get set to 0 again
+      // .two updates label
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const datasets2 = await container.Analytics.getDatasets();
+      datasets2[0].num_entity_conflicts.should.be.equal(2);
+      datasets2[0].num_entity_conflicts_resolved.should.be.equal(0);
+    }));
+
+    it('should return right dataset of each projects', testService(async (service, container) => {
+
+      const asAlice = await service.login('alice');
+
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one').send({ reviewState: 'approved' });
+
+      const secondProjectId = await createTestProject(service, container, 'second');
+      await createTestForm(service, container, testData.forms.simpleEntity.replace(/people|simpleEntity/g, 'employees'), secondProjectId);
+
+      await exhaust(container);
+
+      const dsInDatabase = (await container.all(sql`SELECT * FROM datasets`)).reduce((map, obj) => ({ [obj.id]: obj, ...map }), {});
+      const datasets = await container.Analytics.getDatasets();
+
+      const datasetOfFirstProject = datasets.find(d => d.projectId === 1);
+      datasetOfFirstProject.id.should.be.equal(dsInDatabase[datasetOfFirstProject.id].id);
+      datasetOfFirstProject.num_entities_total.should.be.equal(1);
+
+      const datasetOfSecondProject = datasets.find(d => d.projectId === secondProjectId);
+      datasetOfSecondProject.id.should.be.equal(dsInDatabase[datasetOfSecondProject.id].id);
+      datasetOfSecondProject.num_entities_total.should.be.equal(0);
+
+    }));
+  });
+
   describe('other project metrics', () => {
     it('should calculate projects with descriptions', testService(async (service, container) => {
       await service.login('alice', (asAlice) =>
@@ -743,44 +1242,71 @@ describe('analytics task queries', () => {
           .send({ description: null }));
 
       const res = await container.Analytics.getProjectsWithDescriptions();
-      res.should.eql([ { projectId: 1 }, { projectId: projWithDesc } ]);
+      res.should.eql([{ projectId: 1, description_length: 9 }, { projectId: projWithDesc, description_length: 13 }]);
     }));
   });
 
-  // eslint-disable-next-line space-before-function-paren, func-names
-  describe('combined analytics', function() {
-    // increasing timeouts on this set of tests
-    this.timeout(4000);
-
+  describe('combined analytics', () => {
     it('should combine system level queries', testService(async (service, container) => {
-      // backups
-      // eslint-disable-next-line object-curly-spacing
-      await container.Configs.set('backups.main', {detail: 'dummy'});
+      const asAlice = await service.login('alice');
+
+      // creating client audits (before encrypting the project)
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.clientAudits)
+        .expect(200);
+
+      // the one sub with good client audit attachment
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+        .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+        .expect(201);
+
+      await exhaust(container);
+
+      // add another client audit attachment to fail
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+        .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+        .expect(201);
+
+      // alter the second unprocessed client audit event to count as a failure
+      const event = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
+      await container.run(sql`update audits set failures = 5 where id = ${event.id}`);
 
       // encrypting a project
-      await service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/key')
-          .send({ passphrase: 'supersecret', hint: 'it is a secret' }));
+      await asAlice.post('/v1/projects/1/key')
+        .send({ passphrase: 'supersecret', hint: 'it is a secret' });
 
       // creating and archiving a project
-      await service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects')
+      await asAlice.post('/v1/projects')
+        .set('Content-Type', 'application/json')
+        .send({ name: 'New Project' })
+        .expect(200)
+        .then(({ body }) => asAlice.patch(`/v1/projects/${body.id}`)
           .set('Content-Type', 'application/json')
-          .send({ name: 'New Project' })
-          .expect(200)
-          .then(({ body }) => asAlice.patch(`/v1/projects/${body.id}`)
-            .set('Content-Type', 'application/json')
-            .send({ archived: true })
-            .expect(200)));
+          .send({ archived: true })
+          .expect(200));
 
       // creating more roles
       await createTestUser(service, container, 'Viewer1', 'viewer', 1);
       await createTestUser(service, container, 'Collector1', 'formfill', 1);
 
+      // creating audit events in various states
+      await container.run(sql`insert into audits ("actorId", action, "acteeId", details, "loggedAt", "failures")
+        values
+          (null, 'dummy.action', null, null, '1999-1-1', 1),
+          (null, 'dummy.action', null, null, '1999-1-1', 5),
+          (null, 'dummy.action', null, null, '1999-1-1', 0)`);
+
+
       const res = await container.Analytics.previewMetrics();
 
       // can't easily test this metric
       delete res.system.uses_external_db;
+      delete res.system.sso_enabled;
 
       // everything in system filled in
       Object.values(res.system).forEach((metric) =>
@@ -832,11 +1358,11 @@ describe('analytics task queries', () => {
 
       // deleted and reused form id
       await service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
+        asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
           .send(testData.forms.simple2)
           .set('Content-Type', 'application/xml')
           .then(() => asAlice.delete('/v1/projects/1/forms/simple2'))
-          .then(() => asAlice.post('/v1/projects/1/forms')
+          .then(() => asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
             .send(testData.forms.simple2)
             .set('Content-Type', 'application/xml')));
 
@@ -938,28 +1464,191 @@ describe('analytics task queries', () => {
       res = await container.Analytics.previewMetrics();
       res.projects[1].submissions.num_submissions_approved.total.should.equal(0);
     }));
+
+    it('should fill in all project.datasets queries', testService(async (service, container) => {
+      const { defaultMaxListeners } = require('events').EventEmitter;
+      require('events').EventEmitter.defaultMaxListeners = 30;
+
+      const asAlice = await service.login('alice');
+
+      // Create first Dataset
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await approvalRequired(service, 1, 'people');
+
+      // Make submission for the first Dataset
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one').send({ reviewState: 'approved' });
+
+      // Create second Dataset using two forms
+      await createTestForm(service, container, testData.forms.simpleEntity.replace(/simpleEntity|people/g, 'employees'), 1);
+      await approvalRequired(service, 1, 'employees');
+      await createTestForm(service, container, testData.forms.simpleEntity
+        .replace(/simpleEntity/, 'employees2')
+        .replace(/people/, 'employees')
+        .replace(/age/g, 'gender'), 1);
+
+      // Make submissions for the second Datasets
+      await submitToForm(service, 'alice', 1, 'employees', testData.instances.simpleEntity.two.replace(/simpleEntity|people/g, 'employees'));
+      await asAlice.patch('/v1/projects/1/forms/employees/submissions/two').send({ reviewState: 'approved' });
+      await submitToForm(service, 'alice', 1, 'employees2', testData.instances.simpleEntity.three
+        .replace(/simpleEntity/, 'employees2')
+        .replace(/people/, 'employees')
+        .replace(/age/g, 'gender'));
+      await asAlice.patch('/v1/projects/1/forms/employees2/submissions/three').send({ reviewState: 'approved' });
+
+      // Expecting all Submissions should generate Entities
+      await exhaust(container);
+
+      // Making all Entities ancient
+      await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1' WHERE TRUE`);
+
+      // Make a recent Submissions for the first Dataset
+      // aaa -> ccc creates unique UUID
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two.replace('aaa', 'ccc'));
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two').send({ reviewState: 'approved' });
+
+      // bbb -> xxx causes invalid UUID, hence this Submission should not generate Entity
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three.replace('bbb', 'xxx'));
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/three').send({ reviewState: 'approved' });
+
+      // One Entity will be created and one error will be logged
+      await exhaust(container);
+
+      // Make the error ancient
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.error'`);
+
+      // Create new Submission that will cause entity creation error
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three.replace(/bbb|three/g, 'xxx'));
+      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/xxx').send({ reviewState: 'approved' });
+
+      // One error will be logged
+      await exhaust(container);
+
+      // Update an entity
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ data: { age: '1' } });
+
+      // Make the update ancient
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.update.version'`);
+
+      // Update the same entity again
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+        .send({ data: { age: '2' } });
+
+      // Make another conflict via submission and then resolve it
+      await createTestForm(service, container, testData.forms.updateEntity, 1);
+      await submitToForm(service, 'alice', 1, 'updateEntity', testData.instances.updateEntity.one);
+      await exhaust(container);
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true&resolve=true');
+
+      // Link both Datasets to a Form
+      await createTestForm(service, container, testData.forms.withAttachments
+        .replace(/goodone/g, 'people')
+        .replace(/files\/badsubpath/g, 'file/employees'), 1);
+
+      // Create an empty project
+      const secondProject = await createTestProject(service, container, 'second');
+      await createTestForm(service, container, testData.forms.simple, secondProject);
+
+      const res = await container.Analytics.previewMetrics();
+
+      const { id, ...firstDataset } = res.projects[0].datasets[0];
+      const { id: _, ...secondDataset } = res.projects[0].datasets[1];
+
+      firstDataset.should.be.eql({
+        num_properties: 2,
+        num_creation_forms: 2,
+        num_followup_forms: 1,
+        num_entities: {
+          total: 2, // made one Entity ancient
+          recent: 1
+        },
+        num_failed_entities: { // two Submissions failed due to invalid UUID
+          total: 2, // made one Error ancient
+          recent: 1
+        },
+        num_entity_updates: {
+          total: 3,
+          recent: 2
+        },
+        num_entity_updates_sub: {
+          total: 1,
+          recent: 1
+        },
+        num_entity_updates_api: {
+          total: 2,
+          recent: 1
+        },
+        num_entities_updated: {
+          total: 1,
+          recent: 1
+        },
+        num_entity_conflicts: 1,
+        num_entity_conflicts_resolved: 1
+      });
+
+      secondDataset.should.be.eql({
+        num_properties: 3, // added third Property (age -> gender)
+        num_creation_forms: 2, // used two Forms to create Dataset
+        num_followup_forms: 1,
+        num_entities: {
+          total: 2,
+          recent: 0
+        },
+        num_failed_entities: {
+          total: 0,
+          recent: 0
+        },
+        num_entity_updates: {
+          total: 0,
+          recent: 0
+        },
+        num_entity_updates_sub: {
+          total: 0,
+          recent: 0
+        },
+        num_entity_updates_api: {
+          total: 0,
+          recent: 0
+        },
+        num_entities_updated: {
+          total: 0,
+          recent: 0
+        },
+        num_entity_conflicts: 0,
+        num_entity_conflicts_resolved: 0
+      });
+
+      // Assert that a Project without a Dataset returns an empty array
+      res.projects[1].datasets.should.be.eql([]);
+
+      // revert to original default
+      require('events').defaultMaxListeners = defaultMaxListeners;
+    }));
   });
 
   describe('latest analytics audit log utility', () => {
     it('should find recently created analytics audit log', testService(async (service, container) => {
-      // eslint-disable-next-line object-curly-spacing
-      await container.Audits.log(null, 'analytics', null, {test: 'foo', success: true});
+      await container.Audits.log(null, 'analytics', null, { test: 'foo', success: true });
       const res = await container.Analytics.getLatestAudit().then((o) => o.get());
       res.details.test.should.equal('foo');
     }));
 
-    it('should find nothing if no recent analytics audit log', testService(async (service, container) => {
-      // make all submissions so far in the distant past
-      //await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+    it('should find nothing if no analytics audit log', testService(async (service, container) => {
       const res = await container.Analytics.getLatestAudit();
       res.isEmpty().should.equal(true);
     }));
 
+    it('should find analytics audit log created 30 days ago', testService(async (service, container) => {
+      await container.Audits.log(null, 'analytics', null, { test: 'foo', success: true });
+      await container.all(sql`update audits set "loggedAt" = current_timestamp - interval '30 days' where action = 'analytics'`);
+      const res = await container.Analytics.getLatestAudit();
+      res.isDefined().should.equal(true);
+    }));
+
     it('should not return analytics audit log more than 30 days prior', testService(async (service, container) => {
-      // eslint-disable-next-line object-curly-spacing
-      await container.Audits.log(null, 'analytics', null, {test: 'foo', success: true});
-      // make all analytics audits so far in the distant past
-      await container.all(sql`update audits set "loggedAt" = '1999-1-1' where action = 'analytics'`);
+      await container.Audits.log(null, 'analytics', null, { test: 'foo', success: true });
+      await container.all(sql`update audits set "loggedAt" = current_timestamp - interval '31 days' where action = 'analytics'`);
       const res = await container.Analytics.getLatestAudit();
       res.isEmpty().should.equal(true);
     }));

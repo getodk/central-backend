@@ -2,7 +2,6 @@ const appPath = require('app-root-path');
 const should = require('should');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
-// eslint-disable-next-line import/no-dynamic-require
 const { Blob, Form } = require(appPath + '/lib/model/frames');
 
 describe('form forward versioning', () => {

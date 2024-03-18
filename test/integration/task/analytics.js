@@ -1,7 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 const { testTask } = require('../setup');
-// eslint-disable-next-line import/no-dynamic-require
 const { runAnalytics } = require(appRoot + '/lib/task/analytics');
 
 describe('task: analytics', () => {

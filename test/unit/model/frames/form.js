@@ -1,5 +1,4 @@
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require
 const { Form, Key } = require(appRoot + '/lib/model/frames');
 
 describe('Form', () => {

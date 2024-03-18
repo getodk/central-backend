@@ -1,15 +1,10 @@
 const appRoot = require('app-root-path');
-const uuid = require('uuid/v4');
+const uuid = require('uuid').v4;
 const streamTest = require('streamtest').v2;
-// eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
-// eslint-disable-next-line import/no-dynamic-require
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
-// eslint-disable-next-line import/no-dynamic-require
 const { fieldsFor } = require(appRoot + '/test/util/schema');
-// eslint-disable-next-line import/no-dynamic-require
 const { streamBriefcaseCsvs } = require(appRoot + '/lib/data/briefcase');
-// eslint-disable-next-line import/no-dynamic-require
 const { zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 
 
@@ -21,7 +16,7 @@ const instance = (id, data, formVersion = 'version') => ({
   instanceId: id,
   createdAt: new Date('2018-01-01T00:00:00Z'),
   def: {},
-  xml: `<data id="data">${data}</data>`,
+  xml: `<data id="data"><meta><instanceID>${id}</instanceID></meta>${data}</data>`,
   aux: { attachment: { present: 0, expected: 0 }, encryption: {}, edit: { count: 0 }, exports: { formVersion } }
 });
 
@@ -417,9 +412,9 @@ describe('.csv.zip briefcase output @slow', () => {
 
         result.filenames.should.eql([ 'selectMultiple.csv' ]);
         result['selectMultiple.csv'].should.equal(
-          `SubmissionDate,q1,q1/x,q1/y,q1/z,g1-q2,g1-q2/m,g1-q2/n,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
-2018-01-01T00:00:00.000Z,a b,0,0,0,x y z,0,0,one,,,0,0,,,,0,version
-2018-01-01T00:00:00.000Z,b,0,0,0,m x,1,0,two,,,0,0,,,,0,version
+          `SubmissionDate,meta-instanceID,q1,q1/x,q1/y,q1/z,g1-q2,g1-q2/m,g1-q2/n,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
+2018-01-01T00:00:00.000Z,one,a b,0,0,0,x y z,0,0,one,,,0,0,,,,0,version
+2018-01-01T00:00:00.000Z,two,b,0,0,0,m x,1,0,two,,,0,0,,,,0,version
 `); // eslint-disable-line function-paren-newline
         done();
       });
@@ -457,9 +452,9 @@ describe('.csv.zip briefcase output @slow', () => {
       </h:html>`;
 
     const inStream = streamTest.fromObjects([
-      instance('one', '<orx:meta><orx:instanceID>one</orx:instanceID></orx:meta><name>Alice</name><home><type>Apartment</type><address><street>101 Pike St</street><city>Seattle, WA</city></address></home>'),
-      instance('two', '<orx:meta><orx:instanceID>two</orx:instanceID></orx:meta><name>Bob</name><home><address><street>20 Broadway</street><city>Portland, OR</city></address><type>Condo</type></home>'),
-      instance('three', '<orx:meta><orx:instanceID>three</orx:instanceID></orx:meta><name>Chelsea</name><home><type>House</type><address><city>San Francisco, CA</city><street>99 Mission Ave</street></address></home>'),
+      instance('one', '<name>Alice</name><home><type>Apartment</type><address><street>101 Pike St</street><city>Seattle, WA</city></address></home>'),
+      instance('two', '<name>Bob</name><home><address><street>20 Broadway</street><city>Portland, OR</city></address><type>Condo</type></home>'),
+      instance('three', '<name>Chelsea</name><home><type>House</type><address><city>San Francisco, CA</city><street>99 Mission Ave</street></address></home>'),
     ]);
 
     callAndParse(inStream, formXml, 'structuredform', (err, result) => {
@@ -508,9 +503,9 @@ describe('.csv.zip briefcase output @slow', () => {
       </h:html>`;
 
     const inStream = streamTest.fromObjects([
-      instance('one', '<orx:meta><orx:instanceID>one</orx:instanceID></orx:meta><name>Alice</name><home><type>Apartment</type><address><street>101 Pike St</street><city>Seattle, WA</city></address></home>'),
-      instance('two', '<orx:meta><orx:instanceID>two</orx:instanceID></orx:meta><name>Bob</name><home><address><street>20 Broadway</street><city>Portland, OR</city></address><type>Condo</type></home>'),
-      instance('three', '<orx:meta><orx:instanceID>three</orx:instanceID></orx:meta><name>Chelsea</name><home><type>House</type><address><city>San Francisco, CA</city><street>99 Mission Ave</street></address></home>'),
+      instance('one', '<name>Alice</name><home><type>Apartment</type><address><street>101 Pike St</street><city>Seattle, WA</city></address></home>'),
+      instance('two', '<name>Bob</name><home><address><street>20 Broadway</street><city>Portland, OR</city></address><type>Condo</type></home>'),
+      instance('three', '<name>Chelsea</name><home><type>House</type><address><city>San Francisco, CA</city><street>99 Mission Ave</street></address></home>'),
     ]);
 
     fieldsFor(formXml).then((fields) => {
@@ -543,9 +538,9 @@ describe('.csv.zip briefcase output @slow', () => {
 
         result.filenames.should.eql([ 'selectMultiple.csv' ]);
         result['selectMultiple.csv'].should.equal(
-          `SubmissionDate,q1,q1/x,q1/y,q1/z,q2,q2/m,q2/n,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
-2018-01-01T00:00:00.000Z,a b,0,0,0,x y z,0,0,one,,,0,0,,,,0,version
-2018-01-01T00:00:00.000Z,b,0,0,0,m x,1,0,two,,,0,0,,,,0,version
+          `SubmissionDate,instanceID,q1,q1/x,q1/y,q1/z,q2,q2/m,q2/n,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion
+2018-01-01T00:00:00.000Z,one,a b,0,0,0,x y z,0,0,one,,,0,0,,,,0,version
+2018-01-01T00:00:00.000Z,two,b,0,0,0,m x,1,0,two,,,0,0,,,,0,version
 `); // eslint-disable-line function-paren-newline
         done();
       });
@@ -602,9 +597,9 @@ describe('.csv.zip briefcase output @slow', () => {
       </h:html>`;
 
     const inStream = streamTest.fromObjects([
-      instance('one', '<orx:meta><orx:instanceID>one</orx:instanceID></orx:meta><name>Alice</name><age>30</age>'),
-      instance('two', '<orx:meta><orx:instanceID>two</orx:instanceID></orx:meta><name>Bob</name><age>34</age><children><child><name>Billy</name><age>4</age></child></children><children><child><name>Blaine</name><age>6</age></child></children>'),
-      instance('three', '<orx:meta><orx:instanceID>three</orx:instanceID></orx:meta><name>Chelsea</name><age>38</age><children><child><name>Candace</name><age>2</age></child></children>'),
+      instance('one', '<name>Alice</name><age>30</age>'),
+      instance('two', '<name>Bob</name><age>34</age><children><child><name>Billy</name><age>4</age></child></children><children><child><name>Blaine</name><age>6</age></child></children>'),
+      instance('three', '<name>Chelsea</name><age>38</age><children><child><name>Candace</name><age>2</age></child></children>'),
     ]);
 
     callAndParse(inStream, formXml, 'singlerepeat', (err, result) => {
@@ -745,9 +740,9 @@ Candace,2,three,three/children/child[1]
       </h:html>`;
 
     const inStream = streamTest.fromObjects([
-      instance('one', '<orx:meta><orx:instanceID>one</orx:instanceID></orx:meta><name>Alice</name><age>30</age>'),
-      instance('two', '<orx:meta><orx:instanceID>two</orx:instanceID></orx:meta><name>Bob</name><age>34</age><children><child><name>Billy</name><age>4</age><toy><name>R2-D2</name></toy></child><child><name>Blaine</name><age>6</age><toy><name>BB-8</name></toy><toy><name>Porg plushie</name></toy></child><child><name>Baker</name><age>7</age></child></children>'),
-      instance('three', '<orx:meta><orx:instanceID>three</orx:instanceID></orx:meta><name>Chelsea</name><age>38</age><children><child><name>Candace</name><toy><name>Millennium Falcon</name></toy><toy><name>X-Wing</name></toy><toy><name>Pod racer</name></toy><age>2</age></child></children>'),
+      instance('one', '<name>Alice</name><age>30</age>'),
+      instance('two', '<name>Bob</name><age>34</age><children><child><name>Billy</name><age>4</age><toy><name>R2-D2</name></toy></child><child><name>Blaine</name><age>6</age><toy><name>BB-8</name></toy><toy><name>Porg plushie</name></toy></child><child><name>Baker</name><age>7</age></child></children>'),
+      instance('three', '<name>Chelsea</name><age>38</age><children><child><name>Candace</name><toy><name>Millennium Falcon</name></toy><toy><name>X-Wing</name></toy><toy><name>Pod racer</name></toy><age>2</age></child></children>'),
     ]);
 
     callAndParse(inStream, formXml, 'multirepeat', (err, result) => {
@@ -1119,9 +1114,9 @@ some text 3.1.4,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]/g2[1],uuid:0a1b8
       </h:html>`;
 
     const inStream = streamTest.fromObjects([
-      instance('one', '<orx:meta><orx:instanceID>one</orx:instanceID></orx:meta><name>Alice</name>'),
-      instance('two', '<orx:meta><orx:instanceID>two</orx:instanceID></orx:meta><name>Bob</name><jobs><entry><name>Bobs Hardware</name></entry><entry><name>Local Coffee</name></entry></jobs><friends><entry><name>Nasrin</name></entry></friends>'),
-      instance('three', '<orx:meta><orx:instanceID>three</orx:instanceID></orx:meta><name>Chelsea</name><jobs><entry><name>Instantaneous Food</name></entry></jobs><friends><entry><name>Ferrence</name></entry><entry><name>Mick</name></entry></friends>'),
+      instance('one', '<name>Alice</name>'),
+      instance('two', '<name>Bob</name><jobs><entry><name>Bobs Hardware</name></entry><entry><name>Local Coffee</name></entry></jobs><friends><entry><name>Nasrin</name></entry></friends>'),
+      instance('three', '<name>Chelsea</name><jobs><entry><name>Instantaneous Food</name></entry></jobs><friends><entry><name>Ferrence</name></entry><entry><name>Mick</name></entry></friends>'),
     ]);
 
     callAndParse(inStream, formXml, 'ambiguous', (err, result) => {

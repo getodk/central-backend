@@ -27,8 +27,7 @@ const zipStreamToFiles = (zipStream, callback) => {
           if(err) return callback(err);
 
           const result = { filenames: [] };
-          // eslint-disable-next-line prefer-const
-          let entries = [];
+          const entries = [];
           let completed = 0;
 
           zipfile.on('entry', (entry) => entries.push(entry));
@@ -67,7 +66,7 @@ const zipStreamToFiles = (zipStream, callback) => {
 };
 
 // eslint-disable-next-line no-confusing-arrow
-const pZipStreamToFiles = (zipStream) => new Promise((resolve, reject) => zipStreamToFiles(zipStream, (err, result) => err ? reject(err) : resolve(result)));
+const pZipStreamToFiles = (zipStream) => new Promise((resolve, reject) => { zipStreamToFiles(zipStream, (err, result) => err ? reject(err) : resolve(result)); });
 
 module.exports = { zipStreamToFiles, pZipStreamToFiles };
 

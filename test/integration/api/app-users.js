@@ -1,6 +1,7 @@
 const should = require('should');
-const { testService } = require('../setup');
+const { testService, withClosedForm } = require('../setup');
 const testData = require('../../data/xml');
+const authenticateUser = require('../../util/authenticate-user');
 
 describe('api: /projects/:id/app-users', () => {
   describe('POST', () => {
@@ -234,8 +235,8 @@ describe('api: /key/:key', () => {
       .expect(403)));
 
   it('should reject non-field tokens', testService((service) =>
-    service.post('/v1/sessions').send({ email: 'alice@getodk.org', password: 'alice' })
-      .then(({ body }) => service.get(`/v1/key/${body.token}/users/current`)
+    authenticateUser(service, 'alice')
+      .then((token) => service.get(`/v1/key/${token}/users/current`)
         .expect(403))));
 
   it('should passthrough to the appropriate route with successful auth', testService((service) =>
@@ -249,5 +250,44 @@ describe('api: /key/:key', () => {
             .send(testData.instances.simple.one)
             .set('Content-Type', 'application/xml')
             .expect(200))))));
+
+  it('should not be able access closed forms and its sub-resources', testService(withClosedForm(async (service) => {
+    const asAlice = await service.login('alice');
+
+    const fk = await asAlice.post('/v1/projects/1/app-users')
+      .send({ displayName: 'fktest' })
+      .then(({ body }) => body);
+
+    await asAlice.post(`/v1/projects/1/forms/withAttachments/assignments/app-user/${fk.id}`)
+      .expect(200);
+
+    await service.get(`/v1/key/${fk.token}/projects/1/forms`)
+      .expect(403);
+
+    await service.get(`/v1/key/${fk.token}/projects/1/forms/withAttachments`)
+      .expect(403);
+
+    await service.get(`/v1/key/${fk.token}/projects/1/forms/simple2.xls`)
+      .expect(403);
+
+    await service.get(`/v1/key/${fk.token}/projects/1/forms/withAttachments.xml`)
+      .expect(403);
+
+    await service.get(`/v1/key/${fk.token}/projects/1/forms/withAttachments/versions`)
+      .expect(403);
+
+    await service.get(`/v1/key/${fk.token}/projects/1/forms/withAttachments/fields`)
+      .expect(403);
+
+    await service.get(`/v1/key/${fk.token}/projects/1/forms/withAttachments/manifest`)
+      .set('X-OpenRosa-Version', '1.0')
+      .expect(403);
+
+    await service.get(`/v1/key/${fk.token}/projects/1/forms/withAttachments/attachments`)
+      .expect(403);
+
+    await service.get(`/v1/key/${fk.token}/projects/1/forms/withAttachments/attachments/goodone.csv`)
+      .expect(403);
+  })));
 });
 

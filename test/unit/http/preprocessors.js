@@ -2,21 +2,13 @@ const should = require('should');
 const { createRequest } = require('node-mocks-http');
 
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require
 const preprocessors = require(appRoot + '/lib/http/preprocessors');
-// eslint-disable-next-line import/no-dynamic-require
 const { Context } = require(appRoot + '/lib/http/endpoint');
-// eslint-disable-next-line import/no-dynamic-require
 const { Session, User, Actor } = require(appRoot + '/lib/model/frames');
-// eslint-disable-next-line import/no-dynamic-require
 const { by } = require(appRoot + '/lib/model/query/auth');
-// eslint-disable-next-line import/no-dynamic-require
+const { hashPassword } = require(appRoot + '/lib/util/crypto');
 const Problem = require(appRoot + '/lib/util/problem');
-// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
-
-// eslint-disable-next-line import/no-dynamic-require
-const bcrypt = require(appRoot + '/lib/util/crypto').password(require('bcrypt'));
 
 describe('preprocessors', () => {
   // some mock helpers to simplify testing this module in isolation:
@@ -32,11 +24,11 @@ describe('preprocessors', () => {
       : Option.none())
   });
 
-  describe('sessionHandler', () => {
-    const { sessionHandler } = preprocessors;
+  describe('authHandler', () => {
+    const { authHandler } = preprocessors;
 
     it('should do nothing if no Authorization header is provided', () =>
-      Promise.resolve(sessionHandler(
+      Promise.resolve(authHandler(
         { Auth, Sessions: mockSessions() },
         new Context(createRequest({ fieldKey: Option.none() }))
       )).then((context) => {
@@ -44,18 +36,15 @@ describe('preprocessors', () => {
         should.not.exist(context);
       }));
 
-    it('should do nothing if Authorization mode is not Bearer or Basic', () =>
-      Promise.resolve(sessionHandler(
+    it('should fail the request if unsupported Authorization header is supplied', () =>
+      Promise.resolve(authHandler(
         { Auth, Sessions: mockSessions() },
         new Context(createRequest({ headers: { Authorization: 'Digest aabbccddeeff123' }, fieldKey: Option.none() }))
-      )).then((context) => {
-        // preprocessors return nothing if they have no changes to make to the context.
-        should.not.exist(context);
-      }));
+      )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
     describe('Bearer auth', () => {
       it('should ignore bearer auth if a field key is present', () =>
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Sessions: {
             getByBearerToken: (token) => {
               token.should.not.equal('aabbccddeeff123');
@@ -69,7 +58,7 @@ describe('preprocessors', () => {
         )).should.be.rejectedWith(Problem, { problemCode: 403.1 }));
 
       it('should fail the request if an invalid Bearer token is given', () =>
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
           new Context(
             createRequest({ headers: { Authorization: 'Bearer abracadabra' } }),
@@ -78,7 +67,7 @@ describe('preprocessors', () => {
         )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should set the appropriate session if a valid Bearer token is given', () =>
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
           new Context(
             createRequest({ headers: { Authorization: 'Bearer alohomora' } }),
@@ -91,7 +80,7 @@ describe('preprocessors', () => {
 
     describe('Basic auth', () => {
       it('should reject non-https Basic auth requests', () =>
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Users: mockUsers('alice@getodk.org') },
           new Context(
             createRequest({ headers: { Authorization: 'Basic abracadabra' } }),
@@ -100,7 +89,7 @@ describe('preprocessors', () => {
         )).should.be.rejectedWith(Problem, { problemCode: 401.3 }));
 
       it('should fail the request if an improperly-formatted Basic auth is given', () =>
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Users: mockUsers('alice@getodk.org') },
           new Context(
             createRequest({ headers: {
@@ -112,7 +101,7 @@ describe('preprocessors', () => {
         )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should fail the request if the Basic auth user cannot be found', () =>
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Users: mockUsers('alice@getodk.org') },
           new Context(
             createRequest({ headers: {
@@ -124,8 +113,8 @@ describe('preprocessors', () => {
         )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should fail the request if the Basic auth credentials are not right', () =>
-        Promise.resolve(sessionHandler(
-          { Auth, Users: mockUsers('alice@getodk.org', 'willnevermatch'), bcrypt },
+        Promise.resolve(authHandler(
+          { Auth, Users: mockUsers('alice@getodk.org', 'willnevermatch') },
           new Context(
             createRequest({ headers: {
               Authorization: `Basic ${Buffer.from('alice@getodk.org:alice', 'utf8').toString('base64')}`,
@@ -136,9 +125,9 @@ describe('preprocessors', () => {
         )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should set the appropriate session if valid Basic auth credentials are given @slow', () =>
-        bcrypt.hash('alice').then((hashed) =>
-          Promise.resolve(sessionHandler(
-            { Auth, Users: mockUsers('alice@getodk.org', hashed), bcrypt },
+        hashPassword('alice').then((hashed) =>
+          Promise.resolve(authHandler(
+            { Auth, Users: mockUsers('alice@getodk.org', hashed) },
             new Context(
               createRequest({ headers: {
                 Authorization: `Basic ${Buffer.from('alice@getodk.org:alice', 'utf8').toString('base64')}`,
@@ -153,10 +142,10 @@ describe('preprocessors', () => {
 
     describe('by cookie', () => {
       it('should never try cookie auth over HTTP', () =>
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
           new Context(
-            createRequest({ method: 'GET', headers: { Cookie: '__Host-session=alohomora' } }),
+            createRequest({ method: 'GET', headers: { Cookie: 'session=alohomora' }, cookies: { session: 'alohomora' } }),
             { fieldKey: Option.none() }
           )
         )).then((context) => {
@@ -165,13 +154,13 @@ describe('preprocessors', () => {
         }));
 
       it('should not throw an error if the cookie is invalid', () =>
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
           new Context(
             createRequest({ method: 'GET', headers: {
               'X-Forwarded-Proto': 'https',
               Cookie: 'please just let me in'
-            } }),
+            }, cookies: {} }),
             { fieldKey: Option.none() }
           )
         )).then((context) => {
@@ -180,13 +169,13 @@ describe('preprocessors', () => {
         }));
 
       it('should not throw an error if the token is invalid', () =>
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
           new Context(
             createRequest({ method: 'GET', headers: {
               'X-Forwarded-Proto': 'https',
-              Cookie: '__Host-session=letmein'
-            } }),
+              Cookie: 'session=letmein'
+            }, cookies: { session: 'letmein' } }),
             { fieldKey: Option.none() }
           )
         )).then((context) => {
@@ -196,15 +185,15 @@ describe('preprocessors', () => {
 
       it('should do nothing if Cookie auth is attempted with primary auth present', () => {
         let caught = false;
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
           new Context(
             createRequest({ method: 'GET', headers: {
               // eslint-disable-next-line quote-props
               'Authorization': 'Bearer abc',
               'X-Forwarded-Proto': 'https',
-              Cookie: '__Host-session=alohomora'
-            } }),
+              Cookie: 'session=alohomora'
+            }, cookies: { session: 'alohomora' } }),
             { auth: { isAuthenticated() { return false; } }, fieldKey: Option.none() }
           )
         )).catch((err) => {
@@ -217,7 +206,7 @@ describe('preprocessors', () => {
 
       it('should do nothing if Cookie auth is attempted with fk auth present', () => {
         let caught = false;
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
           new Context(
             createRequest({
@@ -226,8 +215,9 @@ describe('preprocessors', () => {
                 // eslint-disable-next-line quote-props
                 'Authorization': 'Bearer abc',
                 'X-Forwarded-Proto': 'https',
-                Cookie: '__Host-session=alohomora'
+                Cookie: 'session=alohomora'
               },
+              cookies: { session: 'alohomora' },
               url: '/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
             }),
             { auth: { isAuthenticated() { return false; } }, fieldKey: Option.none() }
@@ -241,13 +231,13 @@ describe('preprocessors', () => {
       });
 
       it('should work for HTTPS GET requests', () =>
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
           new Context(
             createRequest({ method: 'GET', headers: {
               'X-Forwarded-Proto': 'https',
-              Cookie: '__Host-session=alohomora'
-            } }),
+              Cookie: 'session=alohomora'
+            }, cookies: { session: 'alohomora' } }),
             { fieldKey: Option.none() }
           )
         )).then((context) => {
@@ -255,13 +245,13 @@ describe('preprocessors', () => {
         }));
 
       it('should work for HTTPS HEAD requests', () =>
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
           new Context(
             createRequest({ method: 'HEAD', headers: {
               'X-Forwarded-Proto': 'https',
-              Cookie: '__Host-session=alohomora'
-            } }),
+              Cookie: 'session=alohomora'
+            }, cookies: { session: 'alohomora' } }),
             { fieldKey: Option.none() }
           )
         )).then((context) => {
@@ -269,13 +259,13 @@ describe('preprocessors', () => {
         }));
 
       it('should decode encoded cookies', () =>
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('aloho$mora') },
           new Context(
             createRequest({ method: 'GET', headers: {
               'X-Forwarded-Proto': 'https',
-              Cookie: '__Host-session=aloho%24mora'
-            } }),
+              Cookie: 'session=aloho%24mora'
+            }, cookies: { session: 'aloho$mora' } }),
             { fieldKey: Option.none() }
           )
         )).then((context) => {
@@ -290,37 +280,37 @@ describe('preprocessors', () => {
         });
 
         it('should reject cookie auth without CSRF token for non-GET requests', () =>
-          Promise.resolve(sessionHandler(
+          Promise.resolve(authHandler(
             { Auth, Sessions: mockSessions('alohomora') },
             new Context(
               createRequest({ method: 'POST', headers: {
                 'X-Forwarded-Proto': 'https',
-                Cookie: '__Host-session=alohomora'
-              } }),
+                Cookie: 'session=alohomora'
+              }, cookies: { session: 'alohomora' } }),
               { fieldKey: Option.none() }
             )
           )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
         it('should reject cookie auth with incorrect CSRF token for non-GET requests', () =>
-          Promise.resolve(sessionHandler(
+          Promise.resolve(authHandler(
             { Auth, Sessions: mockSessionsWithCsrf('alohomora', 'secretcsrf') },
             new Context(
               createRequest({ method: 'POST', headers: {
                 'X-Forwarded-Proto': 'https',
-                Cookie: '__Host-session=alohomora'
-              }, body: { __csrf: 'notsecretcsrf' } }),
+                Cookie: 'session=alohomora'
+              }, body: { __csrf: 'notsecretcsrf' }, cookies: { session: 'alohomora' } }),
               { fieldKey: Option.none() }
             )
           )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
         it('should do nothing on cookie auth with incorrect session token for non-GET requests', () =>
-          Promise.resolve(sessionHandler(
+          Promise.resolve(authHandler(
             { Auth, Sessions: mockSessionsWithCsrf('alohomora', 'secretcsrf') },
             new Context(
               createRequest({ method: 'POST', headers: {
                 'X-Forwarded-Proto': 'https',
-                Cookie: '__Host-session=notalohomora'
-              }, body: { __csrf: 'secretcsrf' } }),
+                Cookie: 'session=notalohomora'
+              }, body: { __csrf: 'secretcsrf' }, cookies: { session: 'notalohomora' } }),
               { fieldKey: Option.none() }
             )
           )).then((context) => {
@@ -329,37 +319,37 @@ describe('preprocessors', () => {
           }));
 
         it('should accept cookie auth with correct CSRF token for non-GET requests', () =>
-          Promise.resolve(sessionHandler(
+          Promise.resolve(authHandler(
             { Auth, Sessions: mockSessionsWithCsrf('alohomora', 'secretcsrf') },
             new Context(
               createRequest({ method: 'POST', headers: {
                 'X-Forwarded-Proto': 'https',
-                Cookie: '__Host-session=alohomora'
-              }, body: { __csrf: 'secretcsrf' } }),
+                Cookie: 'session=alohomora'
+              }, body: { __csrf: 'secretcsrf' }, cookies: { session: 'alohomora' } }),
               { fieldKey: Option.none() }
             )
           )).should.be.fulfilled());
 
         it('should url-decode the CSRF token', () =>
-          Promise.resolve(sessionHandler(
+          Promise.resolve(authHandler(
             { Auth, Sessions: mockSessionsWithCsrf('alohomora', 'secret$csrf') },
             new Context(
               createRequest({ method: 'POST', headers: {
                 'X-Forwarded-Proto': 'https',
-                Cookie: '__Host-session=alohomora'
-              }, body: { __csrf: 'secret%24csrf' } }),
+                Cookie: 'session=alohomora'
+              }, body: { __csrf: 'secret%24csrf' }, cookies: { session: 'alohomora' } }),
               { fieldKey: Option.none() }
             )
           )).should.be.fulfilled());
 
         it('should remove CSRF token from data payload on success', () =>
-          Promise.resolve(sessionHandler(
+          Promise.resolve(authHandler(
             { Auth, Sessions: mockSessionsWithCsrf('alohomora', 'secretcsrf') },
             new Context(
               createRequest({ method: 'POST', headers: {
                 'X-Forwarded-Proto': 'https',
-                Cookie: '__Host-session=alohomora'
-              }, body: { __csrf: 'secretcsrf', other: 'data' } }),
+                Cookie: 'session=alohomora'
+              }, body: { __csrf: 'secretcsrf', other: 'data' }, cookies: { session: 'alohomora' } }),
               { fieldKey: Option.none() }
             )
           )).then((context) => {
@@ -376,7 +366,7 @@ describe('preprocessors', () => {
       });
 
       it('should do nothing if no fieldKey is present in context', () =>
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Sessions: mockFkSession('alohomora') },
           new Context(createRequest(), { fieldKey: Option.none() })
         )).then((context) => {
@@ -385,25 +375,25 @@ describe('preprocessors', () => {
         }));
 
       it('should fail the request with 401 if the token is the wrong length', () =>
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Sessions: mockFkSession('alohomor') },
           new Context(createRequest(), { fieldKey: Option.of('alohomora'), })
         )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should fail the request with 403 if the session does not exist', () =>
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Sessions: mockFkSession('alohomoraalohomoraalohomoraalohomoraalohomoraalohomoraalohomoraa') },
           new Context(createRequest(), { fieldKey: Option.of('abracadabraabracadabraabracadabraabracadabraabracadabraabracadab'), })
         )).should.be.rejectedWith(Problem, { problemCode: 403.1 }));
 
       it('should fail the request with 403 if the session does not belong to a field key', () =>
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Sessions: mockFkSession('alohomoraalohomoraalohomoraalohomoraalohomoraalohomoraalohomoraa', 'user') },
           new Context(createRequest(), { fieldKey: Option.of('alohomoraalohomoraalohomoraalohomoraalohomoraalohomoraalohomoraa'), })
         )).should.be.rejectedWith(Problem, { problemCode: 403.1 }));
 
       it('should attach the correct auth if everything is correct', () =>
-        Promise.resolve(sessionHandler(
+        Promise.resolve(authHandler(
           { Auth, Sessions: mockFkSession('alohomoraalohomoraalohomoraalohomoraalohomoraalohomoraalohomoraa', 'field_key') },
           new Context(createRequest(), { fieldKey: Option.of('alohomoraalohomoraalohomoraalohomoraalohomoraalohomoraalohomoraa'), })
         )).then((context) => {

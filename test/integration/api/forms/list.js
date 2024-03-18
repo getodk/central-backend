@@ -328,7 +328,7 @@ describe('api: /projects/:id/forms (listing forms)', () => {
       <formID>withAttachments</formID>
       <name>withAttachments</name>
       <version></version>
-      <hash>md5:7eb21b5b123b0badcf2b8f50bcf1cbd0</hash>
+      <hash>md5:dda89055c8fec222458f702aead30a83</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments.xml</downloadUrl>
       <manifestUrl>${domain}/v1/projects/1/forms/withAttachments/manifest</manifestUrl>
     </xform>

@@ -6,9 +6,13 @@
     "array-bracket-spacing": "off",
     "arrow-parens": "off",
     "class-methods-use-this": "off",
+    "camelcase": [ "error", { "ignoreDestructuring": true, "properties": "never" } ],
     "comma-dangle": "off",
     "consistent-return": "off",
     "curly": "off",
+    "default-param-last": "off", // TODO enable this and refactor the code
+    "function-call-argument-newline": "off",
+    "function-paren-newline": "off",
     "global-require": "off",
     "implicit-arrow-linebreak": "off",
     "import/newline-after-import": "off",
@@ -33,6 +37,7 @@
     "padded-blocks": "off",
     "prefer-object-spread": "off",
     "prefer-template": "off",
+    "quotes": [ "error", "single", { "allowTemplateLiterals": true, "avoidEscape": true } ],
     "space-infix-ops": "off",
     "spaced-comment": "off"
   }

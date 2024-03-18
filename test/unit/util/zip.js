@@ -1,11 +1,8 @@
 const appRoot = require('app-root-path');
 const { createWriteStream } = require('fs');
 const { Transform, Readable } = require('stream');
-// eslint-disable-next-line import/no-dynamic-require
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
-// eslint-disable-next-line import/no-dynamic-require
 const { PartialPipe } = require(appRoot + '/lib/util/stream');
-// eslint-disable-next-line import/no-dynamic-require
 const { zipPart, zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 const { fromChunks } = require('streamtest').v2;
 
@@ -72,16 +69,16 @@ describe('zipPart streamer', () => {
     const archive = zipStreamFromParts(part);
     archive.pipe(createWriteStream('/dev/null'));
 
+    const calls = [];
+
     archive.on('end', () => {
       // despite the fact that 2 gets closed before 1 below, we still expect 1 to
       // be called back first because it was appended to the archive first, and
       // the archive works serially.
-      // eslint-disable-next-line no-use-before-define
       calls.should.eql([ 1, 2 ]);
       done();
     });
 
-    const calls = [];
     part.append(file1, { name: 'file' }, () => { calls.push(1); });
     file1.push('aoeuaoeu');
     part.append(file2, { name: 'file' }, () => { calls.push(2); });

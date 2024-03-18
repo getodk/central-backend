@@ -1,9 +1,7 @@
 const should = require('should');
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
-// eslint-disable-next-line import/no-dynamic-require
 const { Frame, table, readable, writable, into, aux, embedded } = require(appRoot + '/lib/model/frame');
-// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
 
 describe('Frame', () => {

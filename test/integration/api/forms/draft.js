@@ -3,7 +3,6 @@ const appRoot = require('app-root-path');
 const should = require('should');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
-// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const { sql } = require('slonik');
 
@@ -61,7 +60,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body.version.should.equal('drafty');
               })))));
 
-      it('should create a new draft token setting a new draft version', testService((service) =>
+      it('should create a new draft token while setting a new draft', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .expect(200)
@@ -83,35 +82,92 @@ describe('api: /projects/:id/forms (drafts)', () => {
                     }));
               })))));
 
-      it('should worker-process the draft form over to enketo', testService((service, container) =>
-        service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms/simple/draft')
-            .expect(200)
-            .then(({ body }) => {
-              should.not.exist(body.enketoId);
-            })
-            .then(() => exhaust(container))
-            .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
-              .expect(200)
-              .then(({ body }) => {
-                body.enketoId.should.equal('::abcdefgh');
-                should.not.exist(body.enketoOnceId);
-                global.enketoReceivedUrl.startsWith(container.env.domain).should.equal(true);
-                global.enketoReceivedUrl.should.match(/\/v1\/test\/[a-z0-9$!]{64}\/projects\/1\/forms\/simple\/draft/i);
-              })))));
+      it('should request an enketoId while setting a new draft', testService(async (service, { env }) => {
+        const asAlice = await service.login('alice');
+        global.enketo.enketoId = '::ijklmnop';
+        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+        global.enketo.callCount.should.equal(1);
+        global.enketo.receivedUrl.startsWith(env.domain).should.be.true();
+        const match = global.enketo.receivedUrl.match(/\/v1\/test\/([a-z0-9$!]{64})\/projects\/1\/forms\/simple\/draft$/i);
+        should.exist(match);
+        const { body } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200);
+        match[1].should.equal(body.draftToken);
+        body.enketoId.should.equal('::ijklmnop');
+      }));
 
-      it('should manage draft/published enketo tokens separately', testService((service, container) =>
+      it('should request a new enketoId while setting each new draft', testService(async (service, { env }) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+        await asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+          .expect(200);
+        global.enketo.callCount.should.equal(2);
+        global.enketo.enketoId = '::ijklmnop';
+        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+        global.enketo.callCount.should.equal(3);
+        global.enketo.receivedUrl.startsWith(env.domain).should.be.true();
+        const match = global.enketo.receivedUrl.match(/\/v1\/test\/([a-z0-9$!]{64})\/projects\/1\/forms\/simple\/draft$/i);
+        should.exist(match);
+        const { body } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200);
+        match[1].should.equal(body.draftToken);
+        body.enketoId.should.equal('::ijklmnop');
+      }));
+
+      it('should return with success even if the request to Enketo fails', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        global.enketo.state = 'error';
+        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+        const { body } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200);
+        should.not.exist(body.enketoId);
+      }));
+
+      it('should wait for Enketo only briefly @slow', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        global.enketo.wait = (done) => { setTimeout(done, 600); };
+        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+        const { body } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200);
+        should.not.exist(body.enketoId);
+      }));
+
+      it('should request an enketoId from the worker if the request from the endpoint fails', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+        global.enketo.state = 'error';
+        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+        global.enketo.callCount.should.equal(1);
+        global.enketo.enketoId = '::ijklmnop';
+        await exhaust(container);
+        global.enketo.callCount.should.equal(2);
+        global.enketo.receivedUrl.startsWith(container.env.domain).should.be.true();
+        const match = global.enketo.receivedUrl.match(/\/v1\/test\/([a-z0-9$!]{64})\/projects\/1\/forms\/simple\/draft$/i);
+        should.exist(match);
+        const { body } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200);
+        match[1].should.equal(body.draftToken);
+        body.enketoId.should.equal('::ijklmnop');
+        should.not.exist(body.enketoOnceId);
+      }));
+
+      it('should not request an enketoId from the worker if the request from the endpoint succeeds', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+        global.enketo.callCount.should.equal(1);
+        await exhaust(container);
+        global.enketo.callCount.should.equal(1);
+      }));
+
+      it('should manage draft/published enketo tokens separately', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
             .set('Content-Type', 'application/xml')
             .send(testData.forms.simple2)
             .expect(200)
-            .then(() => exhaust(container))
             .then(() => {
-              global.enketoToken = '::ijklmnop';
+              global.enketo.enketoId = '::ijklmnop';
               return asAlice.post('/v1/projects/1/forms/simple2/draft')
                 .expect(200)
-                .then(() => exhaust(container))
                 .then(() => Promise.all([
                   asAlice.get('/v1/projects/1/forms/simple2')
                     .expect(200)
@@ -138,7 +194,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body.version.should.equal('drafty2');
               })))));
 
-      it('should keep the draft token while replacing the draft version', testService((service) =>
+      it('should keep the draft token while replacing the draft', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
@@ -160,6 +216,41 @@ describe('api: /projects/:id/forms (drafts)', () => {
                       body.draftToken.should.equal(draftToken);
                     }));
               })))));
+
+      it('should keep the enketoId while replacing the draft', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/draft')
+          .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        global.enketo.callCount.should.equal(1);
+        const { body: draft1 } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200);
+        draft1.enketoId.should.equal('::abcdefgh');
+        await asAlice.post('/v1/projects/1/forms/simple/draft')
+          .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        global.enketo.callCount.should.equal(1);
+        const { body: draft2 } = await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200);
+        draft2.enketoId.should.equal('::abcdefgh');
+      }));
+
+      it('should not request an enketoId from the worker while replacing the draft', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/draft')
+          .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        global.enketo.callCount.should.equal(1);
+        await asAlice.post('/v1/projects/1/forms/simple/draft')
+          .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+        global.enketo.callCount.should.equal(1);
+      }));
 
       it('should copy the published form definition if not given one', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -254,7 +345,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
             .send(testData.forms.simple.replace(/simple/g, 'itemsets'))
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.post('/v1/projects/1/forms/itemsets/draft')
+            .then(() => asAlice.post('/v1/projects/1/forms/itemsets/draft?ignoreWarnings=true')
               .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
               .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
               .set('X-XlsForm-FormId-Fallback', 'itemsets'))
@@ -307,7 +398,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
 
       it('should complain about field conflicts (older)', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms/simple/draft')
+          asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
             .send(testData.forms.simple
               .replace('id="simple"', 'id="simple" version="2"')
               .replace(/age/g, 'number'))
@@ -315,7 +406,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
             .expect(200)
             .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish')
               .expect(200))
-            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
               .send(testData.forms.simple.replace('type="int"', 'type="date"'))
               .set('Content-Type', 'application/xml')
               .expect(400)
@@ -370,7 +461,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body.details.should.eql({ path: '/age', type: 'string' });
               })))));
 
-      it.skip('should complain on downcast from group to string', testService((service) =>
+      it('should complain on downcast from group to string', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .send(testData.forms.simple.replace('nodeset="/data/meta/instanceID"', 'nodeset="/data/meta"'))
@@ -381,11 +472,11 @@ describe('api: /projects/:id/forms (drafts)', () => {
               body.details.should.eql({ path: '/meta', type: 'structure' });
             }))));
 
-      it.skip('should complain on downcast from repeat to string', testService((service) =>
+      it('should complain on downcast from repeat to string', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/withrepeat/draft')
             .send(testData.forms.withrepeat
-              .replace('</model>', '<bind nodeset="/data/children/child" type="int"/></model>')
+              .replace('</model>', '<bind nodeset="/data/children/child" type="string"/></model>')
               .replace('<repeat', '<rpt')
               .replace('</repeat', '</rpt'))
             .set('Content-Type', 'application/xml')
@@ -397,18 +488,47 @@ describe('api: /projects/:id/forms (drafts)', () => {
 
       it('should not complain about discarded draft field conflicts', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms/simple/draft')
+          asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
             .send(testData.forms.simple.replace(/age/g, 'number'))
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
               .send(testData.forms.simple.replace(/age/g, 'number').replace('type="int"', 'type="string"'))
               .set('Content-Type', 'application/xml')
               .expect(200)))));
 
+
+      it('should allow new draft with missing meta group', testService(async (service) => {
+        // This case is not expected, but it mimics a different scenario where there are
+        // already meta-less forms in a user's central repo and they need to be able to update them
+        // without breaking their workflows.
+        const asAlice = await service.login('alice');
+
+        const simpleMissingMeta = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml">
+          <h:head>
+            <h:title>Simple</h:title>
+            <model>
+              <instance>
+                <data id="simple">
+                  <name/>
+                  <age/>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string"/>
+              <bind nodeset="/data/age" type="int"/>
+            </model>
+          </h:head>
+        </h:html>`;
+
+        await asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+          .send(simpleMissingMeta)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+      }));
+
       it('should identify attachments', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms/simple/draft')
+          asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
             .send(testData.forms.withAttachments.replace('id="withAttachments"', 'id="simple"'))
             .set('Content-Type', 'application/xml')
             .expect(200)
@@ -648,6 +768,79 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   .then((count) => {
                     count.should.equal(1); // only one for the new draft
                   })))));
+
+          describe('purging form fields of unneeded drafts', () => {
+            it('should not purge fields because they are part of schema of published form', testService((service, { oneFirst }) =>
+              service.login('alice', (asAlice) =>
+                asAlice.post('/v1/projects/1/forms/simple/draft')
+                  .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+                  .set('Content-Type', 'application/xml')
+                  .expect(200)
+                  .then(() => Promise.all([
+                    oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
+                    oneFirst(sql`select count(*) from form_fields where "formId" = 1`)
+                  ]))
+                  .then((counts) => counts.should.eql([ 2, 4 ]))
+                  .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+                    .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
+                    .set('Content-Type', 'application/xml')
+                    .expect(200))
+                  .then(() => Promise.all([
+                    oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
+                    oneFirst(sql`select count(*) from form_fields where "formId" = 1`)
+                  ]))
+                  .then((counts) => counts.should.eql([ 2, 4 ])))));
+
+            it('should purge fields of unneeded intermediate draft with different schema', testService((service, { oneFirst }) =>
+              service.login('alice', (asAlice) =>
+                asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+                  .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"').replace(/age/g, 'number'))
+                  .set('Content-Type', 'application/xml')
+                  .expect(200)
+                  .then(() => Promise.all([
+                    oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
+                    oneFirst(sql`select count(*) from form_fields where "formId" = 1`),
+                    oneFirst(sql`select count(*) from form_schemas`)
+                  ]))
+                  .then((counts) => counts.should.eql([ 2, 8, 3 ]))
+                  .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+                    .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"')) // back to original schema
+                    .set('Content-Type', 'application/xml')
+                    .expect(200))
+                  .then(() => Promise.all([
+                    oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
+                    oneFirst(sql`select count(*) from form_fields where "formId" = 1`),
+                    oneFirst(sql`select count(*) from form_schemas`) // 2: one for each different form
+                  ]))
+                  .then((counts) => counts.should.eql([ 2, 4, 2 ]))
+                  .then(() => asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+                    .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty3"').replace(/age/g, 'number')) // new schema again
+                    .set('Content-Type', 'application/xml')
+                    .expect(200))
+                  .then(() => Promise.all([
+                    oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
+                    oneFirst(sql`select count(*) from form_fields where "formId" = 1`),
+                    oneFirst(sql`select count(*) from form_schemas`) // new schema brought back
+                  ]))
+                  .then((counts) => counts.should.eql([ 2, 8, 3 ])))));
+
+            it('should purge the form field and schema of intermediate version (and no published draft)', testService((service, { oneFirst }) =>
+              service.login('alice', (asAlice) =>
+                asAlice.post('/v1/projects/1/forms')
+                  .send(testData.forms.simple2) // first draft version
+                  .set('Content-Type', 'application/xml')
+                  .expect(200)
+                  .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+                    .send(testData.forms.simple2.replace('id="simple2"', 'id="simple2" version="drafty2"').replace(/age/g, 'number'))
+                    .set('Content-Type', 'application/xml')
+                    .expect(200))
+                  .then(() => Promise.all([
+                    oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple2'`),
+                    oneFirst(sql`select count(*) from form_fields as fs join forms as f on fs."formId" = f.id where f."xmlFormId"='simple2'`),
+                    oneFirst(sql`select count(*) from form_schemas`) // two fixture forms and one for this form
+                  ]))
+                  .then((counts) => counts.should.eql([ 1, 4, 3 ])))));
+          });
         });
       });
     });
@@ -704,18 +897,16 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body.lastSubmission.should.be.a.recentIsoDate();
               })))));
 
-      it('should return the correct enketoId with extended draft', testService((service, container) =>
+      it('should return the correct enketoId with extended draft', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
             .set('Content-Type', 'application/xml')
             .send(testData.forms.simple2)
             .expect(200)
-            .then(() => exhaust(container))
             .then(() => {
-              global.enketoToken = '::ijklmnop';
+              global.enketo.enketoId = '::ijklmnop';
               return asAlice.post('/v1/projects/1/forms/simple2/draft')
                 .expect(200)
-                .then(() => exhaust(container))
                 .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft')
                   .set('X-Extended-Metadata', true)
                   .expect(200)
@@ -950,6 +1141,152 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   { name: 'goodtwo.mp3', type: 'audio', exists: false, blobExists: false, datasetExists: false }
                 ]);
               })))));
+
+      it('should request Enketo IDs when publishing for first time', testService(async (service, { env }) => {
+        const asAlice = await service.login('alice');
+
+        // Create a draft form.
+        global.enketo.state = 'error';
+        const { body: draft } = await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        global.enketo.callCount.should.equal(1);
+        should.not.exist(draft.enketoId);
+        should.not.exist(draft.enketoOnceId);
+
+        // Publish.
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+          .expect(200);
+        global.enketo.callCount.should.equal(2);
+        global.enketo.receivedUrl.should.equal(`${env.domain}/v1/projects/1`);
+        const { body: form } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        form.enketoId.should.equal('::abcdefgh');
+        form.enketoOnceId.should.equal('::::abcdefgh');
+      }));
+
+      it('should return with success even if request to Enketo fails', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        global.enketo.state = 'error';
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+          .expect(200);
+        const { body: form } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        should.not.exist(form.enketoId);
+        should.not.exist(form.enketoOnceId);
+      }));
+
+      it('should wait for Enketo only briefly @slow', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        global.enketo.wait = (done) => { setTimeout(done, 600); };
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+          .expect(200);
+        const { body: form } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        should.not.exist(form.enketoId);
+        should.not.exist(form.enketoOnceId);
+      }));
+
+      it('should request Enketo IDs when republishing if they are missing', testService(async (service, { env }) => {
+        const asAlice = await service.login('alice');
+
+        // First publish
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        global.enketo.state = 'error';
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+          .expect(200);
+        const { body: v1 } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        should.not.exist(v1.enketoId);
+        should.not.exist(v1.enketoOnceId);
+
+        // Republish
+        await asAlice.post('/v1/projects/1/forms/simple2/draft').expect(200);
+        global.enketo.callCount.should.equal(3);
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish?version=new')
+          .expect(200);
+        global.enketo.callCount.should.equal(4);
+        global.enketo.receivedUrl.should.equal(`${env.domain}/v1/projects/1`);
+        const { body: v2 } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        v2.enketoId.should.equal('::abcdefgh');
+        v2.enketoOnceId.should.equal('::::abcdefgh');
+      }));
+
+      it('should not request Enketo IDs when republishing if they are present', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        // First publish
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+          .expect(200);
+
+        // Republish
+        await asAlice.post('/v1/projects/1/forms/simple2/draft').expect(200);
+        global.enketo.callCount.should.equal(3);
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish?version=new')
+          .expect(200);
+        global.enketo.callCount.should.equal(3);
+        const { body: form } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        form.enketoId.should.equal('::abcdefgh');
+        form.enketoOnceId.should.equal('::::abcdefgh');
+      }));
+
+      it('should request Enketo IDs from worker if request from endpoint fails', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // First request to Enketo, from the endpoint
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        global.enketo.state = 'error';
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+          .expect(200);
+        const { body: beforeWorker } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        should.not.exist(beforeWorker.enketoId);
+        should.not.exist(beforeWorker.enketoOnceId);
+
+        // Second request, from the worker
+        global.enketo.callCount.should.equal(2);
+        await exhaust(container);
+        global.enketo.callCount.should.equal(3);
+        global.enketo.receivedUrl.should.equal(`${container.env.domain}/v1/projects/1`);
+        const { body: afterWorker } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        afterWorker.enketoId.should.equal('::abcdefgh');
+        afterWorker.enketoOnceId.should.equal('::::abcdefgh');
+      }));
+
+      it('should not request Enketo IDs from worker if request from endpoint succeeds', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+          .expect(200);
+        global.enketo.callCount.should.equal(2);
+        await exhaust(container);
+        global.enketo.callCount.should.equal(2);
+      }));
 
       it('should log the action in the audit log', testService((service, { Forms }) =>
         service.login('alice', (asAlice) =>

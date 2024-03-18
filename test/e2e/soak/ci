@@ -1,0 +1,60 @@
+#!/bin/bash -eu
+set -o pipefail
+
+serverUrl="http://localhost:8383"
+userEmail="x@example.com"
+userPassword="secret1234"
+
+log() {
+  echo "[test/e2e/soak] $*"
+}
+
+fail_job() {
+  log 'Job failed.'
+  exit 1
+}
+
+make base
+
+echo "$userPassword" | node ./lib/bin/cli.js user-create  -u "$userEmail"
+node ./lib/bin/cli.js user-promote -u "$userEmail"
+
+make run >backend.log 2>&1 &
+
+log 'Waiting for backend to start...'
+timeout 30 bash -c "while ! curl -s -o /dev/null $serverUrl; do sleep 1; done"
+log 'Backend started!'
+
+cd test/e2e/soak
+node index.js -s "$serverUrl" -P "$userPassword" -L /tmp/soak-tester-logs
+
+if ! curl -s -o /dev/null "$serverUrl"; then
+  log 'Backend died.'
+  fail_job
+fi
+
+log 'Checking open DB query count...'
+timeout 120 bash -c "cd ../../..; while ! node lib/bin/check-open-db-queries.js; do sleep 1; done"
+
+log 'Checking backend is serving requests...'
+responseLog="$(mktemp)"
+requestBody='{"email":"'"$userEmail"'","password":"'"$userPassword"'"}'
+loginStatus="$(curl -s -o "$responseLog" -w '%{http_code}' \
+  --header 'Content-Type: application/json' --data "$requestBody" \
+  "$serverUrl/v1/sessions"
+)"
+if [[ "$loginStatus" != "200" ]]; then
+  log 'Backend behaving badly:'
+  log "$(cat "$responseLog")"
+  fail_job
+fi
+log 'Backend survived; job passed.'
+
+# TODO upload results to getodk.cloud for graphing.  Include:
+#
+# * key metrics (for graphing against other branches)
+#   * throughput
+#   * average response time
+#   * response time range (quickest, slowest)
+#   * did export response sizes vary?
+# * individual response timings (to see if e.g. response times degrade over time)

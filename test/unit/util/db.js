@@ -1,12 +1,9 @@
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
-// eslint-disable-next-line import/no-dynamic-require
+const { fieldTypes } = require('../../../lib/model/frame');
 const { Frame, table, into } = require(appRoot + '/lib/model/frame');
-// eslint-disable-next-line import/no-dynamic-require
 const util = require(appRoot + '/lib/util/db');
-// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
-// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
 
 describe('util/db', () => {
@@ -294,10 +291,10 @@ returning *`);
     });
 
     it('should deal with strange data input types', () => {
-      insert(new T({ x: { test: true }, y: undefined, z: new Date('2000-01-01') }))
+      insert(new T({ x: { test: true }, y: undefined, z: new Date('2000-01-01'), w: Object.assign(Object.create(null), { foo: 'bar' }) }))
         .should.eql(sql`
-insert into frames ("x","y","z")
-values (${'{"test":true}'},${null},${'2000-01-01T00:00:00.000Z'})
+insert into frames ("x","y","z","w")
+values (${'{"test":true}'},${null},${'2000-01-01T00:00:00.000Z'},${'{"foo":"bar"}'})
 returning *`);
     });
 
@@ -312,23 +309,38 @@ returning *`);
 
   describe('insertMany', () => {
     const { insertMany } = util;
-    const T = Frame.define(table('dogs'), 'x', 'y');
+    const T = Frame.define(table('dogs'), 'x', 'y', fieldTypes(['text', 'text']));
 
     it('should do nothing if given no data', () => {
       insertMany([]).should.eql(sql`select true`);
     });
 
     it('should insert all data', () => {
-      insertMany([ new T({ x: 2 }), new T({ y: 3 }) ]).should.eql(sql`
-insert into dogs ("x","y")
-values (${2},${null}),(${null},${3})`);
+      const query = insertMany([ new T({ x: 2 }), new T({ y: 3 }) ]);
+      query.sql.should.be.eql(`
+  INSERT INTO dogs ("x","y")
+  SELECT * FROM unnest($1::"text"[], $2::"text"[]) AS t`);
+      query.values.should.be.eql([
+        [2, null],
+        [null, 3]
+      ]);
     });
 
     it('should insert createdAt and strange values', () => {
+      const U = Frame.define(table('dogs'), 'x', 'createdAt', fieldTypes(['timestamptz', 'timestamptz']));
+      const query = insertMany([ new U({ x: new Date('2000-01-01') }), new U() ]);
+      query.sql.should.be.eql(`
+  INSERT INTO dogs ("createdAt", "x")
+  SELECT clock_timestamp(), * FROM unnest($1::"timestamptz"[]) AS t`);
+      query.values.should.be.eql([
+        ['2000-01-01T00:00:00.000Z', null]
+      ]);
+    });
+
+    it('should throw fieldTypesNotDefined', () => {
       const U = Frame.define(table('dogs'), 'x', 'createdAt');
-      insertMany([ new U({ x: new Date('2000-01-01') }), new U() ]).should.eql(sql`
-insert into dogs ("x","createdAt")
-values (${'2000-01-01T00:00:00.000Z'},${sql`clock_timestamp()`}),(${null},${sql`clock_timestamp()`})`);
+      (() => insertMany([ new U({ x: new Date('2000-01-01') }), new U() ]))
+        .should.throw('fieldTypes are not defined on the dogs Frame, please define them to use insertMany.');
     });
   });
 
@@ -406,6 +418,15 @@ returning *`);
       (new QueryOptions({ args: { b: 4, f: 9 }, argData: { a: 1, b: 2, c: 3, d: 4 } }))
         .allowArgs('b', 'c', 'e')
         .args.should.eql({ b: 2, c: 3, f: 9 });
+    });
+
+    it('should create and parse cursor token', () => {
+      const data = {
+        someid: '123'
+      };
+
+      const token = QueryOptions.getSkiptoken(data);
+      QueryOptions.parseSkiptoken(token).should.be.eql(data);
     });
 
     describe('related functions', () => {

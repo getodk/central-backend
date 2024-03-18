@@ -6,13 +6,9 @@ const streamTest = require('streamtest').v2;
 const { always } = require('ramda');
 
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require
 const { endpointBase, defaultErrorWriter, Context, defaultResultWriter, openRosaPreprocessor, openRosaBefore, openRosaResultWriter, openRosaErrorWriter, odataPreprocessor, odataBefore } = require(appRoot + '/lib/http/endpoint');
-// eslint-disable-next-line import/no-dynamic-require
 const { PartialPipe } = require(appRoot + '/lib/util/stream');
-// eslint-disable-next-line import/no-dynamic-require
 const { noop } = require(appRoot + '/lib/util/util');
-// eslint-disable-next-line import/no-dynamic-require
 const Problem = require(appRoot + '/lib/util/problem');
 
 const createModernResponse = () => {
@@ -64,13 +60,12 @@ describe('endpoints', () => {
       defaultErrorWriter(new Problem(409.1138, 'test message', { x: 1 }), null, response);
     });
 
-    it('should turn remaining errors into unknown Problems', (done) => {
+    it('should turn remaining errors into internal server errors', (done) => {
       const response = createModernResponse();
       const error = new Error('oops');
-      error.stack = ''; // strip stack so that our test output isn't super polluted
       response.on('end', () => {
         response.statusCode.should.equal(500);
-        response._getData().message.should.equal('Completely unhandled exception: oops');
+        response._getData().should.deepEqual({ message: 'Internal Server Error' });
         done();
       });
       defaultErrorWriter(error, null, response);
@@ -90,7 +85,7 @@ describe('endpoints', () => {
       const response = createModernResponse();
       response.on('end', () => {
         response.statusCode.should.equal(500);
-        response._getData().message.should.equal('Completely unhandled exception: undefined');
+        response._getData().should.deepEqual({ message: 'Internal Server Error' });
         done();
       });
       defaultErrorWriter(null, null, response);
@@ -234,8 +229,7 @@ describe('endpoints', () => {
 
     describe('before handler', () => {
       it('should run after preprocessors and before the resource', () => {
-        // eslint-disable-next-line prefer-const
-        let ran = [];
+        const ran = [];
         const push = (str) => () => { ran.push(str); };
         return endpointBase({
           before: push('before'),
@@ -361,20 +355,20 @@ describe('endpoints', () => {
             .then(() => { transacted.should.equal(false); });
         })));
 
-      it('should not initiate a transaction given a nonwrite POST', () => {
-        let transacted = false;
-        const container = {
-          transacting(cb) { transacted = true; return cb(); },
-          with() { return container; }
-        };
+      it('should not initiate a transaction given a nonwrite POST', () =>
+        Promise.all([
+          '/projects/1/forms/encrypted/submissions.csv',
+          '/projects/1/forms/encrypted/submissions.csv.zip'
+        ].map((path) => {
+          let transacted = false;
+          const container = {
+            transacting(cb) { transacted = true; return cb(); },
+            with() { return container; }
+          };
 
-        const request = {
-          method: 'POST',
-          path: '/projects/1/forms/encrypted/submissions.csv.zip'
-        };
-        return endpointBase({ resultWriter: noop })(container)(always(true))(request)
-          .then(() => { transacted.should.equal(false); });
-      });
+          return endpointBase({ resultWriter: noop })(container)(always(true))({ method: 'POST', path })
+            .then(() => { transacted.should.equal(false); });
+        })));
 
       it('should reject on the transacting promise on preprocessor failure', () => {
         // we still check the transacted flag just to be sure the rejectedWith assertion runs.
@@ -499,7 +493,8 @@ describe('endpoints', () => {
       let trailers;
       const requestTest = streamTest.fromChunks();
       // eslint-disable-next-line no-shadow
-      const responseTest = streamTest.toText((_, result) => {
+      const responseTest = streamTest.toText((err, result) => {
+        err.message.should.equal('ERR_EXPECTED');
         trailers.should.eql({ Status: 'Error' });
         // eslint-disable-next-line no-multi-spaces
         should.not.exist(result);                  // node v14
@@ -515,7 +510,7 @@ describe('endpoints', () => {
         streamTest.fromChunks([ 'a', 'test', 'stream' ]),
         // eslint-disable-next-line no-shadow
         new Transform({ transform(s, _, done) {
-          if (s.length > 4) done(new Error('nope'));
+          if (s.length > 4) done(new Error('ERR_EXPECTED'));
           else done(null, s + '!');
         } })
       );
@@ -586,7 +581,6 @@ describe('endpoints', () => {
     });
 
     describe('resultWriter', () => {
-      // eslint-disable-next-line import/no-dynamic-require
       const { createdMessage } = require(appRoot + '/lib/formats/openrosa');
 
       it('should send the appropriate content with the appropriate header', () => {
@@ -609,7 +603,7 @@ describe('endpoints', () => {
 
         response.statusCode.should.equal(500);
         response.getHeader('Content-Type').should.equal('application/json');
-        response._getData().message.should.equal('Completely unhandled exception: test');
+        response._getData().should.deepEqual({ message: 'Internal Server Error' });
       });
 
       it('should wrap problems in openrosa xml envelopes', () => {
@@ -662,7 +656,7 @@ describe('endpoints', () => {
       });
 
       it('should reject requests for unsupported OData features', () => {
-        const request = createRequest({ url: '/odata.svc?$orderby=magic' });
+        const request = createRequest({ url: '/odata.svc?$inlineCount=magic' });
         return odataPreprocessor('json')(null, new Context(request), request)
           .should.be.rejectedWith(Problem, { problemCode: 501.1 });
       });

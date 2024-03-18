@@ -21,7 +21,7 @@ describe('db.stream()', () => {
   describe('timeouts', () => {
     const realSleep = (() => {
       const originalSetTimeout = setTimeout;
-      return t => new Promise(resolve => originalSetTimeout(resolve, t));
+      return t => new Promise(resolve => { originalSetTimeout(resolve, t); });
     })();
 
     let clock;

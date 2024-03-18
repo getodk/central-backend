@@ -1,5 +1,4 @@
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require
 const { Submission } = require(appRoot + '/lib/model/frames');
 const streamTest = require('streamtest').v2;
 

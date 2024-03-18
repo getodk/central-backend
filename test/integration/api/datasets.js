@@ -1,17 +1,18 @@
+const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const config = require('config');
 const { Form } = require('../../../lib/model/frames');
 const { getOrNotFound } = require('../../../lib/util/promise');
-const { omit, identity } = require('ramda');
+const { omit } = require('ramda');
 const should = require('should');
 const { sql } = require('slonik');
+const { QueryOptions } = require('../../../lib/util/db');
+const { createConflict } = require('../fixtures/scenarios');
 
-/* eslint-disable import/no-dynamic-require */
-const { createEntityFromSubmission } = require(appRoot + '/lib/worker/entity');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
-/* eslint-enable import/no-dynamic-require */
+const Option = require(appRoot + '/lib/util/option');
 
 describe('datasets and entities', () => {
   describe('listing and downloading datasets', () => {
@@ -36,10 +37,41 @@ describe('datasets and entities', () => {
               asAlice.get('/v1/projects/1/datasets')
                 .expect(200)
                 .then(({ body }) => {
-                  body.map(({ id, createdAt, ...d }) => d).should.eql([
-                    { name: 'people', projectId: 1, revisionNumber: 0 }
+                  body[0].should.be.a.Dataset();
+                  body.map(({ createdAt, ...d }) => d).should.eql([
+                    { name: 'people', projectId: 1, approvalRequired: false }
                   ]);
                 })))));
+
+      it('should return the extended datasets of Default project', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body[0].should.be.an.ExtendedDataset();
+            body.map(({ createdAt, lastEntity, ...d }) => d).should.eql([
+              { name: 'people', projectId: 1, entities: 1, approvalRequired: false, conflicts: 0 }
+            ]);
+          });
+      }));
 
       it('should not return draft datasets', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -56,13 +88,234 @@ describe('datasets and entities', () => {
                 asAlice.get('/v1/projects/1/datasets')
                   .expect(200)
                   .then(({ body }) => {
+                    body[0].should.be.a.Dataset();
                     body.map(({ id, createdAt, ...d }) => d).should.eql([
-                      { name: 'student', projectId: 1, revisionNumber: 0 }
+                      { name: 'student', projectId: 1, approvalRequired: false }
                     ]);
                   }))))));
     });
 
-    describe('projects/:id/datasets/:dataset/download GET', () => {
+    describe('projects/:id/datasets GET extended', () => {
+
+      it('should return the 0 for entities', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body[0].should.be.an.ExtendedDataset();
+            body.map(({ createdAt, lastEntity, ...d }) => {
+              should(lastEntity).be.null();
+              return d;
+            }).should.eql([
+              { name: 'people', projectId: 1, entities: 0, approvalRequired: false, conflicts: 0 }
+            ]);
+          });
+      }));
+
+      it('should return the extended datasets of Default project', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body[0].should.be.an.ExtendedDataset();
+            body.map(({ createdAt, lastEntity, ...d }) => {
+              createdAt.should.not.be.null();
+              lastEntity.should.not.be.null();
+              return d;
+            }).should.eql([
+              { name: 'people', projectId: 1, entities: 1, approvalRequired: false, conflicts: 0 }
+            ]);
+          });
+      }));
+
+      it('should return the correct count and latest timestamp of entities', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+          .send({ data: { age: '99' } })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // all properties changed
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1' WHERE TRUE`);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body[0].should.be.an.ExtendedDataset();
+            body.map(({ createdAt, lastEntity, conflicts, ...d }) => {
+              lastEntity.should.not.startWith('1999');
+              return d;
+            }).should.eql([
+              { name: 'people', projectId: 1, entities: 2, approvalRequired: false }
+            ]);
+
+            body[0].conflicts.should.equal(1);
+          });
+      }));
+
+      it('should exclude deleted entities', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Johnny Doe'
+          })
+          .expect(200);
+        await asAlice.get('/v1/projects/1/datasets')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].entities.should.equal(1);
+            body[0].lastEntity.should.be.an.isoDate();
+          });
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+        await asAlice.get('/v1/projects/1/datasets')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].entities.should.equal(0);
+            should.not.exist(body[0].lastEntity);
+          });
+      }));
+
+      it('should return the correct count for multiple dataset', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Create Datasets
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity
+            .replace(/simpleEntity/g, 'simpleEntity2')
+            .replace(/people/g, 'trees'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Make submissions
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity2/submissions')
+          .send(testData.instances.simpleEntity.one
+            .replace(/simpleEntity/g, 'simpleEntity2')
+            .replace(/123456789abc/g, '123456789000') // we have uniqueness contrainst on UUID for the whole table
+            .replace(/people/g, 'trees'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Approve submissions
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity2/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.map(({ createdAt, lastEntity, ...d }) => {
+              createdAt.should.not.be.null();
+              lastEntity.should.not.be.null();
+              return d;
+            }).reduce((a, v) => ({ ...a, [v.name]: v.entities }), {}).should.eql({
+              people: 2, trees: 1
+            });
+          });
+      }));
+    });
+
+    describe('projects/:id/datasets/:dataset.csv GET', () => {
       it('should reject if the user cannot access dataset', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
@@ -70,7 +323,7 @@ describe('datasets and entities', () => {
             .set('Content-Type', 'application/xml')
             .expect(200)
             .then(() => service.login('chelsea', (asChelsea) =>
-              asChelsea.get('/v1/projects/1/datasets/people/download')
+              asChelsea.get('/v1/projects/1/datasets/people/entities.csv')
                 .expect(403))))));
 
       it('should let the user download the dataset (even if 0 entity rows)', testService((service) =>
@@ -79,26 +332,898 @@ describe('datasets and entities', () => {
             .send(testData.forms.simpleEntity)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.get('/v1/projects/1/datasets/people/download')
+            .then(() => asAlice.get('/v1/projects/1/datasets/people/entities.csv')
               .expect(200)
               .then(({ text }) => {
-                text.should.equal('name,label,first_name,age\n');
+                text.should.equal('__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n');
               })))));
 
-      // TODO: right now this returns 500 internal server error
-      it.skip('should reject if dataset does not exist', testService((service) =>
+      it('should return only published properties', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity
+            .replace(/simpleEntity/g, 'simpleEntity2')
+            .replace(/first_name/, 'full_name'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200)
+          .then(({ text }) => {
+            text.should.equal('__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n');
+          });
+
+      }));
+
+      it('should reject if dataset does not exist', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.simpleEntity)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.get('/v1/projects/1/datasets/nonexistent/download')
+            .then(() => asAlice.get('/v1/projects/1/datasets/nonexistent/entities.csv')
               .expect(404)))));
+
+      it('should reject if dataset is not published', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+              .expect(404)))));
+
+      it('should return csv file with data', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200)
+          .then(r => r.text);
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(2);
+
+        const withOutTs = result.replace(isoRegex, '');
+        withOutTs.should.be.eql(
+          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-123456789aaa,Jane (30),Jane,30,,5,Alice,0,,1\n' +
+            '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,,1\n'
+        );
+
+      }));
+
+      it('should return csv file for dataset that have dot in its property name', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/age/g, 'the.age'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one.replace(/age/g, 'the.age'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200)
+          .then(r => r.text);
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(1);
+
+        const withOutTs = result.replace(isoRegex, '');
+        withOutTs.should.be.eql(
+          '__id,label,first_name,the.age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,,1\n'
+        );
+
+      }));
+
+      it('should stream csv of dataset with entities from multiple forms', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.multiPropertyEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyEntity
+            .replace('multiPropertyEntity', 'multiPropertyEntity2')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/draft/publish').expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/submissions')
+          .send(testData.instances.multiPropertyEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/submissions')
+          .send(testData.instances.multiPropertyEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity2/submissions')
+          .send(testData.instances.multiPropertyEntity.one
+            .replace('multiPropertyEntity', 'multiPropertyEntity2')
+            .replace('uuid:12345678-1234-4123-8234-123456789aaa', 'uuid:12345678-1234-4123-8234-123456789ccc')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/multiPropertyEntity/submissions/one')
+          .send({ reviewState: 'approved' });
+        await asAlice.patch('/v1/projects/1/forms/multiPropertyEntity/submissions/two')
+          .send({ reviewState: 'approved' });
+        await asAlice.patch('/v1/projects/1/forms/multiPropertyEntity2/submissions/one')
+          .send({ reviewState: 'approved' });
+
+        await exhaust(container);
+
+        const { text } = await asAlice.get('/v1/projects/1/datasets/foo/entities.csv');
+
+        const withOutTs = text.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g, '');
+        withOutTs.should.be.eql(
+          '__id,label,f_q1,e_q2,a_q3,c_q4,b_q1,d_q2,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+          '12345678-1234-4123-8234-123456789ccc,one,w,x,y,z,,,,5,Alice,0,,1\n'+
+          '12345678-1234-4123-8234-123456789bbb,two,,,c,d,a,b,,5,Alice,0,,1\n'+
+          '12345678-1234-4123-8234-123456789aaa,one,,,y,z,w,x,,5,Alice,0,,1\n'
+        );
+      }));
+
+      it('should not return deleted entities', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111aaa',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111bbb',
+            label: 'Robert Doe',
+            data: { first_name: 'Robert', age: '88' }
+          })
+          .expect(200);
+
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111bbb');
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200)
+          .then(r => r.text);
+
+        result.should.not.match(/Robert Doe/);
+
+      }));
+
+      it('should return updated value correctly (entity updated via API)', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111aaa',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa?force=true')
+          .send({
+            data: { first_name: 'Robert', age: '' },
+            label: 'Robert Doe (expired)'
+          })
+          .expect(200);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200)
+          .then(r => r.text);
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(2);
+
+        const withOutTs = result.replace(isoRegex, '');
+        withOutTs.should.be.eql(
+          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-111111111aaa,Robert Doe (expired),Robert,,,5,Alice,1,,2\n'
+        );
+
+      }));
+
+      it('should return updated value correctly (entity updated via submission)', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        // create form and submission to update entity
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200)
+          .then(r => r.text);
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(2);
+
+        const withOutTs = result.replace(isoRegex, '');
+        withOutTs.should.be.eql(
+          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-123456789abc,Alicia (85),Alicia,85,,5,Alice,1,,2\n'
+        );
+
+      }));
+
+      it('should return 304 content not changed if ETag matches', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200);
+
+        const withOutTs = result.text.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g, '');
+        withOutTs.should.be.eql(
+          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+          '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,,1\n'
+        );
+
+        const etag = result.get('ETag');
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .set('If-None-Match', etag)
+          .expect(304);
+      }));
+
+      it('should filter the Entities', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111aaa',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        await createConflict(asAlice, container);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv?$filter=__system/conflict eq \'hard\'')
+          .expect(200)
+          .then(r => {
+            should.not.exist(r.get('ETag'));
+            return r.text;
+          });
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(2);
+
+        const withOutTs = result.replace(isoRegex, '');
+        withOutTs.should.be.eql(
+          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-123456789abc,Alicia (85),Alicia,85,,5,Alice,2,,3\n'
+        );
+
+      }));
+    });
+
+    describe('projects/:id/datasets/:name GET', () => {
+
+      it('should return the metadata of the dataset', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/age/g, 'the.age'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity
+            .replace(/simpleEntity/, 'simpleEntity2')
+            .replace(/age/g, 'address'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments
+            .replace(/goodone.csv/, 'people.csv'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people')
+          .expect(200)
+          .then(({ body }) => {
+
+            const { createdAt, linkedForms, properties, sourceForms, ...ds } = body;
+
+            ds.should.be.eql({
+              name: 'people',
+              projectId: 1,
+              approvalRequired: false
+            });
+
+            createdAt.should.not.be.null();
+
+            linkedForms.should.be.eql([{ name: 'withAttachments', xmlFormId: 'withAttachments' }]);
+
+            sourceForms.should.be.eql([
+              { name: 'simpleEntity', xmlFormId: 'simpleEntity' },
+              { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' }]);
+
+            properties.map(({ publishedAt, ...p }) => {
+              publishedAt.should.be.isoDate();
+              return p;
+            }).should.be.eql([
+              {
+                name: 'first_name', odataName: 'first_name', forms: [
+                  { name: 'simpleEntity', xmlFormId: 'simpleEntity' },
+                  { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' }
+                ]
+              },
+              { name: 'the.age', odataName: 'the_age', forms: [{ name: 'simpleEntity', xmlFormId: 'simpleEntity' },] },
+              { name: 'address', odataName: 'address', forms: [{ name: 'simpleEntity2', xmlFormId: 'simpleEntity2' },] }
+            ]);
+
+          });
+
+      }));
+
+      it('should return the extended metadata of the dataset', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111aaa',
+            label: 'Johnny Doe'
+          })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+
+            const { createdAt, properties, lastEntity, ...ds } = body;
+
+            ds.should.be.eql({
+              name: 'people',
+              projectId: 1,
+              approvalRequired: false,
+              entities: 1,
+              conflicts: 0,
+              linkedForms: [],
+              sourceForms: [{ name: 'simpleEntity', xmlFormId: 'simpleEntity' }]
+            });
+
+            lastEntity.should.be.recentIsoDate();
+
+            createdAt.should.be.recentIsoDate();
+
+            properties.map(({ publishedAt, ...p }) => {
+              publishedAt.should.be.isoDate();
+              return p;
+            }).should.be.eql([
+              { name: 'first_name', odataName: 'first_name', forms: [{ name: 'simpleEntity', xmlFormId: 'simpleEntity' }] },
+              { name: 'age', odataName: 'age', forms: [{ name: 'simpleEntity', xmlFormId: 'simpleEntity' },] }
+            ]);
+
+          });
+
+      }));
+
+      it('should reject if dataset is not published', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/datasets/people')
+              .expect(404)))));
+
+      it('should not return duplicate linkedForms', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments
+            .replace(/goodone.csv/, 'people.csv'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/withAttachments/draft')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish?version=2.0')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people')
+          .expect(200)
+          .then(({ body }) => {
+
+            const { linkedForms } = body;
+
+            linkedForms.should.be.eql([{ name: 'withAttachments', xmlFormId: 'withAttachments' }]);
+          });
+
+      }));
+
+      it('should return properties of a dataset in order', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/foo')
+          .expect(200)
+          .then(({ body }) => {
+            const { properties } = body;
+            properties.map((p) => p.name)
+              .should.be.eql([
+                'b_q1',
+                'd_q2',
+                'a_q3',
+                'c_q4'
+              ]);
+          });
+      }));
+
+      it('should return dataset properties from multiple forms in order', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyEntity
+            .replace('multiPropertyEntity', 'multiPropertyEntity2')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/foo')
+          .expect(200)
+          .then(({ body }) => {
+            const { properties } = body;
+            properties.map((p) => p.name)
+              .should.be.eql([
+                'b_q1',
+                'd_q2',
+                'a_q3',
+                'c_q4',
+                'f_q1',
+                'e_q2'
+              ]);
+          });
+      }));
+
+      it('should return dataset properties from multiple forms where later form publishes dataset', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.multiPropertyEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyEntity
+            .replace('multiPropertyEntity', 'multiPropertyEntity2')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/draft/publish');
+
+        await asAlice.get('/v1/projects/1/datasets/foo')
+          .expect(200)
+          .then(({ body }) => {
+            const { properties } = body;
+            properties.map((p) => p.name)
+              .should.be.containDeep([
+                'f_q1',
+                'e_q2',
+                'a_q3',
+                'c_q4',
+                'b_q1',
+                'd_q2',
+              ]);
+          });
+      }));
+
+      it('should return dataset properties from multiple forms including updated form with updated schema', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyEntity
+            .replace('multiPropertyEntity', 'multiPropertyEntity2')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/draft')
+          .send(testData.forms.multiPropertyEntity
+            .replace('orx:version="1.0"', 'orx:version="2.0"')
+            .replace('b_q1', 'g_q1'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity/draft/publish').expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/foo')
+          .expect(200)
+          .then(({ body }) => {
+            const { properties } = body;
+            properties.map((p) => p.name)
+              .should.be.eql([
+                'b_q1',
+                'd_q2',
+                'a_q3',
+                'c_q4',
+                'f_q1',
+                'e_q2',
+                'g_q1'
+              ]);
+          });
+      }));
+
+      it('should return dataset properties when purged draft form shares some properties', testService(async (service, { Forms }) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.multiPropertyEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyEntity
+            .replace('multiPropertyEntity', 'multiPropertyEntity2')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.delete('/v1/projects/1/forms/multiPropertyEntity')
+          .expect(200);
+
+        await Forms.purge(true);
+
+        await asAlice.get('/v1/projects/1/datasets/foo')
+          .expect(200)
+          .then(({ body }) => {
+            const { properties } = body;
+            properties.map((p) => p.name)
+              .should.be.eql([
+                'f_q1',
+                'e_q2',
+                'a_q3',
+                'c_q4'
+              ]);
+          });
+      }));
+
+      it('should return dataset properties when draft form (purged before second form publish) shares some properties', testService(async (service, { Forms }) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.multiPropertyEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.multiPropertyEntity
+            .replace('multiPropertyEntity', 'multiPropertyEntity2')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.delete('/v1/projects/1/forms/multiPropertyEntity')
+          .expect(200);
+
+        await Forms.purge(true);
+
+        await asAlice.post('/v1/projects/1/forms/multiPropertyEntity2/draft/publish');
+
+        await asAlice.get('/v1/projects/1/datasets/foo')
+          .expect(200)
+          .then(({ body }) => {
+            const { properties } = body;
+            properties.map((p) => p.name)
+              .should.be.eql([
+                'f_q1',
+                'e_q2',
+                'a_q3',
+                'c_q4'
+              ]);
+          });
+      }));
+
+      it.skip('should return ordered dataset properties including from deleted published form', testService(async (service, { Forms }) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.delete('/v1/projects/1/forms/multiPropertyEntity')
+          .expect(200);
+
+        await Forms.purge(true);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.multiPropertyEntity
+            .replace('multiPropertyEntity', 'multiPropertyEntity2')
+            .replace('b_q1', 'f_q1')
+            .replace('d_q2', 'e_q2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/foo')
+          .expect(200)
+          .then(({ body }) => {
+            const { properties } = body;
+            // Properties are coming out in this other order:
+            // [ 'a_q3', 'c_q4', 'b_q1', 'd_q2', 'f_q1', 'e_q2' ]
+            // It's not terrible but would rather all the props of the first form
+            // show up first.
+            properties.map((p) => p.name)
+              .should.be.eql([
+                'b_q1',
+                'd_q2',
+                'a_q3',
+                'c_q4',
+                'f_q1',
+                'e_q2'
+              ]);
+          });
+      }));
+
+      // bug # 833
+      it('should not return null in properties.forms when creation form is updated', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=v2.0')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people')
+          .expect(200)
+          .then(({ body }) => {
+            body.properties[0].name.should.be.eql('first_name');
+            body.properties[0].forms.should.be.eql([
+              {
+                xmlFormId: 'simpleEntity',
+                name: 'simpleEntity'
+              }
+            ]);
+
+            body.properties[1].name.should.be.eql('age');
+            body.properties[1].forms.should.be.eql([
+              {
+                xmlFormId: 'simpleEntity',
+                name: 'simpleEntity'
+              }
+            ]);
+          });
+      }));
+
+
+      // bug # 833
+      it('should not return deleted form', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=v2')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people')
+          .expect(200)
+          .then(({ body }) => {
+            body.properties[0].name.should.be.eql('first_name');
+            body.properties[0].forms.should.be.eql([
+              {
+                xmlFormId: 'simpleEntity',
+                name: 'simpleEntity'
+              }
+            ]);
+
+            body.properties[1].name.should.be.eql('age');
+            body.properties[1].forms.should.be.eql([
+              {
+                xmlFormId: 'simpleEntity',
+                name: 'simpleEntity'
+              }
+            ]);
+          });
+      }));
+
+      // bug central#464
+      it('should return source form that does not set any property', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/entities:saveto.*/g, '/>'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people')
+          .expect(200)
+          .then(({ body }) => {
+            body.sourceForms.should.be.eql([{ name: 'simpleEntity', xmlFormId: 'simpleEntity' }]);
+          });
+
+      }));
+
     });
   });
 
   describe('linking form attachments to datasets', () => {
     describe('projects/:id/forms/:formId/draft/attachment/:name PATCH', () => {
+      it('should reject unless user can form.update', testService((service) =>
+        service.login(['alice', 'chelsea'], (asAlice, asChelsea) =>
+          Promise.all([
+            asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.withAttachments)
+              .set('Content-Type', 'application/xml')
+              .expect(200),
+            asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity.replace('people', 'goodone'))
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+          ])
+            .then(() => asChelsea.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+              .send({ dataset: true })
+              .expect(403)))));
+
+      it('should reject if user can form.update but not entity.list', testService((service) =>
+        service.login(['alice', 'chelsea'], (asAlice, asChelsea) =>
+          Promise.all([
+            asChelsea.get('/v1/users/current')
+              .expect(200)
+              .then(({ body }) => body.id),
+            asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.withAttachments)
+              .set('Content-Type', 'application/xml')
+              .expect(200),
+            asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity.replace('people', 'goodone'))
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+          ])
+            .then(([chelseaId]) => asAlice.post(`/v1/projects/1/forms/withAttachments/assignments/manager/${chelseaId}`)
+              .expect(200))
+            .then(() => asChelsea.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+              .send({ dataset: true })
+              .expect(403)))));
+
       it('should link dataset to form and returns in manifest', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
@@ -141,6 +1266,8 @@ describe('datasets and entities', () => {
   </manifest>`);
               })))));
 
+
+
       it('should override blob and link dataset', testService((service, { Forms, FormAttachments, Audits, Datasets }) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
@@ -155,7 +1282,7 @@ describe('datasets and entities', () => {
               .expect(200))
             .then(() => Promise.all([
               Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then(getOrNotFound),
-              Datasets.getByProjectAndName(1, 'goodone').then(getOrNotFound)
+              Datasets.get(1, 'goodone').then(getOrNotFound)
             ]))
             .then(([form, dataset]) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then(getOrNotFound)
               .then(attachment => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
@@ -189,6 +1316,23 @@ describe('datasets and entities', () => {
     </mediaFile>
   </manifest>`);
                 }))))));
+
+      it('should allow an attachment to have a .CSV extension', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments.replace('goodone.csv', 'goodone.CSV'))
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity.replace('people', 'goodone'))
+              .expect(200))
+            .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.CSV')
+              .send({ dataset: true })
+              .expect(200)
+              .then(({ body }) => {
+                body.should.be.a.FormAttachment();
+                body.datasetExists.should.be.true();
+              })))));
 
       it('should unlink dataset from the form', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -250,6 +1394,26 @@ describe('datasets and entities', () => {
               .then(({ body }) => {
                 body.message.should.be.equal('Dataset can only be linked to attachments with "Data File" type.');
               })))));
+
+      it('should return error if dataset is not published', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity.replace(/people/g, 'goodone'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+          .send({ dataset: true })
+          .expect(404);
+
+      }));
+
     });
 
     describe('projects/:id/forms/:formId/draft/attachment/:name DELETE', () => {
@@ -364,6 +1528,372 @@ describe('datasets and entities', () => {
                     .then(attachment => {
                       should(attachment.value.datasetId).be.null();
                     })))))));
+
+      describe('autolink when publishing form that creates and consumes new dataset', () => {
+        // update form that consumes dataset
+        const updateForm = `<?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+          <h:head>
+            <model entities:entities-version="2023.1.0">
+              <instance>
+                <data id="updateEntity" orx:version="1.0">
+                  <person/>
+                  <name/>
+                  <age/>
+                  <hometown/>
+                  <meta>
+                    <entity dataset="people" id="" update="" baseVersion="">
+                      <label/>
+                    </entity>
+                  </meta>
+                </data>
+              </instance>
+              <instance id="people" src="jr://file-csv/people.csv"/>
+              <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+              <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+            </model>
+          </h:head>
+        </h:html>`;
+
+        it('should NOT autolink on upload new form and simultaneously publish', testService(async (service) => {
+          // this path of directly publishing a form on upload isn't possible in central
+          // so it's not going to be supported. if it were, logic would go around line #170 in
+          // lib/model/query/forms.js in Forms.createNew after the dataset is published.
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(updateForm)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].datasetExists.should.be.false();
+            });
+        }));
+
+        it('should autolink when first publishing a draft', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(updateForm)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].exists.should.be.true();
+              body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.true();
+            });
+        }));
+
+        it('should not autolink if attachment already filled in', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(updateForm)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/attachments/people.csv')
+            .send('test,csv\n1,2')
+            .set('Content-Type', 'text/csv')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].exists.should.be.true();
+              body[0].blobExists.should.be.true();
+              body[0].datasetExists.should.be.false();
+              body[0].updatedAt.should.not.be.null();
+            });
+        }));
+
+        it('should not autolink if attachment isnt the dataset in question', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          const differentDataset = `<?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+            <h:head>
+              <model entities:entities-version="2023.1.0">
+                <instance>
+                  <data id="updateEntity" orx:version="1.0">
+                    <person/>
+                    <name/>
+                    <age/>
+                    <hometown/>
+                    <meta>
+                      <entity dataset="students" id="" update="" baseVersion="">
+                        <label/>
+                      </entity>
+                    </meta>
+                  </data>
+                </instance>
+                <instance id="people" src="jr://file-csv/people.csv"/>
+                <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+                <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+              </model>
+            </h:head>
+          </h:html>`;
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(differentDataset)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].exists.should.be.false();
+              body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.false();
+            });
+        }));
+
+        it('should not autolink if dataset already published because it will be attached already if dataset made before', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // upload form that makes people dataset already
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(updateForm)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].exists.should.be.true();
+              body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.true();
+              body[0].should.not.have.property('updatedAt'); // linked to dataset when created, never updated
+            });
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].exists.should.be.true();
+              body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.true();
+              body[0].should.not.have.property('updatedAt'); // linked to dataset when created, never updated
+            });
+        }));
+
+        it('should autolink if dataset already published but it was created after the form draft', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(updateForm)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // upload form that makes people dataset already
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // because the form was uploaded before the dataset was created, this will be null
+          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].exists.should.be.false();
+              body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.false();
+            });
+
+          // we DO auto-link here but since a Central user can still see the draft, and could
+          // potentially see the new dataset now, we might want to change this behavior to NOT
+          // auto-link and have the user explicitly link it themselves.
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].exists.should.be.true();
+              body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.true();
+            });
+        }));
+
+        it('should not autolink if the update form doesnt consume dataset', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // this form creates a dataset to update but it's not propertly attached to the form
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.updateEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+            .then(({ body }) => {
+              body.length.should.equal(0);
+            });
+
+          await asAlice.get('/v1/projects/1/datasets/people')
+            .set('X-Extended-Metadata', 'true')
+            .expect(200)
+            .then(({ body }) => {
+              body.linkedForms.length.should.equal(0);
+            });
+        }));
+
+        it('should not autolink if form doesnt create dataset', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          const noDataset = `<?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+            <h:head>
+              <model entities:entities-version="2023.1.0">
+                <instance>
+                  <data id="updateEntity" orx:version="1.0">
+                    <person/>
+                    <name/>
+                    <age/>
+                    <hometown/>
+                    <meta>
+                      <instanceID/>
+                    </meta>
+                  </data>
+                </instance>
+                <instance id="people" src="jr://file-csv/people.csv"/>
+                <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+                <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+              </model>
+            </h:head>
+          </h:html>`;
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(noDataset)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].exists.should.be.false();
+              body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.false();
+            });
+        }));
+
+        it('should not autolink on create/consume dataset if .csv extention doesnt match case', testService(async (service) => {
+          // we probably want this to be case insensitive but that change will come later.
+          const asAlice = await service.login('alice');
+
+          const caseChange = `<?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+            <h:head>
+              <model entities:entities-version="2023.1.0">
+                <instance>
+                  <data id="updateEntity" orx:version="1.0">
+                    <person/>
+                    <name/>
+                    <age/>
+                    <hometown/>
+                    <meta>
+                      <entity dataset="people" id="" update="" baseVersion="">
+                        <label/>
+                      </entity>
+                    </meta>
+                  </data>
+                </instance>
+                <instance id="people" src="jr://file-csv/people.CSV"/>
+                <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+                <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+              </model>
+            </h:head>
+          </h:html>`;
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(caseChange)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.CSV');
+              body[0].exists.should.be.false();
+              body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.false();
+            });
+        }));
+
+        it('should not autolink on draft consume-only form if .csv extention doesnt match case', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // upload form that makes people dataset already
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          const caseChange = `<?xml version="1.0"?>
+            <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+              <h:head>
+                <model entities:entities-version="2023.1.0">
+                  <instance>
+                    <data id="updateEntity" orx:version="1.0">
+                      <person/>
+                      <name/>
+                      <age/>
+                      <hometown/>
+                      <meta>
+                        <instanceID/>
+                      </meta>
+                    </data>
+                  </instance>
+                  <instance id="people" src="jr://file-csv/people.CSV"/>
+                  <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+                  <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+                </model>
+              </h:head>
+            </h:html>`;
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(caseChange)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.CSV');
+              body[0].exists.should.be.false();
+              body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.false();
+            });
+        }));
+      });
     });
 
     // these scenario will never happen by just using APIs, adding following tests for safety
@@ -382,7 +1912,7 @@ describe('datasets and entities', () => {
               .expect(200))
             .then(() => Promise.all([
               Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then(getOrNotFound),
-              Datasets.getByProjectAndName(1, 'goodone').then(getOrNotFound)
+              Datasets.get(1, 'goodone').then(getOrNotFound)
             ]))
             .then(([form, dataset]) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then(getOrNotFound)
               .then((attachment) => FormAttachments.update(form, attachment, 1, dataset.id)
@@ -400,16 +1930,81 @@ describe('datasets and entities', () => {
               .send(testData.forms.simpleEntity))
             .then(() => Promise.all([
               Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then(getOrNotFound),
-              Datasets.getByProjectAndName(1, 'people').then(getOrNotFound)
+              Datasets.get(1, 'people').then(getOrNotFound)
             ]))
             .then(([form, dataset]) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodtwo.mp3').then(getOrNotFound)
               .then((attachment) => FormAttachments.update(form, attachment, null, dataset.id)
                 .catch(error => {
                   error.constraint.should.be.equal('check_datasetId_is_null_for_non_file');
                 }))))));
+
+      // cb#673
+      it('should not throw problem for fast external itemsets when there is existing "itemsets" dataset', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/people/, 'itemsets'))
+          .expect(200);
+
+        global.xlsformForm = 'itemsets';
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .set('X-XlsForm-FormId-Fallback', 'itemsets')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/itemsets/draft/attachments/itemsets.csv')
+            .expect(200)
+            .then(({ text }) => {
+              text.should.equal('a,b,c\n1,2,3\n4,5,6');
+            }));
+      }));
+
+      // cb#673
+      it('should not throw problem for new version of "fast external itemsets" when there is existing "itemsets" dataset', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.itemsets)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/people/, 'itemsets'))
+          .expect(200);
+
+        // add external choice (fast external itemsets) to an existing form
+        global.xlsformForm = 'itemsets';
+
+        await asAlice.post('/v1/projects/1/forms/itemsets/draft')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .set('X-XlsForm-FormId-Fallback', 'itemsets')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/itemsets/draft/attachments/itemsets.csv')
+            .expect(200)
+            .then(({ text }) => {
+              text.should.equal('a,b,c\n1,2,3\n4,5,6');
+            }));
+
+      }));
+
     });
 
     describe('projects/:id/forms/:formId/attachments/:name (entities dataset)', () => {
+
+      const createBothForms = async (asAlice) => {
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/people/g, 'goodone'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+      };
+
       it('should return entities csv', testService((service, container) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
@@ -424,9 +2019,7 @@ describe('datasets and entities', () => {
               .send(testData.instances.simpleEntity.one.replace(/people/g, 'goodone'))
               .set('Content-Type', 'application/xml')
               .expect(200))
-            .then(() => container.Submissions.getCurrentDefByIds(1, 'simpleEntity', 'one', false)
-              .then(getOrNotFound)
-              .then((subDef) => createEntityFromSubmission(container, { details: { submissionDefId: subDef.id, reviewState: 'approved' } })))
+            .then(() => exhaust(container))
             .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
               .send({ dataset: true })
               .expect(200))
@@ -437,8 +2030,213 @@ describe('datasets and entities', () => {
               .then(({ headers, text }) => {
                 headers['content-disposition'].should.equal('attachment; filename="goodone.csv"; filename*=UTF-8\'\'goodone.csv');
                 headers['content-type'].should.equal('text/csv; charset=utf-8');
-                text.should.equal('name,label,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88\n');
+                text.should.equal('name,label,__version,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n');
               })))));
+
+      it('should return entities csv for testing', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await createBothForms(asAlice);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one.replace(/people/g, 'goodone'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        const token = await asAlice.get('/v1/projects/1/forms/withAttachments/draft')
+          .expect(200)
+          .then(({ body }) => body.draftToken);
+
+        await service.get(`/v1/test/${token}/projects/1/forms/withAttachments/draft/attachments/goodone.csv`)
+          .expect(200)
+          .then(({ text }) => { text.should.equal('name,label,__version,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n'); });
+
+      }));
+
+      it('should return data for columns that contain valid special characters', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity
+            .replace(/people/g, 'goodone')
+            .replace(/age/g, 'the.age'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one
+            .replace(/people/g, 'goodone')
+            .replace(/age/g, 'the.age'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+          .expect(200)
+          .then(({ text }) => {
+            text.should.equal('name,label,__version,first_name,the.age\n' +
+          '12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n');
+          });
+
+      }));
+
+      it('should not return deleted entities', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await createBothForms(asAlice);
+
+        await asAlice.post('/v1/projects/1/datasets/goodone/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111aaa',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/goodone/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111bbb',
+            label: 'Robert Doe',
+            data: { first_name: 'Robert', age: '88' }
+          })
+          .expect(200);
+
+        await asAlice.delete('/v1/projects/1/datasets/goodone/entities/12345678-1234-4123-8234-111111111bbb');
+
+        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+          .expect(200)
+          .then(r => r.text);
+
+        result.should.not.match(/Robert Doe/);
+
+      }));
+
+      it('should return updated value correctly', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await createBothForms(asAlice);
+
+        await asAlice.post('/v1/projects/1/datasets/goodone/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111aaa',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/goodone/entities/12345678-1234-4123-8234-111111111aaa?force=true')
+          .send({
+            data: { first_name: 'Robert', age: '' },
+            label: 'Robert Doe (expired)'
+          })
+          .expect(200);
+
+        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+          .expect(200)
+          .then(r => r.text);
+
+        result.should.be.eql(
+          'name,label,__version,first_name,age\n' +
+          '12345678-1234-4123-8234-111111111aaa,Robert Doe (expired),2,Robert,\n'
+        );
+
+      }));
+
+      it('should return md5 of last Entity timestamp in the manifest', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200);
+
+        const etag = result.get('ETag');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(({ text }) => {
+            const domain = config.get('default.env.domain');
+            text.should.be.eql(`<?xml version="1.0" encoding="UTF-8"?>
+  <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
+    <mediaFile>
+      <filename>people.csv</filename>
+      <hash>md5:${etag.replace(/"/g, '')}</hash>
+      <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/people.csv</downloadUrl>
+    </mediaFile>
+  </manifest>`);
+          });
+
+      }));
+
+      it('should return 304 content not changed if ETag matches', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+          .expect(200);
+
+        result.text.should.be.eql(
+          'name,label,__version,first_name,age\n' +
+          '12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n'
+        );
+
+        const etag = result.get('ETag');
+
+        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+          .set('If-None-Match', etag)
+          .expect(304);
+
+      }));
+
     });
   });
 
@@ -486,8 +2284,8 @@ describe('datasets and entities', () => {
                     name: 'people',
                     isNew: true,
                     properties: [
-                      { name: 'age', isNew: true, inForm: true },
-                      { name: 'first_name', isNew: true, inForm: true }
+                      { name: 'first_name', isNew: true, inForm: true },
+                      { name: 'age', isNew: true, inForm: true }
                     ]
                   }
                 ]);
@@ -512,8 +2310,8 @@ describe('datasets and entities', () => {
                       name: 'people',
                       isNew: false,
                       properties: [
-                        { name: 'age', isNew: false, inForm: true },
-                        { name: 'first_name', isNew: false, inForm: true }
+                        { name: 'first_name', isNew: false, inForm: true },
+                        { name: 'age', isNew: false, inForm: true }
                       ]
                     }
                   ]);
@@ -539,12 +2337,67 @@ describe('datasets and entities', () => {
                     name: 'people',
                     isNew: false,
                     properties: [
-                      { name: 'age', isNew: false, inForm: true },
                       { name: 'first_name', isNew: false, inForm: false },
-                      { name: 'lastName', isNew: true, inForm: true }
+                      { name: 'lastName', isNew: true, inForm: true },
+                      { name: 'age', isNew: false, inForm: true }
                     ]
                   }]);
                 }))));
+      }));
+
+      it('should return properties in the same order they appear as questions in the form', testService(async (service) => {
+        await service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.multiPropertyEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/multiPropertyEntity/draft/dataset-diff')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.be.eql([
+                  {
+                    name: 'foo',
+                    isNew: true,
+                    properties: [
+                      { name: 'b_q1', isNew: true, inForm: true },
+                      { name: 'd_q2', isNew: true, inForm: true },
+                      { name: 'a_q3', isNew: true, inForm: true },
+                      { name: 'c_q4', isNew: true, inForm: true }
+                    ]
+                  }
+                ]);
+              })));
+      }));
+
+      it('should return ordered properties including properties not in the form', testService(async (service) => {
+        await service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.multiPropertyEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/multiPropertyEntity/draft')
+              .send(testData.forms.multiPropertyEntity
+                .replace('orx:version="1.0"', 'orx:version="2.0"') // update version
+                .replace('entities:saveto="b_q1"', '') // remove q1 bind from form
+                .replace('entities:saveto="a_q3"', 'entities:saveto="x_q3"')) // change q3 bind
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/multiPropertyEntity/draft/dataset-diff')
+              .expect(200)
+              .then(({ body }) => {
+                body.should.be.eql([
+                  {
+                    name: 'foo',
+                    isNew: false,
+                    properties: [
+                      { name: 'b_q1', isNew: false, inForm: false },
+                      { name: 'a_q3', isNew: false, inForm: false },
+                      { name: 'd_q2', isNew: false, inForm: true },
+                      { name: 'x_q3', isNew: true, inForm: true },
+                      { name: 'c_q4', isNew: false, inForm: true }
+                    ]
+                  }
+                ]);
+              })));
       }));
 
       it('should return dataset name only if no property mapping is defined', testService(async (service) => {
@@ -602,13 +2455,13 @@ describe('datasets and entities', () => {
                       name: 'people',
                       isNew: true,
                       properties: [
-                        { name: 'age', isNew: true, inForm: true },
-                        { name: 'first_name', isNew: true, inForm: true }
+                        { name: 'first_name', isNew: true, inForm: true },
+                        { name: 'age', isNew: true, inForm: true }
                       ]
                     }])))))));
 
       it('should return inForm false for removed property', testService(async (service) => {
-        const asAlice = await service.login('alice', identity);
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -636,6 +2489,42 @@ describe('datasets and entities', () => {
             }]);
           });
       }));
+
+      it('should return empty array if managed encryption is enabled', testService(async (service) => {
+        // Upload a form and then create a new draft version
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'supersecret' })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/draft/dataset-diff')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.eql([]);
+          });
+      }));
+
+      it('should return empty array if form is encrypted', testService(async (service) => {
+        // Upload a form and then create a new draft version
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity.replace('</model>', '<submission base64RsaPublicKey="abc"/></model>'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/draft/dataset-diff')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.eql([]);
+          });
+      }));
     });
 
     describe('/projects/:id/forms/:formId/dataset-diff GET', () => {
@@ -652,8 +2541,8 @@ describe('datasets and entities', () => {
                   {
                     name: 'people',
                     properties: [
-                      { name: 'age', inForm: true },
-                      { name: 'first_name', inForm: true }
+                      { name: 'first_name', inForm: true },
+                      { name: 'age', inForm: true }
                     ]
                   }
                 ]);
@@ -677,9 +2566,9 @@ describe('datasets and entities', () => {
                   body.should.be.eql([{
                     name: 'people',
                     properties: [
-                      { name: 'age', inForm: true },
                       { name: 'first_name', inForm: false },
-                      { name: 'last_name', inForm: true }
+                      { name: 'last_name', inForm: true },
+                      { name: 'age', inForm: true }
                     ]
                   }]);
                 }))));
@@ -702,43 +2591,73 @@ describe('datasets and entities', () => {
                   body.should.be.eql([{
                     name: 'people',
                     properties: [
-                      { name: 'age', inForm: true },
-                      { name: 'first_name', inForm: true }
+                      { name: 'first_name', inForm: true },
+                      { name: 'age', inForm: true }
                     ]
                   }]);
                 }))));
       }));
+
+      it('should return dataset name only if there is no properties', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/entities:saveto[^/]+/g, ''))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/dataset-diff')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.eql([{
+              name: 'people',
+              properties: []
+            }]);
+          });
+
+      }));
+
+      it('should let the user download even if there are no properties', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/entities:saveto[^/]+/g, ''))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200)
+          .then(({ text }) => {
+            text.should.equal('__id,label,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n');
+          });
+      }));
+
     });
   });
 
   describe('parsing datasets on form upload', () => {
     describe('parsing datasets at /projects/:id/forms POST', () => {
-      it('should return a Problem if the entity xml is invalid (e.g. missing dataset name)', testService((service) => {
-        const xml = `
-        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
-          <h:head>
-            <model>
-              <instance>
-                <data id="noDatasetName">
-                  <meta>
-                  <entities:entity>
-                  </entities:entity>
-                  </meta>
-                </data>
-              </instance>
-            </model>
-          </h:head>
-        </h:html>`;
-        return service.login('alice', (asAlice) =>
+      it('should return a Problem if the entity xml has the wrong version', testService((service) =>
+        service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
-            .send(xml)
+            .send(testData.forms.simpleEntity.replace('2022.1.0', 'bad-version'))
             .set('Content-Type', 'text/xml')
             .expect(400)
             .then(({ body }) => {
               body.code.should.equal(400.25);
-              body.details.reason.should.equal('Dataset name is empty.');
-            }));
-      }));
+              body.details.reason.should.equal('Entities specification version [bad-version] is not supported.');
+            }))));
+
+      it('should return a Problem if the entity xml is invalid (e.g. missing dataset name)', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity.replace('dataset="people"', ''))
+            .set('Content-Type', 'text/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.equal(400.25);
+              body.details.reason.should.equal('Dataset name is missing.');
+            }))));
 
       it('should return a Problem if the savetos reference invalid properties', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -748,7 +2667,18 @@ describe('datasets and entities', () => {
             .expect(400)
             .then(({ body }) => {
               body.code.should.equal(400.25);
-              body.details.reason.should.equal('Invalid Dataset property.');
+              body.details.reason.should.equal('Invalid entity property name.');
+            }))));
+
+      it('should return a Problem if the savetos reference invalid properties (extra whitespace)', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity.replace('first_name', '  first_name  '))
+            .set('Content-Type', 'text/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.equal(400.25);
+              body.details.reason.should.equal('Invalid entity property name.');
             }))));
 
       it('should return the created form upon success', testService((service) =>
@@ -774,16 +2704,15 @@ describe('datasets and entities', () => {
         const xml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
           <h:title>nobinds</h:title>
-          <model>
+          <model entities:entities-version='2022.1.0'>
             <instance>
               <data id="nobinds">
                 <name/>
                 <age/>
                 <meta>
-                  <entities:entity entities:dataset="something">
-                    <entities:create/>
-                    <entities:label/>
-                  </entities:entity>
+                  <entity dataset="something" id="" create="1">
+                    <label/>
+                  </entity>
                 </meta>
               </data>
             </instance>
@@ -801,37 +2730,159 @@ describe('datasets and entities', () => {
             }));
       }));
 
-      it('should update a dataset with new form draft', testService(async (service, { Datasets }) => {
-        // Upload a form and then create a new draft version
+      it('should not let multiple fields to be mapped to a single property', testService(async (service) => {
         await service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms?publish=true')
-            .send(testData.forms.simpleEntity)
+          asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity.replace(/first_name/g, 'age'))
             .set('Content-Type', 'application/xml')
-            .expect(200)
-            .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
-              .expect(200)
-              .then(() => asAlice.get('/v1/projects/1/forms/simpleEntity/draft')
-                .set('X-Extended-Metadata', 'true')
-                .expect(200)
-                .then(({ body }) => {
-                  body.entityRelated.should.equal(true);
-                }))));
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.be.eql(400.25);
+              body.message.should.be.eql('The entity definition within the form is invalid. Multiple Form Fields cannot be saved to a single property.');
+            }));
+      }));
 
-        // Get all datasets by projectId
-        const datasetId = await Datasets.getAllByProjectId(1)
-          .then(result => result[0].id);
-
-        await Datasets.getById(datasetId)
-          .then(result => {
-            result.properties.length.should.be.eql(2);
-            result.properties[0].fields.length.should.equal(2);
+      it('should ignore a saveto incorrrectly placed on a bind on a structural field', testService(async (service) => {
+        const alice = await service.login('alice');
+        const xml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+          <h:head>
+            <model entities:entities-version='2022.1.0'>
+              <instance>
+                <data id="validate_structure">
+                  <name/>
+                  <age/>
+                  <group>
+                    <inner_field/>
+                  </group>
+                  <meta>
+                    <entity dataset="things" id="" create="1">
+                      <label/>
+                    </entity>
+                  </meta>
+                </data>
+              </instance>
+              <bind nodeset="/data/name" type="string" entities:saveto="prop1"/>
+              <bind nodeset="/data/group" entities:saveto="prop2"/>
+              <bind nodeset="/data/group/inner_field" type="string" entities:saveto="prop3"/>
+            </model>
+          </h:head>
+        </h:html>`;
+        await alice.post('/v1/projects/1/forms')
+          .send(xml)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await alice.get('/v1/projects/1/forms/validate_structure/draft/dataset-diff')
+          .expect(200)
+          .then(({ body }) => {
+            const { properties } = body[0];
+            properties.length.should.equal(2);
+            properties[0].name.should.equal('prop1');
+            properties[1].name.should.equal('prop3');
+          });
+        await alice.post('/v1/projects/1/forms/validate_structure/draft/publish')
+          .expect(200);
+        await alice.get('/v1/projects/1/datasets/things')
+          .expect(200)
+          .then(({ body }) => {
+            body.name.should.be.eql('things');
+            const { properties } = body;
+            properties.length.should.equal(2);
+            properties[0].name.should.equal('prop1');
+            properties[1].name.should.equal('prop3');
           });
       }));
 
-      it('should be able to upload multiple drafts', testService(async (service) => {
-        // Upload a form and then create a new draft version
-        await service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms?publish=true')
+      it('should throw an error when a saveto is on a field inside a repeat group', testService(async (service) => {
+        // Entities made from repeat groups are not yet supported. pyxform also throws an error about this.
+        const form = `<?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+          <h:head>
+            <h:title>Repeat Children Entities</h:title>
+            <model entities:entities-version="2022.1.0" odk:xforms-version="1.0.0">
+              <instance>
+                <data id="repeat_entity" version="2">
+                  <num_children/>
+                  <child>
+                    <child_name/>
+                  </child>
+                  <meta>
+                    <instanceID/>
+                    <instanceName/>
+                    <entity create="1" dataset="children" id="">
+                      <label/>
+                    </entity>
+                  </meta>
+                </data>
+              </instance>
+              <bind entities:saveto="num_children" nodeset="/data/num_children" type="int"/>
+              <bind entities:saveto="child_name" nodeset="/data/child/child_name" type="string"/>
+              <bind jr:preload="uid" nodeset="/data/meta/instanceID" readonly="true()" type="string"/>
+              <bind calculate=" /data/num_children " nodeset="/data/meta/instanceName" type="string"/>
+              <bind calculate="1" nodeset="/data/meta/entity/@create" readonly="true()" type="string"/>
+              <bind nodeset="/data/meta/entity/@id" readonly="true()" type="string"/>
+              <setvalue event="odk-instance-first-load" readonly="true()" ref="/data/meta/entity/@id" type="string" value="uuid()"/>
+              <bind calculate="concat(&quot;Num children:&quot;,  /data/num_children )" nodeset="/data/meta/entity/label" readonly="true()" type="string"/>
+            </model>
+          </h:head>
+          <h:body>
+            <input ref="/data/num_children">
+              <label>Num Children</label>
+            </input>
+            <group ref="/data/child">
+              <label>Child</label>
+              <repeat nodeset="/data/child">
+                <input ref="/data/child/child_name">
+                  <label>Child Name</label>
+                </input>
+              </repeat>
+            </group>
+          </h:body>
+        </h:html>
+        `;
+        const alice = await service.login('alice');
+        await alice.post('/v1/projects/1/forms?publish=true')
+          .send(form)
+          .set('Content-Type', 'application/xml')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.25);
+            body.details.reason.should.equal('Currently, entities cannot be populated from fields in repeat groups.');
+          });
+      }));
+
+      it('should publish dataset when any dataset creating form is published', testService(async (service) => {
+        const alice = await service.login('alice');
+
+        await alice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await alice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/simpleEntity/g, 'simpleEntity2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await alice.get('/v1/projects/1/datasets')
+          .expect(200)
+          .then(({ body }) => {
+            body[0].name.should.be.eql('people');
+          });
+
+        await alice.get('/v1/projects/1/datasets/people')
+          .expect(200)
+          .then(({ body }) => {
+            body.name.should.be.eql('people');
+          });
+
+      }));
+
+      describe('updating datasets through new form drafts', () => {
+        it('should update a dataset with a new draft and be able to upload multiple drafts', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // Upload a form and then create a new draft version
+          await asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.simpleEntity)
             .set('Content-Type', 'application/xml')
             .expect(200)
@@ -846,25 +2897,55 @@ describe('datasets and entities', () => {
                 .expect(200)
                 .then(({ body }) => {
                   body.entityRelated.should.equal(true);
-                }))));
-      }));
+                })));
+
+          await asAlice.get('/v1/projects/1/datasets')
+            .expect(200)
+            .then(({ body }) => {
+              body[0].name.should.be.eql('people');
+            });
+
+          await asAlice.get('/v1/projects/1/datasets/people')
+            .expect(200)
+            .then(({ body }) => {
+              body.name.should.be.eql('people');
+              body.properties.length.should.be.eql(2);
+            });
+        }));
+
+        it('should return a Problem if updated form has invalid dataset properties', testService(async (service) => {
+          const asAlice = await service.login('alice');
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+              .send(testData.forms.simpleEntity.replace('first_name', 'name'))
+              .set('Content-Type', 'application/xml')
+              .expect(400)
+              .then(({ body }) => {
+                body.code.should.equal(400.25);
+                body.details.reason.should.equal('Invalid entity property name.');
+              }));
+        }));
+      });
     });
 
     describe('dataset audit logging at /projects/:id/forms POST', () => {
-      it('should log dataset creation in audit log', testService(async (service, { Audits }) => {
+      it('should not log dataset creation when form is not published', testService(async (service, { Audits }) => {
         await service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.simpleEntity)
             .set('Content-Type', 'text/xml')
             .expect(200));
 
-        const audit = await Audits.getLatestByAction('dataset.create').then((o) => o.get());
-        audit.details.fields.should.eql([['/name', 'first_name'], ['/age', 'age']]);
+        const audit = await Audits.getLatestByAction('dataset.create');
+        audit.should.equal(Option.none());
       }));
 
-      it('should log dataset modification in audit log', testService(async (service, { Audits }) => {
+      it('should not log dataset modification when form is not published', testService(async (service, { Audits }) => {
         await service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
+          asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.simpleEntity)
             .set('Content-Type', 'text/xml')
             .expect(200)
@@ -875,50 +2956,559 @@ describe('datasets and entities', () => {
               .set('Content-Type', 'text/xml')
               .expect(200)));
 
-        const audit = await Audits.getLatestByAction('dataset.create').then((o) => o.get());
-        audit.details.fields.should.eql([['/name', 'first_name'], ['/age', 'age']]);
+        const audit = await Audits.getLatestByAction('dataset.update');
 
-        const audit2 = await Audits.getLatestByAction('dataset.update').then((o) => o.get());
-        audit2.details.fields.should.eql([['/name', 'color_name'], ['/age', 'age']]);
-
-        audit.acteeId.should.equal(audit2.acteeId);
+        audit.should.equal(Option.none());
       }));
 
-      it('should log dataset publishing in audit log', testService(async (service, { Audits }) => {
-
-        const asAlice = await service.login('alice', identity);
+      it('should not log dataset modification when no new property is added', testService(async (service, { Audits }) => {
+        const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity)
           .set('Content-Type', 'text/xml')
           .expect(200);
 
-        await Audits.getLatestByAction('dataset.update.publish')
-          .then(o => o.get())
-          .then(audit => audit.details.should.eql({ properties: ['age', 'first_name'] }));
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+          .expect(200);
 
-        await asAlice.post('/v1/projects/1/forms')
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=v2')
+          .expect(200);
+
+        const audit = await Audits.getLatestByAction('dataset.update');
+
+        audit.should.equal(Option.none());
+      }));
+
+      it('should log dataset publishing in audit log', testService(async (service, { Audits }) => {
+
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        await Audits.getLatestByAction('dataset.create')
+          .then(o => o.get())
+          .then(audit => audit.details.should.eql({ properties: ['first_name', 'age'] }));
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity
             .replace('simpleEntity', 'simpleEntity2')
             .replace('first_name', 'color_name'))
           .set('Content-Type', 'text/xml')
           .expect(200);
 
-        await asAlice.post('/v1/projects/1/forms/simpleEntity2/draft/publish')
-          .expect(200);
-
-        await Audits.getLatestByAction('dataset.update.publish')
+        await Audits.getLatestByAction('dataset.update')
           .then(o => o.get())
-          .then(audit => audit.details.should.eql({ properties: ['age', 'color_name', 'first_name'] }));
+          .then(audit => audit.details.should.eql({ properties: ['first_name', 'age', 'color_name',] }));
 
       }));
 
+      describe('uploading forms that UPDATE but do not create entities', () => {
+        it('should be able to add properties to datasets', testService(async (service) => {
+          const asAlice = await service.login('alice');
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.updateEntity
+              .replace('entities:saveto="first_name"', 'entities:saveto="nickname"'))
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([
+                {
+                  name: 'people',
+                  isNew: false,
+                  properties: [
+                    { name: 'first_name', isNew: false, inForm: false },
+                    { name: 'nickname', isNew: true, inForm: true },
+                    { name: 'age', isNew: false, inForm: true }
+                  ]
+                }
+              ]);
+            });
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish');
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([
+                {
+                  name: 'people',
+                  properties: [
+                    { name: 'first_name', inForm: false },
+                    { name: 'nickname', inForm: true },
+                    { name: 'age', inForm: true }
+                  ]
+                }
+              ]);
+            });
+        }));
+
+        it('should be able to have an update entity form with no savetos', testService(async (service) => {
+          const asAlice = await service.login('alice');
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.updateEntity
+              .replace('entities:saveto="first_name"', '')
+              .replace('entities:saveto="age"', ''))
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([
+                {
+                  name: 'people',
+                  isNew: false,
+                  properties: [
+                    { name: 'first_name', isNew: false, inForm: false },
+                    { name: 'age', isNew: false, inForm: false }
+                  ]
+                }
+              ]);
+            });
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish');
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([
+                {
+                  name: 'people',
+                  properties: [
+                    { name: 'first_name', inForm: false },
+                    { name: 'age', inForm: false }
+                  ]
+                }
+              ]);
+            });
+        }));
+
+        it('should create dataset if it does not exist and and log it', testService(async (service) => {
+          const asAlice = await service.login('alice');
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.updateEntity)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/dataset-diff')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.eql([
+                {
+                  name: 'people',
+                  isNew: true, // Dataset is new
+                  properties: [
+                    { name: 'first_name', isNew: true, inForm: true },
+                    { name: 'age', isNew: true, inForm: true }
+                  ]
+                }
+              ]);
+            });
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish');
+
+          await asAlice.get('/v1/projects/1/datasets/people')
+            .expect(200)
+            .then(({ body }) => {
+              body.name.should.be.eql('people');
+              body.properties.map(p => p.name).should.eql([ 'first_name', 'age' ]);
+            });
+
+          await asAlice.get('/v1/audits?action=dataset.create')
+            .expect(200)
+            .then(({ body: audits }) => {
+              audits[0].details.should.eql({ properties: ['first_name', 'age'] });
+            });
+        }));
+      });
     });
+
+    describe('dataset property interaction with intermediate form schemas and purging uneeded drafts', () => {
+      it('should clean up form fields and dataset properties of unneeded drafts', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        // ignoring warning about removing a field
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft?ignoreWarnings=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simpleEntity.replace('orx:version="1.0"', 'orx:version="draft1"').replace(/first_name/g, 'nickname'))
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simpleEntity.replace('orx:version="1.0"', 'orx:version="draft"'))
+          .expect(200);
+
+        // there are expected to be
+        // 2 defs of this form (published and new draft)
+        // 6 form fields of original form (and new form): 3 entity related fields and 3 question fields
+        // ideally only 4 ds property fields, but 2 from deleted def are still there
+        await Promise.all([
+          container.oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simpleEntity'`),
+          container.oneFirst(sql`select count(*) from form_fields as fs join forms as f on fs."formId" = f.id where f."xmlFormId"='simpleEntity'`),
+          container.oneFirst(sql`select count(*) from ds_property_fields`),
+        ])
+          .then((counts) => counts.should.eql([2, 6, 6]));
+
+      }));
+    });
+  });
+
+  describe('form schemas and dataset properties', () => {
+    it('should populate entity properties based on correct form schema', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      // Submission to old (and only) version of form should have only age filled in
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Upload a new version of the form with saveto added to hometown
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity
+          .replace('<bind nodeset="/data/hometown" type="string"/>', '<bind nodeset="/data/hometown" type="string" entities:saveto="hometown"/>'))
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=2.0')
+        .expect(200);
+
+      // Submission to old version of form should make entity with age filled in
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Submission to new version of form should make entity with hometown filled in
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.three.replace('version="1.0"', 'version="2.0"'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Upload a new version of the form with saveto removed from age
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity
+          .replace('<bind nodeset="/data/age" type="int" entities:saveto="age"/>', '<bind nodeset="/data/age" type="int"/>')
+          .replace('<bind nodeset="/data/hometown" type="string"/>', '<bind nodeset="/data/hometown" type="string" entities:saveto="hometown"/>'))
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=3.0')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.four.replace('version="1.0"', 'version="3.0"'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Submission 1 - should just have name and age
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.should.have.property('data').which.is.eql({ age: '88', first_name: 'Alice' });
+        });
+
+      // Submission 2 - should also just have name and age
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.should.have.property('data').which.is.eql({ age: '30', first_name: 'Jane' });
+        });
+
+      // Submission 3 - should have name, age and hometown filled in
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789bbb')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.should.have.property('data').which.is.eql({ age: '40', hometown: 'Toronto', first_name: 'John' });
+        });
+
+      // Submission 4 - should have name and hometown filled in, NO age
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ccc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.should.have.property('data').which.is.eql({ first_name: 'Robert', hometown: 'Seattle' });
+        });
+    }));
+
+    // c#551 issue, <entity/> tag has no children
+    it('should allow update where no label or no properties are updated and entity block is childless', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      const form = `<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" create="" update="" baseVersion="" />
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'First Label',
+          data: { age: '11' }
+        })
+        .expect(200);
+
+      const sub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="brokenForm" version="1.0">
+        <meta>
+          <instanceID>one</instanceID>
+          <orx:instanceName>one</orx:instanceName>
+          <entity baseVersion="1" dataset="people" id="12345678-1234-4123-8234-123456789abc" update="1" />
+        </meta>
+      </data>`;
+
+      await asAlice.post('/v1/projects/1/forms/brokenForm/submissions')
+        .send(sub)
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .expect(200)
+        .then(({ body: versions }) => {
+          versions[1].version.should.equal(2);
+          versions[1].baseVersion.should.equal(1);
+          versions[1].label.should.equal('First Label');
+          versions[1].data.should.eql({ age: '11' });
+          versions[1].dataReceived.should.eql({});
+        });
+
+      await asAlice.get('/v1/projects/1/forms/brokenForm/submissions/one/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs[0].action.should.equal('entity.update.version');
+        });
+    }));
+
+    // c#552 issue, can't add label to entity update form that previously didnt have label
+    it('should allow label to be added to entity block in new version of form', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const form = `<?xml version="1.0"?>
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" create="" update="" baseVersion="" />
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      const form2 = `<?xml version="1.0"?>
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="2.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" create="" update="" baseVersion="">
+                    <label/>
+                  </entity>
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/brokenForm/draft')
+        .send(form2)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+    }));
+
+    // c#553 issue, forms with and without entity label show different fields
+    // (because entity was previously type 'unknown' instead of 'structure')
+    it('should show same field type (structure) for meta/entity tag with and without children', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const form = `<?xml version="1.0"?>
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="updateWithoutLabel" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" update="" baseVersion="" />
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Form with label nested under entity
+      const form2 = `<?xml version="1.0"?>
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="updateWithLabel" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" update="" baseVersion="">
+                    <label/>
+                  </entity>
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form2)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Compare form fields
+      await asAlice.get('/v1/projects/1/forms/updateWithoutLabel/fields?odata=true')
+        .then(({ body }) => {
+          body[2].path.should.equal('/meta/entity');
+          body[2].type.should.equal('structure');
+
+          body.length.should.equal(3);
+        });
+
+      await asAlice.get('/v1/projects/1/forms/updateWithLabel/fields?odata=true')
+        .then(({ body }) => {
+          body[2].path.should.equal('/meta/entity');
+          body[2].type.should.equal('structure');
+
+          body[3].path.should.equal('/meta/entity/label');
+          body.length.should.equal(4);
+        });
+    }));
+
+    it('should gracefully handle error if incoming entity tag in sub has no attributes', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      const form = `<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2023.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="1.0">
+                <age foo="bar"/>
+                <meta>
+                  <entity dataset="people" id="" update="" baseVersion="" />
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(form)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'First Label',
+          data: { age: '11' }
+        })
+        .expect(200);
+
+      const sub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="brokenForm" version="1.0">
+        <meta>
+          <instanceID>one</instanceID>
+          <orx:instanceName>one</orx:instanceName>
+          <entity/>
+        </meta>
+      </data>`;
+
+      await asAlice.post('/v1/projects/1/forms/brokenForm/submissions')
+        .send(sub)
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/forms/brokenForm/submissions/one/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs[0].action.should.equal('entity.error');
+          logs[0].details.errorMessage.should.equal('Required parameter dataset missing.');
+        });
+    }));
   });
 
   describe('dataset and entities should have isolated lifecycle', () => {
     it('should allow a form that has created an entity to be purged', testService(async (service, container) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
@@ -958,7 +3548,8 @@ describe('datasets and entities', () => {
 
       await container.Forms.purge(true);
 
-      await container.all(sql`select * from entity_defs`)
+      await container.all(sql`SELECT * FROM entity_defs
+        JOIN entity_def_sources ON entity_defs."sourceId" = entity_def_sources.id`)
         .then(eDefs => {
           // Ensures that we are only clearing submissionDefId of entities whose submission/form is purged
           should(eDefs.find(d => d.data.first_name === 'Alice').submissionDefId).be.null();
@@ -967,7 +3558,7 @@ describe('datasets and entities', () => {
     }));
 
     it('should return published dataset even if corresponding form is deleted', testService(async (service, container) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
@@ -987,7 +3578,7 @@ describe('datasets and entities', () => {
     }));
 
     it('should keep dataset and its property status intact even if corresponding form is deleted', testService(async (service, container) => {
-      const asAlice = await service.login('alice', identity);
+      const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
@@ -1014,14 +3605,897 @@ describe('datasets and entities', () => {
             name: 'people',
             isNew: false,
             properties: [
-              { name: 'age', isNew: false, inForm: true },
               { name: 'first_name', isNew: false, inForm: false },
-              { name: 'last_name', isNew: true, inForm: true }
+              { name: 'last_name', isNew: true, inForm: true },
+              { name: 'age', isNew: false, inForm: true }
             ]
           }]);
         });
 
     }));
 
+  });
+
+  describe('configurable approval requirements', () => {
+    describe('PATCH /datasets/:name', () => {
+
+      it('should return notfound if the dataset does not exist', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.patch('/v1/projects/1/datasets/nonexistent')
+          .expect(404);
+      }));
+
+      it('should reject if the user cannot read', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const asChelsea = await service.login('chelsea');
+
+        await asChelsea.patch('/v1/projects/1/datasets/people')
+          .expect(403);
+      }));
+
+      it('should allow setting approval requirements', testService(async (service) => {
+
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const dataset = await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        dataset.body.approvalRequired.should.equal(true);
+
+      }));
+
+      it('should return bad request if value of convert query param is invalid', testService(async (service) => {
+
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=dummy')
+          .send({ approvalRequired: true })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.be.eql(400.8);
+          });
+
+      }));
+
+      it('should return warning if there are pending submissions', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: false })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.be.eql(400.29);
+            body.details.count.should.be.eql(1);
+          });
+      }));
+
+      it('should update dataset when pending submissions are draft or deleted', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+          .expect(200);
+
+        // Draft submission
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: false })
+          .expect(200);
+      }));
+
+      it('should update the flag without automatic conversions', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=false')
+          .send({ approvalRequired: false })
+          .expect(200)
+          .then(({ body }) => body.approvalRequired.should.be.false());
+
+        // there are no entities
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => body.should.be.eql([]));
+
+      }));
+
+      it('should automatically convert pending submissions', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // There are no entities
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => body.length.should.be.eql(0));
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200)
+          .then(({ body }) => body.approvalRequired.should.be.false());
+
+        await exhaust(container);
+
+        // Entities are created now
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => body.length.should.be.eql(2));
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].should.be.an.Audit();
+            logs[0].action.should.be.eql('entity.create');
+            logs[0].actor.displayName.should.be.eql('Alice');
+
+            logs[0].details.source.submission.should.be.a.Submission();
+            logs[0].details.source.submission.xmlFormId.should.be.eql('simpleEntity');
+            logs[0].details.source.submission.currentVersion.instanceName.should.be.eql('one');
+            logs[0].details.source.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
+          });
+
+
+
+      }));
+
+      it('should not convert deleted submissions', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // There are no entities because approval is required
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => body.length.should.be.eql(0));
+
+        // Delete the form which means submissions are to be deleted
+        // Currently we don't have a way to delete a Submission
+        await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200)
+          .then(({ body }) => body.approvalRequired.should.be.false());
+
+        await exhaust(container);
+
+        // Still no Entities
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => body.length.should.be.eql(0));
+      }));
+
+      it('should not convert draft submissions', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+          .expect(200);
+
+        // Draft submission
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => body.should.be.eql([]));
+      }));
+
+      it('should log error if there is a problem in a submission while auto converting', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one.replace('<entities:label>Alice (88)</entities:label>', '')) //removing label
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.three.replace('create="1"', 'create="0"')) // don't create entity
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // There are no entities
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => body.length.should.be.eql(0));
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200)
+          .then(({ body }) => body.approvalRequired.should.be.false());
+
+        await exhaust(container);
+
+        // One Entity is created
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.be.eql(1);
+          });
+
+        const entityErrors = await container.Audits.get(new QueryOptions({ args: { action: 'entity.error' } }));
+
+        entityErrors.length.should.be.eql(1);
+        entityErrors[0].details.errorMessage.should.match(/Required parameter label missing/);
+
+      }));
+
+      it('should use latest version of submission in pending submissions', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // submission is edited to create different entity
+        await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send(testData.instances.simpleEntity.one
+            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:12345678-1234-4123-8234-123456789bbb"')
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200)
+          .then(({ body }) => body.approvalRequired.should.be.false());
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].uuid.should.equal('12345678-1234-4123-8234-123456789bbb');
+          });
+      }));
+
+      it('should use latest version of submission (updated to not create entity) in pending submissions', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // submission is edited to create different entity
+        await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send(testData.instances.simpleEntity.one
+            .replace('create="1"', 'create="0"')
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200)
+          .then(({ body }) => body.approvalRequired.should.be.false());
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(0);
+          });
+      }));
+
+      it('should do something reasonable with pending submissions when they contain entity updates', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // can use update form to make dataset populate via api
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        // populate one entity
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        // I also want one actual submission create that needs approval to run
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .expect(200);
+
+        // send update submissions!
+        // this is an update so it will be processed without needing to be approved.
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.three)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // this will also process the create entity submission, but it wont make an entity
+        await exhaust(container);
+
+        // at this point, the main entity has been updated
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.age.should.equal('55');
+            person.currentVersion.version.should.equal(2);
+          });
+
+        // the second entity has not yet been created because it needs submission approval
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa')
+          .expect(404);
+
+        // send next two submission
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.three
+            .replace('<instanceID>three</instanceID>', '<instanceID>four</instanceID>')
+            .replace('<age>55</age>', '<age>66</age>'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // send next submission
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.three
+            .replace('<instanceID>three</instanceID>', '<instanceID>five</instanceID>')
+            .replace('<age>55</age>', '<age>77</age>'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // exhaust hasn't run yet so the one create submission and two update submissions count as pending
+        // central has no way to know if a submission is a create or update until it reads the submission
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: false })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.be.eql(400.29);
+            body.details.count.should.be.eql(3);
+          });
+
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200)
+          .then(({ body }) => body.approvalRequired.should.be.false());
+
+        // send another submission
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.three
+            .replace('<instanceID>three</instanceID>', '<instanceID>six</instanceID>')
+            .replace('<age>55</age>', '<age>888</age>'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // at this point, none of the new submissions have been processed
+        // the unprocessed audit log looks like this with the datset.update event between some submission events
+        const unprocessedAudits = await container.Audits.get(new QueryOptions({ condition: { processed: null } }));
+        unprocessedAudits.map(a => a.action).should.eql([
+          'submission.create',
+          'dataset.update',
+          'submission.create',
+          'submission.create'
+        ]);
+
+        await exhaust(container);
+
+        // main entity with many updates
+        // events should all look like submission.create events (vs. dataset update events)
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            const updateDetails = logs.filter(log => log.action === 'entity.update.version').map(log => log.details);
+            updateDetails.length.should.equal(4);
+            updateDetails.filter(d => d.source.event.action === 'submission.create').length.should.equal(4);
+            updateDetails.map(d => d.source.submission.instanceId).should.eql([
+              'six', 'five', 'four', 'three'
+            ]);
+          });
+
+        // other entity that was created
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.equal('entity.create');
+            logs[0].details.source.submission.xmlFormId.should.equal('simpleEntity');
+            logs[0].details.source.submission.instanceId.should.equal('two');
+            logs[0].details.source.event.action.should.equal('submission.create');
+          });
+
+        // only one entity def should have a source with a non-null parent id
+        // the submission that only created an entity
+        const defSourceParentIds = await container.all(sql`
+        select eds.details->'submission'->'instanceId' as "submissionInstanceId"
+        from entity_defs as ed
+        join entity_def_sources as eds on ed."sourceId" = eds.id
+        where eds.details->'parentEventId' is not null`);
+        defSourceParentIds.length.should.equal(1);
+        defSourceParentIds[0].submissionInstanceId.should.equal('two');
+      }));
+    });
+
+    it('should not let submission edits get caught in pending submission count', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Upload form that creates an entity list and publish it
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Configure the entity list to create entities on submission approval
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      // Populate one entity
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Johnny Doe',
+          data: { first_name: 'Johnny', age: '22' }
+        })
+        .expect(200);
+
+      // Upload form that updates entities
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Send submission
+      await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+        .send(testData.instances.updateEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Observe that entity was updated
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.data.age.should.equal('85');
+          person.currentVersion.version.should.equal(2);
+        });
+
+      // Edit the submission
+      await asAlice.patch('/v1/projects/1/forms/updateEntity/submissions/one')
+        .send(testData.instances.updateEntity.one
+          .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2')
+          .replace('<age>85</age>', '<age>99</age>'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Should do nothing
+      await exhaust(container);
+
+      // Observe that nothing else happened with the entity
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.data.age.should.equal('85');
+          person.currentVersion.version.should.equal(2);
+        });
+
+      // count return 200 instead of 400 error with pending submission count
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: false })
+        .expect(200);
+    }));
+
+    describe('central issue #547, reprocessing submissions that had previous entity errors', () => {
+      it('should not reprocess submission that previously generated entity.error', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Upload form that creates an entity list and publish it
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Configure the entity list to create entities on submission approval
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        // Create a submission that fails to create an entity (bad UUID)
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one
+            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:invalid_uuid"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Approve the submission.
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs.filter((log => log.action === 'entity.error')).length.should.equal(1);
+          });
+
+        // Mark the submission as "has issues".
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'hasIssues' })
+          .expect(200);
+
+        // Change the entity list and select yes to processing pending submissions.
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200);
+
+        await exhaust(container);
+
+        // Observe that the submission that failed to create an entity has NOT been reprocessed.
+        // There is only one entity.error before the update.
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs.filter((log => log.action === 'entity.error')).length.should.equal(1);
+
+            const actions = logs.map(log => log.action);
+            actions.should.eql([
+              'submission.update', // set to hasIssue
+              'entity.error', // first processing
+              'submission.update', // approval
+              'submission.create'
+            ]);
+          });
+      }));
+
+      it('should reprocess submission that was edited after previously generating entity.error', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Upload form that creates an entity list and publish it
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Configure the entity list to create entities on submission approval
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        // Create a submission that fails to create an entity (bad UUID)
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one
+            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:invalid_uuid"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Approve the submission.
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        // Observe that it created an error
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs.filter((log => log.action === 'entity.error')).length.should.equal(1);
+          });
+
+        // Update the submission to resolve the error
+        await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send(testData.instances.simpleEntity.one
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Do not approve the submission yet
+        // Check the unprocessed submissions
+        const ds = await container.Datasets.get(1, 'people').then(o => o.get());
+        const subs = await container.Datasets.getUnprocessedSubmissions(ds.id);
+        subs.length.should.equal(1);
+
+        // Change the entity list and select yes to processing pending submissions.
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200);
+
+        await exhaust(container);
+
+        // Observe that the entity has now been created
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+          });
+
+        // Observe that the submission that failed to create an entity HAS been reprocessed.
+        // There is only one entity.error before the update.
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs.filter((log => log.action === 'entity.error')).length.should.equal(1);
+
+            const actions = logs.map(log => log.action);
+            actions.should.eql([
+              'entity.create', // second processing
+              'submission.update.version', // submission edited
+              'entity.error', // first processing
+              'submission.update', // approval
+              'submission.create'
+            ]);
+          });
+      }));
+
+      it('should not reprocessed an update caught up in the pending submission scenario ', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Upload form that creates an entity list and publish it
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Upload form that updates an entity list and publish it
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Configure the entity list to create entities on submission approval
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        // Create a submission that would create an entity on approval. Don't approve it yet.
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Create a submission that would update the entity created by the previous submission
+        // (which doesn't exist yet because it hasn't been approved)
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // Observe that the update was processed immediately but resulted in an entity.error
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.equal('entity.error');
+          });
+
+        // Observe that the entity was not created or updated yet
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(404);
+
+        // Change the entity list and select yes to processing pending submissions.
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ approvalRequired: false })
+          .expect(200);
+
+        await exhaust(container);
+
+        // Observe that the submission that failed to update an entity has not been reprocessed
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.equal('entity.error');
+          });
+
+        // There was no second update attempt because the entity was not reprocessed
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+          .then(({ body: versions }) => {
+            versions.length.should.equal(1);
+          });
+
+        // Edit the submission so the new def will update the entity
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // Observe that now the entity has been updated
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+          .then(({ body: versions }) => {
+            versions.length.should.equal(2);
+          });
+
+        // Observe that the entity's audit says it was updated by the new edited submission
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .then(({ body: logs }) => {
+            logs[0].details.source.submission.instanceId.should.equal('one2');
+          });
+
+        // Observe that the submission's audit log makes sense
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one2/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.equal('entity.update.version');
+          });
+      }));
+    });
   });
 });

@@ -1,0 +1,11 @@
+{
+  "default": {
+    "oidc": {
+      "_description": "local test server: from https://www.npmjs.com/package/oidc-provider",
+      "issuerUrl": "http://localhost:9898",
+      "clientId": "odk-central-backend-dev",
+      "clientSecret": "super-top-secret",
+      "enabled": true
+    }
+  }
+}

@@ -2,9 +2,7 @@ const appRoot = require('app-root-path');
 const streamTest = require('streamtest').v2;
 const { Readable } = require('stream');
 const { always } = require('ramda');
-// eslint-disable-next-line import/no-dynamic-require
 const { traverseXml, Traversal, applyTraversal, findOne, findAll, and, root, node, hasAttr, getAll, attr, text, tree, stripNamespacesFromPath } = require(appRoot + '/lib/util/xml');
-// eslint-disable-next-line import/no-dynamic-require
 const Option = require(appRoot + '/lib/util/option');
 
 const forever = () => forever;

@@ -1,6 +1,7 @@
 const should = require('should');
-const { testService } = require('../setup');
+const { testService, withClosedForm } = require('../setup');
 const testData = require('../../data/xml');
+const authenticateUser = require('../../util/authenticate-user');
 
 describe('api: /projects/:id/forms/:id/public-links', () => {
   describe('POST', () => {
@@ -195,16 +196,13 @@ describe('api: /key/:key', () => {
       .expect(403)));
 
   it('should allow cookie+public-link', testService((service) =>
-    service.post('/v1/sessions')
-      .send({ email: 'alice@getodk.org', password: 'alice' })
-      .expect(200)
-      .then(({ body }) => body.token)
+    authenticateUser(service, 'alice')
       .then((aliceToken) => service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/public-links')
           .send({ displayName: 'linktest' })
           .then(({ body }) => body.token)
           .then((linkToken) => service.get(`/v1/key/${linkToken}/projects/1/forms/simple.xml`)
-            .set('Cookie', `__Host-session=${aliceToken}`)
+            .set('Cookie', `session=${aliceToken}`)
             .set('X-Forwarded-Proto', 'https')
             .expect(200))))));
 
@@ -227,6 +225,42 @@ describe('api: /key/:key', () => {
           .send(testData.instances.withrepeat.one)
           .set('Content-Type', 'application/xml')
           .expect(403)))));
+
+  it('should not be able access closed forms and its sub-resources', testService(withClosedForm(async (service) => {
+    const asAlice = await service.login('alice');
+
+    const link = await asAlice.post('/v1/projects/1/forms/withAttachments/public-links')
+      .send({ displayName: 'linktest' })
+      .then(({ body }) => body);
+
+    await service.get(`/v1/key/${link.token}/projects/1/forms`)
+      .expect(403);
+
+    await service.get(`/v1/key/${link.token}/projects/1/forms/withAttachments`)
+      .expect(403);
+
+    await service.get(`/v1/key/${link.token}/projects/1/forms/simple2.xls`)
+      .expect(403);
+
+    await service.get(`/v1/key/${link.token}/projects/1/forms/withAttachments.xml`)
+      .expect(403);
+
+    await service.get(`/v1/key/${link.token}/projects/1/forms/withAttachments/versions`)
+      .expect(403);
+
+    await service.get(`/v1/key/${link.token}/projects/1/forms/withAttachments/fields`)
+      .expect(403);
+
+    await service.get(`/v1/key/${link.token}/projects/1/forms/withAttachments/manifest`)
+      .set('X-OpenRosa-Version', '1.0')
+      .expect(403);
+
+    await service.get(`/v1/key/${link.token}/projects/1/forms/withAttachments/attachments`)
+      .expect(403);
+
+    await service.get(`/v1/key/${link.token}/projects/1/forms/withAttachments/attachments/goodone.csv`)
+      .expect(403);
+  })));
 });
 
 

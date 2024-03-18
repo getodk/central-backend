@@ -1,6 +1,5 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-// eslint-disable-next-line import/no-dynamic-require
 const { Config } = require(appRoot + '/lib/model/frames');
 const { plain } = require('../../../util/util');
 
@@ -16,7 +15,9 @@ describe('Config', () => {
   });
 
   describe('fromValue', () => {
-    const notSettable = ['backups.main', 'backups.google'];
+    // There used to be configs that were not settable. Keeping this code in
+    // case there are configs like that in the future.
+    const notSettable = [];
     for (const key of notSettable)
       it(`should not exist for ${key}`, () => {
         should.not.exist(Config.forKey(key).fromValue);
@@ -113,22 +114,6 @@ describe('Config', () => {
     it('should return the value for analytics', () => {
       const config = Config.forKey('analytics').fromValue({ enabled: true });
       config.forApi().value.should.eql({ enabled: true });
-    });
-
-    it('should only return type for backups.main', () => {
-      const config = new (Config.forKey('backups.main'))({
-        key: 'backups.main',
-        value: { type: 'google', keys: { super: 'secret' } }
-      });
-      config.forApi().value.should.eql({ type: 'google' });
-    });
-
-    it('should not return credentials for backups.google', () => {
-      const config = new (Config.forKey('backups.google'))({
-        key: 'backups.google',
-        value: { super: 'secret' }
-      });
-      config.forApi().value.should.eql('New or refreshed Google API credentials');
     });
 
     it('should not return the value for an unknown key', () => {

@@ -7,8 +7,8 @@ const superagent = require('superagent');
 const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
-// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
+const { without } = require(appRoot + '/lib/util/util');
 
 describe('api: /projects/:id/forms (create, read, update)', () => {
 
@@ -69,7 +69,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
       service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1/forms/simple')
           .expect(200)
-          .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+          .then(() => asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
             .send(testData.forms.simple)
             .set('Content-Type', 'application/xml')
             .expect(409)
@@ -154,7 +154,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
           .expect(400)
           .then(({ body }) => {
             body.code.should.equal(400.16);
-            body.details.should.eql({ warnings: [ 'warning 1', 'warning 2' ] });
+            body.details.warnings.xlsFormWarnings.should.eql([ 'warning 1', 'warning 2' ]);
           }));
     }));
 
@@ -267,34 +267,6 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               body.draftToken.should.be.a.token();
             })))));
 
-    it('should worker-process the form draft over to enketo', testService((service, container) =>
-      service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms')
-          .set('Content-Type', 'application/xml')
-          .send(testData.forms.simple2)
-          .expect(200)
-          .then(() => exhaust(container))
-          .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft')
-            .expect(200)
-            .then(({ body }) => {
-              body.enketoId.should.equal('::abcdefgh');
-              should.not.exist(body.enketoOnceId);
-            })))));
-
-    it('should worker-process the published form over to enketo', testService((service, container) =>
-      service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms?publish=true')
-          .set('Content-Type', 'application/xml')
-          .send(testData.forms.simple2)
-          .expect(200)
-          .then(() => exhaust(container))
-          .then(() => asAlice.get('/v1/projects/1/forms/simple2')
-            .expect(200)
-            .then(({ body }) => {
-              body.enketoId.should.equal('::abcdefgh');
-              body.enketoOnceId.should.equal('::::abcdefgh');
-            })))));
-
     it('should if flagged save the given definition as published', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
@@ -325,6 +297,156 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               body.publishedAt.should.be.a.recentIsoDate();
             })))));
 
+    describe('Enketo ID for draft', () => {
+      it('should request an enketoId', testService(async (service, { env }) => {
+        const asAlice = await service.login('alice');
+        const { body } = await asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+        global.enketo.callCount.should.equal(1);
+        global.enketo.createData.should.eql({
+          openRosaUrl: `${env.domain}/v1/test/${body.draftToken}/projects/1/forms/simple2/draft`,
+          xmlFormId: 'simple2',
+          token: undefined
+        });
+        body.enketoId.should.equal('::abcdefgh');
+        should.not.exist(body.enketoOnceId);
+      }));
+
+      it('should return with success even if request to Enketo fails', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        global.enketo.state = 'error';
+        const { body } = await asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+        should.not.exist(body.enketoId);
+        should.not.exist(body.enketoOnceId);
+      }));
+
+      it('should wait for Enketo only briefly @slow', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        global.enketo.wait = (done) => { setTimeout(done, 600); };
+        const { body } = await asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+        should.not.exist(body.enketoId);
+        should.not.exist(body.enketoOnceId);
+      }));
+
+      it('should request an enketoId from worker if request from endpoint fails', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // First request to Enketo, from the endpoint
+        global.enketo.state = 'error';
+        await asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+
+        // Second request, from the worker
+        global.enketo.callCount.should.equal(1);
+        await exhaust(container);
+        global.enketo.callCount.should.equal(2);
+        const { body } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        global.enketo.createData.should.eql({
+          openRosaUrl: `${container.env.domain}/v1/test/${body.draftToken}/projects/1/forms/simple2/draft`,
+          xmlFormId: 'simple2',
+          token: undefined
+        });
+        body.enketoId.should.equal('::abcdefgh');
+        should.not.exist(body.enketoOnceId);
+      }));
+
+      it('should not request an enketoId from worker if request from endpoint succeeds', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+        global.enketo.callCount.should.equal(1);
+        await exhaust(container);
+        global.enketo.callCount.should.equal(1);
+      }));
+    });
+
+    describe('Enketo IDs for published form', () => {
+      it('should request Enketo IDs', testService(async (service, { env }) => {
+        const asAlice = await service.login('alice');
+        const { body } = await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+        global.enketo.callCount.should.equal(1);
+        without(['token'], global.enketo.createData).should.eql({
+          openRosaUrl: `${env.domain}/v1/projects/1`,
+          xmlFormId: 'simple2'
+        });
+        body.enketoId.should.equal('::abcdefgh');
+        body.enketoOnceId.should.equal('::::abcdefgh');
+      }));
+
+      it('should return with success even if request to Enketo fails', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        global.enketo.state = 'error';
+        const { body } = await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+        should.not.exist(body.enketoId);
+        should.not.exist(body.enketoOnceId);
+      }));
+
+      it('should wait for Enketo only briefly @slow', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        global.enketo.wait = (done) => { setTimeout(done, 600); };
+        const { body } = await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+        should.not.exist(body.enketoId);
+        should.not.exist(body.enketoOnceId);
+      }));
+
+      it('should request Enketo IDs from worker if request from endpoint fails', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // First request to Enketo, from the endpoint
+        global.enketo.state = 'error';
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+
+        // Second request, from the worker
+        global.enketo.callCount.should.equal(1);
+        await exhaust(container);
+        global.enketo.callCount.should.equal(2);
+        const { body } = await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200);
+        without(['token'], global.enketo.createData).should.eql({
+          openRosaUrl: `${container.env.domain}/v1/projects/1`,
+          xmlFormId: 'simple2'
+        });
+        body.enketoId.should.equal('::abcdefgh');
+        body.enketoOnceId.should.equal('::::abcdefgh');
+      }));
+
+      it('should not request Enketo IDs from worker if request from endpoint succeeds', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+        global.enketo.callCount.should.equal(1);
+        await exhaust(container);
+        global.enketo.callCount.should.equal(1);
+      }));
+    });
+
     it('should log the action in the audit log', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
@@ -351,6 +473,163 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               body[0].action.should.equal('form.update.publish');
               body[1].action.should.equal('form.create');
             })))));
+
+    it('should reject with deleted form exists warning', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/forms/simple')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simple)
+        .set('Content-Type', 'application/xml')
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.be.eql(400.16);
+          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'deletedFormExists', details: { xmlFormId: 'simple' } });
+        });
+    }));
+
+    it('should reject with xls and deleted form exists warnings', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simple2)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/forms/simple2')
+        .expect(200);
+
+      global.xlsformTest = 'warning'; // set up the mock service to warn.
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+        .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.be.eql(400.16);
+          body.details.warnings.xlsFormWarnings.should.be.eql(['warning 1', 'warning 2']);
+          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'deletedFormExists', details: { xmlFormId: 'simple2' } });
+        });
+    }));
+
+    it('should reject with structure changed warning', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft')
+        .send(testData.forms.simple.replace(/age/g, 'address'))
+        .set('Content-Type', 'application/xml')
+        .then(({ body }) => {
+          body.code.should.be.eql(400.16);
+          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'age' ] });
+        });
+    }));
+
+    it('should reject with structure changed warning', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+        .send(testData.forms.simple.replace(/age/g, 'address'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft/publish?ignoreWarnings=true&version=v2')
+        .expect(200);
+    }));
+
+    it('should reject with xls and structure changed warnings', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simple2.replace(/age/g, 'address'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      global.xlsformTest = 'warning'; // set up the mock service to warn.
+
+      await asAlice.post('/v1/projects/1/forms/simple2/draft')
+        .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+        .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.be.eql(400.16);
+          body.details.warnings.xlsFormWarnings.should.be.eql(['warning 1', 'warning 2']);
+          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'address' ] });
+        });
+    }));
+
+    it('should reject form with missing meta group', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const missingMeta = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml">
+      <h:head>
+        <h:title>Missing Meta</h:title>
+        <model>
+          <instance>
+            <data id="missingMeta">
+              <name/>
+              <age/>
+            </data>
+          </instance>
+          <bind nodeset="/data/name" type="string"/>
+          <bind nodeset="/data/age" type="int"/>
+        </model>
+      </h:head>
+
+    </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(missingMeta)
+        .set('Content-Type', 'application/xml')
+        .expect(400);
+    }));
+
+    it('should reject form with meta field that is not a group', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const missingMeta = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml">
+      <h:head>
+        <h:title>Non Group Meta</h:title>
+        <model>
+          <instance>
+            <data id="missingMeta">
+              <meta/>
+              <name/>
+              <age/>
+            </data>
+          </instance>
+          <bind nodeset="/data/name" type="string"/>
+          <bind nodeset="/data/age" type="int"/>
+        </model>
+      </h:head>
+
+    </h:html>`;
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(missingMeta)
+        .set('Content-Type', 'application/xml')
+        .expect(400);
+    }));
+
+    it('should create the form for xml files with warnings given ignoreWarnings', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simple2)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/forms/simple2')
+        .expect(200);
+
+      global.xlsformTest = 'warning'; // set up the mock service to warn.
+
+      await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+        .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+        .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .expect(200);
+    }));
   });
 
 
@@ -404,8 +683,12 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               .then(({ headers, body }) => {
                 headers['content-type'].should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
                 headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx"; filename*=UTF-8\'\'simple2.xlsx');
+                headers['etag'].should.equal('"30fdb0e9115ea7ca6702573f521814d1"'); // eslint-disable-line dot-notation
                 Buffer.compare(input, body).should.equal(0);
-              })));
+              }))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2.xlsx')
+              .set('If-None-Match', '"30fdb0e9115ea7ca6702573f521814d1"')
+              .expect(304)));
       }));
 
       it('should return the xlsx file originally provided', testService((service) => {
@@ -425,8 +708,12 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               .then(({ headers, body }) => {
                 headers['content-type'].should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
                 headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx"; filename*=UTF-8\'\'simple2.xlsx');
+                headers['etag'].should.equal('"30fdb0e9115ea7ca6702573f521814d1"'); // eslint-disable-line dot-notation
                 Buffer.compare(input, body).should.equal(0);
-              })));
+              }))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xlsx')
+              .set('If-None-Match', '"30fdb0e9115ea7ca6702573f521814d1"')
+              .expect(304)));
       }));
 
       it('should continue to offer the xlsx file after a copy-draft', testService((service) => {
@@ -476,8 +763,15 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .set('Content-Type', 'application/vnd.ms-excel')
             .set('X-XlsForm-FormId-Fallback', 'testformid')
             .expect(200)
-            .then(() => asAlice.get('/v1/projects/1/forms/simple2.xls').expect(200))
-            .then(() => asAlice.get('/v1/projects/1/forms/simple2.xlsx').expect(404)))));
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2.xls')
+              .expect(200)
+              .then(({ headers }) => {
+                headers['etag'].should.equal('"30fdb0e9115ea7ca6702573f521814d1"'); // eslint-disable-line dot-notation
+              }))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2.xlsx').expect(404))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2.xls')
+              .set('If-None-Match', '"30fdb0e9115ea7ca6702573f521814d1"')
+              .expect(304)))));
     });
 
     describe('.xml GET', () => {
@@ -602,18 +896,16 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                 body.submissions.should.equal(0);
               })))));
 
-      it('should return the correct enketoId', testService((service, container) =>
+      it('should return the correct enketoId', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
             .set('Content-Type', 'application/xml')
             .send(testData.forms.simple2)
             .expect(200)
-            .then(() => exhaust(container))
             .then(() => {
-              global.enketoToken = '::ijklmnop';
+              global.enketo.enketoId = '::ijklmnop';
               return asAlice.post('/v1/projects/1/forms/simple2/draft')
                 .expect(200)
-                .then(() => exhaust(container))
                 .then(() => asAlice.get('/v1/projects/1/forms/simple2')
                   .set('X-Extended-Metadata', true)
                   .expect(200)
@@ -704,6 +996,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               .expect(200)
               .then(({ body }) => {
                 body.should.eql([
+                  { name: 'meta', path: '/meta', type: 'structure', binary: null, selectMultiple: null },
+                  { name: 'instanceID', path: '/meta/instanceID', type: 'string', binary: null, selectMultiple: null },
                   { name: 'q1', path: '/q1', type: 'string', binary: null, selectMultiple: true },
                   { name: 'g1', path: '/g1', type: 'structure', binary: null, selectMultiple: null },
                   { name: 'q2', path: '/g1/q2', type: 'string', binary: null, selectMultiple: true }
@@ -716,13 +1010,16 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
       <model>
         <instance>
           <data id="sanitize">
+            <meta>
+              <instanceID>
+            </meta>
             <q1.8>
               <17/>
             </q1.8>
             <4.2/>
           </data>
         </instance>
-
+        <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
         <bind nodeset="/data/q1.8/17" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
         <bind nodeset="/data/4.2" type="number"/>
       </model>
@@ -745,6 +1042,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               .expect(200)
               .then(({ body }) => {
                 body.should.eql([
+                  { name: 'meta', path: '/meta', type: 'structure', binary: null, selectMultiple: null },
+                  { name: 'instanceID', path: '/meta/instanceID', type: 'string', binary: null, selectMultiple: null },
                   { name: 'q1_8', path: '/q1_8', type: 'structure', binary: null, selectMultiple: null },
                   { name: '_17', path: '/q1_8/_17', type: 'string', binary: null, selectMultiple: null },
                   { name: '_4_2', path: '/_4_2', type: 'number', binary: null, selectMultiple: null }
@@ -921,6 +1220,70 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                   headers['content-type'].should.equal('text/csv; charset=utf-8');
                   text.should.equal('test,csv\n1,2');
                 })))));
+
+        it('should return 304 content not changed if ETag matches', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .send('test,csv\n1,2')
+            .set('Content-Type', 'text/csv')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
+            .expect(200);
+
+          const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+            .expect(200);
+
+          result.text.should.be.eql(
+            'test,csv\n' +
+              '1,2'
+          );
+
+          const etag = result.get('ETag');
+
+          await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+            .set('If-None-Match', etag)
+            .expect(304);
+
+        }));
+
+        it('should return latest content and correct ETag', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .send('test,csv\n1,2')
+            .set('Content-Type', 'text/csv')
+            .expect(200);
+
+          const attachmentV1 = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .expect(200);
+
+          const etagV1 = attachmentV1.get('ETag');
+
+          await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .send('test,csv\n1,2\n3,4')
+            .set('Content-Type', 'text/csv')
+            .expect(200);
+
+          const attachmentV2 = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .set('If-None-Match', etagV1)
+            .expect(200);
+
+          const etagV2 = attachmentV2.get('ETag');
+
+          etagV1.should.not.be.eql(etagV2);
+        }));
       });
     });
   });

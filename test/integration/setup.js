@@ -1,25 +1,25 @@
+const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const { mergeRight } = require('ramda');
 const { sql } = require('slonik');
 const { readdirSync } = require('fs');
 const { join } = require('path');
 const request = require('supertest');
-// eslint-disable-next-line import/no-dynamic-require
+const { noop } = require(appRoot + '/lib/util/util');
 const { task } = require(appRoot + '/lib/task/task');
+const authenticateUser = require('../util/authenticate-user');
+const testData = require('../data/xml');
 
 // knex things.
 const config = require('config');
-// eslint-disable-next-line import/no-dynamic-require
 const { connect } = require(appRoot + '/lib/model/migrate');
 
 // slonik connection pool
-// eslint-disable-next-line import/no-dynamic-require
 const { slonikPool } = require(appRoot + '/lib/external/slonik');
 const db = slonikPool(config.get('test.database'));
 
 // set up our mailer.
 const env = config.get('default.env');
-// eslint-disable-next-line import/no-dynamic-require
 const { mailer } = require(appRoot + '/lib/external/mail');
 const mailConfig = config.get('test.email');
 const mail = mailer(mergeRight(mailConfig, env));
@@ -28,39 +28,28 @@ if (mailConfig.transport !== 'json')
   console.error('WARNING: some tests will not work except with a JSON email transport configuration.');
 
 // set up our xlsform-api mock.
-// eslint-disable-next-line import/no-dynamic-require
 const xlsform = require(appRoot + '/test/util/xlsform');
 
-// set up our google mock.
-// eslint-disable-next-line import/no-dynamic-require
-const googler = require(appRoot + '/lib/external/google');
-const realGoogle = googler(config.get('default.external.google'));
-const google = require('../util/google-mock')(realGoogle);
-
 // set up our sentry mock.
-// eslint-disable-next-line import/no-dynamic-require
 const Sentry = require(appRoot + '/lib/external/sentry').init();
 
-// set up our bcrypt module; possibly mock or not based on params.
-const _bcrypt = (process.env.BCRYPT === 'no')
-  ? require('../util/bcrypt-mock')
-  : require('bcrypt');
-// eslint-disable-next-line import/no-dynamic-require
-const bcrypt = require(appRoot + '/lib/util/crypto').password(_bcrypt);
-
 // set up our enketo mock.
-// eslint-disable-next-line import/no-dynamic-require
-const enketo = require(appRoot + '/test/util/enketo');
+const { reset: resetEnketo, ...enketo } = require(appRoot + '/test/util/enketo');
+// Initialize the mock before other setup that uses the mock, then reset the
+// mock after setup is complete and after each test.
+before(resetEnketo);
+after(resetEnketo);
+afterEach(resetEnketo);
 
 // set up odk analytics mock.
-// eslint-disable-next-line import/no-dynamic-require
 const { ODKAnalytics } = require(appRoot + '/test/util/odk-analytics-mock');
 const odkAnalytics = new ODKAnalytics();
 
+// set up mock context
+const context = { query: {}, transitoryData: new Map(), headers: [] };
+
 // application things.
-// eslint-disable-next-line import/no-dynamic-require
 const { withDefaults } = require(appRoot + '/lib/model/container');
-// eslint-disable-next-line import/no-dynamic-require
 const service = require(appRoot + '/lib/http/service');
 
 // get all our fixture scripts, and set up a function that runs them all.
@@ -81,32 +70,41 @@ const populate = (container, [ head, ...tail ] = fixtures) =>
 // in that case.
 const initialize = async () => {
   const migrator = connect(config.get('test.database'));
+  const { log } = console;
   try {
     await migrator.raw('drop owned by current_user');
+    // Silence logging from migrations.
+    console.log = noop; // eslint-disable-line no-console
     await migrator.migrate.latest({ directory: appRoot + '/lib/model/migrations' });
   } finally {
+    console.log = log; // eslint-disable-line no-console
     await migrator.destroy();
   }
 
-  return withDefaults({ db, bcrypt }).transacting(populate);
+  return withDefaults({ db, context, enketo, env }).transacting(populate);
 };
 
-before(initialize);
+// eslint-disable-next-line func-names, space-before-function-paren
+before(function() {
+  this.timeout(0);
+  return initialize();
+});
 
 let mustReinitAfter;
 beforeEach(() => {
   // eslint-disable-next-line keyword-spacing
   if(mustReinitAfter) throw new Error(`Failed to reinitalize after previous test: '${mustReinitAfter}'.  You may need to increase your mocha timeout.`);
 });
-afterEach(async () => {
-  // eslint-disable-next-line keyword-spacing
-  if(mustReinitAfter) {
+// eslint-disable-next-line func-names, space-before-function-paren
+afterEach(async function() {
+  this.timeout(0);
+  if (mustReinitAfter) {
     await initialize();
     mustReinitAfter = false;
   }
 });
 
-// augments a supertest object with a `.as(user, cb)` method, where user may be the
+// augments a supertest object with a `.login(user, cb)` method, where user may be the
 // name of a fixture user or an object with email/password. the user will be logged
 // in and the following single request will be performed as that user.
 //
@@ -122,14 +120,14 @@ const authProxy = (token) => ({
 });
 // eslint-disable-next-line no-shadow
 const augment = (service) => {
-  // eslint-disable-next-line space-before-function-paren, func-names, no-param-reassign
-  service.login = function(user, test) {
-    const credentials = (typeof user === 'string')
-      ? { email: `${user}@getodk.org`, password: user }
-      : user;
-
-    return service.post('/v1/sessions').send(credentials)
-      .then(({ body }) => test(new Proxy(service, authProxy(body.token))));
+  // eslint-disable-next-line no-param-reassign
+  service.login = async (userOrUsers, test = undefined) => {
+    const users = Array.isArray(userOrUsers) ? userOrUsers : [userOrUsers];
+    const tokens = await Promise.all(users.map(user => authenticateUser(service, user)));
+    const proxies = tokens.map((token) => new Proxy(service, authProxy(token)));
+    return test != null
+      ? test(...proxies)
+      : (Array.isArray(userOrUsers) ? proxies : proxies[0]);
   };
   return service;
 };
@@ -138,7 +136,8 @@ const augment = (service) => {
 ////////////////////////////////////////////////////////////////////////////////
 // FINAL TEST WRAPPERS
 
-const baseContainer = withDefaults({ db, mail, env, xlsform, google, bcrypt, enketo, Sentry, odkAnalytics });
+
+const baseContainer = withDefaults({ db, mail, env, xlsform, enketo, Sentry, odkAnalytics, context });
 
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
@@ -189,5 +188,29 @@ const testTask = (test) => () => new Promise((resolve, reject) => {
   });//.catch(Promise.resolve.bind(Promise));
 });
 
-module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask };
+// eslint-disable-next-line no-shadow
+const withClosedForm = (f) => async (service) => {
+  const asAlice = await service.login('alice');
 
+  await asAlice.post('/v1/projects/1/forms?publish=true')
+    .send(testData.forms.withAttachments)
+    .set('Content-Type', 'application/xml')
+    .expect(200);
+
+  await asAlice.patch('/v1/projects/1/forms/withAttachments')
+    .send({ state: 'closed' })
+    .expect(200);
+
+  await asAlice.post('/v1/projects/1/forms?publish=true')
+    .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+    .set('Content-Type', 'application/vnd.ms-excel')
+    .expect(200);
+
+  await asAlice.patch('/v1/projects/1/forms/simple2')
+    .send({ state: 'closed' })
+    .expect(200);
+
+  return f(service);
+};
+
+module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask, withClosedForm };

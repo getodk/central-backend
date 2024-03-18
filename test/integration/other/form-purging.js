@@ -3,7 +3,6 @@ const appPath = require('app-root-path');
 const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
-// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appPath + '/lib/worker/worker');
 
 
@@ -150,6 +149,26 @@ describe('query module form purge', () => {
             container.oneFirst(sql`select count(*) from blobs`)
           ]))
           .then((counts) => counts.should.eql([ 0, 0, 0, 0 ]))))));
+
+  it('should purge the form fields of a form', testService((service, container) =>
+    service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms/simple/draft')
+        .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="2"'))
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish')
+          .expect(200))
+        .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+          .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="3"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200))
+        .then(() => asAlice.delete('/v1/projects/1/forms/simple')
+          .expect(200))
+        .then(() => container.Forms.purge(true)) // force all deleted forms to be purged
+        .then(() => Promise.all([
+          container.oneFirst(sql`select count(*) from form_fields where "formId" = 1`)
+        ]))
+        .then((counts) => counts.should.eql([ 0 ])))));
 
   it('should purge the select multiple values of a purged form', testService((service, container) =>
     service.login('alice', (asAlice) =>

@@ -1,7 +1,6 @@
 require('should');
 const appPath = require('app-root-path');
 const { Transform } = require('stream');
-// eslint-disable-next-line import/no-dynamic-require
 const { consumeAndBuffer, pipethrough, pipethroughAndBuffer, splitStream, PartialPipe } = require(appPath + '/lib/util/stream');
 const { fromObjects, toObjects } = require('streamtest').v2;
 
@@ -34,8 +33,7 @@ describe('stream utils', () => {
 
     it('should reject if any stream rejects', () => {
       const fail = (stream) => new Promise((_, reject) => {
-        // eslint-disable-next-line prefer-promise-reject-errors
-        stream.on('data', (x) => { if (x === 'three') reject(false); });
+        stream.on('data', (x) => { if (x === 'three') reject(new Error()); });
       });
       return consumeAndBuffer(fromObjects([ 'one', 'two', 'three' ]), consumer('two'), fail)
         .should.be.rejected();
@@ -108,8 +106,8 @@ describe('stream utils', () => {
     it('should work with piped outputs', () =>
       splitStream(
         fromObjects([ 4, 8, 15, 16, 23, 42 ]),
-        (stream) => new Promise((resolve) => stream.pipe(toObjects((e, result) => resolve(result)))),
-        (stream) => new Promise((resolve) => stream.pipe(toObjects((e, result) => resolve(result))))
+        (stream) => new Promise((resolve) => { stream.pipe(toObjects((e, result) => resolve(result))); }),
+        (stream) => new Promise((resolve) => { stream.pipe(toObjects((e, result) => resolve(result))); })
       ).then(([ x, y ]) => {
         x.should.eql([ 4, 8, 15, 16, 23, 42 ]);
         y.should.eql([ 4, 8, 15, 16, 23, 42 ]);

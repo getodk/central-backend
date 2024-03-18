@@ -2,26 +2,23 @@ const appRoot = require('app-root-path');
 const { readFileSync } = require('fs');
 const { sql } = require('slonik');
 const { toText } = require('streamtest').v2;
-// eslint-disable-next-line import/no-dynamic-require
 const { testService, testContainerFullTrx, testContainer } = require(appRoot + '/test/integration/setup');
-// eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
-// eslint-disable-next-line import/no-dynamic-require
 const { pZipStreamToFiles } = require(appRoot + '/test/util/zip');
 // eslint-disable-next-line import/no-dynamic-require
-const { Form, Key, Submission } = require(appRoot + '/lib/model/frames');
+const { Form, Key, Submission, Actor } = require(appRoot + '/lib/model/frames');
 // eslint-disable-next-line import/no-dynamic-require
 const { mapSequential } = require(appRoot + '/test/util/util');
-// eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
+const authenticateUser = require('../../util/authenticate-user');
 
 describe('managed encryption', () => {
   describe('lock management', () => {
     it('should reject keyless forms in keyed projects @slow', testContainerFullTrx(async (container) => {
       // enable managed encryption.
-      await container.transacting(({ Projects }) =>
+      await container.transacting(({ Projects, Auth }) =>
         Projects.getById(1).then((o) => o.get())
-          .then((project) => Projects.setManagedEncryption(project, 'supersecret', 'it is a secret')));
+          .then((project) => Projects.setManagedEncryption(project, 'supersecret', 'it is a secret', Auth.by())));
 
       // now attempt to create a keyless form.
       let error;
@@ -41,9 +38,9 @@ describe('managed encryption', () => {
       // enable managed encryption but don't allow the transaction to close.
       let encReq;
       const unblock = await new Promise((resolve) => {
-        encReq = container.transacting(({ Projects }) => Promise.all([
+        encReq = container.transacting(({ Projects, Auth }) => Promise.all([
           Projects.getById(1).then((o) => o.get())
-            .then((project) => Projects.setManagedEncryption(project, 'supersecret', 'it is a secret')),
+            .then((project) => Projects.setManagedEncryption(project, 'supersecret', 'it is a secret', Auth.by())),
           new Promise(resolve) // <- we want unblock to be the function that resolves this inner Promise.
         ]));
       });
@@ -80,9 +77,7 @@ describe('managed encryption', () => {
   });
 
   describe('decryptor', () => {
-    // eslint-disable-next-line import/no-dynamic-require
     const { makePubkey, encryptInstance } = require(appRoot + '/test/util/crypto-odk');
-    // eslint-disable-next-line import/no-dynamic-require
     const { generateManagedKey, stripPemEnvelope } = require(appRoot + '/lib/util/crypto');
 
     it('should give a decryptor for the given passphrases', testService((service, { Keys }) =>
@@ -143,18 +138,19 @@ describe('managed encryption', () => {
       return Submission.fromXml(xml)
         .then((partial) => hijacked.SubmissionAttachments.create(partial, {}, []))
         .then(() => {
+          // values to sql query of insertMany are passed as array of arrays
           results[0].values.should.eql([
-            null, null, 'zulu.file', 0, false,
-            null, null, 'alpha.file', 1, false,
-            null, null, 'bravo.file', 2, false,
-            null, null, 'submission.xml.enc', 3, null
+            [null, null, null, null],
+            [null, null, null, null],
+            ['zulu.file', 'alpha.file', 'bravo.file', 'submission.xml.enc'],
+            [0, 1, 2, 3],
+            [false, false, false, null]
           ]);
         });
     }));
   });
 
   describe('end-to-end', () => {
-    // eslint-disable-next-line import/no-dynamic-require
     const { extractPubkey, extractVersion, encryptInstance, sendEncrypted, internal } = require(appRoot + '/test/util/crypto-odk');
 
     describe('odk encryption simulation', () => {
@@ -162,7 +158,6 @@ describe('managed encryption', () => {
       // ODK Collect client encryption, i wouldn't feel right not.. testing.. the
       // test code....
       describe('oaep padding', () => {
-        // eslint-disable-next-line import/no-dynamic-require
         const { unpadPkcs1OaepMgf1Sha256 } = require(appRoot + '/lib/util/quarantine/oaep');
         it('should survive a round-trip', () => {
           const input = Buffer.from('0102030405060708090a0b0c0d0e0f1112131415161718191a1b1c1d1e1f2021', 'hex');
@@ -284,14 +279,11 @@ describe('managed encryption', () => {
             asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
               .expect(200)
               .then(({ body }) => body[0].id),
-            service.post('/v1/sessions')
-              .send({ email: 'alice@getodk.org', password: 'alice' })
-              .expect(200)
-              .then(({ body }) => body)
+            authenticateUser(service, 'alice', 'include-csrf'),
           ]))
           .then(([ keyId, session ]) => pZipStreamToFiles(service.post('/v1/projects/1/forms/simple/submissions.csv.zip')
             .send(`${keyId}=supersecret&__csrf=${session.csrf}`)
-            .set('Cookie', `__Host-session=${session.token}`)
+            .set('Cookie', `session=${session.token}`)
             .set('X-Forwarded-Proto', 'https')
             .set('Content-Type', 'application/x-www-form-urlencoded'))
             .then((result) => {
@@ -403,10 +395,8 @@ describe('managed encryption', () => {
             .then(({ body }) => body[0].id))
           .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/audits/submissions.csv.zip?${keyId}=supersecret`))
             .then((result) => {
-              result.filenames.should.containDeep([
+              result.filenames.should.eql([
                 'audits.csv',
-                'media/audit.csv',
-                'media/audit.csv',
                 'audits - audit.csv'
               ]);
 
@@ -555,7 +545,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               }))))));
 
     // we have to sort of cheat at this to get two different managed keys in effect.
-    it('should handle mixed[managedA/managedB] formdata (decrypting)', testService((service, { Forms, Projects }) =>
+    it('should handle mixed[managedA/managedB] formdata (decrypting)', testService((service, { Forms, Projects, Auth }) =>
       service.login('alice', (asAlice) =>
         // first enable managed encryption and submit submission one.
         asAlice.post('/v1/projects/1/key')
@@ -581,7 +571,11 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
           // now we can set managed encryption again and submit our last two submissions.
           .then(() => Projects.getById(1).then((o) => o.get()))
-          .then((project) => Projects.setManagedEncryption(project, 'superdupersecret'))
+          .then((project) => asAlice.get('/v1/users/current')
+            .then(({ body: user }) => {
+              const actor = new Actor(user);
+              return Projects.setManagedEncryption(project, 'superdupersecret', '', Auth.by(actor));
+            }))
           .then(() => asAlice.get('/v1/projects/1/forms/simple.xml')
             .expect(200)
             .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
@@ -678,6 +672,22 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0','' ]);
                 csv[3].should.eql([ '' ]);
               }))))));
+
+    it('should log publish events in the audits', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // There are the forms in the fixture that get re-published with managed encryption
+      await asAlice.post('/v1/projects/1/key')
+        .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+        .expect(200);
+
+      await asAlice.get('/v1/audits?action=form')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs.forEach(l => l.action.should.be.eql('form.update.publish'));
+        });
+
+    }));
   });
 });
 

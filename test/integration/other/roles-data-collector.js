@@ -1,4 +1,4 @@
-const { testService } = require('../setup');
+const { testService, withClosedForm } = require('../setup');
 const testData = require('../../data/xml');
 
 const collector = (f) => (service) =>
@@ -9,7 +9,7 @@ const collector = (f) => (service) =>
       .then((chelsea) => service.login('alice', (asAlice) =>
         asAlice.post(`/v1/projects/1/assignments/formfill/${chelsea.id}`)
           .expect(200)
-          .then(() => f(asChelsea, chelsea)))));
+          .then(() => f(asChelsea, chelsea, service)))));
 
 describe('data collector role', () => {
   it('should be able to list projects it can access', testService((service) =>
@@ -79,6 +79,82 @@ describe('data collector role', () => {
   it('should not be able to get submission detail', testService(collector((asCollector) =>
     asCollector.get('/v1/projects/1/forms/simple/submissions/one')
       .expect(403))));
+
+  it('should not be able access closed forms and its sub-resources', testService(withClosedForm(collector(async (asCollector) => {
+
+    await asCollector.get('/v1/projects/1/forms')
+      .expect(200)
+      .then(({ body }) => {
+        body.length.should.equal(2);
+        body.forEach((form) => form.should.be.a.Form());
+        body[0].xmlFormId.should.equal('simple');
+        body[1].xmlFormId.should.equal('withrepeat');
+      });
+
+    await asCollector.get('/v1/projects/1/forms/withAttachments')
+      .expect(403);
+
+    await asCollector.get('/v1/projects/1/forms/simple2.xls')
+      .expect(403);
+
+    await asCollector.get('/v1/projects/1/forms/withAttachments.xml')
+      .expect(403);
+
+    await asCollector.get('/v1/projects/1/forms/withAttachments/versions')
+      .expect(403);
+
+    await asCollector.get('/v1/projects/1/forms/withAttachments/fields')
+      .expect(403);
+
+    await asCollector.get('/v1/projects/1/forms/withAttachments/manifest')
+      .set('X-OpenRosa-Version', '1.0')
+      .expect(403);
+
+    await asCollector.get('/v1/projects/1/forms/withAttachments/attachments')
+      .expect(403);
+
+    await asCollector.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+      .expect(403);
+
+  }))));
+
+  it('should be able see closing forms and make submission', testService(collector(async (asCollector, _, service) => {
+
+    const asAlice = await service.login('alice');
+
+    await asAlice.patch('/v1/projects/1/forms/simple')
+      .send({ state: 'closing' })
+      .expect(200);
+
+    await asCollector.get('/v1/projects/1/forms?publish=true')
+      .expect(200)
+      .then(({ body }) => {
+        body.length.should.equal(2);
+        body.forEach((form) => form.should.be.a.Form());
+        body[0].xmlFormId.should.equal('simple');
+        body[1].xmlFormId.should.equal('withrepeat');
+      });
+
+    await asCollector.get('/v1/projects/1/forms/simple')
+      .expect(200);
+
+    await asCollector.post('/v1/projects/1/forms/simple/submissions')
+      .send(testData.instances.simple.one)
+      .set('Content-Type', 'text/xml')
+      .expect(200);
+
+    // Let's close the Form
+    await asAlice.patch('/v1/projects/1/forms/simple')
+      .send({ state: 'closed' })
+      .expect(200);
+
+    // Should not be able make Submission
+    await asCollector.post('/v1/projects/1/forms/simple/submissions')
+      .send(testData.instances.simple.two)
+      .set('Content-Type', 'text/xml')
+      .expect(409);
+
+  })));
 
 });
 

@@ -1,11 +1,7 @@
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require
 const { submissionToOData } = require(appRoot + '/lib/data/odata');
-// eslint-disable-next-line import/no-dynamic-require
 const { selectFields } = require(appRoot + '/lib/formats/odata');
-// eslint-disable-next-line import/no-dynamic-require
 const { MockField, fieldsFor } = require(appRoot + '/test/util/schema');
-// eslint-disable-next-line import/no-dynamic-require
 const testData = require(appRoot + '/test/data/xml');
 
 const __system = {
@@ -39,7 +35,8 @@ describe('submissionToOData', () => {
   it('should parse and transform a basic submission', () =>
     fieldsFor(testData.forms.simple).then((fields) => {
       const submission = mockSubmission('one', testData.instances.simple.one);
-      return submissionToOData(fields, 'Submissions', submission).then((result) => {
+      return submissionToOData(fields, 'Submissions', submission).then(({ data: result, instanceId }) => {
+        instanceId.should.be.eql('one');
         result.should.eql([{
           __id: 'one',
           __system,
@@ -60,7 +57,7 @@ describe('submissionToOData', () => {
   // have one for explicity this purpose in case things change.
   it('should include submission metadata on the root output', () => {
     const submission = mockSubmission('test', testData.instances.simple.one);
-    return submissionToOData([], 'Submissions', submission).then((result) => {
+    return submissionToOData([], 'Submissions', submission).then(({ data: result }) => {
       result.should.eql([{ __id: 'test', __system }]);
     });
   });
@@ -68,7 +65,7 @@ describe('submissionToOData', () => {
   it('should set the correct review state', () => {
     const submission = Object.assign(mockSubmission('test', testData.instances.simple.one), { reviewState: 'hasIssues' });
 
-    return submissionToOData([], 'Submissions', submission).then((result) => {
+    return submissionToOData([], 'Submissions', submission).then(({ data: result }) => {
       result.should.eql([{ __id: 'test', __system: Object.assign({}, __system, { reviewState: 'hasIssues' }) }]);
     });
   });
@@ -76,7 +73,7 @@ describe('submissionToOData', () => {
   it('should set the correct deviceId', () => {
     const submission = Object.assign(mockSubmission('test', testData.instances.simple.one), { deviceId: 'cool device' });
 
-    return submissionToOData([], 'Submissions', submission).then((result) => {
+    return submissionToOData([], 'Submissions', submission).then(({ data: result }) => {
       result.should.eql([{ __id: 'test', __system: Object.assign({}, __system, { deviceId: 'cool device' }) }]);
     });
   });
@@ -85,7 +82,7 @@ describe('submissionToOData', () => {
     const submission = mockSubmission('test', testData.instances.simple.one);
     submission.aux.edit = { count: 42 };
 
-    return submissionToOData([], 'Submissions', submission).then((result) => {
+    return submissionToOData([], 'Submissions', submission).then(({ data: result }) => {
       result.should.eql([{ __id: 'test', __system: Object.assign({}, __system, { edits: 42 }) }]);
     });
   });
@@ -93,7 +90,7 @@ describe('submissionToOData', () => {
   it('should not crash if no submitter exists', () => {
     const submission = mockSubmission('test', testData.instances.simple.one);
     submission.aux.submitter = {}; // wipe it back out.
-    return submissionToOData([], 'Submissions', submission).then((result) => {
+    return submissionToOData([], 'Submissions', submission).then(({ data: result }) => {
       result.should.eql([{
         __id: 'test',
         __system: {
@@ -138,7 +135,7 @@ describe('submissionToOData', () => {
         <text>hello</text>
         <other>what could it be?</other>
       </data>`);
-    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+    return submissionToOData(fields, 'Submissions', submission).then(({ data: result }) => {
       result.should.eql([{
         __id: 'types',
         __system,
@@ -164,7 +161,7 @@ describe('submissionToOData', () => {
       new MockField({ path: '/uranus', name: 'uranus', type: 'repeat' })
     ];
     const submission = mockSubmission('nulls', '<data><earth>42</earth></data>');
-    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+    return submissionToOData(fields, 'Submissions', submission).then(({ data: result }) => {
       result.should.eql([{
         __id: 'nulls',
         __system,
@@ -188,7 +185,7 @@ describe('submissionToOData', () => {
       new MockField({ path: '/neptune', name: 'neptune', type: 'structure', order: 6 })
     ];
     const submission = mockSubmission('nulls', '<data><earth>42</earth></data>');
-    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+    return submissionToOData(fields, 'Submissions', submission).then(({ data: result }) => {
       result.should.eql([{
         __id: 'nulls',
         __system,
@@ -211,7 +208,7 @@ describe('submissionToOData', () => {
       new MockField({ path: '/sun/uranus', name: 'uranus', type: 'repeat', order: 5 })
     ];
     const submission = mockSubmission('nulls', '<data><sun><earth>42</earth></sun></data>');
-    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+    return submissionToOData(fields, 'Submissions', submission).then(({ data: result }) => {
       result.should.eql([{
         __id: 'nulls',
         __system,
@@ -235,7 +232,7 @@ describe('submissionToOData', () => {
       new MockField({ path: '/sun/uranus', name: 'uranus', type: 'repeat', order: 5 })
     ];
     const submission = mockSubmission('nulls', '<data><sun><earth>42</earth></sun></data>');
-    return submissionToOData(fields, 'Submissions.sun', submission).then((result) => {
+    return submissionToOData(fields, 'Submissions.sun', submission).then(({ data: result }) => {
       result.should.eql([{
         '__Submissions-id': 'nulls',
         __id: '68874cc5985b68898fbd0af1156e12b6270820f7',
@@ -258,7 +255,7 @@ describe('submissionToOData', () => {
       new MockField({ path: '/sun/uranus', name: 'uranus', type: 'repeat', order: 6 })
     ];
     const submission = mockSubmission('nulls', '<data><sun><earth>42</earth></sun></data>');
-    return submissionToOData(fields, 'Submissions.sun', submission).then((result) => {
+    return submissionToOData(fields, 'Submissions.sun', submission).then(({ data: result }) => {
       result.should.eql([{
         '__Submissions-id': 'nulls',
         __id: '68874cc5985b68898fbd0af1156e12b6270820f7',
@@ -279,7 +276,7 @@ describe('submissionToOData', () => {
         <q1.8>hello</q1.8>
         <42>108</42>
       </data>`);
-    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+    return submissionToOData(fields, 'Submissions', submission).then(({ data: result }) => {
       result.should.eql([{
         __id: 'sanitize',
         __system,
@@ -301,7 +298,7 @@ describe('submissionToOData', () => {
           <two>dos</two>
         </q1.8>
       </data>`);
-    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+    return submissionToOData(fields, 'Submissions', submission).then(({ data: result }) => {
       result.should.eql([{
         __id: 'sanitize2',
         __system,
@@ -315,7 +312,7 @@ describe('submissionToOData', () => {
     const submission = mockSubmission('entities', `<data>
         <text>&#171;hello&#187;</text>
       </data>`);
-    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+    return submissionToOData(fields, 'Submissions', submission).then(({ data: result }) => {
       result.should.eql([{
         __id: 'entities',
         __system,
@@ -333,7 +330,7 @@ describe('submissionToOData', () => {
         <geopointNoLon>100</geopointNoLon>
         <geopointNonsense>this is nonsensical</geopointNonsense>
       </data>`);
-    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+    return submissionToOData(fields, 'Submissions', submission).then(({ data: result }) => {
       result.should.eql([{
         __id: 'geo',
         __system,
@@ -352,7 +349,7 @@ describe('submissionToOData', () => {
         <geopoint>4.8 15.16 23.42</geopoint>
         <geopointNoAlt>11.38 -11.38</geopointNoAlt>
       </data>`);
-    return submissionToOData(fields, 'Submissions', submission, { wkt: true }).then((result) => {
+    return submissionToOData(fields, 'Submissions', submission, { wkt: true }).then(({ data: result }) => {
       result.should.eql([{
         __id: 'wkt',
         __system,
@@ -371,7 +368,7 @@ describe('submissionToOData', () => {
         <geotrace>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8;</geotrace>
         <geotraceNoAlt>11.1 22.2;33.3 44.4;55.5 66.6;</geotraceNoAlt>
       </data>`);
-    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+    return submissionToOData(fields, 'Submissions', submission).then(({ data: result }) => {
       result.should.eql([{
         __id: 'geojson',
         __system,
@@ -399,7 +396,7 @@ describe('submissionToOData', () => {
         <geotrace>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8;</geotrace>
         <geotraceNoAlt>11.1 22.2;33.3 44.4;55.5 66.6;</geotraceNoAlt>
       </data>`);
-    return submissionToOData(fields, 'Submissions', submission, { wkt: true }).then((result) => {
+    return submissionToOData(fields, 'Submissions', submission, { wkt: true }).then(({ data: result }) => {
       result.should.eql([{
         __id: 'wkt',
         __system,
@@ -418,7 +415,7 @@ describe('submissionToOData', () => {
         <polygon>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8;10.0 20.0 30.0 40.0;1.1 2.2 3.3 4.4;</polygon>
         <polygonNoAlt>11.1 22.2;33.3 44.4;55.5 66.6;11.1 22.2;</polygonNoAlt>
       </data>`);
-    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+    return submissionToOData(fields, 'Submissions', submission).then(({ data: result }) => {
       result.should.eql([{
         __id: 'geojson',
         __system,
@@ -446,7 +443,7 @@ describe('submissionToOData', () => {
         <polygon>1.1 2.2 3.3 4.4; 5.5 6.6 7.7 8.8; 10.0 20.0 30.0 40.0;1.1 2.2 3.3 4.4;</polygon>
         <polygonNoAlt>11.1 22.2; 33.3 44.4;55.5 66.6; 11.1 22.2; </polygonNoAlt>
       </data>`);
-    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+    return submissionToOData(fields, 'Submissions', submission).then(({ data: result }) => {
       result.should.eql([{
         __id: 'geojson',
         __system,
@@ -474,7 +471,7 @@ describe('submissionToOData', () => {
         <polygon>1.1 2.2 3.3 4.4;5.5 6.6 7.7 8.8;10.0 20.0 30.0 40.0;1.1 2.2 3.3 4.4;</polygon>
         <polygonNoAlt>11.1 22.2;33.3 44.4;55.5 66.6;11.1 22.2;</polygonNoAlt>
       </data>`);
-    return submissionToOData(fields, 'Submissions', submission, { wkt: true }).then((result) => {
+    return submissionToOData(fields, 'Submissions', submission, { wkt: true }).then(({ data: result }) => {
       result.should.eql([{
         __id: 'wkt',
         __system,
@@ -492,7 +489,7 @@ describe('submissionToOData', () => {
       new MockField({ path: '/age', name: 'age', type: 'int' })
     ];
     const submission = mockSubmission('one', testData.instances.simple.one);
-    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+    return submissionToOData(fields, 'Submissions', submission).then(({ data: result }) => {
       result.should.eql([{
         __id: 'one',
         __system,
@@ -518,7 +515,7 @@ describe('submissionToOData', () => {
           <three>tres</three>
         </group>
       </data>`);
-    return submissionToOData(fields, 'Submissions', submission).then((result) => {
+    return submissionToOData(fields, 'Submissions', submission).then(({ data: result }) => {
       result.should.eql([{
         __id: 'nesting',
         __system,
@@ -530,7 +527,7 @@ describe('submissionToOData', () => {
   it('should provide navigation links for repeats', () =>
     fieldsFor(testData.forms.withrepeat).then((fields) => {
       const submission = mockSubmission('rtwo', testData.instances.withrepeat.two);
-      return submissionToOData(fields, 'Submissions', submission).then((result) => {
+      return submissionToOData(fields, 'Submissions', submission).then(({ data: result }) => {
         result.should.eql([{
           __id: 'rtwo',
           __system,
@@ -549,7 +546,7 @@ describe('submissionToOData', () => {
       .then((fields) => {
         const submission = mockSubmission('two', testData.instances.doubleRepeat.double);
         return submissionToOData(fields, 'Submissions', submission, { expand: '*' })
-          .then((result) => {
+          .then(({ data: result }) => {
             result.should.eql([
               {
                 __id: 'two',
@@ -635,7 +632,7 @@ describe('submissionToOData', () => {
   it('should extract subtable rows within repeats', () =>
     fieldsFor(testData.forms.withrepeat).then((fields) => {
       const row = { instanceId: 'two', xml: testData.instances.withrepeat.two, def: {}, aux: { encryption: {}, attachment: {} } };
-      return submissionToOData(fields, 'Submissions.children.child', row).then((result) => {
+      return submissionToOData(fields, 'Submissions.children.child', row).then(({ data: result }) => {
         result.should.eql([{
           '__Submissions-id': 'two',
           __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d',
@@ -653,7 +650,7 @@ describe('submissionToOData', () => {
   it('should return navigation links to repeats within a subtable result set', () =>
     fieldsFor(testData.forms.doubleRepeat).then((fields) => {
       const row = { instanceId: 'double', xml: testData.instances.doubleRepeat.double, def: {}, aux: { encryption: {}, attachment: {} } };
-      return submissionToOData(fields, 'Submissions.children.child', row).then((result) => {
+      return submissionToOData(fields, 'Submissions.children.child', row).then(({ data: result }) => {
         result.should.eql([{
           __id: '46ebf42ee83ddec5028c42b2c054402d1e700208',
           '__Submissions-id': 'double',
@@ -680,7 +677,7 @@ describe('submissionToOData', () => {
   it('should return second-order subtable results', () =>
     fieldsFor(testData.forms.doubleRepeat).then((fields) => {
       const row = { instanceId: 'double', xml: testData.instances.doubleRepeat.double, def: {}, aux: { encryption: {}, attachment: {} } };
-      return submissionToOData(fields, 'Submissions.children.child.toys.toy', row).then((result) => {
+      return submissionToOData(fields, 'Submissions.children.child.toys.toy', row).then(({ data: result }) => {
         result.should.eql([{
           __id: 'a9058d7b2ed9557205ae53f5b1dc4224043eca2a',
           '__Submissions-children-child-id': 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
@@ -724,7 +721,7 @@ describe('submissionToOData', () => {
       new MockField({ path: '/name', name: 'name', type: 'string' })
     ];
     const submission = mockSubmission('one', testData.instances.simple.one);
-    return submissionToOData(fields, 'Submissions', submission, { metadata: { __id: true, '__system/status': true } }).then((result) => {
+    return submissionToOData(fields, 'Submissions', submission, { metadata: { __id: true, '__system/status': true } }).then(({ data: result }) => {
       result.should.eql([{
         __id: 'one',
         __system: { status: null },
@@ -740,7 +737,7 @@ describe('submissionToOData', () => {
       new MockField({ path: '/children/child', name: 'child', type: 'repeat' })
     ];
     const submission = { instanceId: 'double', xml: testData.instances.doubleRepeat.double, def: {}, aux: { encryption: {}, attachment: {} } };
-    return submissionToOData(fields, 'Submissions.children.child', submission, { metadata: { __id: true } }).then((result) => {
+    return submissionToOData(fields, 'Submissions.children.child', submission, { metadata: { __id: true } }).then(({ data: result }) => {
       result.should.eql([{
         __id: '46ebf42ee83ddec5028c42b2c054402d1e700208',
         '__Submissions-id': 'double'
@@ -759,7 +756,7 @@ describe('submissionToOData', () => {
       .then(selectFields({ $select: 'name' }, 'Submissions.children.child.toys.toy'))
       .then((fields) => {
         const row = { instanceId: 'double', xml: testData.instances.doubleRepeat.double, def: {}, aux: { encryption: {}, attachment: {} } };
-        return submissionToOData(fields, 'Submissions.children.child.toys.toy', row, { metadata: { __id: true } }).then((result) => {
+        return submissionToOData(fields, 'Submissions.children.child.toys.toy', row, { metadata: { __id: true } }).then(({ data: result }) => {
           result.should.eql([{
             __id: 'a9058d7b2ed9557205ae53f5b1dc4224043eca2a',
             '__Submissions-children-child-id': 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',

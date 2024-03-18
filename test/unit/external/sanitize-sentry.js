@@ -1,6 +1,5 @@
 require('should');
 const appRoot = require('app-root-path');
-// eslint-disable-next-line import/no-dynamic-require
 const { sanitizeEventRequest, isSensitiveEndpoint, filterTokenFromUrl } = require(appRoot + '/lib/external/sentry');
 
 // These cases are based on real requests!
@@ -548,6 +547,7 @@ const filteredTokenUrls = [
 
 describe('external: sanitize-sentry', () => {
   it('removes sensitive data from request objects ', () => {
+
     for (const [input, expectedOutput] of cases) {
       sanitizeEventRequest({ request: input }).should.eql({ request: expectedOutput });
     }
