@@ -17,7 +17,7 @@ describe('util/xml', () => {
           .then(() => {
             events.should.eql([
               [ 'open', 'root', {} ],
-              [ 'open', 'child', { id: 'test' } ],
+              [ 'open', 'child', { id: 'test-deliberate-failure' } ],
               [ 'close', undefined, undefined ],
               [ 'text', 'sometext', undefined ],
               [ 'close', undefined, undefined ]
