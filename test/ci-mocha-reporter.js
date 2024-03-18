@@ -17,5 +17,5 @@ const MochaJunitReporter = require('mocha-junit-reporter');
 
 module.exports = function CiMochaReporter(runner) {
   new mocha.reporters.Spec(runner);
-  new MochaJunitReporter(runner, { mochaFile: './junit-reports/test-results.xml' });
+  new MochaJunitReporter(runner, { reporterOptions: { mochaFile: './junit-reports/test-results.xml' } });
 };
