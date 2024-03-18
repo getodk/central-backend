@@ -64,8 +64,7 @@ test: lint
 
 .PHONY: test-ci
 test-ci: lint
-	MOCHA_FILE=./junit-reports/test-results.xml \
-	BCRYPT=insecure npx mocha --recursive --exit --reporter mocha-junit-reporter
+	BCRYPT=insecure npx mocha --recursive --exit --reporter test/ci-mocha-reporter.js
 
 .PHONY: test-fast
 test-fast: node_version
