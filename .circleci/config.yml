@@ -14,7 +14,6 @@ jobs:
       - run: make check-file-headers
       - run: npm ci --legacy-peer-deps
       - run: node lib/bin/create-docker-databases.js
-      - run: mkdir ~/junit
-      - run: MOCHA_FILE=~/junit/test-results.xml make test-ci
+      - run: make test-ci
       - store_test_results:
           path: ~/junit
