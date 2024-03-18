@@ -1,4 +1,4 @@
-// Copyright 2019 ODK Central Developers
+// Copyright 2024 ODK Central Developers
 // See the NOTICE file at the top-level directory of this distribution and at
 // https://github.com/getodk/central-backend/blob/master/NOTICE.
 // This file is part of ODK Central. It is subject to the license terms in
@@ -7,15 +7,8 @@
 // including this file, may be copied, modified, propagated, or distributed
 // except according to the terms contained in the LICENSE file.
 
-const up = async (db) => {
-  await db.raw("update roles set verbs = verbs - 'form.list' where system = 'app_user';");
-  await db.raw("update roles set system = 'app-user' where system = 'app_user';");
+module.exports = {
+  ignore: [
+    'test/e2e/**',
+  ],
 };
-
-const down = async (db) => {
-  await db.raw("update roles set system = 'app_user' where system = 'app-user';");
-  await db.raw(`update roles set verbs = verbs || '["form.list"]'::jsonb where system = 'app_user';`);
-};
-
-module.exports = { up, down };
-

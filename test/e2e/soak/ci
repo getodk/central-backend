@@ -6,7 +6,7 @@ userEmail="x@example.com"
 userPassword="secret1234"
 
 log() {
-  echo "[ci-soak-test] $*"
+  echo "[test/e2e/soak] $*"
 }
 
 fail_job() {
@@ -21,13 +21,11 @@ node ./lib/bin/cli.js user-promote -u "$userEmail"
 
 make run >backend.log 2>&1 &
 
-cd soak-tester
-npm ci
-
 log 'Waiting for backend to start...'
 timeout 30 bash -c "while ! curl -s -o /dev/null $serverUrl; do sleep 1; done"
 log 'Backend started!'
 
+cd test/e2e/soak
 node index.js -s "$serverUrl" -P "$userPassword" -L /tmp/soak-tester-logs
 
 if ! curl -s -o /dev/null "$serverUrl"; then
@@ -36,7 +34,7 @@ if ! curl -s -o /dev/null "$serverUrl"; then
 fi
 
 log 'Checking open DB query count...'
-timeout 120 bash -c "cd ..; while ! node lib/bin/check-open-db-queries.js; do sleep 1; done"
+timeout 120 bash -c "cd ../../..; while ! node lib/bin/check-open-db-queries.js; do sleep 1; done"
 
 log 'Checking backend is serving requests...'
 responseLog="$(mktemp)"

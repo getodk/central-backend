@@ -82,6 +82,46 @@ describe('api: /datasets/:name.svc', () => {
         });
     }));
 
+    it('should return entity data that matches spec', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 1);
+
+      await createConflict(asAlice, container);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities')
+        .expect(200)
+        .then(({ body }) => {
+          const entity = body.value[0];
+
+          // properties
+          entity.first_name.should.equal('Alicia');
+          entity.age.should.equal('85');
+
+          // label
+          entity.label.should.equal('Alicia (85)');
+
+          // id
+          entity.__id.should.equal('12345678-1234-4123-8234-123456789abc');
+
+          // metadata/__system data
+          // if any of these change, they should also be updated in the emdx template
+          entity.should.have.property('__system');
+          entity.__system.creatorId.should.equal('5');
+          entity.__system.creatorName.should.equal('Alice');
+          entity.__system.createdAt.should.be.a.recentIsoDate();
+          entity.__system.updatedAt.should.be.a.recentIsoDate();
+          entity.__system.updates.should.equal(2);
+          entity.__system.version.should.equal(3);
+          entity.__system.conflict.should.equal('hard');
+        });
+    }));
+
     it('should return count of entities', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
@@ -281,6 +321,63 @@ describe('api: /datasets/:name.svc', () => {
         });
     }));
 
+    it('should NOT filter by label', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$filter=label eq \'Alice\'')
+        .expect(501)
+        .then(({ body }) => {
+          body.message.should.eql('The given OData filter expression references fields not supported by this server: label at 0');
+        });
+    }));
+
+    it('should NOT filter by id', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$filter=__id eq \'1234\'')
+        .expect(501)
+        .then(({ body }) => {
+          body.message.should.eql('The given OData filter expression references fields not supported by this server: __id at 0');
+        });
+    }));
+
+    it('should NOT filter by name/uuid', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$filter=uuid eq \'1234\'')
+        .expect(501)
+        .then(({ body }) => {
+          body.message.should.eql('The given OData filter expression references fields not supported by this server: uuid at 0');
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$filter=name eq \'1234\'')
+        .expect(501)
+        .then(({ body }) => {
+          body.message.should.eql('The given OData filter expression references fields not supported by this server: name at 0');
+        });
+    }));
+
     it('should return filtered entities with pagination', testService(async (service, container) => {
       const asAlice = await service.login('alice');
       const asBob = await service.login('bob');
@@ -339,14 +436,29 @@ describe('api: /datasets/:name.svc', () => {
 
       await createSubmissions(asAlice, container, 2);
 
-      await container.run(sql`UPDATE entities SET "createdAt" = '2020-01-01'`);
-
-      await createSubmissions(asAlice, container, 2, 2);
-
       await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$select=__id')
         .expect(200)
         .then(({ body }) => {
-          body.value.length.should.be.eql(4);
+          body.value.map((e) => Object.keys(e).should.eql(['__id']));
+          body.value.length.should.be.eql(2);
+        });
+    }));
+
+    it('should return selected user-defined only', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$select=age')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => Object.keys(e).should.eql(['age']));
+          body.value.length.should.be.eql(2);
         });
     }));
 
@@ -415,6 +527,213 @@ describe('api: /datasets/:name.svc', () => {
 
         });
     }));
+
+    it('should return entities in specified order', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 3);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/createdAt asc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.age).should.eql(['1', '2', '3']);
+          body.value[0].__system.createdAt.should.be.lessThan(body.value[2].__system.createdAt);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/createdAt desc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.age).should.eql(['3', '2', '1']);
+          body.value[0].__system.createdAt.should.be.greaterThan(body.value[2].__system.createdAt);
+        });
+    }));
+
+    it('should return entities with order specified in multiple clauses', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+      await createSubmissions(asBob, container, 2, 2);
+      await createSubmissions(asAlice, container, 2, 4);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/creatorId desc, __system/createdAt asc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.creatorId).should.eql(['6', '6', '5', '5', '5', '5']);
+          body.value.map((e) => e.age).should.eql(['3', '4', '1', '2', '5', '6']);
+        });
+    }));
+
+    it('should return entities in stable order', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+      await createSubmissions(asBob, container, 2, 2);
+      await createSubmissions(asAlice, container, 2, 4);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/creatorId desc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.creatorId).should.eql(['6', '6', '5', '5', '5', '5']);
+          body.value.map((e) => e.age).should.eql(['4', '3', '6', '5', '2', '1']);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/creatorId asc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.creatorId).should.eql(['5', '5', '5', '5', '6', '6']);
+          body.value.map((e) => e.age).should.eql(['1', '2', '5', '6', '3', '4']);
+        });
+    }));
+
+    it('should return sorted null values in the correct order', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+      await createConflict(asAlice, container);
+
+      // Default sort order is asc
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/conflict')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.conflict).should.eql([ null, null, 'hard' ]);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/conflict asc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.conflict).should.eql([ null, null, 'hard' ]);
+        });
+
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/conflict desc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.conflict).should.eql([ 'hard', null, null ]);
+        });
+    }));
+
+    it('should return sorted null values in the correct order in any clause', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+      await createSubmissions(asBob, container, 2, 2);
+      await createConflict(asAlice, container);
+
+      // Default sort order is asc
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/creatorId asc,__system/conflict')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.creatorId).should.eql(['5', '5', '5', '6', '6']);
+          body.value.map((e) => e.__system.conflict).should.eql([ null, null, 'hard', null, null ]);
+        });
+
+      // Default sort order is asc
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/creatorId asc,__system/conflict asc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.creatorId).should.eql(['5', '5', '5', '6', '6']);
+          body.value.map((e) => e.__system.conflict).should.eql([ null, null, 'hard', null, null ]);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/creatorId asc,__system/conflict desc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.creatorId).should.eql(['5', '5', '5', '6', '6']);
+          body.value.map((e) => e.__system.conflict).should.eql([ 'hard', null, null, null, null ]);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/creatorId desc,__system/conflict desc')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.map((e) => e.__system.creatorId).should.eql(['6', '6', '5', '5', '5']);
+          body.value.map((e) => e.__system.conflict).should.eql([ null, null, 'hard', null, null ]);
+        });
+    }));
+
+    it('should combine orderby with other filters', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      const lastEntity = await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$top=1')
+        .expect(200)
+        .then(({ body }) => body.value[0]);
+
+      await createSubmissions(asAlice, container, 4, 2);
+
+      await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/createdAt desc&$filter=__system/createdAt gt ${lastEntity.__system.createdAt}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.eql(4);
+          body.value[0].__system.createdAt.should.be.greaterThan(body.value[3].__system.createdAt);
+        });
+
+      await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/createdAt asc&$filter=__system/createdAt gt ${lastEntity.__system.createdAt}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.eql(4);
+          body.value[0].__system.createdAt.should.be.lessThan(body.value[3].__system.createdAt);
+        });
+    }));
+
+    it('should reject if orderby used with skiptoken', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      const token = await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$top=1')
+        .expect(200)
+        .then(({ body }) => {
+          const tokenData = {
+            uuid: body.value[0].__id,
+          };
+          return encodeURIComponent(QueryOptions.getSkiptoken(tokenData));
+        });
+
+      await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$orderby=__system/createdAt desc&%24skiptoken=${token}`)
+        .expect(501)
+        .then(({ body }) => {
+          body.message.should.be.eql('The requested feature using $orderby and $skiptoken together is not supported by this server.');
+        });
+    }));
   });
 
   describe('GET service document', () => {
@@ -465,6 +784,8 @@ describe('api: /datasets/:name.svc', () => {
         <Property Name="creatorName" Type="Edm.String"/>        
         <Property Name="updates" Type="Edm.Int64"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="version" Type="Edm.Int64"/>
+        <Property Name="conflict" Type="Edm.String"/>
       </ComplexType>
     </Schema>
     <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.people">    

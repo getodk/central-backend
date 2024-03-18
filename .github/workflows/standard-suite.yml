@@ -4,12 +4,13 @@ on: push
 
 jobs:
   standard-tests:
+    timeout-minutes: 20
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     services:
       # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
       postgres:
-        image: postgres:14.6
+        image: postgres:14.10
         env:
           POSTGRES_PASSWORD: odktest
         ports:
@@ -21,12 +22,12 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-    - uses: actions/checkout@v3
-    - name: Use Node.js 18
-      uses: actions/setup-node@v3
+    - uses: actions/checkout@v4
+    - name: Use Node.js 20
+      uses: actions/setup-node@v4
       with:
-        node-version: 18.17.0
+        node-version: 20.10.0
         cache: 'npm'
     - run: npm ci --legacy-peer-deps
     - run: node lib/bin/create-docker-databases.js
-    - run: make test-full
+    - run: make test

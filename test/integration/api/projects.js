@@ -62,19 +62,20 @@ describe('api: /projects', () => {
                 body[0].name.should.equal('Default Project');
               }))))));
 
-    it('should return the correct project verbs when multiply assigned', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
-          .then((aliceId) => asAlice.post('/v1/projects/1/assignments/manager/' + aliceId)
-            .expect(200)
-            .then(() => asAlice.get('/v1/projects/1')
-              .set('X-Extended-Metadata', 'true')
-              .expect(200)
-              .then(({ body }) => {
-                body.verbs.length.should.equal(47);
-                body.should.be.a.Project();
-                body.name.should.equal('Default Project');
-              }))))));
+    it('should return the correct project verbs when multiply assigned', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: alice } = await asAlice.get('/v1/users/current')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/assignments/manager/' + alice.id)
+        .expect(200);
+      const { body: project } = await asAlice.get('/v1/projects/1')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200);
+      const { body: admin } = await asAlice.get('/v1/roles/admin').expect(200);
+      project.verbs.should.eqlInAnyOrder(admin.verbs);
+      project.should.be.a.Project();
+      project.name.should.equal('Default Project');
+    }));
 
     it('should order projects appropriately', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -383,28 +384,29 @@ describe('api: /projects', () => {
           .expect(200)
           .then(({ body }) => { should.not.exist(body.verbs); }))));
 
-    it('should return verb information with extended metadata (alice)', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.get('/v1/projects/1')
-          .set('X-Extended-Metadata', 'true')
-          .expect(200)
-          .then(({ body }) => {
-            body.verbs.should.be.an.Array();
-            body.verbs.length.should.equal(47);
-            body.verbs.should.containDeep([ 'user.password.invalidate', 'project.delete' ]);
-          }))));
+    it('should return verb information with extended metadata (alice)', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: project } = await asAlice.get('/v1/projects/1')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200);
+      project.verbs.should.be.an.Array();
+      const { body: admin } = await asAlice.get('/v1/roles/admin').expect(200);
+      project.verbs.should.eql(admin.verbs);
+      project.verbs.should.containDeep([ 'user.password.invalidate', 'project.delete' ]);
+    }));
 
-    it('should return verb information with extended metadata (bob)', testService((service) =>
-      service.login('bob', (asBob) =>
-        asBob.get('/v1/projects/1')
-          .set('X-Extended-Metadata', 'true')
-          .expect(200)
-          .then(({ body }) => {
-            body.verbs.should.be.an.Array();
-            body.verbs.length.should.equal(32);
-            body.verbs.should.containDeep([ 'assignment.create', 'project.delete', 'dataset.list' ]);
-            body.verbs.should.not.containDeep([ 'project.create' ]);
-          }))));
+    it('should return verb information with extended metadata (bob)', testService(async (service) => {
+      const asBob = await service.login('bob');
+      const { body: project } = await asBob.get('/v1/projects/1')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200);
+      project.verbs.should.be.an.Array();
+      const { body: manager } = await asBob.get('/v1/roles/manager')
+        .expect(200);
+      project.verbs.should.eql(manager.verbs);
+      project.verbs.should.containDeep([ 'assignment.create', 'project.delete', 'dataset.list' ]);
+      project.verbs.should.not.containDeep([ 'project.create' ]);
+    }));
 
     it('should return verb information with extended metadata (data collector only)', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -547,7 +549,7 @@ describe('api: /projects', () => {
     it('should return notfound if the project does not exist', testService((service) =>
       service.delete('/v1/projects/99').expect(404)));
 
-    it('should reject unless the user can update', testService((service) =>
+    it('should reject unless the user can delete', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.delete('/v1/projects/1').expect(403))));
 
@@ -1403,20 +1405,21 @@ describe('api: /projects', () => {
 // Nested extended forms
 describe('api: /projects?forms=true', () => {
   describe('GET', () => {
-    it('should return projects with verbs and nested extended forms', testService((service) =>
-      service.login('alice', (asAlice) => asAlice.get('/v1/projects?forms=true')
-        .expect(200)
-        .then(({ body }) => {
-          body.length.should.equal(1);
-          body[0].should.be.a.Project();
-          const { formList, verbs } = body[0];
-          verbs.length.should.equal(47);
-          formList.length.should.equal(2);
-          const form = formList[0];
-          form.should.be.a.ExtendedForm();
-          form.name.should.equal('Simple');
-          form.reviewStates.received.should.equal(0);
-        }))));
+    it('should return projects with verbs and nested extended forms', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: projects } = await asAlice.get('/v1/projects?forms=true')
+        .expect(200);
+      projects.length.should.equal(1);
+      projects[0].should.be.a.Project();
+      const { body: admin } = await asAlice.get('/v1/roles/admin').expect(200);
+      projects[0].verbs.should.eqlInAnyOrder(admin.verbs);
+      const { formList } = projects[0];
+      formList.length.should.equal(2);
+      const form = formList[0];
+      form.should.be.a.ExtendedForm();
+      form.name.should.equal('Simple');
+      form.reviewStates.received.should.equal(0);
+    }));
 
     it('should return projects with datasets', testService(async (service) => {
       const asAlice = await service.login('alice');
@@ -1536,18 +1539,22 @@ describe('api: /projects?forms=true', () => {
             .expect(200))
           .then(() => Users.getByEmail('bob@getodk.org').then((o) => o.get()))
           .then((bob) => asAlice.post(`/v1/projects/${body.id}/assignments/formfill/${bob.actorId}`)))
-        .then(() => service.login('bob', (asBob) => asBob.get('/v1/projects?forms=true')
-          .expect(200)
-          .then(({ body }) => {
-            body.length.should.equal(2);
-            // First project
-            body[0].formList.length.should.equal(2);
-            body[0].verbs.length.should.equal(32);
-            // Second project
-            body[1].formList.length.should.equal(1);
-            body[1].verbs.length.should.be.lessThan(5); // 4 for data collector
-            body[1].formList[0].name.should.equal('Simple 2');
-          }))))));
+        .then(() => service.login('bob', (asBob) =>
+          Promise.all([
+            asBob.get('/v1/projects?forms=true').expect(200),
+            asBob.get('/v1/roles/manager').expect(200),
+            asBob.get('/v1/roles/formfill').expect(200)
+          ])
+            .then(([{ body }, { body: manager }, { body: formfill }]) => {
+              body.length.should.equal(2);
+              // First project
+              body[0].formList.length.should.equal(2);
+              body[0].verbs.should.eqlInAnyOrder(manager.verbs);
+              // Second project
+              body[1].formList.length.should.equal(1);
+              body[1].verbs.should.eqlInAnyOrder(formfill.verbs);
+              body[1].formList[0].name.should.equal('Simple 2');
+            }))))));
 
     it('should set project data from formList even on non-extended projects', testService((service) =>
       service.login('alice', (asAlice) => asAlice.post('/v1/projects/1/forms/simple/submissions')

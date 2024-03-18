@@ -8,7 +8,7 @@
 # See: https://hub.docker.com/_/node
 # See: https://wiki.debian.org/DebianReleases#Codenames
 # See: https://en.wikipedia.org/wiki/Debian_version_history
-FROM node:18.17.0-bullseye
+FROM node:20.10-bullseye
 
 RUN apt-get update && apt-get install wait-for-it && rm -rf /var/lib/apt/lists/*
 
@@ -17,13 +17,13 @@ WORKDIR /odk-central-backend
 COPY Makefile package.json package-lock.json .
 RUN npm clean-install --legacy-peer-deps
 
-WORKDIR /odk-central-backend/oidc-dev/fake-oidc-server
-COPY oidc-dev/fake-oidc-server/package.json oidc-dev/fake-oidc-server/package-lock.json .
+WORKDIR /odk-central-backend/test/e2e/oidc/fake-oidc-server
+COPY test/e2e/oidc/fake-oidc-server/package.json test/e2e/oidc/fake-oidc-server/package-lock.json .
 RUN npm clean-install
 
-WORKDIR /odk-central-backend/oidc-dev/playwright-tests
-COPY oidc-dev/playwright-tests/package.json \
-     oidc-dev/playwright-tests/package-lock.json \
+WORKDIR /odk-central-backend/test/e2e/oidc/playwright-tests
+COPY test/e2e/oidc/playwright-tests/package.json \
+     test/e2e/oidc/playwright-tests/package-lock.json \
      .
 RUN npm clean-install && echo -n 'Playwright: ' && npx playwright --version && npx playwright install --with-deps
 
@@ -35,5 +35,5 @@ WORKDIR /odk-central-backend
 COPY / .
 
 ENV NODE_CONFIG_ENV=oidc-tester-docker
-WORKDIR /odk-central-backend/oidc-dev
+WORKDIR /odk-central-backend/test/e2e/oidc
 CMD ./scripts/docker-start.sh

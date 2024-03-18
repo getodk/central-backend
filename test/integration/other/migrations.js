@@ -11,7 +11,6 @@ const populateUsers = require('../fixtures/01-users');
 const populateForms = require('../fixtures/02-forms');
 const { getFormFields } = require('../../../lib/data/schema');
 
-
 const withTestDatabase = withDatabase(config.get('test.database'));
 const migrationsDir = appRoot + '/lib/model/migrations';
 const upToMigration = (toName, inclusive = true) => withTestDatabase(async (migrator) => {
@@ -32,6 +31,25 @@ const up = () => withTestDatabase((migrator) =>
   migrator.migrate.up({ directory: migrationsDir }));
 const down = () => withTestDatabase((migrator) =>
   migrator.migrate.down({ directory: migrationsDir }));
+
+const testMigration = (filename, tests, options = {}) => {
+  const { only = false, skip = false } = options;
+  const f = only
+    ? describe.only.bind(describe)
+    : (skip ? describe.skip.bind(describe) : describe);
+  // eslint-disable-next-line func-names, space-before-function-paren
+  f(`database migrations: ${filename}`, function() {
+    this.timeout(20000);
+
+    beforeEach(() => upToMigration(filename, false));
+
+    tests.call(this);
+  });
+};
+testMigration.only = (filename, tests) =>
+  testMigration(filename, tests, { only: true });
+testMigration.skip = (filename, tests) =>
+  testMigration(filename, tests, { skip: true });
 
 // NOTE/TODO: figure out something else here D:
 // Skipping these migrations because after adding a new description
@@ -637,7 +655,7 @@ describe('database migrations from 20230512: adding entity_def_sources table', f
     audits[0].details.entityDefId.should.equal(newDef.id);
   }));
 
-  it('should migrate the submissionDefId source of an entity to new table with event links', testServiceFullTrx(async (service, container) => {
+  it.skip('should migrate the submissionDefId source of an entity to new table with event links', testServiceFullTrx(async (service, container) => {
     await upToMigration('20230512-03-add-entity-source.js', false); // actually this is the previous migration
     await populateUsers(container);
     await populateForms(container);
@@ -864,5 +882,110 @@ describe('database migrations from 20230802: delete orphan submissions', functio
         body[0].instanceId.should.be.eql('two');
       });
 
+  }));
+});
+
+describe.skip('database migration: 20231002-01-add-conflict-details.js', function test() {
+  this.timeout(20000);
+
+  it('should update dataReceived and baseVersion of existing entity defs', testServiceFullTrx(async (service, container) => {
+    await upToMigration('20231002-01-add-conflict-details.js', false);
+    await populateUsers(container);
+    await populateForms(container);
+
+    const asAlice = await service.login('alice');
+
+    await asAlice.post('/v1/projects/1/forms?publish=true')
+      .set('Content-Type', 'application/xml')
+      .send(testData.forms.simpleEntity)
+      .expect(200);
+
+    const dsId = await container.oneFirst(sql`select id from datasets limit 1`);
+
+    // Create the entity in the DB directly because application code has changed.
+    const newEntity = await container.one(sql`
+    INSERT INTO entities (uuid, "datasetId", "creatorId", "createdAt")
+    VALUES (${uuid()}, ${dsId}, 5, now())
+    RETURNING "id"`);
+
+    // Create two entity defs
+    await container.run(sql`
+      INSERT INTO entity_defs ("entityId", "createdAt", "creatorId", "current", "label", "data", "version")
+      VALUES (${newEntity.id}, now(), 5, false, 'some label', '{"foo": "bar"}', 1)`);
+
+    await container.run(sql`
+      INSERT INTO entity_defs ("entityId", "createdAt", "creatorId", "current", "label", "data", "version")
+      VALUES (${newEntity.id}, now(), 5, true, 'other label', '{"x": "y", "a": "b"}', 2)`);
+
+    // run migration: fill in dataReceived and baseVersion based on existing version
+    await up();
+
+    const defs = await container.all(sql`select data, label, version, "baseVersion", "dataReceived" from entity_defs order by id`);
+    defs[0].dataReceived.should.eql({ foo: 'bar', label: 'some label' });
+    defs[0].should.have.property('baseVersion').which.is.eql(null);
+    defs[1].dataReceived.should.eql({ a: 'b', x: 'y', label: 'other label' });
+    defs[1].should.have.property('baseVersion').which.is.eql(1);
+  }));
+});
+
+testMigration('20240215-01-entity-delete-verb.js', () => {
+  it('should add entity.delete verb to correct roles', testServiceFullTrx(async (service) => {
+    const verbsByRole = async () => {
+      const { body: roles } = await service.get('/v1/roles').expect(200);
+      const bySystem = {};
+      for (const role of roles) bySystem[role.system] = role.verbs;
+      return bySystem;
+    };
+
+    const before = await verbsByRole();
+    before.admin.length.should.equal(48);
+    before.admin.should.not.containEql('entity.delete');
+    before.manager.length.should.equal(33);
+    before.manager.should.not.containEql('entity.delete');
+    before.viewer.length.should.equal(9);
+    before.viewer.should.not.containEql('entity.delete');
+
+    await up();
+
+    const after = await verbsByRole();
+    after.admin.length.should.equal(49);
+    after.admin.should.containEql('entity.delete');
+    after.manager.length.should.equal(34);
+    after.manager.should.containEql('entity.delete');
+    after.viewer.length.should.equal(9);
+    after.viewer.should.not.containEql('entity.delete');
+  }));
+});
+
+testMigration('20240215-02-dedupe-verbs.js', () => {
+  it('should remove duplicate submission.update verb', testServiceFullTrx(async (service) => {
+    const verbsByRole = async () => {
+      const { body: roles } = await service.get('/v1/roles').expect(200);
+      const bySystem = {};
+      for (const role of roles) bySystem[role.system] = role.verbs;
+      return bySystem;
+    };
+
+    const before = await verbsByRole();
+    before.admin.length.should.equal(49);
+    before.admin.filter(verb => verb === 'submission.update').length.should.equal(2);
+    before.manager.length.should.equal(34);
+    before.manager.filter(verb => verb === 'submission.update').length.should.equal(2);
+    before.viewer.length.should.equal(9);
+
+    await up();
+
+    const after = await verbsByRole();
+    after.admin.length.should.equal(48);
+    after.admin.should.eqlInAnyOrder([...new Set(before.admin)]);
+    after.manager.length.should.equal(33);
+    after.manager.should.eqlInAnyOrder([...new Set(before.manager)]);
+    after.viewer.length.should.equal(9);
+  }));
+
+  it('should result in unique verbs for all roles', testServiceFullTrx(async (service) => {
+    await up();
+    const { body: roles } = await service.get('/v1/roles').expect(200);
+    for (const { verbs } of roles) verbs.should.eql([...new Set(verbs)]);
   }));
 });

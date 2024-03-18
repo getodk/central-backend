@@ -4,19 +4,20 @@ on: push
 
 jobs:
   oidc-e2e-test:
+    timeout-minutes: 6
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Use Node.js 18
-      uses: actions/setup-node@v3
+    - uses: actions/checkout@v4
+    - name: Use Node.js 20
+      uses: actions/setup-node@v4
       with:
-        node-version: 18.17.0
+        node-version: 20.10.0
         cache: 'npm'
     - run: sudo apt-get install -y curl
     - run: make test-oidc-e2e
     - name: Archive playwright screenshots
       if: failure()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Playwright Screenshots
-        path: oidc-dev/playwright-results/**/*.png
+        path: test/e2e/oidc/playwright-results/**/*.png

@@ -60,13 +60,12 @@ describe('endpoints', () => {
       defaultErrorWriter(new Problem(409.1138, 'test message', { x: 1 }), null, response);
     });
 
-    it('should turn remaining errors into unknown Problems', (done) => {
+    it('should turn remaining errors into internal server errors', (done) => {
       const response = createModernResponse();
       const error = new Error('oops');
-      error.stack = ''; // strip stack so that our test output isn't super polluted
       response.on('end', () => {
         response.statusCode.should.equal(500);
-        response._getData().message.should.equal('Completely unhandled exception: oops');
+        response._getData().should.deepEqual({ message: 'Internal Server Error' });
         done();
       });
       defaultErrorWriter(error, null, response);
@@ -86,7 +85,7 @@ describe('endpoints', () => {
       const response = createModernResponse();
       response.on('end', () => {
         response.statusCode.should.equal(500);
-        response._getData().message.should.equal('Completely unhandled exception: undefined');
+        response._getData().should.deepEqual({ message: 'Internal Server Error' });
         done();
       });
       defaultErrorWriter(null, null, response);
@@ -604,7 +603,7 @@ describe('endpoints', () => {
 
         response.statusCode.should.equal(500);
         response.getHeader('Content-Type').should.equal('application/json');
-        response._getData().message.should.equal('Completely unhandled exception: test');
+        response._getData().should.deepEqual({ message: 'Internal Server Error' });
       });
 
       it('should wrap problems in openrosa xml envelopes', () => {
@@ -657,7 +656,7 @@ describe('endpoints', () => {
       });
 
       it('should reject requests for unsupported OData features', () => {
-        const request = createRequest({ url: '/odata.svc?$orderby=magic' });
+        const request = createRequest({ url: '/odata.svc?$inlineCount=magic' });
         return odataPreprocessor('json')(null, new Context(request), request)
           .should.be.rejectedWith(Problem, { problemCode: 501.1 });
       });

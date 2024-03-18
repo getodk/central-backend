@@ -6,10 +6,9 @@ const preprocessors = require(appRoot + '/lib/http/preprocessors');
 const { Context } = require(appRoot + '/lib/http/endpoint');
 const { Session, User, Actor } = require(appRoot + '/lib/model/frames');
 const { by } = require(appRoot + '/lib/model/query/auth');
+const { hashPassword } = require(appRoot + '/lib/util/crypto');
 const Problem = require(appRoot + '/lib/util/problem');
 const Option = require(appRoot + '/lib/util/option');
-
-const bcrypt = require(appRoot + '/lib/util/crypto').password(require('bcrypt'));
 
 describe('preprocessors', () => {
   // some mock helpers to simplify testing this module in isolation:
@@ -115,7 +114,7 @@ describe('preprocessors', () => {
 
       it('should fail the request if the Basic auth credentials are not right', () =>
         Promise.resolve(authHandler(
-          { Auth, Users: mockUsers('alice@getodk.org', 'willnevermatch'), bcrypt },
+          { Auth, Users: mockUsers('alice@getodk.org', 'willnevermatch') },
           new Context(
             createRequest({ headers: {
               Authorization: `Basic ${Buffer.from('alice@getodk.org:alice', 'utf8').toString('base64')}`,
@@ -126,9 +125,9 @@ describe('preprocessors', () => {
         )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should set the appropriate session if valid Basic auth credentials are given @slow', () =>
-        bcrypt.hash('alice').then((hashed) =>
+        hashPassword('alice').then((hashed) =>
           Promise.resolve(authHandler(
-            { Auth, Users: mockUsers('alice@getodk.org', hashed), bcrypt },
+            { Auth, Users: mockUsers('alice@getodk.org', hashed) },
             new Context(
               createRequest({ headers: {
                 Authorization: `Basic ${Buffer.from('alice@getodk.org:alice', 'utf8').toString('base64')}`,

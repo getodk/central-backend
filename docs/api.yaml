@@ -36,19 +36,46 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
+    ## ODK Central v2024.1
+
+    **Added**:
+
+    - Bulk Entity Creation!
+      * The existing [Entity Create](/central-api-entity-management/#creating-entities) endpoint now also accepts a list of Entities to append to a Dataset.
+      * The `uuid` property is no longer required and Central will generate a UUID for each new Entity if needed.
+    - OData Data Document for requests of Submissions and Entities now allow use of `$orderby`.
+    - ETag headers on all Blobs.
+
+    **Changed**:
+
+    - The [Entity Create](/central-api-entity-management/#creating-entities) endpoint will now generate a UUID if the `uuid` parameter is not provided.
+
+
     ## ODK Central v2023.5
 
     **Added**:
 
-    - Entities accessed via API now have conflict and version-specific conflictingProperties fields
+    - Central now supports _Entity Updates via Submissions_ as part of our continued work on Entity-Based Data Collection!
+      * Submissions for Entity Updates specify which properties/label to update with new values and an Entity's target `baseVersion`, which is used to track conflicts
+    - Entities accessed via the API have additional information about conflicts (when multiple Submissions update the same Entity)
+      * Each [Entity](/central-api-entity-management/#getting-entity-details) now has a `conflict` field, which is either:
+        * `null`. The Entity does not have conflicting versions.
+        * `soft`. The Entity has a version that was based on a version other than the version immediately prior to it. (The specified `baseVerson` was not the latest version on the server.)
+        * `hard`. The Entity has a version that was based on a version other than the version immediately prior to it. Further, that version updated the same property as another update.
+        * If an Entity has a conflict, it can be marked as resolved. After that, the conflict field will be null until a new conflicting version is received.
+      * Each Entity Version (`currentVersion` or list of versions) has new fields `baseVersion`, `dataReceived`, and `conflictingProperties`
+    - [Datasets](/central-api-dataset-management/#datasets) extended metadata now has a `conflicts` field, which counts number of Entities currently in conflict
+    - Entity conflicts can be resolved using the existing [PATCH](/central-api-entity-management/#updating-an-entity) endpoint, with or without new data
+    - New `relevantToConflict` query parameter on [GET entities/:uuid/versions](/central-api-entity-management/#listing-versions)
 
-      * Conflicts are either `hard` (baseVersion conflicts and multiple versions update the same property), `soft` (baseVersion conflicts but data updates are independent), or `null`
 
     **Changed**:
 
-    - Conflicts can be resolved using the [PATCH entity](/central-api-entity-management/#updating-an-entity) endpoint with or without new data
+    - Dataset entity list [entities.csv](/central-api-dataset-management/#download-dataset) can now be filtered
+    - Entity Update [PATCH](/central-api-entity-management/#updating-an-entity) endpoint now expects `baseVersion` query parameter or `force` flag
 
-    ### ODK Central v2023.4
+
+    ## ODK Central v2023.4
 
     **Added**:
 
@@ -67,14 +94,14 @@ info:
     - New endpoint [PATCH /projects/:id/datasets/:name](/central-api-dataset-management/#update-dataset-metadata) to change whether approval of Submission is required to create an Entity.
     - New [Entities](/central-api-entity-management) endpoints for richer Entity-Based Data Collection workflows. These endpoints provide ways of accessing Entities, as well as the ability to _create_, _update_ and _soft-delete_ Entities via the API!
       
-      * New endpoint [GET /projects/:id/datasets/:name/entities](/central-api-entities/#entities-metadata) for listing Entities within a Dataset.
-      * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid](/central-api-entities/#getting-entity-details) for getting the metadata, or details, about a specific Entity.
-      * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/versions](/central-api-entities/#listing-versions) for listing the versions of an Entity.
-      * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/diffs](/central-api-entities/#getting-changes-between-versions) for getting the changes between versions of an Entity.
-      * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/audits](/central-api-entities/#entity-audit-log) for getting the server audit logs about a specific Entity.
-      * New endpoint [POST /projects/:id/datasets/:name/entities](/central-api-entities/#creating-an-entity) for creating an Entity from JSON.
-      * New endpoint [PATCH /projects/:id/datasets/:name/entities/:uuid](/central-api-entities/#updating-an-entity) for updating the data or label of an Entity.
-      * New endpoint [DELETE /projects/:id/datasets/:name/entities/:uuid](/central-api-entities/#deleting-an-entity) for soft-deleting an Entity.
+      * New endpoint [GET /projects/:id/datasets/:name/entities](/central-api-entity-management/#entities-metadata) for listing Entities within a Dataset.
+      * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid](/central-api-entity-management/#getting-entity-details) for getting the metadata, or details, about a specific Entity.
+      * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/versions](/central-api-entity-management/#listing-versions) for listing the versions of an Entity.
+      * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/diffs](/central-api-entity-management/#getting-changes-between-versions) for getting the changes between versions of an Entity.
+      * New endpoint [GET /projects/:id/datasets/:name/entities/:uuid/audits](/central-api-entity-management/#entity-audit-log) for getting the server audit logs about a specific Entity.
+      * New endpoint [POST /projects/:id/datasets/:name/entities](/central-api-entity-management/#creating-entities) for creating an Entity from JSON.
+      * New endpoint [PATCH /projects/:id/datasets/:name/entities/:uuid](/central-api-entity-management/#updating-an-entity) for updating the data or label of an Entity.
+      * New endpoint [DELETE /projects/:id/datasets/:name/entities/:uuid](/central-api-entity-management/#deleting-an-entity) for soft-deleting an Entity.
 
     **Changed**:
 
@@ -530,21 +557,20 @@ tags:
     * But Central does not require a `Date` header field. You may set it if you wish, but it will have no effect on Central.
 - name: OData Endpoints
   description: |-
-    [OData](http://www.odata.org/) is an emerging standard for the formal description and transfer of data between web services. In its most ambitious form, it aims to be _the_ standard way for any REST or REST-like API to enable interoperability with other services, not unlike the API Blueprint format this document is written in. However, in practical usage today it is primarily a way for data-centric web services to describe and transfer their data to various clients for deeper analysis or presentation.
+    [OData](http://www.odata.org/) is a standard for sharing data and its schema between web services. It allows for interoperability with tools like Excel, Power BI or Tableau. If you want to use your data in a service that does not support the OData standard but does support JSON data sources, you can use the [data document](/central-api-odata-endpoints/#data-document) directly.
 
-    ODK Central implements the [4.0 Minimal Conformance level](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#_Toc505771292) of the specification. Our goal is to enable data analysis and reporting through powerful third-party tools, sending them the data over OData, rather than attempt to create our own analysis tools. Today, our implementation primarily targets [Microsoft Power BI](https://docs.microsoft.com/en-us/power-bi/desktop-connect-odata) and [Tableau](https://onlinehelp.tableau.com/current/pro/desktop/en-us/examples_odata.html), two tools with reasonably robust free offerings that provide versatile analysis and visualization of data.
+    ODK Central implements the [4.0 Minimal Conformance level](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#_Toc505771292) of the specification. Our goal is to enable data analysis and reporting through powerful third-party tools, sending them the data over OData, rather than attempt to create our own analysis tools. Our implementation primarily targets [Microsoft Power BI](https://docs.microsoft.com/en-us/power-bi/desktop-connect-odata) and [Tableau](https://onlinehelp.tableau.com/current/pro/desktop/en-us/examples_odata.html), two tools with reasonably robust free offerings that provide versatile analysis and visualization of data.
 
-    While OData itself supports data of any sort of structure, Power BI and Tableau both think in terms of relational tables. This presents an interesting challenge for representing ODK's `group` and `repeat` structures in OData. Our current solution is to treat every `repeat` in the `Form` definition as its own relational table, and we invent stable join IDs to relate the tables together.
+    While OData itself supports data of any sort of structure, Power BI and Tableau both think in terms of relational tables. Our current solution for representing ODK's `repeat` structures in OData is to treat every `repeat` in the `Form` definition as its own relational table, and we compute stable join IDs to relate the tables together.
 
     In general, the OData standard protocol consists of three API endpoints:
 
     * The **Service Document** describes the available resources in the service. We provide one of these for every `Form` in the system. As of version 2023.2, we also provide one for every `Dataset`.
 
-    * The **Metadata Document** is a formal XML-based EDMX schema description of every data object we might return. It is linked in every OData response.
+    * The **Metadata Document** defines the data schema using [an XML-based standard](https://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html#sec_Introduction). It is linked in every OData response.
 
-    * The actual data documents, linked from the Service Document, are a simple JSON representation of the submission data or entity, conforming to the schema we describe in our Metadata Document.
+    * The **data documents**, linked from the Service Document, are a simple JSON representation of the Submission or Entity data, conforming to the schema we describe in our Metadata Document.
 
-    As our focus is on the bulk-export of data from ODK Central so that more advanced analysis tools can handle the data themselves, we do not support most of the features at the Intermediate and above conformance levels, like `$sort` or `$filter`.
 - name: System Endpoints
   description: There are some resources available for getting or setting system information
     and configuration. You can set the [Usage Reporting configuration](/central-api-system-endpoints/#usage-reporting-configuration)
@@ -743,11 +769,11 @@ tags:
 - name: OData Form Service
   x-parent-tag: OData Endpoints
   description: |-
-    ODK Central presents one OData service for every `Form` it knows about. To access the OData service, simply add `.svc` to the resource URL for the given Form.
+    ODK Central presents one OData service for every `Form` it knows about. To access the OData service, add `.svc` to the resource URL for the given Form.
 - name: OData Dataset Service
   x-parent-tag: OData Endpoints
   description: |-
-    ODK Central presents one OData service for every `Dataset` as a way to get an OData feed of `Entities`. To access the OData service, simply add `.svc` to the resource URL for the given Dataset.
+    ODK Central presents one OData service for every `Dataset` as a way to get an OData feed of `Entities`. To access the OData service, add `.svc` to the resource URL for the given Dataset.
 - name: Draft Testing
   x-parent-tag: OData Endpoints
   description: |-
@@ -4550,6 +4576,8 @@ paths:
       description: If a Draft Form was created with an Excel file (`.xls` or `.xlsx`),
         you can get that file back by adding `.xls` or `.xlsx` as appropriate to the
         Draft Form resource path.
+
+        This endpoint supports `ETag`, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, it returns a value in `ETag` header, you can pass this value in the header `If-None-Match` of subsequent requests. If the file has not been changed since the previous request, you will receive `304 Not Modified` response otherwise you'll get the latest file.
       operationId: Retrieving Draft Form XLS(X)
       parameters:
       - name: projectId
@@ -4569,6 +4597,11 @@ paths:
       responses:
         200:
           description: OK
+          headers:
+            ETag:
+              schema:
+                type: string
+                description: content version identifier
           content:
             application/xml:
               example: |
@@ -4662,6 +4695,8 @@ paths:
         (attachment with a filename or Dataset name) and `Content-Type` (based on
         the type supplied at upload time or `text/csv` in the case of a linked Dataset)
         will be given.
+
+        This endpoint supports `ETag`, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, it returns a value in `ETag` header, you can pass this value in the header `If-None-Match` of subsequent requests. If the file has not been changed since the previous request, you will receive `304 Not Modified` response otherwise you'll get the latest file.
       operationId: Downloading a Draft Form Attachment
       parameters:
       - name: projectId
@@ -4692,6 +4727,10 @@ paths:
             Content-Disposition:
               schema:
                 type: string
+            ETag:
+              schema:
+                type: string
+                description: content version identifier
           content:
             '{the MIME type of the attachment file itself or text/csv for a Dataset}':
               example: |
@@ -4731,8 +4770,6 @@ paths:
         To upload a binary to an expected file slot, `POST` the binary to its endpoint. Supply a `Content-Type` MIME-type header if you have one.
 
         As of version 2022.3, if there is already a Dataset linked to this attachment, it will be unlinked and replaced with the uploaded file.
-
-        This endpoint supports `ETag` header, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, the endpoint returns a value in `ETag` header. If you pass that value in the `If-None-Match` header of a subsequent request, then if the file has not been changed since the previous request, you will receive `304 Not Modified` response; otherwise you'll get the latest file.
       operationId: Uploading a Draft Form Attachment
       parameters:
       - name: projectId
@@ -5363,6 +5400,8 @@ paths:
       description: If a Form Version was created with an Excel file (`.xls` or `.xlsx`),
         you can get that file back by adding `.xls` or `.xlsx` as appropriate to the
         Form Version resource path.
+
+        This endpoint supports `ETag` header, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, the endpoint returns a value in `ETag` header. If you pass that value in the `If-None-Match` header of a subsequent request, then if the file has not been changed since the previous request, you will receive `304 Not Modified` response; otherwise you'll get the latest file.
       operationId: Retrieving Form Version XLS(X)
       parameters:
       - name: projectId
@@ -5390,6 +5429,11 @@ paths:
       responses:
         200:
           description: OK
+          headers:
+            ETag:
+              schema:
+                type: string
+                description: content version identifier
           content:
             application/xml:
               example: |
@@ -7866,6 +7910,8 @@ paths:
       summary: Downloading an Attachment
       description: The `Content-Type` and `Content-Disposition` will be set appropriately
         based on the file itself when requesting an attachment file download.
+
+        This endpoint supports `ETag`, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, it returns a value in `ETag` header, you can pass this value in the header `If-None-Match` of subsequent requests. If the file has not been changed since the previous request, you will receive `304 Not Modified` response otherwise you'll get the latest file.
       operationId: Downloading an Attachment
       parameters:
       - name: projectId
@@ -7903,6 +7949,10 @@ paths:
             Content-Disposition:
               schema:
                 type: string
+            ETag:
+              schema:
+                type: string
+                description: content version identifier
           content:
             '{the MIME type of the attachment file itself}':
               example: |
@@ -8414,6 +8464,8 @@ paths:
       description: It is important to note that this endpoint returns whatever is
         _currently_ uploaded against the _particular version_ of the _Submission_.
         It will not track overwritten attachments.
+
+        This endpoint supports `ETag`, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, it returns a value in `ETag` header, you can pass this value in the header `If-None-Match` of subsequent requests. If the file has not been changed since the previous request, you will receive `304 Not Modified` response otherwise you'll get the latest file.
       operationId: Downloading a Version's Attachment
       parameters:
       - name: projectId
@@ -8459,6 +8511,10 @@ paths:
             Content-Disposition:
               schema:
                 type: string
+            ETag:
+              schema:
+                type: string
+                description: content version identifier
           content:
             '{the MIME type of the attachment file itself}':
               example: |
@@ -9853,6 +9909,8 @@ paths:
 
         The CSV format closely matches the [OData Dataset Service](/central-api-odata-endpoints/#odata-dataset-service) format, with columns for system properties such as `__id` (the Entity UUID), `__createdAt`, `__creatorName`, etc., the Entity Label `label`, and the Dataset/Entity Properties themselves. If any Property for an given Entity is blank (e.g. it was not captured by that Form or was left blank), that field of the CSV is blank.
 
+        The `$filter` querystring parameter can be used to filter on system-level properties, similar to how filtering in the [OData Dataset Service](/central-api-odata-endpoints/#odata-dataset-service) works.
+
         This endpoint supports `ETag` header, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, the endpoint returns a value in the ETag header. If you pass that value in the If-None-Match header of a subsequent request, then if the Dataset has not been changed since the previous request, you will receive `304 Not Modified` response; otherwise you'll get the new data.
       operationId: Download Dataset
       parameters:
@@ -9870,6 +9928,12 @@ paths:
         schema:
           type: string
         example: people
+      - name: $filter
+        in: query
+        description: If provided, will filter responses to those matching the query. Only system-level Entity fields are available to reference. The operators `lt`, `le`, `eq`, `neq`, `ge`, `gt`, `not`, `and`, and `or` are supported, and the built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second`.
+        schema:
+          type: string
+        example: __system/conflict eq \'hard\'
       responses:
         200:
           description: OK
@@ -9961,6 +10025,9 @@ paths:
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  version: 1
+                  baseVersion: null
+                  conflictingProperties: null
             application/json; extended:
               schema:
                 type: array
@@ -9987,6 +10054,8 @@ paths:
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  version: 1
+                  baseVersion: null
                   conflictingProperties: null
                   creator:
                     createdAt: '2018-04-18T23:19:14.802Z'
@@ -10004,13 +10073,37 @@ paths:
     post:
       tags:
       - Entity Management
-      summary: Creating an Entity
+      summary: Creating Entities
       description: |-
-        Creates an Entity in the Dataset. Request body takes the JSON representation of the Entity. It should have `uuid` and `label` property in addition to the user-defined properties of the Dataset in `data` property.
+        Creates one or more Entities in the Dataset.
         
-        Value type of all properties is `string`.
+        For creating **a single Entity**, the request body takes a JSON representation of the Entity, which has the following properties:
 
-        You can provide header `X-Action-Notes` to store the metadata about the request. The metadata can retrieved using [Entity Audit Log](/central-api-entities/#entity-audit-log)
+          1. A `data` object containing values for the user-defined Dataset properties. (Not all properties have to have values.)
+          2. A `label` property, which cannot be blank or an empty string. (This is used as a human-readable label in Forms that consume Entities.)
+          3. An optional `uuid` property. If the `uuid` is not specified, Central will generate a UUID for an Entity with the provided data and label.
+      
+        `
+          {
+            "label": "John Doe",
+            "data": {
+              "firstName": "John",
+              "age": "22"
+            }
+          }
+        `
+
+        The value type of all properties is `string`.
+
+        For creating **multiple Entities** in bulk, the request body takes an array `entities` containing a list of Entity objects as described above. The bulk entity version also takes a `source` property with a required `name` field and optional `size`, for example to capture the filename and size of a bulk upload source.
+
+        `
+          {
+            "entities": [...], "source": {"name": "file.csv", "size": 100}
+          }
+        `
+
+        You can provide header `X-Action-Notes` to store the metadata about the request. The metadata can retrieved using [Entity Audit Log](/central-api-entity-management/#entity-audit-log)
       operationId: Creating an Entity
       parameters:
       - name: projectId
@@ -10030,23 +10123,27 @@ paths:
       requestBody:
         content:
           '*/*':
-            schema:              
-              type: object
-              properties:
-                uuid:
-                  type: string
-                  description: The `uuid` of the Entity that uniquely identifies the Entity.
-                label:
-                  type: string
-                  description: Label of the Entity
-                data:
-                  $ref: '#/components/schemas/DataExample'
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/EntityCreateSingle'
+                - $ref: '#/components/schemas/EntityCreateBulk'
             example:
-              uuid: 54a405a0-53ce-4748-9788-d23a30cc3afa
-              label: John Doe (88)
-              data:
-                firstName: John
-                age: '88'
+              entities:
+                -
+                  uuid: 54a405a0-53ce-4748-9788-d23a30cc3afa
+                  label: John Doe (22)
+                  data:
+                    firstName: John
+                    age: '22'
+                -
+                  uuid: 0c3a7922-b611-42ca-a961-944e09fa9aa2
+                  label: Amy Jane (38)
+                  data:
+                    firstName: Amy
+                    age: '38'
+              source:
+                name: my_dataset.csv
+                size: 100
       responses:
         200:
           description: OK
@@ -10068,7 +10165,13 @@ paths:
                   creatorId: 1
                   userAgent: Enketo/3.0.4
                   conflictingProperties: null
+                  version: 1
+                  baseVersion: null
                   data:
+                    firstName: John
+                    age: '88'
+                  dataReceived:
+                    label: John (88)
                     firstName: John
                     age: '88'
         403:
@@ -10082,7 +10185,21 @@ paths:
       tags:
       - Entity Management
       summary: Getting Entity Details
-      description: This returns the metadata and current data of an Entity
+      description: |-
+        This returns the metadata and current data of an Entity.
+
+        The data and label of an Entity are found in the `currentVersion` object under `data` and `label` respectively. The `currentVersion` object also contains version-specific metadata fields such as `version`, `baseVersion`, details about conflicts that version introduced, etc. See the [versions](/central-api-entity-management/#listing-versions) endpoint for more details.
+
+        The Entity also contains top-level system metadata such as `uuid`, `createdAt` and `updatedAt` timestamps, and `creatorId` (or full `creator` if extended metadata is requested).
+
+        **Conflicts**
+
+        An Entity's metadata also has a `conflict` field, which indicates the current conflict status of the Entity. The value of a conflict can either be:
+          * `null`. The Entity does not have conflicting versions.
+          * `soft`. The Entity has a version that was based on a version other than the version immediately prior to it. (The specified `baseVerson` was not the latest version on the server.)
+          * `hard`. The Entity has a version that was based on a version other than the version immediately prior to it. Further, that version updated the same property as another update.
+
+        If an Entity has a conflict, it can be marked as resolved. After that, the conflict field will be null until a new conflicting version is received.
       operationId: Getting Entity Details
       parameters:
       - name: projectId
@@ -10129,9 +10246,15 @@ paths:
                   creatorId: 1
                   userAgent: Enketo/3.0.4
                   conflictingProperties: null
+                  version: 1
+                  baseVersion: null
                   data:
                     firstName: John
                     age: '88'
+                  dataReceived:
+                    firstName: John
+                    age: '88'
+                    label: John (88)
             application/json; extended:
               schema:
                 type: array
@@ -10158,9 +10281,15 @@ paths:
                   creatorId: 1
                   userAgent: Enketo/3.0.4
                   conflictingProperties: null
+                  version: 1
+                  baseVersion: null
                   data:
                     firstName: John
                     age: '88'
+                  dataReceived:
+                    firstName: John
+                    age: '88'
+                    label: John (88)
                   creator:
                     createdAt: '2018-04-18T23:19:14.802Z'
                     displayName: My Display Name
@@ -10201,7 +10330,7 @@ paths:
       summary: Deleting an Entity
       description: Use this API to delete an Entity. With this API, Entity is soft-deleted,
         which means it is still in the database and you can retreive it by passing
-        `?deleted=true` to [GET /projects/:id/datasets/:name/entities](/central-api-entities/#entities-metadata).
+        `?deleted=true` to [GET /projects/:id/datasets/:name/entities](/central-api-entity-management/#entities-metadata).
         In the future, we will provide a way to restore deleted entities and purge
         deleted entities.
       operationId: Deleting an Entity
@@ -10256,13 +10385,15 @@ paths:
       - Entity Management
       summary: Updating an Entity
       description: |-
-        Use this API to update one or all properties of an Entity. It will throw `400 - Bad Request` if any of the updating properties doesn't exist in the dataset.
+        This endpoint is used to update the label or the properties (passed as JSON in the request body) of an Entity. You only need to include the properties you wish to update. To unset the value of any property, you can set it to empty string (""). The label must be a non-empty string. Setting a property to `null` will throw an error. Attempting to update a property that doesn't exist in the Dataset will throw an error. 
 
-        To unset value of any property, you can set it to empty string (""). Setting it to `null` will throw an error.
+        **Specifying a base version**
 
-        **Resolve the conflict**
+        You must either provide the query parameter `baseVersion` or use the `force=true` query paramater. You cannot cause a new Entity conflict via the API, which is why when specifying `baseVersion`, it must match the current version of the Entity on the server. This acts as a check to ensure you are not trying to update based on stale data. If you wish to update the Entity regardless of the current state, then you can use the `force` flag. 
 
-        You can also use this endpoint to resolve the conflict by passing `resolve=true` query parameter. If you set `resolve` parameter then providing data in the body is optional, in that case only `conflict` status from the Entity will be cleared.
+        **Resolving a conflict**
+
+        You can also use this endpoint to resolve an Entity conflict by passing the `resolve=true` query parameter, in which case providing data in the request body is optional. When not providing new data, only the `conflict` status from the Entity will be cleared and no new version will be created. When providing data, the `conflict` will be cleared and an updated version of the Entity will be added.
       operationId: Updating an Entity
       parameters:
       - name: projectId
@@ -10286,6 +10417,13 @@ paths:
         schema:
           type: string
         example: 54a405a0-53ce-4748-9788-d23a30cc3afa
+      - name: baseVersion
+        in: query
+        description: The base version of the Entity you are applying the update to (must match the latest version on the server)
+        required: false
+        schema:
+          type: integer
+        example: 2
       - name: force
         in: query
         description: Flag to forcefully update the Entity
@@ -10337,9 +10475,15 @@ paths:
                   creatorId: 1
                   userAgent: Enketo/3.0.4
                   conflictingProperties: null
+                  version: 1
+                  baseVersion: null
                   data:
                     firstName: John
                     age: '88'
+                  dataReceived:
+                    firstName: John
+                    age: '88'
+                    label: John (88)
         403:
           description: Forbidden
           content:
@@ -10377,6 +10521,8 @@ paths:
         This returns the Entity metadata and data for every version of this Entity, in ascending creation order.
 
         This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to return a `creator` data object alongside the `creatorId` Actor ID reference.
+
+        There is an optional query flag `relevantToConflict` that returns the subset of past versions of an Entity that are relevant to the Entity's current conflict. This includes the latest version, the base version, the previous server version, and any other versions since the last time the Entity was in a conflict-free state. If the Entity is not in conflict, zero versions are returned.
       operationId: Listing Entity Versions
       parameters:
       - name: projectId
@@ -10400,6 +10546,12 @@ paths:
         schema:
           type: string
         example: 54a405a0-53ce-4748-9788-d23a30cc3afa
+      - name: relevantToConflict
+        in: query
+        description: Flag to return only the versions of the entity that are relevant to the current conflict.
+        schema:
+          type: boolean
+        example: true
       responses:
         200:
           description: OK
@@ -10409,33 +10561,59 @@ paths:
                 type: array
                 description: Standard Response
                 items:
-                  $ref: '#/components/schemas/EntityVersion'
+                  $ref: '#/components/schemas/EntityVersionFull'
               example:
                 - label: John (88)
                   current: true
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  version: 1
+                  baseVersion: null
+                  conflict: null
+                  resolved: false
+                  lastGoodVersion: true
+                  relevantToConflict: false
                   conflictingProperties: null
+                  baseDiff: []
+                  serverDiff: []
+                  source: "// Similar to Audit.details. This property is experimental and may change in the future."
                   data:
                     firstName: John
                     age: '88'
+                  dataReceived:
+                    firstName: John
+                    age: '88'
+                    label: John (88)
             application/json; extended:
               schema:
                 type: array
                 description: Extended Response
                 items:
-                  $ref: '#/components/schemas/ExtendedEntityVersion'
+                  $ref: '#/components/schemas/ExtendedEntityVersionFull'
               example:
                 - label: John (88)
                   current: true
                   createdAt: '2018-03-21T12:45:02.312Z'
                   creatorId: 1
                   userAgent: Enketo/3.0.4
+                  version: 1
+                  baseVersion: null
+                  conflict: null
+                  resolved: false
+                  lastGoodVersion: true
+                  relevantToConflict: false
                   conflictingProperties: null
+                  baseDiff: []
+                  serverDiff: []
+                  source: "// Similar to Audit.details. This property is experimental and may change in the future."
                   data:
                     firstName: John
                     age: '88'
+                  dataReceived:
+                    firstName: John
+                    age: '88'
+                    label: John (88)
                   creator:
                     createdAt: '2018-04-18T23:19:14.802Z'
                     displayName: My Display Name
@@ -11281,9 +11459,9 @@ paths:
       - OData Form Service
       summary: Metadata Document
       description: |-
-        The Metadata Document describes, in [EDMX CSDL](http://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html), the schema of all the data you can retrieve from the OData Form Service in question (essentially, this is the XForms form schema translated into the OData format). EDMX/CSDL is very similar in concept to UML: there are objects, they have properties, and some of those properties are relationships to other objects.
+        The Metadata Document describes, in [EDMX CSDL](http://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html), the schema of all the data you can retrieve from the OData Form Service in question. This is essentially the XForms form schema translated into the OData format. EDMX/CSDL defines schemas in terms of objects, their properties, and relationships to other objects.
 
-        If you are writing a tool to analyze your own data, whose schema you already know and understand, there is very little reason to touch this endpoint at all. You can likely skip ahead to the data documents themselves and work directly with the simple JSON output returned by those endpoints. This endpoint is more useful for authors of tools which seek to generically work with arbitrary data whose schemas they cannot know in advance.
+        If you are writing a tool to analyze your own data, whose schema you already know and understand, there is very little reason to touch this endpoint. You can likely skip ahead to the data documents themselves and work directly with the simple JSON output returned by those endpoints. This endpoint is more useful for authors of tools which seek to generically work with arbitrary data whose schemas they cannot know in advance.
 
         In general, the way we model the XForms schema in OData terms is to represent `group`s as `ComplexType`s, and `repeat`s as `EntityType`s. In the world of OData, the primary difference between these two types is that Entity Types require Primary Keys, while Complex Types do not. This fits well with the way XForms surveys tend to be structured.
 
@@ -11431,11 +11609,11 @@ paths:
       - OData Form Service
       summary: Data Document
       description: |-
-        The data documents are the straightforward JSON representation of each table of `Submission` data. They follow the [corresponding specification](http://docs.oasis-open.org/odata/odata-json-format/v4.01/odata-json-format-v4.01.html), but apart from the representation of geospatial data as GeoJSON rather than the ODK proprietary format, the output here should not be at all surprising. If you are looking for JSON output of Submission data, this is the best place to look.
+        The data documents are JSON representations of each table of `Submission` data. They follow the [corresponding specification](http://docs.oasis-open.org/odata/odata-json-format/v4.01/odata-json-format-v4.01.html), but apart from the representation of geospatial data as GeoJSON rather than the ODK proprietary format, the output here should not be surprising. If you are looking for JSON output of Submission data, this is the best place to look.
 
         The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. If `$top` parameter is provided in the request then the response will include `@odata.nextLink` that you can use as is to fetch the next set of data. While paging is possible through these parameters, it will not greatly improve the performance of exporting data. ODK Central prefers to bulk-export all of its data at once if possible.
 
-        As of ODK Central v1.1, the [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) is partially supported. In OData, you can use `$filter` to filter by any data field in the schema. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported. These supported elements may be combined in any way, but all other `$filter` features will cause an error.
+        As of ODK Central v1.1, the [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) is partially supported. In OData, you can use `$filter` to filter by certain data fields in the schema. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported. These supported elements may be combined in any way, but all other `$filter` features will cause an error.
 
         The fields you can query against are as follows:
 
@@ -11461,6 +11639,8 @@ paths:
         + `$select` and `$expand` can't be used together.
 
         + Child properties of repeats can't be requested using `$select`
+
+        As of ODK Central v2024.1, the [`$orderby` query parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358952) is now supported, and can sort on the same fields as `$filter`, noted above. The order can be specified as `ASC` (ascending) or `DESC` (descending), which are case-insensitive. Multiple sort expressions can be used together, separated by commas, e.g. `$orderby=__system/submitterId ASC, __system/reviewState DESC`.
 
         As the vast majority of clients only support the JSON OData format, that is the only format ODK Central offers.
       operationId: Data Document
@@ -11526,6 +11706,12 @@ paths:
         schema:
           type: string
         example: year(__system/submissionDate) lt year(now())
+      - name: '%24orderby'
+        in: query
+        description: If provided, will sort responses according to specified order expression. Only the same fields as `$filter` above can be used to sort. Multiple expressions can be used together.
+        schema:
+          type: string
+        example: __system/submitterId asc, __system/updatedAt desc
       - name: '%24expand'
         in: query
         description: Repetitions, which should get expanded. Currently, only `*` is
@@ -11804,6 +11990,8 @@ paths:
                                 <Property Name="creatorName" Type="Edm.String"/>
                                 <Property Name="updates" Type="Edm.Int64"/>
                                 <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
+                                <Property Name="version" Type="Edm.Int64"/>
+                                <Property Name="conflict" Type="Edm.String"/>
                             </ComplexType>
                         </Schema>
                         <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="org.opendatakit.user.trees">
@@ -11928,15 +12116,12 @@ paths:
 
         The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. If `$top` parameter is provided in the request then the response will include `@odata.nextLink` that you can use as is to fetch the next set of data.
 
-        The [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948)can be used to filter by any data field in the system-level schema, but not the Dataset properties. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported.
+        The [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) can be used to filter certain data fields in the system-level schema, but not the Dataset properties. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported.
 
         The fields you can query against are as follows:
 
         | Entity Metadata         | OData Field Name     |
         | ------------------------| -------------------- |
-        | Entity UUID             | `__id`               |
-        | Entity Name (same as UUID) | `name`            |
-        | Entity Label            | `label`              |
         | Entity Creator Actor ID | `__system/creatorId` |
         | Entity Timestamp        | `__system/createdAt` |
         | Entity Update Timestamp | `__system/updatedAt` |
@@ -11947,6 +12132,8 @@ paths:
         Please see the [OData documentation](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) on `$filter` [operations](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinFilterOperations) and [functions](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinQueryFunctions) for more information.
 
         The [`$select` query parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358942) will return just the fields you specify and is supported on `__id`, `__system`, `__system/creatorId`, `__system/createdAt` and `__system/updatedAt`, as well as on user defined properties.
+
+        The [`$orderby` query parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358952) will return Entities sorted by different fields, which come from the same list used by `$filter`, as noted above. The order can be specified as `ASC` (ascending) or `DESC` (descending), which are case-insensitive. Multiple sort expressions can be used together, separated by commas, e.g. `$orderby=__system/creatorId ASC, __system/conflict DESC`.
 
         As the vast majority of clients only support the JSON OData format, that is the only format ODK Central offers.
       operationId: Data Document for Dataset
@@ -11996,6 +12183,12 @@ paths:
         schema:
           type: string
         example: year(__system/createdAt) lt year(now())
+      - name: '%24orderby'
+        in: query
+        description: If provided, will sort responses according to specified order expression. Only the same fields as `$filter` above can be used to sort. Multiple expressions can be used together.
+        schema:
+          type: string
+        example: __system/creatorId asc, __system/updatedAt desc
       - name: '%24select'
         in: query
         description: If provided, will return only the selected fields.
@@ -13256,6 +13449,14 @@ components:
           description: list of properties updated offline simultaneously.
           items:
             type: string
+        version:
+          type: number
+          description: The version number of the Entity. Each update increments this number.
+          example: 2
+        baseVersion:
+          type: number
+          description: The version number of the version that was the "base version" of this version. The base version is the version that was shown to the data collector when they made their update.
+          example: 1
     EntitySummary:
       allOf: 
         - $ref: '#/components/schemas/EntitySummaryFields'
@@ -13302,12 +13503,57 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/DataExample'
+            dataReceived:
+              $ref: '#/components/schemas/DataReceivedExample'
+    
     ExtendedEntityVersion:
       allOf: 
         - $ref: '#/components/schemas/EntityVersion'
         - type: object
           properties:
-            reator:
+            creator:
+              $ref: '#/components/schemas/Actor'
+    EntityVersionFull:
+      allOf: 
+        - $ref: '#/components/schemas/EntityVersion'
+        - type: object
+          properties:
+            source:
+              type: object
+              description: The source of the Entity version, such as a Submission or an API request. This property is experimental and may change in the future.
+              example: {event: {}, submission: {}}
+            baseDiff:
+              type: array
+              description: List of properties that are different between this version and its base version. Includes the label if it differs between the two versions.
+              example: ['name', 'age']
+            serverDiff:
+              type: array
+              description: List of properties that are different between this version and the previous version on the server. Includes the label if it differs between the two versions.
+              example: ['name', 'age']
+            conflict:
+              type: string
+              description: Type of the conflict if this version causes a conflict; otherwise `null`
+              enum:
+                - soft
+                - hard
+            resolved:
+              type: boolean
+              description: Is the conflict resolved? Note that this is also false for the version which didn't cause a conflict
+              example: false
+            lastGoodVersion:
+              type: boolean
+              description: Indicates whether this version is the last known good version. Currently, the last known good version is defined as the version immediately prior to the first unresolved conflict. If there is no conflict, or if all conflicts are resolved, then the current version is the last known good version. This property is experimental, as the definition of the last known good version may change in the future.
+              example: false
+            relevantToConflict:
+              type: boolean
+              description: Indicates whether this version includes information relevant to resolving a conflict. If so, it will be shown to the user during conflict resolution. This property is experimental, as we may redefine conflict relevance in the future.
+              example: false
+    ExtendedEntityVersionFull:
+      allOf: 
+        - $ref: '#/components/schemas/EntityVersionFull'
+        - type: object
+          properties:
+            creator:
               $ref: '#/components/schemas/Actor'
     EntityDiffValue:
       type: array
@@ -13328,6 +13574,18 @@ components:
           type: string
           description: The name of the property that is changed.
           example: name
+    EntityBulkSource:
+      type: object
+      properties:
+        name:
+          type: string
+          description: A name to identify the bulk source, filename or API run
+          example: myfile.csv
+        size:
+          type: number
+          description: Optional, meant to indicate filesize (in MB)
+          example: 100
+      description: An object describing the source of this bulk create action.
     EntityOdata:
       type: object
       properties:
@@ -13361,6 +13619,27 @@ components:
                 type: string
               circumference_cm:
                 type: string
+    EntityCreateSingle:
+      type: object
+      properties:
+        uuid:
+          type: string
+          description: (Optional) The `uuid` of the Entity that uniquely identifies the Entity.
+        label:
+          type: string
+          description: Label of the Entity
+        data:
+          $ref: '#/components/schemas/DataExample'
+    EntityCreateBulk:
+      type: object
+      properties:
+        entities:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityCreateSingle'
+          description: A list of Entities
+        source:
+          $ref: '#/components/schemas/EntityBulkSource'
     DataExample:
       type: object
       properties:
@@ -13370,6 +13649,14 @@ components:
         age:
           type: string
           example: '88'    
+    DataReceivedExample:
+      allOf: 
+        - $ref: '#/components/schemas/DataExample'
+        - type: object
+          properties:
+            label:
+              type: string
+              example: John (88)
     Form:
       required:
       - createdAt

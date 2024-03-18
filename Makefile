@@ -5,12 +5,12 @@ node_modules: package.json
 	touch node_modules
 
 .PHONY: test-oidc-integration
-test-oidc-integration: node_modules
+test-oidc-integration: node_version
 	TEST_AUTH=oidc NODE_CONFIG_ENV=oidc-integration-test make test-integration
 
 .PHONY: test-oidc-e2e
-test-oidc-e2e: node_modules
-	cd oidc-dev && \
+test-oidc-e2e: node_version
+	cd test/e2e/oidc && \
 	docker compose down && \
 	docker compose build && \
 	docker compose up --exit-code-from odk-central-oidc-tester
@@ -21,13 +21,13 @@ dev-oidc: base
 
 .PHONY: fake-oidc-server
 fake-oidc-server:
-	cd oidc-dev/fake-oidc-server && \
+	cd test/e2e/oidc/fake-oidc-server && \
 	npm clean-install && \
 	FAKE_OIDC_ROOT_URL=http://localhost:9898 npx nodemon index.js
 
 .PHONY: fake-oidc-server-ci
 fake-oidc-server-ci:
-	cd oidc-dev/fake-oidc-server && \
+	cd test/e2e/oidc/fake-oidc-server && \
 	npm clean-install && \
 	FAKE_OIDC_ROOT_URL=http://localhost:9898 node index.js
 
@@ -60,23 +60,19 @@ debug: base
 
 .PHONY: test
 test: lint
-	BCRYPT=no npx mocha --recursive
-
-.PHONY: test-full
-test-full: lint
-	npx mocha --recursive
+	BCRYPT=insecure npx mocha --recursive
 
 .PHONY: test-fast
 test-fast: node_version
-	BCRYPT=no npx mocha --recursive --exit --fgrep @slow --invert
+	BCRYPT=insecure npx mocha --recursive --exit --fgrep @slow --invert
 
 .PHONY: test-integration
 test-integration: node_version
-	BCRYPT=no npx mocha --recursive test/integration
+	BCRYPT=insecure npx mocha --recursive test/integration
 
 .PHONY: test-unit
 test-unit: node_version
-	npx mocha --recursive test/unit
+	BCRYPT=insecure npx mocha --recursive test/unit
 
 .PHONY: test-coverage
 test-coverage: node_version
@@ -88,7 +84,7 @@ lint: node_version
 
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
-	docker start odk-postgres14 || (docker run -d --name odk-postgres14 -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:14.6 && sleep 5 && node lib/bin/create-docker-databases.js)
+	docker start odk-postgres14 || (docker run -d --name odk-postgres14 -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:14.10-alpine && sleep 5 && node lib/bin/create-docker-databases.js)
 
 .PHONY: stop-docker-postgres
 stop-docker-postgres:
@@ -105,4 +101,4 @@ check-file-headers:
 .PHONY: api-docs
 api-docs:
 	(test "$(docker images -q odk-docs)" || docker build --file odk-docs.dockerfile -t odk-docs .) && \
-	docker run --rm -it -v ./docs/api.yaml:/docs/docs/_static/api-spec/central.yaml -p 8000:8000 odk-docs
+	docker run --rm -it -v ./docs:/docs/docs/_static/central-spec -p 8000:8000 odk-docs

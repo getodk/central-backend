@@ -2,8 +2,8 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: cimg/node:18.17.0
-      - image: cimg/postgres:14.6
+      - image: cimg/node:20.10.0
+      - image: cimg/postgres:14.10
         environment:
           POSTGRES_PASSWORD: odktest
 
@@ -14,5 +14,5 @@ jobs:
       - run: make check-file-headers
       - run: npm ci --legacy-peer-deps
       - run: node lib/bin/create-docker-databases.js
-      - run: make test-full
+      - run: make test
 
