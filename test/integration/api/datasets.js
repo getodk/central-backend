@@ -175,9 +175,16 @@ describe('datasets and entities', () => {
 
     describe('projects/:id/datasets/:dataset/properties POST', () => {
       it('should reject user does not have dataset update access', testService(async (service) => {
+        const asAlice = await service.login('alice');
         const asChelsea = await service.login('chelsea');
 
-        await asChelsea.post('/v1/projects/1/datasets')
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({
+            name: 'trees'
+          })
+          .expect(200);
+
+        await asChelsea.post('/v1/projects/1/datasets/trees/properties')
           .send({ name: 'trees' })
           .expect(403);
 
