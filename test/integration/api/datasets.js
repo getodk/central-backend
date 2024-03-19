@@ -5,7 +5,6 @@ const testData = require('../../data/xml');
 const config = require('config');
 const { Form } = require('../../../lib/model/frames');
 const { getOrNotFound } = require('../../../lib/util/promise');
-const { omit } = require('ramda');
 const should = require('should');
 const { sql } = require('slonik');
 const { QueryOptions } = require('../../../lib/util/db');
@@ -1320,104 +1319,133 @@ describe('datasets and entities', () => {
               .send({ dataset: true })
               .expect(403)))));
 
-      // TODO: the md5 in this manifest used to be a hash of 1970 date because entity list is empty.
-      // Now the manifest is computed from any dataset event so the hash is no longer fixed.
-      // This test needs to be updated to account for that.
-      it.skip('should link dataset to form and returns in manifest', testService((service) =>
-        service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
-            .send(testData.forms.withAttachments)
-            .set('Content-Type', 'application/xml')
-            .expect(200)
-            .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
-              .send(testData.forms.simpleEntity.replace(/people/, 'goodone')))
-            .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
-              .send({ dataset: true })
-              .expect(200)
-              .then(({ body }) => omit(['updatedAt'], body).should.be.eql({
-                name: 'goodone.csv',
-                type: 'file',
-                exists: true,
-                blobExists: false,
-                datasetExists: true
-              })))
-            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish?version=newversion')
-              .expect(200))
-            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
-              .expect(200)
-              .then(({ body }) => {
-                body[0].name.should.equal('goodone.csv');
-                body[0].datasetExists.should.equal(true);
-                body[0].updatedAt.should.be.a.recentIsoDate();
-              }))
-            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
-              .set('X-OpenRosa-Version', '1.0')
-              .expect(200)
-              .then(({ text }) => {
-                const domain = config.get('default.env.domain');
-                text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+      it('should link dataset to form and return as attachment in manifest', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        // Upload form to create dataset with name 'goodone'
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/people/, 'goodone'));
+
+        // Upload form to consume dataset as attachment (named goodone.csv)
+        // Dataset will get autolinked to attachment because name matches
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Check that attachment is an dataset
+        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
+          .expect(200)
+          .then(({ body }) => {
+            body[0].name.should.equal('goodone.csv');
+            body[0].datasetExists.should.equal(true);
+          });
+
+        // Fetch the etag on the dataset CSV, which should match the manifest md5
+        const result = await asAlice.get('/v1/projects/1/datasets/goodone/entities.csv')
+          .expect(200);
+        const etag = result.get('ETag');
+
+        // Fetch the form manifest
+        const manifest = await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(({ text }) => text);
+
+        const domain = config.get('default.env.domain');
+        manifest.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
     <mediaFile>
       <filename>goodone.csv</filename>
-      <hash>md5:0c0fb6b2ee7dbb235035f7f6fdcfe8fb</hash>
+      <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
     </mediaFile>
   </manifest>`);
-              })))));
+      }));
 
+      it('should override blob and link dataset', testService(async (service, { Forms, FormAttachments, Audits, Datasets }) => {
+        const asAlice = await service.login('alice');
 
+        // Upload draft form with attachment named 'goodone.csv'
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
 
-      // TODO: the md5 in this manifest used to be a hash of 1970 date because entity list is empty.
-      // Now the manifest is computed from any dataset event so the hash is no longer fixed.
-      // This test needs to be updated to account for that.
-      it.skip('should override blob and link dataset', testService((service, { Forms, FormAttachments, Audits, Datasets }) =>
-        service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
-            .send(testData.forms.withAttachments)
-            .set('Content-Type', 'application/xml')
-            .expect(200)
-            .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
-              .send(testData.forms.simpleEntity.replace(/people/, 'goodone')))
-            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
-              .send('test,csv\n1,2')
-              .set('Content-Type', 'text/csv')
-              .expect(200))
-            .then(() => Promise.all([
-              Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then(getOrNotFound),
-              Datasets.get(1, 'goodone').then(getOrNotFound)
-            ]))
-            .then(([form, dataset]) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then(getOrNotFound)
-              .then(attachment => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
-                .send({ dataset: true })
-                .expect(200)
-                .then(() => Audits.getLatestByAction('form.attachment.update').then(getOrNotFound)
-                  .then(({ details }) => {
-                    const { formDefId, ...attachmentDetails } = details;
-                    formDefId.should.not.be.null();
-                    attachmentDetails.should.be.eql({
-                      name: 'goodone.csv',
-                      oldBlobId: attachment.blobId,
-                      newBlobId: null,
-                      oldDatasetId: null,
-                      newDatasetId: dataset.id
-                    });
-                  })))
-              .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
-                .expect(200))
-              .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
-                .set('X-OpenRosa-Version', '1.0')
-                .expect(200)
-                .then(({ text }) => {
-                  const domain = config.get('default.env.domain');
-                  text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+        // Upload form to create a dataset called 'goodone'
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/people/, 'goodone'));
+
+        // Attach a normal csv to the form attachment
+        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+          .send('test,csv\n1,2')
+          .set('Content-Type', 'text/csv')
+          .expect(200);
+
+        // Check that attachment is currently a blob
+        await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments')
+          .expect(200)
+          .then(({ body }) => {
+            body[0].name.should.equal('goodone.csv');
+            body[0].exists.should.equal(true);
+            body[0].datasetExists.should.equal(false);
+            body[0].blobExists.should.equal(true);
+            body[0].updatedAt.should.be.a.recentIsoDate();
+          });
+
+        // For bookkeeping later
+        // Get blob id of original CSV file
+        const form = await Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then(getOrNotFound);
+        const attachment = await FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then(getOrNotFound);
+
+        // Update attachment to link to dataset instead of csv file
+        await asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+          .send({ dataset: true });
+
+        // Check that attachment is now a dataset
+        await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments')
+          .expect(200)
+          .then(({ body }) => {
+            body[0].name.should.equal('goodone.csv');
+            body[0].exists.should.equal(true);
+            body[0].datasetExists.should.equal(true);
+            body[0].blobExists.should.equal(false);
+            body[0].updatedAt.should.be.a.recentIsoDate();
+          });
+
+        // Check bookkeeping
+        const dataset = await Datasets.get(1, 'goodone').then(getOrNotFound);
+        const audit = await Audits.getLatestByAction('form.attachment.update').then(getOrNotFound);
+        audit.details.should.be.eql({
+          formDefId: form.draftDefId,
+          name: 'goodone.csv',
+          oldBlobId: attachment.blobId,
+          newBlobId: null,
+          oldDatasetId: null,
+          newDatasetId: dataset.id
+        });
+
+        // Fetch the etag on the dataset CSV, which should match the manifest md5
+        const result = await asAlice.get('/v1/projects/1/datasets/goodone/entities.csv')
+          .expect(200);
+        const etag = result.get('ETag');
+
+        // Fetch the form manifest
+        const manifest = await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(({ text }) => text);
+
+        const domain = config.get('default.env.domain');
+        manifest.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
     <mediaFile>
       <filename>goodone.csv</filename>
-      <hash>md5:0c0fb6b2ee7dbb235035f7f6fdcfe8fb</hash>
+      <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
     </mediaFile>
   </manifest>`);
-                }))))));
+      }));
 
       it('should allow an attachment to have a .CSV extension', testService((service) =>
         service.login('alice', (asAlice) =>
