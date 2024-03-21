@@ -29,7 +29,7 @@ jobs:
         node-version: 20.10.0
         cache: 'npm'
     - run: npm ci --legacy-peer-deps
-    - run: make fake-oidc-server-ci > fake-oidc-server.log &
+    - run: FAKE_OIDC_ROOT_URL=http://localhost:9898 make fake-oidc-server-ci > fake-oidc-server.log &
     - run: node lib/bin/create-docker-databases.js
     - run: make test-oidc-integration
     - name: Fake OIDC Server Logs
