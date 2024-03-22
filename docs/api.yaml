@@ -9992,7 +9992,7 @@ paths:
         example: "16"
       - name: name
         in: path
-        description: Name of the Property
+        description: Name of the Dataset
         required: true
         schema:
           type: string
