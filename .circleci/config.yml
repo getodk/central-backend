@@ -14,5 +14,6 @@ jobs:
       - run: make check-file-headers
       - run: npm ci --legacy-peer-deps
       - run: node lib/bin/create-docker-databases.js
-      - run: make test
-
+      - run: make test-ci
+      - store_test_results:
+          path: ./junit-reports
