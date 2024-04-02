@@ -161,9 +161,9 @@ info:
       * The [Extended Project](/central-api-project-management/#listing-projects) endpoint now returns the `datasets` count for the Project.
       * The [Extended Form](/central-api-form-management/#list-all-forms) endpoint now returns the `entityRelated` flag if the form defines a Dataset schema.
       * [DELETE .../draft/attachments/:name](/central-api-form-management/#clearing-a-draft-form-attachment) will unlink the Dataset if there's a Dataset link to the attachment.
-      * [GET .../draft/attachments/:filename](central-api-form-management/#downloading-a-form-attachment) will return the Dataset as a CSV file if the attachment is linked to a Dataset.
+      * [GET .../draft/attachments/:filename](/central-api-form-management/#downloading-a-form-attachment) will return the Dataset as a CSV file if the attachment is linked to a Dataset.
       * [GET .../draft/attachments](/central-api-form-management/#listing-expected-draft-form-attachments) returns two additional flags `blobExists` and `datasetExists`.
-      * In the [OpenRosa Form Manifest](central-api-form-management/#openrosa-form-manifest-api), if a Form Attachment is linked to a Dataset then the value of `hash` is the MD5 of the last updated timestamp or the MD5 of `1970-01-01 00:00:00` if the Dataset is empty.
+      * In the [OpenRosa Form Manifest](/central-api-form-management/#openrosa-form-manifest-api), if a Form Attachment is linked to a Dataset then the value of `hash` is the MD5 of the last updated timestamp or the MD5 of `1970-01-01 00:00:00` if the Dataset is empty.
 
     ## ODK Central v1.5.3
 
@@ -183,7 +183,7 @@ info:
     * [Form extended metadata](/central-api-form-management/#getting-form-details) now includes a `reviewStates` object of counts of Submissions with specific review states.
         * e.g. `{"received":12, "hasIssues":2, "edited":3}`
 
-    * New `?forms=true` option on [Project Listing](/central-api-project-management/#listing-projects-with-nested-forms) that includes a `formList` field containing a list of extended Forms (and the review state counts described above) associated with that Project.
+    * New `?forms=true` option on [Project Listing](/central-api-project-management/#listing-projects) that includes a `formList` field containing a list of extended Forms (and the review state counts described above) associated with that Project.
 
     ## ODK Central v1.4
 
@@ -513,7 +513,7 @@ tags:
 
     **Related APIs:**
 
-    - [Implicit creation of Datasets via Forms](/central-api-form-management/#forms/creating-a-new-form)
+    - [Implicit creation of Datasets via Forms](/central-api-form-management/#creating-a-new-form)
 
     - [Link a Dataset to a Form Attachment](/central-api-form-management/#linking-a-dataset-to-a-draft-form-attachment)
 
@@ -618,7 +618,7 @@ tags:
   description: |-
     App Users are only allowed to list and download forms, and upload new submissions to those forms. Primarily, this is to allow clients like ODK Collect to use the OpenRosa API (`/formList` and `/submission`), but any action in this API reference falling into those categories will be allowed.
 
-    Rvoking an App User is same as deleting session token. You can do this by calling [DELETE /sessions/{appUser}](/central-api-authentication/#logging-out-revoking-an-app-user).
+    Revoking an App User is same as deleting session token. You can do this by calling [DELETE /sessions/{appUser}](/central-api-authentication/#logging-out-current-session).
 - name: Users
   x-parent-tag: Accounts and Users
   description: |-
@@ -706,7 +706,7 @@ tags:
 
     The API for Public Links is particularly useful, as it can be used to, for example, programmatically create and send individually customized and controlled links for direct distribution. The user-facing link for a Public Link has the following structure: `/-/{enketoId}?st={token}` where `-` is the Enketo root, `enketoId` is the survey ID of this published Form on Enketo and `token` is a session token to identify this Public Link.
 
-    To revoke the access of any Link, terminate its session `token` by issuing [`DELETE /sessions/:token`](/central-api-authentication/#logging-out).
+    To revoke the access of any Link, terminate its session `token` by issuing [`DELETE /sessions/:token`](/central-api-authentication/#logging-out-current-session).
 - name: Related Datasets
   x-parent-tag: Form Management
   description: |-
@@ -1983,7 +1983,7 @@ paths:
       - App Users
       summary: Deleting a App User
       description: |-
-        You don't have to delete a `App User` in order to cut off its access. Using a `User`'s credentials you can simply [log the App User's session out](/central-api-authentication/#revoking-an-app-user) using its token. This will end its session without actually deleting the App User, which allows you to still see it in the configuration panel and inspect its history. This is what the administrative panel does when you choose to "Revoke" the App User.
+        You don't have to delete a `App User` in order to cut off its access. Using a `User`'s credentials you can simply [log the App User's session out](/central-api-authentication/#logging-out-current-session) using its token. This will end its session without actually deleting the App User, which allows you to still see it in the configuration panel and inspect its history. This is what the administrative panel does when you choose to "Revoke" the App User.
 
         That said, if you do wish to delete the App User altogether, you can do so by issuing a `DELETE` request to its resource path. App Users cannot delete themselves.
       operationId: Deleting a App User
@@ -4343,7 +4343,7 @@ paths:
 
         Even if a Draft exists, you can always replace it by `POST`ing here again. In that case, the attachments that exist on the Draft will similarly be copied over to the new Draft. If you wish to copy from the published version instead, you can do so by first `DELETE`ing the extant Draft.
 
-        Draft `version` conflicts are allowed with prior versions of a Form while in Draft state. If you attempt to [publish the Form](/central-api-form-management/#draft-form/publishing-a-draft-form) without correcting the conflict, the publish operation will fail. You can request that Central update the version string on your behalf as part of the publish operation to avoid this: see that endpoint for more information.
+        Draft `version` conflicts are allowed with prior versions of a Form while in Draft state. If you attempt to [publish the Form](/central-api-form-management/#publishing-a-draft-form) without correcting the conflict, the publish operation will fail. You can request that Central update the version string on your behalf as part of the publish operation to avoid this: see that endpoint for more information.
 
         The `xmlFormId`, however, must exactly match that of the Form overall, or the request will be rejected.
 
@@ -6157,7 +6157,7 @@ paths:
       description: You can fully delete a link by issuing `DELETE` to its resource.
         This will remove the Link from the system entirely. If instead you wish to
         revoke the Link's access to prevent future submission without removing its
-        record entirely, you can issue [`DELETE /sessions/:token`](/central-api-authentication/#session-authentication/logging-out).
+        record entirely, you can issue [`DELETE /sessions/:token`](/central-api-authentication/#logging-out-current-session).
       operationId: Deleting a Link
       parameters:
       - name: projectId
@@ -6693,7 +6693,7 @@ paths:
 
         The XML data you send will _replace_ the existing data entirely. All of the data must be present in the updated XML.
 
-        When you create a new submission version, any uploaded media files attached to the current version that match expected attachment names in the new version will automatically be copied over to the new version. So if you don't make any changes to media files, there is no need to resubmit them. You can get information about all the submission versions [from the `/versions` subresource](central-api-submission-management/#submission-versions).
+        When you create a new submission version, any uploaded media files attached to the current version that match expected attachment names in the new version will automatically be copied over to the new version. So if you don't make any changes to media files, there is no need to resubmit them. You can get information about all the submission versions [from the `/versions` subresource](/central-api-submission-management/#submission-versions).
       operationId: Updating Submission Data
       parameters:
       - name: projectId
@@ -12993,7 +12993,7 @@ paths:
       description: |-
         An Administrator can use this endpoint to choose whether the server will share anonymous usage data with the Central team. This configuration affects the entire server. Until the Usage Reporting configuration is set, Administrators will see a message on the Central administration website that provides further information.
 
-        If an Administrator specifies `true` for `enabled`, the server will share anonymous usage data monthly with the Central team. By specifying `true`, the Administrator accepts the [Terms of Service](https://getodk.org/legal/tos.html) and [Privacy Policy](https://getodk.org/legal/privacy.html). The Administrator can also share contact information to include with the report.
+        If an Administrator specifies `true` for `enabled`, the server will share anonymous usage data monthly with the Central team. By specifying `true`, the Administrator accepts the [Terms of Service](https://getodk.org/legal/tos) and [Privacy Policy](https://getodk.org/legal/privacy). The Administrator can also share contact information to include with the report.
 
         If an Administrator specifies `false` for `enabled`, the server will not share anonymous usage data with the Central team. Administrators will no longer see the message on the administration website.
 
