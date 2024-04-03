@@ -14389,10 +14389,12 @@ components:
               description: The details of the actor given by `actorId`.
     Success:
       type: object
+      required:
+        - success
       properties:
-        message:
-          type: string
-          example: Success
+        success:
+          type: boolean
+          example: true
     Error400:
       type: object
       required:
