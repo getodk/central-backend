@@ -1362,14 +1362,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -1685,14 +1678,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -1752,14 +1738,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -2012,14 +1991,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -2233,14 +2205,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -2288,14 +2253,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -2683,14 +2641,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -3080,14 +3031,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -3142,14 +3086,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -3677,14 +3614,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -4260,14 +4190,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -4387,14 +4310,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         400:
           description: Bad Request
           content:
@@ -4463,14 +4379,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -4804,14 +4713,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -4867,14 +4769,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -4937,14 +4832,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -5125,14 +5013,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -5886,14 +5767,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content: {}
@@ -5941,14 +5815,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -6191,14 +6058,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -8033,14 +7893,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -8102,14 +7955,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -9606,14 +9452,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -9673,14 +9512,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -13100,14 +12932,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -14394,7 +14219,8 @@ components:
       properties:
         success:
           type: boolean
-          example: true
+      example: 
+          success: true
     Error400:
       type: object
       required:
