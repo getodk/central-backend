@@ -1,3 +1,7 @@
+# Source at https://github.com/getodk/central-backend/blob/master/docs/api.yaml
+# Copied at release time to https://github.com/getodk/docs/blob/master/docs/_static/api-spec/central.yaml
+# for publishing at https://docs.getodk.org/central-api/
+
 openapi: 3.0.1
 info:
   title: ODK Central API
