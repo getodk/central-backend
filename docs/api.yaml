@@ -10525,7 +10525,7 @@ paths:
 
         **Specifying a base version**
 
-        You must either provide the query parameter `baseVersion` or use the `force=true` query paramater. You cannot cause a new Entity conflict via the API, which is why when specifying `baseVersion`, it must match the current version of the Entity on the server. This acts as a check to ensure you are not trying to update based on stale data. If you wish to update the Entity regardless of the current state, then you can use the `force` flag. 
+        You must either provide the query parameter `baseVersion` or use the `force=true` query parameter. The specified `baseVersion` must match the current version of the Entity on the server or the request will be rejected. This acts as a check to ensure you are not trying to update based on stale data. To update an Entity regardless of its current state, use the `force` flag with value `true`.
 
         **Resolving a conflict**
 
