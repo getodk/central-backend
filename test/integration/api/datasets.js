@@ -5,11 +5,11 @@ const testData = require('../../data/xml');
 const config = require('config');
 const { Form } = require('../../../lib/model/frames');
 const { getOrNotFound } = require('../../../lib/util/promise');
-const { omit } = require('ramda');
 const should = require('should');
 const { sql } = require('slonik');
 const { QueryOptions } = require('../../../lib/util/db');
 const { createConflict } = require('../fixtures/scenarios');
+const { omit } = require('ramda');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const Option = require(appRoot + '/lib/util/option');
@@ -953,41 +953,6 @@ describe('datasets and entities', () => {
 
       }));
 
-      it('should return 304 content not changed if ETag matches', testService(async (service, container) => {
-        const asAlice = await service.login('alice');
-
-        await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.simpleEntity)
-          .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
-          .send(testData.instances.simpleEntity.one)
-          .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
-          .send({ reviewState: 'approved' })
-          .expect(200);
-
-        await exhaust(container);
-
-        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
-          .expect(200);
-
-        const withOutTs = result.text.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g, '');
-        withOutTs.should.be.eql(
-          '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
-          '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,,1\n'
-        );
-
-        const etag = result.get('ETag');
-
-        await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
-          .set('If-None-Match', etag)
-          .expect(304);
-      }));
-
       it('should filter the Entities', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
@@ -1024,6 +989,137 @@ describe('datasets and entities', () => {
         );
 
       }));
+
+      describe('ETag on entities.csv', () => {
+        it('should return 304 content not changed if ETag matches', testService(async (service, container) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+            .send(testData.instances.simpleEntity.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await exhaust(container);
+
+          const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+            .expect(200);
+
+          const withOutTs = result.text.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g, '');
+          withOutTs.should.be.eql(
+            '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,,1\n'
+          );
+
+          const etag = result.get('ETag');
+
+          await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+            .set('If-None-Match', etag)
+            .expect(304);
+        }));
+
+        it('should return new ETag if entity data is modified', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/datasets/people/entities')
+            .send({
+              uuid: '12345678-1234-4123-8234-111111111aaa',
+              label: 'Alice',
+              data: { first_name: 'Alice' }
+            })
+            .expect(200);
+
+          const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+            .expect(200);
+
+          const withOutTs = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+          result.text.replace(withOutTs, '').should.be.eql(
+            '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-111111111aaa,Alice,Alice,,,5,Alice,0,,1\n'
+          );
+
+          const etag = result.get('ETag');
+
+          await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa?force=true')
+            .send({ data: { age: '33' } })
+            .expect(200);
+
+          const modifiedResult = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+            .set('If-None-Match', etag)
+            .expect(200);
+
+          modifiedResult.text.replace(withOutTs, '').should.be.eql(
+            '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-111111111aaa,Alice,Alice,33,,5,Alice,1,,2\n'
+          );
+        }));
+
+        it('should return new ETag if entity deleted', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // bulk create several entities
+          await asAlice.post('/v1/projects/1/datasets/people/entities')
+            .set('User-Agent', 'central/tests')
+            .send({
+              source: {
+                name: 'people.csv',
+                size: 100,
+              },
+              entities: [
+                {
+                  uuid: '12345678-1234-4123-8234-111111111aaa',
+                  label: 'Alice',
+                  data: { first_name: 'Alice' }
+                },
+                {
+                  uuid: '12345678-1234-4123-8234-111111111bbb',
+                  label: 'Emily',
+                  data: { first_name: 'Emily' }
+                },
+              ]
+            });
+
+          const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+            .expect(200);
+
+          const withOutTs = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+          result.text.replace(withOutTs, '').should.be.eql(
+            '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-111111111bbb,Emily,Emily,,,5,Alice,0,,1\n' +
+            '12345678-1234-4123-8234-111111111aaa,Alice,Alice,,,5,Alice,0,,1\n'
+          );
+
+          const etag = result.get('ETag');
+
+          await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111bbb');
+
+          await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+            .set('If-None-Match', etag)
+            .expect(200); // should not be 304
+
+          const deletedResult = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+            .expect(200);
+
+          deletedResult.text.replace(withOutTs, '').should.be.eql(
+            '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+            '12345678-1234-4123-8234-111111111aaa,Alice,Alice,,,5,Alice,0,,1\n'
+          );
+        }));
+      });
     });
 
     describe('projects/:id/datasets/:name GET', () => {
@@ -1555,98 +1651,164 @@ describe('datasets and entities', () => {
               .send({ dataset: true })
               .expect(403)))));
 
-      it('should link dataset to form and returns in manifest', testService((service) =>
-        service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
-            .send(testData.forms.withAttachments)
-            .set('Content-Type', 'application/xml')
-            .expect(200)
-            .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
-              .send(testData.forms.simpleEntity.replace(/people/, 'goodone')))
-            .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
-              .send({ dataset: true })
-              .expect(200)
-              .then(({ body }) => omit(['updatedAt'], body).should.be.eql({
-                name: 'goodone.csv',
-                type: 'file',
-                exists: true,
-                blobExists: false,
-                datasetExists: true
-              })))
-            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish?version=newversion')
-              .expect(200))
-            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
-              .expect(200)
-              .then(({ body }) => {
-                body[0].name.should.equal('goodone.csv');
-                body[0].datasetExists.should.equal(true);
-                body[0].updatedAt.should.be.a.recentIsoDate();
-              }))
-            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
-              .set('X-OpenRosa-Version', '1.0')
-              .expect(200)
-              .then(({ text }) => {
-                const domain = config.get('default.env.domain');
-                text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+      it('should link dataset to form using PATCH', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        // Upload form with attachment goodone.csv
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Upload and publish form to create dataset with name 'goodone'
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/people/, 'goodone'));
+
+        // Patch attachment in first form to use dataset
+        await asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+          .send({ dataset: true })
+          .expect(200)
+          .then(({ body }) => omit(['updatedAt'], body).should.be.eql({
+            name: 'goodone.csv',
+            type: 'file',
+            exists: true,
+            blobExists: false,
+            datasetExists: true
+          }));
+
+        // Publish form with dataset as attachment
+        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish?version=newversion')
+          .expect(200);
+
+        // Check that attachment is dataset
+        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
+          .expect(200)
+          .then(({ body }) => {
+            body[0].name.should.equal('goodone.csv');
+            body[0].datasetExists.should.equal(true);
+            body[0].updatedAt.should.be.a.recentIsoDate();
+          });
+      }));
+
+      it('should return dataset attachment in form manifest', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        // Upload form to create dataset with name 'goodone'
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/people/, 'goodone'));
+
+        // Upload form to consume dataset as attachment (named goodone.csv)
+        // Dataset will get autolinked to attachment because name matches
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Fetch the etag on the dataset CSV, which should match the manifest md5
+        const result = await asAlice.get('/v1/projects/1/datasets/goodone/entities.csv')
+          .expect(200);
+        const etag = result.get('ETag');
+
+        // Fetch the form manifest
+        const manifest = await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(({ text }) => text);
+
+        const domain = config.get('default.env.domain');
+        manifest.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
     <mediaFile>
       <filename>goodone.csv</filename>
-      <hash>md5:0c0fb6b2ee7dbb235035f7f6fdcfe8fb</hash>
+      <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
     </mediaFile>
   </manifest>`);
-              })))));
+      }));
 
+      it('should override blob and link dataset', testService(async (service, { Forms, FormAttachments, Audits, Datasets }) => {
+        const asAlice = await service.login('alice');
 
+        // Upload draft form with attachment named 'goodone.csv'
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
 
-      it('should override blob and link dataset', testService((service, { Forms, FormAttachments, Audits, Datasets }) =>
-        service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms')
-            .send(testData.forms.withAttachments)
-            .set('Content-Type', 'application/xml')
-            .expect(200)
-            .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
-              .send(testData.forms.simpleEntity.replace(/people/, 'goodone')))
-            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
-              .send('test,csv\n1,2')
-              .set('Content-Type', 'text/csv')
-              .expect(200))
-            .then(() => Promise.all([
-              Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then(getOrNotFound),
-              Datasets.get(1, 'goodone').then(getOrNotFound)
-            ]))
-            .then(([form, dataset]) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then(getOrNotFound)
-              .then(attachment => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
-                .send({ dataset: true })
-                .expect(200)
-                .then(() => Audits.getLatestByAction('form.attachment.update').then(getOrNotFound)
-                  .then(({ details }) => {
-                    const { formDefId, ...attachmentDetails } = details;
-                    formDefId.should.not.be.null();
-                    attachmentDetails.should.be.eql({
-                      name: 'goodone.csv',
-                      oldBlobId: attachment.blobId,
-                      newBlobId: null,
-                      oldDatasetId: null,
-                      newDatasetId: dataset.id
-                    });
-                  })))
-              .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
-                .expect(200))
-              .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
-                .set('X-OpenRosa-Version', '1.0')
-                .expect(200)
-                .then(({ text }) => {
-                  const domain = config.get('default.env.domain');
-                  text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+        // Upload form to create a dataset called 'goodone'
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/people/, 'goodone'));
+
+        // Attach a normal csv to the form attachment
+        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+          .send('test,csv\n1,2')
+          .set('Content-Type', 'text/csv')
+          .expect(200);
+
+        // Check that attachment is currently a blob
+        await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments')
+          .expect(200)
+          .then(({ body }) => {
+            body[0].name.should.equal('goodone.csv');
+            body[0].exists.should.equal(true);
+            body[0].datasetExists.should.equal(false);
+            body[0].blobExists.should.equal(true);
+            body[0].updatedAt.should.be.a.recentIsoDate();
+          });
+
+        // For bookkeeping later
+        // Get blob id of original CSV file
+        const form = await Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then(getOrNotFound);
+        const attachment = await FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then(getOrNotFound);
+
+        // Update attachment to link to dataset instead of csv file
+        await asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+          .send({ dataset: true });
+
+        // Check that attachment is now a dataset
+        await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments')
+          .expect(200)
+          .then(({ body }) => {
+            body[0].name.should.equal('goodone.csv');
+            body[0].exists.should.equal(true);
+            body[0].datasetExists.should.equal(true);
+            body[0].blobExists.should.equal(false);
+            body[0].updatedAt.should.be.a.recentIsoDate();
+          });
+
+        // Check bookkeeping
+        const dataset = await Datasets.get(1, 'goodone').then(getOrNotFound);
+        const audit = await Audits.getLatestByAction('form.attachment.update').then(getOrNotFound);
+        audit.details.should.be.eql({
+          formDefId: form.draftDefId,
+          name: 'goodone.csv',
+          oldBlobId: attachment.blobId,
+          newBlobId: null,
+          oldDatasetId: null,
+          newDatasetId: dataset.id
+        });
+
+        // Fetch the etag on the dataset CSV, which should match the manifest md5
+        const result = await asAlice.get('/v1/projects/1/datasets/goodone/entities.csv')
+          .expect(200);
+        const etag = result.get('ETag');
+
+        // Fetch the form manifest
+        const manifest = await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(({ text }) => text);
+
+        const domain = config.get('default.env.domain');
+        manifest.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
     <mediaFile>
       <filename>goodone.csv</filename>
-      <hash>md5:0c0fb6b2ee7dbb235035f7f6fdcfe8fb</hash>
+      <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
     </mediaFile>
   </manifest>`);
-                }))))));
+      }));
 
       it('should allow an attachment to have a .CSV extension', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -2568,6 +2730,89 @@ describe('datasets and entities', () => {
 
       }));
 
+      it('should return ETag if content has changed', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+          .expect(200);
+
+        result.text.should.be.eql(
+          'name,label,__version,first_name,age\n' +
+          '12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n'
+        );
+
+        const etag = result.get('ETag');
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+          .send({ data: { age: '33' } })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+          .set('If-None-Match', etag)
+          .expect(200); // Not 304, content HAS been modified
+      }));
+
+      it('should return new ETag if content has been deleted', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+
+        await exhaust(container);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+          .expect(200);
+
+        result.text.should.be.eql(
+          'name,label,__version,first_name,age\n' +
+          '12345678-1234-4123-8234-123456789aaa,Jane (30),1,Jane,30\n' +
+          '12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n'
+        );
+
+        const etag = result.get('ETag');
+
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+          .set('If-None-Match', etag)
+          .expect(200); // Not 304, content HAS been modified
+      }));
     });
   });
 
