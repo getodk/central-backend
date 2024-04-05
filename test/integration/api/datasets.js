@@ -9,6 +9,7 @@ const should = require('should');
 const { sql } = require('slonik');
 const { QueryOptions } = require('../../../lib/util/db');
 const { createConflict } = require('../fixtures/scenarios');
+const { omit } = require('ramda');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const Option = require(appRoot + '/lib/util/option');
@@ -1319,7 +1320,46 @@ describe('datasets and entities', () => {
               .send({ dataset: true })
               .expect(403)))));
 
-      it('should link dataset to form and return as attachment in manifest', testService(async (service) => {
+      it('should link dataset to form using PATCH', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        // Upload form with attachment goodone.csv
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Upload and publish form to create dataset with name 'goodone'
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity.replace(/people/, 'goodone'));
+
+        // Patch attachment in first form to use dataset
+        await asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+          .send({ dataset: true })
+          .expect(200)
+          .then(({ body }) => omit(['updatedAt'], body).should.be.eql({
+            name: 'goodone.csv',
+            type: 'file',
+            exists: true,
+            blobExists: false,
+            datasetExists: true
+          }));
+
+        // Publish form with dataset as attachment
+        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish?version=newversion')
+          .expect(200);
+
+        // Check that attachment is dataset
+        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
+          .expect(200)
+          .then(({ body }) => {
+            body[0].name.should.equal('goodone.csv');
+            body[0].datasetExists.should.equal(true);
+            body[0].updatedAt.should.be.a.recentIsoDate();
+          });
+      }));
+
+      it('should return dataset attachment in form manifest', testService(async (service) => {
         const asAlice = await service.login('alice');
 
         // Upload form to create dataset with name 'goodone'
@@ -1332,14 +1372,6 @@ describe('datasets and entities', () => {
           .send(testData.forms.withAttachments)
           .set('Content-Type', 'application/xml')
           .expect(200);
-
-        // Check that attachment is an dataset
-        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
-          .expect(200)
-          .then(({ body }) => {
-            body[0].name.should.equal('goodone.csv');
-            body[0].datasetExists.should.equal(true);
-          });
 
         // Fetch the etag on the dataset CSV, which should match the manifest md5
         const result = await asAlice.get('/v1/projects/1/datasets/goodone/entities.csv')
