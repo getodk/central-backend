@@ -11834,7 +11834,76 @@ paths:
       responses:
         200:
           description: OK
-          content: {}
+          content:
+            application/json; charset=utf-8; odata.metadata=minimal:
+              schema:
+                type: object
+                properties:
+                  '@odata.context':
+                    type: string
+                  value:
+                    type: array
+                    items:
+                      required:
+                      - kind
+                      - name
+                      - url
+                      type: object
+                      properties:
+                        kind:
+                          type: string
+                        name:
+                          type: string
+                        url:
+                          type: string
+                example:
+                  '@odata.context': https://your.odk.server/v1/projects/7/datasets/sample.svc/$metadata
+                  value:
+                  - kind: EntitySet
+                    name: Entities
+                    url: Entities
+                  - kind: EntitySet
+                    name: Entities.children.child
+                    url: Entities.children.child
+              example:
+                '@odata.context': https://your.odk.server/v1/projects/7/datasets/sample.svc/$metadata
+                value:
+                - kind: EntitySet
+                  name: Entities
+                  url: Entities
+                - kind: EntitySet
+                  name: Entities.children.child
+                  url: Entities.children.child
+            application/json:
+              schema:
+                type: object
+                properties:
+                  '@odata.context':
+                    type: string
+                  value:
+                    type: array
+                    items:
+                      required:
+                      - kind
+                      - name
+                      - url
+                      type: object
+                      properties:
+                        kind:
+                          type: string
+                        name:
+                          type: string
+                        url:
+                          type: string
+                example:
+                  '@odata.context': https://your.odk.server/v1/projects/7/datasets/sample.svc/$metadata
+                  value:
+                  - kind: EntitySet
+                    name: Entities
+                    url: Entities
+                  - kind: EntitySet
+                    name: Entities.children.child
+                    url: Entities.children.child
         403:
           description: Forbidden
           content:
