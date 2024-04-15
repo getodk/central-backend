@@ -2250,6 +2250,28 @@ describe('Entities API', () => {
         });
     }));
 
+    it('should insert entities in batches', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .then(({ body }) => {
+          body.length.should.equal(0);
+        });
+
+      const entities = Array.from({ length: 1000 }, () => ({ label: 'an entity label', data: { first_name: 'foo' } }));
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people.csv',
+            size: 100,
+          },
+          entities
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
+    }));
 
     it('should generate uuids for entities when no uuid is provided', testDataset(async (service) => {
       const asAlice = await service.login('alice');
