@@ -21,7 +21,7 @@
     "csv-stringify": "~5",
     "digest-stream": "~2",
     "entities": "~2",
-    "express": "~4.18",
+    "express": "~4.19",
     "express-graceful-exit": "~0.5",
     "fast-myers-diff": "~3",
     "htmlparser2": "~3.9",
