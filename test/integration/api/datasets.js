@@ -98,7 +98,7 @@ describe('datasets and entities', () => {
           });
       }));
 
-      describe('dataset name conflicts', () => {
+      describe('dataset name conflicts via API', () => {
         it('should reject if creating a dataset that already exists', testService(async (service) => {
           const asAlice = await service.login('alice');
 
@@ -116,7 +116,7 @@ describe('datasets and entities', () => {
             .expect(409)
             .then(({ body }) => {
               body.code.should.equal(409.3);
-              body.message.should.startWith('A resource already exists with name,projectId value(s) of trees,');
+              body.message.should.equal('A resource already exists with name,projectId value(s) of trees,1.');
             });
         }));
 
@@ -171,6 +171,38 @@ describe('datasets and entities', () => {
               name: 'PEOPLE'
             })
             .expect(200);
+        }));
+
+        it('should not allow creating a dataset with same name as draft that conflicts with published dataset', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // draft "people" dataset
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // draft "PEOPLE" dataset
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity
+              .replace('dataset="people"', 'dataset="PEOPLE"')
+              .replace(/simpleEntity/g, 'simpleEntity2'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // publish "people"
+          await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish');
+
+          // try to create "PEOPLE" via API
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({
+              name: 'PEOPLE'
+            })
+            .expect(409)
+            .then(({ body }) => {
+              body.code.should.equal(409.16);
+              body.message.should.startWith("A dataset named 'people' exists and you provided 'PEOPLE'");
+            });
         }));
       });
 
@@ -3523,7 +3555,7 @@ describe('datasets and entities', () => {
 
       }));
 
-      describe('dataset name case checks', () => {
+      describe('dataset name conflicts via Form upload and publishing', () => {
         it('should allow two forms to refrence the same dataset if the case is exactly the same', testService(async (service) => {
           const alice = await service.login('alice');
 
@@ -3603,6 +3635,34 @@ describe('datasets and entities', () => {
             .expect(200);
 
           await alice.post('/v1/projects/1/forms/simpleEntity2/draft/publish')
+            .expect(409)
+            .then(({ body }) => {
+              body.code.should.equal(409.16);
+              body.message.should.startWith("A dataset named 'people' exists and you provided 'PEOPLE'");
+            });
+        }));
+
+        it('should not allow the second form to publish (with new version) a dataset that will have a name conflict', testService(async (service) => {
+          const alice = await service.login('alice');
+
+          // dataset "people"
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // dataset "PEOPLE"
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity
+              .replace('dataset="people"', 'dataset="PEOPLE"')
+              .replace(/simpleEntity/g, 'simpleEntity2'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await alice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+            .expect(200);
+
+          await alice.post('/v1/projects/1/forms/simpleEntity2/draft/publish?version=123')
             .expect(409)
             .then(({ body }) => {
               body.code.should.equal(409.16);
@@ -3690,9 +3750,32 @@ describe('datasets and entities', () => {
           // dataset "people" (same as first/published)
           await alice.post('/v1/projects/1/forms')
             .send(testData.forms.simpleEntity
-              .replace('dataset="people"', 'dataset="people"')
               .replace(/simpleEntity/g, 'simpleEntity4'))
             .set('Content-Type', 'application/xml')
+            .expect(200);
+        }));
+
+        it('should allow forms with same name in a different project to be published', testService(async (service) => {
+          const alice = await service.login('alice');
+
+          const newProjectId = await service.login('alice', (asAlice) =>
+            asAlice.post('/v1/projects')
+              .send({ name: 'Second Project' })
+              .then(({ body }) => body.id));
+
+          // dataset "people" in project 1
+          await alice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // dataset "people" in new project
+          await alice.post(`/v1/projects/${newProjectId}/forms`)
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await alice.post(`/v1/projects/${newProjectId}/forms/simpleEntity/draft/publish`)
             .expect(200);
         }));
       });
