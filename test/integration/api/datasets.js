@@ -98,22 +98,81 @@ describe('datasets and entities', () => {
           });
       }));
 
-      it('should reject if creating a dataset that already exists', testService(async (service) => {
-        const asAlice = await service.login('alice');
+      describe('dataset name conflicts', () => {
+        it('should reject if creating a dataset that already exists', testService(async (service) => {
+          const asAlice = await service.login('alice');
 
-        await asAlice.post('/v1/projects/1/datasets')
-          .send({
-            name: 'trees'
-          })
-          .expect(200);
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({
+              name: 'trees'
+            })
+            .expect(200);
 
-        // Second time
-        await asAlice.post('/v1/projects/1/datasets')
-          .send({
-            name: 'trees'
-          })
-          .expect(409);
-      }));
+          // Second time
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({
+              name: 'trees'
+            })
+            .expect(409)
+            .then(({ body }) => {
+              body.code.should.equal(409.3);
+              body.message.should.startWith('A resource already exists with name,projectId value(s) of trees,');
+            });
+        }));
+
+        it('should reject if creating a dataset that has a similar name to an existing published dataset', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({
+              name: 'trees'
+            })
+            .expect(200);
+
+          // Second time
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({
+              name: 'TREES'
+            })
+            .expect(409)
+            .then(({ body }) => {
+              body.code.should.equal(409.16);
+              body.message.should.startWith("A dataset named 'trees' exists and you provided 'TREES'");
+            });
+        }));
+
+        it('should allow creating a dataset that only exists as a draft', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // draft "people" dataset
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({
+              name: 'people'
+            })
+            .expect(200);
+        }));
+
+        it('should allow creating a dataset that has a similar name to a draft dataset', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // draft "people" dataset
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({
+              name: 'PEOPLE'
+            })
+            .expect(200);
+        }));
+      });
 
       it('should add label-only entity to dataset, all via API', testService(async (service) => {
         const asAlice = await service.login('alice');
