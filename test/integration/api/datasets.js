@@ -98,22 +98,113 @@ describe('datasets and entities', () => {
           });
       }));
 
-      it('should reject if creating a dataset that already exists', testService(async (service) => {
-        const asAlice = await service.login('alice');
+      describe('dataset name conflicts via API', () => {
+        it('should reject if creating a dataset that already exists', testService(async (service) => {
+          const asAlice = await service.login('alice');
 
-        await asAlice.post('/v1/projects/1/datasets')
-          .send({
-            name: 'trees'
-          })
-          .expect(200);
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({
+              name: 'trees'
+            })
+            .expect(200);
 
-        // Second time
-        await asAlice.post('/v1/projects/1/datasets')
-          .send({
-            name: 'trees'
-          })
-          .expect(409);
-      }));
+          // Second time
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({
+              name: 'trees'
+            })
+            .expect(409)
+            .then(({ body }) => {
+              body.code.should.equal(409.3);
+              body.message.should.equal('A resource already exists with name,projectId value(s) of trees,1.');
+            });
+        }));
+
+        it('should reject if creating a dataset that has a similar name to an existing published dataset', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({
+              name: 'trees'
+            })
+            .expect(200);
+
+          // Second time
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({
+              name: 'TREES'
+            })
+            .expect(409)
+            .then(({ body }) => {
+              body.code.should.equal(409.16);
+              body.message.should.startWith("A dataset named 'trees' exists and you provided 'TREES'");
+            });
+        }));
+
+        it('should allow creating a dataset that only exists as a draft', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // draft "people" dataset
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({
+              name: 'people'
+            })
+            .expect(200);
+        }));
+
+        it('should allow creating a dataset that has a similar name to a draft dataset', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // draft "people" dataset
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({
+              name: 'PEOPLE'
+            })
+            .expect(200);
+        }));
+
+        it('should not allow creating a dataset with same name as draft that conflicts with published dataset', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // draft "people" dataset
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // draft "PEOPLE" dataset
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity
+              .replace('dataset="people"', 'dataset="PEOPLE"')
+              .replace(/simpleEntity/g, 'simpleEntity2'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // publish "people"
+          await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish');
+
+          // try to create "PEOPLE" via API
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({
+              name: 'PEOPLE'
+            })
+            .expect(409)
+            .then(({ body }) => {
+              body.code.should.equal(409.16);
+              body.message.should.startWith("A dataset named 'people' exists and you provided 'PEOPLE'");
+            });
+        }));
+      });
 
       it('should add label-only entity to dataset, all via API', testService(async (service) => {
         const asAlice = await service.login('alice');
@@ -3463,6 +3554,231 @@ describe('datasets and entities', () => {
           });
 
       }));
+
+      describe('dataset name conflicts via Form upload and publishing', () => {
+        it('should allow two forms to refrence the same dataset if the case is exactly the same', testService(async (service) => {
+          const alice = await service.login('alice');
+
+          // dataset "people"
+          await alice.post('/v1/projects/1/forms?publish=True')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // also dataset "people"
+          await alice.post('/v1/projects/1/forms?publish=True')
+            .send(testData.forms.simpleEntity
+              .replace(/simpleEntity/g, 'simpleEntity2'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await alice.get('/v1/projects/1/datasets')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].name.should.equal('people');
+            });
+        }));
+
+        it('should not allow a form to be uploaded if dataset name conflicts with existing published dataset', testService(async (service) => {
+          const alice = await service.login('alice');
+
+          // dataset "people"
+          await alice.post('/v1/projects/1/forms?publish=True')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // dataset "PEOPLE"
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity
+              .replace('dataset="people"', 'dataset="PEOPLE"')
+              .replace(/simpleEntity/g, 'simpleEntity2'))
+            .set('Content-Type', 'application/xml')
+            .expect(409)
+            .then(({ body }) => {
+              body.code.should.equal(409.16);
+              body.message.should.startWith("A dataset named 'people' exists and you provided 'PEOPLE'");
+            });
+
+          // dataset "People", should not work to auto-publish form either
+          await alice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity
+              .replace('dataset="people"', 'dataset="People"')
+              .replace(/simpleEntity/g, 'simpleEntity3'))
+            .set('Content-Type', 'application/xml')
+            .expect(409)
+            .then(({ body }) => {
+              body.code.should.equal(409.16);
+              body.message.should.startWith("A dataset named 'people' exists and you provided 'People'");
+            });
+        }));
+
+        it('should not allow the second form to publish a dataset that will have a name conflict', testService(async (service) => {
+          const alice = await service.login('alice');
+
+          // dataset "people"
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // dataset "PEOPLE"
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity
+              .replace('dataset="people"', 'dataset="PEOPLE"')
+              .replace(/simpleEntity/g, 'simpleEntity2'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await alice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+            .expect(200);
+
+          await alice.post('/v1/projects/1/forms/simpleEntity2/draft/publish')
+            .expect(409)
+            .then(({ body }) => {
+              body.code.should.equal(409.16);
+              body.message.should.startWith("A dataset named 'people' exists and you provided 'PEOPLE'");
+            });
+        }));
+
+        it('should not allow the second form to publish (with new version) a dataset that will have a name conflict', testService(async (service) => {
+          const alice = await service.login('alice');
+
+          // dataset "people"
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // dataset "PEOPLE"
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity
+              .replace('dataset="people"', 'dataset="PEOPLE"')
+              .replace(/simpleEntity/g, 'simpleEntity2'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await alice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+            .expect(200);
+
+          await alice.post('/v1/projects/1/forms/simpleEntity2/draft/publish?version=123')
+            .expect(409)
+            .then(({ body }) => {
+              body.code.should.equal(409.16);
+              body.message.should.startWith("A dataset named 'people' exists and you provided 'PEOPLE'");
+            });
+        }));
+
+        it('should prevent name conflicts when there are multiple draft datasets with different capitalization', testService(async (service) => {
+          const alice = await service.login('alice');
+
+          // dataset "people"
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // dataset "PEOPLE"
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity
+              .replace('dataset="people"', 'dataset="PEOPLE"')
+              .replace(/simpleEntity/g, 'simpleEntity2'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // dataset "People"
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity
+              .replace('dataset="people"', 'dataset="People"')
+              .replace(/simpleEntity/g, 'simpleEntity3'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await alice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+            .expect(200);
+
+          // dataset "PeOpLe"
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity
+              .replace('dataset="people"', 'dataset="PeOpLe"')
+              .replace(/simpleEntity/g, 'simpleEntity4'))
+            .set('Content-Type', 'application/xml')
+            .expect(409)
+            .then(({ body }) => {
+              body.code.should.equal(409.16);
+              body.message.should.startWith("A dataset named 'people' exists and you provided 'PeOpLe'");
+            });
+
+          await alice.post('/v1/projects/1/forms/simpleEntity2/draft/publish')
+            .expect(409)
+            .then(({ body }) => {
+              body.code.should.equal(409.16);
+              body.message.should.startWith("A dataset named 'people' exists and you provided 'PEOPLE'");
+            });
+        }));
+
+        it('should allow forms that match exisitng datasets even when there are other drafts with different capitalizations', testService(async (service) => {
+          const alice = await service.login('alice');
+
+          // dataset "people"
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // dataset "PEOPLE"
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity
+              .replace('dataset="people"', 'dataset="PEOPLE"')
+              .replace(/simpleEntity/g, 'simpleEntity2'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // dataset "people" (same as first)
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity
+              .replace('dataset="people"', 'dataset="people"')
+              .replace(/simpleEntity/g, 'simpleEntity3'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // publish "people"
+          await alice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+            .expect(200);
+
+          // dataset "people" (same as first/published)
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity
+              .replace(/simpleEntity/g, 'simpleEntity4'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+        }));
+
+        it('should allow forms with same name in a different project to be published', testService(async (service) => {
+          const alice = await service.login('alice');
+
+          const newProjectId = await service.login('alice', (asAlice) =>
+            asAlice.post('/v1/projects')
+              .send({ name: 'Second Project' })
+              .then(({ body }) => body.id));
+
+          // dataset "people" in project 1
+          await alice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // dataset "people" in new project
+          await alice.post(`/v1/projects/${newProjectId}/forms`)
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await alice.post(`/v1/projects/${newProjectId}/forms/simpleEntity/draft/publish`)
+            .expect(200);
+        }));
+      });
 
       describe('updating datasets through new form drafts', () => {
         it('should update a dataset with a new draft and be able to upload multiple drafts', testService(async (service) => {
