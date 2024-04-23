@@ -406,6 +406,7 @@ returning *`);
       (new QueryOptions()).hasPaging().should.equal(false);
       (new QueryOptions({ offset: 0 })).hasPaging().should.equal(true);
       (new QueryOptions({ limit: 0 })).hasPaging().should.equal(true);
+      (new QueryOptions({ skiptoken: 'foo' })).hasPaging().should.equal(true);
     });
 
     it('should transfer allowed args from quarantine on allowArgs', () => {

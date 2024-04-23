@@ -529,9 +529,9 @@ module.exports = {
       three: fullInstance('withrepeat', '1.0', 'rthree', '<name>Chelsea</name><age>38</age><children><child><name>Candace</name><age>2</age></child></children>'),
     },
     simple2: {
-      one: instance('simple2', 's2one', '<name>Alice</name><age>30</age>'),
-      two: instance('simple2', 's2two', '<name>Bob</name><age>34</age>'),
-      three: instance('simple2', 's2three', '<name>Chelsea</name><age>38</age>')
+      one: fullInstance('simple2', '2.1', 's2one', '<name>Alice</name><age>30</age>'),
+      two: fullInstance('simple2', '2.1', 's2two', '<name>Bob</name><age>34</age>'),
+      three: fullInstance('simple2', '2.1', 's2three', '<name>Chelsea</name><age>38</age>')
     },
     doubleRepeat: {
       double: `<data id="doubleRepeat" version="1.0">
