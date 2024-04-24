@@ -43,6 +43,7 @@ fake-s3-server:
 		-p 9000:9000 -p 9001:9001 \
 		-e MINIO_ROOT_USER=odk-central-dev \
 		-e MINIO_ROOT_PASSWORD=topSecret123 \
+		--network host \
 		minio/minio server /data --console-address ":9001"
 
 .PHONY: node_version
