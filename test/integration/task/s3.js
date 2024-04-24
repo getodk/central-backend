@@ -5,9 +5,17 @@ const { testTask } = require('../setup');
 const { uploadPending } = require(appRoot + '/lib/task/s3');
 const { Blob } = require(appRoot + '/lib/model/frames');
 
-const TODO = () => { throw new Error('Needs implementation'); };
+// eslint-disable-next-line camelcase
+const aBlobExistsWith = async ({ Blobs }, { status: s3_status }) => {
+  const blob = { ...await Blob.fromBuffer(crypto.randomBytes(100)), s3_status };
+  return Blobs.ensure(blob);
+};
 
 describe.only('task: s3', () => {
+  const assertUploadCount = (expected) => {
+    global.s3mock.uploadCount.should.equal(expected);
+  };
+
   describe('uploadPending()', () => {
     it('should have loaded uploadPending()', () => (typeof uploadPending === 'function') || should.fail()); // FIXME remove this test
 
@@ -26,12 +34,12 @@ describe.only('task: s3', () => {
       // given
       global.s3mock.enable(container);
       // and
-      await aBlobExistsWith(container, { status:'pending' });
-      await aBlobExistsWith(container, { status:'uploaded' });
-      await aBlobExistsWith(container, { status:'failed' });
-      await aBlobExistsWith(container, { status:'pending' });
-      await aBlobExistsWith(container, { status:'uploaded' });
-      await aBlobExistsWith(container, { status:'failed' });
+      await aBlobExistsWith(container, { status: 'pending' });
+      await aBlobExistsWith(container, { status: 'uploaded' });
+      await aBlobExistsWith(container, { status: 'failed' });
+      await aBlobExistsWith(container, { status: 'pending' });
+      await aBlobExistsWith(container, { status: 'uploaded' });
+      await aBlobExistsWith(container, { status: 'failed' });
 
       // when
       await uploadPending(true);
@@ -45,13 +53,13 @@ describe.only('task: s3', () => {
       global.s3mock.enable(container);
       global.s3mock.error.onUpload = true;
       // and
-      await aBlobExistsWith(container, { status:'pending' });
+      await aBlobExistsWith(container, { status: 'pending' });
 
       // when
       try {
         await uploadPending(true);
         should.fail('should have thrown');
-      } catch(err) {
+      } catch (err) {
         // then
         err.message.should.equal('Mock error when trying to upload blobs.');
       }
@@ -61,7 +69,7 @@ describe.only('task: s3', () => {
     }));
 
     it('should not allow failure to affect previous uploads', testTask(async (container) => {
-      // TODO with the current level of mocking, this test is slightly meaningless.  It should be 
+      // TODO with the current level of mocking, this test is slightly meaningless.  It should be
       // dealing with mocking at the minio level rather than around all s3 classes... this suggests
       // refactoring minio access into an external/minio.js file...
 
@@ -69,15 +77,15 @@ describe.only('task: s3', () => {
       global.s3mock.enable(container);
       global.s3mock.error.onUpload = 3;
       // and
-      await aBlobExistsWith(container, { status:'pending' });
-      await aBlobExistsWith(container, { status:'pending' });
-      await aBlobExistsWith(container, { status:'pending' });
+      await aBlobExistsWith(container, { status: 'pending' });
+      await aBlobExistsWith(container, { status: 'pending' });
+      await aBlobExistsWith(container, { status: 'pending' });
 
       // when
       try {
         await uploadPending(true);
         should.fail('should have thrown');
-      } catch(err) {
+      } catch (err) {
         // then
         err.message.should.equal('Mock error when trying to upload blob #3');
       }
@@ -86,14 +94,4 @@ describe.only('task: s3', () => {
       assertUploadCount(2);
     }));
   });
-
-  function assertUploadCount(expected) {
-    global.s3mock.uploadCount.should.equal(expected);
-  }
 });
-
-async function aBlobExistsWith({ Blobs }, { status:s3_status }) {
-  const blob = { ...await Blob.fromBuffer(crypto.randomBytes(100)), s3_status };
-  console.log('aBlobExistsWith()', blob);
-  return Blobs.ensure(blob);
-}
