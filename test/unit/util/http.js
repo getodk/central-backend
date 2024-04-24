@@ -1,4 +1,3 @@
-const should = require('should');
 const appRoot = require('app-root-path');
 const http = require(appRoot + '/lib/util/http');
 
@@ -17,6 +16,25 @@ describe('util/http', () => {
       isTrue('').should.equal(false);
       isTrue(null).should.equal(false);
       isTrue(undefined).should.equal(false);
+      isTrue(2).should.equal(false);
+    });
+  });
+
+  describe('isFalse', () => {
+    const { isFalse } = http;
+    it('should return true for falsey strings', () => {
+      isFalse('FALSE').should.equal(true);
+      isFalse('False').should.equal(true);
+      isFalse('false').should.equal(true);
+    });
+
+    it('should return false for all other values', () => {
+      isFalse('no').should.equal(false);
+      isFalse('off').should.equal(false);
+      isFalse('').should.equal(false);
+      isFalse(null).should.equal(false);
+      isFalse(undefined).should.equal(false);
+      isFalse(2).should.equal(false);
     });
   });
 
@@ -28,40 +46,6 @@ describe('util/http', () => {
 
     it('should not include query parameters', () => {
       urlPathname('https://www.getodk.org/a/test/path?and=some&extra=bits').should.equal('/a/test/path');
-    });
-  });
-
-  describe('serialize', () => {
-    const { serialize } = http;
-    it('should passthrough nullish values', () => {
-      should(serialize(null)).equal(null);
-      should(serialize(undefined)).equal(undefined);
-    });
-
-    it('should call forApi on the target if it exists', () => {
-      serialize({ forApi: () => 42 }).should.equal(42);
-    });
-
-    it('should leave strings alone', () => {
-      serialize('hello').should.equal('hello');
-    });
-
-    it('should jsonify any other values it finds', () => {
-      serialize(42).should.equal('42');
-      serialize({ x: 1 }).should.equal('{"x":1}');
-    });
-
-    it('should subserialize each element if an array is found', () => {
-      serialize([
-        'hello',
-        { forApi: () => 42 },
-        [ 'world',
-          { forApi: () => 23 } ]
-      ]).should.eql(['hello', 42, [ 'world', 23 ] ]); // TODO: is this actually the desired result?
-    });
-
-    it('should not subserialize plain objects within an array', () => {
-      serialize([{ a: 1 }, { b: 2, c: 3 }]).should.eql([{ a: 1 }, { b: 2, c: 3 }]);
     });
   });
 

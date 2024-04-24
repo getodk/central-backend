@@ -1219,6 +1219,100 @@ describe('analytics task queries', function () {
       datasetOfSecondProject.num_entities_total.should.be.equal(0);
 
     }));
+
+    it('should return recent and total entity.bulk.create events per dataset', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // First dataset in first project: "people"
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      // Past bulk upload with 3 rows in "people"
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people.csv', size: 100, },
+          entities: [ { label: 'a label' }, { label: 'a label' }, { label: 'a label' } ]
+        })
+        .expect(200);
+
+      const secondProjectId = await createTestProject(service, container, 'second');
+
+      // First dataset in second project: "shovels"
+      await asAlice.post(`/v1/projects/${secondProjectId}/datasets`)
+        .send({ name: 'shovels' })
+        .expect(200);
+
+      // Past bulk upload with 1 row in "shovels"
+      await asAlice.post(`/v1/projects/${secondProjectId}/datasets/shovels/entities`)
+        .send({
+          source: { name: 'shovels.csv', size: 100, },
+          entities: [ { label: 'a label' } ]
+        })
+        .expect(200);
+
+      // Make existing audits in the distant past
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.bulk.create'`);
+
+      // Recent bulk upload with 1 row in "people"
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people.csv', size: 100, },
+          entities: [ { label: 'a label' } ]
+        })
+        .expect(200);
+
+      const dsInDatabase = (await container.all(sql`SELECT * FROM datasets`)).reduce((map, obj) => ({ [obj.id]: obj, ...map }), {});
+      const datasets = await container.Analytics.getDatasetEvents();
+
+      const datasetOfFirstProject = datasets.find(d => d.projectId === 1);
+      datasetOfFirstProject.id.should.be.equal(dsInDatabase[datasetOfFirstProject.id].id);
+      datasetOfFirstProject.num_bulk_create_events_total.should.be.equal(2);
+      datasetOfFirstProject.num_bulk_create_events_recent.should.be.equal(1);
+      datasetOfFirstProject.biggest_bulk_upload.should.be.equal(3);
+
+      const datasetOfSecondProject = datasets.find(d => d.projectId === secondProjectId);
+      datasetOfSecondProject.id.should.be.equal(dsInDatabase[datasetOfSecondProject.id].id);
+      datasetOfSecondProject.num_bulk_create_events_total.should.be.equal(1);
+      datasetOfSecondProject.num_bulk_create_events_recent.should.be.equal(0);
+      datasetOfSecondProject.biggest_bulk_upload.should.be.equal(1);
+    }));
+
+    it('should show dataset event metrics within project metrics', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // First dataset in first project: "people"
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      // Recent bulk upload with 1 row in "people"
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people.csv', size: 100, },
+          entities: [ { label: 'a label' } ]
+        })
+        .expect(200);
+
+      const projects = await container.Analytics.projectMetrics();
+      const ds = projects[0].datasets[0];
+      ds.num_bulk_create_events.should.eql({ total: 1, recent: 1 });
+      ds.biggest_bulk_upload.should.equal(1);
+    }));
+
+    it('should combine dataset event metrics with other project metrics even if no bulk create events', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // First dataset in first project: "people"
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      const projects = await container.Analytics.projectMetrics();
+      const ds = projects[0].datasets[0];
+      ds.num_bulk_create_events.should.eql({ total: 0, recent: 0 });
+      ds.biggest_bulk_upload.should.equal(0);
+    }));
   });
 
   describe('other project metrics', () => {
@@ -1548,6 +1642,14 @@ describe('analytics task queries', function () {
         .replace(/goodone/g, 'people')
         .replace(/files\/badsubpath/g, 'file/employees'), 1);
 
+      // Create entities in bulk
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people.csv', size: 100, },
+          entities: [ { label: 'a label' }, { label: 'a label' }, { label: 'a label' } ]
+        })
+        .expect(200);
+
       // Create an empty project
       const secondProject = await createTestProject(service, container, 'second');
       await createTestForm(service, container, testData.forms.simple, secondProject);
@@ -1562,8 +1664,8 @@ describe('analytics task queries', function () {
         num_creation_forms: 2,
         num_followup_forms: 1,
         num_entities: {
-          total: 2, // made one Entity ancient
-          recent: 1
+          total: 5, // made one Entity ancient
+          recent: 4 // 2 from submissions, 3 from bulk uploads
         },
         num_failed_entities: { // two Submissions failed due to invalid UUID
           total: 2, // made one Error ancient
@@ -1586,7 +1688,12 @@ describe('analytics task queries', function () {
           recent: 1
         },
         num_entity_conflicts: 1,
-        num_entity_conflicts_resolved: 1
+        num_entity_conflicts_resolved: 1,
+        num_bulk_create_events: {
+          total: 1,
+          recent: 1
+        },
+        biggest_bulk_upload: 3
       });
 
       secondDataset.should.be.eql({
@@ -1618,7 +1725,12 @@ describe('analytics task queries', function () {
           recent: 0
         },
         num_entity_conflicts: 0,
-        num_entity_conflicts_resolved: 0
+        num_entity_conflicts_resolved: 0,
+        num_bulk_create_events: {
+          total: 0,
+          recent: 0
+        },
+        biggest_bulk_upload: 0
       });
 
       // Assert that a Project without a Dataset returns an empty array

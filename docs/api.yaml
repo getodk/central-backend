@@ -1,3 +1,7 @@
+# Source at https://github.com/getodk/central-backend/blob/master/docs/api.yaml
+# Copied at release time to https://github.com/getodk/docs/blob/master/docs/_static/api-spec/central.yaml
+# for publishing at https://docs.getodk.org/central-api/
+
 openapi: 3.0.1
 info:
   title: ODK Central API
@@ -43,6 +47,7 @@ info:
     - Bulk Entity Creation!
       * The existing [Entity Create](/central-api-entity-management/#creating-entities) endpoint now also accepts a list of Entities to append to a Dataset.
       * The `uuid` property is no longer required and Central will generate a UUID for each new Entity if needed.
+    - [Datasets (Entity Lists)](/central-api-dataset-management/#creating-datasets) and [Properties](/central-api-dataset-management/#adding-properties) can now be added via the API instead of only through Forms.
     - OData Data Document for requests of Submissions and Entities now allow use of `$orderby`.
     - ETag headers on all Blobs.
 
@@ -64,7 +69,7 @@ info:
         * `hard`. The Entity has a version that was based on a version other than the version immediately prior to it. Further, that version updated the same property as another update.
         * If an Entity has a conflict, it can be marked as resolved. After that, the conflict field will be null until a new conflicting version is received.
       * Each Entity Version (`currentVersion` or list of versions) has new fields `baseVersion`, `dataReceived`, and `conflictingProperties`
-    - [Datasets](/central-api-dataset-management/#datasets) extended metadata now has a `conflicts` field, which counts number of Entities currently in conflict
+    - [Datasets](/central-api-dataset-management/#listing-datasets) extended metadata now has a `conflicts` field, which counts number of Entities currently in conflict
     - Entity conflicts can be resolved using the existing [PATCH](/central-api-entity-management/#updating-an-entity) endpoint, with or without new data
     - New `relevantToConflict` query parameter on [GET entities/:uuid/versions](/central-api-entity-management/#listing-versions)
 
@@ -129,7 +134,7 @@ info:
 
     **Changed**:
 
-    - [GET /projects/:id/datasets](/central-api-dataset-management/#datasets) now supports `X-Extended-Metadata` header to retrieve number of Entities in the Dataset and timestamp of the last Entity
+    - [GET /projects/:id/datasets](/central-api-dataset-management/#listing-datasets) now supports `X-Extended-Metadata` header to retrieve number of Entities in the Dataset and timestamp of the last Entity
 
     - `$select` in OData now supports selecting complex type(groups)
 
@@ -146,7 +151,7 @@ info:
     * Introducing [Datasets](/central-api-dataset-management) as the first step of Entity-Based Data Collection! Future versions of Central will build on these new concepts. We consider this functionality experimental and subject to change in the next release.
 
       * Forms can now create Datasets in the project, see [Creating a New Form](/central-api-form-management/#creating-a-new-form) and the [ODK XForms specification](https://getodk.github.io/xforms-spec) for details.
-      * New endpoint [GET /projects/:id/datasets](/central-api-dataset-management/#datasets) for listing Datasets of a project.
+      * New endpoint [GET /projects/:id/datasets](/central-api-dataset-management/#listing-datasets) for listing Datasets of a project.
       * New endpoint [GET /projects/:id/datasets/:name/entities.csv](/central-api-dataset-management/#download-dataset) to download the Dataset as a CSV file.
       * New endpoints for [Related Datasets](/central-api-form-management/#related-datasets) to see the Datasets affected by published and unpublished Forms.
       * New endpoint [PATCH .../attachments/:name](/central-api-form-management/#linking-a-dataset-to-a-draft-form-attachment) to link/unlink a Dataset to a Form Attachment.
@@ -160,9 +165,9 @@ info:
       * The [Extended Project](/central-api-project-management/#listing-projects) endpoint now returns the `datasets` count for the Project.
       * The [Extended Form](/central-api-form-management/#list-all-forms) endpoint now returns the `entityRelated` flag if the form defines a Dataset schema.
       * [DELETE .../draft/attachments/:name](/central-api-form-management/#clearing-a-draft-form-attachment) will unlink the Dataset if there's a Dataset link to the attachment.
-      * [GET .../draft/attachments/:filename](central-api-form-management/#downloading-a-form-attachment) will return the Dataset as a CSV file if the attachment is linked to a Dataset.
+      * [GET .../draft/attachments/:filename](/central-api-form-management/#downloading-a-form-attachment) will return the Dataset as a CSV file if the attachment is linked to a Dataset.
       * [GET .../draft/attachments](/central-api-form-management/#listing-expected-draft-form-attachments) returns two additional flags `blobExists` and `datasetExists`.
-      * In the [OpenRosa Form Manifest](central-api-form-management/#openrosa-form-manifest-api), if a Form Attachment is linked to a Dataset then the value of `hash` is the MD5 of the last updated timestamp or the MD5 of `1970-01-01 00:00:00` if the Dataset is empty.
+      * In the [OpenRosa Form Manifest](/central-api-form-management/#openrosa-form-manifest-api), if a Form Attachment is linked to a Dataset then the value of `hash` is the MD5 of the last updated timestamp or the MD5 of `1970-01-01 00:00:00` if the Dataset is empty.
 
     ## ODK Central v1.5.3
 
@@ -182,7 +187,7 @@ info:
     * [Form extended metadata](/central-api-form-management/#getting-form-details) now includes a `reviewStates` object of counts of Submissions with specific review states.
         * e.g. `{"received":12, "hasIssues":2, "edited":3}`
 
-    * New `?forms=true` option on [Project Listing](/central-api-project-management/#listing-projects-with-nested-forms) that includes a `formList` field containing a list of extended Forms (and the review state counts described above) associated with that Project.
+    * New `?forms=true` option on [Project Listing](/central-api-project-management/#listing-projects) that includes a `formList` field containing a list of extended Forms (and the review state counts described above) associated with that Project.
 
     ## ODK Central v1.4
 
@@ -512,7 +517,7 @@ tags:
 
     **Related APIs:**
 
-    - [Implicit creation of Datasets via Forms](/central-api-form-management/#forms/creating-a-new-form)
+    - [Implicit creation of Datasets via Forms](/central-api-form-management/#creating-a-new-form)
 
     - [Link a Dataset to a Form Attachment](/central-api-form-management/#linking-a-dataset-to-a-draft-form-attachment)
 
@@ -617,7 +622,7 @@ tags:
   description: |-
     App Users are only allowed to list and download forms, and upload new submissions to those forms. Primarily, this is to allow clients like ODK Collect to use the OpenRosa API (`/formList` and `/submission`), but any action in this API reference falling into those categories will be allowed.
 
-    Rvoking an App User is same as deleting session token. You can do this by calling [DELETE /sessions/{appUser}](/central-api-authentication/#logging-out-revoking-an-app-user).
+    Revoking an App User is same as deleting session token. You can do this by calling [DELETE /sessions/{appUser}](/central-api-authentication/#logging-out-current-session).
 - name: Users
   x-parent-tag: Accounts and Users
   description: |-
@@ -705,7 +710,7 @@ tags:
 
     The API for Public Links is particularly useful, as it can be used to, for example, programmatically create and send individually customized and controlled links for direct distribution. The user-facing link for a Public Link has the following structure: `/-/{enketoId}?st={token}` where `-` is the Enketo root, `enketoId` is the survey ID of this published Form on Enketo and `token` is a session token to identify this Public Link.
 
-    To revoke the access of any Link, terminate its session `token` by issuing [`DELETE /sessions/:token`](/central-api-authentication/#logging-out).
+    To revoke the access of any Link, terminate its session `token` by issuing [`DELETE /sessions/:token`](/central-api-authentication/#logging-out-current-session).
 - name: Related Datasets
   x-parent-tag: Form Management
   description: |-
@@ -1357,14 +1362,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -1680,14 +1678,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -1747,14 +1738,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -1982,7 +1966,7 @@ paths:
       - App Users
       summary: Deleting a App User
       description: |-
-        You don't have to delete a `App User` in order to cut off its access. Using a `User`'s credentials you can simply [log the App User's session out](/central-api-authentication/#revoking-an-app-user) using its token. This will end its session without actually deleting the App User, which allows you to still see it in the configuration panel and inspect its history. This is what the administrative panel does when you choose to "Revoke" the App User.
+        You don't have to delete a `App User` in order to cut off its access. Using a `User`'s credentials you can simply [log the App User's session out](/central-api-authentication/#logging-out-current-session) using its token. This will end its session without actually deleting the App User, which allows you to still see it in the configuration panel and inspect its history. This is what the administrative panel does when you choose to "Revoke" the App User.
 
         That said, if you do wish to delete the App User altogether, you can do so by issuing a `DELETE` request to its resource path. App Users cannot delete themselves.
       operationId: Deleting a App User
@@ -2007,14 +1991,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -2228,14 +2205,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -2283,14 +2253,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -2678,14 +2641,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -3075,14 +3031,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -3137,14 +3086,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -3672,14 +3614,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -4255,14 +4190,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -4342,7 +4270,7 @@ paths:
 
         Even if a Draft exists, you can always replace it by `POST`ing here again. In that case, the attachments that exist on the Draft will similarly be copied over to the new Draft. If you wish to copy from the published version instead, you can do so by first `DELETE`ing the extant Draft.
 
-        Draft `version` conflicts are allowed with prior versions of a Form while in Draft state. If you attempt to [publish the Form](/central-api-form-management/#draft-form/publishing-a-draft-form) without correcting the conflict, the publish operation will fail. You can request that Central update the version string on your behalf as part of the publish operation to avoid this: see that endpoint for more information.
+        Draft `version` conflicts are allowed with prior versions of a Form while in Draft state. If you attempt to [publish the Form](/central-api-form-management/#publishing-a-draft-form) without correcting the conflict, the publish operation will fail. You can request that Central update the version string on your behalf as part of the publish operation to avoid this: see that endpoint for more information.
 
         The `xmlFormId`, however, must exactly match that of the Form overall, or the request will be rejected.
 
@@ -4382,14 +4310,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         400:
           description: Bad Request
           content:
@@ -4458,14 +4379,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -4799,14 +4713,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -4862,14 +4769,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -4932,14 +4832,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -5120,14 +5013,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -5881,14 +5767,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content: {}
@@ -5936,14 +5815,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -6156,7 +6028,7 @@ paths:
       description: You can fully delete a link by issuing `DELETE` to its resource.
         This will remove the Link from the system entirely. If instead you wish to
         revoke the Link's access to prevent future submission without removing its
-        record entirely, you can issue [`DELETE /sessions/:token`](/central-api-authentication/#session-authentication/logging-out).
+        record entirely, you can issue [`DELETE /sessions/:token`](/central-api-authentication/#logging-out-current-session).
       operationId: Deleting a Link
       parameters:
       - name: projectId
@@ -6186,14 +6058,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -6692,7 +6557,7 @@ paths:
 
         The XML data you send will _replace_ the existing data entirely. All of the data must be present in the updated XML.
 
-        When you create a new submission version, any uploaded media files attached to the current version that match expected attachment names in the new version will automatically be copied over to the new version. So if you don't make any changes to media files, there is no need to resubmit them. You can get information about all the submission versions [from the `/versions` subresource](central-api-submission-management/#submission-versions).
+        When you create a new submission version, any uploaded media files attached to the current version that match expected attachment names in the new version will automatically be copied over to the new version. So if you don't make any changes to media files, there is no need to resubmit them. You can get information about all the submission versions [from the `/versions` subresource](/central-api-submission-management/#submission-versions).
       operationId: Updating Submission Data
       parameters:
       - name: projectId
@@ -8028,14 +7893,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -8097,14 +7955,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -9601,14 +9452,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -9668,14 +9512,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -9697,9 +9534,9 @@ paths:
     get:
       tags:
       - Dataset Management
-      summary: Datasets
+      summary: Listing Datasets
       description: The Dataset listing endpoint returns all published Datasets in a Project. If a Draft Form defines a new Dataset, that Dataset will not be included in this list until the Form is published.
-      operationId: Datasets
+      operationId: Listing Datasets
       parameters:
       - name: projectId
         in: path
@@ -9735,6 +9572,78 @@ paths:
                   lastEntity: '2018-04-18T03:04:51.695Z'
                   entities: 10
                   conflicts: 2
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+              example:
+                code: "403.1"
+                message: The authenticated actor does not have rights to perform that
+                  action.
+    post:
+      tags:
+      - Dataset Management
+      summary: Creating Datasets
+      description: |- 
+        You can create a Dataset with a specific `name` within a Project. This Dataset can then be populated via the API or via Forms and Submissions, and then used by other Forms. This endpoint allows a Dataset to be created programatically without an input form.
+
+        By default, the Dataset will have no properties, but each Entity will have a `label` and a unique ID (`uuid`). You can add additional properties with this [related endpoint](/central-api-dataset-management/#adding-properties).
+        
+        The Dataset name must follow the the same rules as XML identifiers and not start with `.` or `__`. See the [Entities XForms Specification](https://getodk.github.io/xforms-spec/entities.html#declaring-that-a-form-creates-entities) for more information.
+      operationId: Creating Datasets
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      requestBody:
+          content:
+            '*/*':
+              schema:
+                required:
+                - name
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: The desired name of the Dataset. Must be a valid 
+                  approvalRequired:
+                    type: boolean
+                    description: Control whether a Submission should be approved before an Entity is created from it.
+                    required: false
+                example:
+                  name: Trees
+                  approvalRequired: false
+          required: false
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DatasetMetadata'
+              example:
+                name: people
+                createdAt: '2018-01-19T23:58:03.395Z'
+                projectId: 1
+                approvalRequired: false
+                sourceForms: []
+                linkedForms: []
+                properties: []
         403:
           description: Forbidden
           content:
@@ -9882,6 +9791,69 @@ paths:
                   forms:
                   - xmlFormId: simple
                     name: Simple
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+              example:
+                code: "403.1"
+                message: The authenticated actor does not have rights to perform that
+                  action.
+  /projects/{projectId}/datasets/{name}/properties:
+    post:
+      tags:
+      - Dataset Management
+      summary: Adding Properties
+      description: |-
+        Creates a new Property with a specified name in the Dataset.
+
+        Property names follow the same rules as form field names (valid XML identifiers) and cannot use the reserved names of `name` or `label`, or begin with the reserved prefix `__`. 
+      operationId: Adding Properties
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: name
+        in: path
+        description: Name of the Dataset
+        required: true
+        schema:
+          type: string
+        example: people
+      requestBody:
+          content:
+            '*/*':
+              schema:
+                required:
+                - name
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: The desired name of the Property.
+                example:
+                  name: circumference
+          required: false
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -10389,7 +10361,7 @@ paths:
 
         **Specifying a base version**
 
-        You must either provide the query parameter `baseVersion` or use the `force=true` query paramater. You cannot cause a new Entity conflict via the API, which is why when specifying `baseVersion`, it must match the current version of the Entity on the server. This acts as a check to ensure you are not trying to update based on stale data. If you wish to update the Entity regardless of the current state, then you can use the `force` flag. 
+        You must either provide the query parameter `baseVersion` or use the `force=true` query parameter. The specified `baseVersion` must match the current version of the Entity on the server or the request will be rejected. This acts as a check to ensure you are not trying to update based on stale data. To update an Entity regardless of its current state, use the `force` flag with value `true`.
 
         **Resolving a conflict**
 
@@ -11914,7 +11886,76 @@ paths:
       responses:
         200:
           description: OK
-          content: {}
+          content:
+            application/json; charset=utf-8; odata.metadata=minimal:
+              schema:
+                type: object
+                properties:
+                  '@odata.context':
+                    type: string
+                  value:
+                    type: array
+                    items:
+                      required:
+                      - kind
+                      - name
+                      - url
+                      type: object
+                      properties:
+                        kind:
+                          type: string
+                        name:
+                          type: string
+                        url:
+                          type: string
+                example:
+                  '@odata.context': https://your.odk.server/v1/projects/7/datasets/sample.svc/$metadata
+                  value:
+                  - kind: EntitySet
+                    name: Entities
+                    url: Entities
+                  - kind: EntitySet
+                    name: Entities.children.child
+                    url: Entities.children.child
+              example:
+                '@odata.context': https://your.odk.server/v1/projects/7/datasets/sample.svc/$metadata
+                value:
+                - kind: EntitySet
+                  name: Entities
+                  url: Entities
+                - kind: EntitySet
+                  name: Entities.children.child
+                  url: Entities.children.child
+            application/json:
+              schema:
+                type: object
+                properties:
+                  '@odata.context':
+                    type: string
+                  value:
+                    type: array
+                    items:
+                      required:
+                      - kind
+                      - name
+                      - url
+                      type: object
+                      properties:
+                        kind:
+                          type: string
+                        name:
+                          type: string
+                        url:
+                          type: string
+                example:
+                  '@odata.context': https://your.odk.server/v1/projects/7/datasets/sample.svc/$metadata
+                  value:
+                  - kind: EntitySet
+                    name: Entities
+                    url: Entities
+                  - kind: EntitySet
+                    name: Entities.children.child
+                    url: Entities.children.child
         403:
           description: Forbidden
           content:
@@ -12857,7 +12898,7 @@ paths:
       description: |-
         An Administrator can use this endpoint to choose whether the server will share anonymous usage data with the Central team. This configuration affects the entire server. Until the Usage Reporting configuration is set, Administrators will see a message on the Central administration website that provides further information.
 
-        If an Administrator specifies `true` for `enabled`, the server will share anonymous usage data monthly with the Central team. By specifying `true`, the Administrator accepts the [Terms of Service](https://getodk.org/legal/tos.html) and [Privacy Policy](https://getodk.org/legal/privacy.html). The Administrator can also share contact information to include with the report.
+        If an Administrator specifies `true` for `enabled`, the server will share anonymous usage data monthly with the Central team. By specifying `true`, the Administrator accepts the [Terms of Service](https://getodk.org/legal/tos) and [Privacy Policy](https://getodk.org/legal/privacy). The Administrator can also share contact information to include with the report.
 
         If an Administrator specifies `false` for `enabled`, the server will not share anonymous usage data with the Central team. Administrators will no longer see the message on the administration website.
 
@@ -12960,14 +13001,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -14249,10 +14283,13 @@ components:
               description: The details of the actor given by `actorId`.
     Success:
       type: object
+      required:
+        - success
       properties:
-        message:
-          type: string
-          example: Success
+        success:
+          type: boolean
+      example: 
+          success: true
     Error400:
       type: object
       required:
