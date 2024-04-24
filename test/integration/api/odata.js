@@ -813,17 +813,29 @@ describe('api: /forms/:id.svc', () => {
         .send(testData.instances.simple.two)
         .set('Content-Type', 'text/xml')
         .expect(200);
-      const $skiptoken = await asAlice.get('/v1/projects/1/forms/simple.svc/Submissions?%24top=1')
+      const skiptoken = await asAlice.get('/v1/projects/1/forms/simple.svc/Submissions?%24top=1')
         .expect(200)
         .then(({ body }) => new URL(body['@odata.nextLink']).searchParams.get('$skiptoken'));
-      QueryOptions.parseSkiptoken($skiptoken).instanceId.should.equal('two');
+      QueryOptions.parseSkiptoken(skiptoken).instanceId.should.equal('two');
       // We don't have a submission delete endpoint yet, but we should soon.
       await run(sql`UPDATE submissions SET "deletedAt" = clock_timestamp()
 WHERE "instanceId" = 'two'`);
-      const { body: odata } = await asAlice.get(url`/v1/projects/1/forms/simple.svc/Submissions?%24skiptoken=${$skiptoken}`)
+      const { body: odata } = await asAlice.get(url`/v1/projects/1/forms/simple.svc/Submissions?%24skiptoken=${skiptoken}`)
         .expect(200);
       odata.value.length.should.equal(1);
       odata.value[0].__id.should.equal('one');
+    }));
+
+    it('should return no submissions if $skiptoken instanceId does not exist', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+      const skiptoken = QueryOptions.getSkiptoken({ instanceId: 'foo' });
+      const { body: odata } = await asAlice.get(url`/v1/projects/1/forms/simple.svc/Submissions?%24skiptoken=${skiptoken}`)
+        .expect(200);
+      odata.value.length.should.equal(0);
     }));
 
     it('should not return duplicate submissions if $skiptoken instanceId is reused', testService(async (service) => {
@@ -863,11 +875,11 @@ WHERE "instanceId" = 'two'`);
       firstChunk.value.length.should.equal(1);
       firstChunk.value[0].__id.should.equal('one');
       firstChunk['@odata.count'].should.equal(2);
-      const $skiptoken = new URL(firstChunk['@odata.nextLink']).searchParams
+      const skiptoken = new URL(firstChunk['@odata.nextLink']).searchParams
         .get('$skiptoken');
-      QueryOptions.parseSkiptoken($skiptoken).instanceId.should.equal('one');
+      QueryOptions.parseSkiptoken(skiptoken).instanceId.should.equal('one');
 
-      const { body: secondChunk } = await asAlice.get(url`/v1/projects/1/forms/simple.svc/Submissions?%24skiptoken=${$skiptoken}&%24count=true`)
+      const { body: secondChunk } = await asAlice.get(url`/v1/projects/1/forms/simple.svc/Submissions?%24skiptoken=${skiptoken}&%24count=true`)
         .expect(200);
       secondChunk.value.length.should.equal(1);
       secondChunk.value[0].__id.should.equal('two');
@@ -888,11 +900,11 @@ WHERE "instanceId" = 'two'`);
       // Pretend like 'one' was created before 'two', but its id is greater than
       // the id of 'two'.
       await run(sql`UPDATE submissions SET "createdAt" = '2000-01-01' WHERE "instanceId" = 'one'`);
-      const $skiptoken = await asAlice.get('/v1/projects/1/forms/simple.svc/Submissions?%24top=1')
+      const skiptoken = await asAlice.get('/v1/projects/1/forms/simple.svc/Submissions?%24top=1')
         .expect(200)
         .then(({ body }) => new URL(body['@odata.nextLink']).searchParams.get('$skiptoken'));
-      QueryOptions.parseSkiptoken($skiptoken).instanceId.should.equal('two');
-      const { body: odata } = await asAlice.get(url`/v1/projects/1/forms/simple.svc/Submissions?%24skiptoken=${$skiptoken}`)
+      QueryOptions.parseSkiptoken(skiptoken).instanceId.should.equal('two');
+      const { body: odata } = await asAlice.get(url`/v1/projects/1/forms/simple.svc/Submissions?%24skiptoken=${skiptoken}`)
         .expect(200);
       odata.value.length.should.equal(1);
       odata.value[0].__id.should.equal('one');
