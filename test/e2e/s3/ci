@@ -9,8 +9,10 @@ log() { echo "[test/e2e/s3/ci] $*"; }
 
 make base
 
-echo "$userPassword" | node ./lib/bin/cli.js user-create  -u "$userEmail" | echo "Maybe user already existed ¯\_(ツ)_/¯"
-node ./lib/bin/cli.js user-promote -u "$userEmail"
+log "Attempting to create user..."
+echo "$userPassword" | node ./lib/bin/cli.js user-create  -u "$userEmail" && log "User created." || true
+log "Attempting to promote user..."
+node ./lib/bin/cli.js user-promote -u "$userEmail" && log "User promoted." || true
 
 NODE_CONFIG_ENV=s3-dev node lib/bin/s3-create-bucket.js
 NODE_CONFIG_ENV=s3-dev make run >backend.log 2>&1 &
