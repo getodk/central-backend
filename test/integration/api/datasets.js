@@ -1362,6 +1362,38 @@ describe('datasets and entities', () => {
 
       }));
 
+      it('should not return a linked form that has been deleted', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        const withAttachments = testData.forms.withAttachments
+          .replace('goodone.csv', 'people.csv');
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(withAttachments
+            .replace('id="withAttachments"', 'id="withAttachments2"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        const { body: beforeDeletion } = await asAlice.get('/v1/projects/1/datasets/people')
+          .expect(200);
+        beforeDeletion.linkedForms.map(form => form.xmlFormId).should.eql([
+          'withAttachments',
+          'withAttachments2'
+        ]);
+        await asAlice.delete('/v1/projects/1/forms/withAttachments2')
+          .expect(200);
+        const { body: afterDeletion } = await asAlice.get('/v1/projects/1/datasets/people')
+          .expect(200);
+        afterDeletion.linkedForms.map(form => form.xmlFormId).should.eql([
+          'withAttachments'
+        ]);
+      }));
+
       it('should return properties of a dataset in order', testService(async (service) => {
         const asAlice = await service.login('alice');
 
