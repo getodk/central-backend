@@ -11196,7 +11196,7 @@ paths:
                 <OpenRosaResponse xmlns="http://openrosa.org/http/response" items="0">
                   <message nature="error">The authenticated actor does not have rights to perform that action.</message>
                 </OpenRosaResponse>
-  /v1/test/{token}/projects/{projectId}/forms/{xmlFormId}/attachments/{filename}:
+  /v1/test/{token}/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}:
     get:
       tags:
       - Draft Testing Endpoints
