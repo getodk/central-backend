@@ -699,8 +699,7 @@ describe('database migrations from 20230512: adding entity_def_sources table', f
       .expect(200);
     await asAlice.post('/v1/projects/1/forms/simple2/submissions')
       .set('Content-Type', 'application/xml')
-      .send(testData.instances.simple2.one
-        .replace('id="simple2"', 'id="simple2" version="2.1"'))
+      .send(testData.instances.simple2.one)
       .expect(200);
     await asAlice.patch('/v1/projects/1/forms/simple2/submissions/s2one')
       .send({ reviewState: 'approved' })
@@ -725,8 +724,7 @@ describe('database migrations from 20230512: adding entity_def_sources table', f
     // Create a fifth submission that will be deleted and wont have an approval event
     await asAlice.post('/v1/projects/1/forms/simple2/submissions')
       .set('Content-Type', 'application/xml')
-      .send(testData.instances.simple2.two
-        .replace('id="simple2"', 'id="simple2" version="2.1"'))
+      .send(testData.instances.simple2.two)
       .expect(200);
 
     // ----- Manually create entities to link to these submissions as sources ----
