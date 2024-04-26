@@ -1394,6 +1394,49 @@ describe('datasets and entities', () => {
         ]);
       }));
 
+      it('should not return a form draft as a linked form', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments
+            .replace('goodone.csv', 'people.csv'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/people.csv')
+          .send('test,csv\n1,2')
+          .set('Content-Type', 'text/csv')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms/withAttachments/draft')
+          .expect(200);
+        await asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/people.csv')
+          .send({ dataset: true })
+          .expect(200);
+        const { body: publishedAttachments } = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
+          .expect(200);
+        const publishedCSV = publishedAttachments.find(attachment =>
+          attachment.name === 'people.csv');
+        publishedCSV.should.containEql({
+          blobExists: true,
+          datasetExists: false
+        });
+        const { body: draftAttachments } = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments')
+          .expect(200);
+        const draftCSV = draftAttachments.find(attachment =>
+          attachment.name === 'people.csv');
+        draftCSV.should.containEql({
+          blobExists: false,
+          datasetExists: true
+        });
+        const { body: dataset } = await asAlice.get('/v1/projects/1/datasets/people')
+          .expect(200);
+        dataset.linkedForms.length.should.equal(0);
+      }));
+
       it('should return properties of a dataset in order', testService(async (service) => {
         const asAlice = await service.login('alice');
 
