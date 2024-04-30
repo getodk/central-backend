@@ -13037,8 +13037,8 @@ components:
         - code
       properties:
         code:
-          type: string
-          example: '400'
+          type: number
+          example: 400
         details:
           type: object
           properties: {}
@@ -13052,8 +13052,8 @@ components:
         - code
       properties:
         code:
-          type: string
-          example: '401.2'
+          type: number
+          example: 401.2
         message:
           type: string
           example: Could not authenticate with the provided credentials.
@@ -13063,8 +13063,8 @@ components:
         - code
       properties:
         code:
-          type: string
-          example: '403.1'
+          type: number
+          example: 403.1
         message:
           type: string
           example: The authenticated actor does not have rights to perform that action.
@@ -13074,8 +13074,8 @@ components:
         - code
       properties:
         code:
-          type: string
-          example: '404.1'
+          type: number
+          example: 404.1
         message:
           type: string
           example: Could not find the resource you were looking for.
@@ -13085,8 +13085,8 @@ components:
         - code
       properties:
         code:
-          type: string
-          example: '406.1'
+          type: number
+          example: 406.1
         message:
           type: string
           example: 'Requested format not acceptable; this resource allows: (application/json, json).'
@@ -13096,8 +13096,8 @@ components:
         - code
       properties:
         code:
-          type: string
-          example: '409.1'
+          type: number
+          example: 409.1
         message:
           type: string
           example: A resource already exists with id value(s) of 1.
@@ -13107,8 +13107,8 @@ components:
         - code
       properties:
         code:
-          type: string
-          example: '501.1'
+          type: number
+          example: 501.1
         message:
           type: string
           example: The requested feature $unsupported is not supported by this server.
