@@ -8645,7 +8645,9 @@ paths:
       - Dataset Management
       summary: Creating Datasets
       description: |- 
-        You can create a Dataset with a specific `name` within a Project. This Dataset can then be populated via the API or via Forms and Submissions, and then used by other Forms. This endpoint allows a Dataset to be created programatically without an input form.
+        You can create a Dataset with a specific `name` within a Project. This Dataset can then be populated with Entities via the API or via Forms and Submissions, and then used by other Forms. This endpoint allows a Dataset to be created programatically without an input form.
+
+        The name of a Dataset is case-sensitive in that it will keep the capitalization provided (e.g. "Trees"). But Central will not allow a second Dataset with the same name but different capitalization to be created (e.g. "trees" when "Trees" already exists).
 
         By default, the Dataset will have no properties, but each Entity will have a `label` and a unique ID (`uuid`). You can add additional properties with this [related endpoint](/central-api-dataset-management/#adding-properties).
         
@@ -8701,6 +8703,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+              example:
+                code: 409.3
+                message: A resource already exists with name,projectId value(s) of trees,1.
   /projects/{projectId}/datasets/{name}:
     get:
       tags:
