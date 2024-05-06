@@ -60,6 +60,11 @@ describe('s3 support', () => {
     // then
     should.equal(cli('count-blobs pending'), 0);
     should.equal(cli('count-blobs uploaded'), 11);
+
+    // have a little sleep to allow the server to start behaving (THIS IS NOT GOOD ENOUGH!)
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    // TODO is it possible that the CLI scripts are not closing db connections correctly?  very suspicious...
+
     // and
     await assertAllRedirect(actualAttachments);
     await assertAllDownloadsMatchOriginal(actualAttachments);
