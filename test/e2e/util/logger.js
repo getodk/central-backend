@@ -6,11 +6,11 @@ module.exports = suiteName => {
     if (LOG_LEVELS.indexOf(logLevel) > LOG_LEVELS.indexOf(level)) return;
     console.log(`[${new Date().toISOString()}]`, `[${suiteName}]`, ...args);
   };
-  const log  = (...args) => true  && _log('INFO',   ...args);
-  log.debug  = (...args) => false && _log('DEBUG',  ...args);
+  const log  = (...args) => _log('INFO',   ...args);
+  log.debug  = (...args) => _log('DEBUG',  ...args);
   log.info   = log;
-  log.error  = (...args) => true  && _log('ERROR',  ...args);
-  log.report = (...args) => true  && _log('REPORT', ...args);
+  log.error  = (...args) => _log('ERROR',  ...args);
+  log.report = (...args) => _log('REPORT', ...args);
 
   return log;
 };
