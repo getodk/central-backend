@@ -22,6 +22,10 @@ if [[ -n "${CI-}" ]]; then
     ! If your blobs table is not empty, you may see test failures due to
     ! de-duplication of blobs.
     !
+    ! A quick fix for this could be:
+    !
+    !   docker exec odk-postgres14 psql -U jubilant jubilant -c "TRUNCATE blobs CASCADE"
+    !
     ! Press <enter> to continue...
 
 EOF
