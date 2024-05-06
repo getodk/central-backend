@@ -62,6 +62,9 @@ describe('s3 support', () => {
     should.equal(cli('count-blobs uploaded'), 11);
 
     // have a little sleep to allow the server to start behaving (THIS IS NOT GOOD ENOUGH!)
+    // this prevents:
+    // * `node-fetch`: `Socket hang up`
+    // * `fetch`: TODO document
     await new Promise(resolve => setTimeout(resolve, 1000));
     // TODO is it possible that the CLI scripts are not closing db connections correctly?  very suspicious...
 
