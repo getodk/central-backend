@@ -16,6 +16,7 @@ const fs = require('node:fs');
 const fetch = require('node-fetch');
 const { randomBytes } = require('node:crypto');
 const { basename } = require('node:path');
+const _ = require('lodash');
 const { program } = require('commander');
 const should = require('should');
 
@@ -155,7 +156,8 @@ function bigFileExists() {
 function cli(cmd) {
   cmd = `node lib/bin/s3 ${cmd}`;
   log.info('cli()', 'calling:', cmd);
-  const res = execSync(cmd, { cwd: '../../..', env: { NODE_CONFIG_ENV: 's3-dev' } }).toString();
+  const env = { ..._.pick(process.env, 'PATH'), NODE_CONFIG_ENV:'s3-dev' };
+  const res = execSync(cmd, { env, cwd:'../../..' }).toString();
   log.info('cli()', 'returned:', res);
   return res;
 }
