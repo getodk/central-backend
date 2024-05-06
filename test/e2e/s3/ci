@@ -9,12 +9,17 @@ log() { echo "[test/e2e/s3/ci] $*"; }
 
 make base
 
-log "Attempting to create user..."
-echo "$userPassword" | node ./lib/bin/cli.js user-create  -u "$userEmail" && log "User created." || [[ -n "${CI-}" ]]
-log "Attempting to promote user..."
-node ./lib/bin/cli.js user-promote -u "$userEmail" && log "User promoted." || [[ -n "${CI-}" ]]
+if [[ "${CI-}" = '' ]]; then
+  set +e
+fi
 
-if [[ -n "${CI-}" ]]; then
+log "Attempting to create user..."
+echo "$userPassword" | node ./lib/bin/cli.js user-create  -u "$userEmail" && log "User created."
+log "Attempting to promote user..."
+node ./lib/bin/cli.js user-promote -u "$userEmail" && log "User promoted."
+
+if [[ "${CI-}" = '' ]]; then
+  set -e
   cat <<EOF
 
     ! It looks like you're running this script outside of a CI environment.
@@ -29,7 +34,7 @@ if [[ -n "${CI-}" ]]; then
     ! Press <enter> to continue...
 
 EOF
-  read -p ''
+  read -rp ''
 fi
 
 NODE_CONFIG_ENV=s3-dev node lib/bin/s3-create-bucket.js
