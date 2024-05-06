@@ -1,5 +1,7 @@
 const fs = require('node:fs');
 const { extname } = require('node:path');
+const { Readable } = require('stream');
+const { finished } = require('stream/promises');
 
 async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPath }) {
   const log = require('./logger')(suiteName);
@@ -54,21 +56,15 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
     return fetchToFile(prefix, n, 'POST', path, body, headers);
   }
 
-  async function fetchToFile(filenamePrefix, n, method, path, body, headers) {
-    const res = await apiFetch(method, path, body, headers);
+  async function fetchToFile(filenamePrefix, n, method, apiPath, body, headers) {
+    const res = await apiFetch(method, apiPath, body, headers);
 
-    return new Promise((resolve, reject) => {
-      let bytes = 0;
-      res.body.on('data', data => bytes += data.length);
-      res.body.on('error', reject);
+    const filePath = `${logPath}/${filenamePrefix}.${n.toString().padStart(9, '0')}.dump`;
+    const file = fs.createWriteStream(filePath);
 
-      const file = fs.createWriteStream(`${logPath}/${filenamePrefix}.${n.toString().padStart(9, '0')}.dump`);
-      res.body.on('end', () => file.close(() => resolve(bytes)));
+    await finished(Readable.fromWeb(res.body).pipe(file));
 
-      file.on('error', reject);
-
-      res.body.pipe(file);
-    });
+    return fs.statSync(filePath).size;
   }
 
   async function apiPost(path, body, headers) {
