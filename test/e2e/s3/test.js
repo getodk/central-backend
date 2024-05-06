@@ -13,7 +13,6 @@ const TIMEOUT = 120000; // ms
 
 const { execSync } = require('node:child_process');
 const fs = require('node:fs');
-const fetch = require('node-fetch');
 const { randomBytes } = require('node:crypto');
 const { basename } = require('node:path');
 const _ = require('lodash');
@@ -60,14 +59,6 @@ describe('s3 support', () => {
     // then
     should.equal(cli('count-blobs pending'), 0);
     should.equal(cli('count-blobs uploaded'), 11);
-
-    // have a little sleep to allow the server to start behaving (THIS IS NOT GOOD ENOUGH!)
-    // this prevents:
-    // * `node-fetch`: `Socket hang up`
-    // * `fetch`: TODO document
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    // TODO is it possible that the CLI scripts are not closing db connections correctly?  very suspicious...
-
     // and
     await assertAllRedirect(actualAttachments);
     await assertAllDownloadsMatchOriginal(actualAttachments);
@@ -136,7 +127,7 @@ describe('s3 support', () => {
     const actualContentType = res.headers.get('content-type');
     should.equal(actualContentType, expectedContentType);
 
-    const resContent = await res.buffer();
+    const resContent = new Uint8Array(await res.arrayBuffer());
     const fileContent = fs.readFileSync(filepath);
     should.equal(resContent.length, fileContent.length);
 
