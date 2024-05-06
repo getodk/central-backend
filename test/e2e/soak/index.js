@@ -8,11 +8,12 @@
 // except according to the terms contained in the LICENSE file.
 
 const fs = require('node:fs');
-const fetch = require('node-fetch');
 const _ = require('lodash');
 const uuid = require('uuid').v4;
 const { basename } = require('node:path');
 const { program } = require('commander');
+const { Readable } = require('stream');
+const { finished } = require('stream/promises');
 
 const _log = (...args) => console.log(`[${new Date().toISOString()}]`, '[test/e2e/soak]', ...args);
 const log  = (...args) => true  && _log('INFO',   ...args);
@@ -215,23 +216,18 @@ function apiPostAndDump(prefix, n, path, body, headers) {
 async function fetchToFile(filenamePrefix, n, method, path, body, headers) {
   const res = await apiFetch(method, path, body, headers);
 
-  return new Promise((resolve, reject) => {
-    try {
-      let bytes = 0;
-      res.body.on('data', data => bytes += data.length);
-      res.body.on('error', reject);
+  try {
+    const path = `${logPath}/${filenamePrefix}.${n.toString().padStart(9, '0')}.dump`;
 
-      const file = fs.createWriteStream(`${logPath}/${filenamePrefix}.${n.toString().padStart(9, '0')}.dump`);
-      res.body.on('end', () => file.close(() => resolve(bytes)));
+    const file = fs.createWriteStream(path);
 
-      file.on('error', reject);
+    await finished(Readable.fromWeb(res.body).pipe(file));
 
-      res.body.pipe(file);
-    } catch(err) {
-      console.log(err);
-      process.exit(99);
-    }
-  });
+    return fs.statSync(path).size;
+  } catch(err) {
+    console.log(err);
+    process.exit(99);
+  }
 }
 
 async function apiPost(path, body, headers) {
