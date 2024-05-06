@@ -10,9 +10,23 @@ log() { echo "[test/e2e/s3/ci] $*"; }
 make base
 
 log "Attempting to create user..."
-echo "$userPassword" | node ./lib/bin/cli.js user-create  -u "$userEmail" && log "User created." || true
+echo "$userPassword" | node ./lib/bin/cli.js user-create  -u "$userEmail" && log "User created." || [[ -n "${CI-}" ]]
 log "Attempting to promote user..."
-node ./lib/bin/cli.js user-promote -u "$userEmail" && log "User promoted." || true
+node ./lib/bin/cli.js user-promote -u "$userEmail" && log "User promoted." || [[ -n "${CI-}" ]]
+
+if [[ -n "${CI-}" ]]; then
+  cat <<EOF
+
+    ! It looks like you're running this script outside of a CI environment.
+    !
+    ! If your blobs table is not empty, you may see test failures due to
+    ! de-duplication of blobs.
+    !
+    ! Press <enter> to continue...
+
+EOF
+  read -p ''
+fi
 
 NODE_CONFIG_ENV=s3-dev node lib/bin/s3-create-bucket.js
 NODE_CONFIG_ENV=s3-dev make run >backend.log 2>&1 &

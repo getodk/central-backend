@@ -157,7 +157,7 @@ function cli(cmd) {
   cmd = `node lib/bin/s3 ${cmd}`;
   log.info('cli()', 'calling:', cmd);
   const env = { ..._.pick(process.env, 'PATH'), NODE_CONFIG_ENV:'s3-dev' };
-  const res = execSync(cmd, { env, cwd:'../../..' }).toString();
+  const res = execSync(cmd, { env, cwd:'../../..' }).toString().trim();
   log.info('cli()', 'returned:', res);
   return res;
 }
