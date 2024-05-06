@@ -1,6 +1,5 @@
 const fs = require('node:fs');
 const { extname } = require('node:path');
-const fetch = require('node-fetch'); // TODO replace with native fetch
 
 async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPath }) {
   const log = require('./logger')(suiteName);
@@ -132,7 +131,7 @@ class Redirect {
     this.props = Object.freeze({
       status:   res.status,
       location: res.headers.get('location'),
-      headers:  Object.freeze(res.headers.raw()),
+      headers:  Object.freeze([...res.headers]),
     });
   }
   get status()   { return this.props.status; }
