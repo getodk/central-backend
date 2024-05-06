@@ -8713,7 +8713,7 @@ paths:
                 type: object
                 properties:
                   code:
-                    type: string
+                    type: number
                   message:
                     type: string
               example:
@@ -10478,7 +10478,7 @@ paths:
       description: |-
         The data documents are JSON representations of each table of `Submission` data. They follow the [corresponding specification](http://docs.oasis-open.org/odata/odata-json-format/v4.01/odata-json-format-v4.01.html), but apart from the representation of geospatial data as GeoJSON rather than the ODK proprietary format, the output here should not be surprising. If you are looking for JSON output of Submission data, this is the best place to look.
 
-        The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. If `$top` parameter is provided in the request then the response will include `@odata.nextLink` that you can use as is to fetch the next set of data. As of ODK Central v2023.4, `@odata.nextLink` contains a `$skiptoken` (an opaque cursor) to better paginate around deleted Submissions.
+        The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. If `$top` parameter is provided in the request then the response will include `@odata.nextLink` that you can use as is to fetch the next set of data. As of ODK Central v2023.4, `@odata.nextLink` contains a `$skiptoken` (an opaque cursor), which allows you to page through Submissions with a consistent offset, even while new Submissions are being created.
 
         While paging is possible through these parameters, it will not greatly improve the performance of exporting data. ODK Central prefers to bulk-export all of its data at once if possible.
 
