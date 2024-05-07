@@ -8645,7 +8645,9 @@ paths:
       - Dataset Management
       summary: Creating Datasets
       description: |- 
-        You can create a Dataset with a specific `name` within a Project. This Dataset can then be populated via the API or via Forms and Submissions, and then used by other Forms. This endpoint allows a Dataset to be created programatically without an input form.
+        You can create a Dataset with a specific `name` within a Project. This Dataset can then be populated with Entities via the API or via Forms and Submissions, and then used by other Forms. This endpoint allows a Dataset to be created programatically without an input form.
+
+        The name of a Dataset is case-sensitive in that it will keep the capitalization provided (e.g. "Trees"). But Central will not allow a second Dataset with the same name but different capitalization to be created (e.g. "trees" when "Trees" already exists).
 
         By default, the Dataset will have no properties, but each Entity will have a `label` and a unique ID (`uuid`). You can add additional properties with this [related endpoint](/central-api-dataset-management/#adding-properties).
         
@@ -8701,6 +8703,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: number
+                  message:
+                    type: string
+              example:
+                code: 409.3
+                message: A resource already exists with name,projectId value(s) of trees,1.
   /projects/{projectId}/datasets/{name}:
     get:
       tags:
@@ -10460,7 +10478,9 @@ paths:
       description: |-
         The data documents are JSON representations of each table of `Submission` data. They follow the [corresponding specification](http://docs.oasis-open.org/odata/odata-json-format/v4.01/odata-json-format-v4.01.html), but apart from the representation of geospatial data as GeoJSON rather than the ODK proprietary format, the output here should not be surprising. If you are looking for JSON output of Submission data, this is the best place to look.
 
-        The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. If `$top` parameter is provided in the request then the response will include `@odata.nextLink` that you can use as is to fetch the next set of data. While paging is possible through these parameters, it will not greatly improve the performance of exporting data. ODK Central prefers to bulk-export all of its data at once if possible.
+        The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. If `$top` parameter is provided in the request then the response will include `@odata.nextLink` that you can use as is to fetch the next set of data. As of ODK Central v2023.4, `@odata.nextLink` contains a `$skiptoken` (an opaque cursor), which allows you to page through Submissions with a consistent offset, even while new Submissions are being created.
+
+        While paging is possible through these parameters, it will not greatly improve the performance of exporting data. ODK Central prefers to bulk-export all of its data at once if possible.
 
         As of ODK Central v1.1, the [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) is partially supported. In OData, you can use `$filter` to filter by certain data fields in the schema. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported. These supported elements may be combined in any way, but all other `$filter` features will cause an error.
 
@@ -10574,6 +10594,11 @@ paths:
         schema:
           type: string
         example: __id, age, name, meta/instanceID
+      - name: '%24skiptoken'
+        in: query
+        description: Opaque cursor from `@odata.nextLink` used for paging.
+        schema:
+          type: string
       responses:
         200:
           description: OK
@@ -10999,7 +11024,7 @@ paths:
       description: |-
         A data document is the straightforward JSON representation of all the `Entities` in a `Dataset`.
 
-        The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. If `$top` parameter is provided in the request then the response will include `@odata.nextLink` that you can use as is to fetch the next set of data.
+        The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. If `$top` parameter is provided in the request then the response will include `@odata.nextLink` that you can use as is to fetch the next set of data. As of ODK Central v2023.4, `@odata.nextLink` contains a `$skiptoken` (an opaque cursor) to better paginate around deleted Entities.
 
         The [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) can be used to filter certain data fields in the system-level schema, but not the Dataset properties. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported.
 
@@ -11080,6 +11105,11 @@ paths:
         schema:
           type: string
         example: __id, label, name
+      - name: '%24skiptoken'
+        in: query
+        description: Opaque cursor from `@odata.nextLink` used for paging.
+        schema:
+          type: string
       responses:
         200:
           description: Ok
