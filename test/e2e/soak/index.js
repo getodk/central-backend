@@ -216,18 +216,12 @@ function apiPostAndDump(prefix, n, path, body, headers) {
 async function fetchToFile(filenamePrefix, n, method, apiPath, body, headers) {
   const res = await apiFetch(method, apiPath, body, headers);
 
-  try {
-    const filePath = `${logPath}/${filenamePrefix}.${n.toString().padStart(9, '0')}.dump`;
+  const filePath = `${logPath}/${filenamePrefix}.${n.toString().padStart(9, '0')}.dump`;
+  const file = fs.createWriteStream(filePath);
 
-    const file = fs.createWriteStream(filePath);
+  await finished(Readable.fromWeb(res.body).pipe(file));
 
-    await finished(Readable.fromWeb(res.body).pipe(file));
-
-    return fs.statSync(filePath).size;
-  } catch(err) {
-    console.log(err);
-    process.exit(99);
-  }
+  return fs.statSync(filePath).size;
 }
 
 async function apiPost(path, body, headers) {
