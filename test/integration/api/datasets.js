@@ -2214,10 +2214,7 @@ describe('datasets and entities', () => {
           </h:head>
         </h:html>`;
 
-        it('should NOT autolink on upload new form and simultaneously publish', testService(async (service) => {
-          // this path of directly publishing a form on upload isn't possible in central
-          // so it's not going to be supported. if it were, logic would go around line #170 in
-          // lib/model/query/forms.js in Forms.createNew after the dataset is published.
+        it('should autolink on upload new form and simultaneously publish', testService(async (service) => {
           const asAlice = await service.login('alice');
 
           await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -2228,7 +2225,7 @@ describe('datasets and entities', () => {
           await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
             .then(({ body }) => {
               body[0].name.should.equal('people.csv');
-              body[0].datasetExists.should.be.false();
+              body[0].datasetExists.should.be.true();
             });
         }));
 

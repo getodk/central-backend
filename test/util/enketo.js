@@ -44,7 +44,7 @@ const reset = () => {
 const request = () => {
   global.enketo.callCount += 1;
   const options = { ...global.enketo };
-  Object.assign(global.enketo, without(['callCount'], defaults));
+  Object.assign(global.enketo, without(['callCount', 'state'], defaults));
   return new Promise((resolve, reject) => {
     const { wait } = options;
     const tokenBeforeWait = cancelToken;

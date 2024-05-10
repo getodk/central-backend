@@ -134,7 +134,7 @@ describe('/audits', () => {
               audits[1].action.should.equal('form.update.publish');
               audits[1].acteeId.should.equal(form.acteeId);
               audits[1].actee.should.eql(plain(form.forApi()));
-              audits[1].details.should.eql({ newDefId: form.currentDefId });
+              audits[1].details.should.eql({ newDefId: form.currentDefId, oldDefId: null });
               audits[1].loggedAt.should.be.a.recentIsoDate();
 
               audits[2].actorId.should.equal(alice.actor.id);
@@ -636,9 +636,9 @@ describe('/audits', () => {
         .then(({ body }) => {
           body.length.should.equal(4);
           body.map(a => a.action).should.eql([
+            'dataset.create',
             'form.update.publish',
             'form.create',
-            'dataset.create',
             'user.session.create'
           ]);
         });
