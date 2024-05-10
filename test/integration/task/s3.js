@@ -11,7 +11,7 @@ const aBlobExistsWith = async ({ Blobs }, { status: s3_status }) => {
   return Blobs.ensure(blob);
 };
 
-describe.only('task: s3', () => {
+describe('task: s3', () => {
   const assertUploadCount = (expected) => {
     global.s3mock.uploadCount.should.equal(expected);
   };
