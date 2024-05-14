@@ -13,7 +13,7 @@ const aBlobExistsWith = async ({ Blobs }, { status: s3_status }) => {
 
 describe('task: s3', () => {
   const assertUploadCount = (expected) => {
-    global.s3mock.uploads.successful.should.equal(expected);
+    global.s3.uploads.successful.should.equal(expected);
   };
 
   describe('uploadPending()', () => {
@@ -21,7 +21,7 @@ describe('task: s3', () => {
 
     it('should not do anything if nothing to upload', testTask(async (container) => {
       // given
-      global.s3mock.enableMock(container);
+      global.s3.enableMock(container);
 
       // when
       await uploadPending(true);
@@ -32,7 +32,7 @@ describe('task: s3', () => {
 
     it('should uploading pending blobs, and ignore others', testTask(async (container) => {
       // given
-      global.s3mock.enableMock(container);
+      global.s3.enableMock(container);
       // and
       await aBlobExistsWith(container, { status: 'pending' });
       await aBlobExistsWith(container, { status: 'uploaded' });
@@ -50,8 +50,8 @@ describe('task: s3', () => {
 
     it('should return error if uploading fails', testTask(async (container) => {
       // given
-      global.s3mock.enableMock(container);
-      global.s3mock.error.onUpload = true;
+      global.s3.enableMock(container);
+      global.s3.error.onUpload = true;
       // and
       await aBlobExistsWith(container, { status: 'pending' });
 
@@ -74,8 +74,8 @@ describe('task: s3', () => {
       // refactoring minio access into an external/minio.js file...
 
       // given
-      global.s3mock.enableMock(container);
-      global.s3mock.error.onUpload = 3;
+      global.s3.enableMock(container);
+      global.s3.error.onUpload = 3;
       // and
       await aBlobExistsWith(container, { status: 'pending' });
       await aBlobExistsWith(container, { status: 'pending' });

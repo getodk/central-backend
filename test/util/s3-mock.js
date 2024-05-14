@@ -56,6 +56,6 @@ class S3mock {
   }
 }
 
-global.s3mock = new S3mock();
+global.s3 = new S3mock();
 
-module.exports = { s3: global.s3mock };
+module.exports = { s3: global.s3 };

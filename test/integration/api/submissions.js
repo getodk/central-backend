@@ -487,7 +487,7 @@ describe('api: /submission', () => {
 
     // TODO review use of s3 mock
     it('should successfully save additionally POSTed attachment binary data with s3 enabled', testService((service, container) => {
-      global.s3mock.enableMock(container);
+      global.s3.enableMock(container);
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -1617,7 +1617,7 @@ describe('api: /forms/:id/submissions', () => {
 
     // TODO review use of s3 mock
     it('should return a zipfile with the relevant attachments if s3 is enabled', testService((service, container) => {
-      global.s3mock.enableMock(container);
+      global.s3.enableMock(container);
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -1655,7 +1655,7 @@ describe('api: /forms/:id/submissions', () => {
 
     // TODO review use of s3 mock
     it('should handle s3 errors when trying to construct zipfile', testService((service, container) => {
-      global.s3mock.enableMock(container);
+      global.s3.enableMock(container);
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -1672,7 +1672,7 @@ describe('api: /forms/:id/submissions', () => {
               .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
               .expect(201))
             .then(() => container.Blobs.s3UploadPending())
-            .then(() => { global.s3mock.error.onDownload = true; })
+            .then(() => { global.s3.error.onDownload = true; })
             .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip')
               .then(() => should.fail('Should have thrown an error.'))
               .catch(err => err.message.should.equal('aborted')))));
@@ -2029,7 +2029,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     // TODO review use of s3 mock
     it('should return adhoc-processed consolidated client audit log attachments if uploaded to s3', testService((service, container) => {
-      global.s3mock.enableMock(container);
+      global.s3.enableMock(container);
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -2045,7 +2045,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
             .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
             .expect(201))
-          .then(() => { global.s3mock.error.onDownload = true; })
+          .then(() => { global.s3.error.onDownload = true; })
           .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
             .then((result) => {
               result.filenames.should.eql([
@@ -2068,7 +2068,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     // TODO review use of s3 mock
     it('should gracefully handle error if client audit s3 download fails', testService((service, container) => {
-      global.s3mock.enableMock(container);
+      global.s3.enableMock(container);
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -2085,7 +2085,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
             .expect(201))
           .then(() => container.Blobs.s3UploadPending())
-          .then(() => { global.s3mock.error.onDownload = true; })
+          .then(() => { global.s3.error.onDownload = true; })
           .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip')
             .then(() => should.fail('should have thrown'))
             .catch(err => err.message.should.equal('aborted'))));

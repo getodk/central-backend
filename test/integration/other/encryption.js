@@ -338,7 +338,7 @@ describe('managed encryption', () => {
 
     // TODO review use of s3 mock
     it('should decrypt attached files successfully when s3 enabled', testService((service, container) => {
-      global.s3mock.enableMock(container);
+      global.s3.enableMock(container);
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
           .send({ passphrase: 'supersecret', hint: 'it is a secret' })
@@ -365,7 +365,7 @@ describe('managed encryption', () => {
 
     // TODO review use of s3 mock
     it('should handle s3 issues gracefully', testService((service, container) => {
-      global.s3mock.enableMock(container);
+      global.s3.enableMock(container);
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
           .send({ passphrase: 'supersecret', hint: 'it is a secret' })
@@ -376,7 +376,7 @@ describe('managed encryption', () => {
             .then((send) => send(testData.instances.simple.one, { alpha: 'hello this is file alpha', beta: 'and beta' })
               .then(() => send(testData.instances.simple.two, { charlie: 'file charlie is right here' }))))
           .then(() => container.Blobs.s3UploadPending())
-          .then(() => { global.s3mock.error.onDownload = true; })
+          .then(() => { global.s3.error.onDownload = true; })
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
