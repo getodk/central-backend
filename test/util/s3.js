@@ -1,5 +1,3 @@
-// FIXME this should be mocking minio only, not the whole of the s3 class...
-
 class S3mock {
   resetMock() {
     delete this.s3bucket;
