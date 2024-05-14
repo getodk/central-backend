@@ -42,7 +42,7 @@ after(resetEnketo);
 afterEach(resetEnketo);
 
 // set up our s3 mock
-const { s3 } = require(appRoot + '/test/util/s3-mock');
+const { s3 } = require(appRoot + '/test/util/s3');
 
 // set up odk analytics mock.
 const { ODKAnalytics } = require(appRoot + '/test/util/odk-analytics-mock');
