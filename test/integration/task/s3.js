@@ -97,7 +97,7 @@ describe('task: s3', () => {
       await uploadPending(true);
 
       // then
-      assertUploadCount(2);
+      assertUploadCount(3);
     }));
   });
 });
