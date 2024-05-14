@@ -23,12 +23,11 @@ class S3mock {
 
   // TODO rename _insert
   insert({ md5, sha, content }) {
-    if (this.error.onUpload === this.uploadCount + 1) {
+    // eslint-disable-next-line no-plusplus
+    if (this.error.onUpload === ++this.uploadCount) {
       throw new Error(`Mock error when trying to upload blob #${this.uploadCount+1}`);
     }
     this.s3bucket[md5+sha] = content;
-    // eslint-disable-next-line no-plusplus
-    ++this.uploadCount; // FIXME move this to start of fn
   }
 
   //> MOCKED FUNCTIONS:
