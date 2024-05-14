@@ -21,8 +21,12 @@ class S3mock {
     this.uploads = { attempted: 0, successful: 0 };
   }
 
-  // TODO rename _insert or inline
-  insert({ md5, sha, content }) {
+  //> MOCKED FUNCTIONS:
+  isEnabled() {
+    return !!this.container;
+  }
+
+  uploadFromBlob(blob) {
     if (this.error.onUpload === true) {
       throw new Error('Mock error when trying to upload blobs.');
     }
@@ -35,15 +39,6 @@ class S3mock {
     this.s3bucket[md5+sha] = content;
     // eslint-disable-next-line no-plusplus
     ++this.uploads.successful;
-  }
-
-  //> MOCKED FUNCTIONS:
-  isEnabled() {
-    return !!this.container;
-  }
-
-  uploadFromBlob(blob) {
-    this.insert(blob);
   }
 
   getContentFor({ md5, sha }) {
