@@ -5,6 +5,7 @@ class S3mock {
     this.insert = this.insert.bind(this);
   }
 
+  // TODO rename _resetMock
   resetMock() {
     delete this.container;
     delete this.s3bucket;
@@ -12,10 +13,7 @@ class S3mock {
     delete this.uploadCount;
   }
 
-  isEnabled() {
-    return !!this.container;
-  }
-
+  // TODO rename _enable
   enable(container) {
     this.container = container;
     this.s3bucket = {};
@@ -23,6 +21,7 @@ class S3mock {
     this.uploadCount = 0;
   }
 
+  // TODO rename _insert
   insert({ md5, sha, content }) {
     if (this.error.onUpload === this.uploadCount + 1) {
       throw new Error(`Mock error when trying to upload blob #${this.uploadCount+1}`);
@@ -30,6 +29,15 @@ class S3mock {
     this.s3bucket[md5+sha] = content;
     // eslint-disable-next-line no-plusplus
     ++this.uploadCount;
+  }
+
+//> MOCKED FUNCTIONS:
+  isEnabled() {
+    return !!this.container;
+  }
+
+  uploadFromBlob(blob) {
+    this.insert(blob);
   }
 
   getContentFor({ md5, sha }) {
