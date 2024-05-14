@@ -47,6 +47,7 @@ class S3mock {
 
     const content = this.s3bucket[md5+sha];
     if (content == null) throw new Error('Blob content not found.');
+
     return Promise.resolve(content);
   }
 
