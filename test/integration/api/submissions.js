@@ -1671,7 +1671,7 @@ describe('api: /forms/:id/submissions', () => {
               .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
               .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
               .expect(201))
-            .then(() => container.Blobs.s3UploadPending())
+            .then(() => Blobs.s3UploadPending())
             .then(() => { global.s3.error.onDownload = true; })
             .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip')
               .then(() => should.fail('Should have thrown an error.'))
@@ -2028,7 +2028,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             })))));
 
     // TODO review use of s3 mock
-    it('should return adhoc-processed consolidated client audit log attachments if uploaded to s3', testService((service, container) => {
+    it('should return adhoc-processed consolidated client audit log attachments if uploaded to s3', testService((service) => {
       global.s3.enableMock();
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
