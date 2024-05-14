@@ -7,7 +7,7 @@ class S3mock {
     this.insert = this.insert.bind(this);
   }
 
-  reset() {
+  resetMock() {
     delete this.container;
     delete this.s3bucket;
     delete this.error;
