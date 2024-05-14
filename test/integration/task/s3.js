@@ -13,7 +13,7 @@ const aBlobExistsWith = async ({ Blobs }, { status: s3_status }) => {
 
 describe('task: s3', () => {
   const assertUploadCount = (expected) => {
-    global.s3mock.uploadCount.should.equal(expected);
+    global.s3mock.uploads.successful.should.equal(expected);
   };
 
   describe('uploadPending()', () => {
@@ -87,7 +87,7 @@ describe('task: s3', () => {
         should.fail('should have thrown');
       } catch (err) {
         // then
-        err.message.should.equal('Mock error when trying to upload blob #3');
+        err.message.should.equal('Mock error when trying to upload #3');
       }
 
       // and

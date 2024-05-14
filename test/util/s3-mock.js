@@ -18,16 +18,23 @@ class S3mock {
     this.container = container;
     this.s3bucket = {};
     this.error = {};
-    this.uploadCount = 0;
+    this.uploads = { attempted:0, successful:0 };
   }
 
-  // TODO rename _insert
+  // TODO rename _insert or inline
   insert({ md5, sha, content }) {
-    // eslint-disable-next-line no-plusplus
-    if (this.error.onUpload === ++this.uploadCount) {
-      throw new Error(`Mock error when trying to upload blob #${this.uploadCount}`);
+    if (this.error.onUpload === true) {
+      throw new Error('Mock error when trying to upload blobs.');
     }
+
+    // eslint-disable-next-line no-plusplus
+    if (this.error.onUpload === ++this.uploads.attempted) {
+      throw new Error(`Mock error when trying to upload #${this.uploads.attempted}`);
+    }
+
     this.s3bucket[md5+sha] = content;
+    // eslint-disable-next-line no-plusplus
+    ++this.uploads.successful;
   }
 
   //> MOCKED FUNCTIONS:
