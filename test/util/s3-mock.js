@@ -1,5 +1,3 @@
-const { sql } = require('slonik');
-
 // FIXME this should be mocking minio only, not the whole of the s3 class...
 
 class S3mock {
@@ -32,22 +30,6 @@ class S3mock {
     this.s3bucket[md5+sha] = content;
     // eslint-disable-next-line no-plusplus
     ++this.uploadCount;
-  }
-
-  async exhaustBlobs() {
-    if (this.error.onUpload === true) {
-      return Promise.reject(new Error('Mock error when trying to upload blobs.'));
-    }
-
-    const blobs = await this.container.db.any(sql`
-      SELECT * FROM blobs WHERE s3_status='pending'
-    `);
-    await this.container.db.query(sql`
-      UPDATE blobs
-        SET s3_status='uploaded', content=NULL
-        WHERE s3_status='pending'
-    `);
-    blobs.forEach(this.insert);
   }
 
   getContentFor({ md5, sha }) {
