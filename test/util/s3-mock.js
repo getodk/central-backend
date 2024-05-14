@@ -25,7 +25,7 @@ class S3mock {
     return !!this.container;
   }
 
-  uploadFromBlob(blob) {
+  uploadFromBlob({ md5, sha, content }) {
     if (this.error.onUpload === true) {
       throw new Error('Mock error when trying to upload blobs.');
     }
