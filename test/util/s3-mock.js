@@ -1,10 +1,6 @@
 // FIXME this should be mocking minio only, not the whole of the s3 class...
 
 class S3mock {
-  constructor() {
-    this.insert = this.insert.bind(this);
-  }
-
   resetMock() {
     delete this.container;
     delete this.s3bucket;
