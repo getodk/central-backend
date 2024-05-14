@@ -103,6 +103,7 @@ function base64(s) {
 function mimetypeFor(f) {
   // For more, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types
   const extension = extname(f);
+  log.debug('mimetypeFor()', f, '->', extension);
   switch(extension) {
     case '.bin' : return 'application/octet-stream';
     case '.jpg' : return 'image/jpeg';
