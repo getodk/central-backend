@@ -68,11 +68,7 @@ describe('task: s3', () => {
       assertUploadCount(0);
     }));
 
-    it('should not allow failure to affect previous uploads', testTask(async ({ Blobs }) => {
-      // TODO with the current level of mocking, this test is slightly meaningless.  It should be
-      // dealing with mocking at the minio level rather than around all s3 classes... this suggests
-      // refactoring minio access into an external/minio.js file...
-
+    it('should not allow failure to affect previous or future uploads', testTask(async ({ Blobs }) => {
       // given
       global.s3.enableMock();
       global.s3.error.onUpload = 3;
@@ -91,6 +87,16 @@ describe('task: s3', () => {
       }
 
       // and
+      assertUploadCount(2);
+
+
+      // given
+      await aBlobExistsWith(Blobs, { status: 'pending' });
+
+      // when
+      await uploadPending(true);
+
+      // then
       assertUploadCount(2);
     }));
   });
