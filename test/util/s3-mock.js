@@ -18,7 +18,7 @@ class S3mock {
     this.container = container;
     this.s3bucket = {};
     this.error = {};
-    this.uploads = { attempted:0, successful:0 };
+    this.uploads = { attempted: 0, successful: 0 };
   }
 
   // TODO rename _insert or inline
