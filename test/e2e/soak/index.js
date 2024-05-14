@@ -11,8 +11,6 @@ const fs = require('node:fs');
 const _ = require('lodash');
 const uuid = require('uuid').v4;
 const { program } = require('commander');
-const { Readable } = require('stream');
-const { finished } = require('stream/promises');
 
 const SUITE_NAME = 'test/e2e/soak';
 const log = require('../util/logger')(SUITE_NAME);
