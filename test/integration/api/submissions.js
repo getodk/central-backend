@@ -514,7 +514,7 @@ describe('api: /submission', () => {
               .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
                 .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
                 .expect(304))
-              .then(() => container.Blobs.uploadPending()
+              .then(() => container.Blobs.s3UploadPending()
                 .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
                   .expect(307)
                   .then(({ headers, body }) => {
@@ -1633,7 +1633,7 @@ describe('api: /forms/:id/submissions', () => {
               .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
               .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
               .expect(201))
-            .then(() => container.Blobs.uploadPending())
+            .then(() => container.Blobs.s3UploadPending())
             .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.containDeep([
@@ -1671,7 +1671,7 @@ describe('api: /forms/:id/submissions', () => {
               .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
               .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
               .expect(201))
-            .then(() => container.Blobs.uploadPending())
+            .then(() => container.Blobs.s3UploadPending())
             .then(() => { global.s3mock.error.onDownload = true; })
             .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip')
               .then(() => should.fail('Should have thrown an error.'))
@@ -2084,7 +2084,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
             .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
             .expect(201))
-          .then(() => container.Blobs.uploadPending())
+          .then(() => container.Blobs.s3UploadPending())
           .then(() => { global.s3mock.error.onDownload = true; })
           .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip')
             .then(() => should.fail('should have thrown'))
