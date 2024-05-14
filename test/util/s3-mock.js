@@ -28,7 +28,7 @@ class S3mock {
     }
     this.s3bucket[md5+sha] = content;
     // eslint-disable-next-line no-plusplus
-    ++this.uploadCount;
+    ++this.uploadCount; // FIXME move this to start of fn
   }
 
 //> MOCKED FUNCTIONS:
