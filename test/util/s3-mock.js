@@ -25,7 +25,7 @@ class S3mock {
   insert({ md5, sha, content }) {
     // eslint-disable-next-line no-plusplus
     if (this.error.onUpload === ++this.uploadCount) {
-      throw new Error(`Mock error when trying to upload blob #${this.uploadCount+1}`);
+      throw new Error(`Mock error when trying to upload blob #${this.uploadCount}`);
     }
     this.s3bucket[md5+sha] = content;
   }
