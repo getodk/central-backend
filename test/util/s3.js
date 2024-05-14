@@ -2,14 +2,12 @@
 
 class S3mock {
   resetMock() {
-    delete this.container;
     delete this.s3bucket;
     delete this.error;
     delete this.uploadCount;
   }
 
-  enableMock(container) {
-    this.container = container;
+  enableMock() {
     this.s3bucket = {};
     this.error = {};
     this.uploads = { attempted: 0, successful: 0 };

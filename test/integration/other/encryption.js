@@ -338,7 +338,7 @@ describe('managed encryption', () => {
 
     // TODO review use of s3 mock
     it('should decrypt attached files successfully when s3 enabled', testService((service, container) => {
-      global.s3.enableMock(container);
+      global.s3.enableMock();
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
           .send({ passphrase: 'supersecret', hint: 'it is a secret' })
@@ -365,7 +365,7 @@ describe('managed encryption', () => {
 
     // TODO review use of s3 mock
     it('should handle s3 issues gracefully', testService((service, container) => {
-      global.s3.enableMock(container);
+      global.s3.enableMock();
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
           .send({ passphrase: 'supersecret', hint: 'it is a secret' })
