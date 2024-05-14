@@ -403,7 +403,7 @@ describe('managed encryption', () => {
                 result['media/testfile.jpg'].should.equal('hello this is a suffixed file');
               }))))));
 
-    it('should decrypt client audit log attachments (1)', testService((service, container) =>
+    it('should decrypt client audit log attachments', testService((service, container) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
           .send({ passphrase: 'supersecret', hint: 'it is a secret' })
@@ -424,7 +424,7 @@ describe('managed encryption', () => {
             where action='submission.attachment.update' and processed is not null and failures = 0`)
             .then((count) => { count.should.equal(4); })))));
 
-    it('should decrypt client audit log attachments (2)', testService((service) =>
+    it('should decrypt client audit log attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
           .send({ passphrase: 'supersecret', hint: 'it is a secret' })
