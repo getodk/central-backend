@@ -487,7 +487,7 @@ describe('api: /submission', () => {
 
     // TODO review use of s3 mock
     it('should successfully save additionally POSTed attachment binary data with s3 enabled', testService((service, container) => {
-      global.s3mock.enable(container);
+      global.s3mock.enableMock(container);
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -1617,7 +1617,7 @@ describe('api: /forms/:id/submissions', () => {
 
     // TODO review use of s3 mock
     it('should return a zipfile with the relevant attachments if s3 is enabled', testService((service, container) => {
-      global.s3mock.enable(container);
+      global.s3mock.enableMock(container);
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -1655,7 +1655,7 @@ describe('api: /forms/:id/submissions', () => {
 
     // TODO review use of s3 mock
     it('should handle s3 errors when trying to construct zipfile', testService((service, container) => {
-      global.s3mock.enable(container);
+      global.s3mock.enableMock(container);
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -2029,7 +2029,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     // TODO review use of s3 mock
     it('should return adhoc-processed consolidated client audit log attachments if uploaded to s3', testService((service, container) => {
-      global.s3mock.enable(container);
+      global.s3mock.enableMock(container);
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -2068,7 +2068,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 
     // TODO review use of s3 mock
     it('should gracefully handle error if client audit s3 download fails', testService((service, container) => {
-      global.s3mock.enable(container);
+      global.s3mock.enableMock(container);
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')

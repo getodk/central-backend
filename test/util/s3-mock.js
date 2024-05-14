@@ -5,7 +5,6 @@ class S3mock {
     this.insert = this.insert.bind(this);
   }
 
-  // TODO rename _resetMock
   resetMock() {
     delete this.container;
     delete this.s3bucket;
@@ -13,8 +12,7 @@ class S3mock {
     delete this.uploadCount;
   }
 
-  // TODO rename _enable
-  enable(container) {
+  enableMock(container) {
     this.container = container;
     this.s3bucket = {};
     this.error = {};
@@ -22,6 +20,7 @@ class S3mock {
   }
 
   //> MOCKED FUNCTIONS:
+
   isEnabled() {
     return !!this.container;
   }

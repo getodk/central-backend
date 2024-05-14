@@ -48,7 +48,7 @@ describe('worker: submission.attachment.update', () => {
 
   // TODO review use of s3 mock
   it('should process the given logs if s3 enabled', testService((service, container) => {
-    global.s3mock.enable(container);
+    global.s3mock.enableMock(container);
     return service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
