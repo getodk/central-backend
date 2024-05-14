@@ -486,7 +486,7 @@ describe('api: /submission', () => {
                 .expect(304)))))));
 
     // TODO review use of s3 mock
-    it('should successfully save additionally POSTed attachment binary data with s3 enabled', testService((service, container) => {
+    it('should successfully save additionally POSTed attachment binary data with s3 enabled', testService((service, { Blobs }) => {
       global.s3.enableMock();
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
@@ -514,7 +514,7 @@ describe('api: /submission', () => {
               .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
                 .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
                 .expect(304))
-              .then(() => container.Blobs.s3UploadPending()
+              .then(() => Blobs.s3UploadPending()
                 .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
                   .expect(307)
                   .then(({ headers, body }) => {
@@ -1616,7 +1616,7 @@ describe('api: /forms/:id/submissions', () => {
               }))))));
 
     // TODO review use of s3 mock
-    it('should return a zipfile with the relevant attachments if s3 is enabled', testService((service, container) => {
+    it('should return a zipfile with the relevant attachments if s3 is enabled', testService((service, { Blobs }) => {
       global.s3.enableMock();
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
@@ -1633,7 +1633,7 @@ describe('api: /forms/:id/submissions', () => {
               .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
               .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
               .expect(201))
-            .then(() => container.Blobs.s3UploadPending())
+            .then(() => Blobs.s3UploadPending())
             .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.containDeep([
@@ -1654,7 +1654,7 @@ describe('api: /forms/:id/submissions', () => {
     }));
 
     // TODO review use of s3 mock
-    it('should handle s3 errors when trying to construct zipfile', testService((service, container) => {
+    it('should handle s3 errors when trying to construct zipfile', testService((service, { Blobs }) => {
       global.s3.enableMock();
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
@@ -2067,7 +2067,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
     }));
 
     // TODO review use of s3 mock
-    it('should gracefully handle error if client audit s3 download fails', testService((service, container) => {
+    it('should gracefully handle error if client audit s3 download fails', testService((service, { Blobs }) => {
       global.s3.enableMock();
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
@@ -2084,7 +2084,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
             .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
             .expect(201))
-          .then(() => container.Blobs.s3UploadPending())
+          .then(() => Blobs.s3UploadPending())
           .then(() => { global.s3.error.onDownload = true; })
           .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip')
             .then(() => should.fail('should have thrown'))

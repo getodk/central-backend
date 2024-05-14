@@ -337,7 +337,7 @@ describe('managed encryption', () => {
             })))));
 
     // TODO review use of s3 mock
-    it('should decrypt attached files successfully when s3 enabled', testService((service, container) => {
+    it('should decrypt attached files successfully when s3 enabled', testService((service, { Blobs }) => {
       global.s3.enableMock();
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
@@ -348,7 +348,7 @@ describe('managed encryption', () => {
             .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
             .then((send) => send(testData.instances.simple.one, { alpha: 'hello this is file alpha', beta: 'and beta' })
               .then(() => send(testData.instances.simple.two, { charlie: 'file charlie is right here' }))))
-          .then(() => container.Blobs.s3UploadPending())
+          .then(() => Blobs.s3UploadPending())
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
@@ -364,7 +364,7 @@ describe('managed encryption', () => {
     }));
 
     // TODO review use of s3 mock
-    it('should handle s3 issues gracefully', testService((service, container) => {
+    it('should handle s3 issues gracefully', testService((service, { Blobs }) => {
       global.s3.enableMock();
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
@@ -375,7 +375,7 @@ describe('managed encryption', () => {
             .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
             .then((send) => send(testData.instances.simple.one, { alpha: 'hello this is file alpha', beta: 'and beta' })
               .then(() => send(testData.instances.simple.two, { charlie: 'file charlie is right here' }))))
-          .then(() => container.Blobs.s3UploadPending())
+          .then(() => Blobs.s3UploadPending())
           .then(() => { global.s3.error.onDownload = true; })
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
