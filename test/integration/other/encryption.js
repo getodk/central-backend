@@ -336,6 +336,7 @@ describe('managed encryption', () => {
               result['media/charlie'].should.equal('file charlie is right here');
             })))));
 
+    // TODO review use of s3 mock
     it('should decrypt attached files successfully when s3 enabled', testService((service, container) => {
       global.s3mock.enable(container);
       return service.login('alice', (asAlice) =>
@@ -362,6 +363,7 @@ describe('managed encryption', () => {
             })));
     }));
 
+    // TODO review use of s3 mock
     it('should handle s3 issues gracefully', testService((service, container) => {
       global.s3mock.enable(container);
       return service.login('alice', (asAlice) =>

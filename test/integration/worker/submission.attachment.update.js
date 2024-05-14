@@ -46,6 +46,7 @@ describe('worker: submission.attachment.update', () => {
         .then(() => container.oneFirst(sql`select count(*) from client_audits`))
         .then((count) => { Number(count).should.equal(5); }))));
 
+  // TODO review use of s3 mock
   it('should process the given logs if s3 enabled', testService((service, container) => {
     global.s3mock.enable(container);
     return service.login('alice', (asAlice) =>

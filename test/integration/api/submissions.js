@@ -485,6 +485,7 @@ describe('api: /submission', () => {
                 .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
                 .expect(304)))))));
 
+    // TODO review use of s3 mock
     it('should successfully save additionally POSTed attachment binary data with s3 enabled', testService((service, container) => {
       global.s3mock.enable(container);
       return service.login('alice', (asAlice) =>
@@ -1614,6 +1615,7 @@ describe('api: /forms/:id/submissions', () => {
                 csv.length.should.equal(3); // newline at end
               }))))));
 
+    // TODO review use of s3 mock
     it('should return a zipfile with the relevant attachments if s3 is enabled', testService((service, container) => {
       global.s3mock.enable(container);
       return service.login('alice', (asAlice) =>
@@ -1651,6 +1653,7 @@ describe('api: /forms/:id/submissions', () => {
               }))));
     }));
 
+    // TODO review use of s3 mock
     it('should handle s3 errors when trying to construct zipfile', testService((service, container) => {
       global.s3mock.enable(container);
       return service.login('alice', (asAlice) =>
@@ -2024,6 +2027,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 `);
             })))));
 
+    // TODO review use of s3 mock
     it('should return adhoc-processed consolidated client audit log attachments if uploaded to s3', testService((service, container) => {
       global.s3mock.enable(container);
       return service.login('alice', (asAlice) =>
@@ -2062,6 +2066,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             })));
     }));
 
+    // TODO review use of s3 mock
     it('should gracefully handle error if client audit s3 download fails', testService((service, container) => {
       global.s3mock.enable(container);
       return service.login('alice', (asAlice) =>
