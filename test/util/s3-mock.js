@@ -31,7 +31,7 @@ class S3mock {
     ++this.uploadCount; // FIXME move this to start of fn
   }
 
-//> MOCKED FUNCTIONS:
+  //> MOCKED FUNCTIONS:
   isEnabled() {
     return !!this.container;
   }
