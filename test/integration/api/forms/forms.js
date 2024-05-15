@@ -376,9 +376,6 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
 
         // Second request, from the worker
         global.enketo.callCount.should.equal(1);
-
-        // Remove enketo error state
-        global.enketo.state = undefined;
         await exhaust(container);
         global.enketo.callCount.should.equal(2);
         const { body } = await asAlice.get('/v1/projects/1/forms/simple2')
@@ -424,6 +421,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
       it('should return with success even if request to Enketo fails', testService(async (service) => {
         const asAlice = await service.login('alice');
         global.enketo.state = 'error';
+        global.enketo.autoReset = false;
         const { body } = await asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.simple2)
@@ -432,9 +430,10 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         should.not.exist(body.enketoOnceId);
       }));
 
-      it.skip('should wait for Enketo only briefly @slow', testService(async (service) => {
+      it('should wait for Enketo only briefly @slow', testService(async (service) => {
         const asAlice = await service.login('alice');
         global.enketo.wait = (done) => { setTimeout(done, 600); };
+        global.enketo.autoReset = false;
         const { body } = await asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.simple2)
@@ -460,14 +459,18 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
 
         // First request to Enketo, from the endpoint
         global.enketo.state = 'error';
+        global.enketo.autoReset = false;
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.simple2)
           .expect(200);
 
+        // in place of global.enketo.reset() function
+        global.enketo.state = undefined;
+        global.enketo.autoReset = true;
+
         // Second request, from the worker
         global.enketo.callCount.should.equal(2);
-        global.enketo.state = undefined;
         await exhaust(container);
         global.enketo.callCount.should.equal(3);
         const { body } = await asAlice.get('/v1/projects/1/forms/simple2')
