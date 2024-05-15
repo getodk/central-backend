@@ -74,11 +74,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .set('Content-Type', 'application/xml')
             .expect(409)
             .then(({ body }) => {
-              // eslint-disable-next-line no-multi-str
-              body.message.should.eql("You tried to publish the form 'simple' with version '', \
-but a published form has already existed in this project with those identifiers. \
-Please choose a new name and try again. You can re-request with ?version=xyz \
-to have the version changed in-place for you.");
+              body.message.should.eql("You tried to publish the form 'simple' with version '', but a published form has already existed in this project with those identifiers.");
               body.details.should.eql({ xmlFormId: 'simple', version: '' });
             })))));
 
