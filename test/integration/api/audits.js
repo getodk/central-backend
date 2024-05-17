@@ -636,8 +636,8 @@ describe('/audits', () => {
         .then(({ body }) => {
           body.length.should.equal(4);
           body.map(a => a.action).should.eql([
-            'dataset.create',
             'form.update.publish',
+            'dataset.create',
             'form.create',
             'user.session.create'
           ]);

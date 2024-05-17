@@ -3936,6 +3936,38 @@ describe('datasets and entities', () => {
         audit.should.equal(Option.none());
       }));
 
+      it('should log appropriate sequence of form and dataset events', testService(async (service) => {
+
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simpleEntity.replace('orx:version="1.0"', 'orx:version="draft1"').replace(/first_name/g, 'nickname'))
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish');
+
+        await asAlice.get('/v1/audits?action=nonverbose')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(7);
+            body.map(a => a.action).should.eql([
+              'form.update.publish',
+              'dataset.update',
+              'form.update.draft.set',
+              'form.update.publish',
+              'dataset.create',
+              'form.create',
+              'user.session.create'
+            ]);
+          });
+      }));
+
       it('should not log dataset modification when no new property is added', testService(async (service, { Audits }) => {
         const asAlice = await service.login('alice');
 
@@ -3955,7 +3987,7 @@ describe('datasets and entities', () => {
         audit.should.equal(Option.none());
       }));
 
-      it('should log dataset publishing in audit log', testService(async (service, { Audits }) => {
+      it('should log dataset publishing with properties in audit log', testService(async (service, { Audits }) => {
 
         const asAlice = await service.login('alice');
 

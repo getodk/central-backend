@@ -3,6 +3,8 @@ const appRoot = require('app-root-path');
 const should = require('should');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
+const { Form } = require(appRoot + '/lib/model/frames');
+
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const { sql } = require('slonik');
 
@@ -1338,6 +1340,68 @@ describe('api: /projects/:id/forms (drafts)', () => {
                     body[1].details.newDraftDefId.should.equal(form.currentDefId);
                   });
               })))));
+
+      it('should log the correct def ids in the form audit log', testService(async (service, { Forms }) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        const formT1 = await Forms.getByProjectAndXmlFormId(1, 'simple2').then((o) => o.get());
+
+        await asAlice.post('/v1/projects/1/forms/simple2/draft')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2.replace('version="2.1"', 'version="2.2"'))
+          .expect(200);
+
+        const formT2 = await Forms.getByProjectAndXmlFormId(1, 'simple2', false, Form.DraftVersion).then((o) => o.get());
+
+        await asAlice.post('/v1/projects/1/forms/simple2/draft')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2.replace('version="2.1"', 'version="2.3"'))
+          .expect(200);
+
+        const formT3 = await Forms.getByProjectAndXmlFormId(1, 'simple2', false, Form.DraftVersion).then((o) => o.get());
+
+        await asAlice.post('/v1/projects/1/forms/simple2/draft/publish');
+
+        const formT4 = await Forms.getByProjectAndXmlFormId(1, 'simple2').then((o) => o.get());
+
+        await asAlice.get('/v1/audits?action=nonverbose')
+          .expect(200)
+          .then(({ body }) => {
+            // first form event: form create
+            body[4].action.should.equal('form.create');
+
+            // second form event: form publish
+            body[3].action.should.equal('form.update.publish');
+            // new def id should match form def at time T1
+            body[3].details.should.eql({ newDefId: formT1.def.id, oldDefId: null });
+
+            // third form event: draft
+            body[2].action.should.equal('form.update.draft.set');
+            body[2].details.should.eql({ newDraftDefId: formT2.def.id, oldDraftDefId: null });
+
+            // forth form event: draft
+            body[1].action.should.equal('form.update.draft.set');
+            body[1].details.should.eql({ newDraftDefId: formT3.def.id, oldDraftDefId: formT2.def.id });
+
+            // fifth form event: publish
+            body[0].action.should.equal('form.update.publish');
+            body[0].details.should.eql({ newDefId: formT4.def.id, oldDefId: formT1.def.id });
+
+            body.map(a => a.action).should.eql([
+              'form.update.publish',
+              'form.update.draft.set',
+              'form.update.draft.set',
+              'form.update.publish',
+              'form.create',
+              'user.session.create'
+            ]);
+          });
+      }));
     });
 
     describe('/fields GET', () => {
