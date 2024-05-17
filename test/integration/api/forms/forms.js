@@ -298,10 +298,10 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               body.publishedAt.should.eql(body.createdAt);
               (body.updatedAt == null).should.equal(true);
             })
-            .then(() => asAlice.get('/v1/audits')
+            .then(() => asAlice.get('/v1/audits?action=form')
               .expect(200)
               .then(({ body }) => {
-                body.map((a) => a.action).should.eql(['form.update.publish', 'form.create', 'user.session.create']);
+                body.map((a) => a.action).should.eql(['form.update.publish', 'form.create']);
               }))))));
 
     it('should have published timestamp different from create timestamp if published separately', testService((service) =>
@@ -319,10 +319,10 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               body.publishedAt.should.not.eql(body.createdAt);
               body.updatedAt.should.be.a.recentIsoDate();
             })
-            .then(() => asAlice.get('/v1/audits')
+            .then(() => asAlice.get('/v1/audits?action=form')
               .expect(200)
               .then(({ body }) => {
-                body.map((a) => a.action).should.eql(['form.update.publish', 'form.create', 'user.session.create']);
+                body.map((a) => a.action).should.eql(['form.update.publish', 'form.create']);
               }))))));
 
     describe('Enketo ID for draft', () => {
@@ -470,7 +470,6 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         global.enketo.reset();
 
         // Second request, from the worker
-        global.enketo.callCount.should.equal(0);
         await exhaust(container);
         global.enketo.callCount.should.equal(1);
         const { body } = await asAlice.get('/v1/projects/1/forms/simple2')

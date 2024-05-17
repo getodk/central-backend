@@ -139,11 +139,9 @@ describe('api: /projects/:id/forms (drafts)', () => {
         global.enketo.state = 'error';
         await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
         global.enketo.callCount.should.equal(1);
-        // Reset enketo mock (will also reset callCount)
-        global.enketo.reset();
         global.enketo.enketoId = '::ijklmnop';
         await exhaust(container);
-        global.enketo.callCount.should.equal(1);
+        global.enketo.callCount.should.equal(2);
         global.enketo.receivedUrl.startsWith(container.env.domain).should.be.true();
         const match = global.enketo.receivedUrl.match(/\/v1\/test\/([a-z0-9$!]{64})\/projects\/1\/forms\/simple\/draft$/i);
         should.exist(match);
@@ -1159,13 +1157,10 @@ describe('api: /projects/:id/forms (drafts)', () => {
         should.not.exist(draft.enketoId);
         should.not.exist(draft.enketoOnceId);
 
-        // Reset enketo mock (including callCount)
-        global.enketo.reset();
-
         // Publish.
         await asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
           .expect(200);
-        global.enketo.callCount.should.equal(1);
+        global.enketo.callCount.should.equal(2);
         global.enketo.receivedUrl.should.equal(`${env.domain}/v1/projects/1`);
         const { body: form } = await asAlice.get('/v1/projects/1/forms/simple2')
           .expect(200);
@@ -1219,14 +1214,12 @@ describe('api: /projects/:id/forms (drafts)', () => {
         should.not.exist(v1.enketoId);
         should.not.exist(v1.enketoOnceId);
 
-        // Reset enketo mock (including callCount)
-        global.enketo.reset();
         // Republish
         await asAlice.post('/v1/projects/1/forms/simple2/draft').expect(200);
-        global.enketo.callCount.should.equal(1);
+        global.enketo.callCount.should.equal(3);
         await asAlice.post('/v1/projects/1/forms/simple2/draft/publish?version=new')
           .expect(200);
-        global.enketo.callCount.should.equal(2);
+        global.enketo.callCount.should.equal(4);
         global.enketo.receivedUrl.should.equal(`${env.domain}/v1/projects/1`);
         const { body: v2 } = await asAlice.get('/v1/projects/1/forms/simple2')
           .expect(200);
@@ -1274,12 +1267,9 @@ describe('api: /projects/:id/forms (drafts)', () => {
         should.not.exist(beforeWorker.enketoOnceId);
         global.enketo.callCount.should.equal(2);
 
-        // Reset enketo mock (including callCount)
-        global.enketo.reset();
-
         // Second request, from the worker
         await exhaust(container);
-        global.enketo.callCount.should.equal(1);
+        global.enketo.callCount.should.equal(3);
         global.enketo.receivedUrl.should.equal(`${container.env.domain}/v1/projects/1`);
         const { body: afterWorker } = await asAlice.get('/v1/projects/1/forms/simple2')
           .expect(200);
