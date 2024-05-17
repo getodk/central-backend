@@ -1,6 +1,6 @@
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
-const { testService } = require('../setup');
+const { testService, testServiceFullTrx } = require('../setup');
 const testData = require('../../data/xml');
 const config = require('config');
 const { Form } = require('../../../lib/model/frames');
@@ -3376,17 +3376,6 @@ describe('datasets and entities', () => {
 
   describe('parsing datasets on form upload', () => {
     describe('parsing datasets at /projects/:id/forms POST', () => {
-      it('should allow someone without dataset.create to create a dataset through posting a form', testService(async (service, { run }) => {
-        await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
-
-        const asBob = await service.login('bob');
-
-        await asBob.post('/v1/projects/1/forms')
-          .send(testData.forms.simpleEntity)
-          .set('Content-Type', 'text/xml')
-          .expect(200);
-      }));
-
       it('should return a Problem if the entity xml has the wrong version', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
@@ -3903,6 +3892,191 @@ describe('datasets and entities', () => {
                 body.details.reason.should.equal('Invalid entity property name.');
               }));
         }));
+      });
+
+      describe('dataset-specific verbs', () => {
+        describe('dataset.create', () => {
+          it('should NOT allow a new form that creates a dataset without user having dataset.create verb', testServiceFullTrx(async (service, { run }) => {
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
+
+            const asBob = await service.login('bob');
+
+            await asBob.post('/v1/projects/1/forms')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(403);
+
+            // shouldn't work with immediate publish, either
+            await asBob.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(403);
+          }));
+
+          // TODO: bob shouldn't be allowed to create dataset but it counts as updating it
+          it.skip('should not allow "creating" of a dataset when the dataset exists but unpublished', testServiceFullTrx(async (service, { run }) => {
+            const asAlice = await service.login('alice');
+            const asBob = await service.login('bob');
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
+
+            // Alice can upload first version of form that creates unpublished "people" dataset
+            await asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            // Should not be OK for bob to "create" people dataset
+            await asBob.post('/v1/projects/1/forms')
+              .send(testData.forms.simpleEntity
+                .replace('simpleEntity', 'simpleEntity2'))
+              .set('Content-Type', 'text/xml')
+              .expect(403);
+          }));
+
+          it('should NOT allow update draft that creates a dataset without user having dataset.create verb', testServiceFullTrx(async (service, { run }) => {
+            const asAlice = await service.login('alice');
+            const asBob = await service.login('bob');
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
+
+            // Alice can upload first version of form
+            await asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            await asBob.post('/v1/projects/1/forms/simpleEntity/draft')
+              .send(testData.forms.simpleEntity.replace(/people/g, 'trees'))
+              .set('Content-Type', 'text/xml')
+              .expect(403);
+          }));
+
+          it('should NOT allow unpublished dataset to be published on form publish if user does not have dataset.create verb', testServiceFullTrx(async (service, { run }) => {
+            const asAlice = await service.login('alice');
+            const asBob = await service.login('bob');
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
+
+            // Alice can upload first version of form
+            await asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            // Bob should not be able to publish form because it will publish the new dataset
+            await asBob.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+              .expect(403);
+          }));
+        });
+
+        describe('dataset.update', () => {
+          it('should NOT allow a new form that updates a dataset without user having dataset.update verb', testServiceFullTrx(async (service, { run }) => {
+            const asAlice = await service.login('alice');
+            await asAlice.post('/v1/projects/1/datasets')
+              .send({ name: 'people' })
+              .expect(200);
+
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
+
+            const asBob = await service.login('bob');
+
+            await asBob.post('/v1/projects/1/forms')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(403);
+
+            // shouldn't work with immediate publish, either
+            await asBob.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(403);
+          }));
+
+          it('should NOT allow update draft that updates a dataset without user having dataset.update verb', testServiceFullTrx(async (service, { run }) => {
+            const asAlice = await service.login('alice');
+            const asBob = await service.login('bob');
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
+
+            // Alice can upload first version of form
+            await asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            await asBob.post('/v1/projects/1/forms/simpleEntity/draft')
+              .send(testData.forms.simpleEntity.replace('saveto="age"', 'saveto="birth_year"'))
+              .set('Content-Type', 'text/xml')
+              .expect(403);
+          }));
+
+          it('should NOT allow unpublished properties to be published on form publish if user does not have dataset.update verb', testServiceFullTrx(async (service, { run }) => {
+            const asAlice = await service.login('alice');
+            const asBob = await service.login('bob');
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
+
+            // Alice can upload and publish first version of form
+            await asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            // Alice can upload new version of form with new property
+            await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+              .send(testData.forms.simpleEntity
+                .replace('saveto="age"', 'saveto="birth_year"')
+                .replace('orx:version="1.0"', 'orx:version="2.0"')
+              )
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            // Bob should not be able to publish form because it will publish the new property
+            await asBob.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+              .expect(403);
+          }));
+
+          // TODO: bob not allowed to "update" dataset even with no substantive changes
+          it.skip('should ALLOW update of form draft that does not modify existing dataset', testServiceFullTrx(async (service, { run }) => {
+            const asAlice = await service.login('alice');
+            const asBob = await service.login('bob');
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
+
+            // Alice can upload first version of form
+            await asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            // Should be OK for bob to update draft if not updating dataset
+            await asBob.post('/v1/projects/1/forms/simpleEntity/draft')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+          }));
+
+          // TODO: bob not allowed to "update" dataset even with no substantive changes
+          it.skip('should ALLOW new form about existing dataset that does not update it', testServiceFullTrx(async (service, { run }) => {
+            const asAlice = await service.login('alice');
+            const asBob = await service.login('bob');
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
+
+            // Alice can create the dataset
+            await asAlice.post('/v1/projects/1/datasets')
+              .send({ name: 'people' })
+              .expect(200);
+
+            // And create the properties
+            await asAlice.post('/v1/projects/1/datasets/people/properties')
+              .send({ name: 'age' })
+              .expect(200);
+            await asAlice.post('/v1/projects/1/datasets/people/properties')
+              .send({ name: 'first_name' })
+              .expect(200);
+
+            // Should be OK for bob to upload form that uses existing dataset and properties
+            await asBob.post('/v1/projects/1/forms')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+          }));
+        });
       });
     });
 
