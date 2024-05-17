@@ -39,7 +39,7 @@ const defaults = {
 let cancelToken = 0;
 
 const reset = () => {
-  if (global.enketo === undefined) global.enketo = {};
+  if (global.enketo === undefined) global.enketo = { reset };
   Object.assign(global.enketo, defaults);
   cancelToken += 1;
 };

@@ -465,14 +465,14 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
           .send(testData.forms.simple2)
           .expect(200);
 
-        // in place of global.enketo.reset() function
-        global.enketo.state = undefined;
-        global.enketo.autoReset = true;
+        // reset enketo mock to its default behavior
+        // also resets callCount
+        global.enketo.reset();
 
         // Second request, from the worker
-        global.enketo.callCount.should.equal(2);
+        global.enketo.callCount.should.equal(0);
         await exhaust(container);
-        global.enketo.callCount.should.equal(3);
+        global.enketo.callCount.should.equal(1);
         const { body } = await asAlice.get('/v1/projects/1/forms/simple2')
           .expect(200);
         without(['token'], global.enketo.createData).should.eql({
