@@ -1884,7 +1884,7 @@ describe('datasets and entities', () => {
         const domain = config.get('default.env.domain');
         manifest.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
-    <mediaFile>
+    <mediaFile type="entityList">
       <filename>goodone.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
@@ -1968,7 +1968,7 @@ describe('datasets and entities', () => {
         const domain = config.get('default.env.domain');
         manifest.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
-    <mediaFile>
+    <mediaFile type="entityList">
       <filename>goodone.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
@@ -2843,7 +2843,7 @@ describe('datasets and entities', () => {
             const domain = config.get('default.env.domain');
             text.should.be.eql(`<?xml version="1.0" encoding="UTF-8"?>
   <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
-    <mediaFile>
+    <mediaFile type="entityList">
       <filename>people.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/people.csv</downloadUrl>
