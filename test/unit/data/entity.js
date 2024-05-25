@@ -191,7 +191,9 @@ describe('extracting and validating entities', () => {
               label: 'Alice (88)',
               dataset: 'people',
               update: undefined,
-              baseVersion: undefined
+              baseVersion: undefined,
+              runId: undefined,
+              runIndex: undefined
             });
           }));
 
@@ -206,7 +208,9 @@ describe('extracting and validating entities', () => {
               label: 'Alice (88)',
               dataset: 'people',
               update: undefined,
-              baseVersion: undefined
+              baseVersion: undefined,
+              runId: undefined,
+              runIndex: undefined
             });
           }));
 
@@ -257,8 +261,21 @@ describe('extracting and validating entities', () => {
               label: 'Alicia (85)',
               dataset: 'people',
               update: '1',
-              baseVersion: '1'
+              baseVersion: '1',
+              runId: undefined,
+              runIndex: undefined
             });
+          }));
+    });
+
+    describe('offline entity events', () => {
+      it('should get runId and runIndex if provided', () =>
+        fieldsFor(testData.forms.offlineEntity)
+          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
+          .then((fields) => parseSubmissionXml(fields, testData.instances.offlineEntity.one.replace('runId=""', 'runId="73608072-06b8-4ead-a3bd-82a7078eaa16"')))
+          .then((result) => {
+            result.system.runId.should.equal('73608072-06b8-4ead-a3bd-82a7078eaa16');
+            result.system.runIndex.should.equal('1');
           }));
     });
   });
