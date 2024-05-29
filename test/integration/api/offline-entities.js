@@ -3,6 +3,7 @@ const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { getOrNotFound } = require('../../../lib/util/promise');
 const uuid = require('uuid').v4;
+const should = require('should');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -71,7 +72,7 @@ describe('Offline Entities', () => {
       entity.aux.currentVersion.data.should.eql({ age: '22', status: 'arrived', first_name: 'Johnny' });
     }));
 
-    it('should complain if run index is not good', testOfflineEntities(async (service, container) => {
+    it('should quietly process submission without entity work if run index is not good', testOfflineEntities(async (service, container) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
@@ -94,8 +95,7 @@ describe('Offline Entities', () => {
       await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/one/audits')
         .expect(200)
         .then(({ body }) => {
-          //console.log(body);
-          body[0].details.problem.should.not.be.null();
+          should.not.exist(body[0].details.problem);
         });
     }));
   });
@@ -145,6 +145,7 @@ describe('Offline Entities', () => {
         .set('Content-Type', 'application/xml')
         .expect(200);
 
+      // much later run index
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.one
           .replace('runId=""', `runId="${runId}"`)
@@ -154,6 +155,63 @@ describe('Offline Entities', () => {
         )
         .set('Content-Type', 'application/xml')
         .expect(200);
+
+      await exhaust(container);
+
+      const entity = await container.Entities.getById(dataset.id, '12345678-1234-4123-8234-123456789abc').then(getOrNotFound);
+      entity.aux.currentVersion.runId.should.equal(runId);
+      entity.aux.currentVersion.runIndex.should.equal(1);
+      entity.aux.currentVersion.data.should.eql({ age: '22', status: 'arrived', first_name: 'Johnny' });
+    }));
+
+    it('should not apply later runIndex when run has not even started', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const runId = uuid();
+      const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
+
+      // much later run index
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('runId=""', `runId="${runId}"`)
+          .replace('one', 'one-update2')
+          .replace('runIndex="1"', 'runIndex="2"')
+          .replace('<status>arrived</status>', '<status>departed</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const entity = await container.Entities.getById(dataset.id, '12345678-1234-4123-8234-123456789abc').then(getOrNotFound);
+      should.not.exist(entity.aux.currentVersion.runId);
+      should.not.exist(entity.aux.currentVersion.runIndex);
+      entity.aux.currentVersion.data.should.eql({ age: '22', first_name: 'Johnny' });
+    }));
+
+    it('should apply later run received earlier', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const runId = uuid();
+      const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
+
+      // start run correctly
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('runId=""', `runId="${runId}"`) // runIndex = 1
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('runId=""', `runId="${runId}"`)
+          .replace('one', 'one-update2')
+          .replace('runIndex="1"', 'runIndex="3"')
+          .replace('<status>arrived</status>', '<status>departed</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
 
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.one
@@ -169,8 +227,8 @@ describe('Offline Entities', () => {
 
       const entity = await container.Entities.getById(dataset.id, '12345678-1234-4123-8234-123456789abc').then(getOrNotFound);
       entity.aux.currentVersion.runId.should.equal(runId);
-      entity.aux.currentVersion.runIndex.should.equal(2);
-      entity.aux.currentVersion.data.should.eql({ age: '22', status: 'working', first_name: 'Johnny' });
+      entity.aux.currentVersion.runIndex.should.equal(3);
+      entity.aux.currentVersion.data.should.eql({ age: '22', status: 'departed', first_name: 'Johnny' });
     }));
   });
 });
