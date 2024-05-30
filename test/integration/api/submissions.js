@@ -1399,6 +1399,34 @@ describe('api: /forms/:id/submissions', () => {
             .then(({ body }) => { body.reviewState.should.equal('approved'); })))));
   });
 
+  describe('/:instanceId DELETE', () => {
+    it('should reject notfound if the submission does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+          .expect(404))));
+
+    it('should reject if the user cannot delete', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => service.login('chelsea', (asChelsea) =>
+            asChelsea.delete('/v1/projects/1/forms/simple/submissions/one')
+              .expect(403))))));
+
+    it('should soft-delete the submission and not be able to access it again', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+            .expect(404)))));
+  });
+
   describe('.csv.zip GET', () => {
     // NOTE: tests related to decryption of .csv.zip export are located in test/integration/other/encryption.js
 
