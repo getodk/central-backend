@@ -2263,8 +2263,6 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                description: Standard Response
                 $ref: '#/components/schemas/Project'
               example:
                 id: 1
@@ -2274,8 +2272,6 @@ paths:
                 archived: false
             application/json; extended:
               schema:
-                type: object
-                description: Extended Response
                 $ref: '#/components/schemas/ExtendedProjectWithVerbs'
               example:
                 id: 1
@@ -2342,9 +2338,8 @@ paths:
                 forms:
                   type: array
                   description: If given, the Form metadata to update.
-                  items: {
+                  items:
                     type: object
-                  }
               example:
                 name: New Project Name
                 description: New Project Description
@@ -5704,7 +5699,6 @@ paths:
                     - hasIssues
                     - rejected
                     - approved
-                    - approved
                   createdAt:
                     type: string
                     description: ISO date format. The time that the server received
@@ -5984,7 +5978,6 @@ paths:
                     - hasIssues
                     - rejected
                     - approved
-                    - approved
                   createdAt:
                     type: string
                     description: ISO date format. The time that the server received
@@ -6158,7 +6151,6 @@ paths:
                     - edited
                     - hasIssues
                     - rejected
-                    - approved
                     - approved
                   createdAt:
                     type: string
@@ -7778,7 +7770,6 @@ paths:
                     - hasIssues
                     - rejected
                     - approved
-                    - approved
                   createdAt:
                     type: string
                     description: ISO date format. The time that the server received
@@ -8112,7 +8103,6 @@ paths:
                     - hasIssues
                     - rejected
                     - approved
-                    - approved
                   createdAt:
                     type: string
                     description: ISO date format. The time that the server received
@@ -8250,7 +8240,6 @@ paths:
                     - edited
                     - hasIssues
                     - rejected
-                    - approved
                     - approved
                   createdAt:
                     type: string
