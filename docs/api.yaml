@@ -2263,6 +2263,8 @@ paths:
           content:
             application/json:
               schema:
+                type: object
+                description: Standard Response
                 $ref: '#/components/schemas/Project'
               example:
                 id: 1
@@ -2272,6 +2274,8 @@ paths:
                 archived: false
             application/json; extended:
               schema:
+                type: object
+                description: Extended Response
                 $ref: '#/components/schemas/ExtendedProjectWithVerbs'
               example:
                 id: 1
