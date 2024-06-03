@@ -3913,8 +3913,7 @@ describe('datasets and entities', () => {
               .expect(403);
           }));
 
-          // TODO: bob shouldn't be allowed to create dataset but it counts as updating it
-          it.skip('should not allow "creating" of a dataset when the dataset exists but unpublished', testServiceFullTrx(async (service, { run }) => {
+          it('should NOT allow "creating" of a dataset when the dataset exists but unpublished', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
             await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
@@ -3933,7 +3932,25 @@ describe('datasets and entities', () => {
               .expect(403);
           }));
 
-          it('should NOT allow update draft that creates a dataset without user having dataset.create verb', testServiceFullTrx(async (service, { run }) => {
+          it('should NOT allow updating a form about an unpublished dataset, which is similar to creating that dataset', testServiceFullTrx(async (service, { run }) => {
+            const asAlice = await service.login('alice');
+            const asBob = await service.login('bob');
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
+
+            // Alice can upload first version of form that creates unpublished "people" dataset
+            await asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            // Should not be OK for bob to update this form
+            await asBob.post('/v1/projects/1/forms/simpleEntity/draft')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(403);
+          }));
+
+          it('should NOT allow updating a draft that creates a dataset without user having dataset.create verb', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
             await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
@@ -4032,8 +4049,7 @@ describe('datasets and entities', () => {
               .expect(403);
           }));
 
-          // TODO: bob not allowed to "update" dataset even with no substantive changes
-          it.skip('should ALLOW update of form draft that does not modify existing dataset', testServiceFullTrx(async (service, { run }) => {
+          it('should ALLOW update of form draft that does not modify existing dataset', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
             await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
@@ -4051,8 +4067,7 @@ describe('datasets and entities', () => {
               .expect(200);
           }));
 
-          // TODO: bob not allowed to "update" dataset even with no substantive changes
-          it.skip('should ALLOW new form about existing dataset that does not update it', testServiceFullTrx(async (service, { run }) => {
+          it('should ALLOW new form about existing dataset that does not update it', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
             await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
