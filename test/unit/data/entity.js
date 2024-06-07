@@ -191,7 +191,9 @@ describe('extracting and validating entities', () => {
               label: 'Alice (88)',
               dataset: 'people',
               update: undefined,
-              baseVersion: undefined
+              baseVersion: undefined,
+              branchId: undefined,
+              trunkVersion: undefined
             });
           }));
 
@@ -206,7 +208,9 @@ describe('extracting and validating entities', () => {
               label: 'Alice (88)',
               dataset: 'people',
               update: undefined,
-              baseVersion: undefined
+              baseVersion: undefined,
+              branchId: undefined,
+              trunkVersion: undefined
             });
           }));
 
@@ -257,7 +261,9 @@ describe('extracting and validating entities', () => {
               label: 'Alicia (85)',
               dataset: 'people',
               update: '1',
-              baseVersion: '1'
+              baseVersion: '1',
+              branchId: undefined,
+              trunkVersion: undefined
             });
           }));
     });
