@@ -7,7 +7,7 @@ const { fieldsFor } = require(appRoot + '/test/util/schema');
 const { streamBriefcaseCsvs } = require(appRoot + '/lib/data/briefcase');
 const { zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 
-const disabledS3 = { isEnabled: () => false };
+const disabledS3 = { enabled: false };
 
 
 // these are a little closer to integration tests than unit tests, by virtue of

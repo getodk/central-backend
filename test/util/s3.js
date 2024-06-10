@@ -1,21 +1,19 @@
 class S3mock {
   resetMock() {
+    delete this.enabled;
     delete this.s3bucket;
     delete this.error;
     delete this.uploadCount;
   }
 
   enableMock() {
+    this.enabled = true;
     this.s3bucket = {};
     this.error = {};
     this.uploads = { attempted: 0, successful: 0 };
   }
 
   //> MOCKED FUNCTIONS:
-
-  isEnabled() {
-    return !!this.s3bucket;
-  }
 
   uploadFromBlob({ md5, sha, content }) {
     if (this.error.onUpload === true) {
