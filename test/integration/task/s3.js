@@ -36,27 +36,39 @@ describe('task: s3', () => {
     });
 
     describe('getCount()', () => {
-      beforeEach(async () => {
-        await aBlobExistsWith(Blobs, { status: 'pending' });
-
-        await aBlobExistsWith(Blobs, { status: 'uploaded' });
-        await aBlobExistsWith(Blobs, { status: 'uploaded' });
-
-        await aBlobExistsWith(Blobs, { status: 'failed' });
-        await aBlobExistsWith(Blobs, { status: 'failed' });
-        await aBlobExistsWith(Blobs, { status: 'failed' });
-      });
 
       [
         ['pending', 1],
         ['uploaded', 2],
         ['failed', 3],
       ].forEach(([ status, expectedCount ]) => {
-        it(`should return count of ${status} blobs`, async () => {
+        it(`should return count of ${status} blobs`, testTask(async ({ Blobs }) => {
+          // given
+          await aBlobExistsWith(Blobs, { status: 'pending' });
+
+          await aBlobExistsWith(Blobs, { status: 'uploaded' });
+          await aBlobExistsWith(Blobs, { status: 'uploaded' });
+
+          await aBlobExistsWith(Blobs, { status: 'failed' });
+          await aBlobExistsWith(Blobs, { status: 'failed' });
+          await aBlobExistsWith(Blobs, { status: 'failed' });
+
+          // when
           const count = await getCount(status);
+
+          // then
           count.should.equal(expectedCount);
-        });
+        }));
       });
+
+      it('should reject requests for unknown statuses', testTask(async () => {
+        try {
+          await getCount('nonsense');
+          should.fail('should have thrown');
+        } catch (err) {
+          err.message.should.equal('invalid input value for enum s3_upload_status: "nonsense"');
+        }
+      }));
     });
 
     describe('uploadPending()', () => {
