@@ -4,6 +4,7 @@ const testData = require('../../data/xml');
 const { getOrNotFound } = require('../../../lib/util/promise');
 const uuid = require('uuid').v4;
 const should = require('should');
+const { sql } = require('slonik');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -290,7 +291,7 @@ describe('Offline Entities', () => {
       entity.aux.currentVersion.data.should.eql({ age: '22', first_name: 'Johnny' });
     }));
 
-    it.skip('should apply later run received earlier', testOfflineEntities(async (service, container) => {
+    it('should apply later run received earlier', testOfflineEntities(async (service, container) => {
       const asAlice = await service.login('alice');
       const branchId = uuid();
       const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
@@ -303,6 +304,7 @@ describe('Offline Entities', () => {
         .set('Content-Type', 'application/xml')
         .expect(200);
 
+      // have two updates within the run
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.one
           .replace('branchId=""', `branchId="${branchId}"`)
@@ -314,6 +316,9 @@ describe('Offline Entities', () => {
         .expect(200);
 
       await exhaust(container);
+
+      const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
 
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.one
