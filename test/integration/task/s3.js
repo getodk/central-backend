@@ -35,6 +35,30 @@ describe('task: s3', () => {
       global.s3.enableMock();
     });
 
+    describe('getCount()', () => {
+      beforeEach(async () => {
+        await aBlobExistsWith(Blobs, { status: 'pending' });
+
+        await aBlobExistsWith(Blobs, { status: 'uploaded' });
+        await aBlobExistsWith(Blobs, { status: 'uploaded' });
+
+        await aBlobExistsWith(Blobs, { status: 'failed' });
+        await aBlobExistsWith(Blobs, { status: 'failed' });
+        await aBlobExistsWith(Blobs, { status: 'failed' });
+      });
+
+      [
+        ['pending', 1],
+        ['pending', 2],
+        ['pending', 3],
+      ].forEach(([ status, expectedCount ]) => {
+        it(`should return count of ${status} blobs`, () => {
+          const count = await getCount(status);
+          count.should.equal(expectedCount);
+        });
+      });
+    });
+
     describe('uploadPending()', () => {
       it('should not do anything if nothing to upload', testTask(async () => {
         // when
