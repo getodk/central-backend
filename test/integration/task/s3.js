@@ -52,7 +52,7 @@ describe('task: s3', () => {
         ['uploaded', 2],
         ['failed', 3],
       ].forEach(([ status, expectedCount ]) => {
-        it(`should return count of ${status} blobs`, () => {
+        it(`should return count of ${status} blobs`, async () => {
           const count = await getCount(status);
           count.should.equal(expectedCount);
         });
