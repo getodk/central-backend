@@ -1884,7 +1884,7 @@ describe('datasets and entities', () => {
         const domain = config.get('default.env.domain');
         manifest.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
-    <mediaFile>
+    <mediaFile type="entityList">
       <filename>goodone.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
@@ -1968,7 +1968,7 @@ describe('datasets and entities', () => {
         const domain = config.get('default.env.domain');
         manifest.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
-    <mediaFile>
+    <mediaFile type="entityList">
       <filename>goodone.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
@@ -2214,10 +2214,7 @@ describe('datasets and entities', () => {
           </h:head>
         </h:html>`;
 
-        it('should NOT autolink on upload new form and simultaneously publish', testService(async (service) => {
-          // this path of directly publishing a form on upload isn't possible in central
-          // so it's not going to be supported. if it were, logic would go around line #170 in
-          // lib/model/query/forms.js in Forms.createNew after the dataset is published.
+        it('should autolink on upload new form and simultaneously publish', testService(async (service) => {
           const asAlice = await service.login('alice');
 
           await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -2228,7 +2225,7 @@ describe('datasets and entities', () => {
           await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
             .then(({ body }) => {
               body[0].name.should.equal('people.csv');
-              body[0].datasetExists.should.be.false();
+              body[0].datasetExists.should.be.true();
             });
         }));
 
@@ -2846,7 +2843,7 @@ describe('datasets and entities', () => {
             const domain = config.get('default.env.domain');
             text.should.be.eql(`<?xml version="1.0" encoding="UTF-8"?>
   <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
-    <mediaFile>
+    <mediaFile type="entityList">
       <filename>people.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/people.csv</downloadUrl>
@@ -3939,6 +3936,38 @@ describe('datasets and entities', () => {
         audit.should.equal(Option.none());
       }));
 
+      it('should log appropriate sequence of form and dataset events', testService(async (service) => {
+
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simpleEntity.replace('orx:version="1.0"', 'orx:version="draft1"').replace(/first_name/g, 'nickname'))
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish');
+
+        await asAlice.get('/v1/audits?action=nonverbose')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(7);
+            body.map(a => a.action).should.eql([
+              'form.update.publish',
+              'dataset.update',
+              'form.update.draft.set',
+              'form.update.publish',
+              'dataset.create',
+              'form.create',
+              'user.session.create'
+            ]);
+          });
+      }));
+
       it('should not log dataset modification when no new property is added', testService(async (service, { Audits }) => {
         const asAlice = await service.login('alice');
 
@@ -3958,7 +3987,7 @@ describe('datasets and entities', () => {
         audit.should.equal(Option.none());
       }));
 
-      it('should log dataset publishing in audit log', testService(async (service, { Audits }) => {
+      it('should log dataset publishing with properties in audit log', testService(async (service, { Audits }) => {
 
         const asAlice = await service.login('alice');
 
