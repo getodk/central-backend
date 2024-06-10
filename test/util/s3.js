@@ -14,7 +14,7 @@ class S3mock {
   //> MOCKED FUNCTIONS:
 
   isEnabled() {
-    return !!this.container;
+    return !!this.s3bucket;
   }
 
   uploadFromBlob({ md5, sha, content }) {

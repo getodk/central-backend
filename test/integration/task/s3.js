@@ -31,11 +31,12 @@ describe('task: s3', () => {
       global.s3.uploads.successful.should.equal(expected);
     };
 
+    beforeEach(() => {
+      global.s3.enableMock();
+    });
+
     describe('uploadPending()', () => {
       it('should not do anything if nothing to upload', testTask(async () => {
-        // given
-        global.s3.enableMock();
-
         // when
         await uploadPending(true);
 
@@ -45,8 +46,6 @@ describe('task: s3', () => {
 
       it('should uploading pending blobs, and ignore others', testTask(async ({ Blobs }) => {
         // given
-        global.s3.enableMock();
-        // and
         await aBlobExistsWith(Blobs, { status: 'pending' });
         await aBlobExistsWith(Blobs, { status: 'uploaded' });
         await aBlobExistsWith(Blobs, { status: 'failed' });
@@ -63,9 +62,7 @@ describe('task: s3', () => {
 
       it('should return error if uploading fails', testTask(async ({ Blobs }) => {
         // given
-        global.s3.enableMock();
         global.s3.error.onUpload = true;
-        // and
         await aBlobExistsWith(Blobs, { status: 'pending' });
 
         // when
@@ -83,9 +80,7 @@ describe('task: s3', () => {
 
       it('should not allow failure to affect previous or future uploads', testTask(async ({ Blobs }) => {
         // given
-        global.s3.enableMock();
         global.s3.error.onUpload = 3;
-        // and
         await aBlobExistsWith(Blobs, { status: 'pending' });
         await aBlobExistsWith(Blobs, { status: 'pending' });
         await aBlobExistsWith(Blobs, { status: 'pending' });
