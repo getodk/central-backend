@@ -11,18 +11,28 @@ const aBlobExistsWith = async (Blobs, { status: s3_status }) => {
   return Blobs.ensure(blob);
 };
 
+const assertThrowsAsync = async (fn, expected) => {
+  try {
+    await fn();
+    should.fail('should have thrown');
+  } catch (err) {
+    if (err.message === 'should have thrown') throw err;
+    if (expected) err.message.should.equal(expected);
+  }
+};
+
 describe('task: s3', () => {
   describe('s3 disabled', () => {
-    it('uploadPending() should fail', () => {
-      (() => uploadPending()).should.throw('S3 blob support is not enabled.');
+    it('uploadPending() should fail', async () => {
+      await assertThrowsAsync(() => uploadPending(), 'S3 blob support is not enabled.');
     });
 
-    it('setFailedToPending() should fail', () => {
-      (() => setFailedToPending()).should.throw('S3 blob support is not enabled.');
+    it('setFailedToPending() should fail', async () => {
+      await assertThrowsAsync(() => setFailedToPending(), 'S3 blob support is not enabled.');
     });
 
-    it('getCount() should fail', () => {
-      (() => getCount()).should.throw('S3 blob support is not enabled.');
+    it('getCount() should fail', async () => {
+      await assertThrowsAsync(() => getCount(), 'S3 blob support is not enabled.');
     });
   });
 
@@ -62,12 +72,7 @@ describe('task: s3', () => {
       });
 
       it('should reject requests for unknown statuses', testTask(async () => {
-        try {
-          await getCount('nonsense');
-          should.fail('should have thrown');
-        } catch (err) {
-          err.message.should.equal('invalid input value for enum s3_upload_status: "nonsense"');
-        }
+        await assertThrowsAsync(() => getCount('nonsense'), 'invalid input value for enum s3_upload_status: "nonsense"');
       }));
     });
 
@@ -102,13 +107,7 @@ describe('task: s3', () => {
         await aBlobExistsWith(Blobs, { status: 'pending' });
 
         // when
-        try {
-          await uploadPending(true);
-          should.fail('should have thrown');
-        } catch (err) {
-          // then
-          err.message.should.equal('Mock error when trying to upload blobs.');
-        }
+        await assertThrowsAsync(() => uploadPending(true), 'Mock error when trying to upload blobs.');
 
         // and
         assertUploadCount(0);
@@ -121,14 +120,8 @@ describe('task: s3', () => {
         await aBlobExistsWith(Blobs, { status: 'pending' });
         await aBlobExistsWith(Blobs, { status: 'pending' });
 
-        // when
-        try {
-          await uploadPending(true);
-          should.fail('should have thrown');
-        } catch (err) {
-          // then
-          err.message.should.equal('Mock error when trying to upload #3');
-        }
+        // expect
+        await assertThrowsAsync(() => uploadPending(true), 'Mock error when trying to upload #3');
 
         // and
         assertUploadCount(2);
