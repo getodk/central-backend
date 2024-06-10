@@ -49,8 +49,8 @@ describe('task: s3', () => {
 
       [
         ['pending', 1],
-        ['pending', 2],
-        ['pending', 3],
+        ['uploaded', 2],
+        ['failed', 3],
       ].forEach(([ status, expectedCount ]) => {
         it(`should return count of ${status} blobs`, () => {
           const count = await getCount(status);
