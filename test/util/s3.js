@@ -10,7 +10,7 @@ class S3mock {
     this.enabled = true;
     this.s3bucket = {};
     this.error = {};
-    this.uploads = { attempted: 0, successful: 0 };
+    this.uploads = { attempted: 0, successful: 0, deleted: 0 };
   }
 
   //> MOCKED FUNCTIONS:
@@ -51,7 +51,11 @@ class S3mock {
   }
 
   deleteObjFor({ md5, sha }) {
-    delete this.s3bucket[md5+sha];
+    const key = md5+sha;
+    if (!this.s3bucket[key]) throw new Error('Blob not found.');
+    delete this.s3bucket[key];
+    // eslint-disable-next-line no-plusplus
+    ++this.uploads.deleted;
   }
 }
 
