@@ -3894,7 +3894,7 @@ describe('datasets and entities', () => {
         }));
       });
 
-      describe('dataset-specific verbs', () => {
+      describe.only('dataset-specific verbs', () => {
         describe('dataset.create', () => {
           it('should NOT allow a new form that creates a dataset without user having dataset.create verb', testServiceFullTrx(async (service, { run }) => {
             await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
@@ -3987,14 +3987,16 @@ describe('datasets and entities', () => {
         describe('dataset.update', () => {
           it('should NOT allow a new form that updates a dataset without user having dataset.update verb', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
+            const asBob = await service.login('bob');
+
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
+
             await asAlice.post('/v1/projects/1/datasets')
               .send({ name: 'people' })
               .expect(200);
 
-            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
-
-            const asBob = await service.login('bob');
-
+            // Form mentions properties 'age' and 'first_name' in dataset 'people'
+            // But Bob is not allowed to add these new properties to an existing dataset.
             await asBob.post('/v1/projects/1/forms')
               .send(testData.forms.simpleEntity)
               .set('Content-Type', 'text/xml')
