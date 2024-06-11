@@ -46,7 +46,6 @@ describe('task: s3', () => {
     });
 
     describe('getCount()', () => {
-
       [
         ['pending', 1],
         ['uploaded', 2],
@@ -73,6 +72,29 @@ describe('task: s3', () => {
 
       it('should reject requests for unknown statuses', testTask(async () => {
         await assertThrowsAsync(() => getCount('nonsense'), 'invalid input value for enum s3_upload_status: "nonsense"');
+      }));
+    });
+
+    describe.only('setFailedToPending()', () => {
+      it('should change all failed messages to pending', testTask(async ({ Blobs }) => {
+          // given
+          await aBlobExistsWith(Blobs, { status: 'pending' });
+          await aBlobExistsWith(Blobs, { status: 'uploaded' });
+          await aBlobExistsWith(Blobs, { status: 'uploaded' });
+          await aBlobExistsWith(Blobs, { status: 'failed' });
+          await aBlobExistsWith(Blobs, { status: 'failed' });
+          await aBlobExistsWith(Blobs, { status: 'failed' });
+
+          // expect
+          (await getCount('pending')).should.equal(1);
+          (await getCount('failed')).should.equal(3);
+
+          // when
+          await setFailedToPending();
+
+          // then
+          (await getCount('pending')).should.equal(4);
+          (await getCount('failed')).should.equal(0);
       }));
     });
 
