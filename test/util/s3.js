@@ -25,7 +25,12 @@ class S3mock {
       throw new Error(`Mock error when trying to upload #${this.uploads.attempted}`);
     }
 
-    this.s3bucket[md5+sha] = content;
+    const key = md5+sha;
+    if (Object.prototype.hasOwnProperty.call(this.s3bucket, key)) {
+      throw new Error('Should not re-upload existing s3 object.');
+    }
+
+    this.s3bucket[key] = content;
     // eslint-disable-next-line no-plusplus
     ++this.uploads.successful;
   }
