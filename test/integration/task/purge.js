@@ -203,5 +203,6 @@ describe('task: purge deleted forms', () => {
       count.should.equal(1);
     }));
   });
+
 });
 
