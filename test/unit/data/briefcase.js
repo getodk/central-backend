@@ -9,6 +9,8 @@ const { zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 
 const disabledS3 = { enabled: false };
 
+// TODO add at least one test with _enabled_ s3, or a comment explaining why that has not been done
+
 
 // these are a little closer to integration tests than unit tests, by virtue of
 // the complexity of recursive in-zip csv file generation. hard to test unitly.
