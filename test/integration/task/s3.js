@@ -75,7 +75,7 @@ describe('task: s3', () => {
       }));
     });
 
-    describe.only('setFailedToPending()', () => {
+    describe('setFailedToPending()', () => {
       it('should change all failed messages to pending', testTask(async ({ Blobs }) => {
         // given
         await aBlobExistsWith(Blobs, { status: 'pending' });
