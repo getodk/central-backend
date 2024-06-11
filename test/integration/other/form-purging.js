@@ -150,6 +150,8 @@ describe('query module form purge', () => {
           ]))
           .then((counts) => counts.should.eql([ 0, 0, 0, 0 ]))))));
 
+  // TODO add test here for purging
+
   it('should purge the form fields of a form', testService((service, container) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms/simple/draft')

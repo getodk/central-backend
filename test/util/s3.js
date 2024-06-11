@@ -3,7 +3,7 @@ class S3mock {
     delete this.enabled;
     delete this.s3bucket;
     delete this.error;
-    delete this.uploadCount;
+    delete this.uploads;
   }
 
   enableMock() {

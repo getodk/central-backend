@@ -203,23 +203,5 @@ describe('task: purge deleted forms', () => {
       count.should.equal(1);
     }));
   });
-
-  describe('blob handling', () => {
-    it('should purge attachment blobs', () => {
-      // TODO implement test
-    });
-
-    it('should not purge attachment blobs if used in another form', () => {
-      // TODO implement test
-    });
-
-    it('should not purge attachment blobs if used in a submission', () => {
-      // TODO implement test
-    });
-
-    // TODO other attachments?
-
-    // TODO same tests, but with S3 enabled
-  });
 });
 
