@@ -5,6 +5,7 @@ const { streamAttachments } = require(appRoot + '/lib/data/attachments');
 const { zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 
 const disabledS3 = { enabled: false };
+// TODO add at least one test with _enabled_ s3, or a comment explaining why that has not been done
 
 describe('.zip attachments streaming', () => {
   it('should stream the contents to files at the appropriate paths', (done) => {
