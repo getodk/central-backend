@@ -136,6 +136,37 @@ describe('task: s3', () => {
         // then
         assertUploadCount(3);
       }));
+
+      it('should not attempt to upload an in-progress blob', testTask(async ({ Blobs }) => {
+        // given
+        const original = global.s3.uploadFromBlob;
+        let resume;
+        global.s3.uploadFromBlob = async (...args) => {
+          await new Promise(resolve => {
+            resume = resolve;
+          });
+          original.apply(global.s3, args);
+        };
+        await aBlobExistsWith(Blobs, { status: 'pending' });
+
+        // when
+        const first = uploadPending(true);
+        await new Promise(resolve => setTimeout(resolve, 200));
+        if (!resume) should.fail('Test did not set up successfully');
+        global.s3.uploadFromBlob = original;
+        const second = uploadPending(true);
+
+        // then
+        await second;
+        global.s3.uploads.attempted.should.equal(0);
+        global.s3.uploads.successful.should.equal(0);
+
+        // when
+        resume();
+        await first;
+        global.s3.uploads.attempted.should.equal(1);
+        global.s3.uploads.successful.should.equal(1);
+      }));
     });
   });
 });
