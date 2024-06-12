@@ -202,6 +202,40 @@ describe('Offline Entities', () => {
       entity.aux.currentVersion.branchBaseVersion.should.equal(2);
       entity.aux.currentVersion.data.should.eql({ age: '22', status: 'departed', first_name: 'Johnny' });
     }));
+
+    it('should handle an offline branch that starts with a create', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+      const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
+
+      // First submission creates the entity, offline version is now 1
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Second submission updates the entity
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const entity = await container.Entities.getById(dataset.id, '12345678-1234-4123-8234-123456789ddd').then(getOrNotFound);
+      entity.aux.currentVersion.branchId.should.equal(branchId);
+      entity.aux.currentVersion.version.should.equal(2);
+      entity.aux.currentVersion.baseVersion.should.equal(1);
+      entity.aux.currentVersion.data.should.eql({ age: '20', status: 'checked in', first_name: 'Megan' });
+    }));
   });
 
   describe('out of order runs', () => {
@@ -336,6 +370,45 @@ describe('Offline Entities', () => {
       entity.aux.currentVersion.branchId.should.equal(branchId);
       entity.aux.currentVersion.baseVersion.should.equal(3);
       entity.aux.currentVersion.data.should.eql({ age: '22', status: 'departed', first_name: 'Johnny' });
+    }));
+
+    it('should handle offline update that comes before a create', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+      const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
+
+      // Second submission updates the entity but entity hasn't been created yet
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      // First submission creating the entity comes in later
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const entity = await container.Entities.getById(dataset.id, '12345678-1234-4123-8234-123456789ddd').then(getOrNotFound);
+      entity.aux.currentVersion.branchId.should.equal(branchId);
+      entity.aux.currentVersion.version.should.equal(2);
+      entity.aux.currentVersion.baseVersion.should.equal(1);
+      entity.aux.currentVersion.data.should.eql({ age: '20', status: 'checked in', first_name: 'Megan' });
     }));
   });
 });
