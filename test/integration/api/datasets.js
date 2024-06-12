@@ -3894,7 +3894,7 @@ describe('datasets and entities', () => {
         }));
       });
 
-      describe.only('dataset-specific verbs', () => {
+      describe('dataset-specific verbs', () => {
         describe('dataset.create', () => {
           it('should NOT allow a new form that creates a dataset without user having dataset.create verb', testServiceFullTrx(async (service, { run }) => {
             await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
