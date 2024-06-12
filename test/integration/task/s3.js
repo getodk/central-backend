@@ -8,7 +8,7 @@ const { Blob } = require(appRoot + '/lib/model/frames');
 // eslint-disable-next-line camelcase
 const aBlobExistsWith = async (Blobs, { status: s3_status }) => {
   const blob = { ...await Blob.fromBuffer(crypto.randomBytes(100)), s3_status };
-  return Blobs.ensure(blob);
+  return Blobs._ensureWithStatus(blob);
 };
 
 const assertThrowsAsync = async (fn, expected) => {
