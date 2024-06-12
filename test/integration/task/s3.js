@@ -176,16 +176,19 @@ describe('task: s3', () => {
         await new Promise(resolve => { setTimeout(resolve, 200); });
         if (!resume) should.fail('Test did not set up successfully');
         global.s3.uploadFromBlob = original;
+        // and
         const second = uploadPending(true);
+        await second;
 
         // then
-        await second;
         global.s3.uploads.attempted.should.equal(0);
         global.s3.uploads.successful.should.equal(0);
 
         // when
         resume();
         await first;
+
+        // then
         global.s3.uploads.attempted.should.equal(1);
         global.s3.uploads.successful.should.equal(1);
       }));
