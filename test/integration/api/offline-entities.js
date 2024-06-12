@@ -410,5 +410,64 @@ describe('Offline Entities', () => {
       entity.aux.currentVersion.baseVersion.should.equal(1);
       entity.aux.currentVersion.data.should.eql({ age: '20', status: 'checked in', first_name: 'Megan' });
     }));
+
+    // TODO: test doesn't pass. figure out how to fix this scenario.
+    it.skip('should handle offline create/update that comes in backwards', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+      const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update2')
+          .replace('baseVersion=""', 'baseVersion="2"')
+          .replace('<status>new</status>', '<status>working</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+      let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // TODO: hmmmm this has too many things in it.
+      //const backlog = await container.all(sql`select * from entity_submission_backlog`);
+      //console.log(backlog);
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(2);
+
+      // First submission creating the entity comes in later
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const entity = await container.Entities.getById(dataset.id, '12345678-1234-4123-8234-123456789ddd').then(getOrNotFound);
+      //console.log(entity.aux.currentVersion.data)
+      entity.aux.currentVersion.branchId.should.equal(branchId);
+      entity.aux.currentVersion.version.should.equal(3);
+      entity.aux.currentVersion.baseVersion.should.equal(2);
+      entity.aux.currentVersion.data.should.eql({ age: '20', status: 'working', first_name: 'Megan' });
+    }));
   });
 });
