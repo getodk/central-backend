@@ -5,7 +5,7 @@ serverUrl="http://localhost:8383"
 userEmail="x@example.com"
 userPassword="secret1234"
 
-log() { echo "[test/e2e/s3/ci] $*"; }
+log() { echo "[test/e2e/s3/run-tests] $*"; }
 
 make base
 
