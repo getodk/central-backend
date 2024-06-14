@@ -38,7 +38,7 @@ EOF
 fi
 
 NODE_CONFIG_ENV=s3-dev node lib/bin/s3-create-bucket.js
-NODE_CONFIG_ENV=s3-dev make run >backend.log 2>&1 &
+NODE_CONFIG_ENV=s3-dev make run &
 
 log 'Waiting for backend to start...'
 timeout 30 bash -c "while ! curl -s -o /dev/null $serverUrl; do sleep 1; done"
