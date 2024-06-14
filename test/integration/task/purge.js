@@ -5,8 +5,7 @@ const { purgeForms } = require(appRoot + '/lib/task/purge');
 const testData = require('../../data/xml');
 
 // The basics of this task are tested here, including returning the count
-// eslint-disable-next-line no-trailing-spaces
-// of purged forms, but the full functionality is more thoroughly tested in 
+// of purged forms, but the full functionality is more thoroughly tested in
 // test/integration/other/form-purging.js
 
 describe('task: purge deleted forms', () => {

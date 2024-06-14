@@ -436,7 +436,6 @@ describe('analytics task queries', function () {
     it('should calculate number of managers per project', testService(async (service, container) => {
       // default project has 1 manager already (bob) with no activity
       await createTestUser(service, container, 'Manager1', 'manager', 1);
-      // eslint-disable-next-line no-trailing-spaces
 
       // compute metrics
       const res = await container.Analytics.countUsersPerRole();
