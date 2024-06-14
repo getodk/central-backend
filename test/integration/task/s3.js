@@ -107,7 +107,7 @@ describe('task: s3', () => {
         assertUploadCount(0);
       }));
 
-      it('should uploading pending blobs, and ignore others', testTask(async ({ Blobs }) => {
+      it('should upload pending blobs, and ignore others', testTask(async ({ Blobs }) => {
         // given
         await aBlobExistsWith(Blobs, { status: 'pending' });
         await aBlobExistsWith(Blobs, { status: 'uploaded' });
