@@ -411,12 +411,12 @@ describe('Offline Entities', () => {
       entity.aux.currentVersion.data.should.eql({ age: '20', status: 'checked in', first_name: 'Megan' });
     }));
 
-    // TODO: test doesn't pass. figure out how to fix this scenario.
-    it.skip('should handle offline create/update that comes in backwards', testOfflineEntities(async (service, container) => {
+    it('should handle offline create/update that comes in backwards', testOfflineEntities(async (service, container) => {
       const asAlice = await service.login('alice');
       const branchId = uuid();
       const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
 
+      // First submission contains the last update
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.two
           .replace('create="1"', 'update="1"')
@@ -432,6 +432,7 @@ describe('Offline Entities', () => {
       let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       backlogCount.should.equal(1);
 
+      // Second submission contains update after create (middle of branhc)
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.two
           .replace('create="1"', 'update="1"')
@@ -445,14 +446,10 @@ describe('Offline Entities', () => {
 
       await exhaust(container);
 
-      // TODO: hmmmm this has too many things in it.
-      //const backlog = await container.all(sql`select * from entity_submission_backlog`);
-      //console.log(backlog);
-
       backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       backlogCount.should.equal(2);
 
-      // First submission creating the entity comes in later
+      // Third (but logically first) submission to create entity
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.two
           .replace('branchId=""', `branchId="${branchId}"`)
