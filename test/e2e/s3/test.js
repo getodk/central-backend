@@ -109,7 +109,7 @@ describe('s3 support', () => {
     for(const att of attachments) {
       const res = await api.apiRawHead(`projects/${projectId}/forms/${xmlFormId}/attachments/${att.name}`);
       if(!(res instanceof Redirect) || res.status !== 307) {
-        throw new Error(`Unexpected redirect for attachment ${JSON.stringify(att)}: ${res}`);
+        throw new Error(`Unexpected response for attachment ${JSON.stringify(att)}: ${res}`);
       }
 
       await assertDownloadMatchesOriginal(att, res.location);
