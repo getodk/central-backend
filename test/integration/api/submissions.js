@@ -514,6 +514,7 @@ describe('api: /submission', () => {
                 .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
                 .expect(304))
               .then(() => Blobs.s3UploadPending()
+                // TODO ALSO test WITH if-none-match, and make sure the server sends 304 instead of sending 307->S3
                 .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
                   .expect(307)
                   .then(({ headers, body }) => {
