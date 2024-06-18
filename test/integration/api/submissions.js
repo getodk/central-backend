@@ -2042,7 +2042,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
             .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
             .expect(201))
-          .then(() => { global.s3.error.onDownload = true; })
+          .then(() => { global.s3.error.onDownload = true; }) // FIXME shouldn't this be Blobs.s3UploadPending()?
           .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
             .then((result) => {
               result.filenames.should.eql([
