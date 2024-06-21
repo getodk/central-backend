@@ -33,6 +33,27 @@ const testOfflineEntities = (test) => testService(async (service, container) => 
 
 describe('Offline Entities', () => {
   describe('parsing branchId and trunkVersion from submission xml', () => {
+    it('should ignore trunkVersion and branchId if empty string', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('trunkVersion="1"', `trunkVersion=""`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const entity = await container.Entities.getById(dataset.id, '12345678-1234-4123-8234-123456789abc').then(getOrNotFound);
+      should.not.exist(entity.aux.currentVersion.trunkVersion);
+      should.not.exist(entity.aux.currentVersion.branchId);
+      //should.not.exist(entity.aux.currentVersion.branchBaseVersion);
+      entity.aux.currentVersion.version.should.equal(2);
+      entity.aux.currentVersion.data.should.eql({ age: '22', status: 'arrived', first_name: 'Johnny' });
+    }));
+
     it('should parse and save run info from sub creating an entity', testOfflineEntities(async (service, container) => {
       const asAlice = await service.login('alice');
       const branchId = uuid();
