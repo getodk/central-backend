@@ -15,6 +15,7 @@
 * e2e: add a test for e.g. uploading 50/100 blobs and then killing tthe job - make sure the 50 are marked as uploaded!
 * resolve TODO in lib/task/s3
 * move Blobs._ensureWithStatus to test/integration/task/s3.js instead of polluting the query/blobs.js file
+* TODO: add test for uploadFromBlob() when md5/file content do no match?
 
 ## For review:
 
