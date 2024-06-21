@@ -225,6 +225,8 @@ describe('managed encryption', () => {
               result['simple.csv'].should.be.an.EncryptedSimpleCsv();
             })))));
 
+    // TODO duplicate above test w/ s3
+
     it('should decrypt to CSV successfully as a direct root table', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
