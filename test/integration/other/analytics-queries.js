@@ -357,6 +357,37 @@ describe('analytics task queries', function () {
         await container.Analytics.countClientAuditRows()
           .then((res) => res.should.equal(8));
       }));
+
+      it('should count rows from client audit attachments uploaded to s3', testService(async (service, container) => {
+        global.s3.enableMock();
+
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+          .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+          .expect(201);
+
+        await asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+          .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+          .expect(201);
+
+        await container.Analytics.countClientAuditRows()
+          .then((res) => res.should.equal(0));
+
+        await container.Blobs.s3UploadPending();
+        await exhaust(container);
+
+        await container.Analytics.countClientAuditRows()
+          .then((res) => res.should.equal(8));
+      }));
     });
 
     it('should count failed audits', testService(async (service, container) => {

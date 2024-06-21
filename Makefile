@@ -26,6 +26,26 @@ fake-oidc-server-ci:
 	cd test/e2e/oidc/fake-oidc-server && \
 	node index.mjs
 
+.PHONY: fake-s3-accounts
+fake-s3-accounts: node_version
+	NODE_CONFIG_ENV=s3-dev node lib/bin/s3-create-bucket.js
+
+.PHONY: dev-s3
+dev-s3: fake-s3-accounts base
+	NODE_CONFIG_ENV=s3-dev npx nodemon --watch lib --watch config lib/bin/run-server.js
+
+.PHONY: fake-s3-server
+fake-s3-server:
+	# run an ephemeral, s3-compatible local store
+	# default admin credentials: minioadmin:minioadmin
+	# see: https://hub.docker.com/r/minio/minio/
+	docker run --rm \
+		-p 9000:9000 -p 9001:9001 \
+		-e MINIO_ROOT_USER=odk-central-dev \
+		-e MINIO_ROOT_PASSWORD=topSecret123 \
+		--network host \
+		minio/minio server /data --console-address ":9001"
+
 .PHONY: node_version
 node_version: node_modules
 	node lib/bin/enforce-node-version.js

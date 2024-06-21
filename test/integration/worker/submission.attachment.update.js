@@ -46,6 +46,30 @@ describe('worker: submission.attachment.update', () => {
         .then(() => container.oneFirst(sql`select count(*) from client_audits`))
         .then((count) => { Number(count).should.equal(5); }))));
 
+  it('should process the given logs if already uploaded to s3', testService((service, container) => {
+    global.s3.enableMock();
+    return service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.clientAudits)
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+          .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+          .expect(201)
+          .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions/one/attachments')))
+        .then(() => container.oneFirst(sql`select count(*) from client_audits`))
+        .then((count) => { Number(count).should.equal(0); })
+        .then(() => container.Blobs.s3UploadPending())
+        .then(() => container.Audits.getLatestByAction('submission.attachment.update'))
+        .then((o) => o.get())
+        .then((event) => worker(container, event))
+        .then((result) => { result.should.equal(true); })
+        .then(() => container.oneFirst(sql`select count(*) from client_audits`))
+        .then((count) => { Number(count).should.equal(5); }));
+  }));
+
   it('should not reprocess already-processed logs', testService((service, container) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms?publish=true')
