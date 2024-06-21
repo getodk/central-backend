@@ -1,6 +1,6 @@
 ## TODO
 
-* remove in-progress state and use row-lock?  this may handle killing upload process more gracefully
+* remove in-progress state and use row-lock?  this may handle killing upload process more gracefully; see processSubmissionEvent() in lib/model/query/entities.js for an example
 * logging events? upload succeed, upload failed etc.?
 * make sure that a failed/killed process can't result in a blob stuck as "uploading", or if that is possible then there is a way to clean that up from the CLI
 * check what happens with S3 when trying to re-upload identical content - https://groups.google.com/g/jets3t-users/c/i1gusIu5mTw
