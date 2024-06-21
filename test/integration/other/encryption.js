@@ -403,7 +403,7 @@ describe('managed encryption', () => {
                 result['media/testfile.jpg'].should.equal('hello this is a suffixed file');
               }))))));
 
-    it('should decrypt client audit log attachments', testService((service, container) =>
+    it('should decrypt client audit log attachments TODO rename?', testService((service, container) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
           .send({ passphrase: 'supersecret', hint: 'it is a secret' })
@@ -424,7 +424,7 @@ describe('managed encryption', () => {
             where action='submission.attachment.update' and processed is not null and failures = 0`)
             .then((count) => { count.should.equal(4); })))));
 
-    it('should decrypt client audit log attachments', testService((service) =>
+    it('should decrypt client audit log attachments TODO rename?', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
           .send({ passphrase: 'supersecret', hint: 'it is a secret' })
@@ -459,6 +459,8 @@ two,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
 two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 `);
             })))));
+
+    // TODO add test for audit logs in s3
 
     it('should handle mixed [plaintext/encrypted] attachments (not decrypting)', testService((service) =>
       service.login('alice', (asAlice) =>
