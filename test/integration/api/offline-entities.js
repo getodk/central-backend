@@ -33,28 +33,7 @@ const testOfflineEntities = (test) => testService(async (service, container) => 
 
 describe('Offline Entities', () => {
   describe('parsing branchId and trunkVersion from submission xml', () => {
-    it('should ignore trunkVersion and branchId if empty string', testOfflineEntities(async (service, container) => {
-      const asAlice = await service.login('alice');
-      const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
-
-      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
-        .send(testData.instances.offlineEntity.one
-          .replace('trunkVersion="1"', `trunkVersion=""`)
-        )
-        .set('Content-Type', 'application/xml')
-        .expect(200);
-
-      await exhaust(container);
-
-      const entity = await container.Entities.getById(dataset.id, '12345678-1234-4123-8234-123456789abc').then(getOrNotFound);
-      should.not.exist(entity.aux.currentVersion.trunkVersion);
-      should.not.exist(entity.aux.currentVersion.branchId);
-      //should.not.exist(entity.aux.currentVersion.branchBaseVersion);
-      entity.aux.currentVersion.version.should.equal(2);
-      entity.aux.currentVersion.data.should.eql({ age: '22', status: 'arrived', first_name: 'Johnny' });
-    }));
-
-    it('should parse and save run info from sub creating an entity', testOfflineEntities(async (service, container) => {
+    it('should parse and save branch info from sub creating an entity', testOfflineEntities(async (service, container) => {
       const asAlice = await service.login('alice');
       const branchId = uuid();
       const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
@@ -77,7 +56,7 @@ describe('Offline Entities', () => {
       entity.aux.currentVersion.data.should.eql({ age: '20', status: 'new', first_name: 'Megan' });
     }));
 
-    it('should parse and save run info from sub updating an entity', testOfflineEntities(async (service, container) => {
+    it('should parse and save branch info from sub updating an entity', testOfflineEntities(async (service, container) => {
       const asAlice = await service.login('alice');
       const branchId = uuid();
       const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
@@ -105,6 +84,76 @@ describe('Offline Entities', () => {
       entity.aux.currentVersion.baseVersion.should.equal(1);
       entity.aux.currentVersion.branchBaseVersion.should.equal(1);
       entity.aux.currentVersion.data.should.eql({ age: '22', status: 'arrived', first_name: 'Johnny' });
+    }));
+
+    it('should ignore empty string trunkVersion and branchId values in update scenario', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
+
+      // branchId = "" and trunkVersion = ""
+      // apply update as though it were not offline case
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('trunkVersion="1"', `trunkVersion=""`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const entity = await container.Entities.getById(dataset.id, '12345678-1234-4123-8234-123456789abc').then(getOrNotFound);
+      should.not.exist(entity.aux.currentVersion.trunkVersion);
+      should.not.exist(entity.aux.currentVersion.branchId);
+      should.not.exist(entity.aux.currentVersion.branchBaseVersion);
+      entity.aux.currentVersion.version.should.equal(2);
+      entity.aux.currentVersion.data.should.eql({ age: '22', status: 'arrived', first_name: 'Johnny' });
+    }));
+
+    it('should do something if trunkVersion is set but branchId is not', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
+
+      // branchId = ""
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const entity = await container.Entities.getById(dataset.id, '12345678-1234-4123-8234-123456789abc').then(getOrNotFound);
+      should.not.exist(entity.aux.currentVersion.trunkVersion);
+      should.not.exist(entity.aux.currentVersion.branchId);
+      should.not.exist(entity.aux.currentVersion.branchBaseVersion);
+      entity.aux.currentVersion.version.should.equal(1);
+      entity.aux.currentVersion.data.should.eql({ age: '22', first_name: 'Johnny' });
+
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/one/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].details.errorMessage.should.eql('Required parameter branchId missing.');
+        });
+    }));
+
+    it('should ignore empty string trunkVersion and branchId values in create scenario', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('trunkVersion="1"', `trunkVersion=""`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const entity = await container.Entities.getById(dataset.id, '12345678-1234-4123-8234-123456789ddd').then(getOrNotFound);
+      should.not.exist(entity.aux.currentVersion.trunkVersion);
+      should.not.exist(entity.aux.currentVersion.branchId);
+      should.not.exist(entity.aux.currentVersion.branchBaseVersion);
+      entity.aux.currentVersion.version.should.equal(1);
+      entity.aux.currentVersion.data.should.eql({ age: '20', status: 'new', first_name: 'Megan' });
     }));
   });
 
