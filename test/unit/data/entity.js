@@ -3,7 +3,19 @@ const appRoot = require('app-root-path');
 const assert = require('assert');
 const { ConflictType } = require('../../../lib/data/entity');
 const { Entity } = require('../../../lib/model/frames');
-const { normalizeUuid, extractLabelFromSubmission, extractBaseVersionFromSubmission, parseSubmissionXml, extractEntity, extractBulkSource, extractSelectedProperties, selectFields, diffEntityData, getDiffProp, getWithConflictDetails } = require(appRoot + '/lib/data/entity');
+const { normalizeUuid,
+  extractLabelFromSubmission,
+  extractBaseVersionFromSubmission,
+  extractBranchIdFromSubmission,
+  extractTrunkVersionFromSubmission,
+  parseSubmissionXml,
+  extractEntity,
+  extractBulkSource,
+  extractSelectedProperties,
+  selectFields,
+  diffEntityData,
+  getDiffProp,
+  getWithConflictDetails } = require(appRoot + '/lib/data/entity');
 const { fieldsFor } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
@@ -156,6 +168,57 @@ describe('extracting and validating entities', () => {
         assert.throws(() => { extractBaseVersionFromSubmission(entity); }, (err) => {
           err.problemCode.should.equal(400.11);
           err.message.should.equal('Invalid input data type: expected (baseVersion) to be (integer)');
+          return true;
+        });
+      });
+    });
+
+    describe('extractBranchIdFromSubmission', () => {
+      it('should extract branchId as uuid', () => {
+        const entity = { system: { branchId: 'dcd8906c-e795-45f8-8670-48e97ba79437' } };
+        extractBranchIdFromSubmission(entity).should.equal('dcd8906c-e795-45f8-8670-48e97ba79437');
+      });
+
+      it('should complain if branchId is provided but is not a v4 uuid', () => {
+        const entity = { system: { branchId: 'not-a-uuid' } };
+        assert.throws(() => { extractBranchIdFromSubmission(entity); }, (err) => {
+          err.problemCode.should.equal(400.11);
+          err.message.should.equal('Invalid input data type: expected (branchId) to be (valid version 4 UUID)');
+          return true;
+        });
+      });
+
+      it('should return null for branch id if empty string', () => {
+        const entity = { system: { branchId: '' } };
+        should.not.exist(extractBranchIdFromSubmission(entity));
+      });
+
+      it('should return null for branch id not provided', () => {
+        const entity = { system: { } };
+        should.not.exist(extractBranchIdFromSubmission(entity));
+      });
+    });
+
+    describe('extractTrunkVersionFromSubmission', () => {
+      it('should extract trunkVersion', () => {
+        const entity = { system: { trunkVersion: '4', branchId: 'dcd8906c-e795-45f8-8670-48e97ba79437' } };
+        extractTrunkVersionFromSubmission(entity).should.equal(4);
+      });
+
+      it('should complain if trunkVersion is provided with invalid branchId', () => {
+        const entity = { system: { trunkVersion: '1', branchId: 'not-a-uuid' } };
+        assert.throws(() => { extractTrunkVersionFromSubmission(entity); }, (err) => {
+          err.problemCode.should.equal(400.11);
+          err.message.should.equal('Invalid input data type: expected (branchId) to be (valid version 4 UUID)');
+          return true;
+        });
+      });
+
+      it('should complain if trunkVersion is provided without branchId', () => {
+        const entity = { system: { trunkVersion: '1' } };
+        assert.throws(() => { extractTrunkVersionFromSubmission(entity); }, (err) => {
+          err.problemCode.should.equal(400.2);
+          err.message.should.equal('Required parameter branchId missing.');
           return true;
         });
       });
