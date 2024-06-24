@@ -8,7 +8,7 @@ class S3mock {
 
   enableMock() {
     this.enabled = true;
-    this.s3bucket = {};
+    this.s3bucket = new Map();
     this.error = {};
     this.uploads = { attempted: 0, successful: 0, deleted: 0 };
   }
@@ -26,11 +26,11 @@ class S3mock {
     }
 
     const key = md5+sha;
-    if (Object.prototype.hasOwnProperty.call(this.s3bucket, key)) {
+    if (this.s3bucket.has(key)) {
       throw new Error('Should not re-upload existing s3 object.');
     }
 
-    this.s3bucket[key] = content;
+    this.s3bucket.set(key, content);
     // eslint-disable-next-line no-plusplus
     ++this.uploads.successful;
   }
@@ -40,7 +40,7 @@ class S3mock {
       return Promise.reject(new Error('Mock error when trying to download blob.'));
     }
 
-    const content = this.s3bucket[md5+sha];
+    const content = this.s3bucket.get(md5+sha);
     if (content == null) throw new Error('Blob content not found.');
 
     return Promise.resolve(content);
@@ -52,8 +52,8 @@ class S3mock {
 
   deleteObjFor({ md5, sha }) {
     const key = md5+sha;
-    if (!this.s3bucket[key]) throw new Error('Blob not found.');
-    delete this.s3bucket[key];
+    if (!this.s3bucket.has(key)) throw new Error('Blob not found.');
+    this.s3bucket.delete(key);
     // eslint-disable-next-line no-plusplus
     ++this.uploads.deleted;
   }
