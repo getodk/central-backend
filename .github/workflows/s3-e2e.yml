@@ -2,9 +2,6 @@ name: S3 E2E Tests
 
 on: push
 
-env:
-  LOG_LEVEL: DEBUG
-
 jobs:
   s3-e2e:
     timeout-minutes: 15
