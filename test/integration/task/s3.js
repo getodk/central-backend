@@ -1,14 +1,18 @@
 const crypto = require('crypto');
 const should = require('should');
 const appRoot = require('app-root-path');
+const { sql } = require('slonik');
 const { testTask } = require('../setup');
 const { getCount, setFailedToPending, uploadPending } = require(appRoot + '/lib/task/s3');
 const { Blob } = require(appRoot + '/lib/model/frames');
 
 // eslint-disable-next-line camelcase
-const aBlobExistsWith = async (Blobs, { status: s3_status }) => {
-  const blob = { ...await Blob.fromBuffer(crypto.randomBytes(100)), s3_status };
-  return Blobs._ensureWithStatus(blob);
+const aBlobExistsWith = async (container, { status }) => {
+  const blob = await Blob.fromBuffer(crypto.randomBytes(100));
+  container.run(sql`
+    INSERT INTO BLOBS (sha, md5, content, "contentType", s3_status)
+      VALUES (${blob.sha}, ${blob.md5}, ${sql.binary(blob.content)}, ${blob.contentType || null}, ${status})
+  `);
 };
 
 const assertThrowsAsync = async (fn, expected) => {
@@ -51,16 +55,16 @@ describe('task: s3', () => {
         ['uploaded', 2],
         ['failed', 3],
       ].forEach(([ status, expectedCount ]) => {
-        it(`should return count of ${status} blobs`, testTask(async ({ Blobs }) => {
+        it(`should return count of ${status} blobs`, testTask(async (container) => {
           // given
-          await aBlobExistsWith(Blobs, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
 
-          await aBlobExistsWith(Blobs, { status: 'uploaded' });
-          await aBlobExistsWith(Blobs, { status: 'uploaded' });
+          await aBlobExistsWith(container, { status: 'uploaded' });
+          await aBlobExistsWith(container, { status: 'uploaded' });
 
-          await aBlobExistsWith(Blobs, { status: 'failed' });
-          await aBlobExistsWith(Blobs, { status: 'failed' });
-          await aBlobExistsWith(Blobs, { status: 'failed' });
+          await aBlobExistsWith(container, { status: 'failed' });
+          await aBlobExistsWith(container, { status: 'failed' });
+          await aBlobExistsWith(container, { status: 'failed' });
 
           // when
           const count = await getCount(status);
@@ -76,14 +80,14 @@ describe('task: s3', () => {
     });
 
     describe('setFailedToPending()', () => {
-      it('should change all failed messages to pending', testTask(async ({ Blobs }) => {
+      it('should change all failed messages to pending', testTask(async (container) => {
         // given
-        await aBlobExistsWith(Blobs, { status: 'pending' });
-        await aBlobExistsWith(Blobs, { status: 'uploaded' });
-        await aBlobExistsWith(Blobs, { status: 'uploaded' });
-        await aBlobExistsWith(Blobs, { status: 'failed' });
-        await aBlobExistsWith(Blobs, { status: 'failed' });
-        await aBlobExistsWith(Blobs, { status: 'failed' });
+        await aBlobExistsWith(container, { status: 'pending' });
+        await aBlobExistsWith(container, { status: 'uploaded' });
+        await aBlobExistsWith(container, { status: 'uploaded' });
+        await aBlobExistsWith(container, { status: 'failed' });
+        await aBlobExistsWith(container, { status: 'failed' });
+        await aBlobExistsWith(container, { status: 'failed' });
 
         // expect
         (await getCount('pending')).should.equal(1);
@@ -107,14 +111,14 @@ describe('task: s3', () => {
         assertUploadCount(0);
       }));
 
-      it('should upload pending blobs, and ignore others', testTask(async ({ Blobs }) => {
+      it('should upload pending blobs, and ignore others', testTask(async (container) => {
         // given
-        await aBlobExistsWith(Blobs, { status: 'pending' });
-        await aBlobExistsWith(Blobs, { status: 'uploaded' });
-        await aBlobExistsWith(Blobs, { status: 'failed' });
-        await aBlobExistsWith(Blobs, { status: 'pending' });
-        await aBlobExistsWith(Blobs, { status: 'uploaded' });
-        await aBlobExistsWith(Blobs, { status: 'failed' });
+        await aBlobExistsWith(container, { status: 'pending' });
+        await aBlobExistsWith(container, { status: 'uploaded' });
+        await aBlobExistsWith(container, { status: 'failed' });
+        await aBlobExistsWith(container, { status: 'pending' });
+        await aBlobExistsWith(container, { status: 'uploaded' });
+        await aBlobExistsWith(container, { status: 'failed' });
 
         // when
         await uploadPending(true);
@@ -123,10 +127,10 @@ describe('task: s3', () => {
         assertUploadCount(2);
       }));
 
-      it('should return error if uploading fails', testTask(async ({ Blobs }) => {
+      it('should return error if uploading fails', testTask(async (container) => {
         // given
         global.s3.error.onUpload = true;
-        await aBlobExistsWith(Blobs, { status: 'pending' });
+        await aBlobExistsWith(container, { status: 'pending' });
 
         // when
         await assertThrowsAsync(() => uploadPending(true), 'Mock error when trying to upload blobs.');
@@ -135,12 +139,12 @@ describe('task: s3', () => {
         assertUploadCount(0);
       }));
 
-      it('should not allow failure to affect previous or future uploads', testTask(async ({ Blobs }) => {
+      it('should not allow failure to affect previous or future uploads', testTask(async (container) => {
         // given
         global.s3.error.onUpload = 3;
-        await aBlobExistsWith(Blobs, { status: 'pending' });
-        await aBlobExistsWith(Blobs, { status: 'pending' });
-        await aBlobExistsWith(Blobs, { status: 'pending' });
+        await aBlobExistsWith(container, { status: 'pending' });
+        await aBlobExistsWith(container, { status: 'pending' });
+        await aBlobExistsWith(container, { status: 'pending' });
 
         // expect
         await assertThrowsAsync(() => uploadPending(true), 'Mock error when trying to upload #3');
@@ -150,7 +154,7 @@ describe('task: s3', () => {
 
 
         // given
-        await aBlobExistsWith(Blobs, { status: 'pending' });
+        await aBlobExistsWith(container, { status: 'pending' });
 
         // when
         await uploadPending(true);
@@ -159,7 +163,7 @@ describe('task: s3', () => {
         assertUploadCount(3);
       }));
 
-      it('should not attempt to upload an in-progress blob', testTask(async ({ Blobs }) => {
+      it('should not attempt to upload an in-progress blob', testTask(async (container) => {
         // given
         const original = global.s3.uploadFromBlob;
         let resume;
@@ -169,7 +173,7 @@ describe('task: s3', () => {
           });
           original.apply(global.s3, args);
         };
-        await aBlobExistsWith(Blobs, { status: 'pending' });
+        await aBlobExistsWith(container, { status: 'pending' });
 
         // when
         const first = uploadPending(true);
