@@ -2042,7 +2042,11 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
             .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
             .expect(201))
-          .then(() => { global.s3.error.onDownload = true; }) // FIXME shouldn't this be Blobs.s3UploadPending()?
+          .then(() => Blobs.s3UploadPending())
+          .then(() => {
+            global.s3.uploads.attempted.should.equal(2);
+            global.s3.uploads.successful.should.equal(2);
+          })
           .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
             .then((result) => {
               result.filenames.should.eql([
@@ -2060,7 +2064,11 @@ two,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
 two,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
 two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 `);
-            })));
+            }))
+          .then(() => {
+            global.s3.downloads.attempted.should.equal(2);
+            global.s3.downloads.successful.should.equal(2);
+          }));
     }));
 
     it('should gracefully handle error if client audit s3 download fails', testService((service, { Blobs }) => {
