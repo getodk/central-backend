@@ -2025,7 +2025,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 `);
             })))));
 
-    it('should return adhoc-processed consolidated client audit log attachments if uploaded to s3', testService((service) => {
+    it('should return adhoc-processed consolidated client audit log attachments if uploaded to s3', testService((service, { Blobs }) => {
       global.s3.enableMock();
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
