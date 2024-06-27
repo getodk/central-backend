@@ -1342,7 +1342,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
                 .expect(307)
                 .then(({ headers }) => {
-                  headers.location.should.equal('attachment; filename="goodone.csv"; filename*=UTF-8\'\'goodone.csv');
+                  headers.location.should.equal('s3://mock/2241de57bbec8144c8ad387e69b3a3ba/61baf7288ad1b373346a2fad6056d640746440be/goodone.csv?contentType=text/csv');
                 })));
         }));
 
