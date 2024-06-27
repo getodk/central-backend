@@ -3,6 +3,7 @@ class S3mock {
     delete this.enabled;
     delete this.s3bucket;
     delete this.error;
+    delete this.downloads;
     delete this.uploads;
   }
 
@@ -10,6 +11,7 @@ class S3mock {
     this.enabled = true;
     this.s3bucket = new Map();
     this.error = {};
+    this.downloads = { attempted: 0, successful: 0 };
     this.uploads = { attempted: 0, successful: 0, deleted: 0 };
   }
 
@@ -36,12 +38,18 @@ class S3mock {
   }
 
   getContentFor({ md5, sha }) {
+    // eslint-disable-next-line no-plusplus
+    ++this.downloads.attempted;
+
     if (this.error.onDownload) {
       return Promise.reject(new Error('Mock error when trying to download blob.'));
     }
 
     const content = this.s3bucket.get(md5+sha);
     if (content == null) throw new Error('Blob content not found.');
+
+    // eslint-disable-next-line no-plusplus
+    ++this.downloads.successful;
 
     return Promise.resolve(content);
   }

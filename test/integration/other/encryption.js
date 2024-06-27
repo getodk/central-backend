@@ -225,6 +225,37 @@ describe('managed encryption', () => {
               result['simple.csv'].should.be.an.EncryptedSimpleCsv();
             })))));
 
+    it('should decrypt to CSV successfully if submissions uploaded to S3', testService((service, { Blobs }) => {
+      global.s3.enableMock();
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple.xml')
+            .expect(200)
+            .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
+            .then((send) => send(testData.instances.simple.one)
+              .then(() => send(testData.instances.simple.two))
+              .then(() => send(testData.instances.simple.three))))
+          .then(() => Blobs.s3UploadPending())
+          .then(() => {
+            global.s3.uploads.attempted.should.equal(3);
+            global.s3.uploads.successful.should.equal(3);
+          })
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
+            .expect(200)
+            .then(({ body }) => body[0].id))
+          .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
+            .then((result) => {
+              result.filenames.should.eql([ 'simple.csv' ]);
+              result['simple.csv'].should.be.an.EncryptedSimpleCsv();
+            }))
+          .then(() => {
+            global.s3.downloads.attempted.should.equal(3);
+            global.s3.downloads.successful.should.equal(3);
+          }));
+    }));
+
     // TODO duplicate above test w/ s3
 
     it('should decrypt to CSV successfully as a direct root table', testService((service) =>
