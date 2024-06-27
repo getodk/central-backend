@@ -11,13 +11,16 @@
 
 const TIMEOUT = 120000; // ms
 
-const { execSync } = require('node:child_process');
+const child_process = require('node:child_process');
+const { promisify } = require('node:util');
 const fs = require('node:fs');
 const { randomBytes } = require('node:crypto');
 const { basename } = require('node:path');
 const _ = require('lodash');
 const { program } = require('commander');
 const should = require('should');
+
+const exec = promisify(child_process.exec);
 
 const SUITE_NAME = 'test/e2e/s3';
 const log = require('../util/logger')(SUITE_NAME);
@@ -48,17 +51,17 @@ describe('s3 support', () => {
     should.deepEqual(actualAttachments.map(a => a.name).sort(), expectedAttachments);
 
     // then
-    should.equal(cli('count-blobs pending'), 11);
-    should.equal(cli('count-blobs uploaded'), 0);
+    should.equal(await cli('count-blobs pending'), 11);
+    should.equal(await cli('count-blobs uploaded'), 0);
     // and
     await assertNoneRedirect(actualAttachments);
 
     // when
-    cli('upload-pending');
+    await cli('upload-pending');
 
     // then
-    should.equal(cli('count-blobs pending'), 0);
-    should.equal(cli('count-blobs uploaded'), 11);
+    should.equal(await cli('count-blobs pending'), 0);
+    should.equal(await cli('count-blobs uploaded'), 11);
     // and
     await assertAllRedirect(actualAttachments);
     await assertAllDownloadsMatchOriginal(actualAttachments);
@@ -152,11 +155,12 @@ function bigFileExists() {
   }
 }
 
-function cli(cmd) {
+async function cli(cmd) {
   cmd = `node lib/bin/s3 ${cmd}`;
   log.info('cli()', 'calling:', cmd);
   const env = { ..._.pick(process.env, 'PATH'), NODE_CONFIG_ENV:'s3-dev' };
-  const res = execSync(cmd, { env, cwd:'../../..' }).toString().trim();
+  const { stdout } = await exec(cmd, { env, cwd:'../../..' })
+  const res = stdout.toString().trim();
   log.info('cli()', 'returned:', res);
   return res;
 }
