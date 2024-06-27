@@ -738,7 +738,30 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               .expect(304)));
       }));
 
-      it('should return the xlsx file originally provided', testService((service) => {
+      it('should return the xlsx file originally provided after s3 upload', testService((service, { Blobs }) => {
+        global.s3.enableMock();
+        const input = readFileSync(appRoot + '/test/data/simple.xlsx');
+        return service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(input)
+            .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            .expect(200)
+            .then(() => Blobs.s3UploadPending())
+            .then(() => {
+              global.s3.uploads.attempted.should.equal(1);
+              global.s3.uploads.successful.should.equal(1);
+            })
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2.xlsx')
+              .expect(307)
+              .then(({ headers }) => {
+                headers['location'].should.equal('s3://mock/30fdb0e9115ea7ca6702573f521814d1/9ebd53024b8560ffd0b84763481ed24159ca600f/simple2.xlsx?contentType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+              }))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2.xlsx')
+              .set('If-None-Match', '"30fdb0e9115ea7ca6702573f521814d1"')
+              .expect(304)));
+      }));
+
+      it('should return the xlsx file originally provided for a draft', testService((service) => {
         const input = readFileSync(appRoot + '/test/data/simple.xlsx');
         return service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
@@ -757,6 +780,33 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                 headers['content-disposition'].should.equal('attachment; filename="simple2.xlsx"; filename*=UTF-8\'\'simple2.xlsx');
                 headers['etag'].should.equal('"30fdb0e9115ea7ca6702573f521814d1"'); // eslint-disable-line dot-notation
                 Buffer.compare(input, body).should.equal(0);
+              }))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xlsx')
+              .set('If-None-Match', '"30fdb0e9115ea7ca6702573f521814d1"')
+              .expect(304)));
+      }));
+
+      it('should return the xlsx file originally provided for a draft after s3 upload', testService((service, { Blobs }) => {
+        global.s3.enableMock();
+        const input = readFileSync(appRoot + '/test/data/simple.xlsx');
+        return service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(input)
+            .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+              .send(input)
+              .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+              .expect(200))
+            .then(() => Blobs.s3UploadPending())
+            .then(() => {
+              global.s3.uploads.attempted.should.equal(1);
+              global.s3.uploads.successful.should.equal(1);
+            })
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xlsx')
+              .expect(307)
+              .then(({ headers }) => {
+                headers['location'].should.equal('s3://mock/30fdb0e9115ea7ca6702573f521814d1/9ebd53024b8560ffd0b84763481ed24159ca600f/simple2.xlsx?contentType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
               }))
             .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xlsx')
               .set('If-None-Match', '"30fdb0e9115ea7ca6702573f521814d1"')

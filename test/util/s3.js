@@ -18,6 +18,8 @@ class S3mock {
   //> MOCKED FUNCTIONS:
 
   uploadFromBlob({ md5, sha, content }) {
+    if (!this.enabled) throw new Error('S3 mock has not been enabled, so this function should not be called.');
+
     if (this.error.onUpload === true) {
       throw new Error('Mock error when trying to upload blobs.');
     }
@@ -38,6 +40,8 @@ class S3mock {
   }
 
   getContentFor({ md5, sha }) {
+    if (!this.enabled) throw new Error('S3 mock has not been enabled, so this function should not be called.');
+
     // eslint-disable-next-line no-plusplus
     ++this.downloads.attempted;
 
@@ -55,10 +59,14 @@ class S3mock {
   }
 
   urlForBlob(filename, { md5, sha, contentType }) {
+    if (!this.enabled) throw new Error('S3 mock has not been enabled, so this function should not be called.');
+
     return `s3://mock/${md5}/${sha}/${filename}?contentType=${contentType}`;
   }
 
   deleteObjFor({ md5, sha }) {
+    if (!this.enabled) throw new Error('S3 mock has not been enabled, so this function should not be called.');
+
     const key = md5+sha;
     if (!this.s3bucket.has(key)) throw new Error('Blob not found.');
     this.s3bucket.delete(key);

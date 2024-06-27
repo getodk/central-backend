@@ -1,5 +1,11 @@
 ## TODO
 
+
+
+* some other integration tests:
+  * downloading form attachments rather than submission attachments (technically tested in e2e test)
+  * downloading the xlsx form if it was provided (and converted to xml behind the scenes)
+  * checking what happens if you update or delete a form or submission attachment (old blob could be in S3, new blob could be in DB)
 * remove in-progress state and use row-lock?  this may handle killing upload process more gracefully; see processSubmissionEvent() in lib/model/query/entities.js for an example
 * make sure that a failed/killed process can't result in a blob stuck as "uploading", or if that is possible then there is a way to clean that up from the CLI
 * check what happens with S3 when trying to re-upload identical content - https://groups.google.com/g/jets3t-users/c/i1gusIu5mTw
