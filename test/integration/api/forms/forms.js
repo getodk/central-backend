@@ -10,7 +10,7 @@ const testData = require('../../../data/xml');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const { without } = require(appRoot + '/lib/util/util');
 
-describe.only('api: /projects/:id/forms (create, read, update)', () => {
+describe('api: /projects/:id/forms (create, read, update)', () => {
 
   ////////////////////////////////////////////////////////////////////////////////
   // FORM CREATION+IMPORT
