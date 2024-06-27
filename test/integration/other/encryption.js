@@ -434,7 +434,7 @@ describe('managed encryption', () => {
                 result['media/testfile.jpg'].should.equal('hello this is a suffixed file');
               }))))));
 
-    it('should decrypt client audit log attachments TODO rename?', testService((service, container) =>
+    it('should decrypt client audit log attachments', testService((service, container) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
           .send({ passphrase: 'supersecret', hint: 'it is a secret' })
@@ -455,7 +455,7 @@ describe('managed encryption', () => {
             where action='submission.attachment.update' and processed is not null and failures = 0`)
             .then((count) => { count.should.equal(4); })))));
 
-    it('should decrypt client audit log attachments TODO rename?', testService((service) =>
+    it('should decrypt client audit log attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
           .send({ passphrase: 'supersecret', hint: 'it is a secret' })
@@ -491,7 +491,48 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 `);
             })))));
 
-    // TODO add test for audit logs in s3
+    it('should decrypt client audit log attachments from s3', testService((service, { Blobs }) => {
+      global.s3.enableMock();
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.clientAudits)
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/audits.xml')
+            .expect(200)
+            .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
+            .then((send) => send(testData.instances.clientAudits.one, { 'audit.csv.enc': readFileSync(appRoot + '/test/data/audit.csv') })
+              .then(() => send(testData.instances.clientAudits.two, { 'audit.csv.enc': readFileSync(appRoot + '/test/data/audit2.csv') }))))
+          .then(() => Blobs.s3UploadPending())
+          .then(() => {
+            global.s3.uploads.attempted.should.equal(4);
+            global.s3.uploads.successful.should.equal(4);
+          })
+          .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions/keys')
+            .expect(200)
+            .then(({ body }) => body[0].id))
+          .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/audits/submissions.csv.zip?${keyId}=supersecret`))
+            .then((result) => {
+              result.filenames.should.eql([
+                'audits.csv',
+                'audits - audit.csv'
+              ]);
+
+              result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
+one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
+one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
+one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,
+one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
+two,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
+two,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
+two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+`);
+            })));
+    }));
 
     it('should handle mixed [plaintext/encrypted] attachments (not decrypting)', testService((service) =>
       service.login('alice', (asAlice) =>
