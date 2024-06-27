@@ -1,6 +1,5 @@
 ## TODO
 
-* add test for uploadFromBlob() when md5/file content do no match?
 * e2e tests:
   * e2e test is currently not very interesting - could the upload-pending CLI call be async, and we test what happens if we try to fetch attachments while upload is in progress?
   * e2e: add a test for e.g. uploading 50/100 blobs and then killing tthe job - make sure the 50 are marked as uploaded!
