@@ -67,6 +67,18 @@ describe('s3 support', () => {
     await assertAllDownloadsMatchOriginal(actualAttachments);
   });
 
+  it('should continue to serve blobs while upload-pending is running', () => {
+    throw new Error('TODO');
+  });
+
+  it('should gracefully handle simultaneous calls to upload-pending', () => {
+    throw new Error('TODO');
+  });
+
+  it('should gracefully handle upload-pending dying unexpectedly', () => {
+    throw new Error('TODO');
+  });
+
   async function createProject() {
     const project = await api.apiPostJson(
       'projects',
