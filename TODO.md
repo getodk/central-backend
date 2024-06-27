@@ -9,7 +9,6 @@
   * simpler: just fail completely
   * more helpful: e.g. inline error message in exported data... but if done badly this could be misleading and the user may never notice that they've got a partial export
 * e2e test is currently not very interesting - could the upload-pending CLI call be async, and we test what happens if we try to fetch attachments while upload is in progress?
-* should config key be default.external.s3blobStore?
 * remove this file
 * central: add cron job for triggering upload?
 * e2e: add a test for e.g. uploading 50/100 blobs and then killing tthe job - make sure the 50 are marked as uploaded!
