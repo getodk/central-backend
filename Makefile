@@ -34,17 +34,17 @@ fake-s3-accounts: node_version
 dev-s3: fake-s3-accounts base
 	NODE_CONFIG_ENV=s3-dev npx nodemon --watch lib --watch config lib/bin/run-server.js
 
-.PHONY: fake-s3-server
-fake-s3-server:
-	# run an ephemeral, s3-compatible local store
-	# default admin credentials: minioadmin:minioadmin
-	# see: https://hub.docker.com/r/minio/minio/
-	docker run --rm \
-		-p 9000:9000 -p 9001:9001 \
-		-e MINIO_ROOT_USER=odk-central-dev \
-		-e MINIO_ROOT_PASSWORD=topSecret123 \
-		--network host \
+# default admin credentials: minioadmin:minioadmin
+# see: https://hub.docker.com/r/minio/minio/
+S3_SERVER_ARGS := --network host \
+		-e MINIO_ROOT_USER=odk-central-dev -e MINIO_ROOT_PASSWORD=topSecret123 \
 		minio/minio server /data --console-address ":9001"
+.PHONY: fake-s3-server-ephemeral
+fake-s3-server-ephemeral:
+	docker run --rm $(S3_SERVER_ARGS)
+.PHONY: fake-s3-server-persistent
+fake-s3-server-persistent:
+	docker run --detach $(S3_SERVER_ARGS)
 
 .PHONY: node_version
 node_version: node_modules
@@ -103,15 +103,15 @@ lint: node_version
 
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
-	docker start odk-postgres14 || (docker run -d --name odk-postgres14 -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:14.10-alpine && sleep 5 && node lib/bin/create-docker-databases.js)
+	docker start odk-postgres15 || (docker run -d --name odk-postgres15 --network host -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:14.10-alpine && sleep 5 && node lib/bin/create-docker-databases.js)
 
 .PHONY: stop-docker-postgres
 stop-docker-postgres:
-	docker stop odk-postgres14 || true
+	docker stop odk-postgres15 || true
 
 .PHONY: rm-docker-postgres
 rm-docker-postgres: stop-docker-postgres
-	docker rm odk-postgres14 || true
+	docker rm odk-postgres15 || true
 
 .PHONY: check-file-headers
 check-file-headers:
