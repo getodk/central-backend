@@ -1409,6 +1409,49 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
 
           etagV1.should.not.be.eql(etagV2);
         }));
+
+        it('should return latest content if previous content was uploaded to s3', testService(async (service, { Blobs }) => {
+          global.s3.enableMock();
+
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .send('test,csv\n1,2')
+            .set('Content-Type', 'text/csv')
+            .expect(200);
+
+          const attachmentV1 = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .expect(200);
+
+          const etagV1 = attachmentV1.get('ETag');
+
+          await Blobs.s3UploadPending();
+
+          await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .expect(307);
+
+          await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .set('If-None-Match', etagV1)
+            .expect(304);
+
+          await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .send('test,csv\n1,2\n3,4')
+            .set('Content-Type', 'text/csv')
+            .expect(200);
+
+          const attachmentV2 = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .set('If-None-Match', etagV1)
+            .expect(200);
+
+          const etagV2 = attachmentV2.get('ETag');
+
+          etagV1.should.not.be.eql(etagV2);
+        }));
       });
     });
   });
