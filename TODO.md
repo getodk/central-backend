@@ -1,14 +1,14 @@
 ## TODO
 
-* remove in-progress state and use row-lock?  this may handle killing upload process more gracefully; see processSubmissionEvent() in lib/model/query/entities.js for an example
-* make sure that a failed/killed process can't result in a blob stuck as "uploading", or if that is possible then there is a way to clean that up from the CLI
-* check what happens with S3 when trying to re-upload identical content - https://groups.google.com/g/jets3t-users/c/i1gusIu5mTw
+* add test for uploadFromBlob() when md5/file content do no match?
 * e2e tests:
   * e2e test is currently not very interesting - could the upload-pending CLI call be async, and we test what happens if we try to fetch attachments while upload is in progress?
   * e2e: add a test for e.g. uploading 50/100 blobs and then killing tthe job - make sure the 50 are marked as uploaded!
   * e2e: More e2e tests could also include multiple overlapping upload processes (e.g. one starts before the other has finished, two processes try to upload the same blob (shouldn't happen))
+* remove in-progress state and use row-lock?  this may handle killing upload process more gracefully; see processSubmissionEvent() in lib/model/query/entities.js for an example
+* make sure that a failed/killed process can't result in a blob stuck as "uploading", or if that is possible then there is a way to clean that up from the CLI
+* check what happens with S3 when trying to re-upload identical content - https://groups.google.com/g/jets3t-users/c/i1gusIu5mTw
 * resolve TODO in lib/task/s3
-* add test for uploadFromBlob() when md5/file content do no match?
 * remove this file
 
 ## Central repo
