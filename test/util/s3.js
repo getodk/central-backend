@@ -15,9 +15,12 @@ class S3mock {
     this.uploads = { attempted: 0, successful: 0, deleted: 0 };
   }
 
-  //> MOCKED FUNCTIONS:
+  // MOCKED FUNCTIONS
+  // ================
+  // These functions should be marked `async` to correspond with the function
+  // in lib/external/s3.js that they are mocking.
 
-  uploadFromBlob({ md5, sha, content }) {
+  async uploadFromBlob({ md5, sha, content }) {
     if (!this.enabled) throw new Error('S3 mock has not been enabled, so this function should not be called.');
 
     if (this.error.onUpload === true) {
@@ -39,14 +42,14 @@ class S3mock {
     ++this.uploads.successful;
   }
 
-  getContentFor({ md5, sha }) {
+  async getContentFor({ md5, sha }) {
     if (!this.enabled) throw new Error('S3 mock has not been enabled, so this function should not be called.');
 
     // eslint-disable-next-line no-plusplus
     ++this.downloads.attempted;
 
     if (this.error.onDownload) {
-      return Promise.reject(new Error('Mock error when trying to download blob.'));
+      throw new Error('Mock error when trying to download blob.');
     }
 
     const content = this.s3bucket.get(md5+sha);
@@ -55,16 +58,16 @@ class S3mock {
     // eslint-disable-next-line no-plusplus
     ++this.downloads.successful;
 
-    return Promise.resolve(content);
+    return content;
   }
 
-  urlForBlob(filename, { md5, sha, contentType }) {
+  async urlForBlob(filename, { md5, sha, contentType }) {
     if (!this.enabled) throw new Error('S3 mock has not been enabled, so this function should not be called.');
 
     return `s3://mock/${md5}/${sha}/${filename}?contentType=${contentType}`;
   }
 
-  deleteObjFor({ md5, sha }) {
+  async deleteObjFor({ md5, sha }) {
     if (!this.enabled) throw new Error('S3 mock has not been enabled, so this function should not be called.');
 
     const key = md5+sha;
