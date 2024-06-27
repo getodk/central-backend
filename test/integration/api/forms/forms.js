@@ -10,7 +10,7 @@ const testData = require('../../../data/xml');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const { without } = require(appRoot + '/lib/util/util');
 
-describe('api: /projects/:id/forms (create, read, update)', () => {
+describe.only('api: /projects/:id/forms (create, read, update)', () => {
 
   ////////////////////////////////////////////////////////////////////////////////
   // FORM CREATION+IMPORT
@@ -754,7 +754,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .then(() => asAlice.get('/v1/projects/1/forms/simple2.xlsx')
               .expect(307)
               .then(({ headers }) => {
-                headers['location'].should.equal('s3://mock/30fdb0e9115ea7ca6702573f521814d1/9ebd53024b8560ffd0b84763481ed24159ca600f/simple2.xlsx?contentType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                headers.location.should.equal('s3://mock/30fdb0e9115ea7ca6702573f521814d1/9ebd53024b8560ffd0b84763481ed24159ca600f/simple2.xlsx?contentType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
               }))
             .then(() => asAlice.get('/v1/projects/1/forms/simple2.xlsx')
               .set('If-None-Match', '"30fdb0e9115ea7ca6702573f521814d1"')
@@ -806,7 +806,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xlsx')
               .expect(307)
               .then(({ headers }) => {
-                headers['location'].should.equal('s3://mock/30fdb0e9115ea7ca6702573f521814d1/9ebd53024b8560ffd0b84763481ed24159ca600f/simple2.xlsx?contentType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                headers.location.should.equal('s3://mock/30fdb0e9115ea7ca6702573f521814d1/9ebd53024b8560ffd0b84763481ed24159ca600f/simple2.xlsx?contentType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
               }))
             .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xlsx')
               .set('If-None-Match', '"30fdb0e9115ea7ca6702573f521814d1"')
@@ -1317,6 +1317,34 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                   headers['content-type'].should.equal('text/csv; charset=utf-8');
                   text.should.equal('test,csv\n1,2');
                 })))));
+
+        it('should return 307 if file has been moved to s3', testService((service, { Blobs }) => {
+          global.s3.enableMock();
+          return service.login('alice', (asAlice) =>
+            asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.withAttachments)
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+              .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+                .send('test,csv\n1,2')
+                .set('Content-Type', 'text/csv')
+                .expect(200))
+              .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
+                .expect(200))
+              .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+                .expect(200)
+                .then(({ headers, text }) => {
+                  headers['content-disposition'].should.equal('attachment; filename="goodone.csv"; filename*=UTF-8\'\'goodone.csv');
+                  headers['content-type'].should.equal('text/csv; charset=utf-8');
+                  text.should.equal('test,csv\n1,2');
+                }))
+              .then(() => Blobs.s3UploadPending())
+              .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+                .expect(307)
+                .then(({ headers }) => {
+                  headers.location.should.equal('attachment; filename="goodone.csv"; filename*=UTF-8\'\'goodone.csv');
+                })));
+        }));
 
         it('should return 304 content not changed if ETag matches', testService(async (service) => {
           const asAlice = await service.login('alice');
