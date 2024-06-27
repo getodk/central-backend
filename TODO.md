@@ -21,6 +21,10 @@
   * simpler: just fail completely
   * more helpful: e.g. inline error message in exported data... but if done badly this could be misleading and the user may never notice that they've got a partial export
 * logging events? upload succeed, upload failed etc.?
+* What should be documented about setting up S3?
+  * Minimal recommended setup of S3
+  * S3 retention strategy? Stop things from being deleted manually from S3?
+  * CLI usage
 
 ## For review
 
