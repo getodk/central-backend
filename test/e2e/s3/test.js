@@ -11,7 +11,7 @@
 
 const TIMEOUT = 120000; // ms
 
-const child_process = require('node:child_process');
+const { exec, execSync } = require('node:child_process');
 const { promisify } = require('node:util');
 const fs = require('node:fs');
 const { randomBytes } = require('node:crypto');
@@ -19,8 +19,6 @@ const { basename } = require('node:path');
 const _ = require('lodash');
 const { program } = require('commander');
 const should = require('should');
-
-const exec = promisify(child_process.exec);
 
 const SUITE_NAME = 'test/e2e/s3';
 const log = require('../util/logger')(SUITE_NAME);
@@ -86,7 +84,7 @@ describe('s3 support', () => {
     await uploading;
   });
 
-  it.only('should gracefully handle simultaneous calls to upload-pending', async function() {
+  it('should gracefully handle simultaneous calls to upload-pending', async function() {
     this.timeout(TIMEOUT*2);
 
     // given
@@ -103,10 +101,32 @@ describe('s3 support', () => {
     _.intersection(uploaded1, uploaded2).length.should.equal(0);
   });
 
-  it('should gracefully handle upload-pending dying unexpectedly', async function() {
+  it.only('should gracefully handle upload-pending dying unexpectedly', async function() {
     this.timeout(TIMEOUT*2);
 
-    throw new Error('TODO');
+    // when
+    const uploading = cli('upload-pending');
+    while(await cli('count-blobs pending') !== '0') { sleep(100); }
+    // and
+    // DEBUG:
+    console.log(execSync('ps aux | grep node').toString());
+
+    console.log('Killing pid:', uploading.pid);
+    await execSync(`kill -9 ${uploading.pid}`);
+
+    await sleep(100); // TODO maybe not required... just in case things need to settle
+
+    // DEBUG:
+    console.log(execSync('ps aux | grep node').toString());
+
+    // then
+    const counts = await Promise.all([
+      cli('count-blobs pending'),
+      cli('count-blobs in_progress'),
+      cli('count-blobs uploaded'),
+      cli('count-blobs failed'),
+    ]);
+    counts.should.deepEqual([ '0', '0', '10', '1' ]);
   });
 
   async function createProject() {
@@ -196,14 +216,27 @@ function bigFileExists() {
   }
 }
 
-async function cli(cmd) {
-  cmd = `node lib/bin/s3 ${cmd}`;
+function cli(cmd) {
+  let pid;
+
+  cmd = `exec node lib/bin/s3 ${cmd}`;
   log.info('cli()', 'calling:', cmd);
   const env = { ..._.pick(process.env, 'PATH'), NODE_CONFIG_ENV:'s3-dev' };
-  const { stdout } = await exec(cmd, { env, cwd:'../../..' })
-  const res = stdout.toString().trim();
-  log.info('cli()', 'returned:', res);
-  return res;
+
+  const promise = new Promise((resolve, reject) => {
+    const child = exec(cmd, { env, cwd:'../../..' }, (err, stdout) => {
+      if (err) return reject(err);
+
+      const res = stdout.toString().trim();
+      log.info('cli()', 'returned:', res);
+      resolve(res);
+    });
+    pid = child.pid;
+  });
+
+  promise.pid = pid;
+
+  return promise;
 }
 
 function sleep(ms) {
