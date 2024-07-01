@@ -71,7 +71,7 @@ describe('s3 support', () => {
     await assertAllDownloadsMatchOriginal(actualAttachments);
   });
 
-  it.only('should continue to serve blobs while upload-pending is running', async function() {
+  it('should continue to serve blobs while upload-pending is running', async function() {
     this.timeout(TIMEOUT*2);
 
     // when
@@ -86,10 +86,21 @@ describe('s3 support', () => {
     await uploading;
   });
 
-  it('should gracefully handle simultaneous calls to upload-pending', async function() {
+  it.only('should gracefully handle simultaneous calls to upload-pending', async function() {
     this.timeout(TIMEOUT*2);
 
-    throw new Error('TODO');
+    // given
+    const uploading1 = cli('upload-pending');
+    const uploading2 = cli('upload-pending');
+
+    // when
+    const uploaded1 = hashes(await uploading1);
+    const uploaded2 = hashes(await uploading2);
+
+    // then
+    (uploaded1.length + uploaded2.length).should.equal(11);
+    // and
+    _.intersection(uploaded1, uploaded2).length.should.equal(0);
   });
 
   it('should gracefully handle upload-pending dying unexpectedly', async function() {
@@ -197,4 +208,14 @@ async function cli(cmd) {
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function hashes(uploadOutput) {
+  const leader = 'Uploading blob:';
+  const hashes = uploadOutput.trim()
+    .split('\n')
+    .filter(line => line.startsWith(leader))
+    .map(line => JSON.parse(line.substr(leader.length)).sha);
+  console.log({ uploadOutput, hashes });
+  return hashes;
 }
