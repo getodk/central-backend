@@ -36,7 +36,7 @@ const BIGFILE = `${attDir}/big.bin`;
 describe('s3 support', () => {
   let api, expectedAttachments, projectId, xmlFormId;
 
-  it('should shift submission attachments to s3', async function() {
+  beforeEach(async function() {
     this.timeout(TIMEOUT*2);
 
     // given
@@ -55,6 +55,10 @@ describe('s3 support', () => {
     should.equal(await cli('count-blobs uploaded'), 0);
     // and
     await assertNoneRedirect(actualAttachments);
+  });
+
+  it('should shift submission attachments to s3', async function() {
+    this.timeout(TIMEOUT*2);
 
     // when
     await cli('upload-pending');
@@ -67,15 +71,30 @@ describe('s3 support', () => {
     await assertAllDownloadsMatchOriginal(actualAttachments);
   });
 
-  it('should continue to serve blobs while upload-pending is running', () => {
+  it.only('should continue to serve blobs while upload-pending is running', async function() {
+    this.timeout(TIMEOUT*2);
+
+    // when
+    const uploading = cli('upload-pending');
+    while(await cli('count-blobs pending') !== '1') { sleep(100); }
+
+    // and
+    const res = await api.apiRawGet(`projects/${projectId}/forms/${xmlFormId}/attachments/big.bin`);
+    return assertDownloadMatchesOriginal(res, 'big.bin');
+
+    // cleanup
+    await uploading;
+  });
+
+  it('should gracefully handle simultaneous calls to upload-pending', async function() {
+    this.timeout(TIMEOUT*2);
+
     throw new Error('TODO');
   });
 
-  it('should gracefully handle simultaneous calls to upload-pending', () => {
-    throw new Error('TODO');
-  });
+  it('should gracefully handle upload-pending dying unexpectedly', async function() {
+    this.timeout(TIMEOUT*2);
 
-  it('should gracefully handle upload-pending dying unexpectedly', () => {
     throw new Error('TODO');
   });
 
@@ -127,16 +146,15 @@ describe('s3 support', () => {
         throw new Error(`Unexpected response for attachment ${JSON.stringify(att)}: ${res}`);
       }
 
-      await assertDownloadMatchesOriginal(att, res.location);
+      const res2 = await fetch(res.location);
+      return assertDownloadMatchesOriginal(res2, att.name);
     }
   }
 
-  async function assertDownloadMatchesOriginal({ name }, url) {
-    const filepath = `${attDir}/${name}`;
-    log.info('assertDownloadMatchesOriginal()', name);
-
-    const res = await fetch(url);
+  async function assertDownloadMatchesOriginal(res, name) {
     should.ok(res.ok);
+
+    const filepath = `${attDir}/${name}`;
 
     const expectedContentType = mimetypeFor(name);
     const actualContentType = res.headers.get('content-type');
@@ -175,4 +193,8 @@ async function cli(cmd) {
   const res = stdout.toString().trim();
   log.info('cli()', 'returned:', res);
   return res;
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
