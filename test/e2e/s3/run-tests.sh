@@ -7,6 +7,13 @@ userPassword="secret1234"
 
 log() { echo "[test/e2e/s3/run-tests] $*"; }
 
+cleanup() {
+  if [[ -n "${serverPid-}" ]]; then
+    kill "$serverPid"
+  fi
+}
+trap cleanup EXIT SIGINT SIGTERM SIGHUP
+
 make base
 
 if [[ "${CI-}" = '' ]]; then
@@ -39,6 +46,7 @@ fi
 
 NODE_CONFIG_ENV=s3-dev node lib/bin/s3-create-bucket.js
 NODE_CONFIG_ENV=s3-dev make run &
+serverPid=$!
 
 log 'Waiting for backend to start...'
 timeout 30 bash -c "while ! curl -s -o /dev/null $serverUrl; do sleep 1; done"
