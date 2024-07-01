@@ -8,9 +8,11 @@ userPassword="secret1234"
 log() { echo "[test/e2e/s3/run-tests] $*"; }
 
 cleanup() {
-  if [[ -n "${serverPid-}" ]]; then
-    kill "$serverPid" || true
-  fi
+  if [[ -n "${_cleanupStarted-}" ]]; then return; fi
+  _cleanupStarted=1 # track to prevent recursive cleanup
+
+  log "Cleaning up background service(s); ignore subsequent errors."
+  kill -- -$$
 }
 trap cleanup EXIT SIGINT SIGTERM SIGHUP
 
