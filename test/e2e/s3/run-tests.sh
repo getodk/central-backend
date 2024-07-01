@@ -9,10 +9,15 @@ log() { echo "[test/e2e/s3/run-tests] $*"; }
 
 cleanup() {
   if [[ -n "${serverPid-}" ]]; then
-    kill "$serverPid"
+    kill "$serverPid" || true
   fi
 }
 trap cleanup EXIT SIGINT SIGTERM SIGHUP
+
+if curl -s -o /dev/null $serverUrl; then
+  log "!!! Error: server already running at: $serverUrl"
+  exit 1
+fi
 
 make base
 
@@ -56,7 +61,7 @@ cd test/e2e/s3
 npx mocha test.js
 
 if ! curl -s -o /dev/null "$serverUrl"; then
-  log 'Backend died.'
+  log '!!! Backend died.'
   exit 1
 fi
 
