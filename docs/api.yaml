@@ -40,6 +40,12 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
+    ## ODK Central v2024.2
+
+    **Added**:
+
+    - Extended metadata for Forms includes a new property `publicLinks`, which is the number of Public Links that can submit to the Form.
+
     ## ODK Central v2024.1
 
     **Added**:
@@ -2964,7 +2970,7 @@ paths:
 
         As of version 1.2, Forms that are unpublished (that only carry a draft and have never been published) will appear with full metadata detail. Previously, certain details like `name` were omitted. You can determine that a Form is unpublished by checking the `publishedAt` value: it will be `null` for unpublished forms.
 
-        This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of Submissions that each Form has, the `reviewStates` object of counts of Submissions with specific review states, the `lastSubmission` most recent submission timestamp, as well as the Actor the Form was `createdBy`.
+        This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of Submissions that each Form has, the `reviewStates` object of counts of Submissions with specific review states, the `lastSubmission` most recent submission timestamp, the Actor the Form was `createdBy`, as well as other metadata.
       operationId: List all Forms
       parameters:
       - name: projectId
@@ -3026,6 +3032,7 @@ paths:
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
                 entityRelated: false
+                publicLinks: 4
         403:
           description: Forbidden
           content:
@@ -3281,6 +3288,7 @@ paths:
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
                 entityRelated: false
+                publicLinks: 4
         403:
           description: Forbidden
           content:
@@ -12524,6 +12532,7 @@ components:
             - submissions
             - reviewStates
             - entityRelated
+            - publicLinks
           properties:
             submissions:
               type: number
@@ -12545,6 +12554,10 @@ components:
             entityRelated:
               type: boolean
               description: True only if this Form is related to a Dataset. In v2022.3, this means the Form's Submissions create Entities in a Dataset. In a future version, Submissions will also be able to update existing Entities.
+            publicLinks:
+              type: number
+              example: 4
+              description: The number of Public Links that can submit to the Form. This does not include Public Links that have been revoked.
     ExtendedFormVersion:
       allOf:
         - $ref: '#/components/schemas/Form'
