@@ -738,7 +738,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               .expect(304)));
       }));
 
-      it('should return the xlsx file originally provided', testService((service) => {
+      it('should return the xlsx file originally provided for a draft', testService((service) => {
         const input = readFileSync(appRoot + '/test/data/simple.xlsx');
         return service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
