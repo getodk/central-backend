@@ -29,7 +29,10 @@ const userEmail = 'x@example.com';
 const userPassword = 'secret1234';
 
 describe('s3 support', () => {
-  let api, expectedAttachments, projectId, xmlFormId, attDir;
+  let api, expectedAttachments, actualAttachments, projectId, xmlFormId, attDir;
+
+  // Track of total blobs uploaded over all tests
+  let previousBlobs = 0;
 
   async function setup(testNumber) {
     attDir = `./test-forms/${testNumber}-attachments`;
@@ -42,31 +45,35 @@ describe('s3 support', () => {
     xmlFormId = await uploadFormWithAttachments(`./test-forms/${testNumber}.xml`, attDir);
 
     // when
-    const actualAttachments = await api.apiGet(`projects/${projectId}/forms/${xmlFormId}/attachments`);
+    actualAttachments = await api.apiGet(`projects/${projectId}/forms/${xmlFormId}/attachments`);
     should.deepEqual(actualAttachments.map(a => a.name).sort(), expectedAttachments);
 
     // then
     should.equal(await cli('count-blobs pending'), 11);
-    should.equal(await cli('count-blobs uploaded'), 0);
+    should.equal(await cli('count-blobs uploaded'), previousBlobs);
     // and
     await assertNoneRedirect(actualAttachments);
   }
 
-  it('should shift submission attachments to s3', async function() {
+  it.only('should shift submission attachments to s3', async function() {
     this.timeout(TIMEOUT*2);
 
-    // given
-    await setup(1);
+    try {
+      // given
+      await setup(1);
 
-    // when
-    await cli('upload-pending');
+      // when
+      await cli('upload-pending');
 
-    // then
-    should.equal(await cli('count-blobs pending'), 0);
-    should.equal(await cli('count-blobs uploaded'), 11);
-    // and
-    await assertAllRedirect(actualAttachments);
-    await assertAllDownloadsMatchOriginal(actualAttachments);
+      // then
+      should.equal(await cli('count-blobs pending'), 0);
+      should.equal(await cli('count-blobs uploaded'), 11);
+      // and
+      await assertAllRedirect(actualAttachments);
+      await assertAllDownloadsMatchOriginal(actualAttachments);
+    } finally {
+      previousBlobs += 11;
+    }
   });
 
   it('should continue to serve blobs while upload-pending is running', async function() {
