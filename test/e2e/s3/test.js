@@ -28,21 +28,18 @@ const serverUrl = 'http://localhost:8383';
 const userEmail = 'x@example.com';
 const userPassword = 'secret1234';
 
-const attDir = './test-attachments';
-const BIGFILE = `${attDir}/big.bin`;
-
 describe('s3 support', () => {
-  let api, expectedAttachments, projectId, xmlFormId;
+  let api, expectedAttachments, projectId, xmlFormId, attDir;
 
-  beforeEach(async function() {
-    this.timeout(TIMEOUT*2);
+  async function setup(testNumber) {
+    attDir = `./test-forms/${testNumber}-attachments`;
 
     // given
-    bigFileExists();
+    bigFileExists(attDir);
     expectedAttachments = fs.readdirSync(attDir).filter(f => !f.startsWith('.')).sort();
     api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
     projectId = await createProject();
-    xmlFormId = await uploadFormWithAttachments('test-form.xml');
+    xmlFormId = await uploadFormWithAttachments(`./test-forms/${testNumber}.xml`, attDir);
 
     // when
     const actualAttachments = await api.apiGet(`projects/${projectId}/forms/${xmlFormId}/attachments`);
@@ -53,10 +50,13 @@ describe('s3 support', () => {
     should.equal(await cli('count-blobs uploaded'), 0);
     // and
     await assertNoneRedirect(actualAttachments);
-  });
+  }
 
   it('should shift submission attachments to s3', async function() {
     this.timeout(TIMEOUT*2);
+
+    // given
+    await setup(1);
 
     // when
     await cli('upload-pending');
@@ -71,6 +71,9 @@ describe('s3 support', () => {
 
   it('should continue to serve blobs while upload-pending is running', async function() {
     this.timeout(TIMEOUT*2);
+
+    // given
+    await setup(1);
 
     // when
     const uploading = cli('upload-pending');
@@ -88,6 +91,9 @@ describe('s3 support', () => {
     this.timeout(TIMEOUT*2);
 
     // given
+    await setup(1);
+
+    // given
     const uploading1 = cli('upload-pending');
     const uploading2 = cli('upload-pending');
 
@@ -103,6 +109,9 @@ describe('s3 support', () => {
 
   it.only('should gracefully handle upload-pending dying unexpectedly', async function() {
     this.timeout(TIMEOUT*2);
+
+    // given
+    await setup(4);
 
     // when
     const uploading = cli('upload-pending');
@@ -137,7 +146,7 @@ describe('s3 support', () => {
     return project.id;
   }
 
-  async function uploadFormWithAttachments(xmlFilePath) {
+  async function uploadFormWithAttachments(xmlFilePath, attDir) {
     const { xmlFormId } = await api.apiPostFile(`projects/${projectId}/forms`, xmlFilePath);
 
     await Promise.all(
@@ -201,20 +210,21 @@ describe('s3 support', () => {
     }
     log.info('assertDownloadMatchesOriginal()', '  Looks OK.');
   }
-});
 
-function bigFileExists() {
-  if(fs.existsSync(BIGFILE)) {
-    log.info('big.bin exists; skipping generation');
-  } else {
-    log.info('Generating big.bin...');
-    let remaining = 100000000;
-    const batchSize = 100000;
-    do {
-      fs.appendFileSync(BIGFILE, randomBytes(batchSize));
-    } while((remaining-=batchSize) > 0);
+  function bigFileExists() {
+    const bigFile = `${attDir}/big.bin`;
+    if(fs.existsSync(bigFile)) {
+      log.info('big.bin exists; skipping generation');
+    } else {
+      log.info('Generating big.bin...');
+      let remaining = 100000000;
+      const batchSize = 100000;
+      do {
+        fs.appendFileSync(bigFile, randomBytes(batchSize));
+      } while((remaining-=batchSize) > 0);
+    }
   }
-}
+});
 
 function cli(cmd) {
   let pid;
