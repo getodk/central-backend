@@ -34,6 +34,11 @@ describe('s3 support', () => {
   // Track of total blobs uploaded over all tests
   let previousBlobs = 0;
 
+  afterEach(async () => {
+    await cli('upload-pending');
+    previousBlobs += 11;
+  });
+
   async function setup(testNumber) {
     attDir = `./test-forms/${testNumber}-attachments`;
 
@@ -55,32 +60,28 @@ describe('s3 support', () => {
     await assertNoneRedirect(actualAttachments);
   }
 
-  it.only('should shift submission attachments to s3', async function() {
+  it('should shift submission attachments to s3', async function() {
     this.timeout(TIMEOUT*2);
 
-    try {
-      // given
-      await setup(1);
+    // given
+    await setup(1);
 
-      // when
-      await cli('upload-pending');
+    // when
+    await cli('upload-pending');
 
-      // then
-      should.equal(await cli('count-blobs pending'), 0);
-      should.equal(await cli('count-blobs uploaded'), 11);
-      // and
-      await assertAllRedirect(actualAttachments);
-      await assertAllDownloadsMatchOriginal(actualAttachments);
-    } finally {
-      previousBlobs += 11;
-    }
+    // then
+    should.equal(await cli('count-blobs pending'), 0);
+    should.equal(await cli('count-blobs uploaded'), 11);
+    // and
+    await assertAllRedirect(actualAttachments);
+    await assertAllDownloadsMatchOriginal(actualAttachments);
   });
 
   it('should continue to serve blobs while upload-pending is running', async function() {
     this.timeout(TIMEOUT*2);
 
     // given
-    await setup(1);
+    await setup(2);
 
     // when
     const uploading = cli('upload-pending');
@@ -98,7 +99,7 @@ describe('s3 support', () => {
     this.timeout(TIMEOUT*2);
 
     // given
-    await setup(1);
+    await setup(3);
 
     // given
     const uploading1 = cli('upload-pending');
@@ -114,7 +115,7 @@ describe('s3 support', () => {
     _.intersection(uploaded1, uploaded2).length.should.equal(0);
   });
 
-  it.only('should gracefully handle upload-pending dying unexpectedly', async function() {
+  it('should gracefully handle upload-pending dying unexpectedly', async function() {
     this.timeout(TIMEOUT*2);
 
     // given
@@ -224,7 +225,7 @@ describe('s3 support', () => {
       log.info('big.bin exists; skipping generation');
     } else {
       log.info('Generating big.bin...');
-      let remaining = 100000000;
+      let remaining = 100000000; // FIXME when tests are all passing locally and CI, this can probably be decreased
       const batchSize = 100000;
       do {
         fs.appendFileSync(bigFile, randomBytes(batchSize));
