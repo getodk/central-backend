@@ -609,4 +609,135 @@ describe('Offline Entities', () => {
         });
     }));
   });
+
+  describe('reprocessing submissions when toggling approvalRequired dataset flag', () => {
+    it('should not over-process a submission that is being held because it is later in a run', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Configure the entity list to create entities on submission approval
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      // Create a submission that would create an entity on approval. Don't approve it yet.
+      // trunk version is 1, but base version is higher than trunk version indicating it is later in the run
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${uuid()}"`)
+          .replace('baseVersion="1"', 'baseVersion="2"')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Observe that the submission was initially processed without error
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/one/audits')
+        .expect(200)
+        .then(({ body }) => {
+          should.not.exist(body[0].details.problem);
+        });
+
+      // Observe there is no second version yet this update was not applied
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .then(({ body: versions }) => {
+          versions.length.should.equal(1);
+        });
+
+      // Trigger the submission being reprocessed by updating the entity list
+      await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+        .send({ approvalRequired: false })
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .then(({ body: versions }) => {
+          versions.length.should.equal(1);
+        });
+
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/one/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+          should.not.exist(body[0].details.problem);
+        });
+    }));
+
+    it('should wait for approval of create submission in offline branch', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Configure the entity list to create entities on submission approval
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      const branchId = uuid();
+
+      // First submission creates the entity, offline version is now 1
+      // But this submission requires approval so it wont get processed at first
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Second submission updates the entity
+      // but it should be waiting for first version to come through
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Entity should not exist yet
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd')
+        .expect(404);
+
+      // Neither submission should have a processing error
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+          should.not.exist(body[0].details.problem);
+        });
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two-update/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+          should.not.exist(body[0].details.problem);
+        });
+
+      // There should be one submission (the second one) in the held submissions queue
+      const count = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      count.should.equal(1);
+
+      // Approving the first submission should start a chain that includes the second submission
+      await asAlice.patch('/v1/projects/1/forms/offlineEntity/submissions/two')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd')
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(2);
+          body.currentVersion.baseVersion.should.equal(1);
+          body.currentVersion.data.should.eql({ age: '20', status: 'checked in', first_name: 'Megan' });
+
+          body.currentVersion.branchId.should.equal(branchId);
+          should.not.exist(body.currentVersion.trunkVersion);
+          body.currentVersion.branchBaseVersion.should.equal(1);
+        });
+    }));
+  });
 });
