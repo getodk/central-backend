@@ -17,9 +17,19 @@ describe('parsing dataset from entity block', () => {
         .replace('2022.1.0', '2022.1.123'))
         .should.be.fulfilled());
 
+    it('should validate a version between major releases, e.g. 2023.2.0', () =>
+      getDataset(testData.forms.updateEntity
+        .replace('2023.1.0', '2023.2.0'))
+        .should.be.fulfilled());
+
     it('should validate any version that starts with 2023.1.', () =>
       getDataset(testData.forms.updateEntity
         .replace('2023.1.0', '2023.1.123'))
+        .should.be.fulfilled());
+
+    it('should validate any version that starts with 2024.1.', () =>
+      getDataset(testData.forms.offlineEntity
+        .replace('2024.1.0', '2024.1.123'))
         .should.be.fulfilled());
 
     it('should reject probable future version', () =>
