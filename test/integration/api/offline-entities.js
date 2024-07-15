@@ -32,14 +32,12 @@ const testOfflineEntities = (test) => testService(async (service, container) => 
 
 describe('Offline Entities', () => {
   describe('parsing branchId and trunkVersion from submission xml', () => {
-    it('should parse and save branch info from sub creating an entity', testOfflineEntities(async (service, container) => {
+    it('should parse and save info from submission creating an entity', testOfflineEntities(async (service, container) => {
       const asAlice = await service.login('alice');
-      const branchId = uuid();
 
+      // create=1 is specified, but baseVersion, trunkVersion, and branchId are all empty for entity creation
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
-        .send(testData.instances.offlineEntity.two
-          .replace('branchId=""', `branchId="${branchId}"`)
-        )
+        .send(testData.instances.offlineEntity.two)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -54,7 +52,8 @@ describe('Offline Entities', () => {
           should.not.exist(body.currentVersion.trunkVersion);
           should.not.exist(body.currentVersion.baseVersion);
           should.not.exist(body.currentVersion.branchBaseVersion);
-          body.currentVersion.branchId.should.equal(branchId);
+          // There is also no branchId because Collect does not send one for entity creation
+          should.not.exist(body.currentVersion.branchId);
         });
     }));
 
@@ -139,31 +138,6 @@ describe('Offline Entities', () => {
         .expect(200)
         .then(({ body }) => {
           body[0].details.errorMessage.should.eql('Required parameter branchId missing.');
-        });
-    }));
-
-    it('should ignore empty string trunkVersion and branchId values in create scenario', testOfflineEntities(async (service, container) => {
-      const asAlice = await service.login('alice');
-
-      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
-        .send(testData.instances.offlineEntity.two
-          .replace('trunkVersion="1"', `trunkVersion=""`)
-        )
-        .set('Content-Type', 'application/xml')
-        .expect(200);
-
-      await exhaust(container);
-
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd')
-        .expect(200)
-        .then(({ body }) => {
-          body.currentVersion.version.should.equal(1);
-          should.not.exist(body.currentVersion.baseVersion);
-          body.currentVersion.data.should.eql({ age: '20', status: 'new', first_name: 'Megan' });
-
-          should.not.exist(body.currentVersion.trunkVersion);
-          should.not.exist(body.currentVersion.branchBaseVersion);
-          should.not.exist(body.currentVersion.branchId);
         });
     }));
   });
@@ -303,9 +277,7 @@ describe('Offline Entities', () => {
 
       // First submission creates the entity, offline version is now 1
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
-        .send(testData.instances.offlineEntity.two
-          .replace('branchId=""', `branchId="${branchId}"`)
-        )
+        .send(testData.instances.offlineEntity.two)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -366,6 +338,8 @@ describe('Offline Entities', () => {
         .then(({ body }) => {
           should.not.exist(body[0].details.problem);
         });
+
+      // This submission is now held in the backlog, but that functionality is checked in later tests
     }));
 
     it('should not apply out of order update from a run after starting a run', testOfflineEntities(async (service, container) => {
@@ -503,7 +477,8 @@ describe('Offline Entities', () => {
       const asAlice = await service.login('alice');
       const branchId = uuid();
 
-      // Second submission updates the entity but entity hasn't been created yet
+      // Send the second submission that updates an entity (before the entity has been created)
+      // This submission has a branchId
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.two
           .replace('create="1"', 'update="1"')
@@ -520,11 +495,11 @@ describe('Offline Entities', () => {
       const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       backlogCount.should.equal(1);
 
-      // First submission creating the entity comes in later
+      // Send the second submission to create the entity
+      // This submission does not have an explicit branchId, but it should trigger
+      // the processing of the next submission in the branch.
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
-        .send(testData.instances.offlineEntity.two
-          .replace('branchId=""', `branchId="${branchId}"`)
-        )
+        .send(testData.instances.offlineEntity.two)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -581,10 +556,9 @@ describe('Offline Entities', () => {
       backlogCount.should.equal(2);
 
       // Third (but logically first) submission to create entity
+      // which does not have an explicit branchId.
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
-        .send(testData.instances.offlineEntity.two
-          .replace('branchId=""', `branchId="${branchId}"`)
-        )
+        .send(testData.instances.offlineEntity.two)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -741,9 +715,7 @@ describe('Offline Entities', () => {
       // First submission creates the entity, offline version is now 1
       // But this submission requires approval so it wont get processed at first
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
-        .send(testData.instances.offlineEntity.two
-          .replace('branchId=""', `branchId="${branchId}"`)
-        )
+        .send(testData.instances.offlineEntity.two)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
