@@ -808,4 +808,59 @@ describe('Offline Entities', () => {
       count.should.equal(0);
     }));
   });
+
+  describe('force-processing held submissions', () => {
+    it('should apply an entity update when the previous update is missing', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Trunk version is 1, but base version is 2
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${uuid()}"`)
+          .replace('baseVersion="1"', 'baseVersion="2"')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await container.Entities.processHeldSubmissions();
+
+      // check that nothing too bad happens from running this again
+      await container.Entities.processHeldSubmissions();
+    }));
+
+    it('should apply two updates when first upate is missing', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Trunk version is 1, but base version is 2
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('baseVersion="1"', 'baseVersion="2"')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('one', 'one-update2')
+          .replace('baseVersion="1"', 'baseVersion="3"')
+          .replace('<status>arrived</status>', '<status>departed</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await container.Entities.processHeldSubmissions();
+
+      await exhaust(container);
+
+      // check that nothing too bad happens from running this again
+      await container.Entities.processHeldSubmissions();
+    }));
+  });
 });
