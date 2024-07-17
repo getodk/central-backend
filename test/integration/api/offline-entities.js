@@ -613,23 +613,28 @@ describe('Offline Entities', () => {
   describe('reprocessing submissions when toggling approvalRequired dataset flag', () => {
     it('should not over-process a submission that is being held because it is later in a run', testOfflineEntities(async (service, container) => {
       const asAlice = await service.login('alice');
+      const branchId = uuid();
 
       // Configure the entity list to create entities on submission approval
       await asAlice.patch('/v1/projects/1/datasets/people')
         .send({ approvalRequired: true })
         .expect(200);
 
-      // Create a submission that would create an entity on approval. Don't approve it yet.
-      // trunk version is 1, but base version is higher than trunk version indicating it is later in the run
+      // This submission updates an existing entity.
+      // Trunk version is 1, but base version is higher than trunk version indicating it is later in the branch.
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.one
-          .replace('branchId=""', `branchId="${uuid()}"`)
+          .replace('branchId=""', `branchId="${branchId}"`)
           .replace('baseVersion="1"', 'baseVersion="2"')
         )
         .set('Content-Type', 'application/xml')
         .expect(200);
 
       await exhaust(container);
+
+      // Observe that there is one held submission.
+      let count = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      count.should.equal(1);
 
       // Observe that the submission was initially processed without error
       await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/one/audits')
@@ -638,30 +643,59 @@ describe('Offline Entities', () => {
           should.not.exist(body[0].details.problem);
         });
 
-      // Observe there is no second version yet this update was not applied
+      // Observe this update was not applied (there is no second version) because earlier update in branch is missing.
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
         .then(({ body: versions }) => {
           versions.length.should.equal(1);
         });
 
-      // Trigger the submission being reprocessed by updating the entity list
+      // Trigger the submission reprocessing by updating the entity list settings
       await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
         .send({ approvalRequired: false })
         .expect(200);
 
       await exhaust(container);
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
-        .then(({ body: versions }) => {
-          versions.length.should.equal(1);
-        });
+      // Observe that there is still just one held submission.
+      count = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      count.should.equal(1);
 
+      // Observe that the submission still has no processing errors
       await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/one/audits')
         .expect(200)
         .then(({ body }) => {
           body.length.should.equal(1);
           should.not.exist(body[0].details.problem);
         });
+
+      // Observe that the update was still not applied.
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .then(({ body: versions }) => {
+          versions.length.should.equal(1);
+        });
+
+      // Send in missing submission from earlier in the branch.
+      // Trunk version is 1, base version is 1
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('one', 'one-update')
+          .replace('<status>arrived</status>', '<status>waiting</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Observe that both updates have now been applied.
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .then(({ body: versions }) => {
+          versions.length.should.equal(3);
+        });
+
+      // Observe that there are no longer any held submissions.
+      count = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      count.should.equal(0);
     }));
 
     it('should wait for approval of create submission in offline branch', testOfflineEntities(async (service, container) => {
@@ -717,7 +751,7 @@ describe('Offline Entities', () => {
         });
 
       // There should be one submission (the second one) in the held submissions queue
-      const count = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      let count = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       count.should.equal(1);
 
       // Approving the first submission should start a chain that includes the second submission
@@ -738,6 +772,10 @@ describe('Offline Entities', () => {
           should.not.exist(body.currentVersion.trunkVersion);
           body.currentVersion.branchBaseVersion.should.equal(1);
         });
+
+      // Now there should be no submissions in the backlog.
+      count = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      count.should.equal(0);
     }));
   });
 });
