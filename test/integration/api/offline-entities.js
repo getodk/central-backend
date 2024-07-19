@@ -486,12 +486,6 @@ describe('Offline Entities', () => {
 
       await exhaust(container);
 
-      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/one-update2/audits')
-        .expect(200)
-        .then(({ body }) => {
-          body[1].action.should.equal('submission.reprocess');
-        });
-
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(200)
         .then(({ body }) => {
@@ -606,6 +600,42 @@ describe('Offline Entities', () => {
           body.currentVersion.branchId.should.equal(branchId);
           should.not.exist(body.currentVersion.trunkVersion);
           body.currentVersion.branchBaseVersion.should.equal(2);
+        });
+    }));
+
+    it('should not include submission.reprocess event in audit log of held submission', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Send second update in first
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('one', 'one-update1')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('<status>arrived</status>', '<status>working</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Send first update in
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/one-update1/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(2);
+          body.map(a => a.action).should.eql([
+            'entity.update.version',
+            'submission.create'
+          ]);
         });
     }));
   });
