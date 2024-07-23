@@ -812,11 +812,12 @@ describe('Offline Entities', () => {
   describe('force-processing held submissions', () => {
     it('should apply an entity update when the previous update is missing', testOfflineEntities(async (service, container) => {
       const asAlice = await service.login('alice');
+      const branchId = uuid();
 
       // Trunk version is 1, but base version is 2
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.one
-          .replace('branchId=""', `branchId="${uuid()}"`)
+          .replace('branchId=""', `branchId="${branchId}"`)
           .replace('baseVersion="1"', 'baseVersion="2"')
         )
         .set('Content-Type', 'application/xml')
@@ -826,8 +827,20 @@ describe('Offline Entities', () => {
 
       await container.Entities.processHeldSubmissions();
 
-      // check that nothing too bad happens from running this again
-      await container.Entities.processHeldSubmissions();
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(2);
+          body.currentVersion.baseVersion.should.equal(1);
+          body.currentVersion.data.should.eql({ age: '22', status: 'arrived', first_name: 'Johnny' });
+
+          body.currentVersion.branchId.should.equal(branchId);
+          body.currentVersion.trunkVersion.should.equal(1);
+          body.currentVersion.branchBaseVersion.should.equal(2);
+        });
+
+      const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(0);
     }));
 
     it('should apply two updates when first upate is missing', testOfflineEntities(async (service, container) => {
@@ -855,12 +868,25 @@ describe('Offline Entities', () => {
 
       await exhaust(container);
 
+      let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(2);
+
       await container.Entities.processHeldSubmissions();
 
-      await exhaust(container);
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(3);
+          body.currentVersion.baseVersion.should.equal(2);
+          body.currentVersion.data.should.eql({ age: '22', status: 'departed', first_name: 'Johnny' });
 
-      // check that nothing too bad happens from running this again
-      await container.Entities.processHeldSubmissions();
+          body.currentVersion.branchId.should.equal(branchId);
+          body.currentVersion.trunkVersion.should.equal(1);
+          body.currentVersion.branchBaseVersion.should.equal(3);
+        });
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(0);
     }));
   });
 });
