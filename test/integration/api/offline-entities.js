@@ -888,5 +888,99 @@ describe('Offline Entities', () => {
       backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       backlogCount.should.equal(0);
     }));
+
+    it('should apply an entity update as a create', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+      const newUuid = uuid();
+
+      // Base version is 1 but it doesnt exist
+      // trunk version doesnt make sense to exist here either
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc"', `id="${newUuid}"`)
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('trunkVersion="1"', 'trunkVersion=""')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      await container.Entities.processHeldSubmissions();
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${newUuid}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(1);
+          body.currentVersion.data.should.eql({ status: 'arrived' });
+          body.currentVersion.label.should.eql('auto generated');
+          body.currentVersion.branchId.should.equal(branchId);
+
+
+          // This is the first version of the entity so there should be no base or trunk versions
+          should.not.exist(body.currentVersion.trunkVersion);
+          should.not.exist(body.currentVersion.baseVersion);
+          should.not.exist(body.currentVersion.branchBaseVersion);
+        });
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(0);
+    }));
+
+    it('should apply an entity update as a create followed by another update', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+      const newUuid = uuid();
+
+      // Base version is 1 but it doesnt exist
+      // trunk version doesnt make sense to exist here either
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc"', `id="${newUuid}"`)
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('trunkVersion="1"', 'trunkVersion=""')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // base version is 2 now
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update')
+          .replace('id="12345678-1234-4123-8234-123456789abc"', `id="${newUuid}"`)
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('trunkVersion="1"', 'trunkVersion=""')
+          .replace('<status>arrived</status>', '<name>Dana</name><status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(2);
+
+      await container.Entities.processHeldSubmissions();
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${newUuid}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(2);
+          body.currentVersion.data.should.eql({ status: 'checked in', first_name: 'Dana' });
+          body.currentVersion.label.should.eql('auto generated');
+          body.currentVersion.branchId.should.equal(branchId);
+          body.currentVersion.baseVersion.should.equal(2); // TODO: fix, this doesnt really make sense
+          body.currentVersion.branchBaseVersion.should.equal(2);
+          should.not.exist(body.currentVersion.trunkVersion);
+        });
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(0);
+    }));
   });
 });
