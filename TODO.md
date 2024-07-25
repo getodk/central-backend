@@ -9,7 +9,7 @@
 ## Central repo
 
 * add env var -> config mapping
-* add cron job for triggering upload?
+* add cron job for triggering upload? central:files/service/crontab
 
 ## Queries
 
