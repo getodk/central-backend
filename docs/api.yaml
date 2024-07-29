@@ -9161,6 +9161,9 @@ paths:
                     label: John (88)
                     firstName: John
                     age: '88'
+            application/json; bulk:
+              schema:
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
