@@ -45,6 +45,7 @@ You can also run `make debug` to run the server with a standard node inspector p
 
 ### Setting up the database manually
 
+#### Basic configuration
 First, create a database and user in Postgres. Either use the same settings as the [default configuration file](config/default.json), or update your local configuration file to match the settings you choose. For example:
 
 ```sql
@@ -59,6 +60,18 @@ CREATE EXTENSION IF NOT EXISTS CITEXT;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 ```
 
+#### Advanced configuration
+Rather than specifying username/host/password/database etc in separate fields, you can also use a "connection URI". This allows for many more options, eg for accessing your database over Unix domain sockets. A database configuration block that does that may look like this:
+```javascript
+    "database": {
+      "uri": "postgresql://%2Frun%2Fpostgresql/jubilant"
+    },
+```
+which will connect to the server using the socket at `/run/postgresql/.s.PGSQL.5432`, using your current user (which must have access to the `jubilant` database), using passwordless "peer authentication" (which must be enabled in your PostgreSQL server configuration, usually in `pg_hba.conf`.)
+
+For details on the URI syntax, see [Postgres' documentation](https://www.postgresql.org/docs/17/libpq-connect.html#LIBPQ-CONNSTRING-URIS) and the [parser documentation](https://www.npmjs.com/package/pg-connection-string?activeTab=readme#connection-strings).
+
+#### With Docker
 If you are using Docker, you may find it easiest to run the database in Docker by running `make run-docker-postgres`.
 
 ### Creating an admin user

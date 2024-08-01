@@ -10,6 +10,14 @@ describe('util/db', () => {
   describe('connectionString', () => {
     const { connectionString } = util;
 
+    it('should accept a connection URI and return it intact', () => {
+      const uri = 'postgres://bar:baz@localhost/foo';
+      const result = connectionString({
+        uri,
+      });
+      result.should.equal(uri);
+    });
+
     it('should return a string with the required options', () => {
       const result = connectionString({
         host: 'localhost',
@@ -94,108 +102,13 @@ describe('util/db', () => {
         encoding: 'latin1'
       });
       result.should.throw();
-    });
-  });
 
-  describe('connectionObject', () => {
-    const { connectionObject } = util;
-
-    it('should return an object with the required options', () => {
-      const result = connectionObject({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz'
+      const resultForUri = () => connectionString({
+        uri: 'postgresql://bar:baz@localhost/foo?encoding=latin1',
+        maximumPoolSize: 42,
+        unsupportedoption: 'boo!',
       });
-      result.should.eql({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz'
-      });
-    });
-
-    it('should include the port if one is specified', () => {
-      const result = connectionObject({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        port: 1234
-      });
-      result.should.eql({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        port: 1234
-      });
-    });
-
-    it('should return the correct object if ssl is true', () => {
-      const result = connectionObject({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        ssl: true
-      });
-      result.should.eql({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        ssl: { rejectUnauthorized: false }
-      });
-    });
-
-    it('should throw if ssl is false', () => {
-      const result = () => connectionObject({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        ssl: false
-      });
-      result.should.throw();
-    });
-
-    it('should throw if ssl is an object', () => {
-      const result = () => connectionObject({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        ssl: { rejectUnauthorized: false }
-      });
-      result.should.throw();
-    });
-
-    it('should allow (but ignore) maximumPoolSize', () => {
-      const result = connectionObject({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        maximumPoolSize: 42
-      });
-      result.should.eql({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz'
-      });
-    });
-
-    it('should throw for an unsupported option', () => {
-      const result = () => connectionObject({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        encoding: 'latin1'
-      });
-      result.should.throw();
+      resultForUri.should.throw();
     });
   });
 
