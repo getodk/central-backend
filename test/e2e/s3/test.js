@@ -121,7 +121,10 @@ describe('s3 support', () => {
     this.timeout(TIMEOUT*2);
 
     // given
+    const initialUploaded = previousBlobs;
+    should.equal(await cli('count-blobs uploaded'), initialUploaded);
     await setup(4);
+    should.equal(await cli('count-blobs uploaded'), initialUploaded);
 
     // when
     const uploading = cli('upload-pending');
@@ -148,7 +151,7 @@ describe('s3 support', () => {
     counts.should.deepEqual({
       pending:     '0',
       in_progress: '0',
-      uploaded:   '10',
+      uploaded:    initialUploaded.toString(),
       failed:      '1',
     });
   });
