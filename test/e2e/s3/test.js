@@ -36,7 +36,7 @@ describe('s3 support', () => {
 
   afterEach(async () => {
     await cli('upload-pending');
-    previousBlobs += 11;
+    previousBlobs = +await cli('count-blobs uploaded');
   });
 
   async function setup(testNumber) {
@@ -54,7 +54,7 @@ describe('s3 support', () => {
     should.deepEqual(actualAttachments.map(a => a.name).sort(), expectedAttachments);
 
     // then
-    should.equal(await cli('count-blobs pending'), 11);
+    should.equal(await cli('count-blobs pending'), expectedAttachments.length);
     should.equal(await cli('count-blobs uploaded'), previousBlobs);
     // and
     await assertNoneRedirect(actualAttachments);
