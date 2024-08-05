@@ -12,7 +12,7 @@ cleanup() {
   _cleanupStarted=1 # track to prevent recursive cleanup
 
   log "Cleaning up background service(s); ignore subsequent errors."
-  set +o pipefail
+  set +eo pipefail
   kill -- -$$
 }
 trap cleanup EXIT SIGINT SIGTERM SIGHUP
@@ -68,4 +68,4 @@ if ! curl -s -o /dev/null "$serverUrl"; then
   exit 1
 fi
 
-log "Test completed OK."
+log "Tests completed OK."
