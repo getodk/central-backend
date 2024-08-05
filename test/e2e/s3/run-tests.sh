@@ -12,6 +12,7 @@ cleanup() {
   _cleanupStarted=1 # track to prevent recursive cleanup
 
   log "Cleaning up background service(s); ignore subsequent errors."
+  set +o pipefail
   kill -- -$$
 }
 trap cleanup EXIT SIGINT SIGTERM SIGHUP
