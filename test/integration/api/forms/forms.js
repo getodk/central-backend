@@ -964,6 +964,38 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                 body.excelContentType.should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
               })))));
 
+      it('should return count of public links with extended metadata', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'link1' })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'link2' })
+          .expect(200);
+        const { body: form } = await asAlice.get('/v1/projects/1/forms/simple')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200);
+        form.publicLinks.should.equal(2);
+      }));
+
+      it('should exclude deleted and revoked public links', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        const { body: link1 } = await asAlice.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'link1' })
+          .expect(200);
+        const { body: link2 } = await asAlice.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'link2' })
+          .expect(200);
+        await asAlice.delete(`/v1/projects/1/forms/simple/public-links/${link1.id}`)
+          .expect(200);
+        await asAlice.delete(`/v1/sessions/${link2.token}`)
+          .expect(200);
+        const { body: form } = await asAlice.get('/v1/projects/1/forms/simple')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200);
+        form.publicLinks.should.equal(0);
+      }));
+
       it('should not return a draftToken', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
