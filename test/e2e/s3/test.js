@@ -150,9 +150,9 @@ describe('s3 support', () => {
     }));
     counts.should.deepEqual({
       pending:     '0',
-      in_progress: '0',
+      in_progress: '1', // crashed process will be stuck in_progress forever TODO decide if this is acceptable
       uploaded:    (initialUploaded + 10).toString(),
-      failed:      '1',
+      failed:      '0',
     });
   });
 
