@@ -85,7 +85,7 @@ describe('s3 support', () => {
 
     // when
     const uploading = cli('upload-pending');
-    while(await cli('count-blobs pending') !== '1') { sleep(100); }
+    while(await cli('count-blobs pending') !== '1') { console.log('Sleeping...'); await sleep(100); }
 
     // and
     const res = await api.apiRawGet(`projects/${projectId}/forms/${xmlFormId}/attachments/big.bin`);
