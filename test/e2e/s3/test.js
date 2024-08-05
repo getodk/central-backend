@@ -83,6 +83,8 @@ describe('s3 support', () => {
     // given
     await setup(2);
 
+    console.log('Pending uploads:', await cli('count-blobs pending'));
+
     // when
     const uploading = cli('upload-pending');
     while(await cli('count-blobs pending') !== '1') { console.log('Sleeping...'); await sleep(100); }
