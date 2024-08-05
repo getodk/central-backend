@@ -88,16 +88,13 @@ describe('s3 support', () => {
     // when
     const uploading = cli('upload-pending');
 
-    let waiting = true;
-    while(waiting) {
+    while(true) {
       const count = +await cli('count-blobs pending');
       console.log('Pending blobs:', count);
       if(count < 1) throw new Error('Cannot test because all blobs are already uploaded.');
-      else if(count === 1) waiting = false;
-      else {
-        console.log('Sleeping...');
-        await sleep(100);
-      }
+      else if(count === 1) break;
+      console.log('Sleeping...');
+      await sleep(100);
     }
 
     // and
