@@ -90,10 +90,8 @@ describe('s3 support', () => {
 
     while(true) {
       const count = +await cli('count-blobs pending');
-      console.log('Pending blobs:', count);
       if(count < 1) throw new Error('Cannot test because all blobs are already uploaded.');
       else if(count === 1) break;
-      console.log('Sleeping...');
       await sleep(100);
     }
 
@@ -138,18 +136,10 @@ describe('s3 support', () => {
     const uploading = cli('upload-pending');
     while(await cli('count-blobs pending') !== '0') { sleep(100); }
     // and
-    // DEBUG:
-    console.log(execSync('ps aux | grep node').toString());
-
-    console.log('Killing pid:', uploading.pid);
     await execSync(`kill -9 ${uploading.pid}`);
 
+    // then
     await expectFailure(uploading);
-
-    await sleep(100); // TODO maybe not required... just in case things need to settle
-
-    // DEBUG:
-    console.log(execSync('ps aux | grep node').toString());
 
     // then
     const counts = {};
