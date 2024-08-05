@@ -137,13 +137,16 @@ describe('s3 support', () => {
     console.log(execSync('ps aux | grep node').toString());
 
     // then
-    const counts = await Promise.all([
-      cli('count-blobs pending'),
-      cli('count-blobs in_progress'),
-      cli('count-blobs uploaded'),
-      cli('count-blobs failed'),
-    ]);
-    counts.should.deepEqual([ '0', '0', '10', '1' ]);
+    const counts = {};
+    await Promise.all(['pending', 'in_progress', 'uploaded', 'failed'].map(async status => {
+      counts[status] = await cli(`count-blobs ${status}`);
+    }));
+    counts.should.deepEqual({
+      pending:     '0',
+      in_progress: '0',
+      uploaded:   '10',
+      failed:      '1',
+    });
   });
 
   async function createProject() {
