@@ -151,7 +151,7 @@ describe('s3 support', () => {
     counts.should.deepEqual({
       pending:     '0',
       in_progress: '0',
-      uploaded:    initialUploaded.toString(),
+      uploaded:    (initialUploaded + 10).toString(),
       failed:      '1',
     });
   });
