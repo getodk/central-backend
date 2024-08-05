@@ -131,6 +131,8 @@ describe('s3 support', () => {
     console.log('Killing pid:', uploading.pid);
     await execSync(`kill -9 ${uploading.pid}`);
 
+    await expectFailure(uploading);
+
     await sleep(100); // TODO maybe not required... just in case things need to settle
 
     // DEBUG:
@@ -272,4 +274,17 @@ function hashes(uploadOutput) {
     .map(line => JSON.parse(line.substr(leader.length)).sha);
   console.log({ uploadOutput, hashes });
   return hashes;
+}
+
+async function expectFailure(promise) {
+  try {
+    await promise;
+    should.fail('Uploading should have exited with non-zero status.');
+  } catch(err) {
+    if(err.message.startsWith('Command failed: exec node lib/bin/s3 ')) {
+      // expected
+    } else {
+      throw err;
+    }
+  }
 }
