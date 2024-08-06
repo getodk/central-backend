@@ -105,7 +105,7 @@ describe('task: s3', () => {
     describe('uploadPending()', () => {
       it('should not do anything if nothing to upload', testTask(async () => {
         // when
-        await uploadPending(true);
+        await uploadPending();
 
         // then
         assertUploadCount(0);
@@ -121,7 +121,7 @@ describe('task: s3', () => {
         await aBlobExistsWith(container, { status: 'failed' });
 
         // when
-        await uploadPending(true);
+        await uploadPending();
 
         // then
         assertUploadCount(2);
@@ -133,7 +133,7 @@ describe('task: s3', () => {
         await aBlobExistsWith(container, { status: 'pending' });
 
         // when
-        await assertThrowsAsync(() => uploadPending(true), 'Mock error when trying to upload blobs.');
+        await assertThrowsAsync(() => uploadPending(), 'Mock error when trying to upload blobs.');
 
         // and
         assertUploadCount(0);
@@ -147,7 +147,7 @@ describe('task: s3', () => {
         await aBlobExistsWith(container, { status: 'pending' });
 
         // expect
-        await assertThrowsAsync(() => uploadPending(true), 'Mock error when trying to upload #3');
+        await assertThrowsAsync(() => uploadPending(), 'Mock error when trying to upload #3');
 
         // and
         assertUploadCount(2);
@@ -157,7 +157,7 @@ describe('task: s3', () => {
         await aBlobExistsWith(container, { status: 'pending' });
 
         // when
-        await uploadPending(true);
+        await uploadPending();
 
         // then
         assertUploadCount(3);
@@ -176,12 +176,12 @@ describe('task: s3', () => {
         await aBlobExistsWith(container, { status: 'pending' });
 
         // when
-        const first = uploadPending(true);
+        const first = uploadPending();
         await new Promise(resolve => { setTimeout(resolve, 200); });
         if (!resume) should.fail('Test did not set up successfully');
         global.s3.uploadFromBlob = original;
         // and
-        const second = uploadPending(true);
+        const second = uploadPending();
         await second;
 
         // then
