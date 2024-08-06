@@ -5,7 +5,6 @@
   * reset all at startup
   * reset all via CLI script (e.g. `UPDATE blobs SET s3_status='failed' WHERE id IN (SELECT id FROM blobs WHERE s3_status='in_progress' FOR NO KEY UPDATE SKIP LOCKED);`)
 * check what happens with S3 when trying to re-upload identical content - https://groups.google.com/g/jets3t-users/c/i1gusIu5mTw
-* resolve TODO in lib/task/s3
 * remove this file
 
 ## Central repo
