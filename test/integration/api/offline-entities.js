@@ -503,7 +503,7 @@ describe('Offline Entities', () => {
       const asAlice = await service.login('alice');
       const branchId = uuid();
 
-      // Second submission updates the entity but entity hasn't been created yet
+      // Send the second submission that updates an entity (before the entity has been created)
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.two
           .replace('create="1"', 'update="1"')
@@ -520,7 +520,7 @@ describe('Offline Entities', () => {
       const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       backlogCount.should.equal(1);
 
-      // First submission creating the entity comes in later
+      // Send the second submission to create the entity
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.two
           .replace('branchId=""', `branchId="${branchId}"`)
@@ -825,6 +825,9 @@ describe('Offline Entities', () => {
 
       await exhaust(container);
 
+      let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
       await container.Entities.processHeldSubmissions();
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
@@ -839,7 +842,7 @@ describe('Offline Entities', () => {
           body.currentVersion.branchBaseVersion.should.equal(2);
         });
 
-      const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       backlogCount.should.equal(0);
     }));
 
@@ -974,8 +977,44 @@ describe('Offline Entities', () => {
           body.currentVersion.data.should.eql({ status: 'checked in', first_name: 'Dana' });
           body.currentVersion.label.should.eql('auto generated');
           body.currentVersion.branchId.should.equal(branchId);
-          body.currentVersion.baseVersion.should.equal(2); // TODO: fix, this doesnt really make sense
+          body.currentVersion.baseVersion.should.equal(1);
           body.currentVersion.branchBaseVersion.should.equal(2);
+          should.not.exist(body.currentVersion.trunkVersion);
+        });
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(0);
+
+      // send in another update much later in the same branch
+      // base version is 10 now (many missing intermediate updates)
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update10')
+          .replace('id="12345678-1234-4123-8234-123456789abc"', `id="${newUuid}"`)
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('baseVersion="1"', 'baseVersion="10"')
+          .replace('trunkVersion="1"', 'trunkVersion=""')
+          .replace('<status>arrived</status>', '<name>Dana</name><status>registered</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      await container.Entities.processHeldSubmissions();
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${newUuid}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(3);
+          body.currentVersion.data.should.eql({ status: 'registered', first_name: 'Dana' });
+          body.currentVersion.label.should.eql('auto generated');
+          body.currentVersion.branchId.should.equal(branchId);
+          body.currentVersion.baseVersion.should.equal(2);
+          body.currentVersion.branchBaseVersion.should.equal(10);
           should.not.exist(body.currentVersion.trunkVersion);
         });
 
