@@ -83,19 +83,17 @@ describe('s3 support', () => {
     // given
     await setup(2);
 
-    console.log('Pending uploads:', await cli('count-blobs pending'));
-
     // when
     const uploading = cli('upload-pending');
 
     while(true) {
-      const count = +await cli('count-blobs pending');
+      const count = Number(await cli('count-blobs in_progress')); // FIXME why is this not in_progress?
       if(count < 1) throw new Error('Cannot test because all blobs are already uploaded.');
       else if(count === 1) break;
       await sleep(100);
     }
 
-    // and
+    // then
     const res = await api.apiRawGet(`projects/${projectId}/forms/${xmlFormId}/attachments/big.bin`);
     return assertDownloadMatchesOriginal(res, 'big.bin');
 
@@ -116,6 +114,9 @@ describe('s3 support', () => {
     // when
     const uploaded1 = hashes(await uploading1);
     const uploaded2 = hashes(await uploading2);
+
+    // Check how long each of the processes took to complete: ideally uploading1
+    // should not block uploading2 and vice-versa.
 
     // then
     (uploaded1.length + uploaded2.length).should.equal(11);
@@ -153,6 +154,10 @@ describe('s3 support', () => {
       failed:      '0',
     });
   });
+
+  // TODO new test case: what happens if e.g. kill -SIGTERM?  can upload-pending recover gracefully, and move the blob status to failed?
+
+  // TODO new test case: what happens if the connection to s3 fails while uploading?
 
   async function createProject() {
     const project = await api.apiPostJson(
