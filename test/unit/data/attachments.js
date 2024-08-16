@@ -16,10 +16,8 @@ describe('.zip attachments streaming', () => {
       if(err) return done(err);
 
       result.filenames.should.eql([
-        // eslint-disable-next-line no-trailing-spaces
-        'media/firstfile.ext', 
-        // eslint-disable-next-line no-trailing-spaces
-        'media/secondfile.ext', 
+        'media/firstfile.ext',
+        'media/secondfile.ext',
         'media/thirdfile.ext'
       ]);
 

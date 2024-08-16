@@ -616,30 +616,33 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should get version source even when there is no corresponding create/update event', testEntities(async (service, container) => {
+    it('should get version source with source details even when there is no corresponding submission event', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people.csv',
+            size: 100,
+          },
+          entities: [
+            {
+              uuid: '12345678-1234-4123-8234-111111111aaa',
+              label: 'Johnny Doe',
+              data: {
+                first_name: 'Johnny',
+                age: '22'
+              }
+            },
+          ]
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/versions')
         .expect(200)
         .then(({ body: versions }) => {
           versions[0].should.have.property('source');
-          versions[0].source.submission.instanceId.should.equal('one');
-          versions[0].source.submission.should.have.property('currentVersion');
-          versions[0].source.event.action.should.equal('submission.update');
+          versions[0].source.should.eql({ name: 'people.csv', size: 100, count: 1, userAgent: null });
         });
-
-      // this is simulating an entity version that doesnt have a corresponding create event
-      // e.g. made through bulk create (coming soon)
-      // but that can still look up source details directly from source table
-      await container.run(sql`delete from audits where action = 'entity.create'`);
-
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
-        .expect(200)
-        .then(({ body: versions }) => {
-          versions[0].should.have.property('source');
-          versions[0].source.should.eql({ submission: { instanceId: 'one' } });
-        });
-
     }));
 
     describe('relevantToConflict', () => {
@@ -3755,6 +3758,61 @@ describe('Entities API', () => {
         },
         errorMessage: 'The submission attempts an entity create, but the form does not permit that action. The form permits the following actions: update.'
       });
+    }));
+  });
+
+
+  describe('increased bodyParser json request limit for bulk entity creation', () => {
+    it('should reject >250kb requests to non-entity endpoint', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // 250kb limit = 256000 bytes (1024 bytes per kb)
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'x'.repeat(256001) })
+        .expect(500)
+        .then(({ body }) => {
+          body.message.should.equal('Internal Server Error');
+        });
+    }));
+
+    it('should allow >250kb requests to bulk entity endpoint', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // 250kb limit = 256000 bytes (1024 bytes per kb)
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ source: { name: 'file.csv' }, entities: [{ label: 'x'.repeat(256001) }] })
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
+    }));
+
+    it('should allow >250kb requests to bulk entity endpoint with query parameters', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // query parameters are not currently used in this endpoint
+      await asAlice.post('/v1/projects/1/datasets/people/entities?foo=bar')
+        .send({ source: { name: 'file.csv' }, entities: [{ label: 'x'.repeat(256001) }] })
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
+    }));
+
+    it('should not allow larger body on GET request', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities?foo=bar')
+        .send({ source: { name: 'file.csv' }, entities: [{ label: 'x'.repeat(256001) }] })
+        .expect(500)
+        .then(({ body }) => {
+          body.message.should.equal('Internal Server Error');
+        });
+
+      // GET on this endpoint with payload doens't really make sense
+      await asAlice.get('/v1/projects/1/datasets/people/entities?foo=bar')
+        .send({ source: { name: 'file.csv' }, entities: [{ label: 'x'.repeat(10) }] })
+        .expect(200);
     }));
   });
 });

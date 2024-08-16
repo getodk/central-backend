@@ -30,8 +30,8 @@ describe('task: runner', () => {
     });
   });
 
-  it('should print success object to stdout', () => runScript(success)
-    .then(([ , stdout ]) => stdout.should.equal(`'{"test":"result"}'\n`)));
+  it('should print success json to stdout', () => runScript(success)
+    .then(([ , stdout ]) => stdout.should.equal(`{"test":"result"}\n`)));
 
   it('should print failure details to stderr and exit nonzero', () => runScript(failure)
     .then(([ error, , stderr ]) => {

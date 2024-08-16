@@ -441,7 +441,7 @@ describe('endpoints', () => {
     it('should send the given plain response', () => {
       const response = createModernResponse();
       defaultResultWriter('hello', createRequest(), response);
-      response._getData().should.equal('hello');
+      response._getData().should.equal('"hello"');
     });
 
     it('should send nothing given a 204 response', () => {

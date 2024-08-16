@@ -4,6 +4,8 @@ const testData = require('../../data/xml');
 const { dissocPath, identity } = require('ramda');
 const { QueryOptions } = require('../../../lib/util/db');
 const should = require('should');
+const { URL } = require('url');
+const { url } = require('../../../lib/util/http');
 
 // NOTE: for the data output tests, we do not attempt to extensively determine if every
 // internal case is covered; there are already two layers of tests below these, at
@@ -799,6 +801,113 @@ describe('api: /forms/:id.svc', () => {
 
           should.not.exist(body['@odata.nextLink']);
         });
+    }));
+
+    it('should support $skiptoken even if associated submission is deleted', testService(async (service, { run }) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.two)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+      const skiptoken = await asAlice.get('/v1/projects/1/forms/simple.svc/Submissions?%24top=1')
+        .expect(200)
+        .then(({ body }) => new URL(body['@odata.nextLink']).searchParams.get('$skiptoken'));
+      QueryOptions.parseSkiptoken(skiptoken).instanceId.should.equal('two');
+      // We don't have a submission delete endpoint yet, but we should soon.
+      await run(sql`UPDATE submissions SET "deletedAt" = clock_timestamp()
+WHERE "instanceId" = 'two'`);
+      const { body: odata } = await asAlice.get(url`/v1/projects/1/forms/simple.svc/Submissions?%24skiptoken=${skiptoken}`)
+        .expect(200);
+      odata.value.length.should.equal(1);
+      odata.value[0].__id.should.equal('one');
+    }));
+
+    it('should return no submissions if $skiptoken instanceId does not exist', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+      const skiptoken = QueryOptions.getSkiptoken({ instanceId: 'foo' });
+      const { body: odata } = await asAlice.get(url`/v1/projects/1/forms/simple.svc/Submissions?%24skiptoken=${skiptoken}`)
+        .expect(200);
+      odata.value.length.should.equal(0);
+    }));
+
+    it('should not return duplicate submissions if $skiptoken instanceId is reused', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // Create two submissions with instance IDs of 'one' and 'two'. Creating
+      // them in reverse order so that OData returns 'one' first.
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.two)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Create a draft submission to the same form using an instance ID of 'one'.
+      await asAlice.post('/v1/projects/1/forms/simple/draft')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Create a submission to a different form using an instance ID of 'one'.
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simple2)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simple2/submissions')
+        .send(testData.instances.simple2.one.replace('id="s2one"', 'id="one"'))
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      const { body: firstChunk } = await asAlice.get('/v1/projects/1/forms/simple.svc/Submissions?%24top=1&%24count=true')
+        .expect(200);
+      firstChunk.value.length.should.equal(1);
+      firstChunk.value[0].__id.should.equal('one');
+      firstChunk['@odata.count'].should.equal(2);
+      const skiptoken = new URL(firstChunk['@odata.nextLink']).searchParams
+        .get('$skiptoken');
+      QueryOptions.parseSkiptoken(skiptoken).instanceId.should.equal('one');
+
+      const { body: secondChunk } = await asAlice.get(url`/v1/projects/1/forms/simple.svc/Submissions?%24skiptoken=${skiptoken}&%24count=true`)
+        .expect(200);
+      secondChunk.value.length.should.equal(1);
+      secondChunk.value[0].__id.should.equal('two');
+      secondChunk['@odata.count'].should.equal(2);
+      should.not.exist(secondChunk['@odata.nextLink']);
+    }));
+
+    it('should return a matching submission whose id is after that of $skiptoken submission', testService(async (service, { run }) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.two)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+      // Pretend like 'one' was created before 'two', but its id is greater than
+      // the id of 'two'.
+      await run(sql`UPDATE submissions SET "createdAt" = '2000-01-01' WHERE "instanceId" = 'one'`);
+      const skiptoken = await asAlice.get('/v1/projects/1/forms/simple.svc/Submissions?%24top=1')
+        .expect(200)
+        .then(({ body }) => new URL(body['@odata.nextLink']).searchParams.get('$skiptoken'));
+      QueryOptions.parseSkiptoken(skiptoken).instanceId.should.equal('two');
+      const { body: odata } = await asAlice.get(url`/v1/projects/1/forms/simple.svc/Submissions?%24skiptoken=${skiptoken}`)
+        .expect(200);
+      odata.value.length.should.equal(1);
+      odata.value[0].__id.should.equal('one');
     }));
 
     it('should limit and filter Submissions', testService(async (service) => {

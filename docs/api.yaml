@@ -1,3 +1,7 @@
+# Source at https://github.com/getodk/central-backend/blob/master/docs/api.yaml
+# Copied at release time to https://github.com/getodk/docs/blob/master/docs/_static/api-spec/central.yaml
+# for publishing at https://docs.getodk.org/central-api/
+
 openapi: 3.0.1
 info:
   title: ODK Central API
@@ -35,6 +39,12 @@ info:
     ## Changelog
 
     Here major and breaking changes to the API are listed by version.
+
+    ## ODK Central v2024.2
+
+    **Added**:
+
+    - Extended metadata for Forms includes a new property `publicLinks`, which is the number of Public Links that can submit to the Form.
 
     ## ODK Central v2024.1
 
@@ -161,9 +171,9 @@ info:
       * The [Extended Project](/central-api-project-management/#listing-projects) endpoint now returns the `datasets` count for the Project.
       * The [Extended Form](/central-api-form-management/#list-all-forms) endpoint now returns the `entityRelated` flag if the form defines a Dataset schema.
       * [DELETE .../draft/attachments/:name](/central-api-form-management/#clearing-a-draft-form-attachment) will unlink the Dataset if there's a Dataset link to the attachment.
-      * [GET .../draft/attachments/:filename](central-api-form-management/#downloading-a-form-attachment) will return the Dataset as a CSV file if the attachment is linked to a Dataset.
+      * [GET .../draft/attachments/:filename](/central-api-form-management/#downloading-a-form-attachment) will return the Dataset as a CSV file if the attachment is linked to a Dataset.
       * [GET .../draft/attachments](/central-api-form-management/#listing-expected-draft-form-attachments) returns two additional flags `blobExists` and `datasetExists`.
-      * In the [OpenRosa Form Manifest](central-api-form-management/#openrosa-form-manifest-api), if a Form Attachment is linked to a Dataset then the value of `hash` is the MD5 of the last updated timestamp or the MD5 of `1970-01-01 00:00:00` if the Dataset is empty.
+      * In the [OpenRosa Form Manifest](/central-api-form-management/#openrosa-form-manifest-api), if a Form Attachment is linked to a Dataset then the value of `hash` is the MD5 of the last updated timestamp or the MD5 of `1970-01-01 00:00:00` if the Dataset is empty.
 
     ## ODK Central v1.5.3
 
@@ -183,7 +193,7 @@ info:
     * [Form extended metadata](/central-api-form-management/#getting-form-details) now includes a `reviewStates` object of counts of Submissions with specific review states.
         * e.g. `{"received":12, "hasIssues":2, "edited":3}`
 
-    * New `?forms=true` option on [Project Listing](/central-api-project-management/#listing-projects-with-nested-forms) that includes a `formList` field containing a list of extended Forms (and the review state counts described above) associated with that Project.
+    * New `?forms=true` option on [Project Listing](/central-api-project-management/#listing-projects) that includes a `formList` field containing a list of extended Forms (and the review state counts described above) associated with that Project.
 
     ## ODK Central v1.4
 
@@ -513,7 +523,7 @@ tags:
 
     **Related APIs:**
 
-    - [Implicit creation of Datasets via Forms](/central-api-form-management/#forms/creating-a-new-form)
+    - [Implicit creation of Datasets via Forms](/central-api-form-management/#creating-a-new-form)
 
     - [Link a Dataset to a Form Attachment](/central-api-form-management/#linking-a-dataset-to-a-draft-form-attachment)
 
@@ -618,7 +628,7 @@ tags:
   description: |-
     App Users are only allowed to list and download forms, and upload new submissions to those forms. Primarily, this is to allow clients like ODK Collect to use the OpenRosa API (`/formList` and `/submission`), but any action in this API reference falling into those categories will be allowed.
 
-    Rvoking an App User is same as deleting session token. You can do this by calling [DELETE /sessions/{appUser}](/central-api-authentication/#logging-out-revoking-an-app-user).
+    Revoking an App User is same as deleting session token. You can do this by calling [DELETE /sessions/{appUser}](/central-api-authentication/#logging-out-current-session).
 - name: Users
   x-parent-tag: Accounts and Users
   description: |-
@@ -706,7 +716,7 @@ tags:
 
     The API for Public Links is particularly useful, as it can be used to, for example, programmatically create and send individually customized and controlled links for direct distribution. The user-facing link for a Public Link has the following structure: `/-/{enketoId}?st={token}` where `-` is the Enketo root, `enketoId` is the survey ID of this published Form on Enketo and `token` is a session token to identify this Public Link.
 
-    To revoke the access of any Link, terminate its session `token` by issuing [`DELETE /sessions/:token`](/central-api-authentication/#logging-out).
+    To revoke the access of any Link, terminate its session `token` by issuing [`DELETE /sessions/:token`](/central-api-authentication/#logging-out-current-session).
 - name: Related Datasets
   x-parent-tag: Form Management
   description: |-
@@ -1039,9 +1049,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that action.
   /v1/sessions/current:
     delete:
       tags:
@@ -1065,9 +1072,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that action.
   /v1/users:
     get:
       tags:
@@ -1111,18 +1115,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Users
@@ -1228,18 +1221,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /v1/users/{actorId}:
     get:
@@ -1315,18 +1297,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     delete:
       tags:
       - Users
@@ -1358,31 +1329,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     patch:
       tags:
       - Users
@@ -1497,18 +1450,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /v1/users/current:
     get:
@@ -1626,18 +1568,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/users/{actorId}/password:
     put:
       tags:
@@ -1681,31 +1612,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /v1/users/reset/initiate:
     post:
@@ -1748,31 +1661,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /v1/projects/{projectId}/app-users:
     get:
@@ -1840,18 +1735,7 @@ paths:
           content:            
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - App Users
@@ -1964,18 +1848,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /v1/projects/{projectId}/app-users/{id}:
     delete:
@@ -1983,7 +1856,7 @@ paths:
       - App Users
       summary: Deleting a App User
       description: |-
-        You don't have to delete a `App User` in order to cut off its access. Using a `User`'s credentials you can simply [log the App User's session out](/central-api-authentication/#revoking-an-app-user) using its token. This will end its session without actually deleting the App User, which allows you to still see it in the configuration panel and inspect its history. This is what the administrative panel does when you choose to "Revoke" the App User.
+        You don't have to delete a `App User` in order to cut off its access. Using a `User`'s credentials you can simply [log the App User's session out](/central-api-authentication/#logging-out-current-session) using its token. This will end its session without actually deleting the App User, which allows you to still see it in the configuration panel and inspect its history. This is what the administrative panel does when you choose to "Revoke" the App User.
 
         That said, if you do wish to delete the App User altogether, you can do so by issuing a `DELETE` request to its resource path. App Users cannot delete themselves.
       operationId: Deleting a App User
@@ -2008,31 +1881,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/roles:
     get:
       tags:
@@ -2142,10 +1997,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
   /v1/assignments/{roleId}:
     get:
       tags:
@@ -2185,18 +2036,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/assignments/{roleId}/{actorId}:
     post:
       tags:
@@ -2229,31 +2069,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     delete:
       tags:
       - Assignments
@@ -2284,31 +2106,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects:
     get:
       tags:
@@ -2436,18 +2240,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body  
   /v1/projects/{id}:
     get:
@@ -2509,18 +2302,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     put:
       tags:
       - Projects
@@ -2566,9 +2348,8 @@ paths:
                 forms:
                   type: array
                   description: If given, the Form metadata to update.
-                  items: {
+                  items:
                     type: object
-                  }
               example:
                 name: New Project Name
                 description: New Project Description
@@ -2626,18 +2407,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
         501:
           description: Not Implemented
           content:
@@ -2679,31 +2449,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     patch:
       tags:
       - Projects
@@ -2785,18 +2537,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /v1/projects/{id}/key:
     post:
@@ -2902,18 +2643,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
         409:
           description: Conflict
           content:
@@ -2982,10 +2712,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
   /v1/projects/{projectId}/assignments/{roleId}:
     get:
       tags:
@@ -3033,10 +2759,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
   /v1/projects/{projectId}/assignments/{roleId}/{actorId}:
     post:
       tags:
@@ -3076,31 +2798,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
-              schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+              schema: 
+                $ref: '#/components/schemas/Error403'
     delete:
       tags:
       - Project Assignments
@@ -3138,31 +2842,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/assignments/forms:
     get:
       tags:
@@ -3215,10 +2901,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
   /v1/projects/{projectId}/assignments/forms/{roleId}:
     get:
       tags:
@@ -3278,9 +2960,6 @@ paths:
             application/json; extended:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that action.
   /v1/projects/{projectId}/forms:
     get:
       tags:
@@ -3291,7 +2970,7 @@ paths:
 
         As of version 1.2, Forms that are unpublished (that only carry a draft and have never been published) will appear with full metadata detail. Previously, certain details like `name` were omitted. You can determine that a Form is unpublished by checking the `publishedAt` value: it will be `null` for unpublished forms.
 
-        This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of Submissions that each Form has, the `reviewStates` object of counts of Submissions with specific review states, the `lastSubmission` most recent submission timestamp, as well as the Actor the Form was `createdBy`.
+        This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of Submissions that each Form has, the `reviewStates` object of counts of Submissions with specific review states, the `lastSubmission` most recent submission timestamp, the Actor the Form was `createdBy`, as well as other metadata.
       operationId: List all Forms
       parameters:
       - name: projectId
@@ -3353,16 +3032,13 @@ paths:
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
                 entityRelated: false
+                publicLinks: 4
         403:
           description: Forbidden
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
     post:
       tags:
       - Forms
@@ -3521,18 +3197,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
         409:
           description: Conflict
           content:
@@ -3623,23 +3288,13 @@ paths:
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
                 entityRelated: false
+                publicLinks: 4
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     delete:
       tags:
       - Individual Form
@@ -3673,31 +3328,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     patch:
       tags:
       - Individual Form
@@ -3842,18 +3479,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /v1/projects/{projectId}/forms/{xmlFormId}.xml:
     get:
@@ -3928,18 +3554,7 @@ paths:
                     type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}.xlsx:
     get:
       tags:
@@ -3986,18 +3601,7 @@ paths:
                     type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/attachments:
     get:
       tags:
@@ -4044,10 +3648,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
   /v1/projects/{projectId}/forms/{xmlFormId}/attachments/{filename}:
     get:
       tags:
@@ -4103,18 +3703,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/fields:
     get:
       tags:
@@ -4213,18 +3802,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{id}/restore:
     post:
       tags:
@@ -4256,31 +3834,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/draft:
     get:
       tags:
@@ -4316,18 +3876,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Draft Form
@@ -4343,7 +3892,7 @@ paths:
 
         Even if a Draft exists, you can always replace it by `POST`ing here again. In that case, the attachments that exist on the Draft will similarly be copied over to the new Draft. If you wish to copy from the published version instead, you can do so by first `DELETE`ing the extant Draft.
 
-        Draft `version` conflicts are allowed with prior versions of a Form while in Draft state. If you attempt to [publish the Form](/central-api-form-management/#draft-form/publishing-a-draft-form) without correcting the conflict, the publish operation will fail. You can request that Central update the version string on your behalf as part of the publish operation to avoid this: see that endpoint for more information.
+        Draft `version` conflicts are allowed with prior versions of a Form while in Draft state. If you attempt to [publish the Form](/central-api-form-management/#publishing-a-draft-form) without correcting the conflict, the publish operation will fail. You can request that Central update the version string on your behalf as part of the publish operation to avoid this: see that endpoint for more information.
 
         The `xmlFormId`, however, must exactly match that of the Form overall, or the request will be rejected.
 
@@ -4383,14 +3932,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         400:
           description: Bad Request
           content:
@@ -4417,18 +3959,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     delete:
       tags:
       - Draft Form
@@ -4459,31 +3990,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/draft.xml:
     get:
       tags:
@@ -4557,18 +4070,7 @@ paths:
                     type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/draft.xlsx:
     get:
       tags:
@@ -4622,18 +4124,7 @@ paths:
                     type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments:
     get:
       tags:
@@ -4683,10 +4174,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
   /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}:
     get:
       tags:
@@ -4751,18 +4238,7 @@ paths:
                     type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Draft Form
@@ -4800,31 +4276,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     delete:
       tags:
       - Draft Form
@@ -4863,31 +4321,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     patch:
       tags:
       - Draft Form
@@ -4933,31 +4373,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
         404:
           description: Not Found
           content:
@@ -5066,18 +4488,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/draft/publish:
     post:
       tags:
@@ -5121,31 +4532,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
         409:
           description: Conflict
           content:
@@ -5238,10 +4631,6 @@ paths:
             application/json; extended:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
   /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}:
     get:
       tags:
@@ -5288,18 +4677,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}.xml:
     get:
       tags:
@@ -5381,18 +4759,7 @@ paths:
                     type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}.xlsx:
     get:
       tags:
@@ -5454,18 +4821,7 @@ paths:
                     type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}/attachments:
     get:
       tags:
@@ -5518,18 +4874,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}/attachments/{filename}:
     get:
       tags:
@@ -5593,18 +4938,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}/fields:
     get:
       tags:
@@ -5704,18 +5038,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/assignments:
     get:
       tags:
@@ -5774,10 +5097,6 @@ paths:
             application/json; extended:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
   /v1/projects/{projectId}/forms/{xmlFormId}/assignments/{roleId}:
     get:
       tags:
@@ -5832,10 +5151,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
   /v1/projects/{projectId}/forms/{xmlFormId}/assignments/{roleId}/{actorId}:
     post:
       tags:
@@ -5882,14 +5197,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content: {}
@@ -5937,31 +5245,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/public-links:
     get:
       tags:
@@ -6136,18 +5426,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /v1/projects/{projectId}/forms/{xmlFormId}/public-links/{linkId}:
     delete:
@@ -6157,7 +5436,7 @@ paths:
       description: You can fully delete a link by issuing `DELETE` to its resource.
         This will remove the Link from the system entirely. If instead you wish to
         revoke the Link's access to prevent future submission without removing its
-        record entirely, you can issue [`DELETE /sessions/:token`](/central-api-authentication/#session-authentication/logging-out).
+        record entirely, you can issue [`DELETE /sessions/:token`](/central-api-authentication/#logging-out-current-session).
       operationId: Deleting a Link
       parameters:
       - name: projectId
@@ -6187,31 +5466,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/dataset-diff:
     get:
       tags:
@@ -6377,10 +5638,6 @@ paths:
             application/json; extended:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
     post:
       tags:
       - Submissions
@@ -6453,7 +5710,6 @@ paths:
                     - edited
                     - hasIssues
                     - rejected
-                    - approved
                     - approved
                   createdAt:
                     type: string
@@ -6542,18 +5798,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
         409:
           description: Conflict
           content:
@@ -6666,18 +5911,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     put:
       tags:
       - Submissions
@@ -6693,7 +5927,7 @@ paths:
 
         The XML data you send will _replace_ the existing data entirely. All of the data must be present in the updated XML.
 
-        When you create a new submission version, any uploaded media files attached to the current version that match expected attachment names in the new version will automatically be copied over to the new version. So if you don't make any changes to media files, there is no need to resubmit them. You can get information about all the submission versions [from the `/versions` subresource](central-api-submission-management/#submission-versions).
+        When you create a new submission version, any uploaded media files attached to the current version that match expected attachment names in the new version will automatically be copied over to the new version. So if you don't make any changes to media files, there is no need to resubmit them. You can get information about all the submission versions [from the `/versions` subresource](/central-api-submission-management/#submission-versions).
       operationId: Updating Submission Data
       parameters:
       - name: projectId
@@ -6755,7 +5989,6 @@ paths:
                     - edited
                     - hasIssues
                     - rejected
-                    - approved
                     - approved
                   createdAt:
                     type: string
@@ -6844,18 +6077,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
         409:
           description: Conflict
           content:
@@ -6942,7 +6164,6 @@ paths:
                     - hasIssues
                     - rejected
                     - approved
-                    - approved
                   createdAt:
                     type: string
                     description: ISO date format. The time that the server received
@@ -7009,18 +6230,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}.xml:
     get:
       tags:
@@ -7112,18 +6322,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip:
     get:
       tags:
@@ -7163,7 +6362,7 @@ paths:
         schema:
           type: boolean
         example: "true"
-      - name: '%24filter'
+      - name: '$filter'
         in: query
         description: If provided, will filter responses to those matching the given
           OData query. Only [certain fields](/central-api-odata-endpoints/#data-document)
@@ -7233,18 +6432,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Submissions
@@ -7277,7 +6465,7 @@ paths:
         schema:
           type: boolean
         example: "true"
-      - name: '%24filter'
+      - name: '$filter'
         in: query
         description: If provided, will filter responses to those matching the given
           OData query. Only [certain fields](/central-api-odata-endpoints/#data-document)
@@ -7347,18 +6535,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv:
     get:
       tags:
@@ -7388,7 +6565,7 @@ paths:
         schema:
           type: string
         example: simple
-      - name: '%24filter'
+      - name: '$filter'
         in: query
         description: If provided, will filter responses to those matching the given
           OData query. Only [certain fields](/central-api-odata-endpoints/#data-document)
@@ -7428,18 +6605,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Submissions
@@ -7468,7 +6634,7 @@ paths:
         schema:
           type: string
         example: simple
-      - name: '%24filter'
+      - name: '$filter'
         in: query
         description: If provided, will filter responses to those matching the given
           OData query. Only [certain fields](/central-api-odata-endpoints/#data-document)
@@ -7508,18 +6674,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/audits:
     get:
       tags:
@@ -7591,10 +6746,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/keys:
     get:
       tags:
@@ -7641,10 +6792,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/submitters:
     get:
       tags:
@@ -7691,10 +6838,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/comments:
     get:
       tags:
@@ -7760,10 +6903,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
     post:
       tags:
       - Comments
@@ -7832,18 +6971,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments:
     get:
@@ -7900,10 +7028,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments/{filename}:
     get:
       tags:
@@ -7973,18 +7097,7 @@ paths:
                     type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Attachments
@@ -8029,31 +7142,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     delete:
       tags:
       - Attachments
@@ -8098,31 +7193,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/versions:
     get:
       tags:
@@ -8201,10 +7278,6 @@ paths:
             application/json; extended:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/versions/{versionId}:
     get:
       tags:
@@ -8284,30 +7357,9 @@ paths:
         403:
           description: Forbidden
           content:
-            application/json; extended:
-              schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/versions/{versionId}.xml:
     get:
       tags:
@@ -8371,18 +7423,7 @@ paths:
                     type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/versions/{versionId}/attachments:
     get:
       tags:
@@ -8445,18 +7486,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/versions/{versionId}/attachments/{filename}:
     get:
       tags:
@@ -8535,18 +7565,7 @@ paths:
                     type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/diffs:
     get:
       tags:
@@ -8619,10 +7638,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
   /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions:
     get:
       tags:
@@ -8706,10 +7721,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
     post:
       tags:
       - Draft Submissions
@@ -8770,7 +7781,6 @@ paths:
                     - edited
                     - hasIssues
                     - rejected
-                    - approved
                     - approved
                   createdAt:
                     type: string
@@ -8859,18 +7869,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
         409:
           description: Conflict
           content:
@@ -8944,18 +7943,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Draft Submissions
@@ -9012,18 +8000,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions/keys:
     get:
       tags:
@@ -9067,10 +8044,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
   /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions/{instanceId}:
     get:
       tags:
@@ -9141,7 +8114,6 @@ paths:
                     - edited
                     - hasIssues
                     - rejected
-                    - approved
                     - approved
                   createdAt:
                     type: string
@@ -9281,7 +8253,6 @@ paths:
                     - hasIssues
                     - rejected
                     - approved
-                    - approved
                   createdAt:
                     type: string
                     description: ISO date format. The time that the server received
@@ -9364,30 +8335,9 @@ paths:
         403:
           description: Forbidden
           content:
-            application/json; extended:
-              schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions/{instanceId}.xml:
     get:
       tags:
@@ -9481,10 +8431,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error403"
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
   /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions/{instanceId}/attachments/{filename}:
     get:
       tags:
@@ -9548,18 +8494,7 @@ paths:
                     type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Draft Submissions
@@ -9602,31 +8537,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     delete:
       tags:
       - Draft Submissions
@@ -9669,31 +8586,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /projects/{projectId}/datasets:
     get:
       tags:
@@ -9741,24 +8640,15 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Dataset Management
       summary: Creating Datasets
       description: |- 
-        You can create a Dataset with a specific `name` within a Project. This Dataset can then be populated via the API or via Forms and Submissions, and then used by other Forms. This endpoint allows a Dataset to be created programatically without an input form.
+        You can create a Dataset with a specific `name` within a Project. This Dataset can then be populated with Entities via the API or via Forms and Submissions, and then used by other Forms. This endpoint allows a Dataset to be created programatically without an input form.
+
+        The name of a Dataset is case-sensitive in that it will keep the capitalization provided (e.g. "Trees"). But Central will not allow a second Dataset with the same name but different capitalization to be created (e.g. "trees" when "Trees" already exists).
 
         By default, the Dataset will have no properties, but each Entity will have a `label` and a unique ID (`uuid`). You can add additional properties with this [related endpoint](/central-api-dataset-management/#adding-properties).
         
@@ -9813,18 +8703,23 @@ paths:
           content:
             application/json:
               schema:
+                $ref: '#/components/schemas/Error403'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
                 required:
                 - code
                 type: object
                 properties:
                   code:
-                    type: string
+                    type: number
                   message:
                     type: string
               example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                code: 409.3
+                message: A resource already exists with name,projectId value(s) of trees,1.
   /projects/{projectId}/datasets/{name}:
     get:
       tags:
@@ -9880,18 +8775,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     patch:
       tags:
       - Dataset Management
@@ -9960,18 +8844,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /projects/{projectId}/datasets/{name}/properties:
     post:
       tags:
@@ -9992,7 +8865,7 @@ paths:
         example: "16"
       - name: name
         in: path
-        description: Name of the Property
+        description: Name of the Dataset
         required: true
         schema:
           type: string
@@ -10023,18 +8896,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /projects/{projectId}/datasets/{name}/entities.csv:
     get:
       tags:
@@ -10102,18 +8964,7 @@ paths:
                     type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /projects/{projectId}/datasets/{name}/entities:
     get:
       tags:
@@ -10436,30 +9287,9 @@ paths:
         403:
           description: Forbidden
           content:
-            application/json; extended:
-              schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     delete:
       tags:
       - Entity Management
@@ -10504,18 +9334,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
     patch:
       tags:
       - Entity Management
@@ -10525,7 +9344,7 @@ paths:
 
         **Specifying a base version**
 
-        You must either provide the query parameter `baseVersion` or use the `force=true` query paramater. You cannot cause a new Entity conflict via the API, which is why when specifying `baseVersion`, it must match the current version of the Entity on the server. This acts as a check to ensure you are not trying to update based on stale data. If you wish to update the Entity regardless of the current state, then you can use the `force` flag. 
+        You must either provide the query parameter `baseVersion` or use the `force=true` query parameter. The specified `baseVersion` must match the current version of the Entity on the server or the request will be rejected. This acts as a check to ensure you are not trying to update based on stale data. To update an Entity regardless of its current state, use the `force` flag with value `true`.
 
         **Resolving a conflict**
 
@@ -10623,30 +9442,9 @@ paths:
         403:
           description: Forbidden
           content:
-            application/json; extended:
-              schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /projects/{projectId}/datasets/{name}/entities/{uuid}/versions:
     get:
@@ -10762,18 +9560,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /projects/{projectId}/datasets/{name}/entities/{uuid}/diffs:
     get:
       tags:
@@ -10837,18 +9624,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /projects/{projectId}/datasets/{name}/entities/{uuid}/audits:
     get:
       tags:
@@ -10898,18 +9674,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.              
+                $ref: '#/components/schemas/Error403'             
   /v1/projects/{projectId}/formList:
     get:
       tags:
@@ -11360,7 +10125,7 @@ paths:
                 <OpenRosaResponse xmlns="http://openrosa.org/http/response" items="0">
                   <message nature="error">The authenticated actor does not have rights to perform that action.</message>
                 </OpenRosaResponse>
-  /v1/test/{token}/projects/{projectId}/forms/{xmlFormId}/attachments/{filename}:
+  /v1/test/{token}/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}:
     get:
       tags:
       - Draft Testing Endpoints
@@ -11422,18 +10187,7 @@ paths:
                     type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}.svc:
     get:
       tags:
@@ -11550,18 +10304,7 @@ paths:
                     type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
         406:
           description: Not Acceptable
           content:
@@ -11700,18 +10443,7 @@ paths:
                     type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
         406:
           description: Not Acceptable
           content:
@@ -11747,7 +10479,9 @@ paths:
       description: |-
         The data documents are JSON representations of each table of `Submission` data. They follow the [corresponding specification](http://docs.oasis-open.org/odata/odata-json-format/v4.01/odata-json-format-v4.01.html), but apart from the representation of geospatial data as GeoJSON rather than the ODK proprietary format, the output here should not be surprising. If you are looking for JSON output of Submission data, this is the best place to look.
 
-        The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. If `$top` parameter is provided in the request then the response will include `@odata.nextLink` that you can use as is to fetch the next set of data. While paging is possible through these parameters, it will not greatly improve the performance of exporting data. ODK Central prefers to bulk-export all of its data at once if possible.
+        The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. If `$top` parameter is provided in the request then the response will include `@odata.nextLink` that you can use as is to fetch the next set of data. As of ODK Central v2023.4, `@odata.nextLink` contains a `$skiptoken` (an opaque cursor), which allows you to page through Submissions with a consistent offset, even while new Submissions are being created.
+
+        While paging is possible through these parameters, it will not greatly improve the performance of exporting data. ODK Central prefers to bulk-export all of its data at once if possible.
 
         As of ODK Central v1.1, the [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) is partially supported. In OData, you can use `$filter` to filter by certain data fields in the schema. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported. These supported elements may be combined in any way, but all other `$filter` features will cause an error.
 
@@ -11766,7 +10500,7 @@ paths:
 
         Please see the [OData documentation](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) on `$filter` [operations](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinFilterOperations) and [functions](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinQueryFunctions) for more information.
 
-        As of ODK Central v1.2, you can use `%24expand=*` to expand all repeat repetitions. This is helpful if you'd rather get one nested JSON data payload of all hierarchical data, rather than retrieve each of repeat as a separate flat table with references.
+        As of ODK Central v1.2, you can use `$expand=*` to expand all repeat repetitions. This is helpful if you'd rather get one nested JSON data payload of all hierarchical data, rather than retrieve each of repeat as a separate flat table with references.
 
         The _nonstandard_ `$wkt` querystring parameter may be set to `true` to request that geospatial data is returned as a [Well-Known Text (WKT) string](https://en.wikipedia.org/wiki/Well-known_text) rather than a GeoJSON structure. This exists primarily to support Tableau, which cannot yet read GeoJSON, but you may find it useful as well depending on your mapping software. **Please note** that both GeoJSON and WKT follow a `(lon, lat, alt)` coördinate ordering rather than the ODK-proprietary `lat lon alt`. This is so that the values map neatly to `(x, y, z)`. GPS accuracy information is not a part of either standards specification, and so is presently omitted from OData output entirely. GeoJSON support may come in a future version.
 
@@ -11804,20 +10538,20 @@ paths:
         schema:
           type: string
         example: Submissions
-      - name: '%24skip'
+      - name: '$skip'
         in: query
         description: If supplied, the first `$skip` rows will be omitted from the
           results.
         schema:
           type: number
         example: "10"
-      - name: '%24top'
+      - name: '$top'
         in: query
         description: If supplied, only up to `$top` rows will be returned in the results.
         schema:
           type: number
         example: "5"
-      - name: '%24count'
+      - name: '$count'
         in: query
         description: If set to `true`, an `@odata.count` property will be added to
           the result indicating the total number of rows, ignoring the above paging
@@ -11825,14 +10559,14 @@ paths:
         schema:
           type: boolean
         example: "true"
-      - name: '%24wkt'
+      - name: '$wkt'
         in: query
         description: If set to `true`, geospatial data will be returned as Well-Known
           Text (WKT) strings rather than GeoJSON structures.
         schema:
           type: boolean
         example: "true"
-      - name: '%24filter'
+      - name: '$filter'
         in: query
         description: If provided, will filter responses to those matching the query.
           Only [certain fields](/central-api-odata-endpoints/#data-document)
@@ -11842,25 +10576,30 @@ paths:
         schema:
           type: string
         example: year(__system/submissionDate) lt year(now())
-      - name: '%24orderby'
+      - name: '$orderby'
         in: query
         description: If provided, will sort responses according to specified order expression. Only the same fields as `$filter` above can be used to sort. Multiple expressions can be used together.
         schema:
           type: string
         example: __system/submitterId asc, __system/updatedAt desc
-      - name: '%24expand'
+      - name: '$expand'
         in: query
         description: Repetitions, which should get expanded. Currently, only `*` is
           implemented, which expands all repetitions.
         schema:
           type: string
         example: '*'
-      - name: '%24select'
+      - name: '$select'
         in: query
         description: If provided, will return only the selected fields.
         schema:
           type: string
         example: __id, age, name, meta/instanceID
+      - name: '$skiptoken'
+        in: query
+        description: Opaque cursor from `@odata.nextLink` used for paging.
+        schema:
+          type: string
       responses:
         200:
           description: OK
@@ -11923,18 +10662,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
         406:
           description: Not Acceptable
           content:
@@ -12050,24 +10778,82 @@ paths:
       responses:
         200:
           description: OK
-          content: {}
+          content:
+            application/json; charset=utf-8; odata.metadata=minimal:
+              schema:
+                type: object
+                properties:
+                  '@odata.context':
+                    type: string
+                  value:
+                    type: array
+                    items:
+                      required:
+                      - kind
+                      - name
+                      - url
+                      type: object
+                      properties:
+                        kind:
+                          type: string
+                        name:
+                          type: string
+                        url:
+                          type: string
+                example:
+                  '@odata.context': https://your.odk.server/v1/projects/7/datasets/sample.svc/$metadata
+                  value:
+                  - kind: EntitySet
+                    name: Entities
+                    url: Entities
+                  - kind: EntitySet
+                    name: Entities.children.child
+                    url: Entities.children.child
+              example:
+                '@odata.context': https://your.odk.server/v1/projects/7/datasets/sample.svc/$metadata
+                value:
+                - kind: EntitySet
+                  name: Entities
+                  url: Entities
+                - kind: EntitySet
+                  name: Entities.children.child
+                  url: Entities.children.child
+            application/json:
+              schema:
+                type: object
+                properties:
+                  '@odata.context':
+                    type: string
+                  value:
+                    type: array
+                    items:
+                      required:
+                      - kind
+                      - name
+                      - url
+                      type: object
+                      properties:
+                        kind:
+                          type: string
+                        name:
+                          type: string
+                        url:
+                          type: string
+                example:
+                  '@odata.context': https://your.odk.server/v1/projects/7/datasets/sample.svc/$metadata
+                  value:
+                  - kind: EntitySet
+                    name: Entities
+                    url: Entities
+                  - kind: EntitySet
+                    name: Entities.children.child
+                    url: Entities.children.child
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
         406:
           description: Not Acceptable
           content:
@@ -12203,18 +10989,7 @@ paths:
                     type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
         406:
           description: Not Acceptable
           content:
@@ -12250,7 +11025,7 @@ paths:
       description: |-
         A data document is the straightforward JSON representation of all the `Entities` in a `Dataset`.
 
-        The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. If `$top` parameter is provided in the request then the response will include `@odata.nextLink` that you can use as is to fetch the next set of data.
+        The `$top` and `$skip` querystring parameters, specified by OData, apply `limit` and `offset` operations to the data, respectively. The `$count` parameter, also an OData standard, will annotate the response data with the total row count, regardless of the scoping requested by `$top` and `$skip`. If `$top` parameter is provided in the request then the response will include `@odata.nextLink` that you can use as is to fetch the next set of data. As of ODK Central v2023.4, `@odata.nextLink` contains a `$skiptoken` (an opaque cursor) to better paginate around deleted Entities.
 
         The [`$filter` querystring parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) can be used to filter certain data fields in the system-level schema, but not the Dataset properties. The operators `lt`, `le`, `eq`, `ne`, `ge`, `gt`, `not`, `and`, and `or` are supported. The built-in functions `now`, `year`, `month`, `day`, `hour`, `minute`, `second` are supported.
 
@@ -12288,20 +11063,20 @@ paths:
         schema:
           type: string
         example: people
-      - name: '%24skip'
+      - name: '$skip'
         in: query
         description: If supplied, the first `$skip` rows will be omitted from the
           results.
         schema:
           type: number
         example: "10"
-      - name: '%24top'
+      - name: '$top'
         in: query
         description: If supplied, only up to `$top` rows will be returned in the results.
         schema:
           type: number
         example: "5"
-      - name: '%24count'
+      - name: '$count'
         in: query
         description: If set to `true`, an `@odata.count` property will be added to
           the result indicating the total number of rows, ignoring the above paging
@@ -12309,7 +11084,7 @@ paths:
         schema:
           type: boolean
         example: "true"
-      - name: '%24filter'
+      - name: '$filter'
         in: query
         description: If provided, will filter responses to those matching the query.
           Only [certain fields](/central-api-odata-endpoints/#data-document)
@@ -12319,18 +11094,23 @@ paths:
         schema:
           type: string
         example: year(__system/createdAt) lt year(now())
-      - name: '%24orderby'
+      - name: '$orderby'
         in: query
         description: If provided, will sort responses according to specified order expression. Only the same fields as `$filter` above can be used to sort. Multiple expressions can be used together.
         schema:
           type: string
         example: __system/creatorId asc, __system/updatedAt desc
-      - name: '%24select'
+      - name: '$select'
         in: query
         description: If provided, will return only the selected fields.
         schema:
           type: string
         example: __id, label, name
+      - name: '$skiptoken'
+        in: query
+        description: Opaque cursor from `@odata.nextLink` used for paging.
+        schema:
+          type: string
       responses:
         200:
           description: Ok
@@ -12372,18 +11152,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
         406:
           description: Not Acceptable
           content:
@@ -12530,18 +11299,7 @@ paths:
                     type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
         406:
           description: Not Acceptable
           content:
@@ -12668,18 +11426,7 @@ paths:
                     type: string
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
         406:
           description: Not Acceptable
           content:
@@ -12739,20 +11486,20 @@ paths:
         schema:
           type: string
         example: Submissions
-      - name: '%24skip'
+      - name: '$skip'
         in: query
         description: If supplied, the first `$skip` rows will be omitted from the
           results.
         schema:
           type: number
         example: "10"
-      - name: '%24top'
+      - name: '$top'
         in: query
         description: If supplied, only up to `$top` rows will be returned in the results.
         schema:
           type: number
         example: "5"
-      - name: '%24count'
+      - name: '$count'
         in: query
         description: If set to `true`, an `@odata.count` property will be added to
           the result indicating the total number of rows, ignoring the above paging
@@ -12760,14 +11507,14 @@ paths:
         schema:
           type: boolean
         example: "true"
-      - name: '%24wkt'
+      - name: '$wkt'
         in: query
         description: If set to `true`, geospatial data will be returned as Well-Known
           Text (WKT) strings rather than GeoJSON structures.
         schema:
           type: boolean
         example: "true"
-      - name: '%24filter'
+      - name: '$filter'
         in: query
         description: If provided, will filter responses to those matching the query.
           Only [certain fields](/central-api-odata-endpoints/#data-document)
@@ -12777,14 +11524,14 @@ paths:
         schema:
           type: string
         example: year(__system/submissionDate) lt year(now())
-      - name: '%24expand'
+      - name: '$expand'
         in: query
         description: Repetitions, which should get expanded. Currently, only `*` is
           implemented, which expands all repetitions.
         schema:
           type: string
         example: '*'
-      - name: '%24select'
+      - name: '$select'
         in: query
         description: If provided, will return only the selected fields.
         schema:
@@ -12852,18 +11599,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
         406:
           description: Not Acceptable
           content:
@@ -12958,18 +11694,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
         404:
           description: Not Found
           content:
@@ -12993,7 +11718,7 @@ paths:
       description: |-
         An Administrator can use this endpoint to choose whether the server will share anonymous usage data with the Central team. This configuration affects the entire server. Until the Usage Reporting configuration is set, Administrators will see a message on the Central administration website that provides further information.
 
-        If an Administrator specifies `true` for `enabled`, the server will share anonymous usage data monthly with the Central team. By specifying `true`, the Administrator accepts the [Terms of Service](https://getodk.org/legal/tos.html) and [Privacy Policy](https://getodk.org/legal/privacy.html). The Administrator can also share contact information to include with the report.
+        If an Administrator specifies `true` for `enabled`, the server will share anonymous usage data monthly with the Central team. By specifying `true`, the Administrator accepts the [Terms of Service](https://getodk.org/legal/tos) and [Privacy Policy](https://getodk.org/legal/privacy). The Administrator can also share contact information to include with the report.
 
         If an Administrator specifies `false` for `enabled`, the server will not share anonymous usage data with the Central team. Administrators will no longer see the message on the administration website.
 
@@ -13070,18 +11795,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
     delete:
       tags:
@@ -13096,31 +11810,13 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - success
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/analytics/preview:
     get:
       tags:
@@ -13140,18 +11836,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
   /v1/audits:
     get:
       tags:
@@ -13249,10 +11934,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
   /v1/backup:
     post:
       tags:
@@ -13288,18 +11969,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "403.1"
-                message: The authenticated actor does not have rights to perform that
-                  action.
+                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
 components:
   schemas:
@@ -13862,6 +12532,7 @@ components:
             - submissions
             - reviewStates
             - entityRelated
+            - publicLinks
           properties:
             submissions:
               type: number
@@ -13883,6 +12554,10 @@ components:
             entityRelated:
               type: boolean
               description: True only if this Form is related to a Dataset. In v2022.3, this means the Form's Submissions create Entities in a Dataset. In a future version, Submissions will also be able to update existing Entities.
+            publicLinks:
+              type: number
+              example: 4
+              description: The number of Public Links that can submit to the Form. This does not include Public Links that have been revoked.
     ExtendedFormVersion:
       allOf:
         - $ref: '#/components/schemas/Form'
@@ -14385,18 +13060,21 @@ components:
               description: The details of the actor given by `actorId`.
     Success:
       type: object
+      required:
+        - success
       properties:
-        message:
-          type: string
-          example: Success
+        success:
+          type: boolean
+      example: 
+          success: true
     Error400:
       type: object
       required:
         - code
       properties:
         code:
-          type: string
-          example: '400'
+          type: number
+          example: 400
         details:
           type: object
           properties: {}
@@ -14410,8 +13088,8 @@ components:
         - code
       properties:
         code:
-          type: string
-          example: '401.2'
+          type: number
+          example: 401.2
         message:
           type: string
           example: Could not authenticate with the provided credentials.
@@ -14421,8 +13099,8 @@ components:
         - code
       properties:
         code:
-          type: string
-          example: '403.1'
+          type: number
+          example: 403.1
         message:
           type: string
           example: The authenticated actor does not have rights to perform that action.
@@ -14432,8 +13110,8 @@ components:
         - code
       properties:
         code:
-          type: string
-          example: '404.1'
+          type: number
+          example: 404.1
         message:
           type: string
           example: Could not find the resource you were looking for.
@@ -14443,8 +13121,8 @@ components:
         - code
       properties:
         code:
-          type: string
-          example: '406.1'
+          type: number
+          example: 406.1
         message:
           type: string
           example: 'Requested format not acceptable; this resource allows: (application/json, json).'
@@ -14454,8 +13132,8 @@ components:
         - code
       properties:
         code:
-          type: string
-          example: '409.1'
+          type: number
+          example: 409.1
         message:
           type: string
           example: A resource already exists with id value(s) of 1.
@@ -14465,8 +13143,8 @@ components:
         - code
       properties:
         code:
-          type: string
-          example: '501.1'
+          type: number
+          example: 501.1
         message:
           type: string
           example: The requested feature $unsupported is not supported by this server.
