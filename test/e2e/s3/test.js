@@ -36,6 +36,7 @@ describe('s3 support', () => {
 
   let minioTerminated;
   const terminateMinio = () => {
+    // Ugly, but it gets the job done, both locally, and on GitHub Actions:
     execSync('docker ps | grep minio | cut -d" " -f1 | xargs docker kill');
     minioTerminated = true;
   }
@@ -214,9 +215,6 @@ describe('s3 support', () => {
     const uploading = cli('upload-pending');
     await untilUploadInProgress();
     // and
-    // TODO kill minio or tcp connections or something
-    // TODO test this on github actions
-    // TODO make this less hacky
     terminateMinio();
 
     // then
