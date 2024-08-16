@@ -191,7 +191,7 @@ describe('s3 support', () => {
   });
 
   // ***N.B. THIS TEST KILLS THE MINIO SERVER, SO MUST BE RUN **LAST** OF ALL S3 E2E TESTS***
-  it.only('should gracefully handle s3 connection failing', async function() {
+  it('should gracefully handle s3 connection failing', async function() {
     this.timeout(TIMEOUT*2);
 
     // given
