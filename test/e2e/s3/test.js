@@ -86,11 +86,11 @@ describe('s3 support', () => {
     // when
     const uploading = cli('upload-pending');
 
+    // Wait until the upload is in progress:
     while(true) {
-      const count = Number(await cli('count-blobs in_progress')); // FIXME why is this not in_progress?
-      if(count < 1) throw new Error('Cannot test because all blobs are already uploaded.');
-      else if(count === 1) break;
-      await sleep(100);
+      const count = Number(await cli('count-blobs in_progress'));
+      if(count === 1) break;
+      await sleep(10);
     }
 
     // then
@@ -157,8 +157,9 @@ describe('s3 support', () => {
   // TODO new test case: what happens if the connection to s3 fails while uploading?
 
   async function countByStatus() {
-    const counts = {};
-    await Promise.all(['pending', 'in_progress', 'uploaded', 'failed'].map(async status => {
+    // For easier debugging, define keys up-front.  This makes print order more predictable.
+    const counts = { pending:null, in_progress:null, uploaded:null, failed:null };
+    await Promise.all(Object.keys(counts).map(async status => {
       counts[status] = await cli(`count-blobs ${status}`);
     }));
     return counts;
