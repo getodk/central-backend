@@ -3,7 +3,7 @@ const should = require('should');
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
 const { testTask } = require('../setup');
-const { getCount, setFailedToPending, uploadPending } = require(appRoot + '/lib/task/s3');
+const { getCount, setFailedToPending, setInProgressToPending, uploadPending } = require(appRoot + '/lib/task/s3');
 const { Blob } = require(appRoot + '/lib/model/frames');
 
 // eslint-disable-next-line camelcase
@@ -33,6 +33,10 @@ describe('task: s3', () => {
 
     it('setFailedToPending() should fail', async () => {
       await assertThrowsAsync(() => setFailedToPending(), 'S3 blob support is not enabled.');
+    });
+
+    it('setInProgressToPending() should fail', async () => {
+      await assertThrowsAsync(() => setInProgressToPending(), 'S3 blob support is not enabled.');
     });
 
     it('getCount() should fail', async () => {
@@ -99,6 +103,29 @@ describe('task: s3', () => {
         // then
         (await getCount('pending')).should.equal(4);
         (await getCount('failed')).should.equal(0);
+      }));
+    });
+
+    describe('setInProgressToPending()', () => {
+      it('should change all in_progress messages to pending', testTask(async (container) => {
+        // given
+        await aBlobExistsWith(container, { status: 'pending' });
+        await aBlobExistsWith(container, { status: 'uploaded' });
+        await aBlobExistsWith(container, { status: 'uploaded' });
+        await aBlobExistsWith(container, { status: 'in_progress' });
+        await aBlobExistsWith(container, { status: 'in_progress' });
+        await aBlobExistsWith(container, { status: 'in_progress' });
+
+        // expect
+        (await getCount('pending')).should.equal(1);
+        (await getCount('in_progress')).should.equal(3);
+
+        // when
+        await setInProgressToPending();
+
+        // then
+        (await getCount('pending')).should.equal(4);
+        (await getCount('in_progress')).should.equal(0);
       }));
     });
 
