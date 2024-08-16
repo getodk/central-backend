@@ -139,10 +139,10 @@ describe('s3 support', () => {
     // then
     const counts = await countAllByStatus();
     counts.should.deepEqual({
-      pending:     '0',
-      in_progress: '1', // crashed process will be stuck in_progress forever TODO decide if this is acceptable
-      uploaded:    initialUploaded.toString(),
-      failed:      '0',
+      pending:     0,
+      in_progress: 1, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
+      uploaded:    initialUploaded,
+      failed:      0,
     });
   });
 
