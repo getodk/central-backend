@@ -109,7 +109,7 @@ describe('s3 support', () => {
     const uploaded1 = hashes(await uploading1);
     const uploaded2 = hashes(await uploading2);
 
-    // Check how long each of the processes took to complete: ideally uploading1
+    // TODO Check how long each of the processes took to complete: ideally uploading1
     // should not block uploading2 and vice-versa.
 
     // then
