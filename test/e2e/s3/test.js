@@ -146,7 +146,34 @@ describe('s3 support', () => {
     });
   });
 
-  // TODO new test case: what happens if e.g. kill -SIGTERM?  can upload-pending recover gracefully, and move the blob status to failed?
+  // FIXME this test will not pass until long-running transactions are implemented
+  it.skip('should gracefully handle upload-pending dying unexpectedly (SIGTERM)', async function() {
+    this.timeout(TIMEOUT*2);
+
+    // given
+    const initialUploaded = previousBlobs;
+    should.equal(await cli('count-blobs uploaded'), initialUploaded);
+    await setup(5);
+    should.equal(await cli('count-blobs uploaded'), initialUploaded);
+
+    // when
+    const uploading = cli('upload-pending');
+    await untilUploadInProgress();
+    // and
+    await execSync(`kill ${uploading.pid}`);
+
+    // then
+    await expectFailure(uploading);
+
+    // then
+    const counts = await countByStatus();
+    counts.should.deepEqual({
+      pending:     '0',
+      in_progress: '0', // crashed process will be stuck in_progress forever TODO decide if this is acceptable
+      uploaded:    initialUploaded.toString(),
+      failed:      '1',
+    });
+  });
 
   // TODO new test case: what happens if the connection to s3 fails while uploading?
 
