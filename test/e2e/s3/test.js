@@ -143,10 +143,7 @@ describe('s3 support', () => {
     await expectFailure(uploading);
 
     // then
-    const counts = {};
-    await Promise.all(['pending', 'in_progress', 'uploaded', 'failed'].map(async status => {
-      counts[status] = await cli(`count-blobs ${status}`);
-    }));
+    const counts = await countByStatus();
     counts.should.deepEqual({
       pending:     '0',
       in_progress: '1', // crashed process will be stuck in_progress forever TODO decide if this is acceptable
@@ -158,6 +155,14 @@ describe('s3 support', () => {
   // TODO new test case: what happens if e.g. kill -SIGTERM?  can upload-pending recover gracefully, and move the blob status to failed?
 
   // TODO new test case: what happens if the connection to s3 fails while uploading?
+
+  async function countByStatus() {
+    const counts = {};
+    await Promise.all(['pending', 'in_progress', 'uploaded', 'failed'].map(async status => {
+      counts[status] = await cli(`count-blobs ${status}`);
+    }));
+    return counts;
+  }
 
   async function createProject() {
     const project = await api.apiPostJson(
