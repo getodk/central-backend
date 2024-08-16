@@ -137,7 +137,7 @@ describe('s3 support', () => {
     await expectRejectionFrom(uploading);
 
     // then
-    const counts = await countByStatus();
+    const counts = await countAllByStatus();
     counts.should.deepEqual({
       pending:     '0',
       in_progress: '1', // crashed process will be stuck in_progress forever TODO decide if this is acceptable
@@ -166,12 +166,12 @@ describe('s3 support', () => {
     await expectRejectionFrom(uploading);
 
     // then
-    const counts = await countByStatus();
+    const counts = await countAllByStatus();
     counts.should.deepEqual({
-      pending:     '0',
-      in_progress: '0', // crashed process will be stuck in_progress forever TODO decide if this is acceptable
-      uploaded:    initialUploaded.toString(),
-      failed:      '1',
+      pending:     0,
+      in_progress: 0, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
+      uploaded:    initialUploaded,
+      failed:      1,
     });
   });
 
@@ -181,11 +181,11 @@ describe('s3 support', () => {
     while(await cli('count-blobs in_progress') !== '1') { sleep(10); }
   }
 
-  async function countByStatus() {
+  async function countAllByStatus() {
     // For easier debugging, define keys up-front.  This makes print order more predictable.
     const counts = { pending:null, in_progress:null, uploaded:null, failed:null };
     await Promise.all(Object.keys(counts).map(async status => {
-      counts[status] = await cli(`count-blobs ${status}`);
+      counts[status] = Number(await cli(`count-blobs ${status}`));
     }));
     return counts;
   }
