@@ -196,6 +196,7 @@ describe('s3 support', () => {
 
     // then
     await expectRejectionFrom(uploading);
+    await sleep(100); // Wait for things to settle TODO necessary?
 
     // then
     const counts = await countAllByStatus();
