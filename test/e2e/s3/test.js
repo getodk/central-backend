@@ -175,7 +175,37 @@ describe('s3 support', () => {
     });
   });
 
-  // TODO new test case: what happens if the connection to s3 fails while uploading?
+  // ***N.B. THIS TEST KILLS THE MINIO SERVER, SO MUST BE RUN **LAST** OF ALL S3 E2E TESTS***
+  it('should gracefully handle s3 connection failing', async function() {
+    this.timeout(TIMEOUT*2);
+
+    // given
+    const initialUploaded = previousBlobs;
+    should.equal(await cli('count-blobs uploaded'), initialUploaded);
+    await setup(6);
+    should.equal(await cli('count-blobs uploaded'), initialUploaded);
+
+    // when
+    const uploading = cli('upload-pending');
+    await untilUploadInProgress();
+    // and
+    // TODO kill minio or tcp connections or something
+    // TODO test this on github actions
+    // TODO make this less hacky
+    execSync('docker ps | grep minio | cut -d" " -f1 | xargs docker kill');
+
+    // then
+    await expectRejectionFrom(uploading);
+
+    // then
+    const counts = await countAllByStatus();
+    counts.should.deepEqual({
+      pending:     0,
+      in_progress: 0, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
+      uploaded:    initialUploaded,
+      failed:      1,
+    });
+  });
 
   async function untilUploadInProgress() {
     while(await cli('count-blobs in_progress') !== '1') { sleep(10); }
