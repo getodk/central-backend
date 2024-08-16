@@ -81,14 +81,30 @@ describe('s3 support', () => {
     this.timeout(TIMEOUT*2);
 
     // given
+    await assertBlobStatuses({
+      pending:     0,
+      in_progress: 0,
+      uploaded:    0,
+      failed:      0,
+    });
     await setup(1);
+    await assertBlobStatuses({
+      pending:    11,
+      in_progress: 0,
+      uploaded:    0,
+      failed:      0,
+    });
 
     // when
     await cli('upload-pending');
 
     // then
-    should.equal(await cli('count-blobs pending'), 0);
-    should.equal(await cli('count-blobs uploaded'), 11);
+    await assertBlobStatuses({
+      pending:     0,
+      in_progress: 0,
+      uploaded:   11,
+      failed:      0,
+    });
     // and
     await assertAllRedirect(actualAttachments);
     await assertAllDownloadsMatchOriginal(actualAttachments);
