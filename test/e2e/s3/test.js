@@ -137,8 +137,7 @@ describe('s3 support', () => {
     await expectRejectionFrom(uploading);
 
     // then
-    const counts = await countAllByStatus();
-    counts.should.deepEqual({
+    await assertBlobStatuses({
       pending:     0,
       in_progress: 1, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
       uploaded:    initialUploaded,
@@ -166,8 +165,7 @@ describe('s3 support', () => {
     await expectRejectionFrom(uploading);
 
     // then
-    const counts = await countAllByStatus();
-    counts.should.deepEqual({
+    await assertBlobStatuses({
       pending:     0,
       in_progress: 0, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
       uploaded:    initialUploaded,
@@ -181,9 +179,19 @@ describe('s3 support', () => {
 
     // given
     const initialUploaded = previousBlobs;
-    should.equal(await cli('count-blobs uploaded'), initialUploaded);
+    await assertBlobStatuses({
+      pending:     0,
+      in_progress: 0, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
+      uploaded:    initialUploaded,
+      failed:      0,
+    });
     await setup(6);
-    should.equal(await cli('count-blobs uploaded'), initialUploaded);
+    await assertBlobStatuses({
+      pending:     1,
+      in_progress: 0, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
+      uploaded:    initialUploaded,
+      failed:      0,
+    });
 
     // when
     const uploading = cli('upload-pending');
@@ -199,8 +207,7 @@ describe('s3 support', () => {
     await sleep(100); // Wait for things to settle TODO necessary?
 
     // then
-    const counts = await countAllByStatus();
-    counts.should.deepEqual({
+    await assertBlobStatuses({
       pending:     0,
       in_progress: 0, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
       uploaded:    initialUploaded,
@@ -210,6 +217,11 @@ describe('s3 support', () => {
 
   async function untilUploadInProgress() {
     while(await cli('count-blobs in_progress') !== '1') { sleep(10); }
+  }
+
+  async function assertBlobStatuses(expected) {
+    const counts = await countAllByStatus();
+    counts.should.deepEqual(expected);
   }
 
   async function countAllByStatus() {
