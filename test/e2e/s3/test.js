@@ -36,8 +36,7 @@ describe('s3 support', () => {
 
   let minioTerminated;
   const terminateMinio = () => {
-    // Ugly, but it gets the job done, both locally, and on GitHub Actions:
-    execSync('docker ps | grep minio | cut -d" " -f1 | xargs docker kill');
+    execSync('docker stop $(docker ps --quiet --filter "ancestor=minio/minio")');
     minioTerminated = true;
   }
 
