@@ -85,13 +85,7 @@ describe('s3 support', () => {
 
     // when
     const uploading = cli('upload-pending');
-
-    // Wait until the upload is in progress:
-    while(true) {
-      const count = Number(await cli('count-blobs in_progress'));
-      if(count === 1) break;
-      await sleep(10);
-    }
+    await untilUploadInProgress();
 
     // then
     const res = await api.apiRawGet(`projects/${projectId}/forms/${xmlFormId}/attachments/big.bin`);
@@ -124,7 +118,7 @@ describe('s3 support', () => {
     _.intersection(uploaded1, uploaded2).length.should.equal(0);
   });
 
-  it('should gracefully handle upload-pending dying unexpectedly', async function() {
+  it('should gracefully handle upload-pending dying unexpectedly (SIGKILL)', async function() {
     this.timeout(TIMEOUT*2);
 
     // given
@@ -135,7 +129,7 @@ describe('s3 support', () => {
 
     // when
     const uploading = cli('upload-pending');
-    while(await cli('count-blobs pending') !== '0') { sleep(100); }
+    await untilUploadInProgress();
     // and
     await execSync(`kill -9 ${uploading.pid}`);
 
@@ -155,6 +149,10 @@ describe('s3 support', () => {
   // TODO new test case: what happens if e.g. kill -SIGTERM?  can upload-pending recover gracefully, and move the blob status to failed?
 
   // TODO new test case: what happens if the connection to s3 fails while uploading?
+
+  async function untilUploadInProgress() {
+    while(await cli('count-blobs in_progress') !== '1') { sleep(10); }
+  }
 
   async function countByStatus() {
     // For easier debugging, define keys up-front.  This makes print order more predictable.
