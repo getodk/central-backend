@@ -134,7 +134,7 @@ describe('s3 support', () => {
     await execSync(`kill -9 ${uploading.pid}`);
 
     // then
-    await expectFailure(uploading);
+    await expectRejectionFrom(uploading);
 
     // then
     const counts = await countByStatus();
@@ -163,7 +163,7 @@ describe('s3 support', () => {
     await execSync(`kill ${uploading.pid}`);
 
     // then
-    await expectFailure(uploading);
+    await expectRejectionFrom(uploading);
 
     // then
     const counts = await countByStatus();
@@ -315,7 +315,7 @@ function hashes(uploadOutput) {
   return hashes;
 }
 
-async function expectFailure(promise) {
+async function expectRejectionFrom(promise) {
   try {
     await promise;
     should.fail('Uploading should have exited with non-zero status.');
