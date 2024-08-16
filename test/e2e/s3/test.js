@@ -34,7 +34,24 @@ describe('s3 support', () => {
   // Track of total blobs uploaded over all tests
   let previousBlobs = 0;
 
-  afterEach(async () => {
+  let minioTerminated;
+  const terminateMinio = () => {
+    execSync('docker ps | grep minio | cut -d" " -f1 | xargs docker kill');
+    minioTerminated = true;
+  }
+
+  beforeEach(() => {
+    if(minioTerminated) throw new Error('Cannot run tests if minio has been terminated.');
+  });
+
+  afterEach(async function() {
+    if(minioTerminated) return;
+
+    this.timeout(TIMEOUT*2);
+
+    await cli('reset-in-progress-to-pending');
+    await cli('reset-failed-to-pending');
+
     await cli('upload-pending');
     previousBlobs = +await cli('count-blobs uploaded');
   });
@@ -200,7 +217,7 @@ describe('s3 support', () => {
     // TODO kill minio or tcp connections or something
     // TODO test this on github actions
     // TODO make this less hacky
-    execSync('docker ps | grep minio | cut -d" " -f1 | xargs docker kill');
+    terminateMinio();
 
     // then
     await expectRejectionFrom(uploading);
