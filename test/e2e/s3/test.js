@@ -171,8 +171,8 @@ describe('s3 support', () => {
 
     // then
     await assertBlobStatuses({
-      pending:     0,
-      in_progress: 1, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
+      pending:     1, // crashed process will roll back to pending
+      in_progress: 0,
       uploaded:    initialUploaded,
       failed:      0,
     });
