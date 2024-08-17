@@ -36,6 +36,7 @@ describe('s3 support', () => {
 
   let minioTerminated;
   const terminateMinio = () => {
+    console.log('docker debug:', 'TODO remove me', execSync('docker ps').toString());
     execSync('docker stop $(docker ps --quiet --filter "ancestor=minio/minio")');
     minioTerminated = true;
   }
