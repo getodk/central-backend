@@ -44,11 +44,18 @@ describe('s3 support', () => {
     // However, the ancestor filter requries specifying the exact tag used.
     // See: https://docs.docker.com/reference/cli/docker/container/ls/#ancestor
     execSync(`docker ps | awk '/minio/ { print $1 }' | xargs docker kill`);
+    console.log(`
+      @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+      @
+      @ docker kill returned !
+      @
+      @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    `);
     minioTerminated = true;
   }
 
   beforeEach(() => {
-    if(minioTerminated) throw new Error('Cannot run tests if minio has been terminated.');
+    if(minioTerminated) return;
   });
 
   afterEach(async function() {
@@ -251,6 +258,8 @@ describe('s3 support', () => {
       failed:      1,
     });
   });
+
+  // TODO add a test for when s3 is ALREADY DOWN
 
   async function untilUploadInProgress() {
     while(await cli('count-blobs in_progress') !== '1') { sleep(10); }
