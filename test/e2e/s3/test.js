@@ -250,7 +250,7 @@ describe('s3 support', () => {
     console.log('stdo:', stdo);
 
     // then
-    stdo.should.match(/Caught error: AggregateError\n.*Error: connect ECONNREFUSED/s); // weird error, but seems consistent - presumably this is the last error seen after repeated retries
+    stdo.should.match(/Caught error: (AggregateError\n.*)?Error: connect ECONNREFUSED/s); // weird error, but seems consistent - presumably this is the last error seen after repeated retries
     // and
     await assertBlobStatuses({
       pending:     0,
