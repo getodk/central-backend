@@ -9,7 +9,7 @@
 
 /* eslint-disable */
 
-const TIMEOUT = 120000; // ms
+const TIMEOUT = 120000; // ms // FIXME why is this always *2?
 
 const { exec, execSync } = require('node:child_process');
 const { promisify } = require('node:util');
