@@ -3,7 +3,7 @@ const should = require('should');
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
 const { testTask } = require('../setup');
-const { getCount, setFailedToPending, setInProgressToPending, uploadPending } = require(appRoot + '/lib/task/s3');
+const { getCount, setFailedToPending, uploadPending } = require(appRoot + '/lib/task/s3');
 const { Blob } = require(appRoot + '/lib/model/frames');
 
 // eslint-disable-next-line camelcase
@@ -33,10 +33,6 @@ describe('task: s3', () => {
 
     it('setFailedToPending() should fail', async () => {
       await assertThrowsAsync(() => setFailedToPending(), 'S3 blob support is not enabled.');
-    });
-
-    it('setInProgressToPending() should fail', async () => {
-      await assertThrowsAsync(() => setInProgressToPending(), 'S3 blob support is not enabled.');
     });
 
     it('getCount() should fail', async () => {
