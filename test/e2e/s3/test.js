@@ -63,7 +63,6 @@ describe('s3 support', () => {
 
     this.timeout(TIMEOUT*2);
 
-    await cli('reset-in-progress-to-pending');
     await cli('reset-failed-to-pending');
 
     await cli('upload-pending');
