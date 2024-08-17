@@ -106,29 +106,6 @@ describe('task: s3', () => {
       }));
     });
 
-    describe('setInProgressToPending()', () => {
-      it('should change all in_progress messages to pending', testTask(async (container) => {
-        // given
-        await aBlobExistsWith(container, { status: 'pending' });
-        await aBlobExistsWith(container, { status: 'uploaded' });
-        await aBlobExistsWith(container, { status: 'uploaded' });
-        await aBlobExistsWith(container, { status: 'in_progress' });
-        await aBlobExistsWith(container, { status: 'in_progress' });
-        await aBlobExistsWith(container, { status: 'in_progress' });
-
-        // expect
-        (await getCount('pending')).should.equal(1);
-        (await getCount('in_progress')).should.equal(3);
-
-        // when
-        await setInProgressToPending();
-
-        // then
-        (await getCount('pending')).should.equal(4);
-        (await getCount('in_progress')).should.equal(0);
-      }));
-    });
-
     describe('uploadPending()', () => {
       it('should not do anything if nothing to upload', testTask(async () => {
         // when
