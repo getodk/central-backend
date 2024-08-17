@@ -38,7 +38,12 @@ describe('s3 support', () => {
   const terminateMinio = () => {
     console.log('docker debug 1:', 'TODO remove me', '\n' + execSync('docker ps').toString());
     console.log('docker debug 2:', 'TODO remove me', '\n' + execSync('docker ps --filter "ancestor=minio/minio"').toString());
-    execSync('docker stop $(docker ps --quiet --filter "ancestor=minio/minio")');
+    console.log('docker debug 3:', 'TODO remove me', '\n' + execSync(`docker ps | awk '/minio/ { print $1 }'`).toString());
+    // It should be possible to use docker more precisely here, e.g.
+    //   docker stop $(docker ps --quiet --filter "ancestor=minio/minio")
+    // However, the ancestor filter requries specifying the exact tag used.
+    // See: https://docs.docker.com/reference/cli/docker/container/ls/#ancestor
+    execSync(`docker ps | awk '/minio/ { print $1 }' | xargs docker kill`);
     minioTerminated = true;
   }
 
