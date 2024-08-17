@@ -193,6 +193,7 @@ const testTask = (test) => () => new Promise((resolve, reject) => {
 });
 
 // See testServiceFullTrx()
+// eslint-disable-next-line space-before-function-paren, func-names
 const testTaskFullTrx = (test) => function() {
   mustReinitAfter = this.test.fullTitle();
   task._container = baseContainer.with({ task: true });
