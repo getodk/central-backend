@@ -248,9 +248,8 @@ describe('s3 support', () => {
     const stdo = await uploading; // should exit cleanly
 
     // then
-    stdo.should.match(/Caught error:/);
+    stdo.should.match(/Caught error: Error: connect ECONNREFUSED/); // weird error, but seems consistent - presumably this is the last error seen after repeated retries
     // and
-    await sleep(100); // Wait for things to settle TODO necessary?
     await assertBlobStatuses({
       pending:     0,
       in_progress: 0, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
