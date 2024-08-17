@@ -178,8 +178,7 @@ describe('s3 support', () => {
     });
   });
 
-  // FIXME this test will not pass until long-running transactions are implemented
-  it.skip('should gracefully handle upload-pending dying unexpectedly (SIGTERM)', async function() {
+  it('should gracefully handle upload-pending dying unexpectedly (SIGTERM)', async function() {
     this.timeout(TIMEOUT*2);
 
     // given
