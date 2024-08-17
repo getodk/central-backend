@@ -54,7 +54,7 @@ describe('s3 support', () => {
   }
 
   beforeEach(async function() {
-    this.timeout(TIMEOUT*2);
+    this.timeout(5000);
     _initial = await countAllByStatus();
   });
 
