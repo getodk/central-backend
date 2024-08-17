@@ -212,7 +212,7 @@ describe('s3 support', () => {
 
     // then
     await assertBlobStatuses({
-      pending:     1, // crashed process will roll back to pending
+      pending:     1, // crashed process will roll back to pending // TODO should we catch this & set to failed?
       in_progress: 0,
       uploaded:    initialUploaded,
       failed:      0,
