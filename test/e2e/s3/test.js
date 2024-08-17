@@ -235,7 +235,7 @@ describe('s3 support', () => {
     await setup(6);
     await assertBlobStatuses({
       pending:     1,
-      in_progress: 0, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
+      in_progress: 0,
       uploaded:    initialUploaded,
       failed:      0,
     });
@@ -251,11 +251,11 @@ describe('s3 support', () => {
     console.log('stdo:', stdo);
 
     // then
-    stdo.should.match(/Caught error: (AggregateError\n.*)?Error: connect ECONNREFUSED/s); // weird error, but seems consistent - presumably this is the last error seen after repeated retries
+    stdo.should.match(/Caught error: (AggregateError\n.*)?Error: connect ECONNREFUSED/s);
     // and
     await assertBlobStatuses({
       pending:     0,
-      in_progress: 0, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
+      in_progress: 0,
       uploaded:    initialUploaded,
       failed:      1,
     });
@@ -270,34 +270,25 @@ describe('s3 support', () => {
     const initialUploaded = previousBlobs;
     await assertBlobStatuses({
       pending:     0,
-      in_progress: 0, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
+      in_progress: 0,
       uploaded:    initialUploaded,
       failed:      0,
     });
     await setup(7, { bigFile: false });
     await assertBlobStatuses({
       pending:     1,
-      in_progress: 0, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
+      in_progress: 0,
       uploaded:    initialUploaded,
       failed:      0,
     });
 
     // when
-    const uploading = cli('upload-pending');
-    await untilUploadInProgress();
-    // and
-    minioTerminated();
-    // and
-    const stdo = await uploading; // should exit cleanly, after ~90s timeout
-
-    console.log('stdo:', stdo);
+    await expectRejectionFrom(cli('upload-pending'), (/Error: connect ECONNREFUSED/));
 
     // then
-    stdo.should.match(/Caught error: (AggregateError\n.*)?Error: connect ECONNREFUSED/s); // weird error, but seems consistent - presumably this is the last error seen after repeated retries
-    // and
     await assertBlobStatuses({
       pending:     0,
-      in_progress: 0, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
+      in_progress: 0,
       uploaded:    initialUploaded,
       failed:      1,
     });
@@ -446,13 +437,14 @@ function hashes(uploadOutput) {
   return hashes;
 }
 
-async function expectRejectionFrom(promise) {
+async function expectRejectionFrom(promise, expectedMessage) {
   try {
     await promise;
     should.fail('Uploading should have exited with non-zero status.');
   } catch(err) {
     if(err.message.startsWith('Command failed: exec node lib/bin/s3 ')) {
       // expected
+      if(expectedMessage) err.message.should.match(expectedMessage);
     } else {
       throw err;
     }
