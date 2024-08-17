@@ -30,11 +30,8 @@ const userPassword = 'secret1234';
 
 describe('s3 support', () => {
   let api, expectedAttachments, actualAttachments, projectId, xmlFormId, attDir;
+  let _initial, _minioTerminated;
 
-  // Track of total blobs uploaded over all tests
-  let previousBlobs = 0;
-
-  let _minioTerminated;
   const minioTerminated = () => {
     if(_minioTerminated) return;
 
@@ -56,7 +53,8 @@ describe('s3 support', () => {
     _minioTerminated = true;
   }
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    _initial = await countAllByStatus();
     if(_minioTerminated) return;
   });
 
@@ -64,11 +62,8 @@ describe('s3 support', () => {
     if(_minioTerminated) return;
 
     this.timeout(TIMEOUT*2);
-
     await cli('reset-failed-to-pending');
-
     await cli('upload-pending');
-    previousBlobs = +await cli('count-blobs uploaded');
   });
 
   async function setup(testNumber, opts={ bigFile: true }) {
@@ -86,8 +81,7 @@ describe('s3 support', () => {
     should.deepEqual(actualAttachments.map(a => a.name).sort(), expectedAttachments);
 
     // then
-    should.equal(await cli('count-blobs pending'), expectedAttachments.length);
-    should.equal(await cli('count-blobs uploaded'), previousBlobs);
+    await assertNewStatuses({ pending: expectedAttachments.length });
     // and
     await assertNoneRedirect(actualAttachments);
   }
@@ -96,30 +90,14 @@ describe('s3 support', () => {
     this.timeout(TIMEOUT*2);
 
     // given
-    await assertBlobStatuses({
-      pending:     0,
-      in_progress: 0,
-      uploaded:    0,
-      failed:      0,
-    });
     await setup(1);
-    await assertBlobStatuses({
-      pending:    11,
-      in_progress: 0,
-      uploaded:    0,
-      failed:      0,
-    });
+    await assertNewStatuses({ pending: 11 });
 
     // when
     await cli('upload-pending');
 
     // then
-    await assertBlobStatuses({
-      pending:     0,
-      in_progress: 0,
-      uploaded:   11,
-      failed:      0,
-    });
+    await assertNewStatuses({ uploaded: 11 });
     // and
     await assertAllRedirect(actualAttachments);
     await assertAllDownloadsMatchOriginal(actualAttachments);
@@ -170,10 +148,8 @@ describe('s3 support', () => {
     this.timeout(TIMEOUT*2);
 
     // given
-    const initialUploaded = previousBlobs;
-    should.equal(await cli('count-blobs uploaded'), initialUploaded);
     await setup(4);
-    should.equal(await cli('count-blobs uploaded'), initialUploaded);
+    await assertNewStatuses({ pending: 1 });
 
     // when
     const uploading = cli('upload-pending');
@@ -185,22 +161,15 @@ describe('s3 support', () => {
     await expectRejectionFrom(uploading);
 
     // then
-    await assertBlobStatuses({
-      pending:     1, // crashed process will roll back to pending
-      in_progress: 0,
-      uploaded:    initialUploaded,
-      failed:      0,
-    });
+    await assertNewStatuses({ pending: 1 }); // crashed process will roll back to pending
   });
 
   it('should gracefully handle upload-pending dying unexpectedly (SIGTERM)', async function() {
     this.timeout(TIMEOUT*2);
 
     // given
-    const initialUploaded = previousBlobs;
-    should.equal(await cli('count-blobs uploaded'), initialUploaded);
     await setup(5);
-    should.equal(await cli('count-blobs uploaded'), initialUploaded);
+    assertNewStatuses({ pending: 1 });
 
     // when
     const uploading = cli('upload-pending');
@@ -212,95 +181,61 @@ describe('s3 support', () => {
     await expectRejectionFrom(uploading);
 
     // then
-    await assertBlobStatuses({
-      pending:     1, // crashed process will roll back to pending // TODO should we catch this & set to failed?
-      in_progress: 0,
-      uploaded:    initialUploaded,
-      failed:      0,
-    });
+    await assertNewStatuses({ pending: 1 }); // crashed process will roll back to pending // TODO should we catch this & set to failed?
   });
 
-  // ***N.B. THIS TEST KILLS THE MINIO SERVER, SO MUST BE RUN **LAST** OF ALL S3 E2E TESTS***
-  it('should gracefully handle s3 connection failing', async function() {
+  // N.B. THIS TEST KILLS THE MINIO SERVER, SO IT WILL NOT BE AVAILABLE TO SUBSEQUENT TESTS
+  it('should handle s3 connection failing', async function() {
     this.timeout(TIMEOUT*2);
 
     // given
-    const initialUploaded = previousBlobs;
-    await assertBlobStatuses({
-      pending:     0,
-      in_progress: 0, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
-      uploaded:    initialUploaded,
-      failed:      0,
-    });
     await setup(6);
-    await assertBlobStatuses({
-      pending:     1,
-      in_progress: 0,
-      uploaded:    initialUploaded,
-      failed:      0,
-    });
+    await assertNewStatuses({ pending: 1 });
 
     // when
     const uploading = cli('upload-pending');
     await untilUploadInProgress();
     // and
     minioTerminated();
-    // and
-    const stdo = await uploading; // should exit cleanly, after ~90s timeout
-
-    console.log('stdo:', stdo);
 
     // then
-    stdo.should.match(/Caught error: (AggregateError\n.*)?Error: connect ECONNREFUSED/s);
+    await expectRejectionFrom(uploading, new RegExp(
+      'Command failed: exec node lib/bin/s3 upload-pending\n' +
+          '(AggregateError\n.*)?Error: connect ECONNREFUSED',
+      's',
+    ));
     // and
-    await assertBlobStatuses({
-      pending:     0,
-      in_progress: 0,
-      uploaded:    initialUploaded,
-      failed:      1,
-    });
+    await assertNewStatuses({ failed: 1 });
   });
 
-  it.only('should gracefully handle s3 unavailable', async function() {
+  it('should handle s3 unavailable', async function() {
     this.timeout(TIMEOUT*2);
 
     // given
     minioTerminated();
     // and
-    const initialUploaded = previousBlobs;
-    await assertBlobStatuses({
-      pending:     0,
-      in_progress: 0,
-      uploaded:    initialUploaded,
-      failed:      0,
-    });
     await setup(7, { bigFile: false });
-    await assertBlobStatuses({
-      pending:     1,
-      in_progress: 0,
-      uploaded:    initialUploaded,
-      failed:      0,
-    });
+    await assertNewStatuses({ pending: 1 });
 
     // when
     await expectRejectionFrom(cli('upload-pending'), (/Error: connect ECONNREFUSED/));
 
     // then
-    await assertBlobStatuses({
-      pending:     0,
-      in_progress: 0,
-      uploaded:    initialUploaded,
-      failed:      1,
-    });
+    await assertNewStatuses({ failed: 1 });
   });
 
   async function untilUploadInProgress() {
     while(await cli('count-blobs in_progress') !== '1') { sleep(10); }
   }
 
-  async function assertBlobStatuses(expected) {
+  async function assertNewStatuses(expected) {
     const counts = await countAllByStatus();
-    counts.should.deepEqual(expected);
+    counts.should.deepEqual({
+      pending:     _initial.pending     + (expected.pending     ?? 0),
+      in_progress: _initial.in_progress + (expected.in_progress ?? 0),
+      uploaded:    _initial.uploaded    + (expected.uploaded    ?? 0),
+      failed:      _initial.failed      + (expected.failed      ?? 0),
+    });
   }
 
   async function countAllByStatus() {
