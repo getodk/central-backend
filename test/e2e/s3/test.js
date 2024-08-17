@@ -34,8 +34,10 @@ describe('s3 support', () => {
   // Track of total blobs uploaded over all tests
   let previousBlobs = 0;
 
-  let minioTerminated;
-  const terminateMinio = () => {
+  let _minioTerminated;
+  const minioTerminated = () => {
+    if(_minioTerminated) return;
+
     console.log('docker debug 1:', 'TODO remove me', '\n' + execSync('docker ps').toString());
     console.log('docker debug 2:', 'TODO remove me', '\n' + execSync('docker ps --filter "ancestor=minio/minio"').toString());
     console.log('docker debug 3:', 'TODO remove me', '\n' + execSync(`docker ps | awk '/minio/ { print $1 }'`).toString());
@@ -51,15 +53,15 @@ describe('s3 support', () => {
       @
       @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     `);
-    minioTerminated = true;
+    _minioTerminated = true;
   }
 
   beforeEach(() => {
-    if(minioTerminated) return;
+    if(_minioTerminated) return;
   });
 
   afterEach(async function() {
-    if(minioTerminated) return;
+    if(_minioTerminated) return;
 
     this.timeout(TIMEOUT*2);
 
@@ -69,11 +71,11 @@ describe('s3 support', () => {
     previousBlobs = +await cli('count-blobs uploaded');
   });
 
-  async function setup(testNumber) {
+  async function setup(testNumber, opts={ bigFile: true }) {
     attDir = `./test-forms/${testNumber}-attachments`;
 
     // given
-    bigFileExists(attDir);
+    if(opts.bigFile) bigFileExists(attDir);
     expectedAttachments = fs.readdirSync(attDir).filter(f => !f.startsWith('.')).sort();
     api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
     projectId = await createProject();
@@ -242,7 +244,7 @@ describe('s3 support', () => {
     const uploading = cli('upload-pending');
     await untilUploadInProgress();
     // and
-    terminateMinio();
+    minioTerminated();
     // and
     const stdo = await uploading; // should exit cleanly, after ~90s timeout
 
@@ -259,7 +261,47 @@ describe('s3 support', () => {
     });
   });
 
-  // TODO add a test for when s3 is ALREADY DOWN
+  it.only('should gracefully handle s3 unavailable', async function() {
+    this.timeout(TIMEOUT*2);
+
+    // given
+    minioTerminated();
+    // and
+    const initialUploaded = previousBlobs;
+    await assertBlobStatuses({
+      pending:     0,
+      in_progress: 0, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
+      uploaded:    initialUploaded,
+      failed:      0,
+    });
+    await setup(7, { bigFile: false });
+    await assertBlobStatuses({
+      pending:     1,
+      in_progress: 0, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
+      uploaded:    initialUploaded,
+      failed:      0,
+    });
+
+    // when
+    const uploading = cli('upload-pending');
+    await untilUploadInProgress();
+    // and
+    minioTerminated();
+    // and
+    const stdo = await uploading; // should exit cleanly, after ~90s timeout
+
+    console.log('stdo:', stdo);
+
+    // then
+    stdo.should.match(/Caught error: (AggregateError\n.*)?Error: connect ECONNREFUSED/s); // weird error, but seems consistent - presumably this is the last error seen after repeated retries
+    // and
+    await assertBlobStatuses({
+      pending:     0,
+      in_progress: 0, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
+      uploaded:    initialUploaded,
+      failed:      1,
+    });
+  });
 
   async function untilUploadInProgress() {
     while(await cli('count-blobs in_progress') !== '1') { sleep(10); }
