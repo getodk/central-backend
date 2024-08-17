@@ -245,10 +245,10 @@ describe('s3 support', () => {
     // and
     terminateMinio();
     // and
-    const stdo = await uploading; // should exit cleanly
+    const stdo = await uploading; // should exit cleanly, after ~90s timeout
 
     // then
-    stdo.should.match(/Caught error: Error: connect ECONNREFUSED/); // weird error, but seems consistent - presumably this is the last error seen after repeated retries
+    stdo.should.match(/Caught error: (AggregateError\n.*)?(Error: connect ECONNREFUSED)/s); // weird error, but seems consistent - presumably this is the last error seen after repeated retries
     // and
     await assertBlobStatuses({
       pending:     0,
