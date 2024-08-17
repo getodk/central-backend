@@ -230,12 +230,13 @@ describe('s3 support', () => {
     await untilUploadInProgress();
     // and
     terminateMinio();
+    // and
+    const stdo = await uploading; // should exit cleanly
 
     // then
-    await expectRejectionFrom(uploading);
+    stdo.should.match(/Caught error:/);
+    // and
     await sleep(100); // Wait for things to settle TODO necessary?
-
-    // then
     await assertBlobStatuses({
       pending:     0,
       in_progress: 0, // crashed process will be stuck in_progress forever TODO decide if this is acceptable
