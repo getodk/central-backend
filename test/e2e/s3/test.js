@@ -55,7 +55,6 @@ describe('s3 support', () => {
 
   beforeEach(async () => {
     _initial = await countAllByStatus();
-    if(_minioTerminated) return;
   });
 
   afterEach(async function() {
