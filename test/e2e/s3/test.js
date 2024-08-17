@@ -53,7 +53,8 @@ describe('s3 support', () => {
     _minioTerminated = true;
   }
 
-  beforeEach(async () => {
+  beforeEach(async function() {
+    this.timeout(TIMEOUT*2);
     _initial = await countAllByStatus();
   });
 
