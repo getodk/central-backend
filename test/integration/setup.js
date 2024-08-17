@@ -192,6 +192,13 @@ const testTask = (test) => () => new Promise((resolve, reject) => {
   });//.catch(Promise.resolve.bind(Promise));
 });
 
+// See testServiceFullTrx()
+const testTaskFullTrx = (test) => function() {
+  mustReinitAfter = this.test.fullTitle();
+  task._container = baseContainer.with({ task: true });
+  return test(task._container);
+};
+
 // eslint-disable-next-line no-shadow
 const withClosedForm = (f) => async (service) => {
   const asAlice = await service.login('alice');
@@ -217,4 +224,4 @@ const withClosedForm = (f) => async (service) => {
   return f(service);
 };
 
-module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask, withClosedForm };
+module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask, testTaskFullTrx, withClosedForm };

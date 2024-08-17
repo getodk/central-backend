@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const should = require('should');
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
-const { testTask } = require('../setup');
+const { testTask, testTaskFullTrx } = require('../setup');
 const { getCount, setFailedToPending, uploadPending } = require(appRoot + '/lib/task/s3');
 const { Blob } = require(appRoot + '/lib/model/frames');
 
@@ -163,7 +163,7 @@ describe('task: s3', () => {
         assertUploadCount(3);
       }));
 
-      it('should not attempt to upload an in-progress blob', testTask(async (container) => {
+      it('should not attempt to upload an in-progress blob', testTaskFullTrx(async (container) => {
         // given
         const original = global.s3.uploadFromBlob;
         let resume;
