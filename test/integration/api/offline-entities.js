@@ -1088,5 +1088,70 @@ describe('Offline Entities', () => {
           body.currentVersion.version.should.equal(1);
         });
     }));
+
+    describe('only force-process submissions held in backlog for a certain amount of time', () => {
+      it('should process a submission from over 7 days ago', testOfflineEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+        const branchId = uuid();
+
+        // Neither update below will be applied at first because the first
+        // update in the branch is missing.
+
+        // Send the first submission, which will be held in the backlog
+        await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+          .send(testData.instances.offlineEntity.one
+            .replace('branchId=""', `branchId="${branchId}"`)
+            .replace('baseVersion="1"', 'baseVersion="2"')
+          )
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+        backlogCount.should.equal(1);
+
+        // Update the timestamp on this backlog
+        await container.run(sql`UPDATE entity_submission_backlog SET "loggedAt" = "loggedAt" - interval '8 days'`);
+
+        // Send the next submission, which will also be held in the backlog.
+        // This submission immediately follows the previous one, but force-processing
+        // the first submission does not cause this one to be processed.
+        await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+          .send(testData.instances.offlineEntity.one
+            .replace('branchId=""', `branchId="${branchId}"`)
+            .replace('one', 'one-update')
+            .replace('baseVersion="1"', 'baseVersion="3"')
+            .replace('<status>arrived</status>', '<status>departed</status>')
+          )
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // Both submissions should be in the backlog now
+        backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+        backlogCount.should.equal(2);
+
+        // Process submissions that have been in the backlog for a long time
+        await container.Entities.processHeldSubmissions();
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body }) => {
+            body.currentVersion.version.should.equal(2);
+            body.currentVersion.baseVersion.should.equal(1);
+            body.currentVersion.data.should.eql({ age: '22', status: 'arrived', first_name: 'Johnny' });
+
+            body.currentVersion.branchId.should.equal(branchId);
+            body.currentVersion.trunkVersion.should.equal(1);
+            body.currentVersion.branchBaseVersion.should.equal(2);
+          });
+
+        // One submission should still be in the backlog
+        backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+        backlogCount.should.equal(1);
+      }));
+    });
   });
 });
