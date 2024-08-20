@@ -38,7 +38,6 @@ const testMigration = (filename, tests, options = {}) => {
     // eslint-disable-next-line no-only-tests/no-only-tests
     ? describe.only.bind(describe)
     : (skip ? describe.skip.bind(describe) : describe);
-  // eslint-disable-next-line func-names, space-before-function-paren
   f(`database migrations: ${filename}`, function() {
     this.timeout(20000);
 
@@ -57,7 +56,6 @@ testMigration.skip = (filename, tests) =>
 // column to projects and forms, it is not possible to migrate part way
 // (before the new column) and populate the data when frames expect the
 // new column to exist.
-// eslint-disable-next-line space-before-function-paren, func-names
 describe.skip('database migrations', function() {
   this.timeout(8000);
 
@@ -217,7 +215,6 @@ describe.skip('database migrations', function() {
 
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 describe('database migrations: removing default project', function() {
   this.timeout(8000);
 
@@ -255,7 +252,6 @@ describe('database migrations: removing default project', function() {
   }));
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 describe('database migrations: intermediate form schema', function() {
   this.timeout(20000);
 
@@ -385,7 +381,6 @@ describe('database migrations: intermediate form schema', function() {
   }));
 });
 
-// eslint-disable-next-line func-names, space-before-function-paren
 describe('database migrations: 20230123-01-remove-google-backups', function() {
   this.timeout(20000);
 
@@ -480,7 +475,6 @@ describe('database migrations: 20230123-01-remove-google-backups', function() {
   }));
 });
 
-// eslint-disable-next-line func-names
 describe.skip('database migrations: 20230324-01-edit-dataset-verbs.js', function () {
   this.timeout(20000);
 
@@ -517,7 +511,6 @@ describe.skip('database migrations: 20230324-01-edit-dataset-verbs.js', function
   }));
 });
 
-// eslint-disable-next-line func-names
 describe.skip('database migrations from 20230406: altering entities and entity_defs', function () {
   this.timeout(20000);
 
@@ -612,7 +605,6 @@ describe.skip('database migrations from 20230406: altering entities and entity_d
   }));
 });
 
-// eslint-disable-next-line func-names
 describe('database migrations from 20230512: adding entity_def_sources table', function () {
   this.timeout(20000);
 

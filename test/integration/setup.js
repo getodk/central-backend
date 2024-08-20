@@ -84,7 +84,6 @@ const initialize = async () => {
   return withDefaults({ db, context, enketo, env }).transacting(populate);
 };
 
-// eslint-disable-next-line func-names, space-before-function-paren
 before(function() {
   this.timeout(0);
   return initialize();
@@ -95,7 +94,6 @@ beforeEach(() => {
   // eslint-disable-next-line keyword-spacing
   if(mustReinitAfter) throw new Error(`Failed to reinitalize after previous test: '${mustReinitAfter}'.  You may need to increase your mocha timeout.`);
 });
-// eslint-disable-next-line func-names, space-before-function-paren
 afterEach(async function() {
   this.timeout(0);
   if (mustReinitAfter) {
@@ -152,7 +150,6 @@ const testService = (test) => () => new Promise((resolve, reject) => {
 // for some tests we explicitly need to make concurrent requests, in which case
 // the transaction butchering we do for testService will not work. for these cases,
 // we offer testServiceFullTrx:
-// eslint-disable-next-line space-before-function-paren, func-names
 const testServiceFullTrx = (test) => function() {
   mustReinitAfter = this.test.fullTitle();
   return test(augment(request(service(baseContainer))), baseContainer);
@@ -168,7 +165,6 @@ const testContainer = (test) => () => new Promise((resolve, reject) => {
 });
 
 // complete the square of options:
-// eslint-disable-next-line space-before-function-paren, func-names
 const testContainerFullTrx = (test) => function() {
   mustReinitAfter = this.test.fullTitle();
   return test(baseContainer);
