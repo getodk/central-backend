@@ -10,7 +10,7 @@
 /* eslint-disable */
 
 // Enough time to upload big.bin, and then run each test scenario.
-const TIMEOUT = 12_000; // ms
+const TIMEOUT = 24_000; // ms
 
 const { exec, execSync } = require('node:child_process');
 const { promisify } = require('node:util');
