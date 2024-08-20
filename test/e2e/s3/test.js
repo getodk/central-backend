@@ -7,7 +7,7 @@
 // including this file, may be copied, modified, propagated, or distributed
 // except according to the terms contained in the LICENSE file.
 
-/* eslint-disable space-before-function-paren, func-names */
+/* eslint-disable func-names, no-await-in-loop, space-before-function-paren  */
 
 // Enough time to upload big.bin, and then run each test scenario.
 const TIMEOUT = 120_000; // ms
@@ -330,7 +330,7 @@ describe('s3 support', () => {
       const batchSize = 100_000;
       do {
         fs.appendFileSync(bigFile, randomBytes(batchSize));
-      } while((remaining-=batchSize) > 0);
+      } while((remaining-=batchSize) > 0); // eslint-disable-line no-cond-assign
     }
   }
 });
@@ -338,7 +338,7 @@ describe('s3 support', () => {
 function cli(cmd) {
   let pid;
 
-  cmd = `exec node lib/bin/s3 ${cmd}`;
+  cmd = `exec node lib/bin/s3 ${cmd}`; // eslint-disable-line no-param-reassign
   log.info('cli()', 'calling:', cmd);
   const env = { ..._.pick(process.env, 'PATH'), NODE_CONFIG_ENV:'s3-dev' };
 
