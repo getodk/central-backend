@@ -9,7 +9,8 @@
 
 /* eslint-disable */
 
-const TIMEOUT = 120000; // ms // FIXME should be able to decrease this to about 10 seconds
+// Enough time to upload big.bin, and then run each test scenario.
+const TIMEOUT = 12_000; // ms
 
 const { exec, execSync } = require('node:child_process');
 const { promisify } = require('node:util');
