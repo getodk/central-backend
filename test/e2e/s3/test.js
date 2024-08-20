@@ -199,9 +199,11 @@ describe('s3 support', () => {
     minioTerminated();
 
     // then
+    // N.B. These errors are as observed, and demonstrate that the root error is shared
+    // with the user.  They are not something to try to retain if implementation changes.
     await expectRejectionFrom(uploading, new RegExp(
       'Command failed: exec node lib/bin/s3 upload-pending\n' +
-          '(AggregateError\n.*)?Error: (connect ECONNREFUSED|read ECONNRESET)',
+          '(AggregateError\n.*)?Error: (connect ECONNREFUSED|read ECONNRESET|socket hang up)',
       's',
     ));
     // and
