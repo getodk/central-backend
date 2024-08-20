@@ -335,8 +335,8 @@ describe('s3 support', () => {
       //
       //   * on github actions: 1.2-1.6s
       //   * locally:           300ms-7s
-      let remaining = 100000000;
-      const batchSize = 100000;
+      let remaining = 100_000_000;
+      const batchSize = 100_000;
       do {
         fs.appendFileSync(bigFile, randomBytes(batchSize));
       } while((remaining-=batchSize) > 0);
