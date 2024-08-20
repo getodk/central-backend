@@ -260,10 +260,14 @@ describe('s3 support', () => {
 
     await Promise.all(
       expectedAttachments
-        .map(f => api.apiPostFile(
-          `projects/${projectId}/forms/${xmlFormId}/draft/attachments/${f}`,
-          `${attDir}/${f}`,
-        ))
+        .map(async f => {
+          const start = Date.now();
+          await api.apiPostFile(
+            `projects/${projectId}/forms/${xmlFormId}/draft/attachments/${f}`,
+            `${attDir}/${f}`,
+          );
+          console.log('uploadFormWithAttachments()', f, Date.now() - start, 'ms');
+        })
     );
 
     return xmlFormId;
