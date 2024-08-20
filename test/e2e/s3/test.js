@@ -9,7 +9,7 @@
 
 /* eslint-disable */
 
-const TIMEOUT = 120000; // ms // FIXME why is this always *2?
+const TIMEOUT = 120000; // ms // FIXME should be able to decrease this to about 10 seconds
 
 const { exec, execSync } = require('node:child_process');
 const { promisify } = require('node:util');
@@ -61,7 +61,7 @@ describe('s3 support', () => {
   afterEach(async function() {
     if(_minioTerminated) return;
 
-    this.timeout(TIMEOUT*2);
+    this.timeout(TIMEOUT);
     await cli('reset-failed-to-pending');
     await cli('upload-pending');
   });
@@ -87,7 +87,7 @@ describe('s3 support', () => {
   }
 
   it('should shift submission attachments to s3', async function() {
-    this.timeout(TIMEOUT*2);
+    this.timeout(TIMEOUT);
 
     // given
     await setup(1);
@@ -104,7 +104,7 @@ describe('s3 support', () => {
   });
 
   it('should continue to serve blobs while upload-pending is running', async function() {
-    this.timeout(TIMEOUT*2);
+    this.timeout(TIMEOUT);
 
     // given
     await setup(2);
@@ -122,7 +122,7 @@ describe('s3 support', () => {
   });
 
   it('should gracefully handle simultaneous calls to upload-pending', async function() {
-    this.timeout(TIMEOUT*2);
+    this.timeout(TIMEOUT);
 
     // given
     await setup(3);
@@ -145,7 +145,7 @@ describe('s3 support', () => {
   });
 
   it('should gracefully handle upload-pending dying unexpectedly (SIGKILL)', async function() {
-    this.timeout(TIMEOUT*2);
+    this.timeout(TIMEOUT);
 
     // given
     await setup(4);
@@ -165,7 +165,7 @@ describe('s3 support', () => {
   });
 
   it('should gracefully handle upload-pending dying unexpectedly (SIGTERM)', async function() {
-    this.timeout(TIMEOUT*2);
+    this.timeout(TIMEOUT);
 
     // given
     await setup(5);
@@ -186,7 +186,7 @@ describe('s3 support', () => {
 
   // N.B. THIS TEST KILLS THE MINIO SERVER, SO IT WILL NOT BE AVAILABLE TO SUBSEQUENT TESTS
   it('should handle s3 connection failing', async function() {
-    this.timeout(TIMEOUT*2);
+    this.timeout(TIMEOUT);
 
     // given
     await setup(6);
@@ -211,7 +211,7 @@ describe('s3 support', () => {
   });
 
   it('should handle s3 unavailable', async function() {
-    this.timeout(TIMEOUT*2);
+    this.timeout(TIMEOUT);
 
     // given
     minioTerminated();
