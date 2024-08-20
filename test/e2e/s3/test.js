@@ -7,18 +7,16 @@
 // including this file, may be copied, modified, propagated, or distributed
 // except according to the terms contained in the LICENSE file.
 
-/* eslint-disable */
+/* eslint func-names: 0 */
+/* eslint space-before-function-paren: 0 */
 
 // Enough time to upload big.bin, and then run each test scenario.
 const TIMEOUT = 120_000; // ms
 
 const { exec, execSync } = require('node:child_process');
-const { promisify } = require('node:util');
 const fs = require('node:fs');
 const { randomBytes } = require('node:crypto');
-const { basename } = require('node:path');
 const _ = require('lodash');
-const { program } = require('commander');
 const should = require('should');
 
 const SUITE_NAME = 'test/e2e/s3';
@@ -30,29 +28,20 @@ const userEmail = 'x@example.com';
 const userPassword = 'secret1234';
 
 describe('s3 support', () => {
+  // eslint-disable-next-line one-var, one-var-declaration-per-line
   let api, expectedAttachments, actualAttachments, projectId, xmlFormId, attDir;
-  let _initial, _minioTerminated;
+  let _initial, _minioTerminated; // eslint-disable-line one-var, one-var-declaration-per-line
 
   const minioTerminated = () => {
     if(_minioTerminated) return;
 
-    console.log('docker debug 1:', 'TODO remove me', '\n' + execSync('docker ps').toString());
-    console.log('docker debug 2:', 'TODO remove me', '\n' + execSync('docker ps --filter "ancestor=minio/minio"').toString());
-    console.log('docker debug 3:', 'TODO remove me', '\n' + execSync(`docker ps | awk '/minio/ { print $1 }'`).toString());
     // It should be possible to use docker more precisely here, e.g.
     //   docker stop $(docker ps --quiet --filter "ancestor=minio/minio")
     // However, the ancestor filter requries specifying the exact tag used.
     // See: https://docs.docker.com/reference/cli/docker/container/ls/#ancestor
     execSync(`docker ps | awk '/minio/ { print $1 }' | xargs docker kill`);
-    console.log(`
-      @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-      @
-      @ docker kill returned !
-      @
-      @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    `);
     _minioTerminated = true;
-  }
+  };
 
   beforeEach(async function() {
     this.timeout(5000);
