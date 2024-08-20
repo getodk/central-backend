@@ -153,7 +153,6 @@ describe('s3 support', () => {
     await assertNewStatuses({ pending: 1 }); // crashed process will roll back to pending
   });
 
-  // TODO Also test SIGINT?
   it('should gracefully handle upload-pending dying unexpectedly (SIGTERM)', async function() {
     this.timeout(TIMEOUT);
 
@@ -174,13 +173,34 @@ describe('s3 support', () => {
     await assertNewStatuses({ pending: 1 }); // crashed process will roll back to pending // TODO should we catch this & set to failed?
   });
 
+  // TODO Also test SIGINT?
+  it('should gracefully handle upload-pending dying unexpectedly (SIGINT)', async function() {
+    this.timeout(TIMEOUT);
+
+    // given
+    await setup(6);
+    assertNewStatuses({ pending: 1 });
+
+    // when
+    const uploading = cli('upload-pending');
+    await untilUploadInProgress();
+    // and
+    await execSync(`kill -SIGINT ${uploading.pid}`);
+
+    // then
+    await expectRejectionFrom(uploading);
+
+    // then
+    await assertNewStatuses({ pending: 1 }); // crashed process will roll back to pending // TODO should we catch this & set to failed?
+  });
+
   // N.B. THIS TEST KILLS THE MINIO SERVER, SO IT WILL NOT BE AVAILABLE TO SUBSEQUENT TESTS
   it('should handle s3 connection failing', async function() {
     this.timeout(TIMEOUT);
 
     // given
     // TODO test transaction boundaries are correct by adding a second attachment and making sure it uploads successfully before killing the server
-    await setup(6);
+    await setup(7);
     await assertNewStatuses({ pending: 1 });
 
     // when
@@ -207,7 +227,7 @@ describe('s3 support', () => {
     // given
     minioTerminated();
     // and
-    await setup(7, { bigFile: false });
+    await setup(8, { bigFile: false });
     // TODO add another 1+ attachments here to demonstrate that ONE is marked failed, and the others are still pending
     await assertNewStatuses({ pending: 1 });
 
