@@ -7,8 +7,7 @@
 // including this file, may be copied, modified, propagated, or distributed
 // except according to the terms contained in the LICENSE file.
 
-/* eslint func-names: 0 */
-/* eslint space-before-function-paren: 0 */
+/* eslint-disable space-before-function-paren, func-names */
 
 // Enough time to upload big.bin, and then run each test scenario.
 const TIMEOUT = 120_000; // ms
@@ -105,7 +104,7 @@ describe('s3 support', () => {
 
     // then
     const res = await api.apiRawGet(`projects/${projectId}/forms/${xmlFormId}/attachments/big.bin`);
-    return assertDownloadMatchesOriginal(res, 'big.bin');
+    await assertDownloadMatchesOriginal(res, 'big.bin');
 
     // cleanup
     await uploading;
@@ -291,7 +290,7 @@ describe('s3 support', () => {
       }
 
       const res2 = await fetch(res.location);
-      return assertDownloadMatchesOriginal(res2, att.name);
+      await assertDownloadMatchesOriginal(res2, att.name);
     }
   }
 
@@ -360,7 +359,7 @@ function cli(cmd) {
 }
 
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(resolve => { setTimeout(resolve, ms); });
 }
 
 function hashes(uploadOutput) {
