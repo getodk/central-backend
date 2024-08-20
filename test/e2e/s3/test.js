@@ -165,6 +165,7 @@ describe('s3 support', () => {
     await assertNewStatuses({ pending: 1 }); // crashed process will roll back to pending
   });
 
+  // TODO Also test SIGINT?
   it('should gracefully handle upload-pending dying unexpectedly (SIGTERM)', async function() {
     this.timeout(TIMEOUT);
 
@@ -190,6 +191,7 @@ describe('s3 support', () => {
     this.timeout(TIMEOUT);
 
     // given
+    // TODO test transaction boundaries are correct by adding a second attachment and making sure it uploads successfully before killing the server
     await setup(6);
     await assertNewStatuses({ pending: 1 });
 
@@ -218,10 +220,11 @@ describe('s3 support', () => {
     minioTerminated();
     // and
     await setup(7, { bigFile: false });
+    // TODO add another 1+ attachments here to demonstrate that ONE is marked failed, and the others are still pending
     await assertNewStatuses({ pending: 1 });
 
     // when
-    await expectRejectionFrom(cli('upload-pending'), (/Error: connect ECONNREFUSED/));
+    await expectRejectionFrom(cli('upload-pending'), /Error: connect ECONNREFUSED/);
 
     // then
     await assertNewStatuses({ failed: 1 });
