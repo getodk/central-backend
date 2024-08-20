@@ -201,7 +201,7 @@ describe('s3 support', () => {
     // then
     await expectRejectionFrom(uploading, new RegExp(
       'Command failed: exec node lib/bin/s3 upload-pending\n' +
-          '(AggregateError\n.*)?Error: connect ECONNREFUSED',
+          '(AggregateError\n.*)?Error: (connect ECONNREFUSED|read ECONNRESET)',
       's',
     ));
     // and
