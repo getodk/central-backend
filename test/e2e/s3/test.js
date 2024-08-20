@@ -332,7 +332,13 @@ describe('s3 support', () => {
       log.info('big.bin exists; skipping generation');
     } else {
       log.info('Generating big.bin...');
-      let remaining = 100000000; // FIXME when tests are all passing locally and CI, this can probably be decreased
+      // big.bin needs to take long enough to upload that the tests can
+      // intervene with the upload in various ways.  Uploading a file of 100
+      // million bytes was timed to take the following:
+      //
+      //   * on github actions: 1.2-1.6s
+      //   * locally:           300ms-7s
+      let remaining = 100000000;
       const batchSize = 100000;
       do {
         fs.appendFileSync(bigFile, randomBytes(batchSize));
