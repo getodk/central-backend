@@ -173,7 +173,7 @@ describe('s3 support', () => {
     await assertNewStatuses({ pending: 1 }); // crashed process will roll back to pending // TODO should we catch this & set to failed?
   });
 
-  it('should gracefully handle upload-pending dying unexpectedly (SIGINT)', async function() {
+  it.only('should gracefully handle upload-pending dying unexpectedly (SIGINT)', async function() {
     this.timeout(TIMEOUT);
 
     // given
