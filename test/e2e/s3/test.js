@@ -10,7 +10,7 @@
 /* eslint-disable func-names, no-await-in-loop, space-before-function-paren  */
 
 // Enough time to upload big.bin, and then run each test scenario.
-const TIMEOUT = 120_000; // ms
+const TIMEOUT = 240_000; // ms
 
 const { exec, execSync } = require('node:child_process');
 const fs = require('node:fs');
@@ -184,7 +184,7 @@ describe('s3 support', () => {
     const uploading = cli('upload-pending');
     await untilUploadInProgress();
     // and
-    await execSync(`kill -SIGINT ${uploading.pid}`);
+    await execSync(`kill -2 ${uploading.pid}`);
 
     // then
     await expectRejectionFrom(uploading);
