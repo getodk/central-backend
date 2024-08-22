@@ -285,20 +285,20 @@ describe('s3 support', () => {
 
   async function assertNoneRedirect(attachments) {
     for(const att of attachments) {
-      log.info('assertNoneRedirect()', 'checking attachment:', att.name);
+      log.debug('assertNoneRedirect()', 'checking attachment:', att.name);
       const res = await api.apiRawHead(`projects/${projectId}/forms/${xmlFormId}/attachments/${att.name}`);
       should.ok(!(res instanceof Redirect), `${att.name} is a redirect!`);
       should.equal(res.status, 200);
-      log.info('assertNoneRedirect()', '  Looks OK.');
+      log.debug('assertNoneRedirect()', '  Looks OK.');
     }
   }
 
   async function assertAllRedirect(attachments) {
     for(const att of attachments) {
-      log.info('assertAllRedirect()', 'checking attachment:', att.name);
+      log.debug('assertAllRedirect()', 'checking attachment:', att.name);
       const res = await api.apiRawHead(`projects/${projectId}/forms/${xmlFormId}/attachments/${att.name}`);
       should.ok(res instanceof Redirect, `${att.name} is not a redirect - returned HTTP status: ${res.status}`);
-      log.info('assertAllRedirect()', '  Looks OK.');
+      log.debug('assertAllRedirect()', '  Looks OK.');
     }
   }
 
@@ -331,15 +331,15 @@ describe('s3 support', () => {
     for(let i=0; i<fileContent.length; ++i) {
       should.equal(resContent[i], fileContent[i]);
     }
-    log.info('assertDownloadMatchesOriginal()', '  Looks OK.');
+    log.debug('assertDownloadMatchesOriginal()', '  Looks OK.');
   }
 
   function bigFileExists() {
     const bigFile = `${attDir}/big.bin`;
     if(fs.existsSync(bigFile)) {
-      log.info('big.bin exists; skipping generation');
+      log.debug('big.bin exists; skipping generation');
     } else {
-      log.info('Generating big.bin...');
+      log.debug('Generating big.bin...');
       // big.bin needs to take long enough to upload that the tests can
       // intervene with the upload in various ways.  Uploading a file of 100
       // million bytes was timed to take the following:
@@ -359,7 +359,7 @@ function cli(cmd) {
   let pid;
 
   cmd = `exec node lib/bin/s3 ${cmd}`; // eslint-disable-line no-param-reassign
-  log.info('cli()', 'calling:', cmd);
+  log.debug('cli()', 'calling:', cmd);
   const env = { ..._.pick(process.env, 'PATH'), NODE_CONFIG_ENV:'s3-dev' };
 
   const promise = new Promise((resolve, reject) => {
@@ -367,7 +367,7 @@ function cli(cmd) {
       if (err) return reject(err);
 
       const res = stdout.toString().trim();
-      log.info('cli()', 'returned:', res);
+      log.debug('cli()', 'returned:', res);
       resolve(res);
     });
     pid = child.pid;
