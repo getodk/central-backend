@@ -1,12 +1,10 @@
 ## TODO
 
-* remove in-progress state and use row-lock?  this may handle killing upload process more gracefully; see processSubmissionEvent() in lib/model/query/entities.js for an example
+* document trade-off of long transactions vs less-atomic uploads
   * this is great for data integrity - automatic rollback to pending, and nothing can get stuck in in-progress
   * this does introduce risk that database connections for long-running uploads could be interrupted, and this would not be discovered until the upload was complete.  this scenario seems unlikely as (1) server-to-database connection is probably quite reliable, and (2) uploads are rarely likely to be so big that the upload takes ages.
-* make sure that a failed/killed process can't result in a blob stuck as "uploading", or if that is possible then there is a way to clean that up from the CLI.  currently this _is_ possible, so there should be a mechanism to reset.  obvious options:
-  * reset all at startup
-  * reset all via CLI script (e.g. `UPDATE blobs SET s3_status='failed' WHERE id IN (SELECT id FROM blobs WHERE s3_status='in_progress' FOR NO KEY UPDATE SKIP LOCKED);`)
-* check what happens with S3 when trying to re-upload identical content - https://groups.google.com/g/jets3t-users/c/i1gusIu5mTw
+* resolve all FIXMEs introduced in this PR
+* review all TODOs introduced in this PR
 * remove this file
 
 ## Central repo
