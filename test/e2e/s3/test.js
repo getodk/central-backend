@@ -388,7 +388,6 @@ function hashes(uploadOutput) {
     .split('\n')
     .filter(line => line.startsWith(leader))
     .map(line => JSON.parse(line.substr(leader.length)).sha);
-  console.log({ uploadOutput, hashes });
   return hashes;
 }
 
