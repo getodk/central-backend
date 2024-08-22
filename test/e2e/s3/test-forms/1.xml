@@ -17,9 +17,9 @@
             <value>B</value>
             <value form="image">jr://images/b.jpg</value>
           </text>
-          <text id="image-big-bin">
-            <value>Big Bin</value>
-            <value form="image">jr://images/big.bin</value>
+          <text id="image-big-1-bin">
+            <value>Big Bin 1</value>
+            <value form="image">jr://images/big-1.bin</value>
           </text>
           <text id="image-body-svg">
             <value>Body Svg</value>

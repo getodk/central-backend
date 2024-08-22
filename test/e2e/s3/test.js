@@ -9,7 +9,7 @@
 
 /* eslint-disable func-names, no-await-in-loop, space-before-function-paren  */
 
-// Enough time to upload big.bin, and then run each test scenario.
+// Enough time to upload big-*.bin, and then run each test scenario.
 const TIMEOUT = 240_000; // ms
 
 const { exec, execSync } = require('node:child_process');
@@ -55,11 +55,11 @@ describe('s3 support', () => {
     await cli('upload-pending');
   });
 
-  async function setup(testNumber, opts={ bigFile: true }) {
+  async function setup(testNumber, opts={ bigFiles: 1 }) {
     attDir = `./test-forms/${testNumber}-attachments`;
 
     // given
-    if(opts.bigFile) bigFileExists(attDir);
+    for(let idx=0; idx<opts.bigFiles; ++idx) bigFileExists(1+idx);
     expectedAttachments = fs.readdirSync(attDir).filter(f => !f.startsWith('.')).sort();
     api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
     projectId = await createProject();
@@ -103,8 +103,8 @@ describe('s3 support', () => {
     await untilUploadInProgress();
 
     // then
-    const res = await api.apiRawGet(`projects/${projectId}/forms/${xmlFormId}/attachments/big.bin`);
-    await assertDownloadMatchesOriginal(res, 'big.bin');
+    const res = await api.apiRawGet(`projects/${projectId}/forms/${xmlFormId}/attachments/big-1.bin`);
+    await assertDownloadMatchesOriginal(res, 'big-1.bin');
 
     // cleanup
     await uploading;
@@ -142,7 +142,7 @@ describe('s3 support', () => {
     // and
     Math.abs(res1.duration - res2.duration).should.be.above(1_000,
         'UPLOAD DURATIONS TOO SIMILAR!  ' +
-        'There is no guarantee of which call to upload-pending got big.bin, ' +
+        'There is no guarantee of which call to upload-pending got big-1.bin, ' +
         `but similar durations for uploading1 (${humanDuration(res1)}) and ` +
         `uploading2 (${humanDuration(res2)}) implies that one was blocking the other.`);
   });
@@ -211,13 +211,16 @@ describe('s3 support', () => {
   it('should handle s3 connection failing', async function() {
     this.timeout(TIMEOUT);
 
+    // Also test transaction boundaries are correct by adding a second attachment
+    // and making sure it uploads successfully before killing the server.
+
     // given
-    // TODO test transaction boundaries are correct by adding a second attachment and making sure it uploads successfully before killing the server
-    await setup(7);
-    await assertNewStatuses({ pending: 1 });
+    await setup(7, { bigFiles: 2 });
+    await assertNewStatuses({ pending: 2 });
 
     // when
     const uploading = cli('upload-pending');
+    while(await cli('count-blobs uploaded') !== '1') { sleep(10); }
     await untilUploadInProgress();
     // and
     minioTerminated();
@@ -231,7 +234,7 @@ describe('s3 support', () => {
       's',
     ));
     // and
-    await assertNewStatuses({ failed: 1 });
+    await assertNewStatuses({ uploaded: 1, failed: 1 });
   });
 
   it('should handle s3 unavailable', async function() {
@@ -240,7 +243,7 @@ describe('s3 support', () => {
     // given
     minioTerminated();
     // and
-    await setup(8, { bigFile: false });
+    await setup(8, { bigFiles: 0 });
     // TODO add another 1+ attachments here to demonstrate that ONE is marked failed, and the others are still pending
     await assertNewStatuses({ pending: 1 });
 
@@ -347,13 +350,13 @@ describe('s3 support', () => {
     log.debug('assertDownloadMatchesOriginal()', '  Looks OK.');
   }
 
-  function bigFileExists() {
-    const bigFile = `${attDir}/big.bin`;
+  function bigFileExists(idx) {
+    const bigFile = `${attDir}/big-${idx}.bin`;
     if(fs.existsSync(bigFile)) {
-      log.debug('big.bin exists; skipping generation');
+      log.debug(`${bigFile} exists; skipping generation`);
     } else {
-      log.debug('Generating big.bin...');
-      // big.bin needs to take long enough to upload that the tests can
+      log.debug(`Generating ${bigFile}...`);
+      // Big bin files need to take long enough to upload that the tests can
       // intervene with the upload in various ways.  Uploading a file of 100
       // million bytes was timed to take the following:
       //
