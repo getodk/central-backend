@@ -800,7 +800,7 @@ describe('Offline Entities', () => {
       let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       backlogCount.should.equal(1);
 
-      await container.Entities.processHeldSubmissions(true);
+      await container.Entities.processBacklog(true);
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(200)
@@ -846,7 +846,7 @@ describe('Offline Entities', () => {
       let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       backlogCount.should.equal(2);
 
-      await container.Entities.processHeldSubmissions(true);
+      await container.Entities.processBacklog(true);
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .expect(200)
@@ -885,7 +885,7 @@ describe('Offline Entities', () => {
       let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       backlogCount.should.equal(1);
 
-      await container.Entities.processHeldSubmissions(true);
+      await container.Entities.processBacklog(true);
 
       await asAlice.get(`/v1/projects/1/datasets/people/entities/${newUuid}`)
         .expect(200)
@@ -940,7 +940,7 @@ describe('Offline Entities', () => {
       let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       backlogCount.should.equal(2);
 
-      await container.Entities.processHeldSubmissions(true);
+      await container.Entities.processBacklog(true);
 
       await asAlice.get(`/v1/projects/1/datasets/people/entities/${newUuid}`)
         .expect(200)
@@ -976,7 +976,7 @@ describe('Offline Entities', () => {
       backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       backlogCount.should.equal(1);
 
-      await container.Entities.processHeldSubmissions(true);
+      await container.Entities.processBacklog(true);
 
       await asAlice.get(`/v1/projects/1/datasets/people/entities/${newUuid}`)
         .expect(200)
@@ -1020,7 +1020,7 @@ describe('Offline Entities', () => {
       backlogCount.should.equal(1);
 
       // Force the update submission to be processed as a create
-      await container.Entities.processHeldSubmissions(true);
+      await container.Entities.processBacklog(true);
 
       await asAlice.get(`/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd`)
         .expect(200)
@@ -1107,7 +1107,7 @@ describe('Offline Entities', () => {
 
         // Process submissions that have been in the backlog for a long time
         // (only 1 of 2 should be processed)
-        const count = await container.Entities.processHeldSubmissions();
+        const count = await container.Entities.processBacklog();
         count.should.equal(1);
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
