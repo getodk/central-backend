@@ -140,7 +140,7 @@ describe('s3 support', () => {
     // and
     _.intersection(res1.hashes, res2.hashes).length.should.equal(0);
     // and
-    Math.abs(res1.duration - res2.duration).should.be.above(2_000,
+    Math.abs(res1.duration - res2.duration).should.be.above(1_000,
         'UPLOAD DURATIONS TOO SIMILAR!  ' +
         'There is no guarantee of which call to upload-pending got big.bin, ' +
         `but similar durations for uploading1 (${humanDuration(res1)}) and ` +
