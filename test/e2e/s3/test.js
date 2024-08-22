@@ -113,25 +113,38 @@ describe('s3 support', () => {
   it('should gracefully handle simultaneous calls to upload-pending', async function() {
     this.timeout(TIMEOUT);
 
+    const uploadPending = async () => {
+      const start = performance.now();
+      const stdout = await cli('upload-pending');
+      const duration = performance.now() - start;
+      const parsedHashes = hashes(stdout);
+      return { hashes:parsedHashes, duration };
+    };
+
     // given
     await setup(3);
     await assertNewStatuses({ pending: 11 });
 
     // given
-    const uploading1 = cli('upload-pending');
-    const uploading2 = cli('upload-pending');
+    const uploading1 = uploadPending();
+    const uploading2 = uploadPending();
 
     // when
-    const uploaded1 = hashes(await uploading1);
-    const uploaded2 = hashes(await uploading2);
-
-    // TODO Check how long each of the processes took to complete: ideally uploading1
-    // should not block uploading2 and vice-versa.
+    const res1 = await uploading1;
+    const res2 = await uploading2;
 
     // then
-    (uploaded1.length + uploaded2.length).should.equal(11);
+    await assertNewStatuses({ uploaded: 11 });
     // and
-    _.intersection(uploaded1, uploaded2).length.should.equal(0);
+    (res1.hashes.length + res2.hashes.length).should.equal(11);
+    // and
+    _.intersection(res1.hashes, res2.hashes).length.should.equal(0);
+    // and
+    Math.abs(res1.duration - res2.duration).should.be.above(2_000,
+        'UPLOAD DURATIONS TOO SIMILAR!  ' +
+        'There is no guarantee of which call to upload-pending got big.bin, ' +
+        `but similar durations for uploading1 (${humanDuration(res1)}) and ` +
+        `uploading2 (${humanDuration(res2)}) implies that one was blocking the other.`);
   });
 
   it('should gracefully handle upload-pending dying unexpectedly (SIGKILL)', async function() {
@@ -403,4 +416,8 @@ async function expectRejectionFrom(promise, expectedMessage) {
       throw err;
     }
   }
+}
+
+function humanDuration({ duration }) {
+  return (duration / 1000).toFixed(3) + 's';
 }
