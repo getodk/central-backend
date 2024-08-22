@@ -244,7 +244,6 @@ describe('s3 support', () => {
     minioTerminated();
     // and
     await setup(8, { bigFiles: 0 });
-    // TODO add another 1+ attachments here to demonstrate that ONE is marked failed, and the others are still pending
     await assertNewStatuses({ pending: 2 });
 
     // when
