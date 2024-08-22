@@ -133,7 +133,7 @@ describe('s3 support', () => {
     _.intersection(uploaded1, uploaded2).length.should.equal(0);
   });
 
-  it.only('should gracefully handle upload-pending dying unexpectedly (SIGKILL)', async function() {
+  it('should gracefully handle upload-pending dying unexpectedly (SIGKILL)', async function() {
     this.timeout(TIMEOUT);
 
     // given
@@ -153,7 +153,7 @@ describe('s3 support', () => {
     await assertNewStatuses({ pending: 1 }); // crashed process will roll back to pending
   });
 
-  it.only('should gracefully handle upload-pending dying unexpectedly (SIGTERM)', async function() {
+  it('should gracefully handle upload-pending dying unexpectedly (SIGTERM)', async function() {
     this.timeout(TIMEOUT);
 
     // given
@@ -173,7 +173,7 @@ describe('s3 support', () => {
     await assertNewStatuses({ failed: 1 });
   });
 
-  it.only('should gracefully handle upload-pending dying unexpectedly (SIGINT)', async function() {
+  it('should gracefully handle upload-pending dying unexpectedly (SIGINT)', async function() {
     this.timeout(TIMEOUT);
 
     // given
