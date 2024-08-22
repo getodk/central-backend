@@ -115,6 +115,7 @@ describe('s3 support', () => {
 
     // given
     await setup(3);
+    await assertNewStatuses({ pending: 11 });
 
     // given
     const uploading1 = cli('upload-pending');
