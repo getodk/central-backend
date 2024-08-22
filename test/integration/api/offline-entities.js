@@ -1106,7 +1106,9 @@ describe('Offline Entities', () => {
         backlogCount.should.equal(2);
 
         // Process submissions that have been in the backlog for a long time
-        await container.Entities.processHeldSubmissions();
+        // (only 1 of 2 should be processed)
+        const count = await container.Entities.processHeldSubmissions();
+        count.should.equal(1);
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
           .expect(200)
