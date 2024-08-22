@@ -245,13 +245,13 @@ describe('s3 support', () => {
     // and
     await setup(8, { bigFiles: 0 });
     // TODO add another 1+ attachments here to demonstrate that ONE is marked failed, and the others are still pending
-    await assertNewStatuses({ pending: 1 });
+    await assertNewStatuses({ pending: 2 });
 
     // when
     await expectRejectionFrom(cli('upload-pending'), /Error: connect ECONNREFUSED/);
 
     // then
-    await assertNewStatuses({ failed: 1 });
+    await assertNewStatuses({ pending: 1, failed: 1 });
   });
 
   async function untilUploadInProgress() {
