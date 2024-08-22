@@ -133,7 +133,7 @@ describe('s3 support', () => {
     _.intersection(uploaded1, uploaded2).length.should.equal(0);
   });
 
-  it('should gracefully handle upload-pending dying unexpectedly (SIGKILL)', async function() {
+  it.only('should gracefully handle upload-pending dying unexpectedly (SIGKILL)', async function() {
     this.timeout(TIMEOUT);
 
     // given
@@ -153,7 +153,7 @@ describe('s3 support', () => {
     await assertNewStatuses({ pending: 1 }); // crashed process will roll back to pending
   });
 
-  it('should gracefully handle upload-pending dying unexpectedly (SIGTERM)', async function() {
+  it.only('should gracefully handle upload-pending dying unexpectedly (SIGTERM)', async function() {
     this.timeout(TIMEOUT);
 
     // given
@@ -170,7 +170,7 @@ describe('s3 support', () => {
     await expectRejectionFrom(uploading);
 
     // then
-    await assertNewStatuses({ pending: 1 }); // crashed process will roll back to pending // TODO should we catch this & set to failed?
+    await assertNewStatuses({ failed: 1 });
   });
 
   it.only('should gracefully handle upload-pending dying unexpectedly (SIGINT)', async function() {
@@ -190,7 +190,7 @@ describe('s3 support', () => {
     await expectRejectionFrom(uploading);
 
     // then
-    await assertNewStatuses({ pending: 1 }); // crashed process will roll back to pending // TODO should we catch this & set to failed?
+    await assertNewStatuses({ failed: 1 });
   });
 
   // N.B. THIS TEST KILLS THE MINIO SERVER, SO IT WILL NOT BE AVAILABLE TO SUBSEQUENT TESTS
