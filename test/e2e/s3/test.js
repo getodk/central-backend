@@ -223,7 +223,7 @@ describe('s3 support', () => {
     const uploading = cli('upload-pending');
     while(true) { // eslint-disable-line no-constant-condition
       const uploaded = await countByNewStatus('uploaded');
-      if(uploaded === 0) { await sleep(10); continue; }
+      if(uploaded === 0) continue;
       if(uploaded === 1) break;
       else should.fail('Too many blobs uploaded already!');
     }
@@ -260,7 +260,7 @@ describe('s3 support', () => {
   });
 
   async function untilUploadInProgress() {
-    while(await countByStatus('in_progress') !== 1) { await sleep(10); }
+    while(await countByStatus('in_progress') !== 1) { /* check again */ }
   }
 
   async function assertNewStatuses(expected) {
@@ -386,10 +386,6 @@ function cli(cmd) {
   promise.pid = pid;
 
   return promise;
-}
-
-function sleep(ms) {
-  return new Promise(resolve => { setTimeout(resolve, ms); });
 }
 
 function hashes(uploadOutput) {
