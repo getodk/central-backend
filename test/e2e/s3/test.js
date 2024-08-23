@@ -157,7 +157,7 @@ describe('s3 support', () => {
     await assertNewStatuses({ pending: 1 });
 
     // when
-    const uploading = cli('upload-pending');
+    const uploading = forSacrifice(cli('upload-pending'));
     await untilUploadInProgress();
     // and
     await execSync(`kill -9 ${uploading.pid}`);
@@ -177,7 +177,7 @@ describe('s3 support', () => {
     assertNewStatuses({ pending: 1 });
 
     // when
-    const uploading = cli('upload-pending');
+    const uploading = forSacrifice(cli('upload-pending'));
     await untilUploadInProgress();
     // and
     await execSync(`kill ${uploading.pid}`);
@@ -197,7 +197,7 @@ describe('s3 support', () => {
     assertNewStatuses({ pending: 1 });
 
     // when
-    const uploading = cli('upload-pending');
+    const uploading = forSacrifice(cli('upload-pending'));
     await untilUploadInProgress();
     // and
     await execSync(`kill -2 ${uploading.pid}`);
@@ -221,10 +221,13 @@ describe('s3 support', () => {
     await assertNewStatuses({ pending: 2 });
 
     // when
-    const uploading = cli('upload-pending');
+    const uploading = forSacrifice(cli('upload-pending'));
     while(true) { // eslint-disable-line no-constant-condition
       const uploaded = await countByNewStatus('uploaded');
-      if(uploaded === 0) continue;
+      if(uploaded === 0) {
+        await tick();
+        continue;
+      }
       if(uploaded === 1) break;
       else should.fail('Too many blobs uploaded already!');
     }
@@ -254,14 +257,45 @@ describe('s3 support', () => {
     await assertNewStatuses({ pending: 2 });
 
     // when
-    await expectRejectionFrom(cli('upload-pending'), /Error: connect ECONNREFUSED/);
+    await expectRejectionFrom(forSacrifice(cli('upload-pending')), /Error: connect ECONNREFUSED/);
 
     // then
     await assertNewStatuses({ pending: 1, failed: 1 });
   });
 
+  function forSacrifice(cliPromise) {
+    console.log('forSacrifice() called on', cliPromise);
+    const wrapper = new Promise(async (resolve, reject) => {
+      // This guards against a Promise resolving when it was expected to reject.
+      // This has specifically been seen when upload-pending returns immediately,
+      // but later test code is expecting it to spend time uploading.  In those
+      // cases, this function allows for faster failure - without this short-
+      // circuit, the test would have to wait for the maximum timeout duration.
+      try {
+        console.log('forSacrifice() awaiting', cliPromise, '...');
+        const res = await cliPromise;
+        // TODO there should be a more idiomatic way to quickly fail the test from
+        // within mocha, but this achieves the desired result:
+        console.log(`FATAL ERROR: promise should have failed, but it resolved successfully with: <${res}>`);
+        process.exit(1);
+      } catch (err) {
+        console.log('forSacrifice() caught rejection from', cliPromise, ':', err);
+        reject(err);
+      }
+    });
+    wrapper.pid = cliPromise.pid;
+    console.log('forSacrifice()', 'returning', wrapper);
+    return wrapper;
+  }
+
   async function untilUploadInProgress() {
-    while(await countByStatus('in_progress') !== 1) { /* check again */ }
+    while(await countByStatus('in_progress') !== 1) await tick();
+  }
+
+  // Yield control of the event loop to other functions which are waiting.
+  function tick() {
+    console.log('tick()');
+    return new Promise(resolve => setImmediate(resolve));
   }
 
   async function assertNewStatuses(expected) {
