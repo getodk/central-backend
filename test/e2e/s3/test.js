@@ -220,7 +220,7 @@ describe('s3 support', () => {
 
     // when
     const uploading = cli('upload-pending');
-    while(true) {
+    while(true) { // eslint-disable-line no-constant-condition
       const uploaded = await countByNewStatus('uploaded');
       if(uploaded === 0) { await sleep(10); continue; }
       if(uploaded === 1) break;
