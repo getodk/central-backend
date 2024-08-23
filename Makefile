@@ -35,9 +35,15 @@ dev-s3: fake-s3-accounts base
 	NODE_CONFIG_ENV=s3-dev npx nodemon --watch lib --watch config lib/bin/run-server.js
 
 # default admin credentials: minioadmin:minioadmin
-# see: https://hub.docker.com/r/minio/minio/
+#   See: https://hub.docker.com/r/minio/minio/
+# MINIO_KMS_SECRET_KEY, MINIO_KMS_AUTO_ENCRYPTION enable encryption - this changes how s3 ETags are generated.
+#   See: https://docs.aws.amazon.com/AmazonS3/latest/API/API_Object.html
+#   See: https://github.com/minio/minio/discussions/19012
 S3_SERVER_ARGS := --network host \
-		-e MINIO_ROOT_USER=odk-central-dev -e MINIO_ROOT_PASSWORD=topSecret123 \
+		-e MINIO_ROOT_USER=odk-central-dev \
+		-e MINIO_ROOT_PASSWORD=topSecret123 \
+		-e MINIO_KMS_AUTO_ENCRYPTION=on \
+		-e MINIO_KMS_SECRET_KEY=odk-minio-test-key:QfdUCrn3UQ58W5pqCS5SX4SOlec9sT8yb4rZ4zK24w0= \
 		minio/minio server /data --console-address ":9001"
 .PHONY: fake-s3-server-ephemeral
 fake-s3-server-ephemeral:
