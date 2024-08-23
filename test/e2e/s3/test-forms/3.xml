@@ -19,7 +19,7 @@
           </text>
           <text id="image-big-1-bin">
             <value>Big Bin 1</value>
-            <value form="image">jr://images/big-2.bin</value>
+            <value form="image">jr://images/big-1.bin</value>
           </text>
           <text id="image-body-svg">
             <value>Body Svg</value>
