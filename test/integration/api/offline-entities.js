@@ -881,10 +881,20 @@ describe('Offline Entities', () => {
         .set('Content-Type', 'application/xml')
         .expect(200);
 
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('branchId=""', `branchId="${uuid()}"`)
+          .replace('create="1"', 'update="1"')
+          .replace('<label>Megan (20)</label>', '<label></label>')
+          .replace('baseVersion=""', 'baseVersion="2"')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
       await exhaust(container);
 
       let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
-      backlogCount.should.equal(1);
+      backlogCount.should.equal(2);
 
       await container.Entities.processBacklog(true);
 
@@ -895,6 +905,21 @@ describe('Offline Entities', () => {
           body.currentVersion.data.should.eql({ status: 'arrived' });
           body.currentVersion.label.should.eql('auto generated');
           body.currentVersion.branchId.should.equal(branchId);
+          body.currentVersion.branchBaseVersion.should.equal(2);
+
+          // This is the first version of the entity so there should be no base or trunk versions
+          should.not.exist(body.currentVersion.trunkVersion);
+          should.not.exist(body.currentVersion.baseVersion);
+        });
+
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd`)
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(1);
+          body.currentVersion.data.should.eql({ status: 'new', first_name: 'Megan', age: '20' });
+          body.currentVersion.label.should.eql('auto generated');
+          body.currentVersion.branchId.should.be.a.uuid();
           body.currentVersion.branchBaseVersion.should.equal(2);
 
           // This is the first version of the entity so there should be no base or trunk versions
