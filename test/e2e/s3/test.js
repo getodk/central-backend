@@ -254,7 +254,7 @@ describe('s3 support', () => {
   });
 
   async function untilUploadInProgress() {
-    while(await cli('count-blobs in_progress') !== '1') { sleep(10); }
+    while(await cli('count-blobs in_progress') !== '1') { await sleep(10); }
   }
 
   async function assertNewStatuses(expected) {
