@@ -59,7 +59,8 @@ describe('s3 support', () => {
     attDir = `./test-forms/${testNumber}-attachments`;
 
     // given
-    for(let idx=0; idx<opts.bigFiles; ++idx) bigFileExists(1+idx);
+    fs.mkdirSync(attDir, { recursive:true });
+    for(let idx=0; idx<opts.bigFiles; ++idx) bigFileExists(attDir, 1+idx);
     expectedAttachments = fs.readdirSync(attDir).filter(f => !f.startsWith('.')).sort();
     api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
     projectId = await createProject();
@@ -362,26 +363,6 @@ describe('s3 support', () => {
     }
     log.debug('assertDownloadMatchesOriginal()', '  Looks OK.');
   }
-
-  function bigFileExists(idx) {
-    const bigFile = `${attDir}/big-${idx}.bin`;
-    if(fs.existsSync(bigFile)) {
-      log.debug(`${bigFile} exists; skipping generation`);
-    } else {
-      log.debug(`Generating ${bigFile}...`);
-      // Big bin files need to take long enough to upload that the tests can
-      // intervene with the upload in various ways.  Uploading a file of 100
-      // million bytes was timed to take the following:
-      //
-      //   * on github actions: 1.2-1.6s
-      //   * locally:           300ms-7s
-      let remaining = 100_000_000;
-      const batchSize = 100_000;
-      do {
-        fs.appendFileSync(bigFile, randomBytes(batchSize));
-      } while((remaining-=batchSize) > 0); // eslint-disable-line no-cond-assign
-    }
-  }
 });
 
 function cli(cmd) {
@@ -436,4 +417,24 @@ async function expectRejectionFrom(promise, expectedMessage) {
 
 function humanDuration({ duration }) {
   return (duration / 1000).toFixed(3) + 's';
+}
+
+function bigFileExists(attDir, idx) {
+  const bigFile = `${attDir}/big-${idx}.bin`;
+  if(fs.existsSync(bigFile)) {
+    log.debug(`${bigFile} exists; skipping generation`);
+  } else {
+    log.debug(`Generating ${bigFile}...`);
+    // Big bin files need to take long enough to upload that the tests can
+    // intervene with the upload in various ways.  Uploading a file of 100
+    // million bytes was timed to take the following:
+    //
+    //   * on github actions: 1.2-1.6s
+    //   * locally:           300ms-7s
+    let remaining = 100_000_000;
+    const batchSize = 100_000;
+    do {
+      fs.appendFileSync(bigFile, randomBytes(batchSize));
+    } while((remaining-=batchSize) > 0); // eslint-disable-line no-cond-assign
+  }
 }
