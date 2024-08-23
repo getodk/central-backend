@@ -220,7 +220,12 @@ describe('s3 support', () => {
 
     // when
     const uploading = cli('upload-pending');
-    while(await cli('count-blobs uploaded') !== '1') { sleep(10); }
+    while(true) {
+      const uploaded = await countByNewStatus('uploaded');
+      if(uploaded === 0) { await sleep(10); continue; }
+      if(uploaded === 1) break;
+      else should.fail('Too many blobs uploaded already!');
+    }
     await untilUploadInProgress();
     // and
     minioTerminated();
@@ -254,7 +259,7 @@ describe('s3 support', () => {
   });
 
   async function untilUploadInProgress() {
-    while(await cli('count-blobs in_progress') !== '1') { await sleep(10); }
+    while(await countByStatus('in_progress') !== 1) { await sleep(10); }
   }
 
   async function assertNewStatuses(expected) {
@@ -267,11 +272,20 @@ describe('s3 support', () => {
     });
   }
 
+  async function countByNewStatus(status) {
+    const current = await countByStatus(status);
+    return current - _initial[status];
+  }
+
+  async function countByStatus(status) {
+    return Number(await cli(`count-blobs ${status}`));
+  }
+
   async function countAllByStatus() {
     // For easier debugging, define keys up-front.  This makes print order more predictable.
     const counts = { pending:null, in_progress:null, uploaded:null, failed:null };
     await Promise.all(Object.keys(counts).map(async status => {
-      counts[status] = Number(await cli(`count-blobs ${status}`));
+      counts[status] = await countByStatus(status);
     }));
     return counts;
   }
