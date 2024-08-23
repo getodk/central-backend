@@ -1127,5 +1127,75 @@ describe('Offline Entities', () => {
         backlogCount.should.equal(1);
       }));
     });
+
+    describe('force-processing deleted submissions and entities', () => {
+      it('should not process a submission in a soft-deleted form', testOfflineEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+        const branchId = uuid();
+
+        // Send the first submission, which will be held in the backlog because the base version is high
+        await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+          .send(testData.instances.offlineEntity.one
+            .replace('branchId=""', `branchId="${branchId}"`)
+            .replace('baseVersion="1"', 'baseVersion="2"')
+          )
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+        backlogCount.should.equal(1);
+
+        // Soft-delete the form to delete the submission
+        await asAlice.delete('/v1/projects/1/forms/offlineEntity');
+
+        // Process the backlog (count will be 1 but update should not be applied to entity)
+        const processedCount = await container.Entities.processBacklog(true);
+        processedCount.should.equal(1);
+
+        // Check that the entity is still at version 1
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body }) => {
+            body.currentVersion.version.should.equal(1);
+          });
+      }));
+
+      it('should not process a submission that has been soft-deleted', testOfflineEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+        const branchId = uuid();
+
+        // Send the first submission, which will be held in the backlog because the base version is high
+        await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+          .send(testData.instances.offlineEntity.one
+            .replace('branchId=""', `branchId="${branchId}"`)
+            .replace('baseVersion="1"', 'baseVersion="2"')
+          )
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+        backlogCount.should.equal(1);
+
+        // Soft-delete the submission via the database
+        await container.run(sql`UPDATE submissions SET "deletedAt" = NOW() WHERE "instanceId" = 'one'`);
+
+        // Process the backlog (count will be 1 but update should not be applied to entity)
+        const processedCount = await container.Entities.processBacklog(true);
+        processedCount.should.equal(1);
+
+        // Check that the entity is still at version 1
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body }) => {
+            body.currentVersion.version.should.equal(1);
+          });
+      }));
+
+      // TODO: check deleted entity
+    });
   });
 });
