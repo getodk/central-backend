@@ -174,7 +174,7 @@ describe('s3 support', () => {
 
     // given
     await setup(5);
-    assertNewStatuses({ pending: 1 });
+    await assertNewStatuses({ pending: 1 });
 
     // when
     const uploading = forSacrifice(cli('upload-pending'));
@@ -194,7 +194,7 @@ describe('s3 support', () => {
 
     // given
     await setup(6);
-    assertNewStatuses({ pending: 1 });
+    await assertNewStatuses({ pending: 1 });
 
     // when
     const uploading = forSacrifice(cli('upload-pending'));
