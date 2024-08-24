@@ -263,28 +263,19 @@ describe('s3 support', () => {
     await assertNewStatuses({ pending: 1, failed: 1 });
   });
 
+  // Guard against a Promise resolving when it was expected to reject.  This has
+  // specifically been seen when upload-pending returns immediately, but later
+  // test code is expecting it to spend time uploading.  In those cases, this
+  // function allows for faster failure - without this short-circuit, the test
+  // would have to wait for the maximum timeout duration.
   function forSacrifice(cliPromise) {
-    console.log('forSacrifice() called on', cliPromise);
-    const wrapper = new Promise(async (resolve, reject) => {
-      // This guards against a Promise resolving when it was expected to reject.
-      // This has specifically been seen when upload-pending returns immediately,
-      // but later test code is expecting it to spend time uploading.  In those
-      // cases, this function allows for faster failure - without this short-
-      // circuit, the test would have to wait for the maximum timeout duration.
-      try {
-        console.log('forSacrifice() awaiting', cliPromise, '...');
-        const res = await cliPromise;
-        // TODO there should be a more idiomatic way to quickly fail the test from
-        // within mocha, but this achieves the desired result:
-        console.log(`FATAL ERROR: promise should have failed, but it resolved successfully with: <${res}>`);
-        process.exit(1);
-      } catch (err) {
-        console.log('forSacrifice() caught rejection from', cliPromise, ':', err);
-        reject(err);
-      }
+    const wrapper = cliPromise.then(res => {
+      // TODO there may be a more idiomatic way to quickly fail the test from
+      // within mocha, but this achieves the desired result:
+      console.log(`FATAL ERROR: promise should have failed, but it resolved successfully with: <${res}>`);
+      process.exit(1);
     });
     wrapper.pid = cliPromise.pid;
-    console.log('forSacrifice()', 'returning', wrapper);
     return wrapper;
   }
 
