@@ -295,7 +295,7 @@ describe('s3 support', () => {
   // Yield control of the event loop to other functions which are waiting.
   function tick() {
     console.log('tick()');
-    return new Promise(resolve => setImmediate(resolve));
+    return new Promise(resolve => { setImmediate(resolve); });
   }
 
   async function assertNewStatuses(expected) {
