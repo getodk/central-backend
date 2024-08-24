@@ -240,7 +240,7 @@ describe('s3 support', () => {
     // with the user.  They are not something to try to retain if implementation changes.
     await expectRejectionFrom(uploading, new RegExp(
       'Command failed: exec node lib/bin/s3 upload-pending\n' +
-          '(AggregateError\n.*)?Error: (connect ECONNREFUSED|read ECONNRESET|socket hang up)',
+          '(AggregateError\n.*)?Error: (connect ECONNREFUSED|read ECONNRESET|socket hang up|write EPIPE)',
       's',
     ));
     // and
