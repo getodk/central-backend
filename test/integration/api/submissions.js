@@ -517,7 +517,7 @@ describe('api: /submission', () => {
                 .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
                   .expect(307)
                   .then(({ headers, body }) => {
-                    // FIXME content-type should not be present at all, but response.removeHeader() does not seem to have an effect
+                    // TODO content-type should not be present at all, but response.removeHeader() does not seem to have an effect
                     headers['content-type'].should.equal('text/plain; charset=utf-8');
                     should(headers['content-disposition']).be.undefined();
                     should(headers.etag).be.undefined();
@@ -530,7 +530,7 @@ describe('api: /submission', () => {
                   .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
                   .expect(307)
                   .then(({ headers, body }) => {
-                    // FIXME content-type should not be present at all, but response.removeHeader() does not seem to have an effect
+                    // TODO content-type should not be present at all, but response.removeHeader() does not seem to have an effect
                     headers['content-type'].should.equal('text/plain; charset=utf-8');
                     should(headers['content-disposition']).be.undefined();
                     should(headers.etag).be.undefined();
