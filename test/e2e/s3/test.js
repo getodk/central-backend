@@ -209,6 +209,10 @@ describe('s3 support', () => {
     await assertNewStatuses({ failed: 1 });
   });
 
+  it('should remove purged files from s3', () => {
+    // TODO happy path
+  });
+
   // N.B. THIS TEST KILLS THE MINIO SERVER, SO IT WILL NOT BE AVAILABLE TO SUBSEQUENT TESTS
   it('should handle s3 connection failing', async function() {
     this.timeout(TIMEOUT);
