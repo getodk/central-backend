@@ -738,7 +738,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               .expect(304)));
       }));
 
-      it('should return the xlsx file originally provided after s3 upload', testService((service, { Blobs }) => {
+      it('should return s3 redirect after xlsx file uploaded to s3', testService((service, { Blobs }) => {
         global.s3.enableMock();
         const input = readFileSync(appRoot + '/test/data/simple.xlsx');
         return service.login('alice', (asAlice) =>
@@ -746,11 +746,14 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .send(input)
             .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             .expect(200)
-            .then(() => Blobs.s3UploadPending())
-            .then(() => {
-              global.s3.uploads.attempted.should.equal(1);
-              global.s3.uploads.successful.should.equal(1);
-            })
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2.xlsx')
+              .set('If-None-Match', '"30fdb0e9115ea7ca6702573f521814d1"')
+              .expect(304))
+            .then(() => Blobs.s3UploadPending()
+              .then(() => {
+                global.s3.uploads.attempted.should.equal(1);
+                global.s3.uploads.successful.should.equal(1);
+              }))
             .then(() => asAlice.get('/v1/projects/1/forms/simple2.xlsx')
               .expect(307)
               .then(({ headers }) => {
@@ -758,7 +761,10 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               }))
             .then(() => asAlice.get('/v1/projects/1/forms/simple2.xlsx')
               .set('If-None-Match', '"30fdb0e9115ea7ca6702573f521814d1"')
-              .expect(304)));
+              .expect(307)
+              .then(({ headers }) => {
+                headers.location.should.equal('s3://mock/30fdb0e9115ea7ca6702573f521814d1/9ebd53024b8560ffd0b84763481ed24159ca600f/simple2.xlsx?contentType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+              })));
       }));
 
       it('should return the xlsx file originally provided for a draft', testService((service) => {
@@ -786,7 +792,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               .expect(304)));
       }));
 
-      it('should return the xlsx file originally provided for a draft after s3 upload', testService((service, { Blobs }) => {
+      it('should return s3 redirect after xlsx file for draft uploaded to s3', testService((service, { Blobs }) => {
         global.s3.enableMock();
         const input = readFileSync(appRoot + '/test/data/simple.xlsx');
         return service.login('alice', (asAlice) =>
@@ -798,11 +804,14 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               .send(input)
               .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
               .expect(200))
-            .then(() => Blobs.s3UploadPending())
-            .then(() => {
-              global.s3.uploads.attempted.should.equal(1);
-              global.s3.uploads.successful.should.equal(1);
-            })
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xlsx')
+              .set('If-None-Match', '"30fdb0e9115ea7ca6702573f521814d1"')
+              .expect(304))
+            .then(() => Blobs.s3UploadPending()
+              .then(() => {
+                global.s3.uploads.attempted.should.equal(1);
+                global.s3.uploads.successful.should.equal(1);
+              }))
             .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xlsx')
               .expect(307)
               .then(({ headers }) => {
@@ -810,7 +819,10 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               }))
             .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xlsx')
               .set('If-None-Match', '"30fdb0e9115ea7ca6702573f521814d1"')
-              .expect(304)));
+              .expect(307)
+              .then(({ headers }) => {
+                headers.location.should.equal('s3://mock/30fdb0e9115ea7ca6702573f521814d1/9ebd53024b8560ffd0b84763481ed24159ca600f/simple2.xlsx?contentType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+              })));
       }));
 
       it('should continue to offer the xlsx file after a copy-draft', testService((service) => {
