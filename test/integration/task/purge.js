@@ -1,7 +1,5 @@
 const appRoot = require('app-root-path');
 const assert = require('assert');
-const { isEmpty } = require('ramda');
-const { sql } = require('slonik');
 const { testTask, testService } = require('../setup');
 const { purgeForms } = require(appRoot + '/lib/task/purge');
 const testData = require('../../data/xml');
@@ -10,54 +8,28 @@ const testData = require('../../data/xml');
 // of purged forms, but the full functionality is more thoroughly tested in
 // test/integration/other/form-purging.js
 
-const decorate = container => {
-  const getDbFormRow = (projectId, xmlFormName) => container.maybeOne(sql`
-    SELECT * FROM forms WHERE "projectId"=${projectId} AND "xmlFormId"=${xmlFormName}
-  `);
-  const assertNotDeleted = async (projectId, xmlFormName) => {
-    const maybeForm = await getDbFormRow(projectId, xmlFormName);
-    assert.equal(isEmpty(maybeForm), false, 'Form has been hard-deleted or never existed.');
-    const { deletedAt } = maybeForm.get();
-    assert.equal(deletedAt, null, 'Form exists but has been marked as deleted.');
-  };
-  const assertSoftDeleted = async (projectId, xmlFormName) => {
-    const maybeForm = await getDbFormRow(projectId, xmlFormName);
-    assert.equal(isEmpty(maybeForm), false, 'Form has been hard-deleted or never existed.');
-    const { deletedAt } = maybeForm.get();
-    assert.ok(deletedAt, 'Form exists but has not been marked as deleted.');
-  };
-  const assertHardDeleted = async (projectId, xmlFormName) => {
-    const maybeForm = await getDbFormRow(projectId, xmlFormName);
-    assert.ok(isEmpty(maybeForm), 'Form should have been deleted, but still exists in DB!');
-  };
-  return { ...container, assertHardDeleted, assertNotDeleted, assertSoftDeleted };
-};
-
-const testPurgeTask = fn => testTask(container => fn(decorate(container)));
-const testPurgeService = fn => testService((service, container) => fn(service, decorate(container)));
-
 describe('task: purge deleted forms', () => {
-  it('should not purge recently deleted forms by default', testPurgeTask(({ assertSoftDeleted, Forms }) =>
+  it('should not purge recently deleted forms by default', testTask(({ Forms }) =>
     Forms.getByProjectAndXmlFormId(1, 'simple')
       .then((form) => Forms.del(form.get())
-        .then(() => assertSoftDeleted(1, 'simple')))
+        .then(() => Forms.assertSoftDeleted(1, 'simple')))
       .then(() => purgeForms())
       .then((count) => {
         count.should.equal(0);
       })
-      .then(() => assertSoftDeleted(1, 'simple'))));
+      .then(() => Forms.assertSoftDeleted(1, 'simple'))));
 
-  it('should purge recently deleted form if forced', testPurgeTask(({ assertHardDeleted, assertSoftDeleted, Forms }) =>
+  it('should purge recently deleted form if forced', testTask(({ Forms }) =>
     Forms.getByProjectAndXmlFormId(1, 'simple')
       .then((form) => Forms.del(form.get())
-        .then(() => assertSoftDeleted(1, 'simple')))
+        .then(() => Forms.assertSoftDeleted(1, 'simple')))
       .then(() => purgeForms(true))
       .then((count) => {
         count.should.equal(1);
       })
-      .then(() => assertHardDeleted(1, 'simple'))));
+      .then(() => Forms.assertHardDeleted(1, 'simple'))));
 
-  it('should return count for multiple forms purged', testPurgeTask(({ assertHardDeleted, Forms }) =>
+  it('should return count for multiple forms purged', testTask(({ Forms }) =>
     Forms.getByProjectAndXmlFormId(1, 'simple')
       .then((form) => Forms.del(form.get()))
       .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat')
@@ -66,28 +38,28 @@ describe('task: purge deleted forms', () => {
         .then((count) => {
           count.should.equal(2);
         })
-        .then(() => assertHardDeleted(1, 'simple'))
-        .then(() => assertHardDeleted(1, 'withrepeat')))));
+        .then(() => Forms.assertHardDeleted(1, 'simple'))
+        .then(() => Forms.assertHardDeleted(1, 'withrepeat')))));
 
-  it('should not purge specific recently deleted form', testPurgeTask(({ assertSoftDeleted, Forms }) =>
+  it('should not purge specific recently deleted form', testTask(({ Forms }) =>
     Forms.getByProjectAndXmlFormId(1, 'simple')
       .then((form) => Forms.del(form.get())
         .then(() => purgeForms(false, 1))
         .then((count) => {
           count.should.equal(0);
         })
-        .then(() => assertSoftDeleted(1, 'simple')))));
+        .then(() => Forms.assertSoftDeleted(1, 'simple')))));
 
-  it('should purge specific recently deleted form if forced', testPurgeTask(({ assertHardDeleted, Forms }) =>
+  it('should purge specific recently deleted form if forced', testTask(({ Forms }) =>
     Forms.getByProjectAndXmlFormId(1, 'simple')
       .then((form) => Forms.del(form.get())
         .then(() => purgeForms(true, 1))
         .then((count) => {
           count.should.equal(1);
         })
-        .then(() => assertHardDeleted(1, 'simple')))));
+        .then(() => Forms.assertHardDeleted(1, 'simple')))));
 
-  it('should force purge only specific form', testPurgeTask(({ assertHardDeleted, assertSoftDeleted, Forms }) =>
+  it('should force purge only specific form', testTask(({ Forms }) =>
     Forms.getByProjectAndXmlFormId(1, 'simple')
       .then((form) => Forms.del(form.get()))
       .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat')
@@ -96,29 +68,29 @@ describe('task: purge deleted forms', () => {
           .then((count) => {
             count.should.equal(1);
           })
-          .then(() => assertHardDeleted(1, 'simple'))
-          .then(() => assertSoftDeleted(1, 'withrepeat'))))));
+          .then(() => Forms.assertHardDeleted(1, 'simple'))
+          .then(() => Forms.assertSoftDeleted(1, 'withrepeat'))))));
 
   describe('with projectId', () => {
-    it('should not purge recently deleted forms even if projectId is matched', testPurgeTask(({ assertSoftDeleted, Forms }) =>
+    it('should not purge recently deleted forms even if projectId is matched', testTask(({ Forms }) =>
       Forms.getByProjectAndXmlFormId(1, 'simple')
         .then((form) => Forms.del(form.get())
           .then(() => purgeForms(null, null, 1))
           .then((count) => {
             count.should.equal(0);
           })
-          .then(() => assertSoftDeleted(1, 'simple')))));
+          .then(() => Forms.assertSoftDeleted(1, 'simple')))));
 
-    it('should not purge recently deleted forms even if projectId AND formId is matched', testPurgeTask(({ assertSoftDeleted, Forms }) =>
+    it('should not purge recently deleted forms even if projectId AND formId is matched', testTask(({ Forms }) =>
       Forms.getByProjectAndXmlFormId(1, 'simple')
         .then((form) => Forms.del(form.get())
           .then(() => purgeForms(null, 1, 1))
           .then((count) => {
             count.should.equal(0);
           })
-          .then(() => assertSoftDeleted(1, 'simple')))));
+          .then(() => Forms.assertSoftDeleted(1, 'simple')))));
 
-    it('should purge specific form', testPurgeTask(({ assertHardDeleted, assertSoftDeleted, Forms }) =>
+    it('should purge specific form', testTask(({ Forms }) =>
       Forms.getByProjectAndXmlFormId(1, 'simple')
         .then((form) => Forms.del(form.get()))
         .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat')
@@ -127,10 +99,10 @@ describe('task: purge deleted forms', () => {
             .then((count) => {
               count.should.equal(1);
             })
-            .then(() => assertHardDeleted(1, 'simple'))
-            .then(() => assertSoftDeleted(1, 'withrepeat'))))));
+            .then(() => Forms.assertHardDeleted(1, 'simple'))
+            .then(() => Forms.assertSoftDeleted(1, 'withrepeat'))))));
 
-    it('should not purge specific form if tied to a different project', testPurgeTask(({ assertSoftDeleted, Forms }) =>
+    it('should not purge specific form if tied to a different project', testTask(({ Forms }) =>
       Forms.getByProjectAndXmlFormId(1, 'simple')
         .then((form) => Forms.del(form.get()))
         .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat')
@@ -139,10 +111,10 @@ describe('task: purge deleted forms', () => {
             .then((count) => {
               count.should.equal(0);
             })
-            .then(() => assertSoftDeleted(1, 'simple'))
-            .then(() => assertSoftDeleted(1, 'withrepeat'))))));
+            .then(() => Forms.assertSoftDeleted(1, 'simple'))
+            .then(() => Forms.assertSoftDeleted(1, 'withrepeat'))))));
 
-    it('should purge all forms if no form ID supplied', testPurgeTask(({ assertHardDeleted, Forms }) =>
+    it('should purge all forms if no form ID supplied', testTask(({ Forms }) =>
       Forms.getByProjectAndXmlFormId(1, 'simple')
         .then((form) => Forms.del(form.get()))
         .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat')
@@ -151,10 +123,10 @@ describe('task: purge deleted forms', () => {
             .then((count) => {
               count.should.equal(2);
             })
-            .then(() => assertHardDeleted(1, 'simple'))
-            .then(() => assertHardDeleted(1, 'withrepeat'))))));
+            .then(() => Forms.assertHardDeleted(1, 'simple'))
+            .then(() => Forms.assertHardDeleted(1, 'withrepeat'))))));
 
-    it('should not purge multiple forms if tied to a different project', testPurgeTask(({ assertSoftDeleted, Forms }) =>
+    it('should not purge multiple forms if tied to a different project', testTask(({ Forms }) =>
       Forms.getByProjectAndXmlFormId(1, 'simple')
         .then((form) => Forms.del(form.get()))
         .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat')
@@ -163,12 +135,12 @@ describe('task: purge deleted forms', () => {
             .then((count) => {
               count.should.equal(0);
             })
-            .then(() => assertSoftDeleted(1, 'simple'))
-            .then(() => assertSoftDeleted(1, 'withrepeat'))))));
+            .then(() => Forms.assertSoftDeleted(1, 'simple'))
+            .then(() => Forms.assertSoftDeleted(1, 'withrepeat'))))));
   });
 
   describe('with xmlFormId', () => {
-    it('should throw error if xmlFormId specified without projectId', testPurgeTask(async ({ assertSoftDeleted, Forms }) => {
+    it('should throw error if xmlFormId specified without projectId', testTask(async ({ Forms }) => {
       const form = await Forms.getByProjectAndXmlFormId(1, 'simple');
       await Forms.del(form.get());
       await assert.throws(() => { purgeForms(true, null, null, 'simple'); }, (err) => {
@@ -176,28 +148,28 @@ describe('task: purge deleted forms', () => {
         err.problemDetails.error.should.equal('Must also specify projectId when using xmlFormId');
         return true;
       });
-      await assertSoftDeleted(1, 'simple');
+      await Forms.assertSoftDeleted(1, 'simple');
     }));
 
-    it('should force purge form by project and xmlFormId', testPurgeTask(({ assertHardDeleted, Forms }) =>
+    it('should force purge form by project and xmlFormId', testTask(({ Forms }) =>
       Forms.getByProjectAndXmlFormId(1, 'simple')
         .then((form) => Forms.del(form.get())
           .then(() => purgeForms(true, null, 1, 'simple'))
           .then((count) => {
             count.should.equal(1);
           })
-          .then(() => assertHardDeleted(1, 'simple')))));
+          .then(() => Forms.assertHardDeleted(1, 'simple')))));
 
-    it('should not purge form by project and xmlFormId if form deleted recently and not forced', testPurgeTask(({ assertSoftDeleted, Forms }) =>
+    it('should not purge form by project and xmlFormId if form deleted recently and not forced', testTask(({ Forms }) =>
       Forms.getByProjectAndXmlFormId(1, 'simple')
         .then((form) => Forms.del(form.get())
           .then(() => purgeForms(false, null, 1, 'simple'))
           .then((count) => {
             count.should.equal(0);
           })
-          .then(() => assertSoftDeleted(1, 'simple')))));
+          .then(() => Forms.assertSoftDeleted(1, 'simple')))));
 
-    it('should purge all versions of deleted form in project', testPurgeService(async (service, container) => {
+    it('should purge all versions of deleted form in project', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       await asAlice.delete('/v1/projects/1/forms/simple')
@@ -230,10 +202,10 @@ describe('task: purge deleted forms', () => {
       const count = await container.Forms.purge(true, null, 1, 'simple');
       count.should.equal(2);
 
-      await container.assertNotDeleted(1, 'simple');
+      await container.Forms.assertNotDeleted(1, 'simple');
     }));
 
-    it('should purge named form only from specified project', testPurgeService(async (service, container) => {
+    it('should purge named form only from specified project', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       // delete simple form in project 1 (but don't purge it)
@@ -255,8 +227,8 @@ describe('task: purge deleted forms', () => {
       const count = await container.Forms.purge(true, null, newProjectId, 'simple');
       count.should.equal(1);
 
-      await container.assertSoftDeleted(1, 'simple');
-      await container.assertHardDeleted(newProjectId, 'simple');
+      await container.Forms.assertSoftDeleted(1, 'simple');
+      await container.Forms.assertHardDeleted(newProjectId, 'simple');
     }));
   });
 
