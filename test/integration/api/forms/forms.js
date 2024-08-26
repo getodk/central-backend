@@ -1462,14 +1462,14 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
 
           const etagV1 = attachmentV1.get('ETag');
 
+          await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .set('If-None-Match', etagV1)
+            .expect(304);
+
           await Blobs.s3UploadPending();
 
           await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
             .expect(307);
-
-          await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
-            .set('If-None-Match', etagV1)
-            .expect(304);
 
           await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
             .send('test,csv\n1,2\n3,4')
@@ -1482,7 +1482,45 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
 
           const etagV2 = attachmentV2.get('ETag');
 
+          await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .set('If-None-Match', etagV2)
+            .expect(304);
+
           etagV1.should.not.be.eql(etagV2);
+        }));
+
+        it('should ignore local etag if content was uploaded to s3', testService(async (service, { Blobs }) => {
+          global.s3.enableMock();
+
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .send('test,csv\n1,2')
+            .set('Content-Type', 'text/csv')
+            .expect(200);
+
+          const attachment = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .expect(200);
+
+          const etag = attachment.get('ETag');
+
+          await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .set('If-None-Match', etag)
+            .expect(304);
+
+          await Blobs.s3UploadPending();
+
+          await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .expect(307);
+
+          await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .set('If-None-Match', etag)
+            .expect(307);
         }));
       });
     });
