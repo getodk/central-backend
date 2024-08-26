@@ -98,7 +98,7 @@ describe('task: purge deleted forms', () => {
               count.should.equal(0);
             })))));
 
-    it('should not purge all forms if no form ID supplied', testTask(({ Forms }) =>
+    it('should purge all forms if no form ID supplied', testTask(({ Forms }) =>
       Forms.getByProjectAndXmlFormId(1, 'simple')
         .then((form) => Forms.del(form.get()))
         .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat')
