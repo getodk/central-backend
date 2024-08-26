@@ -36,7 +36,7 @@ const decorate = container => {
 const testPurgeTask = fn => testTask(container => fn(decorate(container)));
 const testPurgeService = fn => testService((service, container) => fn(service, decorate(container)));
 
-describe.only('task: purge deleted forms', () => {
+describe('task: purge deleted forms', () => {
   it('should not purge recently deleted forms by default', testPurgeTask(({ assertSoftDeleted, Forms }) =>
     Forms.getByProjectAndXmlFormId(1, 'simple')
       .then((form) => Forms.del(form.get())
