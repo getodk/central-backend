@@ -1,5 +1,5 @@
 const keyFrom = (id, sha) => {
-  if(!id || !sha) throw new Error('Missing required arg: ' + JSON.stringify({ id, sha }));
+  if (!id || !sha) throw new Error('Missing required arg: ' + JSON.stringify({ id, sha }));
   return sha+id;
 };
 
