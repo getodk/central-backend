@@ -434,7 +434,7 @@ describe('managed encryption', () => {
                 result['media/testfile.jpg'].should.equal('hello this is a suffixed file');
               }))))));
 
-    it('should decrypt client audit log attachments', testService((service, container) =>
+    it('should skip encrypted client audit log attachments and mark them as processed', testService((service, container) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
           .send({ passphrase: 'supersecret', hint: 'it is a secret' })

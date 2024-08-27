@@ -32,14 +32,12 @@ const testOfflineEntities = (test) => testService(async (service, container) => 
 
 describe('Offline Entities', () => {
   describe('parsing branchId and trunkVersion from submission xml', () => {
-    it('should parse and save branch info from sub creating an entity', testOfflineEntities(async (service, container) => {
+    it('should parse and save info from submission creating an entity', testOfflineEntities(async (service, container) => {
       const asAlice = await service.login('alice');
-      const branchId = uuid();
 
+      // create=1 is specified, but baseVersion, trunkVersion, and branchId are all empty for entity creation
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
-        .send(testData.instances.offlineEntity.two
-          .replace('branchId=""', `branchId="${branchId}"`)
-        )
+        .send(testData.instances.offlineEntity.two)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -54,7 +52,8 @@ describe('Offline Entities', () => {
           should.not.exist(body.currentVersion.trunkVersion);
           should.not.exist(body.currentVersion.baseVersion);
           should.not.exist(body.currentVersion.branchBaseVersion);
-          body.currentVersion.branchId.should.equal(branchId);
+          // There is also no branchId because Collect does not send one for entity creation
+          should.not.exist(body.currentVersion.branchId);
         });
     }));
 
@@ -139,31 +138,6 @@ describe('Offline Entities', () => {
         .expect(200)
         .then(({ body }) => {
           body[0].details.errorMessage.should.eql('Required parameter branchId missing.');
-        });
-    }));
-
-    it('should ignore empty string trunkVersion and branchId values in create scenario', testOfflineEntities(async (service, container) => {
-      const asAlice = await service.login('alice');
-
-      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
-        .send(testData.instances.offlineEntity.two
-          .replace('trunkVersion="1"', `trunkVersion=""`)
-        )
-        .set('Content-Type', 'application/xml')
-        .expect(200);
-
-      await exhaust(container);
-
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd')
-        .expect(200)
-        .then(({ body }) => {
-          body.currentVersion.version.should.equal(1);
-          should.not.exist(body.currentVersion.baseVersion);
-          body.currentVersion.data.should.eql({ age: '20', status: 'new', first_name: 'Megan' });
-
-          should.not.exist(body.currentVersion.trunkVersion);
-          should.not.exist(body.currentVersion.branchBaseVersion);
-          should.not.exist(body.currentVersion.branchId);
         });
     }));
   });
@@ -303,9 +277,7 @@ describe('Offline Entities', () => {
 
       // First submission creates the entity, offline version is now 1
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
-        .send(testData.instances.offlineEntity.two
-          .replace('branchId=""', `branchId="${branchId}"`)
-        )
+        .send(testData.instances.offlineEntity.two)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -366,6 +338,8 @@ describe('Offline Entities', () => {
         .then(({ body }) => {
           should.not.exist(body[0].details.problem);
         });
+
+      // This submission is now held in the backlog, but that functionality is checked in later tests
     }));
 
     it('should not apply out of order update from a run after starting a run', testOfflineEntities(async (service, container) => {
@@ -503,7 +477,8 @@ describe('Offline Entities', () => {
       const asAlice = await service.login('alice');
       const branchId = uuid();
 
-      // Second submission updates the entity but entity hasn't been created yet
+      // Send the second submission that updates an entity (before the entity has been created)
+      // This submission has a branchId
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.two
           .replace('create="1"', 'update="1"')
@@ -520,11 +495,11 @@ describe('Offline Entities', () => {
       const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       backlogCount.should.equal(1);
 
-      // First submission creating the entity comes in later
+      // Send the second submission to create the entity
+      // This submission does not have an explicit branchId, but it should trigger
+      // the processing of the next submission in the branch.
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
-        .send(testData.instances.offlineEntity.two
-          .replace('branchId=""', `branchId="${branchId}"`)
-        )
+        .send(testData.instances.offlineEntity.two)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -581,10 +556,9 @@ describe('Offline Entities', () => {
       backlogCount.should.equal(2);
 
       // Third (but logically first) submission to create entity
+      // which does not have an explicit branchId.
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
-        .send(testData.instances.offlineEntity.two
-          .replace('branchId=""', `branchId="${branchId}"`)
-        )
+        .send(testData.instances.offlineEntity.two)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -741,9 +715,7 @@ describe('Offline Entities', () => {
       // First submission creates the entity, offline version is now 1
       // But this submission requires approval so it wont get processed at first
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
-        .send(testData.instances.offlineEntity.two
-          .replace('branchId=""', `branchId="${branchId}"`)
-        )
+        .send(testData.instances.offlineEntity.two)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -807,5 +779,483 @@ describe('Offline Entities', () => {
       count = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       count.should.equal(0);
     }));
+  });
+
+  describe('force-processing held submissions', () => {
+    it('should apply an entity update when the previous update is missing', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Trunk version is 1, but base version is 2
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('baseVersion="1"', 'baseVersion="2"')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      await container.Entities.processBacklog(true);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(2);
+          body.currentVersion.baseVersion.should.equal(1);
+          body.currentVersion.data.should.eql({ age: '22', status: 'arrived', first_name: 'Johnny' });
+
+          body.currentVersion.branchId.should.equal(branchId);
+          body.currentVersion.trunkVersion.should.equal(1);
+          body.currentVersion.branchBaseVersion.should.equal(2);
+        });
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(0);
+    }));
+
+    it('should apply two updates when first upate is missing', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Trunk version is 1, but base version is 2
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('baseVersion="1"', 'baseVersion="2"')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('one', 'one-update2')
+          .replace('baseVersion="1"', 'baseVersion="3"')
+          .replace('<status>arrived</status>', '<status>departed</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(2);
+
+      await container.Entities.processBacklog(true);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(3);
+          body.currentVersion.baseVersion.should.equal(2);
+          body.currentVersion.data.should.eql({ age: '22', status: 'departed', first_name: 'Johnny' });
+
+          body.currentVersion.branchId.should.equal(branchId);
+          body.currentVersion.trunkVersion.should.equal(1);
+          body.currentVersion.branchBaseVersion.should.equal(3);
+        });
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(0);
+    }));
+
+    it('should apply an entity update as a create', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+      const newUuid = uuid();
+
+      // Base version is 1 but it doesnt exist
+      // trunk version doesnt make sense to exist here either
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc"', `id="${newUuid}"`)
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('trunkVersion="1"', 'trunkVersion=""')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('branchId=""', `branchId="${uuid()}"`)
+          .replace('create="1"', 'update="1"')
+          .replace('<label>Megan (20)</label>', '<label></label>')
+          .replace('baseVersion=""', 'baseVersion="2"')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(2);
+
+      await container.Entities.processBacklog(true);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${newUuid}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(1);
+          body.currentVersion.data.should.eql({ status: 'arrived' });
+          body.currentVersion.label.should.eql('auto generated');
+          body.currentVersion.branchId.should.equal(branchId);
+          body.currentVersion.branchBaseVersion.should.equal(2);
+
+          // This is the first version of the entity so there should be no base or trunk versions
+          should.not.exist(body.currentVersion.trunkVersion);
+          should.not.exist(body.currentVersion.baseVersion);
+        });
+
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd`)
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(1);
+          body.currentVersion.data.should.eql({ status: 'new', first_name: 'Megan', age: '20' });
+          body.currentVersion.label.should.eql('auto generated');
+          body.currentVersion.branchId.should.be.a.uuid();
+          body.currentVersion.branchBaseVersion.should.equal(2);
+
+          // This is the first version of the entity so there should be no base or trunk versions
+          should.not.exist(body.currentVersion.trunkVersion);
+          should.not.exist(body.currentVersion.baseVersion);
+        });
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(0);
+    }));
+
+    it('should apply an entity update as a create followed by another update', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+      const newUuid = uuid();
+
+      // Base version is 1 but it doesnt exist
+      // trunk version doesnt make sense to exist here either
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc"', `id="${newUuid}"`)
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('trunkVersion="1"', 'trunkVersion=""')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // base version is 2 now
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update')
+          .replace('id="12345678-1234-4123-8234-123456789abc"', `id="${newUuid}"`)
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('trunkVersion="1"', 'trunkVersion=""')
+          .replace('<status>arrived</status>', '<name>Dana</name><status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(2);
+
+      await container.Entities.processBacklog(true);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${newUuid}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(2);
+          body.currentVersion.data.should.eql({ status: 'checked in', first_name: 'Dana' });
+          body.currentVersion.label.should.eql('auto generated');
+          body.currentVersion.branchId.should.equal(branchId);
+          body.currentVersion.baseVersion.should.equal(1);
+          body.currentVersion.branchBaseVersion.should.equal(2);
+          should.not.exist(body.currentVersion.trunkVersion);
+        });
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(0);
+
+      // send in another update much later in the same branch
+      // base version is 10 now (many missing intermediate updates)
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update10')
+          .replace('id="12345678-1234-4123-8234-123456789abc"', `id="${newUuid}"`)
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('baseVersion="1"', 'baseVersion="10"')
+          .replace('trunkVersion="1"', 'trunkVersion=""')
+          .replace('<status>arrived</status>', '<name>Dana</name><status>registered</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      await container.Entities.processBacklog(true);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${newUuid}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(3);
+          body.currentVersion.data.should.eql({ status: 'registered', first_name: 'Dana' });
+          body.currentVersion.label.should.eql('auto generated');
+          body.currentVersion.branchId.should.equal(branchId);
+          body.currentVersion.baseVersion.should.equal(2);
+          body.currentVersion.branchBaseVersion.should.equal(10);
+          should.not.exist(body.currentVersion.trunkVersion);
+        });
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(0);
+    }));
+
+    it.skip('should apply an entity update as a create, and then properly handle the delayed create', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Send first submission, which is an update that will be applied as a create
+      // Removing extra fields of the submission to demonstrate a simpler update with missing fields
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+          .replace('<label>Megan (20)</label>', '')
+          .replace('<age>20</age>', '')
+          .replace('<name>Megan</name>', '')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      // Force the update submission to be processed as a create
+      await container.Entities.processBacklog(true);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd`)
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(1);
+          body.currentVersion.data.should.eql({ status: 'checked in' });
+          body.currentVersion.label.should.eql('auto generated');
+          body.currentVersion.branchId.should.equal(branchId);
+          should.not.exist(body.currentVersion.baseVersion);
+          should.not.exist(body.currentVersion.branchBaseVersion); // No base version because this is a create, though maybe this should be here.
+          should.not.exist(body.currentVersion.trunkVersion);
+        });
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(0);
+
+      // First submission creates the entity, but this will be processed as an update
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // In the default behavior, attempting create on an entity that already exists causes a conflict error.
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].details.errorMessage.should.eql('A resource already exists with uuid value(s) of 12345678-1234-4123-8234-123456789ddd.');
+        });
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd`)
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(1);
+        });
+    }));
+
+    describe('only force-process submissions held in backlog for a certain amount of time', () => {
+      it('should process a submission from over 7 days ago', testOfflineEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+        const branchId = uuid();
+
+        // Neither update below will be applied at first because the first
+        // update in the branch is missing.
+
+        // Send the first submission, which will be held in the backlog
+        await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+          .send(testData.instances.offlineEntity.one
+            .replace('branchId=""', `branchId="${branchId}"`)
+            .replace('baseVersion="1"', 'baseVersion="2"')
+          )
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+        backlogCount.should.equal(1);
+
+        // Update the timestamp on this backlog
+        await container.run(sql`UPDATE entity_submission_backlog SET "loggedAt" = "loggedAt" - interval '8 days'`);
+
+        // Send the next submission, which will also be held in the backlog.
+        // This submission immediately follows the previous one, but force-processing
+        // the first submission does not cause this one to be processed.
+        await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+          .send(testData.instances.offlineEntity.one
+            .replace('branchId=""', `branchId="${branchId}"`)
+            .replace('one', 'one-update')
+            .replace('baseVersion="1"', 'baseVersion="3"')
+            .replace('<status>arrived</status>', '<status>departed</status>')
+          )
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // Both submissions should be in the backlog now
+        backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+        backlogCount.should.equal(2);
+
+        // Process submissions that have been in the backlog for a long time
+        // (only 1 of 2 should be processed)
+        const count = await container.Entities.processBacklog();
+        count.should.equal(1);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body }) => {
+            body.currentVersion.version.should.equal(2);
+            body.currentVersion.baseVersion.should.equal(1);
+            body.currentVersion.data.should.eql({ age: '22', status: 'arrived', first_name: 'Johnny' });
+
+            body.currentVersion.branchId.should.equal(branchId);
+            body.currentVersion.trunkVersion.should.equal(1);
+            body.currentVersion.branchBaseVersion.should.equal(2);
+          });
+
+        // One submission should still be in the backlog
+        backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+        backlogCount.should.equal(1);
+      }));
+    });
+
+    describe('force-processing deleted submissions and entities', () => {
+      it('should not process a submission in a soft-deleted form', testOfflineEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+        const branchId = uuid();
+
+        // Send the first submission, which will be held in the backlog because the base version is high
+        await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+          .send(testData.instances.offlineEntity.one
+            .replace('branchId=""', `branchId="${branchId}"`)
+            .replace('baseVersion="1"', 'baseVersion="2"')
+          )
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+        backlogCount.should.equal(1);
+
+        // Soft-delete the form to delete the submission
+        await asAlice.delete('/v1/projects/1/forms/offlineEntity');
+
+        // Process the backlog (count will be 1 but update should not be applied to entity)
+        const processedCount = await container.Entities.processBacklog(true);
+        processedCount.should.equal(1);
+
+        // Check that the entity is still at version 1
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body }) => {
+            body.currentVersion.version.should.equal(1);
+          });
+      }));
+
+      it('should not process a submission that has been soft-deleted', testOfflineEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+        const branchId = uuid();
+
+        // Send the first submission, which will be held in the backlog because the base version is high
+        await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+          .send(testData.instances.offlineEntity.one
+            .replace('branchId=""', `branchId="${branchId}"`)
+            .replace('baseVersion="1"', 'baseVersion="2"')
+          )
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+        backlogCount.should.equal(1);
+
+        // Soft-delete the submission via the database
+        await container.run(sql`UPDATE submissions SET "deletedAt" = NOW() WHERE "instanceId" = 'one'`);
+
+        // Process the backlog (count will be 1 but update should not be applied to entity)
+        const processedCount = await container.Entities.processBacklog(true);
+        processedCount.should.equal(1);
+
+        // Check that the entity is still at version 1
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body }) => {
+            body.currentVersion.version.should.equal(1);
+          });
+      }));
+
+      it('should not process a submission for an entity that has been soft-deleted', testOfflineEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+        const branchId = uuid();
+
+        // Send the first submission, which will be held in the backlog because the base version is high
+        await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+          .send(testData.instances.offlineEntity.one
+            .replace('branchId=""', `branchId="${branchId}"`)
+            .replace('baseVersion="1"', 'baseVersion="2"')
+          )
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+        backlogCount.should.equal(1);
+
+        // Soft-delete the entity
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc');
+
+        // Process the backlog (count will be 1 but update should not be applied to entity)
+        const processedCount = await container.Entities.processBacklog(true);
+        processedCount.should.equal(1);
+
+        // Check that the backlog count is now 0
+        backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+        backlogCount.should.equal(0);
+
+        // Check for an entity error on the submission
+        await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body }) => {
+            body[0].details.errorMessage.should.eql('The entity with UUID (12345678-1234-4123-8234-123456789abc) has been deleted.');
+          });
+      }));
+    });
   });
 });
