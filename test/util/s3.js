@@ -20,7 +20,7 @@ class S3mock {
   // These functions should be marked `async` to correspond with the function
   // in lib/external/s3.js that they are mocking.
 
-  async uploadFromBlob({ md5, sha, content }) {
+  async uploadFromBlob({ id, content }) {
     if (!this.enabled) throw new Error('S3 mock has not been enabled, so this function should not be called.');
 
     if (this.error.onUpload === true) {
@@ -32,17 +32,16 @@ class S3mock {
       throw new Error(`Mock error when trying to upload #${this.uploads.attempted}`);
     }
 
-    const key = md5+sha;
-    if (this.s3bucket.has(key)) {
+    if (this.s3bucket.has(id)) {
       throw new Error('Should not re-upload existing s3 object.');
     }
 
-    this.s3bucket.set(key, content);
+    this.s3bucket.set(id, content);
     // eslint-disable-next-line no-plusplus
     ++this.uploads.successful;
   }
 
-  async getContentFor({ md5, sha }) {
+  async getContentFor({ id }) {
     if (!this.enabled) throw new Error('S3 mock has not been enabled, so this function should not be called.');
 
     // eslint-disable-next-line no-plusplus
@@ -52,7 +51,7 @@ class S3mock {
       throw new Error('Mock error when trying to download blob.');
     }
 
-    const content = this.s3bucket.get(md5+sha);
+    const content = this.s3bucket.get(id);
     if (content == null) throw new Error('Blob content not found.');
 
     // eslint-disable-next-line no-plusplus
@@ -67,12 +66,11 @@ class S3mock {
     return `s3://mock/${md5}/${sha}/${filename}?contentType=${contentType}`;
   }
 
-  async deleteObjFor({ md5, sha }) {
+  async deleteObjFor({ id }) {
     if (!this.enabled) throw new Error('S3 mock has not been enabled, so this function should not be called.');
 
-    const key = md5+sha;
-    if (!this.s3bucket.has(key)) throw new Error('Blob not found.');
-    this.s3bucket.delete(key);
+    if (!this.s3bucket.has(id)) throw new Error('Blob not found.');
+    this.s3bucket.delete(id);
     // eslint-disable-next-line no-plusplus
     ++this.uploads.deleted;
   }
