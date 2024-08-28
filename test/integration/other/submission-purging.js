@@ -1,6 +1,7 @@
 const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
+const should = require('should');
 
 const appPath = require('app-root-path');
 const { exhaust } = require(appPath + '/lib/worker/worker');
@@ -259,22 +260,83 @@ describe('query module submission purge', () => {
 
   }));
 
-  // TODO
-  // should purge all versions of a deleted submission
-  // should purge comments of a deleted submission
-  // should purge/redact notes of a deleted submission sent with x-action-notes
-  // should purge form field values of a deleted submission
-  // should set submission def id on entity source to null when submission deleted
-  // should check entity sources from soft-deleted submissions (should be like soft-deleted forms)
+  it('should set submission def id on entity source to null when submission deleted', testService(async (service, container) => {
+    const asAlice = await service.login('alice');
+
+    // Create the form
+    await asAlice.post('/v1/projects/1/forms?publish=true')
+      .send(testData.forms.simpleEntity)
+      .expect(200);
+
+    // Send the submission
+    await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+      .send(testData.instances.simpleEntity.one)
+      .set('Content-Type', 'application/xml')
+      .expect(200);
+
+    // Process the submission
+    await exhaust(container);
+
+    // Delete the submission
+    await asAlice.delete('/v1/projects/1/forms/simpleEntity/submissions/one');
+
+    // Check the submission in the entity source while it is soft-deleted
+    await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+      .expect(200)
+      .then(({ body: logs }) => {
+        logs[0].should.be.an.Audit();
+        logs[0].action.should.be.eql('entity.create');
+        logs[0].actor.displayName.should.be.eql('Alice');
+
+        logs[0].details.source.event.should.be.an.Audit();
+        logs[0].details.source.event.actor.displayName.should.be.eql('Alice');
+        logs[0].details.source.event.loggedAt.should.be.isoDate();
+
+        logs[0].details.source.submission.instanceId.should.be.eql('one');
+        logs[0].details.source.submission.submitter.displayName.should.be.eql('Alice');
+        logs[0].details.source.submission.createdAt.should.be.isoDate();
+
+        // submission is only a stub so it shouldn't have currentVersion
+        logs[0].details.source.submission.should.not.have.property('currentVersion');
+      });
+
+    // Purge the submission
+    await container.Submissions.purge(true);
+
+    // Check the source def in the database has been set to null
+    const sourceDef = await container.oneFirst(sql`select "submissionDefId" from entity_def_sources where details -> 'submission' ->> 'instanceId' = 'one'`);
+    should.not.exist(sourceDef);
+
+    // Check the submission in the entity source after it is purged
+    await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+      .expect(200)
+      .then(({ body: logs }) => {
+        logs[0].should.be.an.Audit();
+        logs[0].action.should.be.eql('entity.create');
+        logs[0].actor.displayName.should.be.eql('Alice');
+
+        logs[0].details.source.event.should.be.an.Audit();
+        logs[0].details.source.event.actor.displayName.should.be.eql('Alice');
+        logs[0].details.source.event.loggedAt.should.be.isoDate();
+
+        logs[0].details.source.submission.instanceId.should.be.eql('one');
+        logs[0].details.source.submission.submitter.displayName.should.be.eql('Alice');
+        logs[0].details.source.submission.createdAt.should.be.isoDate();
+
+        // submission is only a stub so it shouldn't have currentVersion
+        logs[0].details.source.submission.should.not.have.property('currentVersion');
+      });
+  }));
 
   // TODO check soft-deleted submissions
   // should not be accessible
   // should not show up in any export
-  // should no show up in odata
+  // should not show up in odata
   // should interact with pagination and skip tokens
 
   // TODO other stuff
   // should not delete a draft submission? or yes?
+  // should purge client audits associated with a submission via attachment
 
   // TODO in purge function
   // redact audit notes

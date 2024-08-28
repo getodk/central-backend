@@ -1530,6 +1530,39 @@ describe('api: /forms/:id/submissions', () => {
             csv[3].should.eql([ '' ]);
           })))));
 
+    it('should not return data from deleted submissions in csv export', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.two)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.three)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/two');
+
+      const result = await pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'));
+      const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+      csv.length.should.equal(4); // header + 2 data rows + newline
+      csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
+      csv[1].shift().should.be.an.recentIsoDate();
+      // eslint-disable-next-line comma-spacing
+      csv[1].should.eql([ 'three','Chelsea','38','three','5','Alice','0','0','','','','0','' ]);
+      csv[2].shift().should.be.an.recentIsoDate();
+      // eslint-disable-next-line comma-spacing
+      csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0','' ]);
+      csv[3].should.eql([ '' ]);
+    }));
+
     it('should return a submitter-filtered zipfile with the relevant data', testService((service) =>
       service.login('alice', (asAlice) =>
         service.login('bob', (asBob) =>
