@@ -213,8 +213,8 @@ describe('s3 support', () => {
   it('should handle s3 connection failing', async function() {
     this.timeout(TIMEOUT);
 
-    // Also test transaction boundaries are correct by adding a second attachment
-    // and making sure it uploads successfully before killing the server.
+    // This also tests transaction boundaries are correct by adding two attachments,
+    // and making sure the first uploads successfully before killing the server.
 
     // given
     await setup(7, { bigFiles: 2 });
