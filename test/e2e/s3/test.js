@@ -266,7 +266,7 @@ describe('s3 support', () => {
   // Guard against a Promise resolving when it was expected to reject.  This has
   // specifically been seen when upload-pending returns immediately, but later
   // test code is expecting it to spend time uploading.  In those cases, this
-  // function allows for faster failure - without this short-circuit, the test
+  // wrapper allows for faster failure - without this short-circuit, the test
   // would have to wait for the maximum timeout duration.
   function forSacrifice(cliPromise) {
     const wrapper = cliPromise.then(res => {
