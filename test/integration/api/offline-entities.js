@@ -1105,11 +1105,23 @@ describe('Offline Entities', () => {
 
         await exhaust(container);
 
+        // One submission should be in the backlog
         let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
         backlogCount.should.equal(1);
 
+        // Update the timestamp on this to in the past, but less than the default hold duration
+        await container.run(sql`UPDATE entity_submission_backlog SET "loggedAt" = "loggedAt" - interval '4 days'`);
+
+        // The submission should not have been processed
+        let count = await container.Entities.processBacklog();
+        count.should.equal(0);
+
+        // The submission should still be held in the backlog
+        backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+        backlogCount.should.equal(1);
+
         // Update the timestamp on this backlog
-        await container.run(sql`UPDATE entity_submission_backlog SET "loggedAt" = "loggedAt" - interval '8 days'`);
+        await container.run(sql`UPDATE entity_submission_backlog SET "loggedAt" = "loggedAt" - interval '6 days'`);
 
         // Send the next submission, which will also be held in the backlog.
         // This submission immediately follows the previous one, but force-processing
@@ -1132,7 +1144,7 @@ describe('Offline Entities', () => {
 
         // Process submissions that have been in the backlog for a long time
         // (only 1 of 2 should be processed)
-        const count = await container.Entities.processBacklog();
+        count = await container.Entities.processBacklog();
         count.should.equal(1);
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
