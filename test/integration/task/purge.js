@@ -120,7 +120,7 @@ describe('task: purge deleted forms', () => {
   });
 
   describe('with xmlFormId', () => {
-    it('should thow error if xmlFormId specified without projectId', testTask(async ({ Forms }) => {
+    it('should throw error if xmlFormId specified without projectId', testTask(async ({ Forms }) => {
       const form = await Forms.getByProjectAndXmlFormId(1, 'simple');
       await Forms.del(form.get());
       await assert.throws(() => { purgeForms(true, null, null, 'simple'); }, (err) => {
@@ -179,7 +179,7 @@ describe('task: purge deleted forms', () => {
       count.should.equal(2);
     }));
 
-    it('should purged named form only from specified project', testService(async (service, container) => {
+    it('should purge named form only from specified project', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       // delete simple form in project 1 (but don't purge it)
