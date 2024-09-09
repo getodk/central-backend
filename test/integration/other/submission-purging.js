@@ -120,7 +120,7 @@ describe('query module submission purge', () => {
       .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
       .expect(201);
 
-    // Submission ahs 1 attachment with same content as one attachment above
+    // Submission has 1 attachment with same content as one attachment above
     await asAlice.post('/v1/projects/1/submission')
       .set('X-OpenRosa-Version', '1.0')
       .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.one), { filename: 'data.xml' })
