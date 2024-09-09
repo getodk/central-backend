@@ -126,6 +126,13 @@ describe('api: /forms/:id.svc', () => {
       withSubmission(service, (asAlice) =>
         asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('nonexistent')").expect(404))));
 
+    it('should reject if the submission has been soft-deleted', testService((service) =>
+      withSubmission(service, (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/doubleRepeat/submissions/double')
+          .expect(200) // soft-delete
+          .then(() => asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')")
+            .expect(404)))));
+
     it('should return a single row result', testService((service) =>
       withSubmission(service, (asAlice) =>
         asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')")
@@ -648,6 +655,65 @@ describe('api: /forms/:id.svc', () => {
               }]
             });
           }))));
+
+    it('should exclude a deleted submission from rows', testService((service) =>
+      withSubmissions(service, (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/withrepeat/submissions/rthree')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions')
+            .expect(200)
+            .then(({ body }) => {
+              for (const idx of [0, 1]) {
+                body.value[idx].__system.submissionDate.should.be.an.isoDate();
+                // eslint-disable-next-line no-param-reassign
+                delete body.value[idx].__system.submissionDate;
+              }
+
+              body.should.eql({
+                '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+                value: [{
+                  __id: 'rtwo',
+                  __system: {
+                    // submissionDate is checked above,
+                    updatedAt: null,
+                    submitterId: '5',
+                    submitterName: 'Alice',
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 0,
+                    status: null,
+                    reviewState: null,
+                    deviceId: null,
+                    edits: 0,
+                    formVersion: '1.0'
+                  },
+                  meta: { instanceID: 'rtwo' },
+                  name: 'Bob',
+                  age: 34,
+                  children: {
+                    'child@odata.navigationLink': "Submissions('rtwo')/children/child"
+                  }
+                }, {
+                  __id: 'rone',
+                  __system: {
+                    // submissionDate is checked above,
+                    updatedAt: null,
+                    submitterId: '5',
+                    submitterName: 'Alice',
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 0,
+                    status: null,
+                    reviewState: null,
+                    deviceId: null,
+                    edits: 0,
+                    formVersion: '1.0'
+                  },
+                  meta: { instanceID: 'rone' },
+                  name: 'Alice',
+                  age: 30,
+                  children: {}
+                }]
+              });
+            })))));
 
     it('should return a count even if there are no rows', testService((service) =>
       service.login('alice', (asAlice) =>

@@ -184,6 +184,9 @@ describe('query module submission purge', () => {
       .send({ body: 'new comment here' })
       .expect(200);
 
+    let commentCount = await oneFirst(sql`select count(*) from comments`);
+    commentCount.should.equal(1);
+
     // Delete the submission
     await asAlice.delete('/v1/projects/1/forms/simple/submissions/one');
 
@@ -191,11 +194,11 @@ describe('query module submission purge', () => {
     await Submissions.purge(true);
 
     // Check that the comment is deleted
-    const commentCount = await oneFirst(sql`select count(*) from comments`);
+    commentCount = await oneFirst(sql`select count(*) from comments`);
     commentCount.should.equal(0);
   }));
 
-  it('should purge/redact notes of a deleted submission sent with x-action-notes', testService(async (service, { Submissions, oneFirst }) => {
+  it('should redact notes of a deleted submission sent with x-action-notes', testService(async (service, { Submissions, oneFirst }) => {
     const asAlice = await service.login('alice');
 
     // Create a submission
