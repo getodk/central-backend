@@ -869,7 +869,7 @@ describe('api: /forms/:id.svc', () => {
         });
     }));
 
-    it('should support $skiptoken even if associated submission is deleted', testService(async (service, { run }) => {
+    it('should support $skiptoken even if associated submission is deleted', testService(async (service) => {
       const asAlice = await service.login('alice');
       await asAlice.post('/v1/projects/1/forms/simple/submissions')
         .send(testData.instances.simple.one)
@@ -883,9 +883,7 @@ describe('api: /forms/:id.svc', () => {
         .expect(200)
         .then(({ body }) => new URL(body['@odata.nextLink']).searchParams.get('$skiptoken'));
       QueryOptions.parseSkiptoken(skiptoken).instanceId.should.equal('two');
-      // We don't have a submission delete endpoint yet, but we should soon.
-      await run(sql`UPDATE submissions SET "deletedAt" = clock_timestamp()
-WHERE "instanceId" = 'two'`);
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/two');
       const { body: odata } = await asAlice.get(url`/v1/projects/1/forms/simple.svc/Submissions?%24skiptoken=${skiptoken}`)
         .expect(200);
       odata.value.length.should.equal(1);
