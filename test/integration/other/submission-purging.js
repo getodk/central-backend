@@ -332,8 +332,7 @@ describe('query module submission purge', () => {
       });
   }));
 
-  // TODO: test doesn't pass because of client audit purging bug
-  it.skip('should purge client audit blobs attachments for a deleted submission', testService(async (service, container) => {
+  it('should purge client audit blobs attachments for a deleted submission', testService(async (service, container) => {
     const asAlice = await service.login('alice');
 
     // Create the form
@@ -348,30 +347,38 @@ describe('query module submission purge', () => {
       .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
       .expect(201);
 
+    // Send a second submission
+    await asAlice.post('/v1/projects/1/submission')
+      .set('X-OpenRosa-Version', '1.0')
+      .attach('log.csv', createReadStream(appPath + '/test/data/audit2.csv'), { filename: 'log.csv' })
+      .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+      .expect(201);
+
     // Process the client audit attachment
     await exhaust(container);
 
     // Check that the client audit events are in the database
-    const clientAuditEventCount = await container.oneFirst(sql`select count(*) from client_audits group by "blobId"`);
-    clientAuditEventCount.should.equal(5); // 1 blob with 5 events in it
+    const clientAuditEventCount = await container.all(sql`select count(*) from client_audits group by "blobId" order by count(*) desc`);
+    clientAuditEventCount.should.eql([{ count: 5 }, { count: 3 }]); // 1 blob with 5 events in it, another with 3
 
     // Check that the blobs are in the database
     const numBlobs = await container.oneFirst(sql`select count(*) from blobs`);
-    numBlobs.should.equal(1);
+    numBlobs.should.equal(2);
 
-    // Delete the submission
-    await asAlice.delete('/v1/projects/1/forms/clientAudits/submissions/one');
+    // Delete one of the submissions
+    await asAlice.delete('/v1/projects/1/forms/audits/submissions/one')
+      .expect(200);
 
     // Purge the submission
     await container.Submissions.purge(true);
 
-    // Check that the client audit events are deleted from the database
+    // Check that some of the client audit events are deleted from the database
     const numClientAudits = await container.oneFirst(sql`select count(*) from client_audits`);
-    numClientAudits.should.equal(0);
+    numClientAudits.should.equal(3); // from the non-deleted submission
 
-    // Check that the blobs are deleted from the database
+    // Check one blob is deleted from the database
     const count = await container.oneFirst(sql`select count(*) from blobs`);
-    count.should.equal(0);
+    count.should.equal(1);
   }));
 
   // TODO other stuff

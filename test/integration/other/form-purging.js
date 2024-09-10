@@ -323,7 +323,7 @@ describe('query module form purge', () => {
             // eslint-disable-next-line space-in-parens
             .then((audit) => audit.get().notes.should.equal('') )))));
 
-    it('should purge client audit log attachments', testService((service, container) =>
+    it('should purge client audit log attachments (that have been processed into database)', testService((service, container) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -334,6 +334,7 @@ describe('query module form purge', () => {
             .attach('audit.csv', createReadStream(appPath + '/test/data/audit.csv'), { filename: 'audit.csv' })
             .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
             .expect(201))
+          .then(() => exhaust(container))
           .then(() => asAlice.delete('/v1/projects/1/forms/audits'))
           .then(() => container.Forms.purge(true))
           .then(() => Promise.all([
