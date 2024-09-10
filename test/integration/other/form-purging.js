@@ -1,6 +1,7 @@
 const { createReadStream, readFileSync } = require('fs');
 const appPath = require('app-root-path');
 const { sql } = require('slonik');
+const assert = require('assert');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { exhaust } = require(appPath + '/lib/worker/worker');
@@ -58,25 +59,6 @@ describe('query module form purge', () => {
           .then((counts) => {
             counts.should.eql([ 0, 0 ]);
           })))));
-
-  it('should purge a deleted form by ID', testService((service, container) =>
-    service.login('alice', (asAlice) =>
-      asAlice.delete('/v1/projects/1/forms/simple')
-        .expect(200)
-        .then(() => asAlice.post('/v1/projects/1/forms')
-          .send(testData.forms.withAttachments)
-          .set('Content-Type', 'application/xml')
-          .expect(200))
-        .then(() => container.Forms.getByProjectAndXmlFormId(1, 'withAttachments').then((o) => o.get()))
-        .then((ghostForm) => asAlice.delete('/v1/projects/1/withAttachments')
-          .then(() => container.Forms.purge(true, 1)) // force delete a single form
-          .then(() => Promise.all([
-            container.oneFirst(sql`select count(*) from forms where id = ${ghostForm.id}`),
-            container.oneFirst(sql`select count(*) from forms where id = 1`), // deleted form id
-          ])
-            .then((counts) => {
-              counts.should.eql([ 1, 0 ]);
-            }))))));
 
   it('should log the purge action in the audit log', testService((service, container) =>
     service.login('alice', (asAlice) =>
@@ -142,6 +124,7 @@ describe('query module form purge', () => {
         .then((ghostForm) => asAlice.delete('/v1/projects/1/forms/withAttachments')
           .expect(200)
           .then(() => container.Forms.purge(true))
+          .then(() => container.Blobs.purgeUnattached())
           .then(() => Promise.all([
             container.oneFirst(sql`select count(*) from forms where id = ${ghostForm.id}`),
             container.oneFirst(sql`select count(*) from form_defs where "formId" = ${ghostForm.id}`),
@@ -241,6 +224,97 @@ describe('query module form purge', () => {
         .then(() => container.oneFirst(sql`select count(*) from form_field_values`))
         .then((count) => count.should.eql(0)))));
 
+  describe('purging specific forms via specific arguments', () => {
+    it('should purge a deleted form by ID', testService((service, container) =>
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/simple')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200))
+          .then(() => container.Forms.getByProjectAndXmlFormId(1, 'withAttachments').then((o) => o.get()))
+          .then((ghostForm) => asAlice.delete('/v1/projects/1/withAttachments')
+            .then(() => container.Forms.purge(true, 1)) // force delete a single form
+            .then(() => Promise.all([
+              container.oneFirst(sql`select count(*) from forms where id = ${ghostForm.id}`),
+              container.oneFirst(sql`select count(*) from forms where id = 1`), // deleted form id
+            ])
+              .then((counts) => {
+                counts.should.eql([ 1, 0 ]);
+              }))))));
+
+    it('should purge all versions of deleted form in project', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/forms/simple')
+        .expect(200);
+
+      // new version (will be v2)
+      await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+        .send(testData.forms.simple)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // publish new version v2
+      await asAlice.post('/v1/projects/1/forms/simple/draft/publish?ignoreWarnings=true&version=v2')
+        .expect(200);
+
+      // delete new version v2
+      await asAlice.delete('/v1/projects/1/forms/simple')
+        .expect(200);
+
+      // new version (will be v3)
+      await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+        .send(testData.forms.simple)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // publish new version v3 but don't delete
+      await asAlice.post('/v1/projects/1/forms/simple/draft/publish?ignoreWarnings=true&version=v3')
+        .expect(200);
+
+      const count = await container.Forms.purge(true, null, 1, 'simple');
+      count.should.equal(2);
+    }));
+
+    it('should purge named form only from specified project', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // delete simple form in project 1 (but don't purge it)
+      await asAlice.delete('/v1/projects/1/forms/simple')
+        .expect(200);
+
+      const newProjectId = await asAlice.post('/v1/projects')
+        .send({ name: 'Project Two' })
+        .then(({ body }) => body.id);
+
+      await asAlice.post(`/v1/projects/${newProjectId}/forms?publish=true`)
+        .send(testData.forms.simple)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete(`/v1/projects/${newProjectId}/forms/simple`)
+        .expect(200);
+
+      const count = await container.Forms.purge(true, null, newProjectId, 'simple');
+      count.should.equal(1);
+    }));
+
+    it('should throw an error when xmlFormId specified without project ID', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/forms/simple')
+        .expect(200);
+
+      await assert.throws(() => { container.Forms.purge(true, null, null, 'simple'); }, (err) => {
+        err.problemCode.should.equal(500.1);
+        err.problemDetails.error.should.equal('Must also specify projectId when using xmlFormId');
+        return true;
+      });
+    }));
+  });
+
   describe('purging form submissions', () => {
     const withSimpleIds = (deprecatedId, instanceId) => testData.instances.simple.one
       .replace('one</instance', `${instanceId}</instanceID><deprecatedID>${deprecatedId}</deprecated`);
@@ -284,6 +358,7 @@ describe('query module form purge', () => {
             }))
           .then(() => asAlice.delete('/v1/projects/1/forms/binaryType'))
           .then(() => container.Forms.purge(true))
+          .then(() => container.Blobs.purgeUnattached())
           .then(() => container.oneFirst(sql`select count(*) from submission_attachments`)
             .then((count) => count.should.equal(0)))
           .then(() => container.oneFirst(sql`select count(*) from blobs`)
@@ -337,6 +412,7 @@ describe('query module form purge', () => {
           .then(() => exhaust(container))
           .then(() => asAlice.delete('/v1/projects/1/forms/audits'))
           .then(() => container.Forms.purge(true))
+          .then(() => container.Blobs.purgeUnattached())
           .then(() => Promise.all([
             container.oneFirst(sql`select count(*) from client_audits`),
             container.oneFirst(sql`select count(*) from blobs`)
@@ -351,6 +427,7 @@ describe('query module form purge', () => {
           .then(() => asAlice.delete('/v1/projects/1/forms/simple2') // Delete form
             .expect(200))
           .then(() => container.Forms.purge(true))
+          .then(() => container.Blobs.purgeUnattached())
           .then(() => container.oneFirst(sql`select count(*) from blobs`))
           .then((count) => count.should.equal(0)))));
   });

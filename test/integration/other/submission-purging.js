@@ -104,7 +104,7 @@ describe('query module submission purge', () => {
     attachments.should.equal(0);
   }));
 
-  it('should purge blobs associated with attachments when purging submission', testService(async (service, { Submissions, oneFirst }) => {
+  it('should purge blobs associated with attachments when purging submission', testService(async (service, { Blobs, Submissions, oneFirst }) => {
     const asAlice = await service.login('alice');
 
     await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -133,6 +133,9 @@ describe('query module submission purge', () => {
     // Delete submission with 2 attachments
     await asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both');
     await Submissions.purge(true);
+
+    // Purge unattached blobs
+    await Blobs.purgeUnattached();
 
     // One blob still remains from first submission which was not deleted
     blobCount = await oneFirst(sql`select count(*) from blobs`);
@@ -371,6 +374,9 @@ describe('query module submission purge', () => {
 
     // Purge the submission
     await container.Submissions.purge(true);
+
+    // Purge unattached blobs
+    await container.Blobs.purgeUnattached();
 
     // Check that some of the client audit events are deleted from the database
     const numClientAudits = await container.oneFirst(sql`select count(*) from client_audits`);
