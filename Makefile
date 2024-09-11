@@ -109,15 +109,20 @@ lint: node_version
 
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
-	docker start odk-postgres15 || (docker run -d --name odk-postgres15 --network host -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:14.10-alpine postgres -c log_statement=all -c log_destination=stderr -c log_parameter_max_length=80 && sleep 5 && node lib/bin/create-docker-databases.js)
+	docker start odk-postgres14 || (\
+		docker run -d --name odk-postgres14 -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:14.10-alpine \
+			postgres -c log_statement=all -c log_destination=stderr -c log_parameter_max_length=80 \
+		&& sleep 5 \
+		&& node lib/bin/create-docker-databases.js \
+	)
 
 .PHONY: stop-docker-postgres
 stop-docker-postgres:
-	docker stop odk-postgres15 || true
+	docker stop odk-postgres14 || true
 
 .PHONY: rm-docker-postgres
 rm-docker-postgres: stop-docker-postgres
-	docker rm odk-postgres15 || true
+	docker rm odk-postgres14 || true
 
 .PHONY: check-file-headers
 check-file-headers:
