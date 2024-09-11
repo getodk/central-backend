@@ -1,3 +1,4 @@
+const assert = require('assert');
 const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
@@ -8,391 +9,463 @@ const appPath = require('app-root-path');
 const { exhaust } = require(appPath + '/lib/worker/worker');
 
 describe('query module submission purge', () => {
-  it('should purge a submission deleted over 30 days ago', testService(async (service, { Submissions, oneFirst, run }) => {
-    const asAlice = await service.login('alice');
+  describe('submission purge arguments', () => {
+    it('should purge a specific submission', testService(async (service, { Submissions, oneFirst }) => {
+      const asAlice = await service.login('alice');
 
-    await asAlice.post('/v1/projects/1/forms/simple/submissions')
-      .send(testData.instances.simple.one)
-      .set('Content-Type', 'application/xml')
-      .expect(200);
+      // Create two submissions
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
 
-    await asAlice.delete('/v1/projects/1/forms/simple/submissions/one');
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
 
-    await run(sql`update submissions set "deletedAt" = '1999-1-1' where "deletedAt" is not null`);
+      // Delete both submissions
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/two')
+        .expect(200);
 
-    await Submissions.purge();
+      // Purge submissions here should not purge anything because they were in the trash less than 30 days
+      let purgeCount = await Submissions.purge();
+      purgeCount.should.equal(0);
 
-    const counts = await Promise.all([
-      oneFirst(sql`select count(*) from submissions`),
-      oneFirst(sql`select count(*) from submissions`)
-    ]);
+      // But we should be able to force purge a submission
+      // specified by projectId, xmlFormId, and instanceId
+      purgeCount = await Submissions.purge(true, 1, 'simple', 'one');
+      purgeCount.should.equal(1);
 
-    counts.should.eql([ 0, 0 ]);
-  }));
+      // One (soft-deleted) submission should still be in the database
+      const submissionCount = await oneFirst(sql`select count(*) from submissions`);
+      submissionCount.should.equal(1);
+    }));
 
-  it('should purge multiple submissions deleted over 30 days ago', testService(async (service, { Submissions, oneFirst, run }) => {
-    const asAlice = await service.login('alice');
+    it('should throw an error when instanceId specified without project ID and xmlFormId', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
 
-    await asAlice.post('/v1/projects/1/forms/simple/submissions')
-      .send(testData.instances.simple.one)
-      .set('Content-Type', 'application/xml')
-      .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
 
-    await asAlice.post('/v1/projects/1/forms/simple/submissions')
-      .send(testData.instances.simple.two)
-      .set('Content-Type', 'application/xml')
-      .expect(200);
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
 
-    await asAlice.post('/v1/projects/1/forms/simple/submissions')
-      .send(testData.instances.simple.three)
-      .set('Content-Type', 'application/xml')
-      .expect(200);
-
-    await asAlice.delete('/v1/projects/1/forms/simple/submissions/one');
-    await asAlice.delete('/v1/projects/1/forms/simple/submissions/two');
-    // Mark two as deleted a long time ago
-    await run(sql`update submissions set "deletedAt" = '1999-1-1' where "deletedAt" is not null`);
-
-    // More recent delete, within 30 day window
-    await asAlice.delete('/v1/projects/1/forms/simple/submissions/three');
-
-    const purgeCount = await Submissions.purge();
-    purgeCount.should.equal(2);
-
-    // Remaining submissions not recently deleted
-    const counts = await Promise.all([
-      oneFirst(sql`select count(*) from submissions`),
-      oneFirst(sql`select count(*) from submissions`)
-    ]);
-    counts.should.eql([ 1, 1 ]);
-  }));
-
-  it('should purge recently deleted submission when forced', testService(async (service, { Submissions }) => {
-    const asAlice = await service.login('alice');
-
-    await asAlice.post('/v1/projects/1/forms/simple/submissions')
-      .send(testData.instances.simple.one)
-      .set('Content-Type', 'application/xml')
-      .expect(200);
-
-    await asAlice.delete('/v1/projects/1/forms/simple/submissions/one');
-    const purgeCount = await Submissions.purge(true);
-    purgeCount.should.equal(1);
-  }));
-
-  it('should purge attachments with submission', testService(async (service, { Submissions, oneFirst }) => {
-    const asAlice = await service.login('alice');
-
-    await asAlice.post('/v1/projects/1/forms?publish=true')
-      .set('Content-Type', 'application/xml')
-      .send(testData.forms.binaryType)
-      .expect(200);
-
-    await asAlice.post('/v1/projects/1/submission')
-      .set('X-OpenRosa-Version', '1.0')
-      .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
-      .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
-      .expect(201);
-
-    let attachments = await oneFirst(sql`select count(*) from submission_attachments`);
-    attachments.should.equal(2);
-
-    await asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both');
-    await Submissions.purge(true);
-
-    attachments = await oneFirst(sql`select count(*) from submission_attachments`);
-    attachments.should.equal(0);
-  }));
-
-  it('should purge blobs associated with attachments when purging submission', testService(async (service, { Blobs, Submissions, oneFirst }) => {
-    const asAlice = await service.login('alice');
-
-    await asAlice.post('/v1/projects/1/forms?publish=true')
-      .set('Content-Type', 'application/xml')
-      .send(testData.forms.binaryType)
-      .expect(200);
-
-    // Submission has 2 attachments
-    await asAlice.post('/v1/projects/1/submission')
-      .set('X-OpenRosa-Version', '1.0')
-      .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
-      .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
-      .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
-      .expect(201);
-
-    // Submission has 1 attachment with same content as one attachment above
-    await asAlice.post('/v1/projects/1/submission')
-      .set('X-OpenRosa-Version', '1.0')
-      .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.one), { filename: 'data.xml' })
-      .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
-      .expect(201);
-
-    let blobCount = await oneFirst(sql`select count(*) from blobs`);
-    blobCount.should.equal(2);
-
-    // Delete submission with 2 attachments
-    await asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both');
-    await Submissions.purge(true);
-
-    // Purge unattached blobs
-    await Blobs.purgeUnattached();
-
-    // One blob still remains from first submission which was not deleted
-    blobCount = await oneFirst(sql`select count(*) from blobs`);
-    blobCount.should.equal(1);
-  }));
-
-  it('should purge all versions of a deleted submission', testService(async (service, { Submissions, oneFirst }) => {
-    const asAlice = await service.login('alice');
-
-    // Create a submission on an existing form (simple)
-    await asAlice.post('/v1/projects/1/forms/simple/submissions')
-      .send(testData.instances.simple.one)
-      .set('Content-Type', 'application/xml')
-      .expect(200);
-
-    // Edit the submission
-    await asAlice.patch('/v1/projects/1/forms/simple/submissions/one')
-      .send(testData.instances.simple.one
-        .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2')
-        .replace('<age>30</age>', '<age>99</age>'))
-      .set('Content-Type', 'application/xml')
-      .expect(200);
-
-    // Delete the submission
-    await asAlice.delete('/v1/projects/1/forms/simple/submissions/one');
-
-    // Purge the submission
-    await Submissions.purge(true);
-
-    // Check that the submission is deleted
-    const submissionCount = await oneFirst(sql`select count(*) from submissions`);
-    submissionCount.should.equal(0);
-
-    // Check that submission defs are also deleted
-    const submissionDefCount = await oneFirst(sql`select count(*) from submission_defs`);
-    submissionDefCount.should.equal(0);
-  }));
-
-  it('should purge comments of a deleted submission', testService(async (service, { Submissions, oneFirst }) => {
-    const asAlice = await service.login('alice');
-
-    // Create a submission
-    await asAlice.post('/v1/projects/1/forms/simple/submissions')
-      .send(testData.instances.simple.one)
-      .set('Content-Type', 'application/xml')
-      .expect(200);
-
-    // Add a comment to the submission
-    await asAlice.post('/v1/projects/1/forms/simple/submissions/one/comments')
-      .send({ body: 'new comment here' })
-      .expect(200);
-
-    let commentCount = await oneFirst(sql`select count(*) from comments`);
-    commentCount.should.equal(1);
-
-    // Delete the submission
-    await asAlice.delete('/v1/projects/1/forms/simple/submissions/one');
-
-    // Purge the submission
-    await Submissions.purge(true);
-
-    // Check that the comment is deleted
-    commentCount = await oneFirst(sql`select count(*) from comments`);
-    commentCount.should.equal(0);
-  }));
-
-  it('should redact notes of a deleted submission sent with x-action-notes', testService(async (service, { Submissions, oneFirst }) => {
-    const asAlice = await service.login('alice');
-
-    // Create a submission
-    await asAlice.post('/v1/projects/1/forms/simple/submissions')
-      .send(testData.instances.simple.one)
-      .set('X-Action-Notes', 'a note about the submission')
-      .set('Content-Type', 'application/xml')
-      .expect(200);
-
-    // Check that the note exists in the submission's audit log
-    await asAlice.get('/v1/projects/1/forms/simple/submissions/one/audits')
-      .expect(200)
-      .then(({ body }) => {
-        body.length.should.equal(1);
-        body[0].notes.should.equal('a note about the submission');
+      await assert.throws(() => { container.Submissions.purge(true, null, null, 'one'); }, (err) => {
+        err.problemCode.should.equal(500.1);
+        err.problemDetails.error.should.equal('Must specify either all or none of projectId, xmlFormId, and instanceId');
+        return true;
       });
+    }));
 
-    // Delete the submission
-    await asAlice.delete('/v1/projects/1/forms/simple/submissions/one');
+    it('should throw an error when project ID or xmlFormId is non-null but there is no instance id', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
 
-    // Purge the submission
-    await Submissions.purge(true);
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
 
-    // Look at what is in the audit log via the database because the submission is deleted
-    const auditNotes = await oneFirst(sql`select notes from audits where action = 'submission.create'`);
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
 
-    // Check that the note is redacted
-    auditNotes.should.equal('');
-  }));
-
-  it('should purge form field values of a deleted submission', testService(async (service, container) => {
-    const asAlice = await service.login('alice');
-
-    // Upload the selectMultiple form
-    await asAlice.post('/v1/projects/1/forms?publish=true')
-      .set('Content-Type', 'application/xml')
-      .send(testData.forms.selectMultiple)
-      .expect(200);
-
-    // Create a submission
-    await asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
-      .send(testData.instances.selectMultiple.one)
-      .set('Content-Type', 'application/xml')
-      .expect(200);
-
-    // Exhaust worker to update select multiple database values
-    await exhaust(container);
-
-    // Check that the form field values are in the database
-    const numFieldValues = await container.oneFirst(sql`select count(*) from form_field_values`);
-    numFieldValues.should.equal(5);
-
-    // Delete submission
-    await asAlice.delete('/v1/projects/1/forms/selectMultiple/submissions/one');
-
-    // Purge the submission
-    await container.Submissions.purge(true);
-
-    // Check that the form field values are deleted from the database
-    const count = await container.oneFirst(sql`select count(*) from form_field_values`);
-    count.should.equal(0);
-
-  }));
-
-  it('should set submission def id on entity source to null when submission deleted', testService(async (service, container) => {
-    const asAlice = await service.login('alice');
-
-    // Create the form
-    await asAlice.post('/v1/projects/1/forms?publish=true')
-      .send(testData.forms.simpleEntity)
-      .expect(200);
-
-    // Send the submission
-    await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
-      .send(testData.instances.simpleEntity.one)
-      .set('Content-Type', 'application/xml')
-      .expect(200);
-
-    // Process the submission
-    await exhaust(container);
-
-    // Delete the submission
-    await asAlice.delete('/v1/projects/1/forms/simpleEntity/submissions/one');
-
-    // Check the submission in the entity source while it is soft-deleted
-    await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
-      .expect(200)
-      .then(({ body: logs }) => {
-        logs[0].should.be.an.Audit();
-        logs[0].action.should.be.eql('entity.create');
-        logs[0].actor.displayName.should.be.eql('Alice');
-
-        logs[0].details.source.event.should.be.an.Audit();
-        logs[0].details.source.event.actor.displayName.should.be.eql('Alice');
-        logs[0].details.source.event.loggedAt.should.be.isoDate();
-
-        logs[0].details.source.submission.instanceId.should.be.eql('one');
-        logs[0].details.source.submission.submitter.displayName.should.be.eql('Alice');
-        logs[0].details.source.submission.createdAt.should.be.isoDate();
-
-        // submission is only a stub so it shouldn't have currentVersion
-        logs[0].details.source.submission.should.not.have.property('currentVersion');
+      await assert.throws(() => { container.Submissions.purge(true, null, 'simple', null); }, (err) => {
+        err.problemCode.should.equal(500.1);
+        err.problemDetails.error.should.equal('Must specify either all or none of projectId, xmlFormId, and instanceId');
+        return true;
       });
+    }));
+  });
 
-    // Purge the submission
-    await container.Submissions.purge(true);
+  describe('30 day time limit', () => {
+    it('should purge a submission deleted over 30 days ago', testService(async (service, { Submissions, oneFirst, run }) => {
+      const asAlice = await service.login('alice');
 
-    // Check the source def in the database has been set to null
-    const sourceDef = await container.oneFirst(sql`select "submissionDefId" from entity_def_sources where details -> 'submission' ->> 'instanceId' = 'one'`);
-    should.not.exist(sourceDef);
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
 
-    // Check the submission in the entity source after it is purged
-    await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
-      .expect(200)
-      .then(({ body: logs }) => {
-        logs[0].should.be.an.Audit();
-        logs[0].action.should.be.eql('entity.create');
-        logs[0].actor.displayName.should.be.eql('Alice');
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one');
 
-        logs[0].details.source.event.should.be.an.Audit();
-        logs[0].details.source.event.actor.displayName.should.be.eql('Alice');
-        logs[0].details.source.event.loggedAt.should.be.isoDate();
+      await run(sql`update submissions set "deletedAt" = '1999-1-1' where "deletedAt" is not null`);
 
-        logs[0].details.source.submission.instanceId.should.be.eql('one');
-        logs[0].details.source.submission.submitter.displayName.should.be.eql('Alice');
-        logs[0].details.source.submission.createdAt.should.be.isoDate();
+      await Submissions.purge();
 
-        // submission is only a stub so it shouldn't have currentVersion
-        logs[0].details.source.submission.should.not.have.property('currentVersion');
-      });
-  }));
+      const counts = await Promise.all([
+        oneFirst(sql`select count(*) from submissions`),
+        oneFirst(sql`select count(*) from submissions`)
+      ]);
 
-  it('should purge client audit blobs attachments for a deleted submission', testService(async (service, container) => {
-    const asAlice = await service.login('alice');
+      counts.should.eql([ 0, 0 ]);
+    }));
 
-    // Create the form
-    await asAlice.post('/v1/projects/1/forms?publish=true')
-      .send(testData.forms.clientAudits)
-      .expect(200);
+    it('should purge multiple submissions deleted over 30 days ago', testService(async (service, { Submissions, oneFirst, run }) => {
+      const asAlice = await service.login('alice');
 
-    // Send the submission with the client audit attachment
-    await asAlice.post('/v1/projects/1/submission')
-      .set('X-OpenRosa-Version', '1.0')
-      .attach('audit.csv', createReadStream(appPath + '/test/data/audit.csv'), { filename: 'audit.csv' })
-      .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
-      .expect(201);
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
 
-    // Send a second submission
-    await asAlice.post('/v1/projects/1/submission')
-      .set('X-OpenRosa-Version', '1.0')
-      .attach('log.csv', createReadStream(appPath + '/test/data/audit2.csv'), { filename: 'log.csv' })
-      .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
-      .expect(201);
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
 
-    // Process the client audit attachment
-    await exhaust(container);
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.three)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
 
-    // Check that the client audit events are in the database
-    const clientAuditEventCount = await container.all(sql`select count(*) from client_audits group by "blobId" order by count(*) desc`);
-    clientAuditEventCount.should.eql([{ count: 5 }, { count: 3 }]); // 1 blob with 5 events in it, another with 3
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one');
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/two');
+      // Mark two as deleted a long time ago
+      await run(sql`update submissions set "deletedAt" = '1999-1-1' where "deletedAt" is not null`);
 
-    // Check that the blobs are in the database
-    const numBlobs = await container.oneFirst(sql`select count(*) from blobs`);
-    numBlobs.should.equal(2);
+      // More recent delete, within 30 day window
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/three');
 
-    // Delete one of the submissions
-    await asAlice.delete('/v1/projects/1/forms/audits/submissions/one')
-      .expect(200);
+      const purgeCount = await Submissions.purge();
+      purgeCount.should.equal(2);
 
-    // Purge the submission
-    await container.Submissions.purge(true);
+      // Remaining submissions not recently deleted
+      const counts = await Promise.all([
+        oneFirst(sql`select count(*) from submissions`),
+        oneFirst(sql`select count(*) from submissions`)
+      ]);
+      counts.should.eql([ 1, 1 ]);
+    }));
 
-    // Purge unattached blobs
-    await container.Blobs.purgeUnattached();
+    it('should purge recently deleted submission when forced', testService(async (service, { Submissions }) => {
+      const asAlice = await service.login('alice');
 
-    // Check that some of the client audit events are deleted from the database
-    const numClientAudits = await container.oneFirst(sql`select count(*) from client_audits`);
-    numClientAudits.should.equal(3); // from the non-deleted submission
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
 
-    // Check one blob is deleted from the database
-    const count = await container.oneFirst(sql`select count(*) from blobs`);
-    count.should.equal(1);
-  }));
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one');
+      const purgeCount = await Submissions.purge(true);
+      purgeCount.should.equal(1);
+    }));
+  });
 
-  // TODO other stuff
+  describe('deep cleanup of all submission artifacts', () => {
+    it('should purge attachments with submission', testService(async (service, { Submissions, oneFirst }) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+        .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+        .expect(201);
+
+      let attachments = await oneFirst(sql`select count(*) from submission_attachments`);
+      attachments.should.equal(2);
+
+      await asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both');
+      await Submissions.purge(true);
+
+      attachments = await oneFirst(sql`select count(*) from submission_attachments`);
+      attachments.should.equal(0);
+    }));
+
+    it('should purge blobs associated with attachments when purging submission', testService(async (service, { Blobs, Submissions, oneFirst }) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      // Submission has 2 attachments
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+        .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+        .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+        .expect(201);
+
+      // Submission has 1 attachment with same content as one attachment above
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.one), { filename: 'data.xml' })
+        .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+        .expect(201);
+
+      let blobCount = await oneFirst(sql`select count(*) from blobs`);
+      blobCount.should.equal(2);
+
+      // Delete submission with 2 attachments
+      await asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both');
+      await Submissions.purge(true);
+
+      // Purge unattached blobs
+      await Blobs.purgeUnattached();
+
+      // One blob still remains from first submission which was not deleted
+      blobCount = await oneFirst(sql`select count(*) from blobs`);
+      blobCount.should.equal(1);
+    }));
+
+    it('should purge all versions of a deleted submission', testService(async (service, { Submissions, oneFirst }) => {
+      const asAlice = await service.login('alice');
+
+      // Create a submission on an existing form (simple)
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Edit the submission
+      await asAlice.patch('/v1/projects/1/forms/simple/submissions/one')
+        .send(testData.instances.simple.one
+          .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2')
+          .replace('<age>30</age>', '<age>99</age>'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Delete the submission
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one');
+
+      // Purge the submission
+      await Submissions.purge(true);
+
+      // Check that the submission is deleted
+      const submissionCount = await oneFirst(sql`select count(*) from submissions`);
+      submissionCount.should.equal(0);
+
+      // Check that submission defs are also deleted
+      const submissionDefCount = await oneFirst(sql`select count(*) from submission_defs`);
+      submissionDefCount.should.equal(0);
+    }));
+
+    it('should purge comments of a deleted submission', testService(async (service, { Submissions, oneFirst }) => {
+      const asAlice = await service.login('alice');
+
+      // Create a submission
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Add a comment to the submission
+      await asAlice.post('/v1/projects/1/forms/simple/submissions/one/comments')
+        .send({ body: 'new comment here' })
+        .expect(200);
+
+      let commentCount = await oneFirst(sql`select count(*) from comments`);
+      commentCount.should.equal(1);
+
+      // Delete the submission
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one');
+
+      // Purge the submission
+      await Submissions.purge(true);
+
+      // Check that the comment is deleted
+      commentCount = await oneFirst(sql`select count(*) from comments`);
+      commentCount.should.equal(0);
+    }));
+
+    it('should redact notes of a deleted submission sent with x-action-notes', testService(async (service, { Submissions, oneFirst }) => {
+      const asAlice = await service.login('alice');
+
+      // Create a submission
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('X-Action-Notes', 'a note about the submission')
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Check that the note exists in the submission's audit log
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+          body[0].notes.should.equal('a note about the submission');
+        });
+
+      // Delete the submission
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one');
+
+      // Purge the submission
+      await Submissions.purge(true);
+
+      // Look at what is in the audit log via the database because the submission is deleted
+      const auditNotes = await oneFirst(sql`select notes from audits where action = 'submission.create'`);
+
+      // Check that the note is redacted
+      auditNotes.should.equal('');
+    }));
+
+    it('should purge form field values of a deleted submission', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Upload the selectMultiple form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.selectMultiple)
+        .expect(200);
+
+      // Create a submission
+      await asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
+        .send(testData.instances.selectMultiple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Exhaust worker to update select multiple database values
+      await exhaust(container);
+
+      // Check that the form field values are in the database
+      const numFieldValues = await container.oneFirst(sql`select count(*) from form_field_values`);
+      numFieldValues.should.equal(5);
+
+      // Delete submission
+      await asAlice.delete('/v1/projects/1/forms/selectMultiple/submissions/one');
+
+      // Purge the submission
+      await container.Submissions.purge(true);
+
+      // Check that the form field values are deleted from the database
+      const count = await container.oneFirst(sql`select count(*) from form_field_values`);
+      count.should.equal(0);
+    }));
+
+    it('should purge client audit blobs attachments for a deleted submission', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Create the form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.clientAudits)
+        .expect(200);
+
+      // Send the submission with the client audit attachment
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('audit.csv', createReadStream(appPath + '/test/data/audit.csv'), { filename: 'audit.csv' })
+        .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+        .expect(201);
+
+      // Send a second submission
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('log.csv', createReadStream(appPath + '/test/data/audit2.csv'), { filename: 'log.csv' })
+        .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+        .expect(201);
+
+      // Process the client audit attachment
+      await exhaust(container);
+
+      // Check that the client audit events are in the database
+      const clientAuditEventCount = await container.all(sql`select count(*) from client_audits group by "blobId" order by count(*) desc`);
+      clientAuditEventCount.should.eql([{ count: 5 }, { count: 3 }]); // 1 blob with 5 events in it, another with 3
+
+      // Check that the blobs are in the database
+      const numBlobs = await container.oneFirst(sql`select count(*) from blobs`);
+      numBlobs.should.equal(2);
+
+      // Delete one of the submissions
+      await asAlice.delete('/v1/projects/1/forms/audits/submissions/one')
+        .expect(200);
+
+      // Purge the submission
+      await container.Submissions.purge(true);
+
+      // Purge unattached blobs
+      await container.Blobs.purgeUnattached();
+
+      // Check that some of the client audit events are deleted from the database
+      const numClientAudits = await container.oneFirst(sql`select count(*) from client_audits`);
+      numClientAudits.should.equal(3); // from the non-deleted submission
+
+      // Check one blob is deleted from the database
+      const count = await container.oneFirst(sql`select count(*) from blobs`);
+      count.should.equal(1);
+    }));
+  });
+
+  describe('submissions as entity sources', () => {
+    it('should set submission def id on entity source to null when submission deleted', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Create the form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      // Send the submission
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Process the submission
+      await exhaust(container);
+
+      // Delete the submission
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity/submissions/one');
+
+      // Check the submission in the entity source while it is soft-deleted
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs[0].should.be.an.Audit();
+          logs[0].action.should.be.eql('entity.create');
+          logs[0].actor.displayName.should.be.eql('Alice');
+
+          logs[0].details.source.event.should.be.an.Audit();
+          logs[0].details.source.event.actor.displayName.should.be.eql('Alice');
+          logs[0].details.source.event.loggedAt.should.be.isoDate();
+
+          logs[0].details.source.submission.instanceId.should.be.eql('one');
+          logs[0].details.source.submission.submitter.displayName.should.be.eql('Alice');
+          logs[0].details.source.submission.createdAt.should.be.isoDate();
+
+          // submission is only a stub so it shouldn't have currentVersion
+          logs[0].details.source.submission.should.not.have.property('currentVersion');
+        });
+
+      // Purge the submission
+      await container.Submissions.purge(true);
+
+      // Check the source def in the database has been set to null
+      const sourceDef = await container.oneFirst(sql`select "submissionDefId" from entity_def_sources where details -> 'submission' ->> 'instanceId' = 'one'`);
+      should.not.exist(sourceDef);
+
+      // Check the submission in the entity source after it is purged
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs[0].should.be.an.Audit();
+          logs[0].action.should.be.eql('entity.create');
+          logs[0].actor.displayName.should.be.eql('Alice');
+
+          logs[0].details.source.event.should.be.an.Audit();
+          logs[0].details.source.event.actor.displayName.should.be.eql('Alice');
+          logs[0].details.source.event.loggedAt.should.be.isoDate();
+
+          logs[0].details.source.submission.instanceId.should.be.eql('one');
+          logs[0].details.source.submission.submitter.displayName.should.be.eql('Alice');
+          logs[0].details.source.submission.createdAt.should.be.isoDate();
+
+          // submission is only a stub so it shouldn't have currentVersion
+          logs[0].details.source.submission.should.not.have.property('currentVersion');
+        });
+    }));
+  });
+
+  // TODO
   // should not delete a draft submission? or yes?
-  // should purge client audits associated with a submission via attachment
-
-  // TODO in purge function
-  // decide there should be no actee id in the submission.purge audit log because it could be across forms or projects
-  // purge by specific thing like project,xmlFormId,instanceId
-  // add cli thing to do this
+  // check submission.purge audit log
 });
