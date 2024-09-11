@@ -272,7 +272,7 @@ describe('s3 support', () => {
     const wrapper = cliPromise.then(res => {
       // TODO there may be a more idiomatic way to quickly fail the test from
       // within mocha, but this achieves the desired result:
-      console.log(`FATAL ERROR: promise should have failed, but it resolved successfully with: <${res}>`);
+      console.log(new Error(`FATAL ERROR: promise should have failed, but it resolved successfully with: <${res}>`));
       process.exit(1);
     });
     wrapper.pid = cliPromise.pid;
