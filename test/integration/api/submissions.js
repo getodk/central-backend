@@ -1427,6 +1427,63 @@ describe('api: /forms/:id/submissions', () => {
             .expect(404)))));
   });
 
+  describe('/:instanceId RESTORE', () => {
+    it('should reject if the submission has not been deleted', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions/one/restore')
+          .expect(404))));
+
+    it('should reject if the submission does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions/nonexistant/restore')
+          .expect(404))));
+
+    it('should reject if the user cannot restore', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const asChelsea = await service.login('chelsea');
+
+      // Create a submission
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Delete the submission
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+
+      // Chelsea cannot restore
+      await asChelsea.post('/v1/projects/1/forms/simple/submissions/one/restore')
+        .expect(403);
+    }));
+
+    it('should soft-delete the submission and then restore it', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // Create a submission
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Delete the submission
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+
+      // Accessing the submission should 404
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+        .expect(404);
+
+      // Restore the submission
+      await asAlice.post('/v1/projects/1/forms/simple/submissions/one/restore')
+        .expect(200);
+
+      // Accessing the submission should 200
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+    }));
+  });
+
   describe('.csv.zip GET', () => {
     // NOTE: tests related to decryption of .csv.zip export are located in test/integration/other/encryption.js
 
