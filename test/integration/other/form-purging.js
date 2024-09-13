@@ -72,6 +72,27 @@ describe('query module form purge', () => {
             audit.get().acteeId.should.equal(form.acteeId);
           })))));
 
+  it('should log purge action in the audit log for each form', testService(async (service, container) => {
+    const asAlice = await service.login('alice');
+
+    const simpleForm = await container.Forms.getByProjectAndXmlFormId(1, 'simple').then((o) => o.get());
+    const repeatForm = await container.Forms.getByProjectAndXmlFormId(1, 'withrepeat').then((o) => o.get());
+
+    await asAlice.delete('/v1/projects/1/forms/simple')
+      .expect(200);
+
+    await asAlice.delete('/v1/projects/1/forms/withrepeat')
+      .expect(200);
+
+    await container.Forms.purge(true);
+
+    await asAlice.get('/v1/audits')
+      .then(({ body }) => {
+        const acteeIds = body.filter((a) => a.action === 'form.purge').map(a => a.acteeId).sort();
+        acteeIds.should.eql([simpleForm.acteeId, repeatForm.acteeId].sort());
+      });
+  }));
+
   it('should update the actee table with purgedAt details', testService((service, container) =>
     service.login('alice', (asAlice) =>
       container.Forms.getByProjectAndXmlFormId(1, 'simple').then((o) => o.get()) // get the form before we delete it
@@ -149,6 +170,7 @@ describe('query module form purge', () => {
         .then((ghostForm) => asAlice.delete('/v1/projects/1/forms/withAttachments')
           .expect(200)
           .then(() => container.Forms.purge(true))
+          .then(() => container.Blobs.purgeUnattached())
           .then(() => Promise.all([
             container.oneFirst(sql`select count(*) from forms where id = ${ghostForm.id}`),
             container.oneFirst(sql`select count(*) from form_defs where "formId" = ${ghostForm.id}`),
@@ -178,6 +200,7 @@ describe('query module form purge', () => {
           .expect(200)
           .then(() => container.Blobs.s3UploadPending())
           .then(() => container.Forms.purge(true))
+          .then(() => container.Blobs.purgeUnattached())
           .then(() => Promise.all([
             container.oneFirst(sql`select count(*) from forms where id = ${ghostForm.id}`),
             container.oneFirst(sql`select count(*) from form_defs where "formId" = ${ghostForm.id}`),

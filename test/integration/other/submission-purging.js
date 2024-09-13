@@ -465,7 +465,49 @@ describe('query module submission purge', () => {
     }));
   });
 
+  describe('submission.purge audit event', () => {
+    it('should log a purge event in the audit log when purging submissions', testService(async (service, { Submissions }) => {
+      const asAlice = await service.login('alice');
+
+      // Create two submissions
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Delete both submissions
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/two')
+        .expect(200);
+
+      // Purge submissions
+      await Submissions.purge(true);
+
+      await asAlice.get('/v1/audits')
+        .then(({ body }) => {
+          body.filter((a) => a.action === 'submission.purge').length.should.equal(1);
+          body[0].details.should.eql({ submissions_deleted: 2 });
+        });
+    }));
+
+    it('should not log event if no submissions purged', testService(async (service, { Submissions }) => {
+      const asAlice = await service.login('alice');
+      // No deleted submissions exist here to purge
+      await Submissions.purge(true);
+
+      await asAlice.get('/v1/audits')
+        .then(({ body }) => {
+          body.filter((a) => a.action === 'submission.purge').length.should.equal(0);
+        });
+    }));
+  });
+
   // TODO
   // should not delete a draft submission? or yes?
-  // check submission.purge audit log
 });
