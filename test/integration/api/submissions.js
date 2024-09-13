@@ -1425,6 +1425,18 @@ describe('api: /forms/:id/submissions', () => {
             .expect(200))
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
             .expect(404)))));
+
+    it('should not let a draft submission be deleted', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms/simple/draft');
+      await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      // draft submission delete resource does not exist
+      await asAlice.delete('/v1/projects/1/forms/simple/draft/submissions/one')
+        .expect(404);
+    }));
   });
 
   describe('/:instanceId RESTORE', () => {

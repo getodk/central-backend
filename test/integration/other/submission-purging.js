@@ -507,7 +507,4 @@ describe('query module submission purge', () => {
         });
     }));
   });
-
-  // TODO
-  // should not delete a draft submission? or yes?
 });
