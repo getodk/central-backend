@@ -150,6 +150,63 @@ describe('query module form purge', () => {
           ]))
           .then((counts) => counts.should.eql([ 0, 0, 0, 0 ]))))));
 
+  it('should purge attachments and blobs of a form, s3-enabled, blobs not uploaded', testService((service, container) => {
+    global.s3.enableMock();
+    return service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.withAttachments)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+          .send('this is goodone.csv')
+          .expect(200))
+        .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
+          .expect(200))
+        .then(() => container.Forms.getByProjectAndXmlFormId(1, 'withAttachments').then((o) => o.get()))
+        .then((ghostForm) => asAlice.delete('/v1/projects/1/forms/withAttachments')
+          .expect(200)
+          .then(() => container.Forms.purge(true))
+          .then(() => Promise.all([
+            container.oneFirst(sql`select count(*) from forms where id = ${ghostForm.id}`),
+            container.oneFirst(sql`select count(*) from form_defs where "formId" = ${ghostForm.id}`),
+            container.oneFirst(sql`select count(*) from form_attachments where "formId" = ${ghostForm.id}`),
+            container.oneFirst(sql`select count(*) from blobs`)
+          ]))
+          .then((counts) => counts.should.eql([ 0, 0, 0, 0 ]))
+          .then(() => global.s3.uploads.attempted.should.equal(0))
+          .then(() => global.s3.uploads.successful.should.equal(0))
+          .then(() => global.s3.uploads.deleted.should.equal(0))));
+  }));
+
+  it('should purge attachments and blobs of a form, s3-enabled, blobs uploaded', testService((service, container) => {
+    global.s3.enableMock();
+    return service.login('alice', (asAlice) =>
+      asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.withAttachments)
+        .set('Content-Type', 'application/xml')
+        .expect(200)
+        .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+          .send('this is goodone.csv')
+          .expect(200))
+        .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
+          .expect(200))
+        .then(() => container.Forms.getByProjectAndXmlFormId(1, 'withAttachments').then((o) => o.get()))
+        .then((ghostForm) => asAlice.delete('/v1/projects/1/forms/withAttachments')
+          .expect(200)
+          .then(() => container.Blobs.s3UploadPending())
+          .then(() => container.Forms.purge(true))
+          .then(() => Promise.all([
+            container.oneFirst(sql`select count(*) from forms where id = ${ghostForm.id}`),
+            container.oneFirst(sql`select count(*) from form_defs where "formId" = ${ghostForm.id}`),
+            container.oneFirst(sql`select count(*) from form_attachments where "formId" = ${ghostForm.id}`),
+            container.oneFirst(sql`select count(*) from blobs`)
+          ]))
+          .then((counts) => counts.should.eql([ 0, 0, 0, 0 ]))
+          .then(() => global.s3.uploads.attempted.should.equal(1))
+          .then(() => global.s3.uploads.successful.should.equal(1))
+          .then(() => global.s3.uploads.deleted.should.equal(1))));
+  }));
+
   it('should purge the form fields of a form', testService((service, container) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms/simple/draft')

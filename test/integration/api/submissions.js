@@ -485,6 +485,62 @@ describe('api: /submission', () => {
                 .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
                 .expect(304)))))));
 
+    it('should successfully save additionally POSTed attachment binary data with s3 enabled', testService((service, { Blobs }) => {
+      global.s3.enableMock();
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201)
+              .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
+                .expect(200)
+                .then(({ headers, body }) => {
+                  headers['content-type'].should.equal('image/jpeg');
+                  headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+                  headers['etag'].should.equal('"25bdb03b7942881c279788575997efba"'); // eslint-disable-line dot-notation
+                  body.toString('utf8').should.equal('this is test file two');
+                }))
+              .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
+                .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
+                .expect(304))
+              .then(() => Blobs.s3UploadPending()
+                .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
+                  .expect(307)
+                  .then(({ headers, body }) => {
+                    // TODO content-type should not be present at all, but response.removeHeader() does not seem to have an effect
+                    headers['content-type'].should.equal('text/plain; charset=utf-8');
+                    should(headers['content-disposition']).be.undefined();
+                    should(headers.etag).be.undefined();
+
+                    const { location } = headers;
+                    location.should.equal('s3://mock/25bdb03b7942881c279788575997efba/eba799d1dc156c0df70f7bad65f815928b98aa7d/here_is_file2.jpg?contentType=image/jpeg');
+                    body.should.deepEqual({}); // not sure why
+                  }))
+                .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
+                  .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
+                  .expect(307)
+                  .then(({ headers, body }) => {
+                    // TODO content-type should not be present at all, but response.removeHeader() does not seem to have an effect
+                    headers['content-type'].should.equal('text/plain; charset=utf-8');
+                    should(headers['content-disposition']).be.undefined();
+                    should(headers.etag).be.undefined();
+
+                    const { location } = headers;
+                    location.should.equal('s3://mock/25bdb03b7942881c279788575997efba/eba799d1dc156c0df70f7bad65f815928b98aa7d/here_is_file2.jpg?contentType=image/jpeg');
+                    body.should.deepEqual({}); // not sure why
+                  }))))));
+    }));
+
     it('should accept encrypted submissions, with attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
@@ -1571,6 +1627,67 @@ describe('api: /forms/:id/submissions', () => {
                 csv.length.should.equal(3); // newline at end
               }))))));
 
+    it('should return a zipfile with the relevant attachments if s3 is enabled', testService((service, { Blobs }) => {
+      global.s3.enableMock();
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+            .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201))
+            .then(() => Blobs.s3UploadPending())
+            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'))
+              .then((result) => {
+                result.filenames.should.containDeep([
+                  'binaryType.csv',
+                  'media/my_file1.mp4',
+                  'media/here_is_file2.jpg'
+                ]);
+
+                result['media/my_file1.mp4'].should.equal('this is test file one');
+                result['media/here_is_file2.jpg'].should.equal('this is test file two');
+
+                // we also check the csv for the sake of verifying the attachments counts.
+                const csv = result['binaryType.csv'].split('\n');
+                csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+                csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,2,2,,,,0,');
+                csv.length.should.equal(3); // newline at end
+              }))));
+    }));
+
+    it('should handle s3 errors when trying to construct zipfile', testService((service, { Blobs }) => {
+      global.s3.enableMock();
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+            .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201))
+            .then(() => Blobs.s3UploadPending())
+            .then(() => { global.s3.error.onDownload = true; })
+            .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip')
+              .then(() => should.fail('Should have thrown an error.'))
+              .catch(err => err.message.should.equal('aborted')))));
+    }));
+
     it('should filter attachments by the query', testService((service) =>
       service.login('alice', (asAlice) =>
         service.login('bob', (asBob) =>
@@ -1919,6 +2036,76 @@ two,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
 two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 `);
             })))));
+
+    it('should return adhoc-processed consolidated client audit log attachments if uploaded to s3', testService((service, { Blobs }) => {
+      global.s3.enableMock();
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => Blobs.s3UploadPending())
+          .then(() => {
+            global.s3.uploads.attempted.should.equal(2);
+            global.s3.uploads.successful.should.equal(2);
+          })
+          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
+            .then((result) => {
+              result.filenames.should.eql([
+                'audits.csv',
+                'audits - audit.csv'
+              ]);
+
+              result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
+one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
+one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
+one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,
+one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
+two,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
+two,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
+two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+`);
+            }))
+          .then(() => {
+            global.s3.downloads.attempted.should.equal(2);
+            global.s3.downloads.successful.should.equal(2);
+          }));
+    }));
+
+    it('should gracefully handle error if client audit s3 download fails', testService((service, { Blobs }) => {
+      global.s3.enableMock();
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => Blobs.s3UploadPending())
+          .then(() => { global.s3.error.onDownload = true; })
+          .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip')
+            .then(() => should.fail('should have thrown'))
+            .catch(err => err.message.should.equal('aborted'))));
+    }));
 
     it('should return consolidated client audit log filtered by user', testService((service) =>
       service.login('alice', (asAlice) =>
