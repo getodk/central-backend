@@ -416,6 +416,15 @@ describe('api: /users', () => {
           .expect(200)
           .then(({ body }) => body.email.should.equal('chelsea@getodk.org')))));
 
+    it('should return preferences for an extended metadata request', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.preferences.should.eql({ site: {}, projects: {} });
+          }))));
+
     it('should not return sidewide verbs if not extended', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/users/current')
