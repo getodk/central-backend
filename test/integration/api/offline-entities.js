@@ -1343,6 +1343,92 @@ describe('Offline Entities', () => {
     });
   });
 
+  describe('conflict cases', () => {
+    it('should mark an update that is not contiguous with its trunk version as a soft conflict', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Update existing entity on server (change age from 22 to 24)
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+        .send({ data: { age: '24' } })
+        .expect(200);
+
+      // Send update (change status from null to arrived)
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Send second update (change age from 22 to 26)
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('one', 'one-update2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('<status>arrived</status>', '<age>26</age>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .then(({ body: versions }) => {
+          versions.map(v => v.conflict).should.eql([null, null, 'soft', 'soft']);
+        });
+    }));
+
+    it('should mark an update that is not contiguous with its trunk version as a soft conflict', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Send second update first
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('one', 'one-update2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('<status>arrived</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+      await container.Entities.processBacklog(true);
+
+      // Send first update now (it will be applied right away)
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Send fourth update
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('one', 'one-update4')
+          .replace('baseVersion="1"', 'baseVersion="4"')
+          .replace('<status>arrived</status>', '<status>departed</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+      await container.Entities.processBacklog(true);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .then(({ body: versions }) => {
+          versions.map(v => v.conflict).should.eql([null, null, 'hard', 'soft']);
+        });
+    }));
+  });
+
   describe('locking an entity while processing a related submission', function() {
     this.timeout(8000);
 
