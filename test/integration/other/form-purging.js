@@ -88,8 +88,7 @@ describe('query module form purge', () => {
 
     await asAlice.get('/v1/audits')
       .then(({ body }) => {
-        const acteeIds = body.filter((a) => a.action === 'form.purge').map(a => a.acteeId).sort();
-        acteeIds.should.eql([simpleForm.acteeId, repeatForm.acteeId].sort());
+        body.filter((a) => a.action === 'form.purge').map(a => a.acteeId).should.eqlInAnyOrder([simpleForm.acteeId, repeatForm.acteeId]);
       });
   }));
 

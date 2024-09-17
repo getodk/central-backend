@@ -94,11 +94,12 @@ describe('query module submission purge', () => {
 
       await run(sql`update submissions set "deletedAt" = '1999-1-1' where "deletedAt" is not null`);
 
-      await Submissions.purge();
+      const purgeCount = await Submissions.purge();
+      purgeCount.should.equal(1);
 
       const counts = await Promise.all([
         oneFirst(sql`select count(*) from submissions`),
-        oneFirst(sql`select count(*) from submissions`)
+        oneFirst(sql`select count(*) from submission_defs`)
       ]);
 
       counts.should.eql([ 0, 0 ]);
@@ -136,7 +137,7 @@ describe('query module submission purge', () => {
       // Remaining submissions not recently deleted
       const counts = await Promise.all([
         oneFirst(sql`select count(*) from submissions`),
-        oneFirst(sql`select count(*) from submissions`)
+        oneFirst(sql`select count(*) from submission_defs`)
       ]);
       counts.should.eql([ 1, 1 ]);
     }));

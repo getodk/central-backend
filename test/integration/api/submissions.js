@@ -1442,8 +1442,12 @@ describe('api: /forms/:id/submissions', () => {
   describe('/:instanceId RESTORE', () => {
     it('should reject if the submission has not been deleted', testService((service) =>
       service.login('alice', (asAlice) =>
-        asAlice.post('/v1/projects/1/forms/simple/submissions/one/restore')
-          .expect(404))));
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions/one/restore')
+            .expect(404)))));
 
     it('should reject if the submission does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
