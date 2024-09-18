@@ -15,28 +15,28 @@ describe('api: user-preferences', () => {
 
     await asAlice.put('/v1/user-preferences/site/someSimpleSitePref')
       .send({ propertyValue: true })
-      .expect(201);
+      .expect(200);
 
     await asAlice.put('/v1/user-preferences/site/someComplexSitePref')
       .send({ propertyValue: { 1: 2, 3: 4 } })
-      .expect(201);
+      .expect(200);
 
     // overwrite the previous
     await asAlice.put('/v1/user-preferences/site/someComplexSitePref')
       .send({ propertyValue: [1, 2, 3] })
-      .expect(201);
+      .expect(200);
 
     await asAlice.put('/v1/user-preferences/site/toBeDeletedPref')
       .send({ propertyValue: 'troep' })
-      .expect(201);
+      .expect(200);
 
     await asAlice.put('/v1/user-preferences/project/1/someSimpleProjectPref')
       .send({ propertyValue: false })
-      .expect(201);
+      .expect(200);
 
     await asAlice.put('/v1/user-preferences/project/1/someComplexProjectPref')
       .send({ propertyValue: [1, 2, 'many'] })
-      .expect(201);
+      .expect(200);
 
     // make a new project and read its ID
     let newProjectID = null;
@@ -49,18 +49,18 @@ describe('api: user-preferences', () => {
 
     await asAlice.put(`/v1/user-preferences/project/${newProjectID}/prefForSomeOtherProject`)
       .send({ propertyValue: 9000 })
-      .expect(201);
+      .expect(200);
 
     await asAlice.put(`/v1/user-preferences/project/${newProjectID}/toBeDeletedPref`)
       .send({ propertyValue: 'troep' })
-      .expect(201);
+      .expect(200);
 
     // insert a preference for Bob, which we don't want to find in the
     // preferences for Alice that we will subsequently fetch.
     await service.login('bob').then((asBob) =>
       asBob.put('/v1/user-preferences/site/koosje-likes-milk')
         .send({ propertyValue: true })
-        .expect(201)
+        .expect(200)
     );
 
     const newProjectProps = {};
@@ -93,11 +93,11 @@ describe('api: user-preferences', () => {
 
     await asAlice.delete('/v1/user-preferences/site/toBeDeletedPref')
       .send({ propertyValue: true })
-      .expect(204);
+      .expect(200);
 
     await asAlice.delete(`/v1/user-preferences/project/${newProjectID}/toBeDeletedPref`)
       .send({ propertyValue: true })
-      .expect(204);
+      .expect(200);
 
     await asAlice.delete(`/v1/user-preferences/project/${newProjectID}/toBeDeletedPref`)
       .send({ propertyValue: true })
