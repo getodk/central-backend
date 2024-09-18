@@ -69,10 +69,11 @@ describe('api: user-preferences', () => {
       toBeDeletedPref: 'troep',
     };
 
-    await asAlice.get('/v1/user-preferences')
+    await asAlice.get('/v1/users/current')
+      .set('X-Extended-Metadata', 'true')
       .expect(200)
       .then(({ body }) => {
-        body.should.eql({
+        body.preferences.should.eql({
           site: {
             someSimpleSitePref: true,
             someComplexSitePref: [1, 2, 3],
@@ -104,10 +105,11 @@ describe('api: user-preferences', () => {
 
     delete newProjectProps[newProjectID].toBeDeletedPref;
 
-    await asAlice.get('/v1/user-preferences')
+    await asAlice.get('/v1/users/current')
       .expect(200)
+      .set('X-Extended-Metadata', 'true')
       .then(({ body }) => {
-        body.should.eql({
+        body.preferences.should.eql({
           site: {
             someSimpleSitePref: true,
             someComplexSitePref: [1, 2, 3],
