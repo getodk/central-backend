@@ -4,6 +4,7 @@ const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const should = require('should');
 const { createReadStream } = require('fs');
+const { pZipStreamToFiles } = require('../../util/zip');
 
 const appPath = require('app-root-path');
 const { exhaust } = require(appPath + '/lib/worker/worker');
@@ -393,6 +394,74 @@ describe('query module submission purge', () => {
       // Check one blob is deleted from the database
       const count = await container.oneFirst(sql`select count(*) from blobs`);
       count.should.equal(1);
+    }));
+
+    it('should purge client audit blobs when two submissions have same client audit file', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Create the form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.clientAudits)
+        .expect(200);
+
+      // Send the submission with the client audit attachment
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('audit.csv', createReadStream(appPath + '/test/data/audit.csv'), { filename: 'audit.csv' })
+        .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+        .expect(201);
+
+      // Send a second submission
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('log.csv', createReadStream(appPath + '/test/data/audit.csv'), { filename: 'log.csv' })
+        .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+        .expect(201);
+
+      // Process the client audit attachment
+      await exhaust(container);
+
+      // Both submissions share the same client audit data blob so there is only 1 blob
+      const numBlobs = await container.oneFirst(sql`select count(*) from blobs`);
+      numBlobs.should.equal(1);
+
+      // There is only one blob with shared events
+      const clientAuditEventCount = await container.all(sql`select count(*) from client_audits group by "blobId" order by count(*) desc`);
+      clientAuditEventCount.should.eql([{ count: 5 }]); // 1 blob with 5 events in it
+
+      // Delete one of the submissions (instanceId two)
+      await asAlice.delete('/v1/projects/1/forms/audits/submissions/two')
+        .expect(200);
+
+      // Purge the submission
+      await container.Submissions.purge(true);
+
+      // Purge unattached blobs
+      await container.Blobs.purgeUnattached();
+
+      // The one blob is still in the database because it is still referenced by the other submission
+      const count = await container.oneFirst(sql`select count(*) from blobs`);
+      count.should.equal(1);
+
+      // Unfortunately, the client audits all get deleted
+      const numClientAudits = await container.oneFirst(sql`select count(*) from client_audits`);
+      numClientAudits.should.equal(0);
+
+      // But the export still works (adhoc-processing of client audits)
+      const result = await pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'));
+
+      result.filenames.should.eql([
+        'audits.csv',
+        'audits - audit.csv'
+      ]);
+
+      result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
+one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
+one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
+one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,
+one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
+`);
     }));
   });
 
