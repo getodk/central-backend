@@ -2,6 +2,27 @@ const { testService } = require('../setup');
 
 describe('api: user-preferences', () => {
 
+  it('can store a JS null propertyValue', testService(async (service) => {
+    const asAlice = await service.login('alice');
+
+    await asAlice.put('/v1/user-preferences/site/let-us-store-a-null')
+      .send({ propertyValue: null })
+      .expect(200);
+
+    await asAlice.get('/v1/users/current')
+      .set('X-Extended-Metadata', 'true')
+      .expect(200)
+      .then(({ body }) => {
+        body.preferences.should.eql({
+          site: {
+            'let-us-store-a-null': null,
+          },
+          projects: {
+          },
+        });
+      });
+  }));
+
   it('should not allow storing preferences for nonexistent projects', testService(async (service) => {
     const asAlice = await service.login('alice');
 
