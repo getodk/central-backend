@@ -3,7 +3,7 @@ const should = require('should');
 const uuid = require('uuid').v4;
 const { sql } = require('slonik');
 const { createReadStream, readFileSync } = require('fs');
-const { testService } = require('../setup');
+const { testService, testServiceFullTrx } = require('../setup');
 const testData = require('../../data/xml');
 const { pZipStreamToFiles } = require('../../util/zip');
 const { map } = require('ramda');
@@ -1436,6 +1436,57 @@ describe('api: /forms/:id/submissions', () => {
       // draft submission delete resource does not exist
       await asAlice.delete('/v1/projects/1/forms/simple/draft/submissions/one')
         .expect(404);
+    }));
+
+    it('should not let a submission with the same instanceId as a deleted submission be sent', testServiceFullTrx(async (service, { Submissions }) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(409);
+
+      // once purged, the submission can be sent in again
+      await Submissions.purge(true);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+    }));
+
+    it('should delete and restore non-draft submission even when draft submission with same instanceId exists', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // make a draft submission with the same instanceId
+      await asAlice.post('/v1/projects/1/forms/simple/draft');
+      await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // does not effect delete and restore of non-draft submission
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions/one/restore')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
     }));
   });
 
