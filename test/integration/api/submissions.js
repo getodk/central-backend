@@ -3,7 +3,7 @@ const should = require('should');
 const uuid = require('uuid').v4;
 const { sql } = require('slonik');
 const { createReadStream, readFileSync } = require('fs');
-const { testService } = require('../setup');
+const { testService, testServiceFullTrx } = require('../setup');
 const testData = require('../../data/xml');
 const { pZipStreamToFiles } = require('../../util/zip');
 const { map } = require('ramda');
@@ -1399,6 +1399,158 @@ describe('api: /forms/:id/submissions', () => {
             .then(({ body }) => { body.reviewState.should.equal('approved'); })))));
   });
 
+  describe('/:instanceId DELETE', () => {
+    it('should reject notfound if the submission does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+          .expect(404))));
+
+    it('should reject if the user cannot delete', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => service.login('chelsea', (asChelsea) =>
+            asChelsea.delete('/v1/projects/1/forms/simple/submissions/one')
+              .expect(403))))));
+
+    it('should soft-delete the submission and not be able to access it again', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+            .expect(404)))));
+
+    it('should not let a draft submission be deleted', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms/simple/draft');
+      await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      // draft submission delete resource does not exist
+      await asAlice.delete('/v1/projects/1/forms/simple/draft/submissions/one')
+        .expect(404);
+    }));
+
+    it('should not let a submission with the same instanceId as a deleted submission be sent', testServiceFullTrx(async (service, { Submissions }) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(409);
+
+      // once purged, the submission can be sent in again
+      await Submissions.purge(true);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+    }));
+
+    it('should delete and restore non-draft submission even when draft submission with same instanceId exists', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // make a draft submission with the same instanceId
+      await asAlice.post('/v1/projects/1/forms/simple/draft');
+      await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // does not effect delete and restore of non-draft submission
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions/one/restore')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+    }));
+  });
+
+  describe('/:instanceId RESTORE', () => {
+    it('should reject if the submission has not been deleted', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions/one/restore')
+            .expect(404)))));
+
+    it('should reject if the submission does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions/nonexistant/restore')
+          .expect(404))));
+
+    it('should reject if the user cannot restore', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const asChelsea = await service.login('chelsea');
+
+      // Create a submission
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Delete the submission
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+
+      // Chelsea cannot restore
+      await asChelsea.post('/v1/projects/1/forms/simple/submissions/one/restore')
+        .expect(403);
+    }));
+
+    it('should soft-delete the submission and then restore it', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // Create a submission
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Delete the submission
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+
+      // Accessing the submission should 404
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+        .expect(404);
+
+      // Restore the submission
+      await asAlice.post('/v1/projects/1/forms/simple/submissions/one/restore')
+        .expect(200);
+
+      // Accessing the submission should 200
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+    }));
+  });
+
   describe('.csv.zip GET', () => {
     // NOTE: tests related to decryption of .csv.zip export are located in test/integration/other/encryption.js
 
@@ -1501,6 +1653,39 @@ describe('api: /forms/:id/submissions', () => {
             csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0','' ]);
             csv[3].should.eql([ '' ]);
           })))));
+
+    it('should not return data from deleted submissions in csv export', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.two)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.three)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/two');
+
+      const result = await pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'));
+      const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+      csv.length.should.equal(4); // header + 2 data rows + newline
+      csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
+      csv[1].shift().should.be.an.recentIsoDate();
+      // eslint-disable-next-line comma-spacing
+      csv[1].should.eql([ 'three','Chelsea','38','three','5','Alice','0','0','','','','0','' ]);
+      csv[2].shift().should.be.an.recentIsoDate();
+      // eslint-disable-next-line comma-spacing
+      csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0','' ]);
+      csv[3].should.eql([ '' ]);
+    }));
 
     it('should return a submitter-filtered zipfile with the relevant data', testService((service) =>
       service.login('alice', (asAlice) =>
