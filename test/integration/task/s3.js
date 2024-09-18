@@ -25,7 +25,7 @@ const assertThrowsAsync = async (fn, expected) => {
   }
 };
 
-describe.only('task: s3', () => {
+describe('task: s3', () => {
   describe('s3 disabled', () => {
     it('uploadPending() should fail', async () => {
       await assertThrowsAsync(() => uploadPending(), 'S3 blob support is not enabled.');
@@ -127,26 +127,6 @@ describe.only('task: s3', () => {
         assertUploadCount(2);
       }));
 
-      it('should upload requested number of blobs, and ignore others', testTask(async (container) => {
-        // given
-        await aBlobExistsWith(container, { status: 'pending' });
-        await aBlobExistsWith(container, { status: 'pending' });
-        await aBlobExistsWith(container, { status: 'pending' });
-        await aBlobExistsWith(container, { status: 'pending' });
-        await aBlobExistsWith(container, { status: 'pending' });
-        await aBlobExistsWith(container, { status: 'pending' });
-        await aBlobExistsWith(container, { status: 'pending' });
-        await aBlobExistsWith(container, { status: 'pending' });
-        await aBlobExistsWith(container, { status: 'pending' });
-        await aBlobExistsWith(container, { status: 'pending' });
-
-        // when
-        await uploadPending(6);
-
-        // then
-        assertUploadCount(6);
-      }));
-
       it('should return error if uploading fails', testTask(async (container) => {
         // given
         global.s3.error.onUpload = true;
@@ -216,6 +196,28 @@ describe.only('task: s3', () => {
         global.s3.uploads.attempted.should.equal(1);
         global.s3.uploads.successful.should.equal(1);
       }));
+
+      describe.only('with limit', () => {
+        it('should upload requested number of blobs, and ignore others', testTask(async (container) => {
+          // given
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+
+          // when
+          await uploadPending(6);
+
+          // then
+          assertUploadCount(6);
+        }));
+      });
     });
   });
 });
