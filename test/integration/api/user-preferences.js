@@ -2,6 +2,28 @@ const { testService } = require('../setup');
 
 describe('api: user-preferences', () => {
 
+  it('validates the request body stringently', testService(async (service) => {
+    const asAlice = await service.login('alice');
+
+    await asAlice.put('/v1/user-preferences/site/someProperty')
+      .send({ notPropertyValue: 100 })
+      .expect(400)
+      .then(({ body }) => {
+        body.code.should.eql(400.23);
+        body.details.property.should.eql('propertyValue');
+      });
+
+    await asAlice.put('/v1/user-preferences/project/1/someProperty')
+      .send({ spuriousProperty: 'ouch', propertyValue: 100, pancakes: true })
+      .expect(400)
+      .then(({ body }) => {
+        body.code.should.eql(400.33);
+        body.details.expected.should.eql(['propertyValue']);
+        body.details.actual.should.eql(['spuriousProperty', 'propertyValue', 'pancakes']);
+      });
+  }));
+
+
   it('can store a JS null propertyValue', testService(async (service) => {
     const asAlice = await service.login('alice');
 
