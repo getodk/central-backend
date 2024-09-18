@@ -197,7 +197,7 @@ describe('task: s3', () => {
         global.s3.uploads.successful.should.equal(1);
       }));
 
-      describe.only('with limit', () => {
+      describe('with limit', () => {
         it('should upload requested number of blobs, and ignore others', testTask(async (container) => {
           // given
           await aBlobExistsWith(container, { status: 'pending' });
@@ -216,6 +216,37 @@ describe('task: s3', () => {
 
           // then
           assertUploadCount(6);
+        }));
+
+        it('should not complain if blob count is less than limit', testTask(async (container) => {
+          // given
+          await aBlobExistsWith(container, { status: 'pending' });
+
+          // when
+          await uploadPending(1000000);
+
+          // then
+          assertUploadCount(1);
+        }));
+
+        it('should upload all blobs if limit is zero', testTask(async (container) => {
+          // given
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+
+          // when
+          await uploadPending(0);
+
+          // then
+          assertUploadCount(10);
         }));
       });
     });
