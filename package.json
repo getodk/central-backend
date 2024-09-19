@@ -37,7 +37,7 @@
     "path-to-regexp": "^6.2.2",
     "pg": "~8",
     "pg-query-stream": "~4",
-    "pm2": "^5.2.2",
+    "pm2": "~5.4",
     "prompt": "~1",
     "ramda": "~0",
     "sanitize-filename": "~1",
