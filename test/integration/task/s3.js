@@ -198,6 +198,19 @@ describe('task: s3', () => {
       }));
 
       describe('with limit', () => {
+        let originals;
+        let consoleLog;
+
+        beforeEach(() => {
+          originalLog = console.log;
+          consoleLog = [];
+          console.log = (...args) => consoleLog.push(args.map(String).join(' '));
+        });
+
+        afterEach(() => {
+          console.log = originalLog;
+        });
+
         it('should upload requested number of blobs, and ignore others', testTask(async (container) => {
           // given
           await aBlobExistsWith(container, { status: 'pending' });
@@ -215,6 +228,7 @@ describe('task: s3', () => {
           await uploadPending(6);
 
           // then
+          consoleLog[0].should.deepEqual('Uploading 6 blobs...');
           assertUploadCount(6);
         }));
 
@@ -226,6 +240,7 @@ describe('task: s3', () => {
           await uploadPending(1000000);
 
           // then
+          consoleLog[0].should.deepEqual('Uploading 1 blobs...');
           assertUploadCount(1);
         }));
 
@@ -246,6 +261,7 @@ describe('task: s3', () => {
           await uploadPending(0);
 
           // then
+          consoleLog[0].should.deepEqual('Uploading 10 blobs...');
           assertUploadCount(10);
         }));
       });
