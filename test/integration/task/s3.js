@@ -196,6 +196,78 @@ describe('task: s3', () => {
         global.s3.uploads.attempted.should.equal(1);
         global.s3.uploads.successful.should.equal(1);
       }));
+
+      describe('with limit', () => {
+        let originalLog;
+        let consoleLog;
+
+        beforeEach(() => {
+          // eslint-disable-next-line no-console
+          originalLog = console.log;
+          consoleLog = [];
+          // eslint-disable-next-line no-console
+          console.log = (...args) => consoleLog.push(args.map(String).join(' '));
+        });
+
+        afterEach(() => {
+          // eslint-disable-next-line no-console
+          console.log = originalLog;
+        });
+
+        it('should upload requested number of blobs, and ignore others', testTask(async (container) => {
+          // given
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+
+          // when
+          await uploadPending(6);
+
+          // then
+          consoleLog[0].should.deepEqual('Uploading 6 blobs...');
+          assertUploadCount(6);
+        }));
+
+        it('should not complain if blob count is less than limit', testTask(async (container) => {
+          // given
+          await aBlobExistsWith(container, { status: 'pending' });
+
+          // when
+          await uploadPending(1000000);
+
+          // then
+          consoleLog[0].should.deepEqual('Uploading 1 blobs...');
+          assertUploadCount(1);
+        }));
+
+        it('should upload all blobs if limit is zero', testTask(async (container) => {
+          // given
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+          await aBlobExistsWith(container, { status: 'pending' });
+
+          // when
+          await uploadPending(0);
+
+          // then
+          consoleLog[0].should.deepEqual('Uploading 10 blobs...');
+          assertUploadCount(10);
+        }));
+      });
     });
   });
 });
