@@ -198,16 +198,19 @@ describe('task: s3', () => {
       }));
 
       describe('with limit', () => {
-        let originals;
+        let originalLog;
         let consoleLog;
 
         beforeEach(() => {
+          // eslint-disable-next-line no-console
           originalLog = console.log;
           consoleLog = [];
+          // eslint-disable-next-line no-console
           console.log = (...args) => consoleLog.push(args.map(String).join(' '));
         });
 
         afterEach(() => {
+          // eslint-disable-next-line no-console
           console.log = originalLog;
         });
 
