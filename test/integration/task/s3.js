@@ -110,8 +110,7 @@ describe('task: s3', () => {
 
         // then
         assertUploadCount(0);
-        (await container.Audits.getLatestByAction('blobs.s3.upload.start')).isDefined().should.equal(true);
-        (await container.Audits.getLatestByAction('blobs.s3.upload.end')).get().details.should.deepEqual({ uploaded: 0, failed: 0 });
+        (await container.Audits.getLatestByAction('blobs.s3.upload')).isDefined().should.equal(false);
       }));
 
       it('should upload pending blobs, and ignore others', testTask(async (container) => {
@@ -128,8 +127,7 @@ describe('task: s3', () => {
 
         // then
         assertUploadCount(2);
-        (await container.Audits.getLatestByAction('blobs.s3.upload.start')).isDefined().should.equal(true);
-        (await container.Audits.getLatestByAction('blobs.s3.upload.end')).get().details.should.deepEqual({ uploaded: 2, failed: 0 });
+        (await container.Audits.getLatestByAction('blobs.s3.upload')).get().details.should.containEql({ uploaded: 2, failed: 0 });
       }));
 
       it('should return error if uploading fails', testTask(async (container) => {
@@ -142,8 +140,7 @@ describe('task: s3', () => {
 
         // and
         assertUploadCount(0);
-        (await container.Audits.getLatestByAction('blobs.s3.upload.start')).isDefined().should.equal(true);
-        (await container.Audits.getLatestByAction('blobs.s3.upload.end')).get().details.should.deepEqual({ uploaded: 0, failed: 1 });
+        (await container.Audits.getLatestByAction('blobs.s3.upload')).get().details.should.containEql({ uploaded: 0, failed: 1 });
       }));
 
       it('should not allow failure to affect previous or future uploads', testTask(async (container) => {
@@ -158,8 +155,7 @@ describe('task: s3', () => {
 
         // and
         assertUploadCount(2);
-        (await container.Audits.getLatestByAction('blobs.s3.upload.start')).isDefined().should.equal(true);
-        (await container.Audits.getLatestByAction('blobs.s3.upload.end')).get().details.should.deepEqual({ uploaded: 2, failed: 1 });
+        (await container.Audits.getLatestByAction('blobs.s3.upload')).get().details.should.containEql({ uploaded: 2, failed: 1 });
 
 
         // given
@@ -170,8 +166,7 @@ describe('task: s3', () => {
 
         // then
         assertUploadCount(3);
-        (await container.Audits.getLatestByAction('blobs.s3.upload.start')).isDefined().should.equal(true);
-        (await container.Audits.getLatestByAction('blobs.s3.upload.end')).get().details.should.deepEqual({ uploaded: 1, failed: 0 });
+        (await container.Audits.getLatestByAction('blobs.s3.upload')).get().details.should.containEql({ uploaded: 1, failed: 0 });
       }));
 
       it('should not attempt to upload an in-progress blob', testTaskFullTrx(async (container) => {
@@ -198,8 +193,7 @@ describe('task: s3', () => {
         // then
         global.s3.uploads.attempted.should.equal(0);
         global.s3.uploads.successful.should.equal(0);
-        (await container.Audits.getLatestByAction('blobs.s3.upload.start')).isDefined().should.equal(true);
-        (await container.Audits.getLatestByAction('blobs.s3.upload.end')).get().details.should.deepEqual({ uploaded: 0, failed: 0 });
+        (await container.Audits.getLatestByAction('blobs.s3.upload')).isDefined().should.equal(false);
 
         // when
         resume();
@@ -208,8 +202,7 @@ describe('task: s3', () => {
         // then
         global.s3.uploads.attempted.should.equal(1);
         global.s3.uploads.successful.should.equal(1);
-        (await container.Audits.getLatestByAction('blobs.s3.upload.start')).isDefined().should.equal(true);
-        (await container.Audits.getLatestByAction('blobs.s3.upload.end')).get().details.should.deepEqual({ uploaded: 1, failed: 0 });
+        (await container.Audits.getLatestByAction('blobs.s3.upload')).get().details.should.containEql({ uploaded: 1, failed: 0 });
       }));
 
       describe('with limit', () => {
@@ -248,8 +241,7 @@ describe('task: s3', () => {
           // then
           consoleLog[0].should.deepEqual('Uploading 6 blobs...');
           assertUploadCount(6);
-          (await container.Audits.getLatestByAction('blobs.s3.upload.start')).isDefined().should.equal(true);
-          (await container.Audits.getLatestByAction('blobs.s3.upload.end')).get().details.should.deepEqual({ uploaded: 6, failed: 0 });
+          (await container.Audits.getLatestByAction('blobs.s3.upload')).get().details.should.containEql({ uploaded: 6, failed: 0 });
         }));
 
         it('should not complain if blob count is less than limit', testTask(async (container) => {
@@ -262,8 +254,7 @@ describe('task: s3', () => {
           // then
           consoleLog[0].should.deepEqual('Uploading 1 blobs...');
           assertUploadCount(1);
-          (await container.Audits.getLatestByAction('blobs.s3.upload.start')).isDefined().should.equal(true);
-          (await container.Audits.getLatestByAction('blobs.s3.upload.end')).get().details.should.deepEqual({ uploaded: 1, failed: 0 });
+          (await container.Audits.getLatestByAction('blobs.s3.upload')).get().details.should.containEql({ uploaded: 1, failed: 0 });
         }));
 
         it('should upload all blobs if limit is zero', testTask(async (container) => {
@@ -285,8 +276,7 @@ describe('task: s3', () => {
           // then
           consoleLog[0].should.deepEqual('Uploading 10 blobs...');
           assertUploadCount(10);
-          (await container.Audits.getLatestByAction('blobs.s3.upload.start')).isDefined().should.equal(true);
-          (await container.Audits.getLatestByAction('blobs.s3.upload.end')).get().details.should.deepEqual({ uploaded: 10, failed: 0 });
+          (await container.Audits.getLatestByAction('blobs.s3.upload')).get().details.should.containEql({ uploaded: 10, failed: 0 });
         }));
       });
     });
