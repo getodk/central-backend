@@ -53,12 +53,10 @@ CREATE DATABASE jubilant_test WITH OWNER=jubilant ENCODING=UTF8;
 \c jubilant_test;
 CREATE EXTENSION IF NOT EXISTS CITEXT;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE EXTENSION IF NOT EXISTS pgrowlocks;
 CREATE DATABASE jubilant WITH OWNER=jubilant ENCODING=UTF8;
 \c jubilant;
 CREATE EXTENSION IF NOT EXISTS CITEXT;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE EXTENSION IF NOT EXISTS pgrowlocks;
 ```
 
 If you are using Docker, you may find it easiest to run the database in Docker by running `make run-docker-postgres`.
