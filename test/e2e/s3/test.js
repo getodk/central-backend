@@ -300,6 +300,7 @@ describe('s3 support', () => {
 
   async function countByNewStatus(status) {
     const current = await countByStatus(status);
+    console.log('countByStatus()', status, current); // eslint-disable-line no-console
     return current - _initial[status];
   }
 
