@@ -40,7 +40,7 @@ describe('s3 support', () => {
     // See: https://docs.docker.com/reference/cli/docker/container/ls/#ancestor
     console.log(new Date(), 'minioTerminated()', 'killing...'); // eslint-disable-line no-console
     const res = execSync(`docker ps | awk '/minio/ { print $1 }' | xargs docker kill`);
-    console.log(new Date(), 'minioTerminated()', 'killed:', res); // eslint-disable-line no-console
+    console.log(new Date(), 'minioTerminated()', 'killed:', res.toString()); // eslint-disable-line no-console
     _minioTerminated = true;
   };
 
@@ -234,7 +234,11 @@ describe('s3 support', () => {
       else should.fail('Too many blobs uploaded already!');
     }
     console.log(new Date(), 'test()', '1 uploaded'); // eslint-disable-line no-console
-    await untilUploadInProgress();
+
+    // Should be: await untilUploadInProgress();
+    // But this is more reliable:
+    await new Promise(resolve => { setTimeout(resolve, 100); }); // TODO tweak this until it really IS more reliable
+
     // and
     minioTerminated();
 
