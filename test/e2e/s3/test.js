@@ -239,10 +239,9 @@ describe('s3 support', () => {
     }
     console.log(new Date(), 'test()', '1 uploaded'); // eslint-disable-line no-console
 
-    await untilUploadInProgress();
     // Should be: await untilUploadInProgress();
     // But this is more reliable:
-    //await new Promise(resolve => { setTimeout(resolve, 100); }); // TODO tweak this until it really IS more reliable
+    await new Promise(resolve => { setTimeout(resolve, 300); }); // TODO tweak this until it really IS more reliable
 
     // and
     minioTerminated();
