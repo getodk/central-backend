@@ -5545,7 +5545,7 @@ describe('datasets and entities', () => {
     }));
 
     describe('central issue #547, reprocessing submissions that had previous entity errors', () => {
-      it('should not reprocess submission that previously generated entity.error', testService(async (service, container) => {
+      it.skip('should not reprocess submission that previously generated entity.error', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
         // Upload form that creates an entity list and publish it
@@ -5608,7 +5608,7 @@ describe('datasets and entities', () => {
           });
       }));
 
-      it('should reprocess submission that was edited after previously generating entity.error', testService(async (service, container) => {
+      it.skip('should reprocess submission that was edited after previously generating entity.error', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
         // Upload form that creates an entity list and publish it

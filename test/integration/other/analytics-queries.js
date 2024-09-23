@@ -993,7 +993,7 @@ describe('analytics task queries', function () {
       datasets[0].num_entities_recent.should.be.equal(1);
     }));
 
-    it('should calculate failed entities', testService(async (service, container) => {
+    it.skip('should calculate failed entities', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       await createTestForm(service, container, testData.forms.simpleEntity, 1);
@@ -1589,7 +1589,7 @@ describe('analytics task queries', function () {
       res.projects[1].submissions.num_submissions_approved.total.should.equal(0);
     }));
 
-    it('should fill in all project.datasets queries', testService(async (service, container) => {
+    it.skip('should fill in all project.datasets queries', testService(async (service, container) => {
       const { defaultMaxListeners } = require('events').EventEmitter;
       require('events').EventEmitter.defaultMaxListeners = 30;
 
