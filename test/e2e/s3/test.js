@@ -299,8 +299,11 @@ describe('s3 support', () => {
   }
 
   async function countByNewStatus(status) {
+    console.log(new Date(), 'countByStatus()', 'ENTRY'); // eslint-disable-line no-console
+    const start = Date.now();
     const current = await countByStatus(status);
-    console.log(new Date(), 'countByStatus()', status, current - _initial[status]); // eslint-disable-line no-console
+    const duration = Date.now() - start;
+    console.log(new Date(), 'countByStatus()', duration, status, current - _initial[status]); // eslint-disable-line no-console
     return current - _initial[status];
   }
 
