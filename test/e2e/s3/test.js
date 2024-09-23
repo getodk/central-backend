@@ -231,6 +231,7 @@ describe('s3 support', () => {
       if(uploaded === 1) break;
       else should.fail('Too many blobs uploaded already!');
     }
+    console.log(new Date(), 'test()', '1 uploaded'); // eslint-disable-line no-console
     await untilUploadInProgress();
     // and
     minioTerminated();
@@ -280,7 +281,12 @@ describe('s3 support', () => {
   }
 
   async function untilUploadInProgress() {
-    while(await countByStatus('in_progress') !== 1) await tick();
+    console.log(new Date(), 'untilUploadInProgress()', 'ENTRY'); // eslint-disable-line no-console
+    while(await countByStatus('in_progress') !== 1) {
+      console.log(new Date(), 'untilUploadInProgress()', 'ticking...'); // eslint-disable-line no-console
+      await tick();
+    }
+    console.log(new Date(), 'untilUploadInProgress()', 'EXIT'); // eslint-disable-line no-console
   }
 
   // Yield control of the event loop to other functions which are waiting.
