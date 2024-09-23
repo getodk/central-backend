@@ -993,24 +993,20 @@ describe('analytics task queries', function () {
       datasets[0].num_entities_recent.should.be.equal(1);
     }));
 
-    it.skip('should calculate failed entities', testService(async (service, container) => {
+    it('should calculate failed entities', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       await createTestForm(service, container, testData.forms.simpleEntity, 1);
-      await approvalRequired(service, 1, 'people');
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
-      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one').send({ reviewState: 'approved' });
 
       // let's pass invalid UUID
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two.replace(/aaa/, 'xxx'));
-      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two').send({ reviewState: 'approved' });
       await exhaust(container);
 
       // let's set date of entity errors to long time ago
       await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.error'`);
 
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three.replace(/bbb/, 'xxx'));
-      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/three').send({ reviewState: 'approved' });
       await exhaust(container);
 
       const datasets = await container.Analytics.getDatasets();
@@ -1589,7 +1585,7 @@ describe('analytics task queries', function () {
       res.projects[1].submissions.num_submissions_approved.total.should.equal(0);
     }));
 
-    it.skip('should fill in all project.datasets queries', testService(async (service, container) => {
+    it('should fill in all project.datasets queries', testService(async (service, container) => {
       const { defaultMaxListeners } = require('events').EventEmitter;
       require('events').EventEmitter.defaultMaxListeners = 30;
 
@@ -1597,15 +1593,12 @@ describe('analytics task queries', function () {
 
       // Create first Dataset
       await createTestForm(service, container, testData.forms.simpleEntity, 1);
-      await approvalRequired(service, 1, 'people');
 
       // Make submission for the first Dataset
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
-      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one').send({ reviewState: 'approved' });
 
       // Create second Dataset using two forms
       await createTestForm(service, container, testData.forms.simpleEntity.replace(/simpleEntity|people/g, 'employees'), 1);
-      await approvalRequired(service, 1, 'employees');
       await createTestForm(service, container, testData.forms.simpleEntity
         .replace(/simpleEntity/, 'employees2')
         .replace(/people/, 'employees')
@@ -1613,12 +1606,10 @@ describe('analytics task queries', function () {
 
       // Make submissions for the second Datasets
       await submitToForm(service, 'alice', 1, 'employees', testData.instances.simpleEntity.two.replace(/simpleEntity|people/g, 'employees'));
-      await asAlice.patch('/v1/projects/1/forms/employees/submissions/two').send({ reviewState: 'approved' });
       await submitToForm(service, 'alice', 1, 'employees2', testData.instances.simpleEntity.three
         .replace(/simpleEntity/, 'employees2')
         .replace(/people/, 'employees')
         .replace(/age/g, 'gender'));
-      await asAlice.patch('/v1/projects/1/forms/employees2/submissions/three').send({ reviewState: 'approved' });
 
       // Expecting all Submissions should generate Entities
       await exhaust(container);
@@ -1629,11 +1620,9 @@ describe('analytics task queries', function () {
       // Make a recent Submissions for the first Dataset
       // aaa -> ccc creates unique UUID
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two.replace('aaa', 'ccc'));
-      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two').send({ reviewState: 'approved' });
 
       // bbb -> xxx causes invalid UUID, hence this Submission should not generate Entity
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three.replace('bbb', 'xxx'));
-      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/three').send({ reviewState: 'approved' });
 
       // One Entity will be created and one error will be logged
       await exhaust(container);
@@ -1643,7 +1632,6 @@ describe('analytics task queries', function () {
 
       // Create new Submission that will cause entity creation error
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three.replace(/bbb|three/g, 'xxx'));
-      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/xxx').send({ reviewState: 'approved' });
 
       // One error will be logged
       await exhaust(container);
