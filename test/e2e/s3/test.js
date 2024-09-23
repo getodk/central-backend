@@ -38,7 +38,9 @@ describe('s3 support', () => {
     //   docker stop $(docker ps --quiet --filter "ancestor=minio/minio")
     // However, the ancestor filter requries specifying the exact tag used.
     // See: https://docs.docker.com/reference/cli/docker/container/ls/#ancestor
-    execSync(`docker ps | awk '/minio/ { print $1 }' | xargs docker kill`);
+    console.log(new Date(), 'minioTerminated()', 'killing...'); // eslint-disable-line no-console
+    const res = execSync(`docker ps | awk '/minio/ { print $1 }' | xargs docker kill`);
+    console.log(new Date(), 'minioTerminated()', 'killed:', res); // eslint-disable-line no-console
     _minioTerminated = true;
   };
 
