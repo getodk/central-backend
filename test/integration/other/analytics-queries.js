@@ -1546,6 +1546,119 @@ describe('analytics task queries', function () {
       const countInterruptedBranches = await container.Analytics.countInterruptedBranches();
       countInterruptedBranches.should.equal(3);
     }));
+
+    it('should count number of submission.reprocess events (submissions temporarily in the backlog)', testService(async (service, container) => {
+      await createTestForm(service, container, testData.forms.offlineEntity, 1);
+
+      const asAlice = await service.login('alice');
+
+      // Create entity to update
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'label'
+        })
+        .expect(200);
+
+      const branchId = uuid();
+
+      // Send second update in branch first
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update1')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Should be in backlog
+      let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      // Send first update in
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // backlog should be empty now
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(0);
+
+      let countReprocess = await container.Analytics.countSubmissionReprocess();
+      countReprocess.should.equal(1);
+
+      // Send a future update that will get held in backlog
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update10')
+          .replace('baseVersion="1"', 'baseVersion="10"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      // A submission being put in the backlog is not what is counted so this is still 1
+      countReprocess = await container.Analytics.countSubmissionReprocess();
+      countReprocess.should.equal(1);
+
+      // force processing the backlog
+      await container.Entities.processBacklog(true);
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(0);
+
+      // Force processing also doesn't change this count so it is still 1
+      countReprocess = await container.Analytics.countSubmissionReprocess();
+      countReprocess.should.equal(1);
+
+      //----------
+
+      // Trigger another reprocess by sending an update before a create
+      const branchId2 = uuid();
+
+      // Send the second submission that updates an entity (before the entity has been created)
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId2}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      // Send the second submission to create the entity, which should trigger
+      // the processing of the next submission in the branch.
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Two reprocessing events logged now
+      countReprocess = await container.Analytics.countSubmissionReprocess();
+      countReprocess.should.equal(2);
+    }));
   });
 
   describe('other project metrics', () => {
