@@ -246,12 +246,12 @@ describe('s3 support', () => {
 
     // Notes:
     // * with 100mb bigfiles:
-    //   * conclusively too low: 50, 100
+    //   * conclusively too low: 100
     //   * sometimes too low: 200
     //   * works mostly in CI, but sometimes too quick and sometimes too slow: 400
     // * with 250mb bigfiles:
-    //   * conclusively too low: 400
-    await new Promise(resolve => { setTimeout(resolve, 800); });
+    //   * conclusively too high: 400
+    await new Promise(resolve => { setTimeout(resolve, 200); });
 
     //await untilUploadInProgress();
 
