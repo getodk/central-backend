@@ -38,9 +38,7 @@ describe('s3 support', () => {
     //   docker stop $(docker ps --quiet --filter "ancestor=minio/minio")
     // However, the ancestor filter requries specifying the exact tag used.
     // See: https://docs.docker.com/reference/cli/docker/container/ls/#ancestor
-    console.log(new Date(), 'minioTerminated()', 'killing...'); // eslint-disable-line no-console
     const res = execSync(`docker container kill ${_minioContainers}`);
-    console.log(new Date(), 'minioTerminated()', 'killed:', res.toString()); // eslint-disable-line no-console
     _minioTerminated = true;
   };
 
@@ -237,13 +235,7 @@ describe('s3 support', () => {
       if(uploaded === 1) break;
       else should.fail('Too many blobs uploaded already!');
     }
-    console.log(new Date(), 'test()', '1 uploaded'); // eslint-disable-line no-console
-
     await untilUploadInProgress();
-    // Should be: await untilUploadInProgress();
-    // But this is more reliable:
-    //await new Promise(resolve => { setTimeout(resolve, 100); }); // TODO tweak this until it really IS more reliable
-
     // and
     minioTerminated();
 
@@ -292,12 +284,7 @@ describe('s3 support', () => {
   }
 
   async function untilUploadInProgress() {
-    console.log(new Date(), 'untilUploadInProgress()', 'ENTRY'); // eslint-disable-line no-console
-    while(await countByStatus('in_progress') !== 1) {
-      console.log(new Date(), 'untilUploadInProgress()', 'ticking...'); // eslint-disable-line no-console
-      await tick();
-    }
-    console.log(new Date(), 'untilUploadInProgress()', 'EXIT'); // eslint-disable-line no-console
+    while(await countByStatus('in_progress') !== 1) await tick();
   }
 
   // Yield control of the event loop to other functions which are waiting.
@@ -316,11 +303,7 @@ describe('s3 support', () => {
   }
 
   async function countByNewStatus(status) {
-    console.log(new Date(), 'countByStatus()', 'ENTRY'); // eslint-disable-line no-console
-    const start = Date.now();
     const current = await countByStatus(status);
-    const duration = Date.now() - start;
-    console.log(new Date(), 'countByStatus()', duration, status, current - _initial[status]); // eslint-disable-line no-console
     return current - _initial[status];
   }
 
