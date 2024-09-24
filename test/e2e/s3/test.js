@@ -239,7 +239,7 @@ describe('s3 support', () => {
     // Notes:
     // * conclusively too low: 50, 100
     // * sometimes too low: 200
-    // * works great in CI: 400
+    // * works mostly in CI, but sometimes too quick and sometimes too slow: 400
     await new Promise(resolve => { setTimeout(resolve, 400); });
     // and
     minioTerminated();
