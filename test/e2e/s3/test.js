@@ -236,7 +236,9 @@ describe('s3 support', () => {
       else should.fail('Too many blobs uploaded already!');
     }
     //await untilUploadInProgress();
-    await new Promise(resolve => { setTimeout(resolve, 50); });
+    // Notes:
+    // * conclusively too low: 50
+    await new Promise(resolve => { setTimeout(resolve, 100); });
     // and
     minioTerminated();
 
