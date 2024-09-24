@@ -2,6 +2,7 @@ const appRoot = require('app-root-path');
 const { sql } = require('slonik');
 const { testService, testContainer } = require('../setup');
 const { createReadStream, readFileSync } = require('fs');
+const uuid = require('uuid').v4;
 
 const { promisify } = require('util');
 const testData = require('../../data/xml');
@@ -1328,6 +1329,222 @@ describe('analytics task queries', function () {
       const ds = projects[0].datasets[0];
       ds.num_bulk_create_events.should.eql({ total: 0, recent: 0 });
       ds.biggest_bulk_upload.should.equal(0);
+    }));
+  });
+
+  describe('offline entity metrics', () => {
+    it('should count number of offline entity branches (nontrivial branches with >1 update)', testService(async (service, container) => {
+      await createTestForm(service, container, testData.forms.offlineEntity, 1);
+
+      const asAlice = await service.login('alice');
+
+      // Entity version from API doesn't have a branchId so doesn't count
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Johnny Doe',
+          data: { first_name: 'Johnny', age: '22' }
+        })
+        .expect(200);
+
+      // Branch with only update (trunkVersion = baseVersion, doesn't count)
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${uuid()}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Branch with two updates (does count)
+      const branchIdOne = uuid();
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update1')
+          .replace('branchId=""', `branchId="${branchIdOne}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${branchIdOne}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Branch with create, then update (does count)
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${uuid()}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const countOfflineBranches = await container.Analytics.countOfflineBranches();
+      countOfflineBranches.should.equal(2);
+
+      // Sanity check this count, should be 0
+      const countInterruptedBranches = await container.Analytics.countInterruptedBranches();
+      countInterruptedBranches.should.equal(0);
+    }));
+
+    it('should count number of interrupted branches', testService(async (service, container) => {
+      await createTestForm(service, container, testData.forms.offlineEntity, 1);
+
+      const asAlice = await service.login('alice');
+
+      // make some entities to update
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          entities: [
+            { uuid: '12345678-1234-4123-8234-123456789aaa', label: 'aaa' },
+            { uuid: '12345678-1234-4123-8234-123456789bbb', label: 'bbb' },
+            { uuid: '12345678-1234-4123-8234-123456789ccc', label: 'ccc' },
+          ],
+          source: { name: 'api', size: 3 }
+        })
+        .expect(200);
+
+      // aaa entity, branches: A, A, B, A (counts as interrupted)
+      const aaaBranchA = uuid();
+      const aaaBranchB = uuid();
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789aaa')
+          .replace('one', 'aaa-v1')
+          .replace('branchId=""', `branchId="${aaaBranchA}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789aaa')
+          .replace('one', 'aaa-v2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${aaaBranchA}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789aaa')
+          .replace('one', 'aaa-interrupt')
+          .replace('branchId=""', `branchId="${aaaBranchB}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789aaa')
+          .replace('one', 'aaa-v3')
+          .replace('baseVersion="1"', 'baseVersion="3"')
+          .replace('branchId=""', `branchId="${aaaBranchA}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // bbb entity, branches: A, A, B, B (not counted)
+      const bbbBranchA = uuid();
+      const bbbBranchB = uuid();
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789bbb')
+          .replace('one', 'bbb-v1')
+          .replace('branchId=""', `branchId="${bbbBranchA}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789bbb')
+          .replace('one', 'bbb-v2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${bbbBranchA}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789bbb')
+          .replace('one', 'bbb-newbranch-v1')
+          .replace('branchId=""', `branchId="${bbbBranchB}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789bbb')
+          .replace('one', 'bbb-newbranch-v2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${bbbBranchB}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // ccc entity, branches: A, B, A, B  (counted twice)
+      const cccBranchA = uuid();
+      const cccBranchB = uuid();
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789ccc')
+          .replace('one', 'ccc-v1')
+          .replace('branchId=""', `branchId="${cccBranchA}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789ccc')
+          .replace('one', 'ccc-newbranch-v1')
+          .replace('branchId=""', `branchId="${cccBranchB}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789ccc')
+          .replace('one', 'ccc-v2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${cccBranchA}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789ccc')
+          .replace('one', 'ccc-newbranch-v2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${cccBranchB}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const countInterruptedBranches = await container.Analytics.countInterruptedBranches();
+      countInterruptedBranches.should.equal(3);
     }));
   });
 
