@@ -38,7 +38,7 @@ describe('s3 support', () => {
     //   docker stop $(docker ps --quiet --filter "ancestor=minio/minio")
     // However, the ancestor filter requries specifying the exact tag used.
     // See: https://docs.docker.com/reference/cli/docker/container/ls/#ancestor
-    const res = execSync(`docker container kill ${_minioContainers}`);
+    execSync(`docker container kill ${_minioContainers.join(' ')}`);
     _minioTerminated = true;
   };
 
@@ -46,7 +46,7 @@ describe('s3 support', () => {
     this.timeout(5000);
 
     // cache to save time when we need to kill these fast:
-    _minioContainers = execSync(`docker ps | awk '/minio/ { print $1 }'`).toString().trim().split('\n').join(' ');
+    _minioContainers = execSync(`docker ps | awk '/minio/ { print $1 }'`).toString().trim().split('\n');
 
     _initial = await countAllByStatus();
   });
