@@ -226,7 +226,10 @@ describe('s3 support', () => {
     // and making sure the first uploads successfully before killing the server.
 
     // given
-    await setup(7, { bigFiles: 2, bigFileSizeMb: 300 });
+    // Bigger bigfiles decrease the likelihood of tests flake due to race conditions.
+    // However, the max bigfile size is limited by a bug in node-pg.
+    // See: ___TODO___
+    await setup(7, { bigFiles: 2, bigFileSizeMb: 250 });
     await assertNewStatuses({ pending: 2 });
 
     // when
@@ -241,13 +244,15 @@ describe('s3 support', () => {
       else should.fail('Too many blobs uploaded already!');
     }
 
-    // Notes: with 100mb bigfiles:
-    // * conclusively too low: 50, 100
-    // * sometimes too low: 200
-    // * works mostly in CI, but sometimes too quick and sometimes too slow: 400
-    //await new Promise(resolve => { setTimeout(resolve, 400); });
+    // Notes:
+    // * with 100mb bigfiles:
+    //   * conclusively too low: 50, 100
+    //   * sometimes too low: 200
+    //   * works mostly in CI, but sometimes too quick and sometimes too slow: 400
+    // * with 250mb bigfiles:
+    await new Promise(resolve => { setTimeout(resolve, 400); });
 
-    await untilUploadInProgress();
+    //await untilUploadInProgress();
 
     // and
     minioTerminated();
