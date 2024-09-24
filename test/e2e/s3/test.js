@@ -224,7 +224,7 @@ describe('s3 support', () => {
     // given
     // Bigger bigfiles decrease the likelihood of tests flake due to race conditions.
     // However, the max bigfile size is limited by a bug in node-pg.
-    // See: ___TODO___
+    // See: https://github.com/brianc/node-postgres/issues/2653
     await setup(7, { bigFiles: 2, bigFileSizeMb: 250 });
     await assertNewStatuses({ pending: 2 });
 
