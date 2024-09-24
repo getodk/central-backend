@@ -226,7 +226,7 @@ describe('s3 support', () => {
     // and making sure the first uploads successfully before killing the server.
 
     // given
-    await setup(7, { bigFiles: 2, bigFileSizeMb: 350 });
+    await setup(7, { bigFiles: 2, bigFileSizeMb: 300 });
     await assertNewStatuses({ pending: 2 });
 
     // when
