@@ -57,8 +57,8 @@ describe('s3 support', () => {
 
   async function setup(testNumber, opts={}) {
     // Bigger bigfiles decrease the likelihood of tests flake due to race
-    // conditions.  However, bigger files make for slower tests, and the max
-    // bigfile size is limited by a bug in node-pg.
+    // conditions.  However, bigger files also make for slower tests, and the
+    // max bigfile size is limited by a bug in node-pg.
     // See: https://github.com/brianc/node-postgres/issues/2653
     const { // eslint-disable-line object-curly-newline
       bigFiles = 1,
