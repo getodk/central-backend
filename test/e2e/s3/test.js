@@ -29,7 +29,7 @@ const userPassword = 'secret1234';
 describe('s3 support', () => {
   // eslint-disable-next-line one-var, one-var-declaration-per-line
   let api, expectedAttachments, actualAttachments, projectId, xmlFormId, attDir;
-  let _initial, _minioContainers, _minioTerminated; // eslint-disable-line one-var, one-var-declaration-per-line
+  let _initial, _minioTerminated; // eslint-disable-line one-var, one-var-declaration-per-line
 
   const minioTerminated = () => {
     if(_minioTerminated) return;
@@ -38,16 +38,12 @@ describe('s3 support', () => {
     //   docker stop $(docker ps --quiet --filter "ancestor=minio/minio")
     // However, the ancestor filter requries specifying the exact tag used.
     // See: https://docs.docker.com/reference/cli/docker/container/ls/#ancestor
-    execSync(`docker container kill ${_minioContainers.join(' ')}`);
+    execSync(`docker ps | awk '/minio/ { print $1 }' | xargs docker kill`);
     _minioTerminated = true;
   };
 
   beforeEach(async function() {
     this.timeout(5000);
-
-    // cache to save time when we need to kill these fast:
-    _minioContainers = execSync(`docker ps | awk '/minio/ { print $1 }'`).toString().trim().split('\n');
-
     _initial = await countAllByStatus();
   });
 
@@ -59,17 +55,12 @@ describe('s3 support', () => {
     await cli('upload-pending');
   });
 
-  async function setup(testNumber, opts={}) {
-    const { // eslint-disable-line object-curly-newline
-      bigFiles = 1,
-      bigFileSizeMb = 100,
-    } = opts; // eslint-disable-line object-curly-newline
-
+  async function setup(testNumber, opts={ bigFiles: 1 }) {
     attDir = `./test-forms/${testNumber}-attachments`;
 
     // given
     fs.mkdirSync(attDir, { recursive:true });
-    for(let idx=0; idx<bigFiles; ++idx) bigFileExists(attDir, bigFileSizeMb, 1+idx);
+    for(let idx=0; idx<opts.bigFiles; ++idx) bigFileExists(attDir, 1+idx);
     expectedAttachments = fs.readdirSync(attDir).filter(f => !f.startsWith('.')).sort();
     api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
     projectId = await createProject();
@@ -226,10 +217,7 @@ describe('s3 support', () => {
     // and making sure the first uploads successfully before killing the server.
 
     // given
-    // Bigger bigfiles decrease the likelihood of tests flake due to race conditions.
-    // However, the max bigfile size is limited by a bug in node-pg.
-    // See: ___TODO___
-    await setup(7, { bigFiles: 2, bigFileSizeMb: 250 });
+    await setup(7, { bigFiles: 2 });
     await assertNewStatuses({ pending: 2 });
 
     // when
@@ -244,7 +232,6 @@ describe('s3 support', () => {
       else should.fail('Too many blobs uploaded already!');
     }
     await untilUploadInProgress();
-
     // and
     minioTerminated();
 
@@ -453,7 +440,7 @@ function humanDuration({ duration }) {
   return (duration / 1000).toFixed(3) + 's';
 }
 
-function bigFileExists(attDir, sizeMb, idx) {
+function bigFileExists(attDir, idx) {
   const bigFile = `${attDir}/big-${idx}.bin`;
   if(fs.existsSync(bigFile)) {
     log.debug(`${bigFile} exists; skipping generation`);
@@ -465,7 +452,7 @@ function bigFileExists(attDir, sizeMb, idx) {
     //
     //   * on github actions: 1.2-1.6s
     //   * locally:           300ms-7s
-    let remaining = sizeMb * 1_000_000;
+    let remaining = 100_000_000;
     const batchSize = 100_000;
     do {
       fs.appendFileSync(bigFile, randomBytes(batchSize));
