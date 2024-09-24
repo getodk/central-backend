@@ -243,17 +243,7 @@ describe('s3 support', () => {
       if(uploaded === 1) break;
       else should.fail('Too many blobs uploaded already!');
     }
-
-    // Notes:
-    // * with 100mb bigfiles:
-    //   * conclusively too low: 100
-    //   * sometimes too low: 200
-    //   * works mostly in CI, but sometimes too quick and sometimes too slow: 400
-    // * with 250mb bigfiles:
-    //   * conclusively too high: 400
-    await new Promise(resolve => { setTimeout(resolve, 800); });
-
-    //await untilUploadInProgress();
+    await untilUploadInProgress();
 
     // and
     minioTerminated();
@@ -263,7 +253,7 @@ describe('s3 support', () => {
     // with the user.  They are not something to try to retain if implementation changes.
     await expectRejectionFrom(uploading, new RegExp(
       'Command failed: exec node lib/bin/s3 upload-pending\n' +
-          '(AggregateError\n.*)?Error: (connect ECONNREFUSED|read ECONNRESET|socket hang up|write EPIPE)',
+          '(AggregateError.*)?Error: (connect ECONNREFUSED|read ECONNRESET|socket hang up|write EPIPE)',
       's',
     ));
     // and
