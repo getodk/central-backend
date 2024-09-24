@@ -238,7 +238,8 @@ describe('s3 support', () => {
     //await untilUploadInProgress();
     // Notes:
     // * conclusively too low: 50, 100
-    await new Promise(resolve => { setTimeout(resolve, 200); });
+    // * sometimes too low: 200
+    await new Promise(resolve => { setTimeout(resolve, 400); });
     // and
     minioTerminated();
 
