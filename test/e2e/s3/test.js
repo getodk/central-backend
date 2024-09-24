@@ -29,7 +29,7 @@ const userPassword = 'secret1234';
 describe('s3 support', () => {
   // eslint-disable-next-line one-var, one-var-declaration-per-line
   let api, expectedAttachments, actualAttachments, projectId, xmlFormId, attDir;
-  let _initial, _minioContainers, _minioTerminated; // eslint-disable-line one-var, one-var-declaration-per-line
+  let _initial, _minioTerminated; // eslint-disable-line one-var, one-var-declaration-per-line
 
   const minioTerminated = () => {
     if(_minioTerminated) return;
@@ -38,16 +38,12 @@ describe('s3 support', () => {
     //   docker stop $(docker ps --quiet --filter "ancestor=minio/minio")
     // However, the ancestor filter requries specifying the exact tag used.
     // See: https://docs.docker.com/reference/cli/docker/container/ls/#ancestor
-    execSync(`docker container kill ${_minioContainers.join(' ')}`);
+    execSync(`docker ps | awk '/minio/ { print $1 }' | xargs docker kill`);
     _minioTerminated = true;
   };
 
   beforeEach(async function() {
     this.timeout(5000);
-
-    // cache to save time when we need to kill these fast:
-    _minioContainers = execSync(`docker ps | awk '/minio/ { print $1 }'`).toString().trim().split('\n');
-
     _initial = await countAllByStatus();
   });
 
