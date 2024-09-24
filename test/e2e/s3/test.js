@@ -241,7 +241,6 @@ describe('s3 support', () => {
       else should.fail('Too many blobs uploaded already!');
     }
     await untilUploadInProgress();
-
     // and
     minioTerminated();
 
