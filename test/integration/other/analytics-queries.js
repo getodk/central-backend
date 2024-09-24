@@ -1659,6 +1659,44 @@ describe('analytics task queries', function () {
       countReprocess = await container.Analytics.countSubmissionReprocess();
       countReprocess.should.equal(2);
     }));
+
+    it('should measure time from submission creation to entity version finished processing', testService(async (service, container) => {
+      await createTestForm(service, container, testData.forms.offlineEntity, 1);
+
+      const asAlice = await service.login('alice');
+
+      // Make an entity that doesn't have a source
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Johnny Doe',
+          data: { first_name: 'Johnny', age: '22' }
+        })
+        .expect(200);
+
+      // times may be null if no submissions have been processed
+      let waitTime = await container.Analytics.measureEntityProcessingTime();
+      waitTime.should.eql({ max_wait: null, avg_wait: null });
+
+      // Make an entity update
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${uuid()}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Make another entity create
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+      waitTime = await container.Analytics.measureEntityProcessingTime();
+      waitTime.max_wait.should.be.greaterThan(0);
+      waitTime.avg_wait.should.be.greaterThan(0);
+    }));
   });
 
   describe('other project metrics', () => {
