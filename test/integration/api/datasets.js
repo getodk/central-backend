@@ -5545,7 +5545,7 @@ describe('datasets and entities', () => {
     }));
 
     describe('central issue #547, reprocessing submissions that had previous entity errors', () => {
-      it.skip('should not reprocess submission that previously generated entity.error', testService(async (service, container) => {
+      it('should not reprocess submission that previously generated entity.error', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
         // Upload form that creates an entity list and publish it
@@ -5559,10 +5559,10 @@ describe('datasets and entities', () => {
           .send({ approvalRequired: true })
           .expect(200);
 
-        // Create a submission that fails to create an entity (bad UUID)
+        // Create a submission that fails to create an entity (empty label)
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
           .send(testData.instances.simpleEntity.one
-            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:invalid_uuid"'))
+            .replace('<entities:label>Alice (88)</entities:label>', ''))
           .set('Content-Type', 'application/xml')
           .expect(200);
 
@@ -5608,7 +5608,7 @@ describe('datasets and entities', () => {
           });
       }));
 
-      it.skip('should reprocess submission that was edited after previously generating entity.error', testService(async (service, container) => {
+      it('should reprocess submission that was edited after previously generating entity.error', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
         // Upload form that creates an entity list and publish it
@@ -5622,10 +5622,10 @@ describe('datasets and entities', () => {
           .send({ approvalRequired: true })
           .expect(200);
 
-        // Create a submission that fails to create an entity (bad UUID)
+        // Create a submission that fails to create an entity (empty label)
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
           .send(testData.instances.simpleEntity.one
-            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:invalid_uuid"'))
+            .replace('<entities:label>Alice (88)</entities:label>', ''))
           .set('Content-Type', 'application/xml')
           .expect(200);
 
