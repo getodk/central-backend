@@ -1751,6 +1751,10 @@ describe('analytics task queries', function () {
       let waitTime = await container.Analytics.measureEntityProcessingTime();
       waitTime.should.eql({ max_wait: null, avg_wait: null });
 
+      // wait 100ms
+      // eslint-disable-next-line no-promise-executor-return
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Toggle approvalRequired flag
       await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
         .send({ approvalRequired: false })
@@ -1766,6 +1770,12 @@ describe('analytics task queries', function () {
 
       const processTimes2 = await container.one(sql`select "claimed", "processed", "loggedAt" from audits where action = 'submission.create'`);
       processTimes1.should.eql(processTimes2);
+
+      // Overall time from submission creation to entity version creation should be higher
+      // because it includes delay from dataset approval flag toggle
+      const entityTime = await container.Analytics.measureElapsedEntityTime();
+      entityTime.max_wait.should.be.greaterThan(waitTime.max_wait + 0.1);
+      entityTime.avg_wait.should.be.greaterThan(waitTime.avg_wait + 0.1);
     }));
 
     it('should not see a delay for submissions held in backlog and then force-processed', testService(async (service, container) => {
@@ -1796,6 +1806,10 @@ describe('analytics task queries', function () {
       let waitTime = await container.Analytics.measureEntityProcessingTime();
       waitTime.should.eql({ max_wait: null, avg_wait: null });
 
+      // wait 100ms
+      // eslint-disable-next-line no-promise-executor-return
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // force processing the backlog
       await container.Entities.processBacklog(true);
 
@@ -1810,6 +1824,12 @@ describe('analytics task queries', function () {
 
       const processTimes2 = await container.one(sql`select "claimed", "processed", "loggedAt" from audits where action = 'submission.create'`);
       processTimes1.should.eql(processTimes2);
+
+      // Overall time for entity creation should be higher because it includes the delay
+      // from waiting in the backlog before being force-processed
+      const entityTime = await container.Analytics.measureElapsedEntityTime();
+      entityTime.max_wait.should.be.greaterThan(waitTime.max_wait + 0.1);
+      entityTime.avg_wait.should.be.greaterThan(waitTime.avg_wait + 0.1);
     }));
   });
 
