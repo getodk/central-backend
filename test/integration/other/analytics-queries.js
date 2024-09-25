@@ -1890,6 +1890,69 @@ describe('analytics task queries', function () {
       const event = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
       await container.run(sql`update audits set failures = 5 where id = ${event.id}`);
 
+
+      // 2024.2 offline entity metrics
+
+      // create the form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.offlineEntity)
+        .expect(200);
+
+      // Creating an update chain
+      // API create
+      // update 2, update 1, (out of order reprocessing)
+      // API update (interrupt branch)
+      // update 3
+      const branchId = uuid();
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'abc',
+        })
+        .expect(200);
+
+      // switching the order of these updates triggers the
+      // submission.reprocess count
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update1')
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // inserting an API update before continuing the branch triggers
+      // the interrupted branch count
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=3')
+        .send({ label: 'abc update' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update3')
+          .replace('baseVersion="1"', 'baseVersion="3"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // After the interesting stuff above, encrypt and archive the project
+
       // encrypting a project
       await asAlice.post('/v1/projects/1/key')
         .send({ passphrase: 'supersecret', hint: 'it is a secret' });
@@ -1914,7 +1977,6 @@ describe('analytics task queries', function () {
           (null, 'dummy.action', null, null, '1999-1-1', 1),
           (null, 'dummy.action', null, null, '1999-1-1', 5),
           (null, 'dummy.action', null, null, '1999-1-1', 0)`);
-
 
       const res = await container.Analytics.previewMetrics();
 
