@@ -71,12 +71,6 @@ const createTestForm = (service, container, xml, projectId) =>
       .send(xml)
       .then(({ body }) => body.xmlFormId));
 
-const approvalRequired = (service, projectId, datasetName) =>
-  service.login('alice', (asAlice) =>
-    asAlice.patch(`/v1/projects/${projectId}/datasets/${datasetName}`)
-      .send({ approvalRequired: true })
-      .expect(200));
-
 const createPublicLink = (service, projectId, xmlFormId) =>
   service.login('alice', (asAlice) =>
     asAlice.post(`/v1/projects/${projectId}/forms/${xmlFormId}/public-links`)
@@ -994,8 +988,6 @@ describe('analytics task queries', function () {
     }));
 
     it('should calculate failed entities', testService(async (service, container) => {
-      const asAlice = await service.login('alice');
-
       await createTestForm(service, container, testData.forms.simpleEntity, 1);
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
 
