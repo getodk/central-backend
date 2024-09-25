@@ -1413,6 +1413,7 @@ describe('analytics task queries', function () {
             { uuid: '12345678-1234-4123-8234-123456789aaa', label: 'aaa' },
             { uuid: '12345678-1234-4123-8234-123456789bbb', label: 'bbb' },
             { uuid: '12345678-1234-4123-8234-123456789ccc', label: 'ccc' },
+            { uuid: '12345678-1234-4123-8234-123456789ddd', label: 'ddd' },
           ],
           source: { name: 'api', size: 3 }
         })
@@ -1543,8 +1544,41 @@ describe('analytics task queries', function () {
 
       await exhaust(container);
 
+      // ddd entity, branches A, (api update), A
+      const dddBranchA = uuid();
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789ddd')
+          .replace('one', 'ddd-v1')
+          .replace('branchId=""', `branchId="${dddBranchA}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd?baseVersion=2')
+        .send({ label: 'ddd update' })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd?baseVersion=3')
+        .send({ label: 'ddd update2' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789ddd')
+          .replace('one', 'ddd-v2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${dddBranchA}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
       const countInterruptedBranches = await container.Analytics.countInterruptedBranches();
-      countInterruptedBranches.should.equal(3);
+      countInterruptedBranches.should.equal(4);
     }));
 
     it('should count number of submission.reprocess events (submissions temporarily in the backlog)', testService(async (service, container) => {
