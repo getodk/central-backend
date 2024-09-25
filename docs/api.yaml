@@ -2979,6 +2979,8 @@ paths:
         As of version 1.2, Forms that are unpublished (that only carry a draft and have never been published) will appear with full metadata detail. Previously, certain details like `name` were omitted. You can determine that a Form is unpublished by checking the `publishedAt` value: it will be `null` for unpublished forms.
 
         This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `submissions` count of the number of Submissions that each Form has, the `reviewStates` object of counts of Submissions with specific review states, the `lastSubmission` most recent submission timestamp, the Actor the Form was `createdBy`, as well as other metadata.
+
+        The query `?deleted=true` can be added to list deleted Forms with their numeric form IDs, which can be used to [restore](/central-api-form-management/#restoring-a-form) a deleted Form.
       operationId: List all Forms
       parameters:
       - name: projectId
@@ -2988,6 +2990,12 @@ paths:
         schema:
           type: number
         example: "16"
+      - name: deleted
+        in: query
+        description: If set to `true`, will return only deleted Forms and their IDs
+        schema:
+          type: boolean
+        example: "true"
       responses:
         200:
           description: OK
@@ -3307,13 +3315,18 @@ paths:
       tags:
       - Individual Form
       summary: Deleting a Form
-      description: When a Form is deleted, it goes into the Trash section, but it
+      description: -|
+        When a Form is deleted, it goes into the Trash section, but it
         can now be restored from the Trash. After 30 days in the Trash, the Form and
         all of its resources and submissions will be automatically purged. If your
         goal is to prevent it from showing up on survey clients like ODK Collect,
         consider setting its `state` to `closing` or `closed` instead (see [Modifying
         a Form](/central-api-form-management/#modifying-a-form) just above for
         more details).
+
+        The API usually identifies forms by their `projectId` and `xmlFormId`, but if a Form
+        is deleted, the same `xmlFormId` can be reused. To [restore](/central-api-form-management/#restoring-a-form) a deleted Form, use its
+        _numeric ID_, which can be retrieved by [listing Forms with `?deleted=true`](/central-api-form-management/#list-all-forms).
       operationId: Deleting a Form
       parameters:
       - name: xmlFormId
@@ -3819,7 +3832,9 @@ paths:
       description: |-
         _(introduced: version 1.4)_
 
-        Deleted forms can now be restored (as long as they have been in the Trash less than 30 days and have not been purged). However, a deleted Form with the same `xmlFormId` as an active Form cannot be restored while that other Form is active. This `/restore` URL uses the numeric ID of the Form (now returned by the `/forms` endpoint) rather than the `xmlFormId` to unambigously restore.
+        Deleted forms can now be restored (as long as they have been in the Trash less than 30 days and have not been purged). However, a deleted Form with the same `xmlFormId` as an active Form cannot be restored while that other Form is active. 
+
+        This `/restore` URL uses the numeric ID of the Form (now returned by the `/forms?deleted=true` endpoint) rather than the `xmlFormId` to unambigously restore. Note that the numeric ID of a Form is not returned by default on the [Form list](/central-api-form-management/#list-all-forms) and is only returned when listing deleted Forms.
       operationId: Restoring a Form
       parameters:
       - name: projectId
