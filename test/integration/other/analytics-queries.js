@@ -1731,6 +1731,86 @@ describe('analytics task queries', function () {
       waitTime.max_wait.should.be.greaterThan(0);
       waitTime.avg_wait.should.be.greaterThan(0);
     }));
+
+    it('should not see a delay for submissions processed with approvalRequired flag toggled', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Create form, set dataset people to approvalRequired = true
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await approvalRequired(service, 1, 'people');
+
+      // Send submission
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
+
+      // Process submission
+      await exhaust(container);
+
+      const processTimes1 = await container.one(sql`select "claimed", "processed", "loggedAt" from audits where action = 'submission.create'`);
+
+      // Wait times shouldn't be set yet because submission hasn't been processed into an entity
+      let waitTime = await container.Analytics.measureEntityProcessingTime();
+      waitTime.should.eql({ max_wait: null, avg_wait: null });
+
+      // Toggle approvalRequired flag
+      await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+        .send({ approvalRequired: false })
+        .expect(200);
+
+      await exhaust(container);
+
+      // Wait times are now measured but they are from the initial processing of the submission.create event
+      // (when it was skipped because the dataset approval was required)
+      waitTime = await container.Analytics.measureEntityProcessingTime();
+      waitTime.max_wait.should.be.greaterThan(0);
+      waitTime.avg_wait.should.be.greaterThan(0);
+
+      const processTimes2 = await container.one(sql`select "claimed", "processed", "loggedAt" from audits where action = 'submission.create'`);
+      processTimes1.should.eql(processTimes2);
+    }));
+
+    it('should not see a delay for submissions held in backlog and then force-processed', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await createTestForm(service, container, testData.forms.offlineEntity, 1);
+
+      // Send an update without the preceeding create
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${uuid()}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      // The submission.create event does have timestamps on it that we will compare later
+      const processTimes1 = await container.one(sql`select "claimed", "processed", "loggedAt" from audits where action = 'submission.create'`);
+
+      // Wait times shouldn't be set yet because submission hasn't been processed into an entity
+      let waitTime = await container.Analytics.measureEntityProcessingTime();
+      waitTime.should.eql({ max_wait: null, avg_wait: null });
+
+      // force processing the backlog
+      await container.Entities.processBacklog(true);
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(0);
+
+      // Wait times are now measured but they are from the initial processing of the submission.create event
+      // (when it was skipped because it went into backlog)
+      waitTime = await container.Analytics.measureEntityProcessingTime();
+      waitTime.max_wait.should.be.greaterThan(0);
+      waitTime.avg_wait.should.be.greaterThan(0);
+
+      const processTimes2 = await container.one(sql`select "claimed", "processed", "loggedAt" from audits where action = 'submission.create'`);
+      processTimes1.should.eql(processTimes2);
+    }));
   });
 
   describe('other project metrics', () => {
