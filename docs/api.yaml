@@ -44,8 +44,12 @@ info:
 
     **Added**:
 
-    - Extended metadata for Forms includes a new property `publicLinks`, which is the number of Public Links that can submit to the Form.
-    - Data for Entity versions now includes the properties `branchId`, `trunkVersion`, and `branchBaseVersion` for supporting offline functionality.
+    * Submission Delete!
+      - New DELETE and RESTORE endpoints for submissions!
+      - Submissions that have been soft-deleted for 30 days will automatically be purged. 
+    * Additional properties on certain responses:
+      - Extended metadata for Forms includes a new property `publicLinks`, which is the number of Public Links that can submit to the Form.
+      - Data for Entity versions now includes the properties `branchId`, `trunkVersion`, and `branchBaseVersion` for supporting offline functionality.
 
     ## ODK Central v2024.1
 
@@ -848,6 +852,9 @@ tags:
     * `submission.update` when a Submission's metadata is updated.
     * `submission.update.version` when a Submission XML data is updated.
     * `submission.attachment.update` when a Submission Attachment binary is set or cleared, but _only via the REST API_. Attachments created alongside the submission over the OpenRosa `/submission` API (including submissions from Collect) do not generate audit log entries.
+    * `submission.delete` when a Submission is soft-deleted.
+    * `submission.purge` when soft-deleted Submissions are purged.
+    * `submission.restore` when a Submission is restored.
     * `dataset.create` when a Dataset is created.
     * `dataset.update` when a Dataset is updated.
     * `dataset.update.publish` when a Dataset is published.
@@ -6232,6 +6239,123 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
+    delete:
+      tags:
+      - Submissions
+      summary: Deleting a Submission
+      description: When a Submission is deleted, there is a period of time (30 days)
+        during which it can be restored. After this time, all of its resources and attachments
+        are automatically purged. Purging deleted Submissions can also be triggered from the command line.
+      operationId: Deleting a Submission
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: xmlFormId
+        in: path
+        description: The `xmlFormId` of the Form being referenced.
+        required: true
+        schema:
+          type: string
+        example: simple
+      - name: instanceId
+        in: path
+        description: The `instanceId` of the Submission being referenced.
+        required: true
+        schema:
+          type: string
+        example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+              example:
+                code: "404.1"
+                message: Could not find the resource you were looking for.
+  /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/restore:
+    post:
+      tags:
+      - Submissions
+      summary: Restoring a deleted Submission
+      description: Submissions that have been recently soft-deleted and not yet purged can be restored using this endpoint.
+      operationId: Restoring a deleted Submission
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: xmlFormId
+        in: path
+        description: The `xmlFormId` of the Form being referenced.
+        required: true
+        schema:
+          type: string
+        example: simple
+      - name: instanceId
+        in: path
+        description: The `instanceId` of the Submission being referenced.
+        required: true
+        schema:
+          type: string
+        example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+              example:
+                code: "404.1"
+                message: Could not find the resource you were looking for.
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}.xml:
     get:
       tags:
