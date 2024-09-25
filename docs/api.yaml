@@ -45,7 +45,7 @@ info:
     **Added**:
 
     * Submission Delete!
-      - New DELETE and RESTORE endpoints for submissions!
+      - New [DELETE](/central-api-submission-management/#deleting-a-submission) and [RESTORE](/central-api-submission-management/#restoring-a-deleted-submission) endpoints for submissions!
       - Submissions that have been soft-deleted for 30 days will automatically be purged. 
     * Additional properties on certain responses:
       - Extended metadata for Forms includes a new property `publicLinks`, which is the number of Public Links that can submit to the Form.
