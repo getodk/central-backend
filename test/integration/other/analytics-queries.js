@@ -1737,7 +1737,9 @@ describe('analytics task queries', function () {
 
       // Create form, set dataset people to approvalRequired = true
       await createTestForm(service, container, testData.forms.simpleEntity, 1);
-      await approvalRequired(service, 1, 'people');
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
+        .expect(200);
 
       // Send submission
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
