@@ -45,6 +45,7 @@ info:
     **Added**:
 
     - Extended metadata for Forms includes a new property `publicLinks`, which is the number of Public Links that can submit to the Form.
+    - Data for Entity versions now includes the properties `branchId`, `trunkVersion`, and `branchBaseVersion` for supporting offline functionality.
 
     ## ODK Central v2024.1
 
@@ -9014,6 +9015,9 @@ paths:
                   userAgent: Enketo/3.0.4
                   version: 1
                   baseVersion: null
+                  branchId: null
+                  trunkVersion: null
+                  branchBaseVersion: null
                   conflictingProperties: null
             application/json; extended:
               schema:
@@ -9043,6 +9047,9 @@ paths:
                   userAgent: Enketo/3.0.4
                   version: 1
                   baseVersion: null
+                  branchId: null
+                  trunkVersion: null
+                  branchBaseVersion: null
                   conflictingProperties: null
                   creator:
                     createdAt: '2018-04-18T23:19:14.802Z'
@@ -9154,6 +9161,9 @@ paths:
                   conflictingProperties: null
                   version: 1
                   baseVersion: null
+                  branchId: null
+                  trunkVersion: null
+                  branchBaseVersion: null
                   data:
                     firstName: John
                     age: '88'
@@ -9235,6 +9245,9 @@ paths:
                   conflictingProperties: null
                   version: 1
                   baseVersion: null
+                  branchId: null
+                  trunkVersion: null
+                  branchBaseVersion: null
                   data:
                     firstName: John
                     age: '88'
@@ -9270,6 +9283,9 @@ paths:
                   conflictingProperties: null
                   version: 1
                   baseVersion: null
+                  branchId: null
+                  trunkVersion: null
+                  branchBaseVersion: null
                   data:
                     firstName: John
                     age: '88'
@@ -9432,6 +9448,9 @@ paths:
                   conflictingProperties: null
                   version: 1
                   baseVersion: null
+                  branchId: null
+                  trunkVersion: null
+                  branchBaseVersion: null
                   data:
                     firstName: John
                     age: '88'
@@ -9504,6 +9523,9 @@ paths:
                   userAgent: Enketo/3.0.4
                   version: 1
                   baseVersion: null
+                  branchId: null
+                  trunkVersion: null
+                  branchBaseVersion: null
                   conflict: null
                   resolved: false
                   lastGoodVersion: true
@@ -9533,6 +9555,9 @@ paths:
                   userAgent: Enketo/3.0.4
                   version: 1
                   baseVersion: null
+                  branchId: null
+                  trunkVersion: null
+                  branchBaseVersion: null
                   conflict: null
                   resolved: false
                   lastGoodVersion: true
@@ -12261,7 +12286,19 @@ components:
           example: 2
         baseVersion:
           type: number
-          description: The version number of the version that was the "base version" of this version. The base version is the version that was shown to the data collector when they made their update.
+          description: The version number of the version that was the "base version" of this version.
+          example: 1
+        branchId:
+          type: string
+          description: The uuid of a branch linking multiple offline entity updates together.
+          example: b0e927b6-958a-42f6-8344-1deb37ee9672
+        trunkVersion:
+          type: number
+          description: The version number of the last known base server version of an entity, in the case of an offline branch of updates.
+          example: 1
+        branchBaseVersion:
+          type: number
+          description: The base version of the entity according to the submission. In the case of an offline branch of updates, this may not match the version of the base submission on Central.
           example: 1
     EntitySummary:
       allOf: 
