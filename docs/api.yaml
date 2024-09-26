@@ -855,6 +855,7 @@ tags:
     * `submission.delete` when a Submission is soft-deleted.
     * `submission.purge` when soft-deleted Submissions are purged.
     * `submission.restore` when a Submission is restored.
+    * `submission.reprocess` when an Entity Submission is held in a processing backlog and then removed.
     * `dataset.create` when a Dataset is created.
     * `dataset.update` when a Dataset is updated.
     * `dataset.update.publish` when a Dataset is published.
@@ -865,6 +866,8 @@ tags:
     * `entity.delete` when an Entity is deleted.
     * `config.set` when a system configuration is set.
     * `analytics` when a Usage Report is attempted.
+    * `blobs.s3.upload` when blobs are moved from the database to external storage.
+    * `blobs.s3.failed-to-pending` when blobs that failed to upload are reset to the pending state to be retried.
     * Deprecated: `backup` when a backup operation is attempted for Google Drive backups.
 - name: Direct Backup
   x-parent-tag: System Endpoints
