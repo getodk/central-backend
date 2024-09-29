@@ -3963,7 +3963,7 @@ describe('datasets and entities', () => {
       describe('dataset-specific verbs', () => {
         describe('dataset.create', () => {
           it('should NOT allow a new form that creates a dataset without user having dataset.create verb', testServiceFullTrx(async (service, { run }) => {
-            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
+            await run(sql`DELETE FROM role_verbs WHERE species = 'dataset' AND verbname = 'create' AND role_id = (SELECT id FROM roles WHERE system = 'manager')`);
 
             const asBob = await service.login('bob');
 
@@ -3982,7 +3982,7 @@ describe('datasets and entities', () => {
           it('should NOT allow "creating" of a dataset when the dataset exists but unpublished', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
-            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
+            await run(sql`DELETE FROM role_verbs WHERE species = 'dataset' AND verbname = 'create' AND role_id = (SELECT id FROM roles WHERE system = 'manager')`);
 
             // Alice can upload first version of form that creates unpublished "people" dataset
             await asAlice.post('/v1/projects/1/forms')
@@ -4001,7 +4001,7 @@ describe('datasets and entities', () => {
           it('should NOT allow updating a form about an unpublished dataset, which is similar to creating that dataset', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
-            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
+            await run(sql`DELETE FROM role_verbs WHERE species = 'dataset' AND verbname = 'create' AND role_id = (SELECT id FROM roles WHERE system = 'manager')`);
 
             // Alice can upload first version of form that creates unpublished "people" dataset
             await asAlice.post('/v1/projects/1/forms')
@@ -4019,7 +4019,7 @@ describe('datasets and entities', () => {
           it('should NOT allow updating a draft that creates a dataset without user having dataset.create verb', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
-            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
+            await run(sql`DELETE FROM role_verbs WHERE species = 'dataset' AND verbname = 'create' AND role_id = (SELECT id FROM roles WHERE system = 'manager')`);
 
             // Alice can upload first version of form
             await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -4036,7 +4036,7 @@ describe('datasets and entities', () => {
           it('should NOT allow unpublished dataset to be published on form publish if user does not have dataset.create verb', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
-            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
+            await run(sql`DELETE FROM role_verbs WHERE species = 'dataset' AND verbname = 'create' AND role_id = (SELECT id FROM roles WHERE system = 'manager')`);
 
             // Alice can upload first version of form
             await asAlice.post('/v1/projects/1/forms')
@@ -4054,8 +4054,7 @@ describe('datasets and entities', () => {
           it('should NOT allow a new form that updates a dataset without user having dataset.update verb', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
-
-            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
+            await run(sql`DELETE FROM role_verbs WHERE species = 'dataset' AND verbname = 'update' AND role_id = (SELECT id FROM roles WHERE system = 'manager')`);
 
             await asAlice.post('/v1/projects/1/datasets')
               .send({ name: 'people' })
@@ -4078,7 +4077,7 @@ describe('datasets and entities', () => {
           it('should NOT allow update draft that updates a dataset without user having dataset.update verb', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
-            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
+            await run(sql`DELETE FROM role_verbs WHERE species = 'dataset' AND verbname = 'update' AND role_id = (SELECT id FROM roles WHERE system = 'manager')`);
 
             // Alice can upload first version of form
             await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -4095,7 +4094,7 @@ describe('datasets and entities', () => {
           it('should NOT allow unpublished properties to be published on form publish if user does not have dataset.update verb', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
-            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
+            await run(sql`DELETE FROM role_verbs WHERE species = 'dataset' AND verbname = 'update' AND role_id = (SELECT id FROM roles WHERE system = 'manager')`);
 
             // Alice can upload and publish first version of form
             await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -4120,7 +4119,7 @@ describe('datasets and entities', () => {
           it('should ALLOW update of form draft that does not modify existing dataset', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
-            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
+            await run(sql`DELETE FROM role_verbs WHERE species = 'dataset' AND verbname = 'update' AND role_id = (SELECT id FROM roles WHERE system = 'manager')`);
 
             // Alice can upload first version of form
             await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -4138,7 +4137,7 @@ describe('datasets and entities', () => {
           it('should ALLOW new form about existing dataset that does not update it', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
-            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
+            await run(sql`DELETE FROM role_verbs WHERE species = 'dataset' AND verbname = 'update' AND role_id = (SELECT id FROM roles WHERE system = 'manager')`);
 
             // Alice can create the dataset
             await asAlice.post('/v1/projects/1/datasets')
