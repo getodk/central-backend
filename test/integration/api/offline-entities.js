@@ -1,11 +1,11 @@
 const appRoot = require('app-root-path');
-const { testService } = require('../setup');
+const { testService, testServiceFullTrx } = require('../setup');
 const testData = require('../../data/xml');
 const uuid = require('uuid').v4;
 const should = require('should');
 const { sql } = require('slonik');
 
-const { exhaust } = require(appRoot + '/lib/worker/worker');
+const { exhaust, exhaustParallel } = require(appRoot + '/lib/worker/worker');
 
 const testOfflineEntities = (test) => testService(async (service, container) => {
   const asAlice = await service.login('alice');
@@ -1269,5 +1269,57 @@ describe('Offline Entities', () => {
           });
       }));
     });
+  });
+
+  // eslint-disable-next-line func-names, space-before-function-paren
+  describe('locking an entity while processing a related submission', function() {
+    this.timeout(8000);
+
+    // https://github.com/getodk/central/issues/705
+    it('should concurrently process an offline create + update @slow', testServiceFullTrx(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.offlineEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await exhaust(container);
+
+      // Set up the race condition.
+      const race = async () => {
+        const entityUuid = uuid();
+        await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+          .send(testData.instances.offlineEntity.two
+            .replace('two', uuid())
+            .replace('12345678-1234-4123-8234-123456789ddd', entityUuid))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+          .send(testData.instances.offlineEntity.two
+            .replace('two', uuid())
+            .replace('12345678-1234-4123-8234-123456789ddd', entityUuid)
+            .replace('create="1"', 'update="1"')
+            .replace('branchId=""', `branchId="${uuid()}"`)
+            .replace('baseVersion=""', 'baseVersion="1"'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaustParallel(container);
+
+        const { body: entity } = await asAlice.get(`/v1/projects/1/datasets/people/entities/${entityUuid}`)
+          .expect(200);
+        const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+        return entity.currentVersion.version === 2 && backlogCount === 0;
+      };
+      // Run the race condition 50 times. If I remove locking in
+      // Entities._processSubmissionEvent(), then successCount < 10. With
+      // locking in place, successCount === 50. It's because it's often the case
+      // that successCount > 0 even without locking that we run the race
+      // condition multiple times.
+      let successCount = 0;
+      for (let i = 0; i < 50; i += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        if (await race()) successCount += 1;
+      }
+      successCount.should.equal(50);
+    }));
   });
 });
