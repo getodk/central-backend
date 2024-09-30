@@ -422,8 +422,8 @@ describe('api: /projects', () => {
                 body.verbs.should.eqlInAnyOrder([
                   // following verbs from role: formfill
                   'project.read',
-                  'open_form.list',
-                  'open_form.read',
+                  'form.list_open',
+                  'form.read_open',
                   'submission.create',
                 ]);
               }))))));
@@ -445,8 +445,8 @@ describe('api: /projects', () => {
                   // following roles from formfill + viewer:
                   'project.read',
                   // following roles from formfill only:
-                  'open_form.list',
-                  'open_form.read',
+                  'form.list_open',
+                  'form.read_open',
                   'submission.create',
                   // following roles from viewer only:
                   'form.list',
@@ -1652,8 +1652,8 @@ describe('api: /projects?forms=true', () => {
                   // following roles from formfill + viewer:
                   'project.read',
                   // following roles from formfill only:
-                  'open_form.list',
-                  'open_form.read',
+                  'form.list_open',
+                  'form.read_open',
                   'submission.create',
                   // following roles from viewer only:
                   'form.list',
@@ -1698,11 +1698,12 @@ describe('api: /projects?forms=true', () => {
               //none
 
               // following roles from app-user only:
-              'open_form.read',
+              'form.read_open',
               'submission.create',
               // following roles from viewer only:
               'project.read',
               'form.list',
+              'form.list_open',
               'form.read',
               'submission.read',
               'submission.list',
