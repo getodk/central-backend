@@ -114,7 +114,7 @@ describe('analytics task queries', function () {
       await container.Audits.log(null, 'dummy.action', null, 'test audit details');
       // old audit
       await container.run(sql`insert into audits ("actorId", action, "acteeId", details, "loggedAt")
-        values (null, 'dummy.action', null, null, '1999-1-1')`);
+        values (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z')`);
       const res = await container.Analytics.auditLogs();
       res.recent.should.equal(2);
       res.total.should.equal(3);
@@ -517,7 +517,7 @@ describe('analytics task queries', function () {
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one, 'device1');
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.two, 'device2');
       // make all submissions so far in the distant past
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.three, 'device3');
       const res = await container.Analytics.countDeviceIds();
       res[0].projectId.should.equal(1);
@@ -623,7 +623,7 @@ describe('analytics task queries', function () {
       const projId = await createTestProject(service, container, 'New Proj');
       const encryptedFormId = await createTestForm(service, container, testData.forms.encrypted, projId);
       await submitToForm(service, 'alice', projId, encryptedFormId, testData.instances.encrypted.one);
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
       const res = await container.Analytics.countFormsEncrypted();
       const projects = {};
       for (const row of res) {
@@ -723,7 +723,7 @@ describe('analytics task queries', function () {
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one);
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.two);
       // make all submissions so far in the distant past
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.three);
       const res = await container.Analytics.countSubmissions();
       res[0].projectId.should.equal(1);
@@ -737,7 +737,7 @@ describe('analytics task queries', function () {
         asAlice.patch('/v1/projects/1/forms/simple/submissions/aaa')
           .send({ reviewState: 'approved' }));
 
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
 
       await submitToForm(service, 'alice', 1, 'simple', simpleInstance('bbb'));
       await service.login('alice', (asAlice) =>
@@ -767,7 +767,7 @@ describe('analytics task queries', function () {
         asAlice.patch('/v1/projects/1/forms/simple/submissions/aaa')
           .send({ reviewState: 'rejected' }));
 
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
 
       await submitToForm(service, 'alice', 1, 'simple', simpleInstance('bbb'));
       await service.login('alice', (asAlice) =>
@@ -796,7 +796,7 @@ describe('analytics task queries', function () {
         asAlice.patch('/v1/projects/1/forms/simple/submissions/aaa')
           .send({ reviewState: 'hasIssues' }));
 
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
 
       await submitToForm(service, 'alice', 1, 'simple', simpleInstance('bbb'));
       await service.login('alice', (asAlice) =>
@@ -825,7 +825,7 @@ describe('analytics task queries', function () {
         asAlice.patch('/v1/projects/1/forms/simple/submissions/aaa')
           .send({ reviewState: 'edited' }));
 
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
 
       await submitToForm(service, 'alice', 1, 'simple', simpleInstance('bbb'));
       await service.login('alice', (asAlice) =>
@@ -857,8 +857,8 @@ describe('analytics task queries', function () {
           .attach('xml_submission_file', Buffer.from(withSimpleIds('one', '111').replace('Alice', 'Alyssa')), { filename: 'data.xml' }));
 
       // make all submissions (and their defs in this case) so far in the distant past
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
-      await container.all(sql`update submission_defs set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
+      await container.all(sql`update submission_defs set "createdAt" = '1999-1-1T00:00:00Z' where true`);
 
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.two);
       await service.login('alice', (asAlice) =>
@@ -879,7 +879,7 @@ describe('analytics task queries', function () {
           .send({ body: 'new comment here' }));
 
       // make all submissions so far in the past
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.two);
       await service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions/two/comments')
@@ -912,7 +912,7 @@ describe('analytics task queries', function () {
         .set('Content-Type', 'application/xml');
 
       // make all submissions so far in the distant past
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.two);
       await submitToForm(service, 'bob', 1, 'simple', testData.instances.simple.three);
 
@@ -981,7 +981,7 @@ describe('analytics task queries', function () {
       await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two').send({ reviewState: 'approved' });
       await exhaust(container);
 
-      await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1' WHERE TRUE`);
+      await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1T00:00:00Z' WHERE TRUE`);
 
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three);
       await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/three').send({ reviewState: 'approved' });
@@ -1007,7 +1007,7 @@ describe('analytics task queries', function () {
       await exhaust(container);
 
       // let's set date of entity errors to long time ago
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.error'`);
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.error'`);
 
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three.replace(/bbb/, 'xxx'));
       await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/three').send({ reviewState: 'approved' });
@@ -1037,7 +1037,7 @@ describe('analytics task queries', function () {
         .expect(200);
 
       // let's set date of entity update to long time ago
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.update.version'`);
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.update.version'`);
 
       await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
         .send({ data: { age: '2' } })
@@ -1071,7 +1071,7 @@ describe('analytics task queries', function () {
         .expect(200);
 
       // let's set date of entity update to long time ago
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.update.version'`);
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.update.version'`);
 
       await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
         .send({ data: { age: '2' } })
@@ -1109,10 +1109,10 @@ describe('analytics task queries', function () {
         .expect(200);
 
       // let's set date of entity update to long time ago
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.update.version'`);
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.update.version'`);
 
       // let's set entity updatedAt to a long time ago, too
-      await container.run(sql`UPDATE entities SET "updatedAt" = '1999-1-1' WHERE "uuid" = '12345678-1234-4123-8234-123456789abc'`);
+      await container.run(sql`UPDATE entities SET "updatedAt" = '1999-1-1T00:00:00Z' WHERE "uuid" = '12345678-1234-4123-8234-123456789abc'`);
 
       await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
         .send({ data: { age: '2' } })
@@ -1280,7 +1280,7 @@ describe('analytics task queries', function () {
         .expect(200);
 
       // Make existing audits in the distant past
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.bulk.create'`);
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.bulk.create'`);
 
       // Recent bulk upload with 1 row in "people"
       await asAlice.post('/v1/projects/1/datasets/people/entities')
@@ -1421,9 +1421,9 @@ describe('analytics task queries', function () {
       // creating audit events in various states
       await container.run(sql`insert into audits ("actorId", action, "acteeId", details, "loggedAt", "failures")
         values
-          (null, 'dummy.action', null, null, '1999-1-1', 1),
-          (null, 'dummy.action', null, null, '1999-1-1', 5),
-          (null, 'dummy.action', null, null, '1999-1-1', 0)`);
+          (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 1),
+          (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 5),
+          (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 0)`);
 
 
       const res = await container.Analytics.previewMetrics();
@@ -1624,7 +1624,7 @@ describe('analytics task queries', function () {
       await exhaust(container);
 
       // Making all Entities ancient
-      await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1' WHERE TRUE`);
+      await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1T00:00:00Z' WHERE TRUE`);
 
       // Make a recent Submissions for the first Dataset
       // aaa -> ccc creates unique UUID
@@ -1639,7 +1639,7 @@ describe('analytics task queries', function () {
       await exhaust(container);
 
       // Make the error ancient
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.error'`);
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.error'`);
 
       // Create new Submission that will cause entity creation error
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three.replace(/bbb|three/g, 'xxx'));
@@ -1653,7 +1653,7 @@ describe('analytics task queries', function () {
         .send({ data: { age: '1' } });
 
       // Make the update ancient
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.update.version'`);
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.update.version'`);
 
       // Update the same entity again
       await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')

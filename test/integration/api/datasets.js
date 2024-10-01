@@ -677,7 +677,7 @@ describe('datasets and entities', () => {
 
         await exhaust(container);
 
-        await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1' WHERE TRUE`);
+        await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1T00:00:00Z' WHERE TRUE`);
 
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
           .send(testData.instances.simpleEntity.two)
