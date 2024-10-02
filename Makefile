@@ -111,9 +111,8 @@ lint: node_version
 run-docker-postgres: stop-docker-postgres
 	docker start odk-postgres14 || (\
 		docker run -d --name odk-postgres14 -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:14.10-alpine \
-			postgres -c log_statement=all -c log_destination=stderr -c log_parameter_max_length=80 \
 		&& sleep 5 \
-		&& node lib/bin/create-docker-databases.js \
+		&& node lib/bin/create-docker-databases.js --log \
 	)
 
 .PHONY: stop-docker-postgres
