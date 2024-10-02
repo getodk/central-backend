@@ -165,13 +165,13 @@ describe('Entities API', () => {
         .send({ label: 'two' })
         .expect(200);
 
-      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01' WHERE "displayName" = 'Alice'`);
-      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01' WHERE "displayName" = 'Bob'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01T00:00:00Z' WHERE "displayName" = 'Alice'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01T00:00:00Z' WHERE "displayName" = 'Bob'`);
 
-      await container.run(sql`UPDATE entities SET "createdAt" = '2022-01-01', "updatedAt" = '2023-01-01' WHERE uuid = '12345678-1234-4123-8234-123456789abc'`);
+      await container.run(sql`UPDATE entities SET "createdAt" = '2022-01-01T00:00:00Z', "updatedAt" = '2023-01-01T00:00:00Z' WHERE uuid = '12345678-1234-4123-8234-123456789abc'`);
 
-      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2022-01-01' WHERE label = 'Alice (88)'`);
-      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2023-01-01' WHERE label = 'two'`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2022-01-01T00:00:00Z' WHERE label = 'Alice (88)'`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2023-01-01T00:00:00Z' WHERE label = 'two'`);
 
       await asAlice.get('/v1/projects/1/datasets/people/entities')
         .set('X-Extended-Metadata', true)
@@ -340,13 +340,13 @@ describe('Entities API', () => {
         .send({ label: 'two' })
         .expect(200);
 
-      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01' WHERE "displayName" = 'Alice'`);
-      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01' WHERE "displayName" = 'Bob'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01T00:00:00Z' WHERE "displayName" = 'Alice'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01T00:00:00Z' WHERE "displayName" = 'Bob'`);
 
-      await container.run(sql`UPDATE entities SET "createdAt" = '2022-01-01', "updatedAt" = '2023-01-01'`);
+      await container.run(sql`UPDATE entities SET "createdAt" = '2022-01-01T00:00:00Z', "updatedAt" = '2023-01-01T00:00:00Z'`);
 
-      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2022-01-01' WHERE label = 'Alice (88)'`);
-      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2023-01-01' WHERE label = 'two'`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2022-01-01T00:00:00Z' WHERE label = 'Alice (88)'`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2023-01-01T00:00:00Z' WHERE label = 'two'`);
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .set('X-Extended-Metadata', true)

@@ -12,7 +12,7 @@ describe('query module form purge', () => {
     service.login('alice', (asAlice) =>
       asAlice.delete('/v1/projects/1/forms/simple')
         .expect(200)
-        .then(() => container.run(sql`update forms set "deletedAt" = '1999-1-1' where id = 1`))
+        .then(() => container.run(sql`update forms set "deletedAt" = '1999-1-1T00:00:00Z' where id = 1`))
         .then(() => container.Forms.purge()) // default purge() targets forms deleted > 30 days ago
         .then(() => Promise.all([
           container.oneFirst(sql`select count(*) from forms where id = 1`),
@@ -30,7 +30,7 @@ describe('query module form purge', () => {
         .then(() => asAlice.delete('/v1/projects/1/forms/simple'))
         .then(() => asAlice.delete('/v1/projects/1/forms/simple2'))
         .then(() => asAlice.delete('/v1/projects/1/forms/withrepeat'))
-        .then(() => container.run(sql`update forms set "deletedAt" = '1999-1-1' where "xmlFormId" in ('simple', 'simple2')`))
+        .then(() => container.run(sql`update forms set "deletedAt" = '1999-1-1T00:00:00Z' where "xmlFormId" in ('simple', 'simple2')`))
         .then(() => container.Forms.purge())
         .then((purgeCount) => purgeCount.should.equal(2)))));
 
