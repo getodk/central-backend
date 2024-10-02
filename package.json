@@ -6,7 +6,7 @@
     "node": "20"
   },
   "volta": {
-    "node": "20.10.0"
+    "node": "20.17.0"
   },
   "dependencies": {
     "@sentry/node": "~7",
@@ -21,7 +21,7 @@
     "csv-stringify": "~5",
     "digest-stream": "~2",
     "entities": "~2",
-    "express": "~4.19",
+    "express": "~4.21",
     "express-graceful-exit": "~0.5",
     "fast-myers-diff": "~3",
     "htmlparser2": "~3.9",
@@ -37,7 +37,7 @@
     "path-to-regexp": "^6.2.2",
     "pg": "~8",
     "pg-query-stream": "~4",
-    "pm2": "^5.2.2",
+    "pm2": "~5.4",
     "prompt": "~1",
     "ramda": "~0",
     "sanitize-filename": "~1",

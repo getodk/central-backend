@@ -677,7 +677,7 @@ describe('datasets and entities', () => {
 
         await exhaust(container);
 
-        await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1' WHERE TRUE`);
+        await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1T00:00:00Z' WHERE TRUE`);
 
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
           .send(testData.instances.simpleEntity.two)
@@ -5559,10 +5559,10 @@ describe('datasets and entities', () => {
           .send({ approvalRequired: true })
           .expect(200);
 
-        // Create a submission that fails to create an entity (bad UUID)
+        // Create a submission that fails to create an entity (empty label)
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
           .send(testData.instances.simpleEntity.one
-            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:invalid_uuid"'))
+            .replace('<entities:label>Alice (88)</entities:label>', ''))
           .set('Content-Type', 'application/xml')
           .expect(200);
 
@@ -5622,10 +5622,10 @@ describe('datasets and entities', () => {
           .send({ approvalRequired: true })
           .expect(200);
 
-        // Create a submission that fails to create an entity (bad UUID)
+        // Create a submission that fails to create an entity (empty label)
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
           .send(testData.instances.simpleEntity.one
-            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:invalid_uuid"'))
+            .replace('<entities:label>Alice (88)</entities:label>', ''))
           .set('Content-Type', 'application/xml')
           .expect(200);
 

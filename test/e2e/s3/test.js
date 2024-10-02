@@ -55,12 +55,21 @@ describe('s3 support', () => {
     await cli('upload-pending');
   });
 
-  async function setup(testNumber, opts={ bigFiles: 1 }) {
+  async function setup(testNumber, opts={}) {
+    // Bigger bigfiles decrease the likelihood of tests flake due to race
+    // conditions.  However, bigger files also make for slower tests, and the
+    // max bigfile size is limited by a bug in node-pg.
+    // See: https://github.com/brianc/node-postgres/issues/2653
+    const { // eslint-disable-line object-curly-newline
+      bigFiles = 1,
+      bigFileSizeMb = 100,
+    } = opts; // eslint-disable-line object-curly-newline
+
     attDir = `./test-forms/${testNumber}-attachments`;
 
     // given
     fs.mkdirSync(attDir, { recursive:true });
-    for(let idx=0; idx<opts.bigFiles; ++idx) bigFileExists(attDir, 1+idx);
+    for(let idx=0; idx<bigFiles; ++idx) bigFileExists(attDir, bigFileSizeMb, 1+idx);
     expectedAttachments = fs.readdirSync(attDir).filter(f => !f.startsWith('.')).sort();
     api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
     projectId = await createProject();
@@ -217,7 +226,7 @@ describe('s3 support', () => {
     // and making sure the first uploads successfully before killing the server.
 
     // given
-    await setup(7, { bigFiles: 2 });
+    await setup(7, { bigFiles: 2, bigFileSizeMb: 250 });
     await assertNewStatuses({ pending: 2 });
 
     // when
@@ -240,7 +249,7 @@ describe('s3 support', () => {
     // with the user.  They are not something to try to retain if implementation changes.
     await expectRejectionFrom(uploading, new RegExp(
       'Command failed: exec node lib/bin/s3 upload-pending\n' +
-          '(AggregateError\n.*)?Error: (connect ECONNREFUSED|read ECONNRESET|socket hang up|write EPIPE)',
+          '(AggregateError.*)?Error: (connect ECONNREFUSED|read ECONNRESET|socket hang up|write EPIPE)',
       's',
     ));
     // and
@@ -440,7 +449,7 @@ function humanDuration({ duration }) {
   return (duration / 1000).toFixed(3) + 's';
 }
 
-function bigFileExists(attDir, idx) {
+function bigFileExists(attDir, sizeMb, idx) {
   const bigFile = `${attDir}/big-${idx}.bin`;
   if(fs.existsSync(bigFile)) {
     log.debug(`${bigFile} exists; skipping generation`);
@@ -452,7 +461,7 @@ function bigFileExists(attDir, idx) {
     //
     //   * on github actions: 1.2-1.6s
     //   * locally:           300ms-7s
-    let remaining = 100_000_000;
+    let remaining = sizeMb * 1_000_000;
     const batchSize = 100_000;
     do {
       fs.appendFileSync(bigFile, randomBytes(batchSize));
