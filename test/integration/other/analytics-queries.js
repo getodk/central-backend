@@ -97,7 +97,6 @@ const submitToForm = (service, user, projectId, xmlFormId, xml, deviceId = 'abcd
 ////////////////////////////////////////////////////////////////////////////////
 // Tests!
 ////////////////////////////////////////////////////////////////////////////////
-// eslint-disable-next-line func-names
 describe('analytics task queries', function () {
   // increasing timeouts on this set of tests
   this.timeout(8000);
