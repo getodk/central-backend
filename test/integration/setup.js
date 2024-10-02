@@ -41,6 +41,9 @@ before(resetEnketo);
 after(resetEnketo);
 afterEach(resetEnketo);
 
+// set up our s3 mock
+const { s3 } = require(appRoot + '/test/util/s3');
+
 // set up odk analytics mock.
 const { ODKAnalytics } = require(appRoot + '/test/util/odk-analytics-mock');
 const odkAnalytics = new ODKAnalytics();
@@ -81,7 +84,7 @@ const initialize = async () => {
     await migrator.destroy();
   }
 
-  return withDefaults({ db, context, enketo, env }).transacting(populate);
+  return withDefaults({ db, context, enketo, env, s3 }).transacting(populate);
 };
 
 before(function() {
@@ -93,6 +96,7 @@ let mustReinitAfter;
 beforeEach(() => {
   // eslint-disable-next-line keyword-spacing
   if(mustReinitAfter) throw new Error(`Failed to reinitalize after previous test: '${mustReinitAfter}'.  You may need to increase your mocha timeout.`);
+  s3.resetMock();
 });
 afterEach(async function() {
   this.timeout(0);
@@ -135,7 +139,7 @@ const augment = (service) => {
 // FINAL TEST WRAPPERS
 
 
-const baseContainer = withDefaults({ db, mail, env, xlsform, enketo, Sentry, odkAnalytics, context });
+const baseContainer = withDefaults({ db, mail, env, xlsform, enketo, Sentry, odkAnalytics, context, s3 });
 
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
@@ -184,6 +188,14 @@ const testTask = (test) => () => new Promise((resolve, reject) => {
   });//.catch(Promise.resolve.bind(Promise));
 });
 
+// See testServiceFullTrx()
+// eslint-disable-next-line space-before-function-paren, func-names
+const testTaskFullTrx = (test) => function() {
+  mustReinitAfter = this.test.fullTitle();
+  task._container = baseContainer.with({ task: true });
+  return test(task._container);
+};
+
 // eslint-disable-next-line no-shadow
 const withClosedForm = (f) => async (service) => {
   const asAlice = await service.login('alice');
@@ -209,4 +221,4 @@ const withClosedForm = (f) => async (service) => {
   return f(service);
 };
 
-module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask, withClosedForm };
+module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask, testTaskFullTrx, withClosedForm };

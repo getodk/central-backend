@@ -4,8 +4,11 @@ const uuid = require('uuid').v4;
 const config = require('config');
 const { testContainerFullTrx, testServiceFullTrx } = require('../setup');
 const { sql } = require('slonik');
+const { createReadStream } = require('fs');
 const { Actor, Config } = require(appRoot + '/lib/model/frames');
 const { withDatabase } = require(appRoot + '/lib/model/migrate');
+const { exhaust } = require(appRoot + '/lib/worker/worker');
+
 const testData = require('../../data/xml');
 const populateUsers = require('../fixtures/01-users');
 const populateForms = require('../fixtures/02-forms');
@@ -978,5 +981,77 @@ testMigration('20240215-02-dedupe-verbs.js', () => {
     await up();
     const { body: roles } = await service.get('/v1/roles').expect(200);
     for (const { verbs } of roles) verbs.should.eql([...new Set(verbs)]);
+  }));
+});
+
+testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
+  it('should remove orphaned client audits', testServiceFullTrx(async (service, container) => {
+    await populateUsers(container);
+    await populateForms(container);
+
+    const asAlice = await service.login('alice');
+
+    await asAlice.post('/v1/projects/1/forms?publish=true')
+      .send(testData.forms.clientAudits)
+      .expect(200);
+
+    // Send the submission with the client audit attachment
+    await asAlice.post('/v1/projects/1/submission')
+      .set('X-OpenRosa-Version', '1.0')
+      .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+      .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+      .expect(201);
+
+    await asAlice.post('/v1/projects/1/submission')
+      .set('X-OpenRosa-Version', '1.0')
+      .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+      .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+      .expect(201);
+
+    await exhaust(container);
+
+    // there should be 8 total rows (5 + 3)
+    let numClientAudits = await container.oneFirst(sql`select count(*) from client_audits`);
+    numClientAudits.should.equal(8);
+
+    // there should be 2 blobs
+    let blobCount = await container.oneFirst(sql`select count(*) from blobs`);
+    blobCount.should.equal(2);
+
+    // delete one of the submissions
+    await asAlice.delete('/v1/projects/1/forms/audits/submissions/one')
+      .expect(200);
+
+    // simulate purge without client audit purge
+    await container.run(sql`delete from submissions
+    where submissions."deletedAt" is not null`);
+
+    // purge unattached blobs (will not purge any because one is still referenced)
+    await container.Blobs.purgeUnattached(true);
+
+    // blobs count should still be 2
+    blobCount = await container.oneFirst(sql`select count(*) from blobs`);
+    blobCount.should.equal(2);
+
+    // client audits still equals 8 after purge (3 orphaned)
+    numClientAudits = await container.oneFirst(sql`select count(*) from client_audits`);
+    numClientAudits.should.equal(8);
+
+    // clean up orphaned client audits
+    await up();
+
+    numClientAudits = await container.oneFirst(sql`select count(*) from client_audits`);
+    numClientAudits.should.equal(3);
+
+    // blob count will still be two
+    blobCount = await container.oneFirst(sql`select count(*) from blobs`);
+    blobCount.should.equal(2);
+
+    // but next run of purging unattached blobs will purge one
+    await container.Blobs.purgeUnattached(true);
+
+    // blobs count should finally be 1
+    blobCount = await container.oneFirst(sql`select count(*) from blobs`);
+    blobCount.should.equal(1);
   }));
 });
