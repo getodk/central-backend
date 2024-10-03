@@ -1,8 +1,6 @@
 const should = require('should');
 const { DateTime } = require('luxon');
 
-/* eslint-disable space-before-function-paren, func-names */
-
 // debugging things.
 // eslint-disable-next-line no-console
 global.tap = (x) => { console.log(x); return x; };

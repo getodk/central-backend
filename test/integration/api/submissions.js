@@ -3756,13 +3756,13 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
         .send(withSimpleIds('one', 'two'))
         .expect(200);
 
-      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01' WHERE "displayName" = 'Alice'`);
-      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01' WHERE "displayName" = 'Bob'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01T00:00:00Z' WHERE "displayName" = 'Alice'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01T00:00:00Z' WHERE "displayName" = 'Bob'`);
 
-      await container.run(sql`UPDATE submissions SET "createdAt" = '2022-01-01', "updatedAt" = '2023-01-01'`);
+      await container.run(sql`UPDATE submissions SET "createdAt" = '2022-01-01T00:00:00Z', "updatedAt" = '2023-01-01T00:00:00Z'`);
 
-      await container.run(sql`UPDATE submission_defs SET "createdAt" = '2022-01-01' WHERE "instanceId" = 'one'`);
-      await container.run(sql`UPDATE submission_defs SET "createdAt" = '2023-01-01' WHERE "instanceId" = 'two'`);
+      await container.run(sql`UPDATE submission_defs SET "createdAt" = '2022-01-01T00:00:00Z' WHERE "instanceId" = 'one'`);
+      await container.run(sql`UPDATE submission_defs SET "createdAt" = '2023-01-01T00:00:00Z' WHERE "instanceId" = 'two'`);
 
       await asAlice.get('/v1/projects/1/forms/simple/submissions/one')
         .set('X-Extended-Metadata', 'true')

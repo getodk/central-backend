@@ -51,7 +51,7 @@ describe('util/http', () => {
 
   describe('format response helpers', () => {
     const { contentType, xml, atom, json } = http;
-    // eslint-disable-next-line semi, space-before-function-paren, object-shorthand, func-names
+    // eslint-disable-next-line semi, object-shorthand
     const mockResponse = () => ({ type: function(value) { this.contentType = value } });
     it('should ultimately return the result', () => {
       contentType()(42)(null, mockResponse()).should.equal(42);

@@ -307,6 +307,78 @@ describe('Offline Entities', () => {
           body.currentVersion.branchBaseVersion.should.equal(1);
         });
     }));
+
+    it('should handle offline create+update+update with interleaved online updates', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // First submission creates the entity
+      // no trunk version
+      // sets name, age, status
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Update the entity online
+      // Change age
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd?baseVersion=1')
+        .send({ data: { age: '30' } });
+
+      // Second submission (1st offline update after offline create)
+      // updates the status only
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>arrived</status>')
+          .replace('<name>Megan</name>', '')
+          .replace('<age>20</age>', '')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Update the entity online
+      // change age again
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd?baseVersion=3')
+        .send({ data: { age: '40' } });
+
+      // Third submission (2nd offline update)
+      // updates the status only
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update2')
+          .replace('baseVersion=""', 'baseVersion="2"')
+          .replace('<status>new</status>', '<status>complete</status>')
+          .replace('<name>Megan</name>', '')
+          .replace('<age>20</age>', '')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Check that the actual computed base version is the right one (v3) while branchBaseVersion is v2.
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd')
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(5);
+          body.currentVersion.baseVersion.should.equal(3);
+          body.currentVersion.data.should.eql({ age: '40', status: 'complete', first_name: 'Megan' });
+
+          body.currentVersion.branchId.should.equal(branchId);
+          should.not.exist(body.currentVersion.trunkVersion);
+          body.currentVersion.branchBaseVersion.should.equal(2);
+        });
+    }));
   });
 
   describe('out of order runs', () => {
