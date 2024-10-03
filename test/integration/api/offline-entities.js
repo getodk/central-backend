@@ -1343,7 +1343,6 @@ describe('Offline Entities', () => {
     });
   });
 
-  // eslint-disable-next-line func-names, space-before-function-paren
   describe('locking an entity while processing a related submission', function() {
     this.timeout(8000);
 
