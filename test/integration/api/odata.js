@@ -4,6 +4,8 @@ const testData = require('../../data/xml');
 const { dissocPath, identity } = require('ramda');
 const { QueryOptions } = require('../../../lib/util/db');
 const should = require('should');
+const { URL } = require('url');
+const { url } = require('../../../lib/util/http');
 
 // NOTE: for the data output tests, we do not attempt to extensively determine if every
 // internal case is covered; there are already two layers of tests below these, at
@@ -123,6 +125,13 @@ describe('api: /forms/:id.svc', () => {
     it('should reject if the submission does not exist', testService((service) =>
       withSubmission(service, (asAlice) =>
         asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('nonexistent')").expect(404))));
+
+    it('should reject if the submission has been soft-deleted', testService((service) =>
+      withSubmission(service, (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/doubleRepeat/submissions/double')
+          .expect(200) // soft-delete
+          .then(() => asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')")
+            .expect(404)))));
 
     it('should return a single row result', testService((service) =>
       withSubmission(service, (asAlice) =>
@@ -647,6 +656,65 @@ describe('api: /forms/:id.svc', () => {
             });
           }))));
 
+    it('should exclude a deleted submission from rows', testService((service) =>
+      withSubmissions(service, (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/withrepeat/submissions/rthree')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions')
+            .expect(200)
+            .then(({ body }) => {
+              for (const idx of [0, 1]) {
+                body.value[idx].__system.submissionDate.should.be.an.isoDate();
+                // eslint-disable-next-line no-param-reassign
+                delete body.value[idx].__system.submissionDate;
+              }
+
+              body.should.eql({
+                '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+                value: [{
+                  __id: 'rtwo',
+                  __system: {
+                    // submissionDate is checked above,
+                    updatedAt: null,
+                    submitterId: '5',
+                    submitterName: 'Alice',
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 0,
+                    status: null,
+                    reviewState: null,
+                    deviceId: null,
+                    edits: 0,
+                    formVersion: '1.0'
+                  },
+                  meta: { instanceID: 'rtwo' },
+                  name: 'Bob',
+                  age: 34,
+                  children: {
+                    'child@odata.navigationLink': "Submissions('rtwo')/children/child"
+                  }
+                }, {
+                  __id: 'rone',
+                  __system: {
+                    // submissionDate is checked above,
+                    updatedAt: null,
+                    submitterId: '5',
+                    submitterName: 'Alice',
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 0,
+                    status: null,
+                    reviewState: null,
+                    deviceId: null,
+                    edits: 0,
+                    formVersion: '1.0'
+                  },
+                  meta: { instanceID: 'rone' },
+                  name: 'Alice',
+                  age: 30,
+                  children: {}
+                }]
+              });
+            })))));
+
     it('should return a count even if there are no rows', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$count=true')
@@ -799,6 +867,111 @@ describe('api: /forms/:id.svc', () => {
 
           should.not.exist(body['@odata.nextLink']);
         });
+    }));
+
+    it('should support $skiptoken even if associated submission is deleted', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.two)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+      const skiptoken = await asAlice.get('/v1/projects/1/forms/simple.svc/Submissions?%24top=1')
+        .expect(200)
+        .then(({ body }) => new URL(body['@odata.nextLink']).searchParams.get('$skiptoken'));
+      QueryOptions.parseSkiptoken(skiptoken).instanceId.should.equal('two');
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/two');
+      const { body: odata } = await asAlice.get(url`/v1/projects/1/forms/simple.svc/Submissions?%24skiptoken=${skiptoken}`)
+        .expect(200);
+      odata.value.length.should.equal(1);
+      odata.value[0].__id.should.equal('one');
+    }));
+
+    it('should return no submissions if $skiptoken instanceId does not exist', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+      const skiptoken = QueryOptions.getSkiptoken({ instanceId: 'foo' });
+      const { body: odata } = await asAlice.get(url`/v1/projects/1/forms/simple.svc/Submissions?%24skiptoken=${skiptoken}`)
+        .expect(200);
+      odata.value.length.should.equal(0);
+    }));
+
+    it('should not return duplicate submissions if $skiptoken instanceId is reused', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // Create two submissions with instance IDs of 'one' and 'two'. Creating
+      // them in reverse order so that OData returns 'one' first.
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.two)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Create a draft submission to the same form using an instance ID of 'one'.
+      await asAlice.post('/v1/projects/1/forms/simple/draft')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Create a submission to a different form using an instance ID of 'one'.
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simple2)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simple2/submissions')
+        .send(testData.instances.simple2.one.replace('id="s2one"', 'id="one"'))
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      const { body: firstChunk } = await asAlice.get('/v1/projects/1/forms/simple.svc/Submissions?%24top=1&%24count=true')
+        .expect(200);
+      firstChunk.value.length.should.equal(1);
+      firstChunk.value[0].__id.should.equal('one');
+      firstChunk['@odata.count'].should.equal(2);
+      const skiptoken = new URL(firstChunk['@odata.nextLink']).searchParams
+        .get('$skiptoken');
+      QueryOptions.parseSkiptoken(skiptoken).instanceId.should.equal('one');
+
+      const { body: secondChunk } = await asAlice.get(url`/v1/projects/1/forms/simple.svc/Submissions?%24skiptoken=${skiptoken}&%24count=true`)
+        .expect(200);
+      secondChunk.value.length.should.equal(1);
+      secondChunk.value[0].__id.should.equal('two');
+      secondChunk['@odata.count'].should.equal(2);
+      should.not.exist(secondChunk['@odata.nextLink']);
+    }));
+
+    it('should return a matching submission whose id is after that of $skiptoken submission', testService(async (service, { run }) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.two)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+      // Pretend like 'one' was created before 'two', but its id is greater than
+      // the id of 'two'.
+      await run(sql`UPDATE submissions SET "createdAt" = '2000-01-01' WHERE "instanceId" = 'one'`);
+      const skiptoken = await asAlice.get('/v1/projects/1/forms/simple.svc/Submissions?%24top=1')
+        .expect(200)
+        .then(({ body }) => new URL(body['@odata.nextLink']).searchParams.get('$skiptoken'));
+      QueryOptions.parseSkiptoken(skiptoken).instanceId.should.equal('two');
+      const { body: odata } = await asAlice.get(url`/v1/projects/1/forms/simple.svc/Submissions?%24skiptoken=${skiptoken}`)
+        .expect(200);
+      odata.value.length.should.equal(1);
+      odata.value[0].__id.should.equal('one');
     }));
 
     it('should limit and filter Submissions', testService(async (service) => {

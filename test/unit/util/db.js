@@ -337,6 +337,18 @@ returning *`);
       ]);
     });
 
+    it('should insert createdAt even if last type is not timestamp', () => {
+      const U = Frame.define(table('dogs'), 'x', 'createdAt', 'age', fieldTypes(['timestamptz', 'timestamptz', 'int4']));
+      const query = insertMany([ new U({ x: new Date('2000-01-01'), age: 14 }), new U({ age: 8 }), new U() ]);
+      query.sql.should.be.eql(`
+  INSERT INTO dogs ("createdAt", "x","age")
+  SELECT clock_timestamp(), * FROM unnest($1::"timestamptz"[], $2::"int4"[]) AS t`);
+      query.values.should.be.eql([
+        ['2000-01-01T00:00:00.000Z', null, null],
+        [14, 8, null]
+      ]);
+    });
+
     it('should throw fieldTypesNotDefined', () => {
       const U = Frame.define(table('dogs'), 'x', 'createdAt');
       (() => insertMany([ new U({ x: new Date('2000-01-01') }), new U() ]))
@@ -406,6 +418,7 @@ returning *`);
       (new QueryOptions()).hasPaging().should.equal(false);
       (new QueryOptions({ offset: 0 })).hasPaging().should.equal(true);
       (new QueryOptions({ limit: 0 })).hasPaging().should.equal(true);
+      (new QueryOptions({ skiptoken: 'foo' })).hasPaging().should.equal(true);
     });
 
     it('should transfer allowed args from quarantine on allowArgs', () => {
