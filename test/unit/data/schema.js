@@ -2089,7 +2089,7 @@ describe('form schema', () => {
 
   describe('updateEntityForm', () => {
     it('should change version 2023->2024, add trunkVersion, and add branchId', () =>
-      updateEntityForm(testData.forms.updateEntity, '2024.1.0', '_upgrade').then((result) => result.should.equal(`<?xml version="1.0"?>
+      updateEntityForm(testData.forms.updateEntity, '2023.1.0', '2024.1.0', '_upgrade').then((result) => result.should.equal(`<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
   <h:head>
     <model entities:entities-version="2024.1.0">
@@ -2110,6 +2110,12 @@ describe('form schema', () => {
     </model>
   </h:head>
 </h:html>`)));
+
+    it('should not alter a version 2022.1.0 form when the old version to replace is 2023.1.0', () =>
+      updateEntityForm(testData.forms.simpleEntity, '2023.1.0', '2024.1.0', '_upgrade').then((result) => result.should.equal(testData.forms.simpleEntity)));
+
+    it('should not alter a version 2024.1.0 form when the old version to replace is 2023.1.0', () =>
+      updateEntityForm(testData.forms.offlineEntity, '2023.1.0', '2024.1.0', '_upgrade').then((result) => result.should.equal(testData.forms.offlineEntity)));
   });
 });
 
