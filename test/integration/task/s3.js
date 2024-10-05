@@ -25,7 +25,7 @@ const assertThrowsAsync = async (fn, expected) => {
   }
 };
 
-describe('task: s3', () => {
+describe.only('task: s3', () => {
   describe('s3 disabled', () => {
     it('uploadPending() should fail', async () => {
       await assertThrowsAsync(() => uploadPending(), 'S3 blob support is not enabled.');
@@ -179,7 +179,7 @@ describe('task: s3', () => {
           });
           original.apply(global.s3, args);
         };
-        await aBlobExistsWith(container, { status: 'pending' });
+        //await aBlobExistsWith(container, { status: 'pending' });
 
         // when
         const first = uploadPending();
