@@ -8,7 +8,7 @@ const { workerQueue } = require(appRoot + '/lib/worker/worker');
 const { Audit } = require(appRoot + '/lib/model/frames');
 const { insert } = require(appRoot + '/lib/util/db');
 
-describe.only('worker', () => {
+describe('worker', () => {
   describe('runner @slow', () => {
     // we know reschedule is getting called at some point in these flows because
     // these tests would hang otherwise.

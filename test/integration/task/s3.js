@@ -25,7 +25,7 @@ const assertThrowsAsync = async (fn, expected) => {
   }
 };
 
-describe.only('task: s3', () => {
+describe('task: s3', () => {
   describe('s3 disabled', () => {
     it('uploadPending() should fail', async () => {
       await assertThrowsAsync(() => uploadPending(), 'S3 blob support is not enabled.');
