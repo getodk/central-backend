@@ -170,7 +170,8 @@ describe('task: s3', () => {
       }));
 
       describe('with delayed s3 upload', () => {
-        let restoreS3mock, resumeFirstUpload;
+        let restoreS3mock;
+        let resumeFirstUpload;
 
         beforeEach(() => {
           const original = global.s3.uploadFromBlob;
