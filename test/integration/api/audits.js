@@ -1,5 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
+const uuid = require('uuid').v4;
 const { sql } = require('slonik');
 const { plain } = require('../../util/util');
 const { testService } = require('../setup');
@@ -630,6 +631,49 @@ describe('/audits', () => {
           ]
         })
         .expect(200);
+
+      await asAlice.get('/v1/audits?action=nonverbose')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(4);
+          body.map(a => a.action).should.eql([
+            'form.update.publish',
+            'dataset.create',
+            'form.create',
+            'user.session.create'
+          ]);
+        });
+    }));
+
+    it('should filter out offline entity submission reprocessing events given action=nonverbose', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.offlineEntity)
+        .expect(200);
+
+      const branchId = uuid();
+
+      // second submission in a branch will get held to wait for first in branch
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
 
       await asAlice.get('/v1/audits?action=nonverbose')
         .expect(200)
