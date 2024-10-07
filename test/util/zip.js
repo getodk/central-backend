@@ -69,6 +69,13 @@ const zipStreamToFiles = (zipStream, callback) => {
   });
 };
 
+// Work around a subtle bug in streams that is not fully understood.  Probably one of:
+//
+// * the cleanup code in test/util/zip.js, or
+// * an unfulfilled interaction that supertest is expecting when working with streams, or
+// * a bug in supertest's pipe/stream implementation
+//
+// Possibly: https://github.com/ladjs/supertest/issues/487
 const binaryParser = (res, callback) => {
   res.setEncoding('binary');
   let data = '';
