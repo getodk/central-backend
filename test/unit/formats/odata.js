@@ -984,7 +984,6 @@ describe('odata message composition', () => {
             expectedNext: false,
             expectedValue: [ blain ],
           },
-
         ].forEach(({ $top, skiptoken, expectedNext, expectedValue }) =>
           it(`should return expected result for ${[$top, JSON.stringify(skiptoken)]}`, () =>
             fieldsFor(testData.forms.withrepeat).then((fields) => {
