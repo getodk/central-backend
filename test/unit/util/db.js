@@ -291,10 +291,10 @@ returning *`);
     });
 
     it('should deal with strange data input types', () => {
-      insert(new T({ x: { test: true }, y: undefined, z: new Date('2000-01-01') }))
+      insert(new T({ x: { test: true }, y: undefined, z: new Date('2000-01-01'), w: Object.assign(Object.create(null), { foo: 'bar' }) }))
         .should.eql(sql`
-insert into frames ("x","y","z")
-values (${'{"test":true}'},${null},${'2000-01-01T00:00:00.000Z'})
+insert into frames ("x","y","z","w")
+values (${'{"test":true}'},${null},${'2000-01-01T00:00:00.000Z'},${'{"foo":"bar"}'})
 returning *`);
     });
 
@@ -334,6 +334,18 @@ returning *`);
   SELECT clock_timestamp(), * FROM unnest($1::"timestamptz"[]) AS t`);
       query.values.should.be.eql([
         ['2000-01-01T00:00:00.000Z', null]
+      ]);
+    });
+
+    it('should insert createdAt even if last type is not timestamp', () => {
+      const U = Frame.define(table('dogs'), 'x', 'createdAt', 'age', fieldTypes(['timestamptz', 'timestamptz', 'int4']));
+      const query = insertMany([ new U({ x: new Date('2000-01-01'), age: 14 }), new U({ age: 8 }), new U() ]);
+      query.sql.should.be.eql(`
+  INSERT INTO dogs ("createdAt", "x","age")
+  SELECT clock_timestamp(), * FROM unnest($1::"timestamptz"[], $2::"int4"[]) AS t`);
+      query.values.should.be.eql([
+        ['2000-01-01T00:00:00.000Z', null, null],
+        [14, 8, null]
       ]);
     });
 
@@ -406,6 +418,7 @@ returning *`);
       (new QueryOptions()).hasPaging().should.equal(false);
       (new QueryOptions({ offset: 0 })).hasPaging().should.equal(true);
       (new QueryOptions({ limit: 0 })).hasPaging().should.equal(true);
+      (new QueryOptions({ skiptoken: 'foo' })).hasPaging().should.equal(true);
     });
 
     it('should transfer allowed args from quarantine on allowArgs', () => {

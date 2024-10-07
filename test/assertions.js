@@ -1,8 +1,6 @@
 const should = require('should');
 const { DateTime } = require('luxon');
 
-/* eslint-disable space-before-function-paren, func-names */
-
 // debugging things.
 // eslint-disable-next-line no-console
 global.tap = (x) => { console.log(x); return x; };
@@ -208,10 +206,11 @@ should.Assertion.add('ExtendedForm', function() {
   this.params = { operator: 'to be a ExtendedForm' };
 
   this.obj.should.be.a.Form();
-  Object.keys(this.obj).should.containDeep([ 'submissions', 'lastSubmission', 'reviewStates' ]);
+  Object.keys(this.obj).should.containDeep([ 'submissions', 'lastSubmission', 'reviewStates', 'publicLinks' ]);
   this.obj.submissions.should.be.a.Number();
   Object.keys(this.obj.reviewStates).should.containDeep([ 'received', 'hasIssues', 'edited']);
   if (this.obj.lastSubmission != null) this.obj.lastSubmission.should.be.an.isoDate();
+  this.obj.publicLinks.should.be.a.Number();
 });
 
 should.Assertion.add('FormAttachment', function() {

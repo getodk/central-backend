@@ -320,7 +320,7 @@ describe('worker: entity', () => {
         const event = await container.Audits.getLatestByAction('entity.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(updateEvent.details.submissionId);
-        event.details.errorMessage.should.equal('Invalid input data type: expected (uuid) to be (valid UUID)');
+        event.details.errorMessage.should.equal('Invalid input data type: expected (uuid) to be (valid version 4 UUID)');
         event.details.problem.problemCode.should.equal(400.11);
       }));
 
@@ -493,7 +493,7 @@ describe('worker: entity', () => {
         const event = await container.Audits.getLatestByAction('entity.error').then((o) => o.get());
         event.actorId.should.equal(5); // Alice
         event.details.submissionId.should.equal(subEvent.details.submissionId);
-        event.details.errorMessage.should.equal('Invalid input data type: expected (uuid) to be (valid UUID)');
+        event.details.errorMessage.should.equal('Invalid input data type: expected (uuid) to be (valid version 4 UUID)');
         event.details.problem.problemCode.should.equal(400.11);
       }));
 
@@ -954,7 +954,7 @@ describe('worker: entity', () => {
         .expect(200)
         .then(({ body: logs }) => {
           logs[0].action.should.be.eql('entity.update.version');
-          logs[0].details.sourceEvent.action.should.be.eql('submission.create');
+          logs[0].details.source.event.action.should.be.eql('submission.create');
         });
     }));
 

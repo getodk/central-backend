@@ -229,6 +229,7 @@ describe('blob query module', () => {
           .expect(201))
         .then(() => asAlice.delete('/v1/projects/1/forms/binaryType'))
         .then(() => container.Forms.purge(true))
+        .then(() => container.Blobs.purgeUnattached())
         .then(() => container.oneFirst(sql`select count(*) from blobs`))
         .then((count) => count.should.equal(1))))); //
 });

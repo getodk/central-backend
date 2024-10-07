@@ -14,13 +14,11 @@ const Problem = require(appRoot + '/lib/util/problem');
 const createModernResponse = () => {
   const result = createResponse({ eventEmitter: EventEmitter });
   // node-mocks-http does not have hasHeader yet.
-  // eslint-disable-next-line space-before-function-paren, func-names
   result.hasHeader = function(name) {
     return this.getHeader(name) != null;
   };
 
   // express adds this.
-  // eslint-disable-next-line space-before-function-paren, func-names
   result.status = function(code) {
     this.statusCode = code;
     return this;
@@ -60,13 +58,12 @@ describe('endpoints', () => {
       defaultErrorWriter(new Problem(409.1138, 'test message', { x: 1 }), null, response);
     });
 
-    it('should turn remaining errors into unknown Problems', (done) => {
+    it('should turn remaining errors into internal server errors', (done) => {
       const response = createModernResponse();
       const error = new Error('oops');
-      error.stack = ''; // strip stack so that our test output isn't super polluted
       response.on('end', () => {
         response.statusCode.should.equal(500);
-        response._getData().message.should.equal('Completely unhandled exception: oops');
+        response._getData().should.deepEqual({ message: 'Internal Server Error' });
         done();
       });
       defaultErrorWriter(error, null, response);
@@ -86,7 +83,7 @@ describe('endpoints', () => {
       const response = createModernResponse();
       response.on('end', () => {
         response.statusCode.should.equal(500);
-        response._getData().message.should.equal('Completely unhandled exception: undefined');
+        response._getData().should.deepEqual({ message: 'Internal Server Error' });
         done();
       });
       defaultErrorWriter(null, null, response);
@@ -442,7 +439,7 @@ describe('endpoints', () => {
     it('should send the given plain response', () => {
       const response = createModernResponse();
       defaultResultWriter('hello', createRequest(), response);
-      response._getData().should.equal('hello');
+      response._getData().should.equal('"hello"');
     });
 
     it('should send nothing given a 204 response', () => {
@@ -466,7 +463,6 @@ describe('endpoints', () => {
         result.should.equal('ateststream');
         done();
       });
-      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
       defaultResultWriter(streamTest.fromChunks([ 'a', 'test', 'stream' ]), requestTest, responseTest);
     });
@@ -478,7 +474,6 @@ describe('endpoints', () => {
         result.should.equal('a!test!stream!');
         done();
       });
-      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
 
       const resourceResult = PartialPipe.of(
@@ -502,9 +497,7 @@ describe('endpoints', () => {
         (result === undefined).should.equal(true); // post node v14.??
         done();
       });
-      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.addTrailers = function(t) { trailers = t; };
-      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
 
       const resourceResult = PartialPipe.of(
@@ -523,9 +516,8 @@ describe('endpoints', () => {
     it('should call next on PartialPipe stream error', (done) => {
       const requestTest = streamTest.fromChunks();
       const responseTest = streamTest.toText(() => {});
-      // eslint-disable-next-line no-undef, space-before-function-paren, func-names
+      // eslint-disable-next-line no-undef
       responseTest.addTrailers = function(t) { trailers = t; };
-      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
 
       const resourceResult = PartialPipe.of(
@@ -546,7 +538,6 @@ describe('endpoints', () => {
     it('should not crash if the request is aborted but the stream is not endable', () => {
       const requestTest = new EventEmitter();
       const responseTest = streamTest.toText(() => {});
-      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
       const source = streamTest.fromChunks([ 'a', 'test', 'stream' ], 20);
       defaultResultWriter(source, requestTest, responseTest);
@@ -604,7 +595,7 @@ describe('endpoints', () => {
 
         response.statusCode.should.equal(500);
         response.getHeader('Content-Type').should.equal('application/json');
-        response._getData().message.should.equal('Completely unhandled exception: test');
+        response._getData().should.deepEqual({ message: 'Internal Server Error' });
       });
 
       it('should wrap problems in openrosa xml envelopes', () => {
@@ -657,7 +648,7 @@ describe('endpoints', () => {
       });
 
       it('should reject requests for unsupported OData features', () => {
-        const request = createRequest({ url: '/odata.svc?$orderby=magic' });
+        const request = createRequest({ url: '/odata.svc?$inlineCount=magic' });
         return odataPreprocessor('json')(null, new Context(request), request)
           .should.be.rejectedWith(Problem, { problemCode: 501.1 });
       });
