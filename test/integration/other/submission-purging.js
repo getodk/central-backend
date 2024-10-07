@@ -4,7 +4,7 @@ const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const should = require('should');
 const { createReadStream } = require('fs');
-const { pZipStreamToFiles } = require('../../util/zip');
+const { httpZipResponseToFiles } = require('../../util/zip');
 
 const appPath = require('app-root-path');
 const { exhaust } = require(appPath + '/lib/worker/worker');
@@ -448,7 +448,7 @@ describe('query module submission purge', () => {
       numClientAudits.should.equal(0);
 
       // But the export still works (adhoc-processing of client audits)
-      const result = await pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'));
+      const result = await httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'));
 
       result.filenames.should.eql([
         'audits.csv',
