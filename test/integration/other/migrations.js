@@ -4,13 +4,15 @@ const uuid = require('uuid').v4;
 const config = require('config');
 const { testContainerFullTrx, testServiceFullTrx } = require('../setup');
 const { sql } = require('slonik');
+const { createReadStream } = require('fs');
 const { Actor, Config } = require(appRoot + '/lib/model/frames');
 const { withDatabase } = require(appRoot + '/lib/model/migrate');
+const { exhaust } = require(appRoot + '/lib/worker/worker');
+
 const testData = require('../../data/xml');
 const populateUsers = require('../fixtures/01-users');
 const populateForms = require('../fixtures/02-forms');
 const { getFormFields } = require('../../../lib/data/schema');
-
 
 const withTestDatabase = withDatabase(config.get('test.database'));
 const migrationsDir = appRoot + '/lib/model/migrations';
@@ -33,12 +35,30 @@ const up = () => withTestDatabase((migrator) =>
 const down = () => withTestDatabase((migrator) =>
   migrator.migrate.down({ directory: migrationsDir }));
 
+const testMigration = (filename, tests, options = {}) => {
+  const { only = false, skip = false } = options;
+  const f = only
+    // eslint-disable-next-line no-only-tests/no-only-tests
+    ? describe.only.bind(describe)
+    : (skip ? describe.skip.bind(describe) : describe);
+  f(`database migrations: ${filename}`, function() {
+    this.timeout(20000);
+
+    beforeEach(() => upToMigration(filename, false));
+
+    tests.call(this);
+  });
+};
+testMigration.only = (filename, tests) =>
+  testMigration(filename, tests, { only: true });
+testMigration.skip = (filename, tests) =>
+  testMigration(filename, tests, { skip: true });
+
 // NOTE/TODO: figure out something else here D:
 // Skipping these migrations because after adding a new description
 // column to projects and forms, it is not possible to migrate part way
 // (before the new column) and populate the data when frames expect the
 // new column to exist.
-// eslint-disable-next-line space-before-function-paren, func-names
 describe.skip('database migrations', function() {
   this.timeout(8000);
 
@@ -198,7 +218,6 @@ describe.skip('database migrations', function() {
 
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 describe('database migrations: removing default project', function() {
   this.timeout(8000);
 
@@ -236,7 +255,6 @@ describe('database migrations: removing default project', function() {
   }));
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 describe('database migrations: intermediate form schema', function() {
   this.timeout(20000);
 
@@ -366,7 +384,6 @@ describe('database migrations: intermediate form schema', function() {
   }));
 });
 
-// eslint-disable-next-line func-names, space-before-function-paren
 describe('database migrations: 20230123-01-remove-google-backups', function() {
   this.timeout(20000);
 
@@ -461,7 +478,6 @@ describe('database migrations: 20230123-01-remove-google-backups', function() {
   }));
 });
 
-// eslint-disable-next-line func-names
 describe.skip('database migrations: 20230324-01-edit-dataset-verbs.js', function () {
   this.timeout(20000);
 
@@ -498,7 +514,6 @@ describe.skip('database migrations: 20230324-01-edit-dataset-verbs.js', function
   }));
 });
 
-// eslint-disable-next-line func-names
 describe.skip('database migrations from 20230406: altering entities and entity_defs', function () {
   this.timeout(20000);
 
@@ -593,7 +608,6 @@ describe.skip('database migrations from 20230406: altering entities and entity_d
   }));
 });
 
-// eslint-disable-next-line func-names
 describe('database migrations from 20230512: adding entity_def_sources table', function () {
   this.timeout(20000);
 
@@ -681,8 +695,7 @@ describe('database migrations from 20230512: adding entity_def_sources table', f
       .expect(200);
     await asAlice.post('/v1/projects/1/forms/simple2/submissions')
       .set('Content-Type', 'application/xml')
-      .send(testData.instances.simple2.one
-        .replace('id="simple2"', 'id="simple2" version="2.1"'))
+      .send(testData.instances.simple2.one)
       .expect(200);
     await asAlice.patch('/v1/projects/1/forms/simple2/submissions/s2one')
       .send({ reviewState: 'approved' })
@@ -707,8 +720,7 @@ describe('database migrations from 20230512: adding entity_def_sources table', f
     // Create a fifth submission that will be deleted and wont have an approval event
     await asAlice.post('/v1/projects/1/forms/simple2/submissions')
       .set('Content-Type', 'application/xml')
-      .send(testData.instances.simple2.two
-        .replace('id="simple2"', 'id="simple2" version="2.1"'))
+      .send(testData.instances.simple2.two)
       .expect(200);
 
     // ----- Manually create entities to link to these submissions as sources ----
@@ -907,5 +919,139 @@ describe.skip('database migration: 20231002-01-add-conflict-details.js', functio
     defs[0].should.have.property('baseVersion').which.is.eql(null);
     defs[1].dataReceived.should.eql({ a: 'b', x: 'y', label: 'other label' });
     defs[1].should.have.property('baseVersion').which.is.eql(1);
+  }));
+});
+
+testMigration('20240215-01-entity-delete-verb.js', () => {
+  it('should add entity.delete verb to correct roles', testServiceFullTrx(async (service) => {
+    const verbsByRole = async () => {
+      const { body: roles } = await service.get('/v1/roles').expect(200);
+      const bySystem = {};
+      for (const role of roles) bySystem[role.system] = role.verbs;
+      return bySystem;
+    };
+
+    const before = await verbsByRole();
+    before.admin.length.should.equal(48);
+    before.admin.should.not.containEql('entity.delete');
+    before.manager.length.should.equal(33);
+    before.manager.should.not.containEql('entity.delete');
+    before.viewer.length.should.equal(9);
+    before.viewer.should.not.containEql('entity.delete');
+
+    await up();
+
+    const after = await verbsByRole();
+    after.admin.length.should.equal(49);
+    after.admin.should.containEql('entity.delete');
+    after.manager.length.should.equal(34);
+    after.manager.should.containEql('entity.delete');
+    after.viewer.length.should.equal(9);
+    after.viewer.should.not.containEql('entity.delete');
+  }));
+});
+
+testMigration('20240215-02-dedupe-verbs.js', () => {
+  it('should remove duplicate submission.update verb', testServiceFullTrx(async (service) => {
+    const verbsByRole = async () => {
+      const { body: roles } = await service.get('/v1/roles').expect(200);
+      const bySystem = {};
+      for (const role of roles) bySystem[role.system] = role.verbs;
+      return bySystem;
+    };
+
+    const before = await verbsByRole();
+    before.admin.length.should.equal(49);
+    before.admin.filter(verb => verb === 'submission.update').length.should.equal(2);
+    before.manager.length.should.equal(34);
+    before.manager.filter(verb => verb === 'submission.update').length.should.equal(2);
+    before.viewer.length.should.equal(9);
+
+    await up();
+
+    const after = await verbsByRole();
+    after.admin.length.should.equal(48);
+    after.admin.should.eqlInAnyOrder([...new Set(before.admin)]);
+    after.manager.length.should.equal(33);
+    after.manager.should.eqlInAnyOrder([...new Set(before.manager)]);
+    after.viewer.length.should.equal(9);
+  }));
+
+  it('should result in unique verbs for all roles', testServiceFullTrx(async (service) => {
+    await up();
+    const { body: roles } = await service.get('/v1/roles').expect(200);
+    for (const { verbs } of roles) verbs.should.eql([...new Set(verbs)]);
+  }));
+});
+
+testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
+  it('should remove orphaned client audits', testServiceFullTrx(async (service, container) => {
+    await populateUsers(container);
+    await populateForms(container);
+
+    const asAlice = await service.login('alice');
+
+    await asAlice.post('/v1/projects/1/forms?publish=true')
+      .send(testData.forms.clientAudits)
+      .expect(200);
+
+    // Send the submission with the client audit attachment
+    await asAlice.post('/v1/projects/1/submission')
+      .set('X-OpenRosa-Version', '1.0')
+      .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+      .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+      .expect(201);
+
+    await asAlice.post('/v1/projects/1/submission')
+      .set('X-OpenRosa-Version', '1.0')
+      .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+      .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+      .expect(201);
+
+    await exhaust(container);
+
+    // there should be 8 total rows (5 + 3)
+    let numClientAudits = await container.oneFirst(sql`select count(*) from client_audits`);
+    numClientAudits.should.equal(8);
+
+    // there should be 2 blobs
+    let blobCount = await container.oneFirst(sql`select count(*) from blobs`);
+    blobCount.should.equal(2);
+
+    // delete one of the submissions
+    await asAlice.delete('/v1/projects/1/forms/audits/submissions/one')
+      .expect(200);
+
+    // simulate purge without client audit purge
+    await container.run(sql`delete from submissions
+    where submissions."deletedAt" is not null`);
+
+    // purge unattached blobs (will not purge any because one is still referenced)
+    await container.Blobs.purgeUnattached(true);
+
+    // blobs count should still be 2
+    blobCount = await container.oneFirst(sql`select count(*) from blobs`);
+    blobCount.should.equal(2);
+
+    // client audits still equals 8 after purge (3 orphaned)
+    numClientAudits = await container.oneFirst(sql`select count(*) from client_audits`);
+    numClientAudits.should.equal(8);
+
+    // clean up orphaned client audits
+    await up();
+
+    numClientAudits = await container.oneFirst(sql`select count(*) from client_audits`);
+    numClientAudits.should.equal(3);
+
+    // blob count will still be two
+    blobCount = await container.oneFirst(sql`select count(*) from blobs`);
+    blobCount.should.equal(2);
+
+    // but next run of purging unattached blobs will purge one
+    await container.Blobs.purgeUnattached(true);
+
+    // blobs count should finally be 1
+    blobCount = await container.oneFirst(sql`select count(*) from blobs`);
+    blobCount.should.equal(1);
   }));
 });
