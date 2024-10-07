@@ -1011,21 +1011,20 @@ describe('odata message composition', () => {
             expectedNext: false,
             expectedValue: [ blain ],
           },
-
-        ].forEach(({ $top, skiptoken, expectedNext, expectedValue }) => {
-          it(`should return expected result for ${[$top, JSON.stringify(skiptoken)]}`, () => {
-            return fieldsFor(testData.forms.withrepeat).then((fields) => {
+        ].forEach(({ $top, skiptoken, expectedNext, expectedValue }) =>
+          it(`should return expected result for ${[$top, JSON.stringify(skiptoken)]}`, () =>
+            fieldsFor(testData.forms.withrepeat).then((fields) => {
               const submission = mockSubmission('two', testData.instances.withrepeat.two);
               const $skiptoken = '01' + Buffer.from(JSON.stringify(skiptoken)).toString('base64');
               const query = { $top, $skiptoken };
-              const originaUrl =  "/withrepeat.svc/Submissions('two')/children/child"; // doesn't have to include query string
+              const originaUrl = "/withrepeat.svc/Submissions('two')/children/child"; // doesn't have to include query string
               return singleRowToOData(fields, submission, 'http://localhost:8989', originaUrl, query)
                 .then(JSON.parse)
                 .then((res) => {
                   res['@odata.context'].should.eql('http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child');
 
                   const nextLink = res['@odata.nextLink'];
-                  if(expectedNext === false) should(nextLink).be.undefined();
+                  if (expectedNext === false) should(nextLink).be.undefined();
                   else {
                     should(nextLink).be.ok();
                     JSON.parse(
@@ -1041,9 +1040,7 @@ describe('odata message composition', () => {
 
                   res.value.should.deepEqual(expectedValue.map(x => ({ ...x, '__Submissions-id': 'two' })));
                 });
-            });
-          });
-        });
+            })));
       });
 
       // eslint-disable-next-line arrow-body-style
