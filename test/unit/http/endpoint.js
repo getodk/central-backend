@@ -14,13 +14,11 @@ const Problem = require(appRoot + '/lib/util/problem');
 const createModernResponse = () => {
   const result = createResponse({ eventEmitter: EventEmitter });
   // node-mocks-http does not have hasHeader yet.
-  // eslint-disable-next-line space-before-function-paren, func-names
   result.hasHeader = function(name) {
     return this.getHeader(name) != null;
   };
 
   // express adds this.
-  // eslint-disable-next-line space-before-function-paren, func-names
   result.status = function(code) {
     this.statusCode = code;
     return this;
@@ -441,7 +439,7 @@ describe('endpoints', () => {
     it('should send the given plain response', () => {
       const response = createModernResponse();
       defaultResultWriter('hello', createRequest(), response);
-      response._getData().should.equal('hello');
+      response._getData().should.equal('"hello"');
     });
 
     it('should send nothing given a 204 response', () => {
@@ -465,7 +463,6 @@ describe('endpoints', () => {
         result.should.equal('ateststream');
         done();
       });
-      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
       defaultResultWriter(streamTest.fromChunks([ 'a', 'test', 'stream' ]), requestTest, responseTest);
     });
@@ -477,7 +474,6 @@ describe('endpoints', () => {
         result.should.equal('a!test!stream!');
         done();
       });
-      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
 
       const resourceResult = PartialPipe.of(
@@ -501,9 +497,7 @@ describe('endpoints', () => {
         (result === undefined).should.equal(true); // post node v14.??
         done();
       });
-      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.addTrailers = function(t) { trailers = t; };
-      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
 
       const resourceResult = PartialPipe.of(
@@ -522,9 +516,8 @@ describe('endpoints', () => {
     it('should call next on PartialPipe stream error', (done) => {
       const requestTest = streamTest.fromChunks();
       const responseTest = streamTest.toText(() => {});
-      // eslint-disable-next-line no-undef, space-before-function-paren, func-names
+      // eslint-disable-next-line no-undef
       responseTest.addTrailers = function(t) { trailers = t; };
-      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
 
       const resourceResult = PartialPipe.of(
@@ -545,7 +538,6 @@ describe('endpoints', () => {
     it('should not crash if the request is aborted but the stream is not endable', () => {
       const requestTest = new EventEmitter();
       const responseTest = streamTest.toText(() => {});
-      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
       const source = streamTest.fromChunks([ 'a', 'test', 'stream' ], 20);
       defaultResultWriter(source, requestTest, responseTest);

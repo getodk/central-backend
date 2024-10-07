@@ -415,6 +415,29 @@ module.exports = {
   </h:head>
 </h:html>`,
 
+    offlineEntity: `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+  <h:head>
+    <model entities:entities-version="2024.1.0">
+      <instance>
+        <data id="offlineEntity" orx:version="1.0">
+          <name/>
+          <age/>
+          <status/>
+          <meta>
+            <entity dataset="people" id="" create="" update="" baseVersion="" trunkVersion="" branchId="">
+              <label/>
+            </entity>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+      <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+      <bind nodeset="/data/status" type="int" entities:saveto="status"/>
+    </model>
+  </h:head>
+</h:html>`,
+
     groupRepeat: `<?xml version="1.0"?>
     <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
         <h:head>
@@ -529,9 +552,9 @@ module.exports = {
       three: fullInstance('withrepeat', '1.0', 'rthree', '<name>Chelsea</name><age>38</age><children><child><name>Candace</name><age>2</age></child></children>'),
     },
     simple2: {
-      one: instance('simple2', 's2one', '<name>Alice</name><age>30</age>'),
-      two: instance('simple2', 's2two', '<name>Bob</name><age>34</age>'),
-      three: instance('simple2', 's2three', '<name>Chelsea</name><age>38</age>')
+      one: fullInstance('simple2', '2.1', 's2one', '<name>Alice</name><age>30</age>'),
+      two: fullInstance('simple2', '2.1', 's2two', '<name>Bob</name><age>34</age>'),
+      three: fullInstance('simple2', '2.1', 's2three', '<name>Chelsea</name><age>38</age>')
     },
     doubleRepeat: {
       double: `<data id="doubleRepeat" version="1.0">
@@ -701,6 +724,33 @@ module.exports = {
         </meta>
         <age>55</age>
       </data>`
+    },
+    offlineEntity: {
+      one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="offlineEntity" version="1.0">
+        <meta>
+          <instanceID>one</instanceID>
+          <orx:instanceName>one</orx:instanceName>
+          <entity dataset="people" id="12345678-1234-4123-8234-123456789abc"
+            baseVersion="1" update="1"
+            trunkVersion="1" branchId="">
+          </entity>
+        </meta>
+        <status>arrived</status>
+      </data>`,
+      two: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="offlineEntity" version="1.0">
+        <meta>
+          <instanceID>two</instanceID>
+          <orx:instanceName>two</orx:instanceName>
+          <entity dataset="people" id="12345678-1234-4123-8234-123456789ddd"
+          baseVersion="" create="1"
+          trunkVersion="" branchId="">
+            <label>Megan (20)</label>
+          </entity>
+        </meta>
+        <name>Megan</name>
+        <status>new</status>
+        <age>20</age>
+      </data>`,
     },
     groupRepeat: {
       one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="groupRepeat">
