@@ -169,42 +169,108 @@ describe.only('api: /forms/:id.svc', () => {
             });
           }))));
 
-    it.only('should return now result if skiptoken matches the last record', testService((service) =>
-      withSubmission(service, (asAlice) =>
-        // XXX
-        asAlice.get(`/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')?%24skiptoken=01${Buffer.from(JSON.stringify({ repeatId:'double' })).toString('base64')}`)
-          .expect(200)
-          .then(({ body }) => {
-            // have to manually check and clear the date for exact match:
-            body.value[0].__system.submissionDate.should.be.an.isoDate();
-            // eslint-disable-next-line no-param-reassign
-            delete body.value[0].__system.submissionDate;
+    describe.only('skiptoken', () => {
+      const alice = { id: 'one', name: 'Alice', age: 30 };
+      const bob = { id: 'two', name: 'Bob', age: 34 };
+      const chelsea = { id: 'three', name: 'Chelsea', age: 38 };
 
-            body.should.eql({
-              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions',
-              value: [{
-                __id: 'double',
-                __system: {
-                  // submissionDate is checked above!
-                  updatedAt: null,
-                  submitterId: '5',
-                  submitterName: 'Alice',
-                  attachmentsPresent: 0,
-                  attachmentsExpected: 0,
-                  status: null,
-                  reviewState: null,
-                  deviceId: 'testid',
-                  edits: 0,
-                  formVersion: '1.0'
-                },
-                children: {
-                  'child@odata.navigationLink': "Submissions('double')/children/child"
-                },
-                meta: { instanceID: 'double' },
-                name: 'Vick'
-              }]
-            });
-          }))));
+      const expectResponse = expected => ({ body }) => {
+        const { '@odata.context':odataContext, value, ...rest } = body;
+        Object.keys(rest).length.should.eql(0);
+        odataContext.should.eql('http://localhost:8989/v1/projects/1/forms/simple.svc/$metadata#Submissions');
+        value.map(r => ({ id:r.__id, name:r.name, age:r.age })).should.deepEqual(expected);
+      };
+
+      const testWithSimpleSubmission = testFn => testService(service => service.login('alice', async (asAlice) => {
+        const submissionExists = submissionBody => asAlice.post('/v1/projects/1/forms/simple/submissions?deviceID=testid')
+            .send(submissionBody)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+        await submissionExists(testData.instances.simple.one);
+        await submissionExists(testData.instances.simple.two);
+        await submissionExists(testData.instances.simple.three);
+
+        const requestWithSkiptoken = skiptoken => asAlice.get(`/v1/projects/1/forms/simple.svc/Submissions('two')?%24skiptoken=01${Buffer.from(JSON.stringify(skiptoken)).toString('base64')}`)
+            .expect(200)
+
+        return testFn(requestWithSkiptoken);
+      }));
+
+      [
+        [ {}, [ alice, bob, chelsea ] ],
+        [ { repeatId:'nonsense' }, [ alice, bob, chelsea ] ],
+        [ { repeatId:'one' }, [ alice, bob, chelsea ] ],
+        [ { repeatId:'two' }, [ alice, bob, chelsea ] ],
+        [ { repeatId:'three' }, [ alice, bob, chelsea ] ],
+      ].forEach(([ skiptoken, expected ]) => {
+        it(`should return ${expected.map(x => x.name)} for skiptoken ${JSON.stringify(skiptoken)}`, testWithSimpleSubmission((requestWithSkiptoken) =>
+          requestWithSkiptoken(skiptoken)
+              .then(expectResponse(expected))));
+      });
+    });
+
+    it('should process various skiptoken scenarios', testService((service) =>
+      service.login('alice', async (asAlice) => {
+        const alice = { id: 'one', name: 'Alice', age: 30 };
+        const bob = { id: 'two', name: 'Bob', age: 34 };
+        const chelsea = { id: 'three', name: 'Chelsea', age: 38 };
+        const submissionExists = submissionBody => asAlice.post('/v1/projects/1/forms/simple/submissions?deviceID=testid')
+            .send(submissionBody)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+        const requestWithSkiptoken = skiptoken => asAlice.get(`/v1/projects/1/forms/simple.svc/Submissions('two')?%24skiptoken=01${Buffer.from(JSON.stringify(skiptoken)).toString('base64')}`)
+            .expect(200)
+        const expectResponse = expected => ({ body }) => {
+          const { '@odata.context':odataContext, value, ...rest } = body;
+          Object.keys(rest).length.should.eql(0);
+          odataContext.should.eql('http://localhost:8989/v1/projects/1/forms/simple.svc/$metadata#Submissions');
+          value.map(r => ({ id:r.__id, name:r.name, age:r.age })).should.deepEqual(expected);
+        };
+
+        // given
+        await submissionExists(testData.instances.simple.one);
+        await submissionExists(testData.instances.simple.two);
+        await submissionExists(testData.instances.simple.three);
+
+        // when
+        await requestWithSkiptoken({ repeatId:'double' })
+            .then(expectResponse([ alice, bob, chelsea ]));
+
+//        await asAlice.get(`/v1/projects/1/forms/simple.svc/Submissions('two')?%24skiptoken=01${Buffer.from(JSON.stringify({ repeatId:'double' })).toString('base64')}`)
+//            .expect(200)
+//            .then(({ body }) => {
+//              // have to manually check and clear the date for exact match:
+//              body.value[0].__system.submissionDate.should.be.an.isoDate();
+//              // eslint-disable-next-line no-param-reassign
+//              delete body.value[0].__system.submissionDate;
+//
+//              body.should.eql({
+//                '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions',
+//                value: [{
+//                  __id: 'double',
+//                  __system: {
+//                    // submissionDate is checked above!
+//                    updatedAt: null,
+//                    submitterId: '5',
+//                    submitterName: 'Alice',
+//                    attachmentsPresent: 0,
+//                    attachmentsExpected: 0,
+//                    status: null,
+//                    reviewState: null,
+//                    deviceId: 'testid',
+//                    edits: 0,
+//                    formVersion: '1.0'
+//                  },
+//                  children: {
+//                    'child@odata.navigationLink': "Submissions('double')/children/child"
+//                  },
+//                  meta: { instanceID: 'double' },
+//                  name: 'Vick'
+//                }]
+//              });
+//            });
+      })));
 
     it('should return success if "uuid:" prefix is encoded', testService((service) =>
       service.login('alice', (asAlice) =>
