@@ -7,47 +7,39 @@
 // including this file, may be copied, modified, propagated, or distributed
 // except according to the terms contained in the LICENSE file.
 
-/* eslint-disable */
-
 const assert = require('node:assert');
 const fs = require('node:fs');
-const should = require('should');
 
 const SUITE_NAME = 'test/e2e/standard';
-const log = require('../util/logger')(SUITE_NAME);
-const { apiClient, mimetypeFor, Redirect } = require('../util/api');
+const { apiClient } = require('../util/api');
 
 const serverUrl = 'http://localhost:8383';
 const userEmail = 'x@example.com';
 const userPassword = 'secret1234';
 
-const attDir = './test-attachments';
-const BIGFILE = `${attDir}/big.bin`;
-
 describe('standard', () => {
-  let api, projectId, xmlFormId, xmlFormVersion;
+  let api, projectId, xmlFormId, xmlFormVersion; // eslint-disable-line one-var, one-var-declaration-per-line
 
-  it('should handle weird submission instanceId gracefully', async function() {
+  it('should handle weird submission instanceId gracefully', async () => {
     // given
     api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
     projectId = await createProject();
     await uploadForm('test-form.xml');
-
-    // given
+    // and
     const goodSubmissionId = 'good-id';
     await uploadSubmission(goodSubmissionId);
 
-    // when
-    const goodSubmissionOdata = await api.apiGet(`projects/${projectId}/forms/${encodeURIComponent(xmlFormId)}.svc/Submissions('${goodSubmissionId}')`);
+    // expect 200:
+    await api.apiGet(`projects/${projectId}/forms/${encodeURIComponent(xmlFormId)}.svc/Submissions('${goodSubmissionId}')`);
 
     // given
     const badSubmissionId = 'bad-id:';
     await uploadSubmission(badSubmissionId);
-
     // when
     await assert.rejects(
       () => api.apiGet(`projects/${projectId}/forms/${encodeURIComponent(xmlFormId)}.svc/Submissions('${badSubmissionId}')?%24select=__id%2C__system%2Cmeta`),
       (err) => {
+        // then
         assert.strictEqual(err.responseStatus, 404);
         assert.deepStrictEqual(JSON.parse(err.responseText), {
           message: 'Could not find the resource you were looking for.',
@@ -57,7 +49,7 @@ describe('standard', () => {
       },
     );
 
-    // then service has not crashed
+    // and service has not crashed:
     const rootRes = await fetch(serverUrl);
     assert.strictEqual(rootRes.status, 404);
     assert.strictEqual(await rootRes.text(), '{"message":"Expected an API version (eg /v1) at the start of the request URL.","code":404.2}');
