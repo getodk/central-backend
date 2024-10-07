@@ -91,16 +91,7 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
 
     // eslint-disable-next-line no-use-before-define
     if(isRedirected(res)) return new Redirect(res);
-    if(!res.ok) {
-      const responseStatus = res.status;
-      const responseText = await res.text();
-
-      const err = new Error(`${responseStatus}: ${responseText}`);
-      err.responseStatus = responseStatus;
-      err.responseText = responseText;
-
-      throw err;
-    }
+    if(!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
     return res;
   }
 }
