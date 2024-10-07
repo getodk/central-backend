@@ -29,11 +29,13 @@ const processZipFile = (zipfile, callback) => {
         result.filenames.push(entry.fileName);
         // eslint-disable-next-line no-shadow
         zipfile.openReadStream(entry, (err, resultStream) => {
-          if (err) return callback(err);
+          // eslint-disable-next-line keyword-spacing
+          if(err) return callback(err);
 
           // eslint-disable-next-line no-shadow
           resultStream.pipe(streamTest.toText((err, contents) => {
-            if (err) return callback(err);
+            // eslint-disable-next-line keyword-spacing
+            if(err) return callback(err);
 
             result[entry.fileName] = contents;
             completed += 1;
@@ -50,7 +52,8 @@ const processZipFile = (zipfile, callback) => {
 
 const zipStreamToFiles = (zipStream, callback) => {
   tmp.file((err, tmpfile) => {
-    if (err) return callback(err);
+    // eslint-disable-next-line keyword-spacing
+    if(err) return callback(err);
 
     const writeStream = createWriteStream(tmpfile);
     zipStream.pipe(writeStream);
