@@ -1674,7 +1674,7 @@ describe('api: /forms/:id/submissions', () => {
 
       await asAlice.delete('/v1/projects/1/forms/simple/submissions/two');
 
-      const result = await pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'));
+      const result = await httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'));
       const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
       csv.length.should.equal(4); // header + 2 data rows + newline
       csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
@@ -1830,7 +1830,7 @@ describe('api: /forms/:id/submissions', () => {
               .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
               .expect(201))
             .then(() => Blobs.s3UploadPending())
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.containDeep([
                   'binaryType.csv',
@@ -2244,7 +2244,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             global.s3.uploads.attempted.should.equal(2);
             global.s3.uploads.successful.should.equal(2);
           })
-          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
+          .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
             .then((result) => {
               result.filenames.should.eql([
                 'audits.csv',
