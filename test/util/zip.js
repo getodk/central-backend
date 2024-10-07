@@ -1,7 +1,6 @@
 const tmp = require('tmp');
 const yauzl = require('yauzl');
 const { createWriteStream } = require('fs');
-
 const streamTest = require('streamtest').v2;
 
 // unzip and detangle zipfiles.
