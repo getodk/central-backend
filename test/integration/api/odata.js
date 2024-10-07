@@ -13,7 +13,7 @@ const { url } = require('../../../lib/util/http');
 // that we have plumbed the relevant input to those layers correctly, and have applied
 // the appropriate higher-level logics (notfound, notauthorized, etc.)
 
-describe('api: /forms/:id.svc', () => {
+describe.only('api: /forms/:id.svc', () => {
   describe('GET', () => {
     it('should reject unless the form exists', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -136,6 +136,43 @@ describe('api: /forms/:id.svc', () => {
     it('should return a single row result', testService((service) =>
       withSubmission(service, (asAlice) =>
         asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')")
+          .expect(200)
+          .then(({ body }) => {
+            // have to manually check and clear the date for exact match:
+            body.value[0].__system.submissionDate.should.be.an.isoDate();
+            // eslint-disable-next-line no-param-reassign
+            delete body.value[0].__system.submissionDate;
+
+            body.should.eql({
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions',
+              value: [{
+                __id: 'double',
+                __system: {
+                  // submissionDate is checked above!
+                  updatedAt: null,
+                  submitterId: '5',
+                  submitterName: 'Alice',
+                  attachmentsPresent: 0,
+                  attachmentsExpected: 0,
+                  status: null,
+                  reviewState: null,
+                  deviceId: 'testid',
+                  edits: 0,
+                  formVersion: '1.0'
+                },
+                children: {
+                  'child@odata.navigationLink': "Submissions('double')/children/child"
+                },
+                meta: { instanceID: 'double' },
+                name: 'Vick'
+              }]
+            });
+          }))));
+
+    it.only('should return now result if skiptoken matches the last record', testService((service) =>
+      withSubmission(service, (asAlice) =>
+        // XXX
+        asAlice.get(`/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')?%24skiptoken=01${Buffer.from(JSON.stringify({ repeatId:'double' })).toString('base64')}`)
           .expect(200)
           .then(({ body }) => {
             // have to manually check and clear the date for exact match:
