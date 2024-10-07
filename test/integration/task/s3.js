@@ -169,41 +169,53 @@ describe('task: s3', () => {
         (await container.Audits.getLatestByAction('blobs.s3.upload')).get().details.should.containEql({ uploaded: 1, failed: 0 });
       }));
 
-      it('should not attempt to upload an in-progress blob', testTaskFullTrx(async (container) => {
-        // given
-        const original = global.s3.uploadFromBlob;
-        let resume;
-        global.s3.uploadFromBlob = async (...args) => {
-          await new Promise(resolve => {
-            resume = resolve;
-          });
-          original.apply(global.s3, args);
-        };
-        await aBlobExistsWith(container, { status: 'pending' });
+      describe('with delayed s3 upload', () => {
+        let restoreS3mock;
+        let resumeFirstUpload;
 
-        // when
-        const first = uploadPending();
-        await new Promise(resolve => { setTimeout(resolve, 200); });
-        if (!resume) should.fail('Test did not set up successfully');
-        global.s3.uploadFromBlob = original;
-        // and
-        const second = uploadPending();
-        await second;
+        beforeEach(() => {
+          const original = global.s3.uploadFromBlob;
+          restoreS3mock = () => { global.s3.uploadFromBlob = original; };
 
-        // then
-        global.s3.uploads.attempted.should.equal(0);
-        global.s3.uploads.successful.should.equal(0);
-        (await container.Audits.getLatestByAction('blobs.s3.upload')).isDefined().should.equal(false);
+          global.s3.uploadFromBlob = async (...args) => {
+            await new Promise(resolve => {
+              resumeFirstUpload = resolve;
+            });
+            original.apply(global.s3, args);
+          };
+        });
 
-        // when
-        resume();
-        await first;
+        afterEach(() => {
+          restoreS3mock();
+        });
 
-        // then
-        global.s3.uploads.attempted.should.equal(1);
-        global.s3.uploads.successful.should.equal(1);
-        (await container.Audits.getLatestByAction('blobs.s3.upload')).get().details.should.containEql({ uploaded: 1, failed: 0 });
-      }));
+        it('should not attempt to upload an in-progress blob', testTaskFullTrx(async (container) => {
+          await aBlobExistsWith(container, { status: 'pending' });
+
+          // when
+          const first = uploadPending();
+          await new Promise(resolve => { setTimeout(resolve, 200); });
+          should(resumeFirstUpload).be.a.Function(); // or Blobs.s3UploadPending() never triggered
+          restoreS3mock();
+          // and
+          const second = uploadPending();
+          await second;
+
+          // then
+          global.s3.uploads.attempted.should.equal(0);
+          global.s3.uploads.successful.should.equal(0);
+          (await container.Audits.getLatestByAction('blobs.s3.upload')).isDefined().should.equal(false);
+
+          // when
+          resumeFirstUpload();
+          await first;
+
+          // then
+          global.s3.uploads.attempted.should.equal(1);
+          global.s3.uploads.successful.should.equal(1);
+          (await container.Audits.getLatestByAction('blobs.s3.upload')).get().details.should.containEql({ uploaded: 1, failed: 0 });
+        }));
+      });
 
       describe('with limit', () => {
         let originalLog;
