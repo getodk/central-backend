@@ -1,4 +1,3 @@
-const should = require('should');
 const appRoot = require('app-root-path');
 const http = require(appRoot + '/lib/util/http');
 
@@ -50,43 +49,9 @@ describe('util/http', () => {
     });
   });
 
-  describe('serialize', () => {
-    const { serialize } = http;
-    it('should passthrough nullish values', () => {
-      should(serialize(null)).equal(null);
-      should(serialize(undefined)).equal(undefined);
-    });
-
-    it('should call forApi on the target if it exists', () => {
-      serialize({ forApi: () => 42 }).should.equal(42);
-    });
-
-    it('should leave strings alone', () => {
-      serialize('hello').should.equal('hello');
-    });
-
-    it('should jsonify any other values it finds', () => {
-      serialize(42).should.equal('42');
-      serialize({ x: 1 }).should.equal('{"x":1}');
-    });
-
-    it('should subserialize each element if an array is found', () => {
-      serialize([
-        'hello',
-        { forApi: () => 42 },
-        [ 'world',
-          { forApi: () => 23 } ]
-      ]).should.eql(['hello', 42, [ 'world', 23 ] ]); // TODO: is this actually the desired result?
-    });
-
-    it('should not subserialize plain objects within an array', () => {
-      serialize([{ a: 1 }, { b: 2, c: 3 }]).should.eql([{ a: 1 }, { b: 2, c: 3 }]);
-    });
-  });
-
   describe('format response helpers', () => {
     const { contentType, xml, atom, json } = http;
-    // eslint-disable-next-line semi, space-before-function-paren, object-shorthand, func-names
+    // eslint-disable-next-line semi, object-shorthand
     const mockResponse = () => ({ type: function(value) { this.contentType = value } });
     it('should ultimately return the result', () => {
       contentType()(42)(null, mockResponse()).should.equal(42);
