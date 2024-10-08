@@ -26,6 +26,26 @@ describe('entity', () => {
       partial.aux.should.have.property('dataset', 'people');
     });
 
+    it('should throw 400.2 for other problems like missing branchId when trunkVersion is present', () => {
+      const entity = {
+        system: {
+          label: 'label',
+          id: 'uuid:12345678-1234-4123-8234-abcd56789abc',
+          update: '1',
+          trunkVersion: '1',
+          baseVersion: '3',
+          dataset: 'people'
+        },
+        data: { field: 'value' }
+      };
+
+      assert.throws(() => { Entity.fromParseEntityData(entity, { update: true }); }, (err) => {
+        err.problemCode.should.equal(400.2);
+        err.message.should.equal('Required parameter branchId missing.');
+        return true;
+      });
+    });
+
     describe('baseVersion', () => {
       it('should parse successfully for empty baseVersion, create: true', () => {
         const partial = Entity.fromParseEntityData({
@@ -62,7 +82,7 @@ describe('entity', () => {
           system: {
             label: 'label',
             id: 'uuid:12345678-1234-4123-8234-abcd56789abc',
-            create: '1',
+            update: '1',
             baseVersion: '',
             dataset: 'people'
           },
