@@ -94,7 +94,10 @@ const httpZipResponseToFiles = (zipHttpResponse) => new Promise((resolve, reject
       if (err) return reject(err);
 
       // eslint-disable-next-line no-shadow
-      processZipFile(zipfile, (err, result) => { if (err) reject(err); else resolve(result); });
+      processZipFile(zipfile, (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
     });
   });
 });
