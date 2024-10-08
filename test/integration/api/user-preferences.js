@@ -56,27 +56,32 @@ describe('api: user-preferences', () => {
   it('PUT/DELETE preference storage operations', testService(async (service) => {
     const asAlice = await service.login('alice');
 
+    // Storage of simple property value
     await asAlice.put('/v1/user-preferences/site/someSimpleSitePref')
       .send({ propertyValue: true })
       .expect(200);
 
+    // Storage of property with complex value
     await asAlice.put('/v1/user-preferences/site/someComplexSitePref')
       .send({ propertyValue: { 1: 2, 3: 4 } })
       .expect(200);
 
-    // overwrite the previous
+    // Overwriting should work; later we'll check whether we retrieve this value
     await asAlice.put('/v1/user-preferences/site/someComplexSitePref')
       .send({ propertyValue: [1, 2, 3] })
       .expect(200);
 
+    // Store some pref to delete later on
     await asAlice.put('/v1/user-preferences/site/toBeDeletedPref')
       .send({ propertyValue: 'troep' })
       .expect(200);
 
+    // Store a *project* property (simple value)
     await asAlice.put('/v1/user-preferences/project/1/someSimpleProjectPref')
       .send({ propertyValue: false })
       .expect(200);
 
+    // Store a *project* property (complex value)
     await asAlice.put('/v1/user-preferences/project/1/someComplexProjectPref')
       .send({ propertyValue: [1, 2, 'many'] })
       .expect(200);
@@ -90,10 +95,12 @@ describe('api: user-preferences', () => {
         newProjectID = body.id;
       });
 
+    // we should be able to store a preference for the new project
     await asAlice.put(`/v1/user-preferences/project/${newProjectID}/prefForSomeOtherProject`)
       .send({ propertyValue: 9000 })
       .expect(200);
 
+    // store a project preference on this new project to be deleted later on
     await asAlice.put(`/v1/user-preferences/project/${newProjectID}/toBeDeletedPref`)
       .send({ propertyValue: 'troep' })
       .expect(200);
@@ -106,12 +113,14 @@ describe('api: user-preferences', () => {
         .expect(200)
     );
 
+    // expected properties of the new project
     const newProjectProps = {};
     newProjectProps[newProjectID] = {
       prefForSomeOtherProject: 9000,
       toBeDeletedPref: 'troep',
     };
 
+    // check whether the built-up state is sane (eg stores and overwrites applied)
     await asAlice.get('/v1/users/current')
       .set('X-Extended-Metadata', 'true')
       .expect(200)
@@ -134,17 +143,21 @@ describe('api: user-preferences', () => {
         });
       });
 
+    // check deletion of a site preference
     await asAlice.delete('/v1/user-preferences/site/toBeDeletedPref')
       .expect(200);
 
+    // check deletion of a project preference
     await asAlice.delete(`/v1/user-preferences/project/${newProjectID}/toBeDeletedPref`)
       .expect(200);
 
+    // check whether deleting something nonexistent results in an informative error response
     await asAlice.delete(`/v1/user-preferences/project/${newProjectID}/toBeDeletedPref`)
       .expect(404); // as we've just deleted it
 
     delete newProjectProps[newProjectID].toBeDeletedPref;
 
+    // check whether the built-up state is sane (deletions applied)
     await asAlice.get('/v1/users/current')
       .expect(200)
       .set('X-Extended-Metadata', 'true')
