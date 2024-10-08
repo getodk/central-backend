@@ -72,10 +72,15 @@ describe('Update / migrate entities-version within form', () => {
       // Run form upgrade
       await exhaust(container);
 
-      // The version on the draft hasn't changed because it has been updated in place
+      // The version on the draft does change even though it is updated in place
       await asAlice.get('/v1/projects/1/forms/updateEntity/draft')
         .then(({ body }) => {
-          body.version.should.equal('1.0');
+          body.version.should.equal('1.0_upgrade');
+        });
+
+      await asAlice.get('/v1/projects/1/forms/updateEntity/versions')
+        .then(({ body }) => {
+          body.length.should.equal(0);
         });
 
       // The XML is updated
