@@ -135,15 +135,12 @@ describe('api: user-preferences', () => {
       });
 
     await asAlice.delete('/v1/user-preferences/site/toBeDeletedPref')
-      .send({ propertyValue: true })
       .expect(200);
 
     await asAlice.delete(`/v1/user-preferences/project/${newProjectID}/toBeDeletedPref`)
-      .send({ propertyValue: true })
       .expect(200);
 
     await asAlice.delete(`/v1/user-preferences/project/${newProjectID}/toBeDeletedPref`)
-      .send({ propertyValue: true })
       .expect(404); // as we've just deleted it
 
     delete newProjectProps[newProjectID].toBeDeletedPref;
