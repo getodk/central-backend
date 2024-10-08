@@ -76,6 +76,13 @@ const zipStreamToFiles = (zipStream, callback) => {
 // * a bug in supertest's pipe/stream implementation
 //
 // Possibly: https://github.com/ladjs/supertest/issues/487
+//
+// Parsers are documented at:
+//
+// * https://github.com/ladjs/superagent/blob/master/docs/index.md#parsing-response-bodies
+// * https://github.com/ladjs/superagent/tree/2fd631ae225f4335fef37e9888925db0ef42d497/src/node/parsers
+//
+// There doesn't seem to be an error event.
 const binaryParser = (res, callback) => {
   res.setEncoding('binary');
   let data = '';
