@@ -19,9 +19,7 @@ const processZipFile = (zipfile, callback) => {
 
   zipfile.on('error', (err) => callback(err));
   zipfile.on('entry', (entry) => entries.push(entry));
-  zipfile.on('end', (err) => {
-    if (err) return callback(err);
-
+  zipfile.on('end', () => {
     if (entries.length === 0) {
       callback(null, result);
       zipfile.close();
