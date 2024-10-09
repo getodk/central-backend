@@ -41,6 +41,9 @@ before(resetEnketo);
 after(resetEnketo);
 afterEach(resetEnketo);
 
+// set up our s3 mock
+const { s3 } = require(appRoot + '/test/util/s3');
+
 // set up odk analytics mock.
 const { ODKAnalytics } = require(appRoot + '/test/util/odk-analytics-mock');
 const odkAnalytics = new ODKAnalytics();
@@ -81,21 +84,23 @@ const initialize = async () => {
     await migrator.destroy();
   }
 
-  return withDefaults({ db, context, enketo, env }).transacting(populate);
+  return withDefaults({ db, context, enketo, env, s3 }).transacting(populate);
 };
 
-// eslint-disable-next-line func-names, space-before-function-paren
 before(function() {
   this.timeout(0);
   return initialize();
+});
+after(async () => {
+  await db.end();
 });
 
 let mustReinitAfter;
 beforeEach(() => {
   // eslint-disable-next-line keyword-spacing
   if(mustReinitAfter) throw new Error(`Failed to reinitalize after previous test: '${mustReinitAfter}'.  You may need to increase your mocha timeout.`);
+  s3.resetMock();
 });
-// eslint-disable-next-line func-names, space-before-function-paren
 afterEach(async function() {
   this.timeout(0);
   if (mustReinitAfter) {
@@ -137,7 +142,7 @@ const augment = (service) => {
 // FINAL TEST WRAPPERS
 
 
-const baseContainer = withDefaults({ db, mail, env, xlsform, enketo, Sentry, odkAnalytics, context });
+const baseContainer = withDefaults({ db, mail, env, xlsform, enketo, Sentry, odkAnalytics, context, s3 });
 
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
@@ -152,7 +157,6 @@ const testService = (test) => () => new Promise((resolve, reject) => {
 // for some tests we explicitly need to make concurrent requests, in which case
 // the transaction butchering we do for testService will not work. for these cases,
 // we offer testServiceFullTrx:
-// eslint-disable-next-line space-before-function-paren, func-names
 const testServiceFullTrx = (test) => function() {
   mustReinitAfter = this.test.fullTitle();
   return test(augment(request(service(baseContainer))), baseContainer);
@@ -168,7 +172,6 @@ const testContainer = (test) => () => new Promise((resolve, reject) => {
 });
 
 // complete the square of options:
-// eslint-disable-next-line space-before-function-paren, func-names
 const testContainerFullTrx = (test) => function() {
   mustReinitAfter = this.test.fullTitle();
   return test(baseContainer);
@@ -187,6 +190,14 @@ const testTask = (test) => () => new Promise((resolve, reject) => {
     return test(task._container).then(rollback(resolve), rollback(reject));
   });//.catch(Promise.resolve.bind(Promise));
 });
+
+// See testServiceFullTrx()
+// eslint-disable-next-line space-before-function-paren, func-names
+const testTaskFullTrx = (test) => function() {
+  mustReinitAfter = this.test.fullTitle();
+  task._container = baseContainer.with({ task: true });
+  return test(task._container);
+};
 
 // eslint-disable-next-line no-shadow
 const withClosedForm = (f) => async (service) => {
@@ -213,4 +224,4 @@ const withClosedForm = (f) => async (service) => {
   return f(service);
 };
 
-module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask, withClosedForm };
+module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask, testTaskFullTrx, withClosedForm };

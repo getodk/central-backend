@@ -409,6 +409,34 @@ describe('datasets and entities', () => {
           });
       }));
 
+      it('should reject if creating a dataset property that already exists', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({
+            name: 'trees'
+          })
+          .expect(200);
+
+        // Create a property
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({
+            name: 'height'
+          })
+          .expect(200);
+
+        // Second time should fail
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({
+            name: 'height'
+          })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.3);
+            body.message.should.startWith('A resource already exists with name,datasetId value(s) of height');
+          });
+      }));
+
       it('should log an event for creating a new dataset property', testService(async (service) => {
         const asAlice = await service.login('alice');
 
@@ -432,6 +460,44 @@ describe('datasets and entities', () => {
             logs[0].actee.should.be.a.Dataset();
             logs[0].actee.name.should.equal('trees');
             logs[0].details.properties.should.eql([ 'circumference' ]);
+          });
+      }));
+
+      it('should allow property name from a deleted draft form be used', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        // Create a draft dataset
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Delete the draft form
+        await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+          .expect(200);
+
+        // Create the dataset with the same name as the dataset in the deleted form
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        // Create a property with a name that wasn't originally in the dataset in the form
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'nickname' })
+          .expect(200);
+
+        // Create a property with a name that was in the dataset in the form
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'age' })
+          .expect(200);
+
+        // Re-creating an existing property should result in an error
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'age' })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.3);
+            body.message.should.startWith('A resource already exists with name,datasetId value(s) of age');
           });
       }));
     });
@@ -611,7 +677,7 @@ describe('datasets and entities', () => {
 
         await exhaust(container);
 
-        await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1' WHERE TRUE`);
+        await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1T00:00:00Z' WHERE TRUE`);
 
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
           .send(testData.instances.simpleEntity.two)
@@ -5493,10 +5559,10 @@ describe('datasets and entities', () => {
           .send({ approvalRequired: true })
           .expect(200);
 
-        // Create a submission that fails to create an entity (bad UUID)
+        // Create a submission that fails to create an entity (empty label)
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
           .send(testData.instances.simpleEntity.one
-            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:invalid_uuid"'))
+            .replace('<entities:label>Alice (88)</entities:label>', ''))
           .set('Content-Type', 'application/xml')
           .expect(200);
 
@@ -5556,10 +5622,10 @@ describe('datasets and entities', () => {
           .send({ approvalRequired: true })
           .expect(200);
 
-        // Create a submission that fails to create an entity (bad UUID)
+        // Create a submission that fails to create an entity (empty label)
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
           .send(testData.instances.simpleEntity.one
-            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:invalid_uuid"'))
+            .replace('<entities:label>Alice (88)</entities:label>', ''))
           .set('Content-Type', 'application/xml')
           .expect(200);
 
