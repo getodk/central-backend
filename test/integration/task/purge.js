@@ -9,7 +9,7 @@ const { purgeTask } = require(appRoot + '/lib/task/purge');
 // of purged forms, but the full functionality is more thoroughly tested in
 // test/integration/other/form-purging.js and test/integration/other/submission-purging.js.
 
-const decorate = container => {
+const withDeleteChecks = container => {
   const confirm = {
     form: {},
     forms: {},
@@ -39,7 +39,7 @@ const decorate = container => {
   return { ...container, confirm };
 };
 
-const testPurgeTask = fn => testTask(container => fn(decorate(container)));
+const testPurgeTask = fn => testTask(container => fn(withDeleteChecks(container)));
 
 describe('task: purge deleted resources (forms and submissions)', () => {
   describe('forms', () => {
