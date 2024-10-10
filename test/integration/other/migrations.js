@@ -1054,4 +1054,83 @@ testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
     blobCount = await container.oneFirst(sql`select count(*) from blobs`);
     blobCount.should.equal(1);
   }));
+
+  testMigration('20241010-01-schedule-entity-form-upgrade.js', () => {
+    it('should schedule entity forms with spec version 2023.1.0 for upgrade to 2024.1.0', testServiceFullTrx(async (service, container) => {
+      await populateUsers(container);
+      await populateForms(container);
+
+      const asAlice = await service.login('alice');
+
+      // Upload one form with multiple versions
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/draft')
+        .send(testData.forms.updateEntity.replace('orx:version="1.0"', 'orx:version="2.0"'))
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish');
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/draft')
+        .send(testData.forms.updateEntity.replace('orx:version="1.0"', 'orx:version="3.0"'))
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Upload another form that needs updating
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.updateEntity.replace('id="updateEntity"', 'id="updateEntity2"'))
+        .expect(200);
+
+      // Upload an entity form that doesn't really need updating but does have 'update' in the actions column
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.offlineEntity)
+        .expect(200);
+
+      // Upload an entity form that does not need updating
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      // Mark forms for upgrade
+      await up();
+
+      // Check: 2 forms that need upgradin and 1 2024.1 form that it wont harm to run through the worker
+      const audits = await container.oneFirst(sql`select count(*) from audits where action = 'upgrade.process.form.entities_version'`);
+      audits.should.equal(3);
+
+      // Run upgrade
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/forms/updateEntity.xml')
+        .then(({ text }) => {
+          text.should.equal(`<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+  <h:head>
+    <model entities:entities-version="2024.1.0">
+      <instance>
+        <data id="updateEntity" orx:version="2.0_upgrade">
+          <name/>
+          <age/>
+          <hometown/>
+          <meta>
+            <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId="">
+              <label/>
+            </entity>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+      <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+    </model>
+  </h:head>
+</h:html>`);
+        });
+
+      await asAlice.get('/v1/projects/1/forms/offlineEntity.xml')
+        .then(({ text }) => text.should.equal(testData.forms.offlineEntity));
+    }));
+  });
 });

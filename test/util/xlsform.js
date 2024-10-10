@@ -21,6 +21,8 @@ module.exports = (stream, fallback) => new Promise((resolve, reject) => {
       resolve({ xml: testData.forms.itemsets, itemsets: 'a,b,c\n1,2,3\n4,5,6', warnings: [] });
     else if (form === 'extra-itemsets')
       resolve({ xml: testData.forms.simple2, itemsets: 'a,b,c\n1,2,3\n4,5,6', warnings: [] });
+    else if (form === 'updateEntity')
+      resolve({ xml: testData.forms.updateEntity, warnings: [] });
     else
       resolve({ xml: testData.forms.simple2, warnings: [] });
   }));
