@@ -4,7 +4,7 @@ const { sql } = require('slonik');
 const { toText } = require('streamtest').v2;
 const { testService, testContainerFullTrx, testContainer } = require(appRoot + '/test/integration/setup');
 const testData = require(appRoot + '/test/data/xml');
-const { pZipStreamToFiles } = require(appRoot + '/test/util/zip');
+const { httpZipResponseToFiles } = require(appRoot + '/test/util/zip');
 // eslint-disable-next-line import/no-dynamic-require
 const { Form, Key, Submission, Actor } = require(appRoot + '/lib/model/frames');
 // eslint-disable-next-line import/no-dynamic-require
@@ -219,7 +219,7 @@ describe('managed encryption', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
+          .then((keyId) => httpZipResponseToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
               result['simple.csv'].should.be.an.EncryptedSimpleCsv();
@@ -245,7 +245,7 @@ describe('managed encryption', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
+          .then((keyId) => httpZipResponseToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
               result['simple.csv'].should.be.an.EncryptedSimpleCsv();
@@ -288,7 +288,7 @@ describe('managed encryption', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then((keyId) => pZipStreamToFiles(asAlice.post('/v1/projects/1/forms/simple/submissions.csv.zip')
+          .then((keyId) => httpZipResponseToFiles(asAlice.post('/v1/projects/1/forms/simple/submissions.csv.zip')
             .send(`${keyId}=supersecret`)
             .set('Content-Type', 'application/x-www-form-urlencoded'))
             .then((result) => {
@@ -313,7 +313,7 @@ describe('managed encryption', () => {
               .then(({ body }) => body[0].id),
             authenticateUser(service, 'alice', 'include-csrf'),
           ]))
-          .then(([ keyId, session ]) => pZipStreamToFiles(service.post('/v1/projects/1/forms/simple/submissions.csv.zip')
+          .then(([ keyId, session ]) => httpZipResponseToFiles(service.post('/v1/projects/1/forms/simple/submissions.csv.zip')
             .send(`${keyId}=supersecret&__csrf=${session.csrf}`)
             .set('Cookie', `session=${session.token}`)
             .set('X-Forwarded-Proto', 'https')
@@ -337,7 +337,7 @@ describe('managed encryption', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then((keyId) => pZipStreamToFiles(asAlice.post('/v1/projects/1/forms/simple/submissions.csv.zip')
+          .then((keyId) => httpZipResponseToFiles(asAlice.post('/v1/projects/1/forms/simple/submissions.csv.zip')
             .send({ [keyId]: 'supersecret' }))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
@@ -357,7 +357,7 @@ describe('managed encryption', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
+          .then((keyId) => httpZipResponseToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
             .then((result) => {
               result.filenames.length.should.equal(4);
               result.filenames.should.containDeep([ 'simple.csv', 'media/alpha', 'media/beta', 'media/charlie' ]);
@@ -382,7 +382,7 @@ describe('managed encryption', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
+          .then((keyId) => httpZipResponseToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
             .then((result) => {
               result.filenames.length.should.equal(4);
               result.filenames.should.containDeep([ 'simple.csv', 'media/alpha', 'media/beta', 'media/charlie' ]);
@@ -426,7 +426,7 @@ describe('managed encryption', () => {
             .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
               .expect(200)
               .then(({ body }) => body[0].id))
-            .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
+            .then((keyId) => httpZipResponseToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
               .then((result) => {
                 result.filenames.length.should.equal(2);
                 result.filenames.should.containDeep([ 'simple.csv', 'media/testfile.jpg' ]);
@@ -472,7 +472,7 @@ describe('managed encryption', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/audits/submissions.csv.zip?${keyId}=supersecret`))
+          .then((keyId) => httpZipResponseToFiles(asAlice.get(`/v1/projects/1/forms/audits/submissions.csv.zip?${keyId}=supersecret`))
             .then((result) => {
               result.filenames.should.eql([
                 'audits.csv',
@@ -514,7 +514,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/audits/submissions.csv.zip?${keyId}=supersecret`))
+          .then((keyId) => httpZipResponseToFiles(asAlice.get(`/v1/projects/1/forms/audits/submissions.csv.zip?${keyId}=supersecret`))
             .then((result) => {
               result.filenames.should.eql([
                 'audits.csv',
@@ -554,7 +554,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200)
             .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
             .then((send) => send(testData.instances.binaryType.two, { 'here_is_file2.jpg': 'file two you cant see' })))
-          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'))
+          .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'))
             .then((result) => {
               result.filenames.length.should.equal(2);
               result.filenames.should.containDeep([ 'binaryType.csv', 'media/my_file1.mp4' ]);
@@ -585,7 +585,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/keys')
             .expect(200)
             .then(({ body }) => body[0].id))
-          .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/binaryType/submissions.csv.zip?${keyId}=supersecret`))
+          .then((keyId) => httpZipResponseToFiles(asAlice.get(`/v1/projects/1/forms/binaryType/submissions.csv.zip?${keyId}=supersecret`))
             .then((result) => {
               result.filenames.length.should.equal(3);
               result.filenames.should.containDeep([ 'binaryType.csv', 'media/my_file1.mp4', 'media/here_is_file2.jpg' ]);
@@ -611,7 +611,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
               .expect(200)
               .then(({ body }) => body[0].id))
-            .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
+            .then((keyId) => httpZipResponseToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
               .then((result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
                 const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
@@ -645,7 +645,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .then(({ text }) => sendEncrypted(asAlice, extractVersion(text), extractPubkey(text)))
               .then((send) => send(testData.instances.simple.two)
                 .then(() => send(testData.instances.simple.three))))
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
 
@@ -706,7 +706,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
             .expect(200)
             .then(({ body }) => body.map((key) => key.id)))
-          .then((keyIds) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyIds[1]}=supersecret&${keyIds[0]}=superdupersecret`))
+          .then((keyIds) => httpZipResponseToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyIds[1]}=supersecret&${keyIds[0]}=superdupersecret`))
             .then((result) => {
               const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
               csv.length.should.equal(5); // header + 3 data rows + newline
@@ -745,7 +745,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
               .expect(200)
               .then(({ body }) => body[0].id))
-            .then((keyId) => pZipStreamToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
+            .then((keyId) => httpZipResponseToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
               .then((result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
 
@@ -778,7 +778,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 .send(envelope)
                 .set('Content-Type', 'text/xml')
                 .expect(200)))
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
 

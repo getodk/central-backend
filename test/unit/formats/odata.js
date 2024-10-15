@@ -969,22 +969,28 @@ describe('odata message composition', () => {
             expectedValue: [],
           },
           {
+            $top: 0,
+            skiptoken: { repeatId: billy.__id },
+            expectedNext: false,
+            expectedValue: [],
+          },
+          {
             $top: 1,
             skiptoken: { repeatId: billy.__id },
-            expectedNext: billy.__id,
-            expectedValue: [ billy ],
+            expectedNext: false,
+            expectedValue: [ blain ],
           },
           {
             $top: 2,
             skiptoken: { repeatId: billy.__id },
             expectedNext: false,
-            expectedValue: [ billy, blain ],
+            expectedValue: [ blain ],
           },
           {
             $top: undefined,
             skiptoken: { repeatId: billy.__id },
             expectedNext: false,
-            expectedValue: [ billy, blain ],
+            expectedValue: [ blain ],
           },
 
           {
@@ -997,19 +1003,19 @@ describe('odata message composition', () => {
             $top: 1,
             skiptoken: { repeatId: blain.__id },
             expectedNext: false,
-            expectedValue: [ blain ],
+            expectedValue: [],
           },
           {
             $top: 2,
             skiptoken: { repeatId: blain.__id },
             expectedNext: false,
-            expectedValue: [ blain ],
+            expectedValue: [],
           },
           {
             $top: undefined,
             skiptoken: { repeatId: blain.__id },
             expectedNext: false,
-            expectedValue: [ blain ],
+            expectedValue: [],
           },
         ].forEach(({ $top, skiptoken, expectedNext, expectedValue }) =>
           it(`should return expected result for ${[$top, JSON.stringify(skiptoken)]}`, () =>

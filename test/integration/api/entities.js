@@ -3238,6 +3238,53 @@ describe('Entities API', () => {
             logs[1].action.should.be.eql('submission.create');
           });
       }));
+
+      it('should create entity when both create and update are true but baseVersion is empty', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('id="12345678-1234-4123-8234-123456789abc"', 'id="12345678-1234-4123-8234-123456789ddd"')
+            .replace('update="1"', 'create="1" update="1"')
+            .replace('baseVersion="1"', 'baseVersion=""'))
+          .expect(200);
+
+        await exhaust(container);
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body: people }) => {
+            // existing entity + new entity
+            people.length.should.be.eql(2);
+          });
+      }));
+
+      it('should log error when both create and update are true, baseVersion is empty but entity uuid exists', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // This submission uses an existing entity uuid
+        // has create and update both set to true
+        // and is missing a baseVersion.
+        // This will attempt to update but fail because it finds no
+        // baseVersion to parse in the update case
+        // and will then attempt to create but fail because
+        // the entity uuid does actually exist.
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('update="1"', 'create="1" update="1"')
+            .replace('baseVersion="1"', 'baseVersion=""'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('entity.error');
+            logs[0].details.problem.problemCode.should.be.eql(409.3);
+            logs[0].details.errorMessage.should.be.eql('A resource already exists with uuid value(s) of 12345678-1234-4123-8234-123456789abc.');
+            logs[1].action.should.be.eql('submission.create');
+          });
+      }));
     });
 
     // 10 examples described in central issue #517
