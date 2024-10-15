@@ -946,20 +946,20 @@ describe('odata message composition', () => {
           {
             $top: 1,
             skiptoken: { repeatId: badId },
-            expectedNext: false,
-            expectedValue: [],
+            expectedNext: blain,
+            expectedValue: [ billy ],
           },
           {
             $top: 2,
             skiptoken: { repeatId: badId },
             expectedNext: false,
-            expectedValue: [],
+            expectedValue: [ billy, blain ],
           },
           {
             $top: undefined,
             skiptoken: { repeatId: badId },
             expectedNext: false,
-            expectedValue: [ blain ],
+            expectedValue: [ billy, blain ],
           },
 
           {
