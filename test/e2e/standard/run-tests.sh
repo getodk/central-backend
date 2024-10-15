@@ -7,6 +7,7 @@ userPassword="secret1234"
 
 log() { echo "[test/e2e/standard/run-tests] $*"; }
 
+log "Building backend..."
 make base
 
 if [[ "${CI-}" = "" ]]; then
@@ -18,6 +19,7 @@ echo "$userPassword" | node ./lib/bin/cli.js user-create  -u "$userEmail" && log
 log "Attempting to promote user..."
 node ./lib/bin/cli.js user-promote -u "$userEmail" && log "User promoted."
 
+log "Starting backend..."
 make run &
 
 log "Waiting for backend to start..."
