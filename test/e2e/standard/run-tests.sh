@@ -15,6 +15,12 @@ echo "$userPassword" | node ./lib/bin/cli.js user-create  -u "$userEmail" && log
 log "Attempting to promote user..."
 node ./lib/bin/cli.js user-promote -u "$userEmail" && log "User promoted."
 
+kill_child_processes() {
+  log "Killing child processes..."
+  kill -- -$$
+}
+trap kill_child_processes EXIT
+
 log "Starting backend..."
 make run &
 
