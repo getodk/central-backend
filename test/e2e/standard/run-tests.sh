@@ -17,7 +17,7 @@ node ./lib/bin/cli.js user-promote -u "$userEmail" && log "User promoted."
 
 kill_child_processes() {
   log "Killing child processes..."
-  kill -- -$$
+  kill -- -$$ || true
 }
 trap kill_child_processes EXIT
 
