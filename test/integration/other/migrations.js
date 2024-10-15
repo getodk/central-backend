@@ -1094,6 +1094,29 @@ testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
         .send(testData.forms.simpleEntity)
         .expect(200);
 
+      // Deleted forms and projects
+      // Upload another form that needs updating but will be deleted
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.updateEntity.replace('id="updateEntity"', 'id="updateEntityDeleted"'))
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/forms/updateEntityDeleted')
+        .expect(200);
+
+      // Create a new project
+      const newProjectId = await asAlice.post('/v1/projects')
+        .send({ name: 'NewDeletedProject' })
+        .expect(200)
+        .then(({ body }) => body.id);
+
+      // Upload a form that needs updating to the new project
+      await asAlice.post(`/v1/projects/${newProjectId}/forms?publish=true`)
+        .send(testData.forms.updateEntity)
+        .expect(200);
+
+      // Delete the new project
+      await asAlice.delete(`/v1/projects/${newProjectId}`);
+
       // Mark forms for upgrade
       await up();
 
@@ -1111,7 +1134,7 @@ testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
   <h:head>
     <model entities:entities-version="2024.1.0">
       <instance>
-        <data id="updateEntity" orx:version="2.0_upgrade">
+        <data id="updateEntity" orx:version="2.0[upgrade]">
           <name/>
           <age/>
           <hometown/>

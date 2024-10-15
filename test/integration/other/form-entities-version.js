@@ -10,7 +10,7 @@ const upgradedUpdateEntity = `<?xml version="1.0"?>
   <h:head>
     <model entities:entities-version="2024.1.0">
       <instance>
-        <data id="updateEntity" orx:version="1.0_upgrade">
+        <data id="updateEntity" orx:version="1.0[upgrade]">
           <name/>
           <age/>
           <hometown/>
@@ -48,7 +48,7 @@ describe('Update / migrate entities-version within form', () => {
       await asAlice.get('/v1/projects/1/forms/updateEntity/versions')
         .then(({ body }) => {
           body.length.should.equal(2);
-          body[0].version.should.equal('1.0_upgrade');
+          body[0].version.should.equal('1.0[upgrade]');
           body[1].version.should.equal('1.0');
         });
 
@@ -76,7 +76,7 @@ describe('Update / migrate entities-version within form', () => {
       // The version on the draft does change even though it is updated in place
       await asAlice.get('/v1/projects/1/forms/updateEntity/draft')
         .then(({ body }) => {
-          body.version.should.equal('1.0_upgrade');
+          body.version.should.equal('1.0[upgrade]');
         });
 
       await asAlice.get('/v1/projects/1/forms/updateEntity/versions')
@@ -111,13 +111,13 @@ describe('Update / migrate entities-version within form', () => {
       // The version on the draft does change even though it is updated in place
       await asAlice.get('/v1/projects/1/forms/updateEntity/draft')
         .then(({ body }) => {
-          body.version.should.equal('1.0_upgrade');
+          body.version.should.equal('1.0[upgrade]');
         });
 
       await asAlice.get('/v1/projects/1/forms/updateEntity/versions')
         .then(({ body }) => {
           body.length.should.equal(2);
-          body[0].version.should.equal('1.0_upgrade');
+          body[0].version.should.equal('1.0[upgrade]');
           body[1].version.should.equal('1.0');
         });
 
@@ -162,7 +162,7 @@ describe('Update / migrate entities-version within form', () => {
 
       await asAlice.get('/v1/projects/1/forms/updateEntity/versions')
         .then(({ body }) => {
-          body.map(f => f.version).should.eql([ '3.0_upgrade', '3.0', '2.0', '1.0' ]);
+          body.map(f => f.version).should.eql([ '3.0[upgrade]', '3.0', '2.0', '1.0' ]);
         });
     }));
 
@@ -274,7 +274,7 @@ describe('Update / migrate entities-version within form', () => {
       await asAlice.get('/v1/projects/1/forms/withAttachments.xml')
         .then(({ text }) => {
           text.includes('entities:entities-version="2024.1.0"').should.equal(true);
-          text.includes('version="_upgrade"').should.equal(true);
+          text.includes('version="[upgrade]"').should.equal(true);
           text.includes('trunkVersion="" branchId=""').should.equal(true);
         });
 
@@ -282,7 +282,7 @@ describe('Update / migrate entities-version within form', () => {
       await asAlice.get('/v1/projects/1/forms/withAttachments/draft.xml')
         .then(({ text }) => {
           text.includes('entities:entities-version="2024.1.0"').should.equal(true);
-          text.includes('version="_upgrade"').should.equal(true);
+          text.includes('version="[upgrade]"').should.equal(true);
           text.includes('trunkVersion="" branchId=""').should.equal(true);
         });
 

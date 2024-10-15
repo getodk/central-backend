@@ -2089,7 +2089,7 @@ describe('form schema', () => {
 
   describe('updateEntityForm', () => {
     it('should change version 2023->2024, add trunkVersion, and add branchId', (async () => {
-      const result = await updateEntityForm(testData.forms.updateEntity, '2023.1.0', '2024.1.0', '_upgrade');
+      const result = await updateEntityForm(testData.forms.updateEntity, '2023.1.0', '2024.1.0', '[upgrade]');
       // entities-version has been updated
       // version has suffix
       // trunkVersion and branchId are present
@@ -2098,7 +2098,7 @@ describe('form schema', () => {
   <h:head>
     <model entities:entities-version="2024.1.0">
       <instance>
-        <data id="updateEntity" orx:version="1.0_upgrade">
+        <data id="updateEntity" orx:version="1.0[upgrade]">
           <name/>
           <age/>
           <hometown/>
@@ -2117,11 +2117,11 @@ describe('form schema', () => {
     }));
 
     it('should not alter a version 2022.1.0 form when the old version to replace is 2023.1.0', (async () => {
-      const result = await updateEntityForm(testData.forms.simpleEntity, '2023.1.0', '2024.1.0', '_upgrade');
+      const result = await updateEntityForm(testData.forms.simpleEntity, '2023.1.0', '2024.1.0', '[upgrade]');
       result.should.equal(testData.forms.simpleEntity);
     }));
     it('should not alter a version 2024.1.0 form when the old version to replace is 2023.1.0', (async () => {
-      const result = await updateEntityForm(testData.forms.offlineEntity, '2023.1.0', '2024.1.0', '_upgrade');
+      const result = await updateEntityForm(testData.forms.offlineEntity, '2023.1.0', '2024.1.0', '[upgrade]');
       result.should.equal(testData.forms.offlineEntity);
     }));
   });
