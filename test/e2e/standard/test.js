@@ -11,7 +11,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 
 const SUITE_NAME = 'test/e2e/standard';
-const { apiClient } = require('../util/api');
+const { apiClient, mimetypeFor } = require('../util/api');
 
 const serverUrl = 'http://localhost:8383';
 const userEmail = 'x@example.com';
@@ -71,12 +71,14 @@ describe('standard', () => {
 
   function uploadSubmission(submissionId) {
     const xmlTemplate = fs.readFileSync('submission.xml', { encoding: 'utf8' });
-    const tempFile = 'TODO-generate-proper-tempfile-name.xml';
     const formXml = xmlTemplate
       .replace('{{submissionId}}', submissionId)
       .replace('{{formId}}', xmlFormId)
       .replace('{{formVersion}}', xmlFormVersion);
-    fs.writeFileSync(tempFile, formXml);
-    return api.apiPostFile(`projects/${projectId}/forms/${encodeURIComponent(xmlFormId)}/submissions?deviceID=testid`, tempFile);
+
+    return api.apiPostFile(`projects/${projectId}/forms/${encodeURIComponent(xmlFormId)}/submissions?deviceID=testid`, {
+      body: formXml,
+      mimeType: mimetypeFor('.xml'),
+    });
   }
 });
