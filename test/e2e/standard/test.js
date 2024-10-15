@@ -11,7 +11,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 
 const SUITE_NAME = 'test/e2e/standard';
-const { apiClient, mimetypeFor } = require('../util/api');
+const { apiClient } = require('../util/api');
 
 const serverUrl = 'http://localhost:8383';
 const userEmail = 'x@example.com';
@@ -78,7 +78,7 @@ describe('standard', () => {
 
     return api.apiPostFile(`projects/${projectId}/forms/${encodeURIComponent(xmlFormId)}/submissions?deviceID=testid`, {
       body: formXml,
-      mimeType: mimetypeFor('.xml'),
+      mimeType: 'application/xml',
     });
   }
 });
