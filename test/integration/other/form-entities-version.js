@@ -1,4 +1,6 @@
 const { readFileSync } = require('fs');
+const should = require('should');
+const config = require('config');
 const appRoot = require('app-root-path');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
@@ -309,9 +311,234 @@ describe('Update / migrate entities-version within form', () => {
           ]);
         });
     }));
+
+    it('should update the formList once the form changes', testService(async (service, container) => {
+      const { Forms, Audits } = container;
+      const asAlice = await service.login('alice');
+      const domain = config.get('default.env.domain');
+
+      // Publish a form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Create a draft as well
+      await asAlice.post('/v1/projects/1/forms/updateEntity/draft')
+        .expect(200);
+
+      const token = await asAlice.get('/v1/projects/1/forms/updateEntity/draft')
+        .expect(200)
+        .then(({ body }) => body.draftToken);
+
+      await asAlice.get('/v1/projects/1/formList')
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(200)
+        .then(({ text }) => text.should.containEql(`<xform>
+      <formID>updateEntity</formID>
+      <name>updateEntity</name>
+      <version>1.0</version>
+      <hash>md5:e4902c380ef428aa3d35e4ed17ea6c04</hash>
+      <downloadUrl>${domain}/v1/projects/1/forms/updateEntity.xml</downloadUrl>
+    </xform>`));
+
+      await asAlice.get(`/v1/test/${token}/projects/1/forms/updateEntity/draft/formList`)
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(200)
+        .then(({ text }) => text.should.containEql(`<xform>
+      <formID>updateEntity</formID>
+      <name>updateEntity</name>
+      <version>1.0</version>
+      <hash>md5:e4902c380ef428aa3d35e4ed17ea6c04</hash>
+      <downloadUrl>${domain}/v1/test/${token}/projects/1/forms/updateEntity/draft.xml</downloadUrl>
+    </xform>`));
+
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
+
+      // Run form upgrade
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/formList')
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(200)
+        .then(({ text }) => text.should.containEql(`<xform>
+      <formID>updateEntity</formID>
+      <name>updateEntity</name>
+      <version>1.0[upgrade]</version>
+      <hash>md5:77292dd9e1ad532bb5a4f7128e0a9596</hash>
+      <downloadUrl>${domain}/v1/projects/1/forms/updateEntity.xml</downloadUrl>
+    </xform>`));
+
+      await asAlice.get(`/v1/test/${token}/projects/1/forms/updateEntity/draft/formList`)
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(200)
+        .then(({ text }) => text.should.containEql(`<xform>
+      <formID>updateEntity</formID>
+      <name>updateEntity</name>
+      <version>1.0[upgrade]</version>
+      <hash>md5:77292dd9e1ad532bb5a4f7128e0a9596</hash>
+      <downloadUrl>${domain}/v1/test/${token}/projects/1/forms/updateEntity/draft.xml</downloadUrl>
+    </xform>`));
+    }));
+
+    it('should update the updatedAt timestamps on the form when updating a draft form', testService(async (service, container) => {
+      const { Forms, Audits } = container;
+      const asAlice = await service.login('alice');
+
+      // Upload a form and publish it
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // check updatedAt on the draft form
+      await asAlice.get('/v1/projects/1/forms/updateEntity')
+        .expect(200)
+        .then(({ body }) => {
+          should(body.updatedAt).be.null();
+        });
+
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
+
+      // Run form upgrade
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/forms/updateEntity')
+        .expect(200)
+        .then(({ body }) => {
+          body.updatedAt.should.be.a.recentIsoDate();
+        });
+    }));
+
+    it('should update the updatedAt timestamps on the form when updating a published form', testService(async (service, container) => {
+      const { Forms, Audits } = container;
+      const asAlice = await service.login('alice');
+
+      // Upload a form and publish it
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // check updatedAt on the draft form
+      await asAlice.get('/v1/projects/1/forms/updateEntity')
+        .expect(200)
+        .then(({ body }) => {
+          should(body.updatedAt).be.null();
+        });
+
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
+
+      // Run form upgrade
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/forms/updateEntity')
+        .expect(200)
+        .then(({ body }) => {
+          body.updatedAt.should.be.a.recentIsoDate();
+        });
+    }));
   });
 
   describe('audit logging and errors', () => {
+    it('should log events about the upgrade for a published form', testService(async (service, container) => {
+      const { Forms, Audits } = container;
+      const asAlice = await service.login('alice');
+
+      // Upload a form and publish it
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
+
+      // Run form upgrade
+      await exhaust(container);
+
+      await asAlice.get('/v1/audits')
+        .expect(200)
+        .then(({ body }) => {
+          const actions = body.map(a => a.action);
+          actions.should.eql([
+            'form.update.publish',
+            'upgrade.process.form.entities_version',
+            'form.update.publish',
+            'dataset.create',
+            'form.create',
+            'user.session.create'
+          ]);
+        });
+    }));
+
+    it('should log events about the upgrade for a draft form', testService(async (service, container) => {
+      const { Forms, Audits } = container;
+      const asAlice = await service.login('alice');
+
+      // Upload a form and publish it
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
+
+      // Run form upgrade
+      await exhaust(container);
+
+      await asAlice.get('/v1/audits')
+        .expect(200)
+        .then(({ body }) => {
+          const actions = body.map(a => a.action);
+          actions.should.eql([
+            'form.update.draft.replace',
+            'upgrade.process.form.entities_version',
+            'form.create',
+            'user.session.create'
+          ]);
+        });
+    }));
+
+    it('should log events about the upgrade for a published and draft form', testService(async (service, container) => {
+      const { Forms, Audits } = container;
+      const asAlice = await service.login('alice');
+
+      // Upload a form and publish it
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/draft');
+
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
+
+      // Run form upgrade
+      await exhaust(container);
+
+      await asAlice.get('/v1/audits')
+        .expect(200)
+        .then(({ body }) => {
+          const actions = body.map(a => a.action);
+          actions.should.eql([
+            'form.update.draft.replace',
+            'form.update.publish',
+            'upgrade.process.form.entities_version',
+            'form.update.draft.set',
+            'form.update.publish',
+            'dataset.create',
+            'form.create',
+            'user.session.create'
+          ]);
+        });
+    }));
+
     it('should update the audit log event for a successful upgrade', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
