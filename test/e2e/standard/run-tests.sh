@@ -10,10 +10,6 @@ log() { echo "[test/e2e/standard/run-tests] $*"; }
 log "Building backend..."
 make base
 
-if [[ "${CI-}" = "" ]]; then
-  set +e
-fi
-
 log "Attempting to create user..."
 echo "$userPassword" | node ./lib/bin/cli.js user-create  -u "$userEmail" && log "User created."
 log "Attempting to promote user..."
