@@ -81,27 +81,27 @@ debug: base
 
 .PHONY: test
 test: lint
-	BCRYPT=insecure npx mocha --recursive --exit
+	BCRYPT=insecure npx mocha --recursive
 
 .PHONY: test-ci
 test-ci: lint
-	BCRYPT=insecure npx mocha --recursive --exit --reporter test/ci-mocha-reporter.js
+	BCRYPT=insecure npx mocha --recursive --reporter test/ci-mocha-reporter.js
 
 .PHONY: test-fast
 test-fast: node_version
-	BCRYPT=insecure npx mocha --recursive --exit --fgrep @slow --invert
+	BCRYPT=insecure npx mocha --recursive --fgrep @slow --invert
 
 .PHONY: test-integration
 test-integration: node_version
-	BCRYPT=insecure npx mocha --recursive test/integration --exit
+	BCRYPT=insecure npx mocha --recursive test/integration
 
 .PHONY: test-unit
 test-unit: node_version
-	BCRYPT=insecure npx mocha --recursive test/unit --exit
+	BCRYPT=insecure npx mocha --recursive test/unit
 
 .PHONY: test-coverage
 test-coverage: node_version
-	npx nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --exit --recursive test
+	npx nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --recursive test
 
 .PHONY: lint
 lint: node_version

@@ -131,36 +131,30 @@ describe('extracting and validating entities', () => {
 
     describe('extractBaseVersionFromSubmission', () => {
       it('should extract integer base version when update is true', () => {
-        const entity = { system: { update: '1', baseVersion: '99' } };
-        extractBaseVersionFromSubmission(entity).should.equal(99);
-      });
-
-      it('not return base version if create is true because it is not relevant', () => {
-        const entity = { system: { create: '1', baseVersion: '99' } };
-        should.not.exist(extractBaseVersionFromSubmission(entity));
-      });
-
-      it('not return base version if neither create nor update are provided', () => {
         const entity = { system: { baseVersion: '99' } };
-        should.not.exist(extractBaseVersionFromSubmission(entity));
+        extractBaseVersionFromSubmission(entity, { update: true }).should.equal(99);
       });
 
-      it('should complain if baseVersion is missing when update is true (update = 1)', () => {
+      it('should extract base version even if create is true and update is not', () => {
+        const entity = { system: { baseVersion: '99' } };
+        extractBaseVersionFromSubmission(entity, { create: true }).should.equal(99);
+      });
+
+      it('should complain if baseVersion is missing when update is true', () => {
         const entity = { system: { update: '1' } };
-        assert.throws(() => { extractBaseVersionFromSubmission(entity); }, (err) => {
+        assert.throws(() => { extractBaseVersionFromSubmission(entity, { update: true }); }, (err) => {
           err.problemCode.should.equal(400.2);
           err.message.should.equal('Required parameter baseVersion missing.');
           return true;
         });
       });
 
-      it('should complain if baseVersion is missing when update is true (update = true)', () => {
-        const entity = { system: { update: 'true' } };
-        assert.throws(() => { extractBaseVersionFromSubmission(entity); }, (err) => {
-          err.problemCode.should.equal(400.2);
-          err.message.should.equal('Required parameter baseVersion missing.');
-          return true;
-        });
+      it('not complain if baseVersion is missing when update is false and create is true', () => {
+        const entity = { system: { } };
+        // the create/update values do not get pulled from the entity system data here
+        // but rather from the branch in the code that decides whether a create
+        // or update is currently being attempted.
+        should.not.exist(extractBaseVersionFromSubmission(entity, { create: true }));
       });
 
       it('should complain if baseVersion not an integer', () => {
