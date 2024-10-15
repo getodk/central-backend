@@ -9,7 +9,7 @@ log() { echo "[test/e2e/standard/run-tests] $*"; }
 
 make base
 
-if [[ "${CI-}" = '' ]]; then
+if [[ "${CI-}" = "" ]]; then
   set +e
 fi
 
@@ -20,15 +20,15 @@ node ./lib/bin/cli.js user-promote -u "$userEmail" && log "User promoted."
 
 make run &
 
-log 'Waiting for backend to start...'
+log "Waiting for backend to start..."
 timeout 30 bash -c "while ! curl -s -o /dev/null $serverUrl; do sleep 1; done"
-log 'Backend started!'
+log "Backend started!"
 
 cd test/e2e/standard
 npx mocha test.js
 
 if ! curl -s -o /dev/null "$serverUrl"; then
-  log 'Backend died.'
+  log "Backend died."
   exit 1
 fi
 
