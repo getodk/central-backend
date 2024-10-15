@@ -17,7 +17,7 @@ const serverUrl = 'http://localhost:8383';
 const userEmail = 'x@example.com';
 const userPassword = 'secret1234';
 
-describe('standard', () => {
+describe('#1157 - Backend crash when opening hostile-named submission detail', () => {
   let api, projectId, xmlFormId, xmlFormVersion; // eslint-disable-line one-var, one-var-declaration-per-line
 
   it('should handle weird submission instanceId gracefully', async () => {
