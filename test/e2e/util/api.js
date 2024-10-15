@@ -38,10 +38,16 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
     return apiFetch('GET', path, undefined, headers);
   }
 
-  function apiPostFile(path, filePath) {
-    const mimeType = mimetypeFor(filePath);
-    const blob = fs.readFileSync(filePath);
-    return apiPost(path, blob, { 'Content-Type':mimeType });
+  function apiPostFile(path, opts) {
+    if(typeof opts === 'string') {
+      return apiPostFile(path, {
+        body: fs.readFileSync(opts),
+        mimeType: mimetypeFor(opts),
+      });
+    } else {
+      const { body, mimeType } = opts;
+      return apiPost(path, body, { 'Content-Type':mimeType });
+    }
   }
 
   function apiPostJson(path, body, headers) {
@@ -91,7 +97,16 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
 
     // eslint-disable-next-line no-use-before-define
     if(isRedirected(res)) return new Redirect(res);
-    if(!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+    if(!res.ok) {
+      const responseStatus = res.status;
+      const responseText = await res.text();
+
+      const err = new Error(`${responseStatus}: ${responseText}`);
+      err.responseStatus = responseStatus;
+      err.responseText = responseText;
+
+      throw err;
+    }
     return res;
   }
 }
