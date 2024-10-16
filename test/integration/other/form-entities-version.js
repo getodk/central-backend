@@ -441,6 +441,32 @@ describe('Update / migrate entities-version within form', () => {
           body.updatedAt.should.be.a.recentIsoDate();
         });
     }));
+
+    it('should set publishedBy to null on the form when updating a published form', testService(async (service, container) => {
+      const { Forms, Audits } = container;
+      const asAlice = await service.login('alice');
+
+      // Upload a form and publish it
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.updateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
+
+      // Run form upgrade
+      await exhaust(container);
+
+      // publishedBy is null on the latest version of the form
+      await asAlice.get('/v1/projects/1/forms/updateEntity/versions')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          should(body[0].publishedBy).be.null();
+          body[1].publishedBy.should.be.an.Actor();
+        });
+    }));
   });
 
   describe('audit logging and errors', () => {
@@ -501,6 +527,8 @@ describe('Update / migrate entities-version within form', () => {
             'form.create',
             'user.session.create'
           ]);
+
+          body[0].details.should.eql({ upgrade: 'Updated entities-version in form draft to 2024.1' });
         });
     }));
 
@@ -536,6 +564,8 @@ describe('Update / migrate entities-version within form', () => {
             'form.create',
             'user.session.create'
           ]);
+
+          body[0].details.should.eql({ upgrade: 'Updated entities-version in form draft to 2024.1' });
         });
     }));
 
@@ -604,9 +634,8 @@ describe('Update / migrate entities-version within form', () => {
       const asAlice = await service.login('alice');
 
       // Publish an XML form of the right version
-      const invalidForm = testData.forms.offlineEntity;
       await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(invalidForm)
+        .send(testData.forms.offlineEntity)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
