@@ -1380,7 +1380,7 @@ describe('Offline Entities', () => {
         });
     }));
 
-    it('should mark an update that is not contiguous with its trunk version as a soft conflict', testOfflineEntities(async (service, container) => {
+    it('should mark an update that is not contiguous (due to force processing) as a soft conflict', testOfflineEntities(async (service, container) => {
       const asAlice = await service.login('alice');
       const branchId = uuid();
 
@@ -1425,6 +1425,150 @@ describe('Offline Entities', () => {
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
         .then(({ body: versions }) => {
           versions.map(v => v.conflict).should.eql([null, null, 'hard', 'soft']);
+        });
+    }));
+
+    it('should mark an update that is not contiguous with its trunk version as a soft conflict on entity despite earlier conflict resolution', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Update existing entity on server (change age from 22 to 24)
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+        .send({ data: { age: '24' } })
+        .expect(200);
+
+      // Send update (change status from null to arrived)
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await exhaust(container);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&baseVersion=3')
+        .expect(200);
+
+      // Send second update (change age from 22 to 26)
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('one', 'one-update2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('<status>arrived</status>', '<age>26</age>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .then(({ body: versions }) => {
+          versions.map(v => v.conflict).should.eql([null, null, 'soft', 'soft']);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .then(({ body: entity }) => {
+          should(entity.conflict).equal('soft');
+        });
+    }));
+
+    it('should mark an update that is not contiguous (from an offline create branch) as a soft conflict on entity despite earlier conflict resolution', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Send initial submission to create entity
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await exhaust(container);
+
+      // Update existing entity on server before getting the rest of the branch
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd?baseVersion=1')
+        .send({ data: { age: '24' } })
+        .expect(200);
+
+      // Send update (change status from new to arrived)
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('two', 'two-update1')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('create="1"', 'update="1"')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>arrived</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await exhaust(container);
+
+      // Conflict is hard here
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd')
+        .then(({ body: entity }) => {
+          should(entity.conflict).equal('hard');
+        });
+
+      // resolve the conflict
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd?resolve=true&baseVersion=3')
+        .expect(200);
+
+      // Send second update in offline create-update-update chain (change age from 22 to 26)
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('two', 'two-update2')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('create="1"', 'update="1"')
+          .replace('baseVersion=""', 'baseVersion="2"')
+          .replace('<status>new</status>', '<status>arrived</status>')
+          .replace('<age>20</age>', '<age>27</age>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd/versions')
+        .then(({ body: versions }) => {
+          versions.map(v => v.conflict).should.eql([null, null, 'hard', 'soft']);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd')
+        .then(({ body: entity }) => {
+          should(entity.conflict).equal('soft');
+        });
+    }));
+
+    it('should check that interrupting version logic is doesnt flag non-conflicts as conflicts', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Send initial submission to create entity
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await exhaust(container);
+
+      // Send second update in offline create-update-update chain (change age from 22 to 26)
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('two', 'two-update')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('create="1"', 'update="1"')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>arrived</status>')
+          .replace('<age>20</age>', '<age>27</age>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd/versions')
+        .then(({ body: versions }) => {
+          versions.map(v => v.conflict).should.eql([null, null]);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd')
+        .then(({ body: entity }) => {
+          should(entity.conflict).equal(null);
         });
     }));
   });
