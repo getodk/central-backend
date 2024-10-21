@@ -40,6 +40,12 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
+    ## ODK Central v2024.3
+
+    **Changed**:
+
+    - [Submissions Odata]() now returns `__system/deletedAt`. It can also be used in $filter, $sort and $select query parameters.
+
     ## ODK Central v2024.2
 
     **Added**:
@@ -5622,6 +5628,7 @@ paths:
                 reviewState: approved
                 createdAt: 2018-01-19T23:58:03.395Z
                 updatedAt: 2018-03-21T12:45:02.312Z
+                deletedAt: null
                 currentVersion:
                   instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                   instanceName: village third house
@@ -5643,6 +5650,7 @@ paths:
                 reviewState: approved
                 createdAt: 2018-01-19T23:58:03.395Z
                 updatedAt: 2018-03-21T12:45:02.312Z
+                deletedAt: null
                 currentVersion:
                   instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                   instanceName: village third house
@@ -5704,84 +5712,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - createdAt
-                - instanceId
-                - submitterId
-                type: object
-                properties:
-                  instanceId:
-                    type: string
-                    description: The `instanceId` of the `Submission`, given by the
-                      Submission XML.
-                  submitterId:
-                    type: number
-                    description: The ID of the `Actor` (`App User`, `User`, or `Public
-                      Link`) that originally submitted this `Submission`.
-                  deviceId:
-                    type: string
-                    description: The self-identified `deviceId` of the device that
-                      collected the data, sent by it upon submission to the server.
-                      The initial submission `deviceId` will be returned here.
-                  userAgent:
-                    type: string
-                    description: The self-identified `userAgent` of the device that
-                      collected the data, sent by it upon submission to the server.
-                      The initial submission `userAgent` will be returned here.
-                  reviewState:
-                    type: string
-                    description: The current review state of the submission.
-                    enum:
-                    - null
-                    - edited
-                    - hasIssues
-                    - rejected
-                    - approved
-                  createdAt:
-                    type: string
-                    description: ISO date format. The time that the server received
-                      the Submission.
-                  updatedAt:
-                    type: string
-                    description: ISO date format. `null` when the Submission is first
-                      created, then updated when the Submission's XML data or metadata
-                      is updated.
-                  currentVersion:
-                    required:
-                    - createdAt
-                    - current
-                    - instanceId
-                    - submitterId
-                    type: object
-                    properties:
-                      instanceId:
-                        type: string
-                        description: The `instanceId` of the `Submission` version,
-                          given by the Submission XML.
-                      instanceName:
-                        type: string
-                        description: The `instanceName`, if any, given by the Submission
-                          XML in the metadata section.
-                      submitterId:
-                        type: number
-                        description: The ID of the `Actor` (`App User`, `User`, or
-                          `Public Link`) that submitted this `Submission` version.
-                      deviceId:
-                        type: string
-                        description: The self-identified `deviceId` of the device
-                          that submitted the `Submission` version.
-                      userAgent:
-                        type: string
-                        description: The self-identified `userAgent` of the device
-                          that submitted the `Submission` version.
-                      createdAt:
-                        type: string
-                        description: ISO date format. The time that the server received
-                          the `Submission` version.
-                      current:
-                        type: boolean
-                        description: Whether the version is current or not.
-                    description: The current version of the `Submission`.
+                $ref: '#/components/schemas/Submission'
               example:
                 instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                 submitterId: 23
@@ -5790,6 +5721,7 @@ paths:
                 reviewState: approved
                 createdAt: 2018-01-19T23:58:03.395Z
                 updatedAt: 2018-03-21T12:45:02.312Z
+                deletedAt: null
                 currentVersion:
                   instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                   instanceName: village third house
@@ -5893,6 +5825,7 @@ paths:
                 reviewState: approved
                 createdAt: 2018-01-19T23:58:03.395Z
                 updatedAt: 2018-03-21T12:45:02.312Z
+                deletedAt: null
                 currentVersion:
                   instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                   instanceName: village third house
@@ -5912,6 +5845,7 @@ paths:
                 reviewState: approved
                 createdAt: 2018-01-19T23:58:03.395Z
                 updatedAt: 2018-03-21T12:45:02.312Z
+                deletedAt: null
                 currentVersion:
                   instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                   instanceName: village third house
@@ -5983,84 +5917,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - createdAt
-                - instanceId
-                - submitterId
-                type: object
-                properties:
-                  instanceId:
-                    type: string
-                    description: The `instanceId` of the `Submission`, given by the
-                      Submission XML.
-                  submitterId:
-                    type: number
-                    description: The ID of the `Actor` (`App User`, `User`, or `Public
-                      Link`) that originally submitted this `Submission`.
-                  deviceId:
-                    type: string
-                    description: The self-identified `deviceId` of the device that
-                      collected the data, sent by it upon submission to the server.
-                      The initial submission `deviceId` will be returned here.
-                  userAgent:
-                    type: string
-                    description: The self-identified `userAgent` of the device that
-                      collected the data, sent by it upon submission to the server.
-                      The initial submission `userAgent` will be returned here.
-                  reviewState:
-                    type: string
-                    description: The current review state of the submission.
-                    enum:
-                    - null
-                    - edited
-                    - hasIssues
-                    - rejected
-                    - approved
-                  createdAt:
-                    type: string
-                    description: ISO date format. The time that the server received
-                      the Submission.
-                  updatedAt:
-                    type: string
-                    description: ISO date format. `null` when the Submission is first
-                      created, then updated when the Submission's XML data or metadata
-                      is updated.
-                  currentVersion:
-                    required:
-                    - createdAt
-                    - current
-                    - instanceId
-                    - submitterId
-                    type: object
-                    properties:
-                      instanceId:
-                        type: string
-                        description: The `instanceId` of the `Submission` version,
-                          given by the Submission XML.
-                      instanceName:
-                        type: string
-                        description: The `instanceName`, if any, given by the Submission
-                          XML in the metadata section.
-                      submitterId:
-                        type: number
-                        description: The ID of the `Actor` (`App User`, `User`, or
-                          `Public Link`) that submitted this `Submission` version.
-                      deviceId:
-                        type: string
-                        description: The self-identified `deviceId` of the device
-                          that submitted the `Submission` version.
-                      userAgent:
-                        type: string
-                        description: The self-identified `userAgent` of the device
-                          that submitted the `Submission` version.
-                      createdAt:
-                        type: string
-                        description: ISO date format. The time that the server received
-                          the `Submission` version.
-                      current:
-                        type: boolean
-                        description: Whether the version is current or not.
-                    description: The current version of the `Submission`.
+                $ref: '#/components/schemas/Submission'
               example:
                 instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                 submitterId: 23
@@ -6069,6 +5926,7 @@ paths:
                 reviewState: approved
                 createdAt: 2018-01-19T23:58:03.395Z
                 updatedAt: 2018-03-21T12:45:02.312Z
+                deletedAt: null
                 currentVersion:
                   instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                   instanceName: village third house
@@ -6157,84 +6015,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - createdAt
-                - instanceId
-                - submitterId
-                type: object
-                properties:
-                  instanceId:
-                    type: string
-                    description: The `instanceId` of the `Submission`, given by the
-                      Submission XML.
-                  submitterId:
-                    type: number
-                    description: The ID of the `Actor` (`App User`, `User`, or `Public
-                      Link`) that originally submitted this `Submission`.
-                  deviceId:
-                    type: string
-                    description: The self-identified `deviceId` of the device that
-                      collected the data, sent by it upon submission to the server.
-                      The initial submission `deviceId` will be returned here.
-                  userAgent:
-                    type: string
-                    description: The self-identified `userAgent` of the device that
-                      collected the data, sent by it upon submission to the server.
-                      The initial submission `userAgent` will be returned here.
-                  reviewState:
-                    type: string
-                    description: The current review state of the submission.
-                    enum:
-                    - null
-                    - edited
-                    - hasIssues
-                    - rejected
-                    - approved
-                  createdAt:
-                    type: string
-                    description: ISO date format. The time that the server received
-                      the Submission.
-                  updatedAt:
-                    type: string
-                    description: ISO date format. `null` when the Submission is first
-                      created, then updated when the Submission's XML data or metadata
-                      is updated.
-                  currentVersion:
-                    required:
-                    - createdAt
-                    - current
-                    - instanceId
-                    - submitterId
-                    type: object
-                    properties:
-                      instanceId:
-                        type: string
-                        description: The `instanceId` of the `Submission` version,
-                          given by the Submission XML.
-                      instanceName:
-                        type: string
-                        description: The `instanceName`, if any, given by the Submission
-                          XML in the metadata section.
-                      submitterId:
-                        type: number
-                        description: The ID of the `Actor` (`App User`, `User`, or
-                          `Public Link`) that submitted this `Submission` version.
-                      deviceId:
-                        type: string
-                        description: The self-identified `deviceId` of the device
-                          that submitted the `Submission` version.
-                      userAgent:
-                        type: string
-                        description: The self-identified `userAgent` of the device
-                          that submitted the `Submission` version.
-                      createdAt:
-                        type: string
-                        description: ISO date format. The time that the server received
-                          the `Submission` version.
-                      current:
-                        type: boolean
-                        description: Whether the version is current or not.
-                    description: The current version of the `Submission`.
+                $ref: '#/components/schemas/Submission'
               example:
                 instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                 submitterId: 23
@@ -6243,6 +6024,7 @@ paths:
                 reviewState: approved
                 createdAt: 2018-01-19T23:58:03.395Z
                 updatedAt: 2018-03-21T12:45:02.312Z
+                deletedAt: null
                 currentVersion:
                   instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                   instanceName: village third house
@@ -7892,84 +7674,7 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - createdAt
-                - instanceId
-                - submitterId
-                type: object
-                properties:
-                  instanceId:
-                    type: string
-                    description: The `instanceId` of the `Submission`, given by the
-                      Submission XML.
-                  submitterId:
-                    type: number
-                    description: The ID of the `Actor` (`App User`, `User`, or `Public
-                      Link`) that originally submitted this `Submission`.
-                  deviceId:
-                    type: string
-                    description: The self-identified `deviceId` of the device that
-                      collected the data, sent by it upon submission to the server.
-                      The initial submission `deviceId` will be returned here.
-                  userAgent:
-                    type: string
-                    description: The self-identified `userAgent` of the device that
-                      collected the data, sent by it upon submission to the server.
-                      The initial submission `userAgent` will be returned here.
-                  reviewState:
-                    type: string
-                    description: The current review state of the submission.
-                    enum:
-                    - null
-                    - edited
-                    - hasIssues
-                    - rejected
-                    - approved
-                  createdAt:
-                    type: string
-                    description: ISO date format. The time that the server received
-                      the Submission.
-                  updatedAt:
-                    type: string
-                    description: ISO date format. `null` when the Submission is first
-                      created, then updated when the Submission's XML data or metadata
-                      is updated.
-                  currentVersion:
-                    required:
-                    - createdAt
-                    - current
-                    - instanceId
-                    - submitterId
-                    type: object
-                    properties:
-                      instanceId:
-                        type: string
-                        description: The `instanceId` of the `Submission` version,
-                          given by the Submission XML.
-                      instanceName:
-                        type: string
-                        description: The `instanceName`, if any, given by the Submission
-                          XML in the metadata section.
-                      submitterId:
-                        type: number
-                        description: The ID of the `Actor` (`App User`, `User`, or
-                          `Public Link`) that submitted this `Submission` version.
-                      deviceId:
-                        type: string
-                        description: The self-identified `deviceId` of the device
-                          that submitted the `Submission` version.
-                      userAgent:
-                        type: string
-                        description: The self-identified `userAgent` of the device
-                          that submitted the `Submission` version.
-                      createdAt:
-                        type: string
-                        description: ISO date format. The time that the server received
-                          the `Submission` version.
-                      current:
-                        type: boolean
-                        description: Whether the version is current or not.
-                    description: The current version of the `Submission`.
+                $ref: '#/components/schemas/Submission'
               example:
                 instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                 submitterId: 23
@@ -7978,6 +7683,7 @@ paths:
                 reviewState: approved
                 createdAt: 2018-01-19T23:58:03.395Z
                 updatedAt: 2018-03-21T12:45:02.312Z
+                deletedAt: null
                 currentVersion:
                   instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                   instanceName: village third house
@@ -8222,121 +7928,9 @@ paths:
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
-            application/json; extended:
+            application/json:
               schema:
-                required:
-                - createdAt
-                - instanceId
-                - submitter
-                - submitterId
-                type: object
-                properties:
-                  instanceId:
-                    type: string
-                    description: The `instanceId` of the `Submission`, given by the
-                      Submission XML.
-                  submitterId:
-                    type: number
-                    description: The ID of the `Actor` (`App User`, `User`, or `Public
-                      Link`) that originally submitted this `Submission`.
-                  deviceId:
-                    type: string
-                    description: The self-identified `deviceId` of the device that
-                      collected the data, sent by it upon submission to the server.
-                      The initial submission `deviceId` will be returned here.
-                  userAgent:
-                    type: string
-                    description: The self-identified `userAgent` of the device that
-                      collected the data, sent by it upon submission to the server.
-                      The initial submission `userAgent` will be returned here.
-                  reviewState:
-                    type: string
-                    description: The current review state of the submission.
-                    enum:
-                    - null
-                    - edited
-                    - hasIssues
-                    - rejected
-                    - approved
-                  createdAt:
-                    type: string
-                    description: ISO date format. The time that the server received
-                      the Submission.
-                  updatedAt:
-                    type: string
-                    description: ISO date format. `null` when the Submission is first
-                      created, then updated when the Submission's XML data or metadata
-                      is updated.
-                  currentVersion:
-                    required:
-                    - createdAt
-                    - current
-                    - instanceId
-                    - submitterId
-                    type: object
-                    properties:
-                      instanceId:
-                        type: string
-                        description: The `instanceId` of the `Submission` version,
-                          given by the Submission XML.
-                      instanceName:
-                        type: string
-                        description: The `instanceName`, if any, given by the Submission
-                          XML in the metadata section.
-                      submitterId:
-                        type: number
-                        description: The ID of the `Actor` (`App User`, `User`, or
-                          `Public Link`) that submitted this `Submission` version.
-                      deviceId:
-                        type: string
-                        description: The self-identified `deviceId` of the device
-                          that submitted the `Submission` version.
-                      userAgent:
-                        type: string
-                        description: The self-identified `userAgent` of the device
-                          that submitted the `Submission` version.
-                      createdAt:
-                        type: string
-                        description: ISO date format. The time that the server received
-                          the `Submission` version.
-                      current:
-                        type: boolean
-                        description: Whether the version is current or not.
-                    description: The current version of the `Submission`.
-                  submitter:
-                    required:
-                    - createdAt
-                    - displayName
-                    - id
-                    - type
-                    type: object
-                    properties:
-                      createdAt:
-                        type: string
-                        description: ISO date format
-                      displayName:
-                        type: string
-                        description: All `Actor`s, regardless of type, have a display
-                          name
-                      id:
-                        type: number
-                      type:
-                        type: string
-                        description: the Type of this Actor; typically this will be
-                          `user`.
-                        enum:
-                        - user
-                        - field_key
-                        - public_link
-                        - singleUse
-                      updatedAt:
-                        type: string
-                        description: ISO date format
-                      deletedAt:
-                        type: string
-                        description: ISO date format
-                    description: The full details of the `Actor` that submitted this
-                      `Submission`.
+                $ref: '#/components/schemas/Submission'
               example:
                 instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                 submitterId: 23
@@ -8345,6 +7939,27 @@ paths:
                 reviewState: approved
                 createdAt: 2018-01-19T23:58:03.395Z
                 updatedAt: 2018-03-21T12:45:02.312Z
+                deletedAt: null
+                currentVersion:
+                  instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
+                  instanceName: village third house
+                  submitterId: 23
+                  deviceId: imei:123456
+                  userAgent: Enketo/3.0.4
+                  createdAt: 2018-01-19T23:58:03.395Z
+                  current: true
+            application/json; extended:
+              schema:
+                $ref: '#/components/schemas/ExtendedSubmission'
+              example:
+                instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
+                submitterId: 23
+                deviceId: imei:123456
+                userAgent: Enketo/3.0.4
+                reviewState: approved
+                createdAt: 2018-01-19T23:58:03.395Z
+                updatedAt: 2018-03-21T12:45:02.312Z
+                deletedAt: null
                 currentVersion:
                   instanceId: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
                   instanceName: village third house
@@ -8360,121 +7975,6 @@ paths:
                   type: user
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
-            application/json:
-              schema:
-                required:
-                - createdAt
-                - instanceId
-                - submitter
-                - submitterId
-                type: object
-                properties:
-                  instanceId:
-                    type: string
-                    description: The `instanceId` of the `Submission`, given by the
-                      Submission XML.
-                  submitterId:
-                    type: number
-                    description: The ID of the `Actor` (`App User`, `User`, or `Public
-                      Link`) that originally submitted this `Submission`.
-                  deviceId:
-                    type: string
-                    description: The self-identified `deviceId` of the device that
-                      collected the data, sent by it upon submission to the server.
-                      The initial submission `deviceId` will be returned here.
-                  userAgent:
-                    type: string
-                    description: The self-identified `userAgent` of the device that
-                      collected the data, sent by it upon submission to the server.
-                      The initial submission `userAgent` will be returned here.
-                  reviewState:
-                    type: string
-                    description: The current review state of the submission.
-                    enum:
-                    - null
-                    - edited
-                    - hasIssues
-                    - rejected
-                    - approved
-                  createdAt:
-                    type: string
-                    description: ISO date format. The time that the server received
-                      the Submission.
-                  updatedAt:
-                    type: string
-                    description: ISO date format. `null` when the Submission is first
-                      created, then updated when the Submission's XML data or metadata
-                      is updated.
-                  currentVersion:
-                    required:
-                    - createdAt
-                    - current
-                    - instanceId
-                    - submitterId
-                    type: object
-                    properties:
-                      instanceId:
-                        type: string
-                        description: The `instanceId` of the `Submission` version,
-                          given by the Submission XML.
-                      instanceName:
-                        type: string
-                        description: The `instanceName`, if any, given by the Submission
-                          XML in the metadata section.
-                      submitterId:
-                        type: number
-                        description: The ID of the `Actor` (`App User`, `User`, or
-                          `Public Link`) that submitted this `Submission` version.
-                      deviceId:
-                        type: string
-                        description: The self-identified `deviceId` of the device
-                          that submitted the `Submission` version.
-                      userAgent:
-                        type: string
-                        description: The self-identified `userAgent` of the device
-                          that submitted the `Submission` version.
-                      createdAt:
-                        type: string
-                        description: ISO date format. The time that the server received
-                          the `Submission` version.
-                      current:
-                        type: boolean
-                        description: Whether the version is current or not.
-                    description: The current version of the `Submission`.
-                  submitter:
-                    required:
-                    - createdAt
-                    - displayName
-                    - id
-                    - type
-                    type: object
-                    properties:
-                      createdAt:
-                        type: string
-                        description: ISO date format
-                      displayName:
-                        type: string
-                        description: All `Actor`s, regardless of type, have a display
-                          name
-                      id:
-                        type: number
-                      type:
-                        type: string
-                        description: the Type of this Actor; typically this will be
-                          `user`.
-                        enum:
-                        - user
-                        - field_key
-                        - public_link
-                        - singleUse
-                      updatedAt:
-                        type: string
-                        description: ISO date format
-                      deletedAt:
-                        type: string
-                        description: ISO date format
-                    description: The full details of the `Actor` that submitted this
-                      `Submission`.
         403:
           description: Forbidden
           content:
@@ -10654,12 +10154,13 @@ paths:
 
         The fields you can query against are as follows:
 
-        | Submission Metadata         | REST API Name | OData Field Name          |
-        | --------------------------- | ------------- | ------------------------- |
-        | Submitter Actor ID          | `submitterId` | `__system/submitterId`    |
-        | Submission Timestamp        | `createdAt`   | `__system/submissionDate` |
-        | Submission Update Timestamp | `updatedAt`   | `__system/updatedAt`      |
-        | Review State                | `reviewState` | `__system/reviewState`    |
+        | Submission Metadata                      | REST API Name | OData Field Name          |
+        | ---------------------------------------- | ------------- | ------------------------- |
+        | Submitter Actor ID                       | `submitterId` | `__system/submitterId`    |
+        | Submission Timestamp                     | `createdAt`   | `__system/submissionDate` |
+        | Submission Update Timestamp              | `updatedAt`   | `__system/updatedAt`      |
+        | Review State                             | `reviewState` | `__system/reviewState`    |
+        | Submission Delete Timestamp (v2024.3)    | `deletedAt`   | `__system/deletedAt`      |
 
         You can use `$root` expression to filter subtables (repeats) by Submission Metadata, you'll have to prefix above fields by `$root/Submissions/` in the filter criteria. For example, to filter a repeat table by Submission Timestamp you can pass `$filter=$root/Submissions/__system/submissionDate gt 2020-01-31T23:59:59.999Z` in the query parameter.
 
@@ -13060,6 +12561,10 @@ components:
           type: string
           example: '2018-03-21T12:45:02.312Z'
           description: ISO date format. `null` when the Submission is first created, then updated when the Submission's XML data or metadata is updated.
+        deletedAt:
+          type: string
+          description: Timestamp of the deletion in ISO date format. `null` if the Submission is not deleted.
+          example: 2018-04-18T23:42:11.406Z
         currentVersion:
           $ref: '#/components/schemas/SubmissionVersion'
           description: The current version of the `Submission`.
