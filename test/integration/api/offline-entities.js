@@ -1393,4 +1393,89 @@ describe('Offline Entities', () => {
       successCount.should.equal(50);
     }));
   });
+
+  describe('force processing flags in version sources and audit logs', () => {
+    it('should indicate in version source and audits that an entity update was force-applied as a create [update-as-create]', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+      const newUuid = uuid();
+
+      // Send an update about a submission that hasn't been created yet
+      // give it a new uuid
+      // give it a blank trunkVersion to indicate offline create
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update-as-create')
+          .replace('id="12345678-1234-4123-8234-123456789abc"', `id="${newUuid}"`)
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('trunkVersion="1"', 'trunkVersion=""')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await container.Entities.processBacklog(true);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${newUuid}/audits`)
+        .expect(200)
+        .then(({ body }) => {
+          body[0].details.source.forceProcessed.should.equal(true);
+          body[0].details.source.updateAsCreate.should.equal(true);
+          body[0].details.source.upsert.should.equal(true);
+        });
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${newUuid}/versions`)
+        .expect(200)
+        .then(({ body }) => {
+          body[0].source.forceProcessed.should.equal(true);
+          body[0].source.updateAsCreate.should.equal(true);
+          body[0].source.upsert.should.equal(true);
+        });
+    }));
+
+    it('should mark a regular update as not force processed', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // send in a regular update
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${uuid()}"`))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions`)
+        .expect(200)
+        .then(({ body }) => {
+          body[1].source.forceProcessed.should.equal(false);
+        });
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits`)
+        .expect(200)
+        .then(({ body }) => {
+          body[0].details.source.forceProcessed.should.equal(false);
+        });
+    }));
+
+    it('should mark a create and update as an upsert', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'create="1" update="1"'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd/versions`)
+        .expect(200)
+        .then(({ body }) => {
+          body[0].source.upsert.should.equal(true);
+          body[0].source.forceProcessed.should.equal(false);
+        });
+    }));
+  });
 });
