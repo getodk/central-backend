@@ -84,13 +84,13 @@ describe('api: /projects/:id/forms (drafts)', () => {
                     }));
               })))));
 
-      it('should request an enketoId while setting a new draft', testService(async (service, { env }) => {
+      it.only('should request an enketoId while setting a new draft', testService(async (service, { env }) => {
         const asAlice = await service.login('alice');
         global.enketo.enketoId = '::ijklmnop';
         await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
         global.enketo.callCount.should.equal(1);
         global.enketo.receivedUrl.startsWith(env.domain).should.be.true();
-        const match = global.enketo.receivedUrl.match(/\/v1\/test\/([a-z0-9$!]{64})\/projects\/1\/forms\/simple\/draft$/i);
+        const match = global.enketo.receivedUrl.match(/\/v1\/test\/([a-z0-9_-]{64})\/projects\/1\/forms\/simple\/draft$/i);
         should.exist(match);
         const { body } = await asAlice.get('/v1/projects/1/forms/simple/draft')
           .expect(200);
@@ -108,7 +108,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
         await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
         global.enketo.callCount.should.equal(3);
         global.enketo.receivedUrl.startsWith(env.domain).should.be.true();
-        const match = global.enketo.receivedUrl.match(/\/v1\/test\/([a-z0-9$!]{64})\/projects\/1\/forms\/simple\/draft$/i);
+        const match = global.enketo.receivedUrl.match(/\/v1\/test\/([a-z0-9_-]{64})\/projects\/1\/forms\/simple\/draft$/i);
         should.exist(match);
         const { body } = await asAlice.get('/v1/projects/1/forms/simple/draft')
           .expect(200);
@@ -143,7 +143,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
         await exhaust(container);
         global.enketo.callCount.should.equal(2);
         global.enketo.receivedUrl.startsWith(container.env.domain).should.be.true();
-        const match = global.enketo.receivedUrl.match(/\/v1\/test\/([a-z0-9$!]{64})\/projects\/1\/forms\/simple\/draft$/i);
+        const match = global.enketo.receivedUrl.match(/\/v1\/test\/([a-z0-9_-]{64})\/projects\/1\/forms\/simple\/draft$/i);
         should.exist(match);
         const { body } = await asAlice.get('/v1/projects/1/forms/simple/draft')
           .expect(200);

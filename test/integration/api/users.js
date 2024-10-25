@@ -105,7 +105,7 @@ describe('api: /users', () => {
               .send({ email: 'david@getodk.org' })
               .expect(200)
               .then(() => {
-                const tokenMatch = /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html);
+                const tokenMatch = /token=([a-z0-9_-]+)/i.exec(global.inbox.pop().html);
                 should(tokenMatch).be.null();
               }))));
       });
@@ -157,7 +157,7 @@ describe('api: /users', () => {
               .send({ email: 'david@getodk.org' })
               .expect(200)
               .then(() => {
-                const token = /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html)[1];
+                const token = /token=([a-z0-9_-]+)/i.exec(global.inbox.pop().html)[1];
                 return service.post('/v1/users/reset/verify')
                   .send({ new: 'testresetpassword' })
                   .set('Authorization', 'Bearer ' + token)
@@ -172,7 +172,7 @@ describe('api: /users', () => {
               .send({ email: 'david@getodk.org' })
               .expect(200)
               .then(() => {
-                const token = /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html)[1];
+                const token = /token=([a-z0-9_-]+)/i.exec(global.inbox.pop().html)[1];
                 return service.post('/v1/users/reset/verify')
                   .send({ new: 'tooshort' })
                   .set('Authorization', 'Bearer ' + token)
@@ -274,7 +274,7 @@ describe('api: /users', () => {
               global.inbox.length.should.equal(0);
               email.to.should.eql([{ address: 'alice@getodk.org', name: '' }]);
               email.subject.should.equal('ODK Central account password reset');
-              const token = /token=([a-z0-9!$]+)/i.exec(email.html)[1];
+              const token = /token=([a-z0-9_-]+)/i.exec(email.html)[1];
 
               return service.post('/v1/users/reset/verify')
                 .send({ new: 'resetthis!' })
@@ -292,7 +292,7 @@ describe('api: /users', () => {
           // The session has not been deleted yet.
           await asAlice.get('/v1/users/current').expect(200);
 
-          const token = /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html)[1];
+          const token = /token=([a-z0-9_-]+)/i.exec(global.inbox.pop().html)[1];
           await service.post('/v1/users/reset/verify')
             .send({ new: 'resetpassword' })
             .set('Authorization', `Bearer ${token}`)
@@ -305,7 +305,7 @@ describe('api: /users', () => {
           service.post('/v1/users/reset/initiate')
             .send({ email: 'alice@getodk.org' })
             .expect(200)
-            .then(() => /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html)[1])
+            .then(() => /token=([a-z0-9_-]+)/i.exec(global.inbox.pop().html)[1])
             .then((token) => service.post('/v1/users/reset/verify')
               .send({ new: 'reset the first time!' })
               .set('Authorization', 'Bearer ' + token)
@@ -319,7 +319,7 @@ describe('api: /users', () => {
           service.post('/v1/users/reset/initiate')
             .send({ email: 'alice@getodk.org' })
             .expect(200)
-            .then(() => /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html)[1])
+            .then(() => /token=([a-z0-9_-]+)/i.exec(global.inbox.pop().html)[1])
             .then((token) => service.post('/v1/users/reset/verify')
               .send({ new: 'resetpassword' })
               .set('Authorization', 'Bearer ' + token)
