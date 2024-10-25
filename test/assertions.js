@@ -53,7 +53,7 @@ should.Assertion.add('recentDate', function() {
 
 should.Assertion.add('token', function(length = 64) {
   this.params = { operator: 'to be a token string' };
-  this.obj.should.match(new RegExp(`^[a-z0-9!$]{${length}}$`, 'i'));
+  this.obj.should.match(new RegExp(`^[a-z0-9_-]{${length}}$`, 'i'));
 });
 
 should.Assertion.add('uuid', function() {
