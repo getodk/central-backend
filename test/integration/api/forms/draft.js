@@ -84,7 +84,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                     }));
               })))));
 
-      it.only('should request an enketoId while setting a new draft', testService(async (service, { env }) => {
+      it('should request an enketoId while setting a new draft', testService(async (service, { env }) => {
         const asAlice = await service.login('alice');
         global.enketo.enketoId = '::ijklmnop';
         await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
