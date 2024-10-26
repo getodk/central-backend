@@ -7,7 +7,10 @@ const Option = require(appRoot + '/lib/util/option');
 describe('Frame', () => {
   describe('definition', () => {
     it('should accept fields', () => { Frame.define('a', 'b').fields.should.eql([ 'a', 'b' ]); });
-    it('should create a fieldlist', () => { Frame.define('a', 'b').fieldlist.should.eql(sql`"a","b"`); });
+    it('should create a fieldlist', () => {
+      const { fieldlist } = Frame.define('a', 'b');
+      sql`${fieldlist}`.should.eql(sql`"a","b"`);
+    });
     it('should note readables', () => {
       Frame.define('a', writable, readable, 'b', 'c', readable).def.readable.should.eql([ 'a', 'c' ]);
     });
@@ -17,7 +20,7 @@ describe('Frame', () => {
     it('should note insert fields and list', () => {
       const Box = Frame.define('id', 'a', readable, writable, 'b', writable, 'c');
       Box.insertfields.should.eql([ 'a', 'b', 'c' ]);
-      Box.insertlist.should.eql(sql`"a","b","c"`);
+      sql`${Box.insertlist}`.should.eql(sql`"a","b","c"`);
     });
     it('should note hasCreatedAt and hasUpdatedAt', () => {
       const T = Frame.define('updatedAt');
