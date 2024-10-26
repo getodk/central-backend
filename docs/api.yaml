@@ -628,6 +628,8 @@ tags:
     Standard HTTP Basic Authentication is allowed, but **strongly discouraged**. This is because the server must verify your password with every single request, which is very slow to compute: typically, this will add hundreds of milliseconds to each request. For some one-off tasks and in cases where there is no other choice, it is reasonable to choose Basic authentication, but wherever possible we strongly encourage the use of any other authentication method.
 
     In addition, because credentials are sent in plaintext as part of the request, **the server will only accept Basic auth over HTTPS**. If your ODK Central server is set up over plain HTTP, it will not accept Basic auth.
+
+    Furthermore, authenticating using accounts with email addresses with a colon (":") in them is not possible.
 - name: App User Authentication
   x-parent-tag: Authentication
   description: |-
@@ -977,6 +979,8 @@ paths:
         `Authorization: Basic bXkuZW1haWwuYWRkcmVzc0BvcGVuZGF0YWtpdC5vcmc6bXkucGFzc3dvcmQ=`
 
         As given by [the standard](https://en.wikipedia.org/wiki/Basic_access_authentication), the text following the `Basic` marker here is a base64 encoding of the credentials, provided in the form `email:password` (in this example `my.email.address@getodk.org:my.password`).
+
+        Because the colon symbol (":") is used as a separator, authenticating using an email address containing a colon is not possible. This is a general limitation of this authentication method; it is not specific to ODK Central.
 
         Unlike the standard, we do not require the client to first send an unauthenticated request and retry the request only after receiving a `WWW-Authenticate` response, and in fact we will never send the `WWW-Authenticate` header. This is mostly because, as noted above, we generally discourage the use of this authentication method, and would rather not advertise its use openly. As a result, if you wish to use Basic Authentication, directly supply the header on any request that needs it.
 
