@@ -74,6 +74,15 @@ describe('OData filter query transformer', () => {
       return true;
     });
   });
+
+  it.only('should reject unrecognized function names', () => {
+    assert.throws(() => { odataFilter('123 eq trim(\' 123 \')'); }, (err) => {
+      err.should.be.a.Problem();
+      err.problemCode.should.equal(501.5);
+      err.message.should.equal('The given OData filter expression references fields not supported by this server: myfield at 7');
+      return true;
+    });
+  });
 });
 
 describe('OData orderby/sort query transformer', () => {
