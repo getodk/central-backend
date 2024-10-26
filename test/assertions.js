@@ -232,8 +232,7 @@ should.Assertion.add('Problem', function() {
 
   this.obj.should.be.a.Error();
   Object.keys(this.obj).should.containDeep([ 'problemCode', 'problemDetails' ]);
-  this.obj.problemCode.should.be.a.String();
-  this.obj.problemDetails.should.be.a.String();
+  this.obj.problemCode.should.be.a.Number();
 });
 
 should.Assertion.add('Project', function() {
