@@ -30,7 +30,7 @@ describe('preprocessors', () => {
     it('should do nothing if no Authorization header is provided', () =>
       Promise.resolve(authHandler(
         { Auth, Sessions: mockSessions() },
-        new Context(createRequest({ fieldKey: Option.none() }))
+        new Context(createRequest())
       )).then((context) => {
         // preprocessors return nothing if they have no changes to make to the context.
         should.not.exist(context);
