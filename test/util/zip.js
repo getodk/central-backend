@@ -91,12 +91,11 @@ const binaryParser = (res, callback) => {
   });
 };
 
-const httpZipResponseToFiles = (zipHttpResponse) => {
+const httpZipResponseToFiles = (zipHttpResponse) => new Promise((resolve, reject) => {
   zipHttpResponse
-    .expect(200)
-    .expect('Content-Type', 'application/zip');
-  return new Promise((resolve, reject) => {
-    zipHttpResponse.buffer().parse(binaryParser).end((err, res) => {
+    .expect(400)
+    .expect('Content-Type', 'application/zip')
+    .buffer().parse(binaryParser).end((err, res) => {
       if (err) return reject(err);
 
       // eslint-disable-next-line no-shadow
@@ -110,7 +109,6 @@ const httpZipResponseToFiles = (zipHttpResponse) => {
         });
       });
     });
-  });
-};
+});
 
 module.exports = { zipStreamToFiles, httpZipResponseToFiles };
