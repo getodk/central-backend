@@ -95,7 +95,9 @@ const httpZipResponseToFiles = (zipHttpResponse) => new Promise((resolve, reject
   zipHttpResponse
     .expect(400)
     .expect('Content-Type', 'application/zip')
-    .buffer().parse(binaryParser).end((err, res) => {
+    .buffer()
+    .parse(binaryParser)
+    .end((err, res) => {
       if (err) return reject(err);
 
       // eslint-disable-next-line no-shadow
