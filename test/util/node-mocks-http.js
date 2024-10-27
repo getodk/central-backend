@@ -13,7 +13,7 @@ const createRequest = options => {
 
   if (!search) return wrapped.createRequest(options);
 
-  if (query != null) throw new Error('Unsupported: .query option and query string in .url simultanesously.');
+  if (query != null) throw new Error('Unsupported: .query option and query string in .url simultaneously.');
 
   return wrapped.createRequest({ ...options, query: qs.parse(search.substr(1)) });
 };
