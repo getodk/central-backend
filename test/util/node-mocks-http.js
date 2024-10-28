@@ -3,7 +3,21 @@
 
 const wrapped = require('node-mocks-http');
 // qs is an implicit dependency of express:
-const qs = require('qs'); // eslint-disable-line import/no-extraneous-dependencies
+
+const qs = (() => {
+  try {
+    // In case express has its own version of qs, try loading that first:
+    return require('./node_modules/express/node_modules/qs'); // eslint-disable-line import/extensions,import/no-unresolved
+  } catch (err) {
+    // Try loading the global qs:
+    try {
+      return require('./node_modules/qs'); // eslint-disable-line import/extensions,import/no-unresolved
+    } catch (err) { // eslint-disable-line no-shadow
+      // node_modules layout may change in future (e.g. using yarn with different nodeLinker config)
+      throw new Error('Unexpected missing module: qs.  Please confirm node_modules directory is initialised, and dependency resolution has not changed recently.');
+    }
+  }
+})();
 
 const createRequest = options => {
   if (!options?.url) return wrapped.createRequest(options);
