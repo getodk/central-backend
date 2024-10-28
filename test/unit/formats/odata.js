@@ -940,30 +940,30 @@ describe('odata message composition', () => {
         const billy = { __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d', age: 4, name: 'Billy' };
         const blain = { __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172', age: 6, name: 'Blaine' };
 
-        const badId = 'not an id';
+        const nomatch = '0000000000000000000000000000000000000000';
 
         [
           {
             $top: 0,
-            skiptoken: { repeatId: badId },
+            skiptoken: { repeatId: nomatch },
             expectedNext: false,
             expectedValue: [],
           },
           {
             $top: 1,
-            skiptoken: { repeatId: badId },
+            skiptoken: { repeatId: nomatch },
             expectedNext: blain,
             expectedValue: [ billy ],
           },
           {
             $top: 2,
-            skiptoken: { repeatId: badId },
+            skiptoken: { repeatId: nomatch },
             expectedNext: false,
             expectedValue: [ billy, blain ],
           },
           {
             $top: undefined,
-            skiptoken: { repeatId: badId },
+            skiptoken: { repeatId: nomatch },
             expectedNext: false,
             expectedValue: [ billy, blain ],
           },
