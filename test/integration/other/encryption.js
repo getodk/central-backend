@@ -10,7 +10,6 @@ const { Form, Key, Submission, Actor } = require(appRoot + '/lib/model/frames');
 // eslint-disable-next-line import/no-dynamic-require
 const { mapSequential } = require(appRoot + '/test/util/util');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
-const authenticateUser = require('../../util/authenticate-user');
 const should = require('should');
 
 describe('managed encryption', () => {
@@ -311,7 +310,7 @@ describe('managed encryption', () => {
             asAlice.get('/v1/projects/1/forms/simple/submissions/keys')
               .expect(200)
               .then(({ body }) => body[0].id),
-            authenticateUser(service, 'alice', 'include-csrf'),
+            service.authenticateUser('alice', 'include-csrf'),
           ]))
           .then(([ keyId, session ]) => httpZipResponseToFiles(service.post('/v1/projects/1/forms/simple/submissions.csv.zip')
             .send(`${keyId}=supersecret&__csrf=${session.csrf}`)

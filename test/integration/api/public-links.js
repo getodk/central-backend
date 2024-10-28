@@ -1,7 +1,6 @@
 const should = require('should');
 const { testService, withClosedForm } = require('../setup');
 const testData = require('../../data/xml');
-const authenticateUser = require('../../util/authenticate-user');
 
 describe('api: /projects/:id/forms/:id/public-links', () => {
   describe('POST', () => {
@@ -196,7 +195,7 @@ describe('api: /key/:key', () => {
       .expect(403)));
 
   it('should allow cookie+public-link', testService((service) =>
-    authenticateUser(service, 'alice')
+    service.authenticateUser('alice')
       .then((aliceToken) => service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/public-links')
           .send({ displayName: 'linktest' })

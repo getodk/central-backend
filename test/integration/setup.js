@@ -126,9 +126,12 @@ const authProxy = (token) => ({
 // eslint-disable-next-line no-shadow
 const augment = (service) => {
   // eslint-disable-next-line no-param-reassign
+  service.authenticateUser = authenticateUser.bind(null, service);
+
+  // eslint-disable-next-line no-param-reassign
   service.login = async (userOrUsers, test = undefined) => {
     const users = Array.isArray(userOrUsers) ? userOrUsers : [userOrUsers];
-    const tokens = await Promise.all(users.map(user => authenticateUser(service, user)));
+    const tokens = await Promise.all(users.map(user => service.authenticateUser(user)));
     const proxies = tokens.map((token) => new Proxy(service, authProxy(token)));
     return test != null
       ? test(...proxies)

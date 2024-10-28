@@ -74,6 +74,7 @@ describe('odata message composition', () => {
       <ComplexType Name="metadata">
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="deletedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
@@ -119,6 +120,7 @@ describe('odata message composition', () => {
       <ComplexType Name="metadata">
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="deletedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
@@ -182,6 +184,7 @@ describe('odata message composition', () => {
       <ComplexType Name="metadata">
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="deletedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
@@ -235,6 +238,7 @@ describe('odata message composition', () => {
       <ComplexType Name="metadata">
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="deletedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
@@ -387,6 +391,7 @@ describe('odata message composition', () => {
       <ComplexType Name="metadata">
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="deletedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
@@ -465,6 +470,7 @@ describe('odata message composition', () => {
       <ComplexType Name="metadata">
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="deletedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
