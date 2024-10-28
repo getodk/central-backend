@@ -1,4 +1,8 @@
-// Safe wrapper for node-mocks-http
+// Safe wrapper for node-mocks-http - ensure that query string parsing matches
+// what is happening in production.  N.B. if express's `query parser` option is
+// set, this wrapper will need to change too.
+//
+// See: https://expressjs.com/en/api.html#app.settings.table
 // See: https://github.com/eugef/node-mocks-http/issues/299
 
 const wrapped = require('node-mocks-http');
