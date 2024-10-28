@@ -1353,7 +1353,9 @@ describe('Offline Entities', () => {
         .send({ data: { age: '24' } })
         .expect(200);
 
-      // Send update (change status from null to arrived)
+      // Send update (change status from null to arrived, no other properties included/changed)
+      // Introduces a soft conflict because baseVersion is 1
+      // But no hard conflict
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.one
           .replace('branchId=""', `branchId="${branchId}"`)
@@ -1361,7 +1363,10 @@ describe('Offline Entities', () => {
         .set('Content-Type', 'application/xml')
         .expect(200);
 
-      // Send second update (change age from 22 to 26)
+      // Send second update (change age from 22 to 26, instead of changing status)
+      // Doesn't conflict with previous version (from the same offline branch)
+      // But it should be marked as a soft conflict because the branch was
+      // interrupted by the first API update.
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.one
           .replace('branchId=""', `branchId="${branchId}"`)
@@ -1374,9 +1379,18 @@ describe('Offline Entities', () => {
 
       await exhaust(container);
 
+      // Final version should have soft conflict
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
         .then(({ body: versions }) => {
           versions.map(v => v.conflict).should.eql([null, null, 'soft', 'soft']);
+        });
+
+      // Overall entity should have soft conflict
+      // (A test below shows this is set explicitily and not just carried over
+      // from the previous conflict state.)
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .then(({ body: entity }) => {
+          should(entity.conflict).equal('soft');
         });
     }));
 
@@ -1384,6 +1398,7 @@ describe('Offline Entities', () => {
       const asAlice = await service.login('alice');
       const branchId = uuid();
 
+      // Scenario described in issue: c#698
       // Send second update first
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.one
@@ -1399,6 +1414,9 @@ describe('Offline Entities', () => {
       await container.Entities.processBacklog(true);
 
       // Send first update now (it will be applied right away)
+      // Introduces a hard conflict because it will find baseVersion v1
+      // and the force-processed update above also branched of v1
+      // and both update 'status'.
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.one
           .replace('branchId=""', `branchId="${branchId}"`)
@@ -1408,7 +1426,13 @@ describe('Offline Entities', () => {
 
       await exhaust(container);
 
-      // Send fourth update
+      // Entity conflict should be hard at this point
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .then(({ body: entity }) => {
+          should(entity.conflict).equal('hard');
+        });
+
+      // Send fourth update (skipping a 3rd update so this must be force-applied)
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.one
           .replace('branchId=""', `branchId="${branchId}"`)
@@ -1422,9 +1446,18 @@ describe('Offline Entities', () => {
       await exhaust(container);
       await container.Entities.processBacklog(true);
 
+      // All updates are from the same branch, but 1 expected version is missing
+      // and updates came in out of order. Unclear if final 'soft' conflict is what we
+      // want or if it should possibly be null.
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
         .then(({ body: versions }) => {
           versions.map(v => v.conflict).should.eql([null, null, 'hard', 'soft']);
+        });
+
+      // Hard conflict is carried forward
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .then(({ body: entity }) => {
+          should(entity.conflict).equal('hard');
         });
     }));
 
@@ -1437,7 +1470,9 @@ describe('Offline Entities', () => {
         .send({ data: { age: '24' } })
         .expect(200);
 
-      // Send update (change status from null to arrived)
+      // Send update (change status from null to arrived, don't change age)
+      // Has soft conflict with parallel update but doesn't have hard conflict
+      // because different properties were changed.
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.one
           .replace('branchId=""', `branchId="${branchId}"`)
@@ -1446,10 +1481,19 @@ describe('Offline Entities', () => {
         .expect(200);
       await exhaust(container);
 
+      // Entity has soft conflict at this point
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .then(({ body: entity }) => {
+          should(entity.conflict).equal('soft');
+        });
+
       await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&baseVersion=3')
         .expect(200);
 
       // Send second update (change age from 22 to 26)
+      // Doesn't conflict with previous version (from the same offline branch)
+      // But it should be marked as a soft conflict because the branch was
+      // interrupted by the first API update.
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.one
           .replace('branchId=""', `branchId="${branchId}"`)
@@ -1461,11 +1505,13 @@ describe('Offline Entities', () => {
         .expect(200);
       await exhaust(container);
 
+      // Final version conflict is soft because of interrupted branch
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
         .then(({ body: versions }) => {
           versions.map(v => v.conflict).should.eql([null, null, 'soft', 'soft']);
         });
 
+      // Entity version is soft
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .then(({ body: entity }) => {
           should(entity.conflict).equal('soft');
