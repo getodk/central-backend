@@ -13,7 +13,7 @@ const qs = (() => {
     // In case express has its own version of qs, try loading that first:
     return require('./node_modules/express/node_modules/qs'); // eslint-disable-line import/extensions,import/no-unresolved
   } catch (err) {
-    // Try loading the global qs:
+    // Try loading the global qs.  This is not written as `require('qs')` to avoid loading of the qs module from a surprising place.
     try {
       return require('./node_modules/qs'); // eslint-disable-line import/extensions,import/no-unresolved
     } catch (err) { // eslint-disable-line no-shadow
