@@ -3670,7 +3670,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/FormAttachment'
               example:
-              - name: myfile.mp3
+              - name: myfile.png
                 type: image
                 exists: true
                 blobExists: true
@@ -4198,7 +4198,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/FormAttachment'
               example:
-              - name: myfile.mp3
+              - name: myfile.png
                 type: image
                 exists: true
                 blobExists: true
@@ -4899,7 +4899,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/FormAttachment'
               example:
-              - name: myfile.mp3
+              - name: myfile.png
                 type: image
                 exists: true
                 blobExists: true
@@ -12264,7 +12264,7 @@ components:
       properties:
         name:
           type: string
-          example: myfile.mp3
+          example: myfile.png
           description: The name of the file as specified in the XForm.
         type:
           $ref: '#/components/schemas/FormAttachmentType'
@@ -12659,7 +12659,7 @@ components:
       properties:
         name:
           type: string
-          example: myfile.mp3
+          example: myfile.png
           description: The name of the file as specified in the Submission XML.
         exists:
           type: boolean
