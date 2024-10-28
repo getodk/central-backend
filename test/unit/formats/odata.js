@@ -6,6 +6,7 @@ const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 const should = require('should');
 const { QueryOptions } = require('../../../lib/util/db');
+const Problem = require(appRoot + '/lib/util/problem');
 
 // Helpers to deal with repeated system metadata generation.
 const submitter = { id: 5, displayName: 'Alice' };
@@ -946,28 +947,34 @@ describe('odata message composition', () => {
           {
             $top: 0,
             skiptoken: { repeatId: nomatch },
-            expectedNext: false,
-            expectedValue: [],
           },
           {
             $top: 1,
             skiptoken: { repeatId: nomatch },
-            expectedNext: blain,
-            expectedValue: [ billy ],
           },
           {
             $top: 2,
             skiptoken: { repeatId: nomatch },
-            expectedNext: false,
-            expectedValue: [ billy, blain ],
           },
           {
             $top: undefined,
             skiptoken: { repeatId: nomatch },
-            expectedNext: false,
-            expectedValue: [ billy, blain ],
           },
+        ].forEach(({ $top, skiptoken }) =>
+          it(`should throw error for ${[$top, JSON.stringify(skiptoken)]}`, () =>
+            fieldsFor(testData.forms.withrepeat)
+              .then((fields) => {
+                const submission = mockSubmission('two', testData.instances.withrepeat.two);
+                const $skiptoken = '01' + Buffer.from(JSON.stringify(skiptoken)).toString('base64');
+                const query = { $top, $skiptoken };
+                const originaUrl = "/withrepeat.svc/Submissions('two')/children/child"; // doesn't have to include query string
+                return singleRowToOData(fields, submission, 'http://localhost:8989', originaUrl, query);
+              })
+              .should.be.rejectedWith(Problem, { problemCode:400.34,
+                message: 'repeatId not found',
+              })));
 
+        [
           {
             $top: 0,
             skiptoken: { repeatId: billy.__id },
