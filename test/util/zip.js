@@ -93,7 +93,7 @@ const binaryParser = (res, callback) => {
 
 const httpZipResponseToFiles = (zipHttpResponse) => new Promise((resolve, reject) => {
   zipHttpResponse
-    .expect(400)
+    .expect(200)
     .expect('Content-Type', 'application/zip')
     .buffer()
     .parse(binaryParser)
