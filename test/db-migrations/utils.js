@@ -1,4 +1,5 @@
 module.exports = {
+  assertIndexExists,
   assertTableDoesNotExist,
   assertTableSchema,
   describeMigration,
@@ -8,8 +9,7 @@ const fs = require('node:fs');
 const migrator = require('./migrator');
 
 function describeMigration(migrationName, fn) {
-  const migrationFile = `./lib/model/migrations/${migrationName}.js`;
-  assert.ok(fs.existsSync(migrationFile), `Could not find migration file at ${migrationFile}`);
+  assert.ok(migrator.exists(migrationName));
 
   assert.strictEqual(typeof fn, 'function');
   assert.strictEqual(fn.length, 1);
@@ -33,6 +33,17 @@ function describeMigration(migrationName, fn) {
   });
 }
 
+async function assertIndexExists(tableName, expected) {
+  if(arguments.length !== 2) throw new Error('Incorrect arg count.');
+  const actualIndexes = await db.anyFirst(sql`SELECT indexdef FROM pg_indexes WHERE tablename=${tableName}`);
+
+  if(actualIndexes.includes(expected)) return true;
+  assert.ok(false, 'Could not find expected index: \n' + JSON.stringify({
+    expected,
+    actualIndexes,
+  }, null, 2));
+}
+
 async function assertTableExists(tableName) {
   const count = await db.oneFirst(sql`SELECT COUNT(*) FROM information_schema.tables WHERE table_name=${tableName}`);
   assert.strictEqual(count, 1, `Table not found: ${tableName}`);
@@ -47,28 +58,58 @@ async function assertTableSchema(tableName, ...expectedCols) {
   await assertTableExists(tableName);
 
   expectedCols.forEach((def, idx) => {
-    if(!def.name) throw new Error(`Expected column definition is missing required prop: .name at index ${idx}`);
+    if(!def.column_name) throw new Error(`Expected column definition is missing required prop: .column_name at index ${idx}`);
   });
 
-  const actualCols = await db.maybeOne(sql`SELECT * FROM information_schema.columns WHERE table_name=${tableName}`);
-  assert.notStrictEqual(actualCols, null, `Expected table not found: ${tableName}`);
+  const actualCols = await db.any(sql`SELECT * FROM information_schema.columns WHERE table_name=${tableName}`);
+  console.log('actualCols:', actualCols);
 
-  assert.deepEqual(
-    expectedCols.map(col => col.name),
-    actualCols.map(col => col.name),
+  assertEqualInAnyOrder(
+    expectedCols.map(col => col.column_name),
+    actualCols.map(col => col.column_name),
     'Expected columns did not match returned columns!',
   );
 
   assertRowsMatch(actualCols, expectedCols);
 }
 
-function assertRowsMatch(actual, expected) {
-  assert.strictEqual(actual.length, expected.length, 'row count mismatch');
+function assertRowsMatch(actualRows, expectedRows) {
+  assert.strictEqual(actualRows.length, expectedRows.length, 'row count mismatch');
 
-  expectedCols.forEach((expectedRow, rowIdx) => {
-    for(const [colName, expectedV] of Object.entries(expectedRow)) {
-      const actualV = actualCols[colName];
-      assert.strictEqual(actualV, expectedV, `Value mismatch in row ${rowIdx}, col ${colName}`);
+  const remainingRows = [...actualRows];
+  for(let i=0; i<expectedRows.length; ++i) {
+    const x = expectedRows[i];
+    let found = false;
+    for(let j=0; j<remainingRows.length; ++j) {
+      const rr = remainingRows[j];
+      try {
+        assertIncludes(rr, x); 
+        remainingRows.splice(j, 1); 
+        found = true;
+        break;
+      } catch(err) { /* keep searching */ }
+    }   
+    if(!found) {
+      const filteredRemainingRows = remainingRows.map(r => _.pick(r, Object.keys(x)));
+      assert.fail(`Expected row ${i} not found in table '${tableName}':\n        json=${JSON.stringify({ remainingRows, filteredRemainingRows, expectedRow:x })}`);
+    }   
+  } 
+}
+
+function assertEqualInAnyOrder(a, b, message) {
+  if(!Array.isArray(a)) throw new Error('IllegalArgument: first arg is not an array');
+  if(!Array.isArray(b)) throw new Error('IllegalArgument: second arg is not an array');
+  assert.deepEqual([...a].sort(), [...b].sort(), message);
+}
+
+function assertIncludes(actual, expected) {
+  for(const [k, expectedVal] of Object.entries(expected)) {
+    const actualVal = actual[k];
+    try {
+      assert.deepEqual(actualVal, expectedVal);
+      return true;
+    } catch(err) {
+      return false;
     }
-  });
+  }
 }
