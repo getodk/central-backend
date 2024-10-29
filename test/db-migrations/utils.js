@@ -5,7 +5,6 @@ module.exports = {
   describeMigration,
 };
 
-const fs = require('node:fs');
 const _ = require('lodash');
 const migrator = require('./migrator');
 
@@ -84,20 +83,20 @@ function assertRowsMatch(actualRows, expectedRows) {
     for(let j=0; j<remainingRows.length; ++j) {
       const rr = remainingRows[j];
       try {
-        assertIncludes(rr, x); 
-        remainingRows.splice(j, 1); 
+        assertIncludes(rr, x);
+        remainingRows.splice(j, 1);
         found = true;
         break;
       } catch(err) { /* keep searching */ }
-    }   
+    }
     if(!found) {
       const filteredRemainingRows = remainingRows.map(r => _.pick(r, Object.keys(x)));
       assert.fail(
         `Expected row ${i} not found:\njson=` +
         JSON.stringify({ remainingRows, filteredRemainingRows, expectedRow:x }),
       );
-    }   
-  } 
+    }
+  }
 }
 
 function assertEqualInAnyOrder(a, b, message) {

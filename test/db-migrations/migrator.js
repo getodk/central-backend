@@ -7,7 +7,6 @@ module.exports = {
 
 const fs = require('node:fs');
 const { execSync } = require('node:child_process');
-const _ = require('lodash');
 
 // Horrible hacks.  Without this:
 //
@@ -41,7 +40,7 @@ function runIncluding(lastMigrationToRun) {
 
   for(let restoreIdx=lastRunIdx+1; restoreIdx<=finalIdx; ++restoreIdx) {
     const f = allMigrations[restoreIdx] + '.js';
-    fs.renameSync(`${holdingPen}/${f}`, `${migrationsDir}/${f}`)
+    fs.renameSync(`${holdingPen}/${f}`, `${migrationsDir}/${f}`);
   }
 
   log('Running migrations until:', lastMigrationToRun, '...');
@@ -50,7 +49,7 @@ function runIncluding(lastMigrationToRun) {
   lastRunIdx = finalIdx;
 
   log(`Ran migrations up-to-and-including ${lastMigrationToRun}:\n`, res);
-};
+}
 
 function getIndex(migrationName) {
   const idx = allMigrations.indexOf(migrationName);
@@ -74,9 +73,9 @@ function moveAll(src, tgt) {
 
 function loadMigrationsList() {
   const migrations = fs.readdirSync(migrationsDir)
-      .filter(f => f.endsWith('.js'))
-      .map(f => f.replace(/\.js$/, ''))
-      .sort(); // TODO check that this is how knex sorts migration files
+    .filter(f => f.endsWith('.js'))
+    .map(f => f.replace(/\.js$/, ''))
+    .sort(); // TODO check that this is how knex sorts migration files
   log();
   log('All migrations:');
   log();

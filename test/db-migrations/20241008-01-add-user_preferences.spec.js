@@ -1,4 +1,4 @@
-const { 
+const {
   assertIndexExists,
   assertTableDoesNotExist,
   assertTableSchema,
