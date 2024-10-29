@@ -1091,7 +1091,7 @@ describe('Offline Entities', () => {
       backlogCount.should.equal(0);
     }));
 
-    it('should apply an entity update as a create, and then properly handle the delayed create', testOfflineEntities(async (service, container) => {
+    it('should apply an entity update as a create, and then properly handle the delayed create as an update', testOfflineEntities(async (service, container) => {
       const asAlice = await service.login('alice');
       const branchId = uuid();
 
@@ -1138,6 +1138,7 @@ describe('Offline Entities', () => {
         .expect(200)
         .then(({ body }) => {
           body.currentVersion.data.should.eql({ status: 'checked in' });
+          should(body.conflict).equal(null); // conflict should be null after update-as-create
         });
 
       // First submission creates the entity, but this will be processed as an update
@@ -1153,6 +1154,7 @@ describe('Offline Entities', () => {
         .then(({ body }) => {
           body.currentVersion.version.should.equal(2);
           body.currentVersion.data.should.eql({ age: '20', status: 'new', first_name: 'Megan' });
+          body.conflict.should.equal('soft'); // this should be marked as a soft conflict
         });
     }));
 
