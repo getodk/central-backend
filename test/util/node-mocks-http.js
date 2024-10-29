@@ -6,7 +6,6 @@
 // See: https://github.com/eugef/node-mocks-http/issues/299
 
 const wrapped = require('node-mocks-http');
-// qs is an implicit dependency of express:
 
 const qs = (() => {
   try {
