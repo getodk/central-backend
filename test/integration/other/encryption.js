@@ -150,7 +150,9 @@ describe('managed encryption', () => {
     }));
   });
 
-  describe('end-to-end', () => {
+  describe('end-to-end @slow', function() {
+    this.timeout(5000);
+
     const { extractPubkey, extractVersion, encryptInstance, sendEncrypted, internal } = require(appRoot + '/test/util/crypto-odk');
 
     describe('odk encryption simulation', () => {
