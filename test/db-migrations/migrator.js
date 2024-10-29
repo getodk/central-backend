@@ -2,6 +2,7 @@ module.exports = {
   exists,
   runBefore,
   runIncluding,
+  restoreMigrations,
 };
 
 const fs = require('node:fs');

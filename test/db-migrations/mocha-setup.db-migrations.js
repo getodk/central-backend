@@ -40,6 +40,7 @@ async function mochaGlobalSetup() {
 function mochaGlobalTeardown() {
   log('mochaGlobalTeardown() :: ENTRY');
   db?.end();
+  migrator.restoreMigrations();
   log('mochaGlobalTeardown() :: EXIT');
 }
 
