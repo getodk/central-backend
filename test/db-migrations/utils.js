@@ -6,6 +6,7 @@ module.exports = {
 };
 
 const fs = require('node:fs');
+const _ = require('lodash');
 const migrator = require('./migrator');
 
 function describeMigration(migrationName, fn) {
@@ -38,10 +39,10 @@ async function assertIndexExists(tableName, expected) {
   const actualIndexes = await db.anyFirst(sql`SELECT indexdef FROM pg_indexes WHERE tablename=${tableName}`);
 
   if(actualIndexes.includes(expected)) return true;
-  assert.ok(false, 'Could not find expected index: \n' + JSON.stringify({
-    expected,
-    actualIndexes,
-  }, null, 2));
+  assert.fail(
+    'Could not find expected index:\njson=' +
+    JSON.stringify({ expected, actualIndexes, }),
+  );
 }
 
 async function assertTableExists(tableName) {
@@ -91,7 +92,10 @@ function assertRowsMatch(actualRows, expectedRows) {
     }   
     if(!found) {
       const filteredRemainingRows = remainingRows.map(r => _.pick(r, Object.keys(x)));
-      assert.fail(`Expected row ${i} not found in table '${tableName}':\n        json=${JSON.stringify({ remainingRows, filteredRemainingRows, expectedRow:x })}`);
+      assert.fail(
+        `Expected row ${i} not found:\njson=` +
+        JSON.stringify({ remainingRows, filteredRemainingRows, expectedRow:x }),
+      );
     }   
   } 
 }
@@ -107,9 +111,8 @@ function assertIncludes(actual, expected) {
     const actualVal = actual[k];
     try {
       assert.deepEqual(actualVal, expectedVal);
-      return true;
     } catch(err) {
-      return false;
+      assert.fail(`Could not find all properties of ${expected} in ${actual}`);
     }
   }
 }
