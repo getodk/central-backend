@@ -374,11 +374,23 @@ describe('preprocessors', () => {
           should.not.exist(context);
         }));
 
-      it('should fail the request with 401 if the token is the wrong length', () =>
-        Promise.resolve(authHandler(
-          { Auth, Sessions: mockFkSession('alohomor') },
-          new Context(createRequest(), { fieldKey: Option.of('alohomora'), })
-        )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
+      Object.entries({
+        'is the wrong length':      'alohomora', // eslint-disable-line key-spacing
+        'contains illegal char: %': '%123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        'contains illegal char: &': '&123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        'contains illegal char: /': '/123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        'contains illegal char: :': ':123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        'contains illegal char: @': '@123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        'contains illegal char: [': '[123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        'contains illegal char: `': '`123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        'contains illegal char: {': '{123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      }).forEach(([ reason, fk ]) => {
+        it(`should fail the request with 401 if the token ${reason}`, () =>
+          Promise.resolve(authHandler(
+            { Auth, Sessions: mockFkSession('alohomor') },
+            new Context(createRequest(), { fieldKey: Option.of(fk), })
+          )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
+      });
 
       it('should fail the request with 403 if the session does not exist', () =>
         Promise.resolve(authHandler(
@@ -392,16 +404,24 @@ describe('preprocessors', () => {
           new Context(createRequest(), { fieldKey: Option.of('alohomoraalohomoraalohomoraalohomoraalohomoraalohomoraalohomoraa'), })
         )).should.be.rejectedWith(Problem, { problemCode: 403.1 }));
 
-      it('should attach the correct auth if everything is correct', () =>
-        Promise.resolve(authHandler(
-          { Auth, Sessions: mockFkSession('alohomoraalohomoraalohomoraalohomoraalohomoraalohomoraalohomoraa', 'field_key') },
-          new Context(createRequest(), { fieldKey: Option.of('alohomoraalohomoraalohomoraalohomoraalohomoraalohomoraalohomoraa'), })
-        )).then((context) => {
-          context.auth.session.should.eql(Option.of(new Session({
-            token: 'alohomoraalohomoraalohomoraalohomoraalohomoraalohomoraalohomoraa'
-          })));
-          context.auth.actor.should.eql(Option.of(new Actor({ type: 'field_key' })));
-        }));
+      [
+        'alohomoraalohomoraalohomoraalohomoraalohomoraalohomoraalohomoraa',
+        '$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!', // legacy format
+        '________________________________--------------------------------', // base64url format
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ____________', // alphabet chars
+        '0123456789!$-___________________________________________________', // other legal chars
+      ].forEach(fieldKey => {
+        it(`should attach the correct auth if everything is correct (fk: ${fieldKey})`, () =>
+          Promise.resolve(authHandler(
+            { Auth, Sessions: mockFkSession(fieldKey, 'field_key') },
+            new Context(createRequest(), { fieldKey: Option.of(fieldKey), })
+          )).then((context) => {
+            context.auth.session.should.eql(Option.of(new Session({
+              token: fieldKey,
+            })));
+            context.auth.actor.should.eql(Option.of(new Actor({ type: 'field_key' })));
+          }));
+      });
     });
   });
 
