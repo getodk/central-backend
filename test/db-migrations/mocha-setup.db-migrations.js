@@ -6,7 +6,7 @@ const _log = level => (...args) => console.log(level, ...args);
 global.log = _log('[INFO]');
 
 async function mochaGlobalSetup() {
-  console.log('server.mochaGlobalSetup()');
+  log('mochaGlobalSetup() :: ENTRY');
 
   global.assert = assert;
 
@@ -24,15 +24,23 @@ async function mochaGlobalSetup() {
 
     If you are using odk-postgres14 docker, try:
 
-      docker exec odk-postgres14 psql -U postgres ${database} -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public"
+      docker exec odk-postgres14 psql -U postgres ${database} -c "
+        DROP SCHEMA public CASCADE;
+        CREATE SCHEMA public;
+        GRANT ALL ON SCHEMA public TO postgres;
+        GRANT ALL ON SCHEMA public TO public;
+      "
     `);
     process.exit(1);
   }
+
+  log('mochaGlobalSetup() :: EXIT');
 }
 
 function mochaGlobalTeardown() {
-  console.log('server.mochaGlobalTeardown()');
+  log('mochaGlobalTeardown() :: ENTRY');
   db?.end();
+  log('mochaGlobalTeardown() :: EXIT');
 }
 
 module.exports = { mochaGlobalSetup, mochaGlobalTeardown };

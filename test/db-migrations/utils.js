@@ -5,6 +5,7 @@ module.exports = {
 };
 
 const fs = require('node:fs');
+const migrator = require('./migrator');
 
 function describeMigration(migrationName, fn) {
   const migrationFile = `./lib/model/migrations/${migrationName}.js`;
@@ -20,11 +21,16 @@ function describeMigration(migrationName, fn) {
     return async () => {
       if(alreadyRun) throw new Error('Migration has already run!  Check your test structure.');
       alreadyRun = true;
-      await migrator.runUntil(migrationName);
+      migrator.runIncluding(migrationName);
     };
   })();
 
-  return describe(`database migration: ${migrationName}`, () => fn({ runMigrationBeingTested }));
+  return describe(`database migration: ${migrationName}`, () => {
+    before(async () => {
+      migrator.runBefore(migrationName);
+    });
+    return fn({ runMigrationBeingTested });
+  });
 }
 
 async function assertTableExists(tableName) {
