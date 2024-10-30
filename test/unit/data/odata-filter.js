@@ -41,12 +41,12 @@ describe('OData filter query transformer', () => {
   });
 
   it('should transform date extraction method calls', () => {
-    odataFilter('2020 eq year(2020-01-01)').should.eql(sql`(${'2020'} is not distinct from extract(year from ${'2020-01-01'}))`);
-    odataFilter('2020 eq year(__system/submissionDate)').should.eql(sql`(${'2020'} is not distinct from extract(year from ${sql.identifier([ 'submissions', 'createdAt' ])}))`);
+    odataFilter('2020 eq year(2020-01-01)').should.eql(sql`(${'2020'} is not distinct from extract("year" from ${'2020-01-01'}))`);
+    odataFilter('2020 eq year(__system/submissionDate)').should.eql(sql`(${'2020'} is not distinct from extract("year" from ${sql.identifier([ 'submissions', 'createdAt' ])}))`);
   });
 
   it('should transform now method calls', () => {
-    odataFilter('2020 eq year(now())').should.eql(sql`(${'2020'} is not distinct from extract(year from now()))`);
+    odataFilter('2020 eq year(now())').should.eql(sql`(${'2020'} is not distinct from extract("year" from now()))`);
   });
 
   it('should reject unparseable expressions', () => {
