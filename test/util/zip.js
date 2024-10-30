@@ -92,20 +92,25 @@ const binaryParser = (res, callback) => {
 };
 
 const httpZipResponseToFiles = (zipHttpResponse) => new Promise((resolve, reject) => {
-  zipHttpResponse.buffer().parse(binaryParser).end((err, res) => {
-    if (err) return reject(err);
-
-    // eslint-disable-next-line no-shadow
-    yauzl.fromBuffer(res.body, (err, zipfile) => {
+  zipHttpResponse
+    .expect(200)
+    .expect('Content-Type', 'application/zip')
+    .buffer()
+    .parse(binaryParser)
+    .end((err, res) => {
       if (err) return reject(err);
 
       // eslint-disable-next-line no-shadow
-      processZipFile(zipfile, (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
+      yauzl.fromBuffer(res.body, (err, zipfile) => {
+        if (err) return reject(err);
+
+        // eslint-disable-next-line no-shadow
+        processZipFile(zipfile, (err, result) => {
+          if (err) reject(err);
+          else resolve(result);
+        });
       });
     });
-  });
 });
 
 module.exports = { zipStreamToFiles, httpZipResponseToFiles };

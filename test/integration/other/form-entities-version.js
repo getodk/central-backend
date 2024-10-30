@@ -29,6 +29,29 @@ const upgradedUpdateEntity = `<?xml version="1.0"?>
   </h:head>
 </h:html>`;
 
+const upgradedSimpleEntity = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+  <h:head>
+    <model entities:entities-version="2024.1.0">
+      <instance>
+        <data id="simpleEntity" orx:version="1.0[upgrade]">
+          <name/>
+          <age/>
+          <hometown/>
+          <meta>
+            <entity dataset="people" id="" create="">
+              <label/>
+            </entity>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+      <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+      <bind nodeset="/data/hometown" type="string"/>
+    </model>
+  </h:head>
+</h:html>`;
+
 describe('Update / migrate entities-version within form', () => {
   describe('upgrading a 2023.1.0 update form', () => {
     it('should upgrade a form with only a published version', testService(async (service, container) => {
@@ -466,6 +489,49 @@ describe('Update / migrate entities-version within form', () => {
           should(body[0].publishedBy).be.null();
           body[1].publishedBy.should.be.an.Actor();
         });
+    }));
+  });
+
+  describe('upgrading a 2022.1.0 create form', () => {
+    it('should upgrade a form with a draft version and a published version', testService(async (service, container) => {
+      const { Forms, Audits } = container;
+      const asAlice = await service.login('alice');
+
+      // Upload a form and publish it
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Convert the published form to a draft
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft');
+
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'simpleEntity').then(o => o.get());
+      await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
+
+      // Run form upgrade
+      await exhaust(container);
+
+      // The version on the draft does change even though it is updated in place
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/draft')
+        .then(({ body }) => {
+          body.version.should.equal('1.0[upgrade]');
+        });
+
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/versions')
+        .then(({ body }) => {
+          body.length.should.equal(2);
+          body[0].version.should.equal('1.0[upgrade]');
+          body[1].version.should.equal('1.0');
+        });
+
+      // The published form XML is updated
+      await asAlice.get('/v1/projects/1/forms/simpleEntity.xml')
+        .then(({ text }) => text.should.equal(upgradedSimpleEntity));
+
+      // The draft XML is updated
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/draft.xml')
+        .then(({ text }) => text.should.equal(upgradedSimpleEntity));
     }));
   });
 
