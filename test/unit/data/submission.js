@@ -50,7 +50,7 @@ describe('submission field streamer', () => {
     });
   });
 
-  it('should not hang given null xml', (done) => {
+  it('should throw given null xml', (done) => {
     fieldsFor(testData.forms.simple).then((fields) => {
       const stream = submissionXmlToFieldStream(fields, null);
       stream.on('data', () => () => {});
@@ -59,7 +59,7 @@ describe('submission field streamer', () => {
     });
   });
 
-  it('should not hang given undefined xml', (done) => {
+  it('should throw given undefined xml', (done) => {
     fieldsFor(testData.forms.simple).then((fields) => {
       const stream = submissionXmlToFieldStream(fields, undefined);
       stream.on('data', () => () => {});
