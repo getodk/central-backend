@@ -1,4 +1,4 @@
-const { createRequest } = require('node-mocks-http');
+const { createRequest } = require('../../util/node-mocks-http');
 
 const appRoot = require('app-root-path');
 const middleware = require(appRoot + '/lib/http/middleware');

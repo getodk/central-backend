@@ -74,6 +74,15 @@ describe('OData filter query transformer', () => {
       return true;
     });
   });
+
+  it('should reject unrecognized function names', () => {
+    assert.throws(() => { odataFilter('123 eq trim(\' 123 \')'); }, (err) => {
+      err.should.be.a.Problem();
+      err.problemCode.should.equal(501.4);
+      err.message.should.equal('The given OData filter expression uses features not supported by this server: MethodCallExpression at 7 ("trim(\' 123 \')")');
+      return true;
+    });
+  });
 });
 
 describe('OData orderby/sort query transformer', () => {

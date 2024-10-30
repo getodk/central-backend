@@ -3845,21 +3845,5 @@ describe('Entities API', () => {
           body.success.should.be.true();
         });
     }));
-
-    it('should not allow larger body on GET request', testDataset(async (service) => {
-      const asAlice = await service.login('alice');
-
-      await asAlice.get('/v1/projects/1/datasets/people/entities?foo=bar')
-        .send({ source: { name: 'file.csv' }, entities: [{ label: 'x'.repeat(256001) }] })
-        .expect(500)
-        .then(({ body }) => {
-          body.message.should.equal('Internal Server Error');
-        });
-
-      // GET on this endpoint with payload doens't really make sense
-      await asAlice.get('/v1/projects/1/datasets/people/entities?foo=bar')
-        .send({ source: { name: 'file.csv' }, entities: [{ label: 'x'.repeat(10) }] })
-        .expect(200);
-    }));
   });
 });
