@@ -50,6 +50,14 @@ describe('submission field streamer', () => {
     });
   });
 
+  it('should not hang given null xml', (done) => {
+    fieldsFor(testData.forms.simple).then((fields) => {
+      const stream = submissionXmlToFieldStream(fields, null);
+      stream.on('data', () => {});
+      stream.on('end', done); // not hanging/timing out is the assertion here
+    });
+  });
+
   it('should not hang given undefined xml', (done) => {
     fieldsFor(testData.forms.simple).then((fields) => {
       const stream = submissionXmlToFieldStream(fields, undefined);
