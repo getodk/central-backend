@@ -1,5 +1,5 @@
 const should = require('should');
-const { createRequest } = require('node-mocks-http');
+const { createRequest } = require('../../util/node-mocks-http');
 
 const appRoot = require('app-root-path');
 const preprocessors = require(appRoot + '/lib/http/preprocessors');

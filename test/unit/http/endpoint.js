@@ -1,7 +1,7 @@
 const should = require('should');
 const { EventEmitter } = require('events');
 const { Transform } = require('stream');
-const { createRequest, createResponse } = require('node-mocks-http');
+const { createRequest, createResponse } = require('../../util/node-mocks-http');
 const streamTest = require('streamtest').v2;
 const { always } = require('ramda');
 
