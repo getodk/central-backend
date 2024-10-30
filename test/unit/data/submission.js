@@ -53,16 +53,18 @@ describe('submission field streamer', () => {
   it('should not hang given null xml', (done) => {
     fieldsFor(testData.forms.simple).then((fields) => {
       const stream = submissionXmlToFieldStream(fields, null);
-      stream.on('data', () => {});
-      stream.on('end', done); // not hanging/timing out is the assertion here
+      stream.on('data', () => () => {});
+      stream.on('error', () => done());
+      stream.on('end', () => done(new Error('should have emitted error event')));
     });
   });
 
   it('should not hang given undefined xml', (done) => {
     fieldsFor(testData.forms.simple).then((fields) => {
       const stream = submissionXmlToFieldStream(fields, undefined);
-      stream.on('data', () => {});
-      stream.on('end', done); // not hanging/timing out is the assertion here
+      stream.on('data', () => () => {});
+      stream.on('error', () => done());
+      stream.on('end', () => done(new Error('should have emitted error event')));
     });
   });
 
