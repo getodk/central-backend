@@ -592,7 +592,11 @@ tags:
     * The **Metadata Document** defines the data schema using [an XML-based standard](https://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html#sec_Introduction). It is linked in every OData response.
 
     * The **data documents**, linked from the Service Document, are a simple JSON representation of the Submission or Entity data, conforming to the schema we describe in our Metadata Document.
-
+- name: User Preferences
+  description: |-
+    The Central frontend uses this API to save various user preferences, such as the sorting order of certain listings. When a user starts a new session, these preferences are loaded in.
+    
+    Preferences can be set site-wide or per-project.
 - name: System Endpoints
   description: There are some resources available for getting or setting system information
     and configuration. You can set the [Usage Reporting configuration](/central-api-system-endpoints/#usage-reporting-configuration)
@@ -1473,17 +1477,211 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
+  /v1/user-preferences/project/{projectId}/{propertyName}:
+    put:
+      tags:
+        - User Preferences
+      summary: Setting a project preference
+      parameters:
+        - name: projectId
+          in: path
+          description: The integer ID of the `Project`.
+          required: true
+          schema:
+            type: integer
+          example: 42
+        - name: propertyName
+          in: path
+          description: The name of the preference.
+          required: true
+          schema:
+            type: string
+          example: "frobwazzleEnabled"
+        - name: Authorization
+          in: header
+          description: Bearer encoding of a token of the user whose preferences to operate on
+          required: true
+          schema:
+            type: string
+          example: Bearer lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+              - propertyValue
+              type: any
+              properties:
+                propertyValue:
+                  type: any
+                  description: The preference to be stored. It may be of any json-serializable type.
+              example:
+                propertyValue: true
+        required: true
+      responses:
+        200:
+          description: The preference was stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        403:
+          description: Forbidden - supplied bearer token was not valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        404:
+          description: The specified project does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+    delete:
+      tags:
+        - User Preferences
+      summary: Deleting a project preference
+      parameters:
+        - name: projectId
+          in: path
+          description: The integer ID of the `Project`.
+          required: true
+          schema:
+            type: integer
+          example: 42
+        - name: propertyName
+          in: path
+          description: The name of the preference.
+          required: true
+          schema:
+            type: string
+          example: "frobwazzleEnabled"
+        - name: Authorization
+          in: header
+          description: Bearer encoding of a token of the user whose preferences to operate on
+          required: true
+          schema:
+            type: string
+          example: Bearer lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7
+      responses:
+        200:
+          description: The preference was stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        403:
+          description: Forbidden - supplied bearer token was not valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        404:
+          description: The preference does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+  /v1/user-preferences/site/{propertyName}:
+    put:
+      tags:
+        - User Preferences
+      summary: Setting a sitewide preference
+      parameters:
+        - name: propertyName
+          in: path
+          description: The name of the preference.
+          required: true
+          schema:
+            type: string
+          example: "frobwazzleEnabled"
+        - name: Authorization
+          in: header
+          description: Bearer encoding of a token of the user whose preferences to operate on
+          required: true
+          schema:
+            type: string
+          example: Bearer lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+              - propertyValue
+              type: any
+              properties:
+                propertyValue:
+                  type: any
+                  description: The preference to be stored. It may be of any json-serializable type.
+              example:
+                propertyValue: true
+        required: true
+
+      responses:
+        200:
+          description: The preference was stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        403:
+          description: Forbidden - supplied bearer token was not valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+    delete:
+      tags:
+        - User Preferences
+      summary: Deleting a sitewide preference
+      parameters:
+        - name: propertyName
+          in: path
+          description: The name of the preference.
+          required: true
+          schema:
+            type: string
+          example: "frobwazzleEnabled"
+        - name: Authorization
+          in: header
+          description: Bearer encoding of a token of the user whose preferences to operate on
+          required: true
+          schema:
+            type: string
+          example: Bearer lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7
+      responses:
+        200:
+          description: The preference was deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        403:
+          description: Forbidden - supplied bearer token was not valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+          404:
+          description: The specified preference does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
   /v1/users/current:
     get:
       tags:
       - Users
+      - User Preferences
       summary: Getting authenticated User details
       description: |-
         Typically, you would get User details by the User's numeric Actor ID.
 
         However, if you only have a Bearer token, for example, you don't have any information about the user attached to that session, including even the ID with which to get more information. So you can instead supply the text `current` to get the user information associated with the authenticated session.
 
-        If you _do_ use `current`, you may request extended metadata. Supply an `X-Extended-Metadata` header value of `true` to additionally retrieve an array of strings of the `verbs` the authenticated User/Actor is allowed to perform server-wide.
+        If you _do_ use `current`, you may request extended metadata. Supply an `X-Extended-Metadata` header value of `true` to additionally receive:
+        — an array of strings of the `verbs` the authenticated User/Actor is allowed to perform server-wide
+        — an object containing the preferences of the authenticated User/Actor
       operationId: Getting authenticated User details
       responses:
         200:
