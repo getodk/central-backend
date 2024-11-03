@@ -227,6 +227,14 @@ should.Assertion.add('FormAttachment', function() {
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 
+should.Assertion.add('Problem', function() {
+  this.params = { operator: 'to be a Problem' };
+
+  this.obj.should.be.a.Error();
+  Object.keys(this.obj).should.containDeep([ 'problemCode', 'problemDetails' ]);
+  this.obj.problemCode.should.be.a.Number();
+});
+
 should.Assertion.add('Project', function() {
   this.params = { operator: 'to be a Project' };
 
