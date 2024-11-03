@@ -389,19 +389,19 @@ returning *`);
     });
   });
 
-  describe('equals', () => {
-    const { equals } = util;
+  describe('sqlEquals', () => {
+    const { sqlEquals } = util;
     it('should do nothing if given no conditions', () => {
-      equals({}).should.eql(sql`true`);
+      sqlEquals({}).should.eql(sql`true`);
     });
 
     it('should match k/v pairs', () => {
-      equals({ x: 2, y: 3 })
+      sqlEquals({ x: 2, y: 3 })
         .should.eql(sql.join([ sql`"x"=${2}`, sql`"y"=${3}` ], sql` and `));
     });
 
     it('should split compound keys', () => {
-      equals({ 'x.y': 2 })
+      sqlEquals({ 'x.y': 2 })
         .should.eql(sql.join([ sql`"x"."y"=${2}` ], sql` and `));
     });
   });
