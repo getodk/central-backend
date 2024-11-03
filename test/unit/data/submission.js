@@ -50,6 +50,15 @@ describe('submission field streamer', () => {
     });
   });
 
+  it('should throw given random text', (done) => {
+    fieldsFor(testData.forms.simple).then((fields) => {
+      const stream = submissionXmlToFieldStream(fields, 'this is not an XML');
+      stream.on('data', () => () => {});
+      stream.on('error', () => done());
+      stream.on('end', () => done(new Error('should have emitted error event')));
+    });
+  });
+
   it('should throw given null xml', (done) => {
     fieldsFor(testData.forms.simple).then((fields) => {
       const stream = submissionXmlToFieldStream(fields, null);
