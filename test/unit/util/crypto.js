@@ -52,6 +52,36 @@ describe('util/crypto', () => {
     });
   });
 
+  describe('isValidStandardLengthToken()', () => {
+    const { generateToken, isValidStandardLengthToken } = crypto;
+
+    [
+      generateToken(), generateToken(), generateToken(), generateToken(),
+      generateToken(), generateToken(), generateToken(), generateToken(),
+      generateToken(), generateToken(), generateToken(), generateToken(),
+      generateToken(), generateToken(), generateToken(), generateToken(),
+    ].forEach(validToken => {
+      it(`should return true for valid token '${validToken}'`, () => {
+        isValidStandardLengthToken(validToken).should.be.true();
+      });
+    });
+
+    [
+      undefined,
+      null,
+      '',
+      generateToken(0),
+      generateToken(1),
+      generateToken(47),
+      generateToken(49),
+      generateToken(99),
+    ].forEach(invalidToken => {
+      it(`return false for invalid token '${invalidToken}'`, () => {
+        isValidStandardLengthToken(invalidToken).should.be.false();
+      });
+    });
+  });
+
   describe('generateVersionSuffix', () => {
     const { generateVersionSuffix } = crypto;
     it('should generate a suffix', () => {
