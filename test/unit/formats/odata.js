@@ -866,12 +866,11 @@ describe('odata message composition', () => {
         }).should.be.rejected();
       });
 
-      it('should reject if subpath cannot be url-decoded', () => {
-        return fieldsFor(testData.forms.simple).then((fields) => {
+      it('should reject if subpath cannot be decoded', () =>
+        fieldsFor(testData.forms.simple).then((fields) => {
           const submission = mockSubmission('one', testData.instances.simple.one);
-          (() => singleRowToOData(fields, submission, 'http://localhost:8989', "/simple.svc/Submissions%ea('one')", {})).should.throw()
-        });
-      });
+          (() => singleRowToOData(fields, submission, 'http://localhost:8989', "/simple.svc/Submissions%ea('one')", {})).should.throw();
+        }));
 
       // eslint-disable-next-line arrow-body-style
       it('should pass if the toplevel table is correct', () => {
