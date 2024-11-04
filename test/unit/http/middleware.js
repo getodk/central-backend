@@ -80,6 +80,16 @@ describe('middleware', () => {
       });
     });
 
+    it('should return error for unparsable percent-encoded prefix keys', (done) => {
+      const request = createRequest({ url: '/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%eaaa!aaaaaaaaaaaaaaaaaa/users/23' });
+      fieldKeyParser(request, null, (error) => {
+        error.should.be.a.Problem();
+        error.problemCode.should.equal(401.2);
+        error.message.should.equal('Could not authenticate with the provided credentials.');
+        done();
+      });
+    });
+
     it('should pass through any query key content', (done) => {
       const request = createRequest({ url: '/v1/users/23?st=inva|id' });
       fieldKeyParser(request, null, () => {
