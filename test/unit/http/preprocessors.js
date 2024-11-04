@@ -272,6 +272,30 @@ describe('preprocessors', () => {
           context.auth.session.should.eql(Option.of(new Session({ test: 'session' })));
         }));
 
+      it('should do nothing if cookie cannot be url-decoded', () => {
+        let caught = false;
+        Promise.resolve(authHandler(
+          { Auth, Sessions: mockSessions('alohomora') },
+          new Context(
+            createRequest({
+              method: 'GET',
+              headers: {
+                'X-Forwarded-Proto': 'https',
+                Cookie: 'session=aloho%25eamora'
+              },
+              cookies: { session: 'aloho%eamora' },
+              url: ''
+            }),
+            { auth: { isAuthenticated() { return false; } }, fieldKey: Option.none() }
+          )
+        )).catch((err) => {
+          err.problemCode.should.equal(401.2);
+          caught = true;
+        }).then(() => {
+          caught.should.equal(true);
+        });
+      });
+
       describe('CSRF protection', () => {
         const mockSessionsWithCsrf = (expectedToken, csrf) => ({
           getByBearerToken: (token) => Promise.resolve((token === expectedToken)
