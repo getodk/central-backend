@@ -2259,7 +2259,7 @@ describe('datasets and entities', () => {
         const updateForm = `<?xml version="1.0"?>
         <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
           <h:head>
-            <model entities:entities-version="2023.1.0">
+            <model entities:entities-version="2024.1.0">
               <instance>
                 <data id="updateEntity" orx:version="1.0">
                   <person/>
@@ -2267,7 +2267,7 @@ describe('datasets and entities', () => {
                   <age/>
                   <hometown/>
                   <meta>
-                    <entity dataset="people" id="" update="" baseVersion="">
+                    <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId="">
                       <label/>
                     </entity>
                   </meta>
@@ -2347,7 +2347,7 @@ describe('datasets and entities', () => {
           const differentDataset = `<?xml version="1.0"?>
           <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
             <h:head>
-              <model entities:entities-version="2023.1.0">
+              <model entities:entities-version="2024.1.0">
                 <instance>
                   <data id="updateEntity" orx:version="1.0">
                     <person/>
@@ -2355,7 +2355,7 @@ describe('datasets and entities', () => {
                     <age/>
                     <hometown/>
                     <meta>
-                      <entity dataset="students" id="" update="" baseVersion="">
+                      <entity dataset="students" id="" update="" baseVersion="" trunkVersion="" branchId="">
                         <label/>
                       </entity>
                     </meta>
@@ -2490,7 +2490,7 @@ describe('datasets and entities', () => {
           const noDataset = `<?xml version="1.0"?>
           <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
             <h:head>
-              <model entities:entities-version="2023.1.0">
+              <model entities:entities-version="2024.1.0">
                 <instance>
                   <data id="updateEntity" orx:version="1.0">
                     <person/>
@@ -2533,7 +2533,7 @@ describe('datasets and entities', () => {
           const caseChange = `<?xml version="1.0"?>
           <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
             <h:head>
-              <model entities:entities-version="2023.1.0">
+              <model entities:entities-version="2024.1.0">
                 <instance>
                   <data id="updateEntity" orx:version="1.0">
                     <person/>
@@ -2541,7 +2541,7 @@ describe('datasets and entities', () => {
                     <age/>
                     <hometown/>
                     <meta>
-                      <entity dataset="people" id="" update="" baseVersion="">
+                      <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId="">
                         <label/>
                       </entity>
                     </meta>
@@ -2583,7 +2583,7 @@ describe('datasets and entities', () => {
           const caseChange = `<?xml version="1.0"?>
             <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
               <h:head>
-                <model entities:entities-version="2023.1.0">
+                <model entities:entities-version="2024.1.0">
                   <instance>
                     <data id="updateEntity" orx:version="1.0">
                       <person/>
@@ -3442,10 +3442,57 @@ describe('datasets and entities', () => {
 
   describe('parsing datasets on form upload', () => {
     describe('parsing datasets at /projects/:id/forms POST', () => {
+
+      describe('warnings about entities-version from before 2024.1.0', () => {
+        it('should warn if the entities-version is 2022.1.0 (earlier than 2024.1.0)', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity2022)
+            .set('Content-Type', 'application/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.be.eql(400.16);
+              body.details.warnings.workflowWarnings[0].should.be.eql({
+                type: 'oldEntityVersion',
+                details: { version: '2022.1.0' },
+                reason: 'Entities specification version [2022.1.0] is not compatible with Offline Entities. Please use version 2024.1.0 or later.'
+              });
+            });
+
+          await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+            .send(testData.forms.simpleEntity2022)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+        }));
+
+        it('should warn if the entities-version is 2023.1.0 (earlier than 2024.1.0)', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.updateEntity2023)
+            .set('Content-Type', 'application/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.be.eql(400.16);
+              body.details.warnings.workflowWarnings[0].should.be.eql({
+                type: 'oldEntityVersion',
+                details: { version: '2023.1.0' },
+                reason: 'Entities specification version [2023.1.0] is not compatible with Offline Entities. Please use version 2024.1.0 or later.'
+              });
+            });
+
+          await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+            .send(testData.forms.updateEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+        }));
+      });
+
       it('should return a Problem if the entity xml has the wrong version', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
-            .send(testData.forms.simpleEntity.replace('2022.1.0', 'bad-version'))
+            .send(testData.forms.simpleEntity.replace('2024.1.0', 'bad-version'))
             .set('Content-Type', 'text/xml')
             .expect(400)
             .then(({ body }) => {
@@ -3509,7 +3556,7 @@ describe('datasets and entities', () => {
         const xml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
           <h:title>nobinds</h:title>
-          <model entities:entities-version='2022.1.0'>
+          <model entities:entities-version='2024.1.0'>
             <instance>
               <data id="nobinds">
                 <name/>
@@ -3551,7 +3598,7 @@ describe('datasets and entities', () => {
         const alice = await service.login('alice');
         const xml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
           <h:head>
-            <model entities:entities-version='2022.1.0'>
+            <model entities:entities-version='2024.1.0'>
               <instance>
                 <data id="validate_structure">
                   <name/>
@@ -3603,7 +3650,7 @@ describe('datasets and entities', () => {
         <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
           <h:head>
             <h:title>Repeat Children Entities</h:title>
-            <model entities:entities-version="2022.1.0" odk:xforms-version="1.0.0">
+            <model entities:entities-version="2024.1.0" odk:xforms-version="1.0.0">
               <instance>
                 <data id="repeat_entity" version="2">
                   <num_children/>
@@ -4534,12 +4581,12 @@ describe('datasets and entities', () => {
       const form = `<?xml version="1.0"?>
       <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model entities:entities-version="2023.1.0">
+          <model entities:entities-version="2024.1.0">
             <instance>
               <data id="brokenForm" orx:version="1.0">
                 <age foo="bar"/>
                 <meta>
-                  <entity dataset="people" id="" create="" update="" baseVersion="" />
+                  <entity dataset="people" id="" create="" update="" baseVersion="" trunkVersion="" branchId=""/>
                 </meta>
               </data>
             </instance>
@@ -4599,12 +4646,12 @@ describe('datasets and entities', () => {
       const form = `<?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model entities:entities-version="2023.1.0">
+          <model entities:entities-version="2024.1.0">
             <instance>
               <data id="brokenForm" orx:version="1.0">
                 <age foo="bar"/>
                 <meta>
-                  <entity dataset="people" id="" create="" update="" baseVersion="" />
+                  <entity dataset="people" id="" create="" update="" baseVersion="" trunkVersion="" branchId="" />
                 </meta>
               </data>
             </instance>
@@ -4616,12 +4663,12 @@ describe('datasets and entities', () => {
       const form2 = `<?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model entities:entities-version="2023.1.0">
+          <model entities:entities-version="2024.1.0">
             <instance>
               <data id="brokenForm" orx:version="2.0">
                 <age foo="bar"/>
                 <meta>
-                  <entity dataset="people" id="" create="" update="" baseVersion="">
+                  <entity dataset="people" id="" create="" update="" baseVersion=""  trunkVersion="" branchId="">
                     <label/>
                   </entity>
                 </meta>
@@ -4651,12 +4698,12 @@ describe('datasets and entities', () => {
       const form = `<?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model entities:entities-version="2023.1.0">
+          <model entities:entities-version="2024.1.0">
             <instance>
               <data id="updateWithoutLabel" orx:version="1.0">
                 <age foo="bar"/>
                 <meta>
-                  <entity dataset="people" id="" update="" baseVersion="" />
+                  <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId=""/>
                 </meta>
               </data>
             </instance>
@@ -4674,12 +4721,12 @@ describe('datasets and entities', () => {
       const form2 = `<?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model entities:entities-version="2023.1.0">
+          <model entities:entities-version="2024.1.0">
             <instance>
               <data id="updateWithLabel" orx:version="1.0">
                 <age foo="bar"/>
                 <meta>
-                  <entity dataset="people" id="" update="" baseVersion="">
+                  <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId="">
                     <label/>
                   </entity>
                 </meta>
@@ -4720,12 +4767,12 @@ describe('datasets and entities', () => {
       const form = `<?xml version="1.0"?>
       <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model entities:entities-version="2023.1.0">
+          <model entities:entities-version="2024.1.0">
             <instance>
               <data id="brokenForm" orx:version="1.0">
                 <age foo="bar"/>
                 <meta>
-                  <entity dataset="people" id="" update="" baseVersion="" />
+                  <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId=""/>
                 </meta>
               </data>
             </instance>
