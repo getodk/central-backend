@@ -46,9 +46,8 @@ describe('util/crypto', () => {
       generateToken().should.be.a.token();
     });
 
-    it('should accept other lengths', () => {
-      // the numbers are not equal due to the base64 conversion.
-      generateToken(12).length.should.equal(16);
+    it('should ignore legacy length argument', () => {
+      generateToken(12).should.be.a.token();
     });
   });
 
