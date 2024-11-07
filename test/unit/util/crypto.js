@@ -51,8 +51,8 @@ describe('util/crypto', () => {
     });
   });
 
-  describe('isValidStandardLengthToken()', () => {
-    const { generateToken, isValidStandardLengthToken } = crypto;
+  describe('isValidToken()', () => {
+    const { generateToken, isValidToken } = crypto;
 
     [
       generateToken(), generateToken(), generateToken(), generateToken(),
@@ -61,7 +61,7 @@ describe('util/crypto', () => {
       generateToken(), generateToken(), generateToken(), generateToken(),
     ].forEach(validToken => {
       it(`should return true for valid token '${validToken}'`, () => {
-        isValidStandardLengthToken(validToken).should.be.true();
+        isValidToken(validToken).should.be.true();
       });
     });
 
@@ -76,7 +76,7 @@ describe('util/crypto', () => {
       generateToken(99),
     ].forEach(invalidToken => {
       it(`return false for invalid token '${invalidToken}'`, () => {
-        isValidStandardLengthToken(invalidToken).should.be.false();
+        isValidToken(invalidToken).should.be.false();
       });
     });
   });
