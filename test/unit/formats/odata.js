@@ -970,7 +970,7 @@ describe('odata message composition', () => {
                 const originaUrl = "/withrepeat.svc/Submissions('two')/children/child"; // doesn't have to include query string
                 return singleRowToOData(fields, submission, 'http://localhost:8989', originaUrl, query);
               })
-              .should.be.rejectedWith(Problem, { problemCode: 400.34, message: 'repeatId not found', })));
+              .should.be.rejectedWith(Problem, { problemCode: 400.34, message: 'Record associated with the provided $skiptoken not found.' })));
 
         [
           {
