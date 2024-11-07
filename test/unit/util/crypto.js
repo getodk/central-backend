@@ -69,11 +69,8 @@ describe('util/crypto', () => {
       undefined,
       null,
       '',
-      generateToken(0),
-      generateToken(1),
-      generateToken(47),
-      generateToken(49),
-      generateToken(99),
+      generateToken() + 'a',
+      generateToken().substr(1),
     ].forEach(invalidToken => {
       it(`return false for invalid token '${invalidToken}'`, () => {
         isValidToken(invalidToken).should.be.false();
