@@ -937,7 +937,7 @@ describe('odata message composition', () => {
         });
       });
 
-      describe.only('with $skiptoken', () => {
+      describe('with $skiptoken', () => {
         const billy = { __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d', age: 4, name: 'Billy' };
         const blain = { __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172', age: 6, name: 'Blaine' };
 
@@ -966,7 +966,7 @@ describe('odata message composition', () => {
           // correct version + non-base64 string
           '01~',
         ].forEach($skiptoken => {
-          it(`should throw error for malformed $skiptoken '${$skiptoken}'`, () => 
+          it(`should throw error for malformed $skiptoken '${$skiptoken}'`, () =>
             fieldsFor(testData.forms.withrepeat)
               .then((fields) => {
                 const submission = mockSubmission('two', testData.instances.withrepeat.two);
