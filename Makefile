@@ -65,7 +65,7 @@ check-migrations: node_version
 	node lib/bin/check-migrations.js
 
 .PHONY: base
-base: node_version migrations check-migrations
+base: node_modules node_version migrations check-migrations
 
 .PHONY: dev
 dev: base
