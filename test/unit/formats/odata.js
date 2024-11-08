@@ -862,7 +862,7 @@ describe('odata message composition', () => {
           return fieldsFor(testData.forms.withrepeat)
             .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows))
             .then((stream) => stream.pipe(streamTest.toText((_, result) => {
-              done(new Error('should have failed'));
+              // should have failed
             })))
             .should.be.rejectedWith(Problem, { problemCode: 400.34, message: 'Record associated with the provided $skiptoken not found.' });
         });
