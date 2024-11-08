@@ -36,9 +36,7 @@ const createRequest = options => {
   return wrapped.createRequest({ ...options, query: qs.parse(search.substr(1)) });
 };
 
-const createResponse = options => {
-  return wrapped.createResponse({ eventEmitter: EventEmitter, ...options });
-};
+const createResponse = options => wrapped.createResponse({ eventEmitter: EventEmitter, ...options });
 
 module.exports = {
   createRequest,
