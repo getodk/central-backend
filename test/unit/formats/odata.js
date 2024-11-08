@@ -937,11 +937,45 @@ describe('odata message composition', () => {
         });
       });
 
-      describe('with $skiptoken', () => {
+      describe.only('with $skiptoken', () => {
         const billy = { __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d', age: 4, name: 'Billy' };
         const blain = { __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172', age: 6, name: 'Blaine' };
 
         const nomatch = '0000000000000000000000000000000000000000';
+
+        const stringify64 = obj => Buffer.from(JSON.stringify(obj)).toString('base64');
+
+        [
+          'nonsense',
+
+          // no version + valid token
+          stringify64({ repeatId: billy.__id }),
+
+          // incorrect version number + valid token
+          '00' + stringify64({ repeatId: billy.__id }),
+          '02' + stringify64({ repeatId: billy.__id }),
+
+          // correct version plus non-json
+          '01',
+          '01aGk=',
+
+          // correct version + empty JSON:
+          '01' + stringify64({}),
+          '01' + stringify64(''),
+
+          // correct version + non-base64 string
+          '01~',
+        ].forEach($skiptoken => {
+          it(`should throw error for malformed $skiptoken '${$skiptoken}'`, () => 
+            fieldsFor(testData.forms.withrepeat)
+              .then((fields) => {
+                const submission = mockSubmission('two', testData.instances.withrepeat.two);
+                const query = { $skiptoken };
+                const originaUrl = "/withrepeat.svc/Submissions('two')/children/child"; // doesn't have to include query string
+                return singleRowToOData(fields, submission, 'http://localhost:8989', originaUrl, query);
+              })
+              .should.be.rejectedWith(Problem, { problemCode: 400.35, message: 'Invalid $skiptoken' }));
+        });
 
         [
           {
