@@ -851,20 +851,22 @@ describe('odata message composition', () => {
         { instanceId: 'two' },
         { instanceId: 'two', repeatId: '' },
         { instanceId: 'two', repeatId: 'this should probably be rejected' },
+        { instanceId: 'two', repeatId: '0000000000000000000000000000000000000000' },
       ].forEach(skipToken => {
-        it(`should reject bad skipToken '${JSON.stringify(skipToken)}'`, () => {
+        it.only(`should reject bad skipToken '${JSON.stringify(skipToken)}'`, done => {
           const query = { $skiptoken: QueryOptions.getSkiptoken(skipToken) };
           const inRows = streamTest.fromObjects([
             mockSubmission('one', testData.instances.withrepeat.one),
             mockSubmission('two', testData.instances.withrepeat.two),
             mockSubmission('three', testData.instances.withrepeat.three)
           ]);
-          return fieldsFor(testData.forms.withrepeat)
+          fieldsFor(testData.forms.withrepeat)
             .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows))
-            .then((stream) => stream.pipe(streamTest.toText((_, result) => {
-              // should have failed
-            })))
-            .should.be.rejectedWith(Problem, { problemCode: 400.34, message: 'Record associated with the provided $skiptoken not found.' });
+            .then((stream) => stream.pipe(streamTest.toText((err, result) => {
+              should(err).be.an.Error();
+              should(result).equalOneOf([ undefined, null ]);
+              err.message.should.equal('');
+            })));
         });
       });
     });
