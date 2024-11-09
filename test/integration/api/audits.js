@@ -723,7 +723,7 @@ describe('/audits', () => {
           .then(({ body }) => {
             body.should.deepEqual({
               code: 400.6,
-              details: { field: 'x-action-notes', value: 'doing this for fun%ae' },
+              details: { field: 'x-action-notes', value: '[supplied]' },
               message: 'An expected header field (x-action-notes) did not match the expected format (got: doing this for fun%ae).',
             });
           }))));
