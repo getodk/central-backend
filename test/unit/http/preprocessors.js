@@ -327,6 +327,18 @@ describe('preprocessors', () => {
             )
           )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
+        it('should reject cookie auth with invalid CSRF token for non-GET requests', () =>
+          Promise.resolve(authHandler(
+            { Auth, Sessions: mockSessionsWithCsrf('alohomora', 'secretcsrf') },
+            new Context(
+              createRequest({ method: 'POST', headers: {
+                'X-Forwarded-Proto': 'https',
+                Cookie: 'session=alohomora'
+              }, body: { __csrf: '%ea' }, cookies: { session: 'alohomora' } }),
+              { fieldKey: Option.none() }
+            )
+          )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
+
         it('should do nothing on cookie auth with incorrect session token for non-GET requests', () =>
           Promise.resolve(authHandler(
             { Auth, Sessions: mockSessionsWithCsrf('alohomora', 'secretcsrf') },
