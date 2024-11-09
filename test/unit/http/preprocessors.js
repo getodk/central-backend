@@ -272,7 +272,7 @@ describe('preprocessors', () => {
           context.auth.session.should.eql(Option.of(new Session({ test: 'session' })));
         }));
 
-      it('should do nothing if cookie cannot be url-decoded', () => {
+      it('should reject cookie which cannot be url-decoded', () => {
         let caught = false;
         Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
