@@ -45,7 +45,7 @@ describe('util/http', () => {
     const b = 'funnyȩ¸iê';
     const c = '100%';
     const d = 999;
-    const e = { toString:() => 'e!' };
+    const e = { toString: () => 'e!' };
 
     [
       [ url``, '' ],
