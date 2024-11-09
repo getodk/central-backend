@@ -1,5 +1,6 @@
 const appRoot = require('app-root-path');
 const http = require(appRoot + '/lib/util/http');
+const Option = require(appRoot + '/lib/util/option');
 
 describe('util/http', () => {
   describe('isTrue', () => {
@@ -94,6 +95,34 @@ describe('util/http', () => {
 
     it('should unset keys given nully values', () => {
       urlWithQueryParams('/path?x=1&y=2&z=3', { x: null, z: undefined }).should.equal('/path?y=2');
+    });
+  });
+
+  describe('urlDecode()', () => {
+    const { urlDecode } = http;
+
+    [
+      [ '', '' ],
+      [ '%20', ' ' ],
+      [ 'abc123', 'abc123' ],
+    ].forEach(([ decodable, expected ]) => {
+      it(`should successfully decode '${decodable}' to Option.of('${expected}')`, () => {
+        const decoded = urlDecode(decodable);
+        (decoded instanceof Option).should.equal(true);
+        decoded.isDefined().should.equal(true);
+        decoded.get().should.equal(expected);
+      });
+    });
+
+    [
+      '%',
+      '%ae',
+    ].forEach(undecodable => {
+      it(`should decode '${undecodable}' to Option.None`, () => {
+        const decoded = urlDecode(undecodable);
+        (decoded instanceof Option).should.equal(true);
+        decoded.isEmpty().should.equal(true);
+      });
     });
   });
 });
