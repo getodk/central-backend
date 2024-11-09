@@ -78,6 +78,7 @@ describe('util/util', () => {
 
       [
         undefined,
+        null,
         '!',
       ].forEach(malformed64 => {
         it(`should reject malformed input '${malformed64}'`, () => {
@@ -88,7 +89,6 @@ describe('util/util', () => {
       [
         [ '', '' ],
         [ '   ', '' ],
-        [ null, '\x9Eée' ],
         [ 'c29tZSB0ZXh0',   'some text' ], // eslint-disable-line no-multi-spaces
         [ 'c29tZSB0ZXh0 ',  'some text' ], // eslint-disable-line no-multi-spaces
         [ ' c29tZSB0ZXh0 ', 'some text' ],
