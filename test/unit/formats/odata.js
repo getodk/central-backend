@@ -6,6 +6,7 @@ const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 const should = require('should');
 const { QueryOptions } = require('../../../lib/util/db');
+const Problem = require(appRoot + '/lib/util/problem');
 
 // Helpers to deal with repeated system metadata generation.
 const submitter = { id: 5, displayName: 'Alice' };
@@ -945,6 +946,37 @@ describe('odata message composition', () => {
       describe('with $skiptoken', () => {
         const billy = { __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d', age: 4, name: 'Billy' };
         const blain = { __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172', age: 6, name: 'Blaine' };
+
+        const nomatch = '0000000000000000000000000000000000000000';
+
+        [
+          {
+            $top: 0,
+            skiptoken: { repeatId: nomatch },
+          },
+          {
+            $top: 1,
+            skiptoken: { repeatId: nomatch },
+          },
+          {
+            $top: 2,
+            skiptoken: { repeatId: nomatch },
+          },
+          {
+            $top: undefined,
+            skiptoken: { repeatId: nomatch },
+          },
+        ].forEach(({ $top, skiptoken }) =>
+          it(`should throw error for ${[$top, JSON.stringify(skiptoken)]}`, () =>
+            fieldsFor(testData.forms.withrepeat)
+              .then((fields) => {
+                const submission = mockSubmission('two', testData.instances.withrepeat.two);
+                const $skiptoken = '01' + Buffer.from(JSON.stringify(skiptoken)).toString('base64');
+                const query = { $top, $skiptoken };
+                const originaUrl = "/withrepeat.svc/Submissions('two')/children/child"; // doesn't have to include query string
+                return singleRowToOData(fields, submission, 'http://localhost:8989', originaUrl, query);
+              })
+              .should.be.rejectedWith(Problem, { problemCode: 400.34, message: 'Record associated with the provided $skiptoken not found.' })));
 
         [
           {
