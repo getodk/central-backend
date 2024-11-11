@@ -57,7 +57,8 @@ describe('middleware', () => {
       const request = createRequest({ url: '/key/12|45/users/23' });
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('12|45'));
-        request.url.should.equal('/users/23');
+        request.url        .should.equal('/users/23');
+        request.originalUrl.should.equal('/key/12|45/users/23');
         done();
       });
     });
@@ -66,7 +67,8 @@ describe('middleware', () => {
       const request = createRequest({ url: '/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/23' });
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'));
-        request.url.should.equal('/users/23');
+        request.url        .should.equal('/users/23');
+        request.originalUrl.should.equal('/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/23');
         done();
       });
     });
@@ -75,7 +77,8 @@ describe('middleware', () => {
       const request = createRequest({ url: '/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%24aa!aaaaaaaaaaaaaaaaaa/users/23' });
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aa!aaaaaaaaaaaaaaaaaa'));
-        request.url.should.equal('/users/23');
+        request.url        .should.equal('/users/23');
+        request.originalUrl.should.equal('/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%24aa!aaaaaaaaaaaaaaaaaa/users/23');
         done();
       });
     });
@@ -84,6 +87,7 @@ describe('middleware', () => {
       const request = createRequest({ url: '/v1/users/23?st=inva|id' });
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('inva|id'));
+        request.url        .should.equal('/v1/users/23?st=inva|id');
         request.originalUrl.should.equal('/v1/key/inva|id/users/23?st=inva|id');
         done();
       });
@@ -93,6 +97,7 @@ describe('middleware', () => {
       const request = createRequest({ url: '/v1/users/23?st=in$va/i/d' });
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('in$va/i/d'));
+        request.url        .should.equal('/v1/users/23?st=in$va/i/d');
         request.originalUrl.should.equal('/v1/key/in$va%2Fi%2Fd/users/23?st=in$va/i/d');
         done();
       });
@@ -102,6 +107,7 @@ describe('middleware', () => {
       const request = createRequest({ url: '/v1/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' });
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'));
+        request.url        .should.equal('/v1/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
         request.originalUrl.should.equal('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
         done();
       });
