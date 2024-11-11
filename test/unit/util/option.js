@@ -126,6 +126,9 @@ describe('(libs/FP) Option type', () => {
         [ Option.of(''), Option.of(0) ],
         [ Option.of(0),  Option.of(1) ], // eslint-disable-line no-multi-spaces
         [ Option.none(), null ],
+        [ Option.none(), undefined ],
+        [ Option.none(), 0 ],
+        [ Option.none(), false ],
         [ Option.of(1),  1 ], // eslint-disable-line no-multi-spaces
         [ Option.of(1),  { value: 1 } ], // eslint-disable-line no-multi-spaces
       ].forEach(([a, b]) => {
