@@ -112,6 +112,27 @@ describe('(libs/FP) Option type', () => {
   });
 
   describe('ramda interactions', () => {
+    describe('R.equals()', () => {
+      it('Option.none() should equal Option.none()', () => {
+        R.equals(Option.none(), Option.none()).should.be.true();
+      });
+
+      it('Option.of(...) should equal Option.of(...) the same value', () => {
+        R.equals(Option.of(1), Option.of(1)).should.be.true();
+      });
+
+      [
+        [ Option.none(), Option.of(0) ],
+        [ Option.of(''), Option.of(0) ],
+        [ Option.of(0),  Option.of(1) ],
+      ].forEach(([a, b]) => {
+        it(`${a} should not equal ${b}`, () => {
+          R.equals(a, b).should.be.false();
+          R.equals(b, a).should.be.false();
+        });
+      });
+    });
+
     describe('R.isEmpty()', () => {
       it('Option.none() should be considered empty', () => {
         R.isEmpty(Option.none()).should.be.true();
