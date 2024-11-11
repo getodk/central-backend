@@ -41,12 +41,12 @@ describe('OData filter query transformer', () => {
   });
 
   it('should transform date extraction method calls', () => {
-    odataFilter('2020 eq year(2020-01-01)').should.eql(sql`(${'2020'} is not distinct from extract(year from ${'2020-01-01'}))`);
-    odataFilter('2020 eq year(__system/submissionDate)').should.eql(sql`(${'2020'} is not distinct from extract(year from ${sql.identifier([ 'submissions', 'createdAt' ])}))`);
+    odataFilter('2020 eq year(2020-01-01)').should.eql(sql`(${'2020'} is not distinct from extract("year" from ${'2020-01-01'}))`);
+    odataFilter('2020 eq year(__system/submissionDate)').should.eql(sql`(${'2020'} is not distinct from extract("year" from ${sql.identifier([ 'submissions', 'createdAt' ])}))`);
   });
 
   it('should transform now method calls', () => {
-    odataFilter('2020 eq year(now())').should.eql(sql`(${'2020'} is not distinct from extract(year from now()))`);
+    odataFilter('2020 eq year(now())').should.eql(sql`(${'2020'} is not distinct from extract("year" from now()))`);
   });
 
   it('should reject unparseable expressions', () => {
@@ -72,6 +72,30 @@ describe('OData filter query transformer', () => {
       err.problemCode.should.equal(501.4);
       err.message.should.equal('The given OData filter expression uses features not supported by this server: CommonExpression at 0 ("3 add 4")');
       return true;
+    });
+  });
+
+  it('should reject unsupported OData functions', () => {
+    assert.throws(() => { odataFilter('123 eq trim(\' 123 \')'); }, (err) => {
+      err.should.be.a.Problem();
+      err.problemCode.should.equal(501.4);
+      err.message.should.equal('The given OData filter expression uses features not supported by this server: MethodCallExpression at 7 ("trim(\' 123 \')")');
+      return true;
+    });
+  });
+
+  [
+    'somethingwhichneverexisted()',
+    'NOW()', // wrong case
+    'YEAR(now())', // wrong case
+  ].forEach(badCall => {
+    it(`should reject unrecognized function name ${badCall}`, () => {
+      assert.throws(() => { odataFilter(`123 eq ${badCall}`); }, (err) => {
+        err.should.be.a.Problem();
+        err.problemCode.should.equal(400.18);
+        err.message.should.match(/^The OData filter expression you provided could not be parsed: Unexpected character at \d+$/);
+        return true;
+      });
     });
   });
 });
