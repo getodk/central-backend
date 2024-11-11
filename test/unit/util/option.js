@@ -1,3 +1,4 @@
+const R = require('ramda');
 const Should = require('should');
 const Option = require('../../../lib/util/option');
 
@@ -107,6 +108,18 @@ describe('(libs/FP) Option type', () => {
     it('It is not empty / It is defined', () => {
       o.isDefined().should.be.false();
       o.isEmpty().should.be.true();
+    });
+  });
+
+  describe('ramda interactions', () => {
+    describe('R.isEmpty()', () => {
+      it('Option.none() should be considered empty', () => {
+        R.isEmpty(Option.none()).should.be.true();
+      });
+
+      it('Option.of(...) should NOT be considered empty', () => {
+        R.isEmpty(Option.of(1)).should.be.false();
+      });
     });
   });
 });
