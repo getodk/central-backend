@@ -125,6 +125,9 @@ describe('(libs/FP) Option type', () => {
         [ Option.none(), Option.of(0) ],
         [ Option.of(''), Option.of(0) ],
         [ Option.of(0),  Option.of(1) ], // eslint-disable-line no-multi-spaces
+        [ Option.none(), null ],
+        [ Option.of(1),  1 ], // eslint-disable-line no-multi-spaces
+        [ Option.of(1),  { value: 1 } ], // eslint-disable-line no-multi-spaces
       ].forEach(([a, b]) => {
         it(`${a} should not equal ${b}`, () => {
           R.equals(a, b).should.be.false();
