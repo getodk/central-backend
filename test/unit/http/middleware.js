@@ -9,7 +9,7 @@ describe('middleware', () => {
     const { versionParser } = middleware;
 
     const createPreVersionParserRequest = ({ url, originalUrl, ...props }) => {
-      if(originalUrl) throw new Error('Should not specify originalUrl');
+      if (originalUrl) throw new Error('Should not specify originalUrl');
       return createRequest({ url, originalUrl: url, ...props });
     };
 
