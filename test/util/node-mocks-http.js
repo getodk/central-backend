@@ -23,17 +23,27 @@ const qs = (() => {
   }
 })();
 
-const createRequest = options => {
-  if (!options?.url) return wrapped.createRequest(options);
+const createRequest = ({ url, originalUrl, ...other }={}) => {
+  if(!url) return wrapped.createRequest({ originalUrl, ...other });
 
-  const { search } = new URL(options.url, 'http://example.test');
-  const { query } = options;
+  if(!originalUrl) {
+    if (url.startsWith('/v1')) {
+      throw new Error(
+        'URL should not start with /v1 when accessed after versionParser middleware.  ' +
+        'If this is deliberate, set originalUrl explicitly.',
+      );
+    }
+    originalUrl = '/v1' + url;
+  }
 
-  if (!search) return wrapped.createRequest(options);
+  const { search } = new URL(url, 'http://example.test');
+  const { query } = other;
+
+  if (!search) return wrapped.createRequest({ url, originalUrl, ...other });
 
   if (query != null) throw new Error('Unsupported: .query option and query string in .url simultaneously.');
 
-  return wrapped.createRequest({ ...options, query: qs.parse(search.substr(1)) });
+  return wrapped.createRequest({ url, originalUrl, ...other, query: qs.parse(search.substr(1)) });
 };
 
 const createResponse = options => wrapped.createResponse({ eventEmitter: EventEmitter, ...options });
