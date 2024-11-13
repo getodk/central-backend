@@ -24,16 +24,16 @@ const qs = (() => {
 })();
 
 const createRequest = ({ url, originalUrl, ...other }={}) => {
-  if(!url) return wrapped.createRequest({ originalUrl, ...other });
+  if (!url) return wrapped.createRequest({ originalUrl, ...other });
 
-  if(!originalUrl) {
+  if (!originalUrl) {
     if (url.startsWith('/v1')) {
       throw new Error(
         'URL should not start with /v1 when accessed after versionParser middleware.  ' +
         'If this is deliberate, set originalUrl explicitly.',
       );
     }
-    originalUrl = '/v1' + url;
+    originalUrl = '/v1' + url; // eslint-disable-line no-param-reassign
   }
 
   const { search } = new URL(url, 'http://example.test');
