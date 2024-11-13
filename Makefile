@@ -110,7 +110,7 @@ test-ci: lint
 .PHONY: test-db-migrations
 test-db-migrations:
 	NODE_CONFIG_ENV=db-migration-test npx mocha --bail --sort --timeout=20000 \
-	    --require test/db-migrations/mocha-setup.db-migrations.js \
+	    --require test/db-migrations/mocha-setup.js \
 	    ./test/db-migrations/**/*.spec.js
 
 .PHONY: test-fast
