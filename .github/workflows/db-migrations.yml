@@ -3,8 +3,9 @@ name: Database Migrations
 on:
   push:
     paths:
-      - lib/model/migrations/**
-      - test/db-migrations/**
+    - .github/workflows/db-migrations.yml
+    - lib/model/migrations/**
+    - test/db-migrations/**
 
 jobs:
   standard-tests:
