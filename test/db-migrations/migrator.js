@@ -1,5 +1,6 @@
 module.exports = {
   exists,
+  hasRun,
   runBefore,
   runIncluding,
   restoreMigrations,
@@ -93,4 +94,8 @@ function exists(migrationName) {
   } catch(err) {
     return false;
   }
+}
+
+function hasRun(migratioName) {
+  return lastRunIdx >= getIndex(migratioName);
 }

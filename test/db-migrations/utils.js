@@ -9,7 +9,8 @@ const _ = require('lodash');
 const migrator = require('./migrator');
 
 function describeMigration(migrationName, fn) {
-  assert.ok(migrator.exists(migrationName));
+  assert.ok(migrator.exists(migrationName), `Migration '${migrationName}' already exists.`);
+  assert.ok(!migrator.hasRun(migrationName), `Migration '${migrationName}' has already been run.`);
 
   assert.strictEqual(typeof fn, 'function');
   assert.strictEqual(fn.length, 1);
