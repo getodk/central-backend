@@ -9,7 +9,7 @@ on:
 
 jobs:
   standard-tests:
-    timeout-minutes: 20
+    timeout-minutes: 2
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     services:
