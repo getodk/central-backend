@@ -63,7 +63,6 @@ async function assertTableSchema(tableName, ...expectedCols) {
   });
 
   const actualCols = await db.any(sql`SELECT * FROM information_schema.columns WHERE table_name=${tableName}`);
-  console.log('actualCols:', actualCols);
 
   assertEqualInAnyOrder(
     expectedCols.map(col => col.column_name),
