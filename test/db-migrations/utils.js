@@ -8,14 +8,16 @@ module.exports = {
 const _ = require('lodash');
 const migrator = require('./migrator');
 
-function describeMigration(migrationName, fn) {
+function _describeMigration(describeFn, migrationName, fn) {
+  assert.strictEqual(arguments.length, 3, 'Incorrect argument count.');
+
+  assert.strictEqual(typeof describeFn, 'function');
+
   assert.ok(migrator.exists(migrationName), `Migration '${migrationName}' already exists.`);
   assert.ok(!migrator.hasRun(migrationName), `Migration '${migrationName}' has already been run.`);
 
   assert.strictEqual(typeof fn, 'function');
   assert.strictEqual(fn.length, 1);
-
-  assert.strictEqual(arguments.length, 2);
 
   const runMigrationBeingTested = (() => {
     let alreadyRun;
@@ -26,13 +28,16 @@ function describeMigration(migrationName, fn) {
     };
   })();
 
-  return describe(`database migration: ${migrationName}`, () => {
+  return describeFn(`database migration: ${migrationName}`, () => {
     before(async () => {
       migrator.runBefore(migrationName);
     });
     return fn({ runMigrationBeingTested });
   });
 }
+function describeMigration(...args) { return _describeMigration(describe, ...args); }
+describeMigration.only =  (...args) =>       _describeMigration(describe.only, ...args);
+describeMigration.skip =  (...args) =>       _describeMigration(describe.skip, ...args);
 
 async function assertIndexExists(tableName, expected) {
   if(arguments.length !== 2) throw new Error('Incorrect arg count.');
