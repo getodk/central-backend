@@ -34,4 +34,5 @@ jobs:
         node-version: 20.17.0
         cache: 'npm'
     - run: npm ci --legacy-peer-deps
+    - run: node lib/bin/create-docker-databases.js
     - run: make test-db-migrations
