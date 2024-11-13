@@ -36,7 +36,7 @@ function _describeMigration(describeFn, migrationName, fn) {
   });
 }
 function describeMigration(...args) { return _describeMigration(describe, ...args); }
-describeMigration.only =  (...args) =>       _describeMigration(describe.only, ...args);
+describeMigration.only =  (...args) =>       _describeMigration(describe.only, ...args); // eslint-disable-line no-only-tests/no-only-tests
 describeMigration.skip =  (...args) =>       _describeMigration(describe.skip, ...args);
 
 async function assertIndexExists(tableName, expected) {
