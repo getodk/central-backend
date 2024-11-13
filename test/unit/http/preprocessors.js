@@ -183,7 +183,7 @@ describe('preprocessors', () => {
           should.not.exist(context);
         }));
 
-      it('should do nothing if Cookie auth is attempted with primary auth present', () =>
+      it('should prioritise primary auth over Cookie auth', () => {
         Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
           new Context(
@@ -197,7 +197,7 @@ describe('preprocessors', () => {
           )
         )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
-      it('should do nothing if Cookie auth is attempted with fk auth present', () =>
+      it('should prioritise fk auth over Cookie auth', () => {
         Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
           new Context(
