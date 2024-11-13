@@ -1,10 +1,10 @@
+const _log = level => (...args) => console.log(level, ...args);
+global.log = _log('[INFO]');
+
 global.assert = require('node:assert');
 const fs = require('node:fs');
 const slonik = require('slonik');
 const migrator = require('./migrator');
-
-const _log = level => (...args) => console.log(level, ...args);
-global.log = _log('[INFO]');
 
 async function mochaGlobalSetup() {
   log('mochaGlobalSetup() :: ENTRY');
