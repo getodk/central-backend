@@ -476,7 +476,7 @@ describe('endpoints', () => {
       const responseTest = streamTest.toText((err, result) => {
         err.message.should.equal('ERR_EXPECTED');
         trailers.should.eql({ Status: 'Error' });
-        should(result).be.undefined()
+        should(result).be.undefined();
         done();
       });
       responseTest.addTrailers = function(t) { trailers = t; };
