@@ -149,4 +149,40 @@ describe('(libs/FP) Option type', () => {
       });
     });
   });
+
+  describe('should.js interactions', () => {
+
+    // N.B. should.equal() is different from should.eql():
+    //
+    // * .eql(): check equality using ===
+    // * .eql(): check equality using "should-equal" module
+    //
+    // See: https://www.npmjs.com/package/should-equal
+
+    describe('should.eql()', () => {
+      [
+        true,
+        false,
+        0,
+        1,
+        '',
+        'non-empty string',
+      ].forEach(val => {
+        it(`should recognise two Options of '${val}' to be equal`, () => {
+          Option.of(val).should.eql(Option.of(val));
+        });
+      });
+
+      [
+        [ 0, 1 ],
+        [ 0, false ],
+        [ 0, '' ],
+        [ false, '' ],
+      ].forEach((a, b) => {
+        it(`should not recognise Options of '${a}' and '${b}' as equal`, () => {
+          Option.of(a).should.not.eql(Option.of(b));
+        });
+      });
+    });
+  });
 });
