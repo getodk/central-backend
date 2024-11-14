@@ -1,3 +1,4 @@
+const should = require('should');
 const { createRequest } = require('../../util/node-mocks-http');
 
 const appRoot = require('app-root-path');
