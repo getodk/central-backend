@@ -46,7 +46,7 @@ jobs:
       with:
         node-version: 20.17.0
         cache: 'npm'
-    - run: npm ci --legacy-peer-deps
+    - run: npm ci
     - run: node lib/bin/create-docker-databases.js
     - name: E2E Test
       timeout-minutes: 10

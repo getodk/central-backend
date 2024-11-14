@@ -1,7 +1,7 @@
 default: base
 
 node_modules: package.json
-	npm install --legacy-peer-deps
+	npm install
 	touch node_modules
 
 .PHONY: node_version

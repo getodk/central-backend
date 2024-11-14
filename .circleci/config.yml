@@ -18,7 +18,7 @@ jobs:
             find . -size +1000000c -not -path './.git/*' | grep .
             [[ $? -eq 1 ]]
       - run: make check-file-headers
-      - run: npm ci --legacy-peer-deps
+      - run: npm ci
       - run: node lib/bin/create-docker-databases.js
       - run: make test-ci
       - store_test_results:
