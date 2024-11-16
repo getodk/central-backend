@@ -844,6 +844,68 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   .then((counts) => counts.should.eql([ 1, 4, 3 ])))));
           });
         });
+
+        describe('preserving submissions from old or deleted drafts', () => {
+          it('should soft-delete submissions of undeeded draft when a new version is uploaded', testService(async (service, { oneFirst }) => {
+            const asAlice = await service.login('alice');
+
+            await asAlice.post('/v1/projects/1/forms/simple/draft')
+              .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+              .set('Content-Type', 'application/xml')
+              .expect(200);
+
+            await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+              .send(testData.instances.simple.one)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            let subs = await oneFirst(sql`select count(*) from submissions`);
+            subs.should.equal(1);
+
+            await asAlice.post('/v1/projects/1/forms/simple/draft')
+              .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
+              .set('Content-Type', 'application/xml')
+              .expect(200);
+
+            subs = await oneFirst(sql`select count(*) from submissions`);
+            subs.should.equal(1);
+
+            const fds = await oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple'`);
+            fds.should.equal(3); // Old draft has not been deleted. Count also includes published and new draft.
+          }));
+        });
+
+        it('should purge old draft submissions after 30 days', testService(async (service, { oneFirst, run, Forms, Submissions }) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          let subs = await oneFirst(sql`select count(*) from submissions`);
+          subs.should.equal(1);
+
+          await asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await run(sql`update submissions set "deletedAt" = '1999-1-1T00:00:00Z' where "deletedAt" is not null`);
+          await Submissions.purge();
+          await Forms.clearUnneededDrafts();
+
+          subs = await oneFirst(sql`select count(*) from submissions`);
+          subs.should.equal(0);
+
+          const fds = await oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple'`);
+          fds.should.equal(2); // Old draft has now been deleted. Count also includes published and new draft.
+        }));
       });
     });
 
