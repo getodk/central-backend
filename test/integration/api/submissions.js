@@ -3294,7 +3294,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200)
             .then(({ body }) => { body.should.eql([]); })))));
 
-    it.only('should not carry over draft keys when a draft is replaced', testService((service) =>
+    it('should not carry over draft keys when a draft is replaced', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.encrypted)
