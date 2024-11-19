@@ -6379,9 +6379,8 @@ paths:
       tags:
       - Submissions
       summary: Retrieving Submission XML
-      description: To get only the XML of the `Submission` rather than all of the
-        details with the XML as one of many properties, just add `.xml` to the end
-        of the request URL.
+      description: To retrieve the XML of the `Submission`, just append `.xml` to
+        the end of the request URL.
       operationId: Retrieving Submission XML
       parameters:
       - name: projectId
