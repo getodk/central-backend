@@ -592,11 +592,6 @@ tags:
     * The **Metadata Document** defines the data schema using [an XML-based standard](https://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html#sec_Introduction). It is linked in every OData response.
 
     * The **data documents**, linked from the Service Document, are a simple JSON representation of the Submission or Entity data, conforming to the schema we describe in our Metadata Document.
-- name: User Preferences
-  description: |-
-    The Central frontend uses this API to save various user preferences, such as the sorting order of certain listings. When a user starts a new session, these preferences are loaded in.
-    
-    Preferences can be set site-wide or per-project.
 - name: System Endpoints
   description: There are some resources available for getting or setting system information
     and configuration. You can set the [Usage Reporting configuration](/central-api-system-endpoints/#usage-reporting-configuration)
@@ -650,6 +645,12 @@ tags:
   x-parent-tag: Accounts and Users
   description: |-
     Presently, it is possible to create and list `User`s in the system, as well as to perform password reset operations. In future versions of this API it will be possible to manage existing user information and delete accounts as well.
+- name: User Preferences
+  x-parent-tag: Accounts and Users
+  description: |-
+    The Central frontend uses this API to save various user preferences, such as the sorting order of certain listings. When a user starts a new session, these preferences are loaded in.
+    
+    Preferences can be set site-wide or per-project.
 - name: App Users
   x-parent-tag: Accounts and Users
   description: |-
