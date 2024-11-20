@@ -4,7 +4,6 @@ module.exports = {
     'keyword-spacing': 'off',
     'no-multi-spaces': 'off',
     'no-use-before-define': 'off',
-    'object-curly-newline': 'off',
     'prefer-arrow-callback': 'off',
   },
   globals: {
