@@ -13,7 +13,7 @@ function _describeMigration(describeFn, migrationName, fn) {
 
   assert.strictEqual(typeof describeFn, 'function');
 
-  assert.ok(migrator.exists(migrationName), `Migration '${migrationName}' already exists.`);
+  assert.ok(migrator.exists(migrationName), `Migration '${migrationName}' does not exist.`);
   assert.ok(!migrator.hasRun(migrationName), `Migration '${migrationName}' has already been run.`);
 
   assert.strictEqual(typeof fn, 'function');
