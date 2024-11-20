@@ -12,14 +12,6 @@
 // * allow replacement of the production migration implementation without
 //   changing tests
 
-module.exports = {
-  exists,
-  hasRun,
-  runBefore,
-  runIncluding,
-  restoreMigrations,
-};
-
 const fs = require('node:fs');
 const { execSync } = require('node:child_process');
 
@@ -28,23 +20,23 @@ const holdingPen = './test/db-migrations/.holding-pen';
 
 fs.mkdirSync(holdingPen, { recursive: true });
 
-restoreMigrations();
-const allMigrations = loadMigrationsList();
-moveMigrationsToHoldingPen();
+restoreMigrations(); // eslint-disable-line no-use-before-define
+const allMigrations = loadMigrationsList(); // eslint-disable-line no-use-before-define
+moveMigrationsToHoldingPen(); // eslint-disable-line no-use-before-define
 
 let lastRunIdx = -1;
 
 function runBefore(migrationName) {
-  const idx = getIndex(migrationName);
+  const idx = getIndex(migrationName); // eslint-disable-line no-use-before-define
   if (idx === 0) return;
 
   const previousMigration = allMigrations[idx - 1];
 
-  return runIncluding(previousMigration);
+  return runIncluding(previousMigration); // eslint-disable-line no-use-before-define
 }
 
 function runIncluding(lastMigrationToRun) {
-  const finalIdx = getIndex(lastMigrationToRun);
+  const finalIdx = getIndex(lastMigrationToRun); // eslint-disable-line no-use-before-define
 
   for (let restoreIdx=lastRunIdx+1; restoreIdx<=finalIdx; ++restoreIdx) { // eslint-disable-line no-plusplus
     const f = allMigrations[restoreIdx] + '.js';
@@ -67,11 +59,11 @@ function getIndex(migrationName) {
 }
 
 function restoreMigrations() {
-  moveAll(holdingPen, migrationsDir);
+  moveAll(holdingPen, migrationsDir); // eslint-disable-line no-use-before-define
 }
 
 function moveMigrationsToHoldingPen() {
-  moveAll(migrationsDir, holdingPen);
+  moveAll(migrationsDir, holdingPen); // eslint-disable-line no-use-before-define
 }
 
 function moveAll(src, tgt) {
@@ -106,3 +98,11 @@ function exists(migrationName) {
 function hasRun(migrationName) {
   return lastRunIdx >= getIndex(migrationName);
 }
+
+module.exports = {
+  exists,
+  hasRun,
+  runBefore,
+  runIncluding,
+  restoreMigrations,
+};

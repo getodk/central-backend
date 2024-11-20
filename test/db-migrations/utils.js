@@ -1,10 +1,3 @@
-module.exports = {
-  assertIndexExists,
-  assertTableDoesNotExist,
-  assertTableSchema,
-  describeMigration,
-};
-
 const assert = require('node:assert');
 const _ = require('lodash');
 const migrator = require('./migrator');
@@ -70,13 +63,13 @@ async function assertTableSchema(tableName, ...expectedCols) {
 
   const actualCols = await db.any(sql`SELECT * FROM information_schema.columns WHERE table_name=${tableName}`);
 
-  assertEqualInAnyOrder(
+  assertEqualInAnyOrder( // eslint-disable-line no-use-before-define
     expectedCols.map(col => col.column_name),
     actualCols.map(col => col.column_name),
     'Expected columns did not match returned columns!',
   );
 
-  assertRowsMatch(actualCols, expectedCols);
+  assertRowsMatch(actualCols, expectedCols); // eslint-disable-line no-use-before-define
 }
 
 function assertRowsMatch(actualRows, expectedRows) {
@@ -89,7 +82,7 @@ function assertRowsMatch(actualRows, expectedRows) {
     for (let j=0; j<remainingRows.length; ++j) { // eslint-disable-line no-plusplus
       const rr = remainingRows[j];
       try {
-        assertIncludes(rr, x);
+        assertIncludes(rr, x); // eslint-disable-line no-use-before-define
         remainingRows.splice(j, 1);
         found = true;
         break;
@@ -121,3 +114,10 @@ function assertIncludes(actual, expected) {
     }
   }
 }
+
+module.exports = {
+  assertIndexExists,
+  assertTableDoesNotExist,
+  assertTableSchema,
+  describeMigration,
+};

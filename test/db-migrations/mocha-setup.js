@@ -10,7 +10,7 @@ async function mochaGlobalSetup() {
 
   global.sql = slonik.sql;
 
-  const { user, password, host, database } = jsonFile('./config/db-migration-test.json').default.database;
+  const { user, password, host, database } = jsonFile('./config/db-migration-test.json').default.database; // eslint-disable-line no-use-before-define
   const dbUrl = `postgres://${user}:${password}@${host}/${database}`;
   log('dbUrl:', dbUrl);
   global.db = slonik.createPool(dbUrl);
