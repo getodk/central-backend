@@ -12,7 +12,6 @@ module.exports = {
   },
   globals: {
     db: false,
-    log: false,
     sql: false,
   },
 };
