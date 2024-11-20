@@ -37,8 +37,8 @@ function _describeMigration(describeFn, migrationName, fn) {
   });
 }
 function describeMigration(...args) { return _describeMigration(describe, ...args); }
-describeMigration.only =  (...args) =>       _describeMigration(describe.only, ...args); // eslint-disable-line no-only-tests/no-only-tests
-describeMigration.skip =  (...args) =>       _describeMigration(describe.skip, ...args);
+describeMigration.only =  (...args) =>       _describeMigration(describe.only, ...args); // eslint-disable-line no-only-tests/no-only-tests, no-multi-spaces
+describeMigration.skip =  (...args) =>       _describeMigration(describe.skip, ...args); // eslint-disable-line no-multi-spaces
 
 async function assertIndexExists(tableName, expected) {
   if(arguments.length !== 2) throw new Error('Incorrect arg count.');
