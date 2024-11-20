@@ -40,6 +40,8 @@ function runBefore(migrationName) {
 
   const previousMigration = allMigrations[idx - 1];
 
+  log('previousMigration:', previousMigration);
+
   return runIncluding(previousMigration);
 }
 
@@ -51,13 +53,17 @@ function runIncluding(lastMigrationToRun) {
     fs.renameSync(`${holdingPen}/${f}`, `${migrationsDir}/${f}`);
   }
 
-  execSync(`node ./lib/bin/run-migrations.js`, { encoding:'utf8' });
+  log('Running migrations until:', lastMigrationToRun, '...');
+  const res = execSync(`node ./lib/bin/run-migrations.js`, { encoding:'utf8' });
 
   lastRunIdx = finalIdx;
+
+  log(`Ran migrations up-to-and-including ${lastMigrationToRun}:\n`, res);
 }
 
 function getIndex(migrationName) {
   const idx = allMigrations.indexOf(migrationName);
+  log('getIndex()', migrationName, 'found at', idx);
   if(idx === -1) throw new Error(`Unknown migration: ${migrationName}`);
   return idx;
 }
@@ -76,10 +82,18 @@ function moveAll(src, tgt) {
 }
 
 function loadMigrationsList() {
-  return fs.readdirSync(migrationsDir)
+  const migrations = fs.readdirSync(migrationsDir)
     .filter(f => f.endsWith('.js'))
     .map(f => f.replace(/\.js$/, ''))
     .sort(); // TODO check that this is how knex sorts migration files
+  log();
+  log('All migrations:');
+  log();
+  migrations.forEach(m => log('*', m));
+  log();
+  log('Total:', migrations.length);
+  log();
+  return migrations;
 }
 
 function exists(migrationName) {
