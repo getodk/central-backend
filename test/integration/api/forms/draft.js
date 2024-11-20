@@ -731,149 +731,271 @@ describe('api: /projects/:id/forms (drafts)', () => {
                         .then(({ body }) => {
                           body.name.should.equal('New Title');
                         })))))))));
+      });
 
-        describe('purging unneeded drafts', () => {
-          it('should purge the old undeeded draft when a new version is uploaded', testService((service, { oneFirst }) =>
+      describe('purging unneeded drafts', () => {
+        it('should purge the old undeeded draft when a new version is uploaded', testService((service, { oneFirst }) =>
+          service.login('alice', (asAlice) =>
+            asAlice.post('/v1/projects/1/forms/simple/draft')
+              .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+              .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+                .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
+                .set('Content-Type', 'application/xml')
+                .expect(200))
+              .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
+                .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty3"'))
+                .set('Content-Type', 'application/xml')
+                .expect(200))
+              .then(() => oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple'`)
+                .then((count) => {
+                  count.should.equal(2); // one for the first published version and for the new draft
+                })))));
+
+        it('should purge the old undeeded draft when a new version is uploaded (and no published draft)', testService((service, { oneFirst }) =>
+          service.login('alice', (asAlice) =>
+            asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.simple2)
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+              .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+                .send(testData.forms.simple2.replace('id="simple2"', 'id="simple2" version="drafty2"'))
+                .set('Content-Type', 'application/xml')
+                .expect(200))
+              .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+                .send(testData.forms.simple2.replace('id="simple2"', 'id="simple2" version="drafty3"'))
+                .set('Content-Type', 'application/xml')
+                .expect(200))
+              .then(() => oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple2'`)
+                .then((count) => {
+                  count.should.equal(1); // only one for the new draft
+                })))));
+
+        describe('purging form fields of unneeded drafts', () => {
+          it('should not purge fields because they are part of schema of published form', testService((service, { oneFirst }) =>
             service.login('alice', (asAlice) =>
               asAlice.post('/v1/projects/1/forms/simple/draft')
                 .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
                 .set('Content-Type', 'application/xml')
                 .expect(200)
+                .then(() => Promise.all([
+                  oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
+                  oneFirst(sql`select count(*) from form_fields where "formId" = 1`)
+                ]))
+                .then((counts) => counts.should.eql([ 2, 4 ]))
                 .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
                   .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
                   .set('Content-Type', 'application/xml')
                   .expect(200))
+                .then(() => Promise.all([
+                  oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
+                  oneFirst(sql`select count(*) from form_fields where "formId" = 1`)
+                ]))
+                .then((counts) => counts.should.eql([ 2, 4 ])))));
+
+          it('should purge fields of unneeded intermediate draft with different schema', testService((service, { oneFirst }) =>
+            service.login('alice', (asAlice) =>
+              asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+                .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"').replace(/age/g, 'number'))
+                .set('Content-Type', 'application/xml')
+                .expect(200)
+                .then(() => Promise.all([
+                  oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
+                  oneFirst(sql`select count(*) from form_fields where "formId" = 1`),
+                  oneFirst(sql`select count(*) from form_schemas`)
+                ]))
+                .then((counts) => counts.should.eql([ 2, 8, 3 ]))
                 .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
-                  .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty3"'))
+                  .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"')) // back to original schema
                   .set('Content-Type', 'application/xml')
                   .expect(200))
-                .then(() => oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple'`)
-                  .then((count) => {
-                    count.should.equal(2); // one for the first published version and for the new draft
-                  })))));
+                .then(() => Promise.all([
+                  oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
+                  oneFirst(sql`select count(*) from form_fields where "formId" = 1`),
+                  oneFirst(sql`select count(*) from form_schemas`) // 2: one for each different form
+                ]))
+                .then((counts) => counts.should.eql([ 2, 4, 2 ]))
+                .then(() => asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+                  .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty3"').replace(/age/g, 'number')) // new schema again
+                  .set('Content-Type', 'application/xml')
+                  .expect(200))
+                .then(() => Promise.all([
+                  oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
+                  oneFirst(sql`select count(*) from form_fields where "formId" = 1`),
+                  oneFirst(sql`select count(*) from form_schemas`) // new schema brought back
+                ]))
+                .then((counts) => counts.should.eql([ 2, 8, 3 ])))));
 
-          it('should purge the old undeeded draft when a new version is uploaded (and no published draft)', testService((service, { oneFirst }) =>
+          it('should purge the form field and schema of intermediate version (and no published draft)', testService((service, { oneFirst }) =>
             service.login('alice', (asAlice) =>
               asAlice.post('/v1/projects/1/forms')
-                .send(testData.forms.simple2)
+                .send(testData.forms.simple2) // first draft version
                 .set('Content-Type', 'application/xml')
                 .expect(200)
                 .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
-                  .send(testData.forms.simple2.replace('id="simple2"', 'id="simple2" version="drafty2"'))
+                  .send(testData.forms.simple2.replace('id="simple2"', 'id="simple2" version="drafty2"').replace(/age/g, 'number'))
                   .set('Content-Type', 'application/xml')
                   .expect(200))
-                .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
-                  .send(testData.forms.simple2.replace('id="simple2"', 'id="simple2" version="drafty3"'))
-                  .set('Content-Type', 'application/xml')
-                  .expect(200))
-                .then(() => oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple2'`)
-                  .then((count) => {
-                    count.should.equal(1); // only one for the new draft
-                  })))));
-
-          describe('purging form fields of unneeded drafts', () => {
-            it('should not purge fields because they are part of schema of published form', testService((service, { oneFirst }) =>
-              service.login('alice', (asAlice) =>
-                asAlice.post('/v1/projects/1/forms/simple/draft')
-                  .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
-                  .set('Content-Type', 'application/xml')
-                  .expect(200)
-                  .then(() => Promise.all([
-                    oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
-                    oneFirst(sql`select count(*) from form_fields where "formId" = 1`)
-                  ]))
-                  .then((counts) => counts.should.eql([ 2, 4 ]))
-                  .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
-                    .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
-                    .set('Content-Type', 'application/xml')
-                    .expect(200))
-                  .then(() => Promise.all([
-                    oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
-                    oneFirst(sql`select count(*) from form_fields where "formId" = 1`)
-                  ]))
-                  .then((counts) => counts.should.eql([ 2, 4 ])))));
-
-            it('should purge fields of unneeded intermediate draft with different schema', testService((service, { oneFirst }) =>
-              service.login('alice', (asAlice) =>
-                asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
-                  .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"').replace(/age/g, 'number'))
-                  .set('Content-Type', 'application/xml')
-                  .expect(200)
-                  .then(() => Promise.all([
-                    oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
-                    oneFirst(sql`select count(*) from form_fields where "formId" = 1`),
-                    oneFirst(sql`select count(*) from form_schemas`)
-                  ]))
-                  .then((counts) => counts.should.eql([ 2, 8, 3 ]))
-                  .then(() => asAlice.post('/v1/projects/1/forms/simple/draft')
-                    .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"')) // back to original schema
-                    .set('Content-Type', 'application/xml')
-                    .expect(200))
-                  .then(() => Promise.all([
-                    oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
-                    oneFirst(sql`select count(*) from form_fields where "formId" = 1`),
-                    oneFirst(sql`select count(*) from form_schemas`) // 2: one for each different form
-                  ]))
-                  .then((counts) => counts.should.eql([ 2, 4, 2 ]))
-                  .then(() => asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
-                    .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty3"').replace(/age/g, 'number')) // new schema again
-                    .set('Content-Type', 'application/xml')
-                    .expect(200))
-                  .then(() => Promise.all([
-                    oneFirst(sql`select count(*) from form_defs where "formId" = 1`),
-                    oneFirst(sql`select count(*) from form_fields where "formId" = 1`),
-                    oneFirst(sql`select count(*) from form_schemas`) // new schema brought back
-                  ]))
-                  .then((counts) => counts.should.eql([ 2, 8, 3 ])))));
-
-            it('should purge the form field and schema of intermediate version (and no published draft)', testService((service, { oneFirst }) =>
-              service.login('alice', (asAlice) =>
-                asAlice.post('/v1/projects/1/forms')
-                  .send(testData.forms.simple2) // first draft version
-                  .set('Content-Type', 'application/xml')
-                  .expect(200)
-                  .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
-                    .send(testData.forms.simple2.replace('id="simple2"', 'id="simple2" version="drafty2"').replace(/age/g, 'number'))
-                    .set('Content-Type', 'application/xml')
-                    .expect(200))
-                  .then(() => Promise.all([
-                    oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple2'`),
-                    oneFirst(sql`select count(*) from form_fields as fs join forms as f on fs."formId" = f.id where f."xmlFormId"='simple2'`),
-                    oneFirst(sql`select count(*) from form_schemas`) // two fixture forms and one for this form
-                  ]))
-                  .then((counts) => counts.should.eql([ 1, 4, 3 ])))));
-          });
+                .then(() => Promise.all([
+                  oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple2'`),
+                  oneFirst(sql`select count(*) from form_fields as fs join forms as f on fs."formId" = f.id where f."xmlFormId"='simple2'`),
+                  oneFirst(sql`select count(*) from form_schemas`) // two fixture forms and one for this form
+                ]))
+                .then((counts) => counts.should.eql([ 1, 4, 3 ])))));
         });
+      });
 
-        describe('preserving submissions from old or deleted drafts', () => {
-          it('should soft-delete submissions of undeeded draft when a new version is uploaded', testService(async (service, { oneFirst }) => {
-            const asAlice = await service.login('alice');
+      describe('preserving submissions from old or deleted drafts', () => {
+        it('should soft-delete submissions of undeeded draft when a new version is uploaded', testService(async (service, { oneFirst }) => {
+          const asAlice = await service.login('alice');
 
-            await asAlice.post('/v1/projects/1/forms/simple/draft')
-              .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
-              .set('Content-Type', 'application/xml')
-              .expect(200);
+          // Upload a new draft version
+          await asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
 
-            await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
-              .send(testData.instances.simple.one)
-              .set('Content-Type', 'text/xml')
-              .expect(200);
+          // Send a submission to that draft
+          await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
 
-            let subs = await oneFirst(sql`select count(*) from submissions`);
-            subs.should.equal(1);
+          // Check that the submission is there
+          let subs = await oneFirst(sql`select count(*) from submissions`);
+          subs.should.equal(1);
 
-            await asAlice.post('/v1/projects/1/forms/simple/draft')
-              .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
-              .set('Content-Type', 'application/xml')
-              .expect(200);
+          // Upload a new draft version to replace the old one
+          await asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
 
-            subs = await oneFirst(sql`select count(*) from submissions`);
-            subs.should.equal(1);
+          // Confirm that the previous submission is still there but soft-deleted
+          subs = await oneFirst(sql`select count(*) from submissions where "deletedAt" is not null`);
+          subs.should.equal(1);
 
-            const fds = await oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple'`);
-            fds.should.equal(3); // Old draft has not been deleted. Count also includes published and new draft.
-          }));
-        });
+          // Confirm that the draft def is still there, too, in addition to the new draft def and published def
+          const fds = await oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple'`);
+          fds.should.equal(3);
+        }));
+
+        it('should soft-delete submissions of draft when it is abandoned/deleted', testService(async (service, { oneFirst }) => {
+          const asAlice = await service.login('alice');
+
+          // Upload a new draft version
+          await asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // Send a submission to that draft
+          await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          // Delete the draft
+          await asAlice.delete('/v1/projects/1/forms/simple/draft');
+
+          // Confirm that the submission is still there but soft-deleted
+          const subs = await oneFirst(sql`select count(*) from submissions where "deletedAt" is not null`);
+          subs.should.equal(1);
+
+          // Confirm that there are two defs (the draft def that was unlinked and the published def)
+          const fds = await oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple'`);
+          fds.should.equal(2);
+        }));
+
+        it('should soft-delete submissions of draft when it is published', testService(async (service, { oneFirst }) => {
+          const asAlice = await service.login('alice');
+
+          // Upload a new draft version
+          await asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // Send a submission to that draft
+          await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          // Publish the form draft
+          await asAlice.post('/v1/projects/1/forms/simple/draft/publish');
+
+          // Confirm that the submission is still there but soft-deleted
+          const subs = await oneFirst(sql`select count(*) from submissions where "deletedAt" is not null`);
+          subs.should.equal(1);
+
+          // Confirm that there are two defs (the previously published version and new published version)
+          const fds = await oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple'`);
+          fds.should.equal(2);
+        }));
+
+        it('should soft-delete submissions of draft when it is published AND the version is set on publish', testService(async (service, { oneFirst }) => {
+          const asAlice = await service.login('alice');
+
+          // Upload a new draft version
+          await asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // Send a submission to that draft
+          await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          // Publish the form draft
+          await asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two');
+
+          // Confirm that the submission is still there but soft-deleted
+          const subs = await oneFirst(sql`select count(*) from submissions where "deletedAt" is not null`);
+          subs.should.equal(1);
+
+          // Confirm that there are three defs
+          // - previously published
+          // - draft def
+          // - new published version (from draft def but with new version)
+          const fds = await oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple'`);
+          fds.should.equal(3);
+        }));
+
+        it('should purge draft submissions when project is encrypted', testService(async (service, { oneFirst }) => {
+          const asAlice = await service.login('alice');
+
+          // Upload a new draft version
+          await asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // Send a submission to that draft
+          await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          // Encrypt the project
+          await asAlice.post('/v1/projects/1/key')
+            .send({ passphrase: 'supersecret' })
+            .expect(200);
+
+          // Confirm that the submissions have been purged
+          const subs = await oneFirst(sql`select count(*) from submissions where "deletedAt" is not null`);
+          subs.should.equal(0);
+
+          // Confirm that there are 3 form defs
+          // - the original published version
+          // - encrypted published version
+          // - encrypted draft
+          const fds = await oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simple'`);
+          fds.should.equal(3);
+        }));
 
         it('should purge old draft submissions after 30 days', testService(async (service, { oneFirst, run, Forms, Submissions }) => {
           const asAlice = await service.login('alice');
