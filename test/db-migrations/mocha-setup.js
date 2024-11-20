@@ -15,22 +15,9 @@ async function mochaGlobalSetup() {
   log('dbUrl:', dbUrl);
   global.db = slonik.createPool(dbUrl);
 
-  const existingTables = await db.oneFirst(sql`SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'`);
-  if(existingTables) {
-    console.log(`
-    Existing tables were found in the public database schema.  Reset the database before running migration tests.
-
-    If you are using odk-postgres14 docker, try:
-
-      docker exec odk-postgres14 psql -U postgres ${database} -c "
-        DROP SCHEMA public CASCADE;
-        CREATE SCHEMA public;
-        GRANT ALL ON SCHEMA public TO postgres;
-        GRANT ALL ON SCHEMA public TO public;
-      "
-    `);
-    process.exit(1);
-  }
+  // Try to clean up the test database.  This should work unless you've used
+  // different users to create/configure the DB.
+  await db.query(sql`DROP OWNED BY CURRENT_USER`);
 
   log('mochaGlobalSetup() :: EXIT');
 }
