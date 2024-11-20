@@ -21,7 +21,7 @@ function _describeMigration(describeFn, migrationName, fn) {
 
   const runMigrationBeingTested = (() => {
     let alreadyRun;
-    return async () => {
+    return () => {
       if(alreadyRun) throw new Error('Migration has already run!  Check your test structure.');
       alreadyRun = true;
       migrator.runIncluding(migrationName);
@@ -29,7 +29,7 @@ function _describeMigration(describeFn, migrationName, fn) {
   })();
 
   return describeFn(`database migration: ${migrationName}`, () => {
-    before(async () => {
+    before(() => {
       migrator.runBefore(migrationName);
     });
     return fn({ runMigrationBeingTested });
