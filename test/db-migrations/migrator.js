@@ -12,7 +12,7 @@ const { execSync } = require('node:child_process');
 // Horrible hacks.  Without this:
 //
 // 1. production migration code needs modifying, and
-// 2. it takes 3 mins+ just to run the migrations
+// 2. it takes 3+ mins just to run the migrations
 
 const migrationsDir = './lib/model/migrations';
 const holdingPen = './test/db-migrations/.holding-pen';
@@ -96,6 +96,6 @@ function exists(migrationName) {
   }
 }
 
-function hasRun(migratioName) {
-  return lastRunIdx >= getIndex(migratioName);
+function hasRun(migrationName) {
+  return lastRunIdx >= getIndex(migrationName);
 }
