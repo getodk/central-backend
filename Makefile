@@ -1,8 +1,16 @@
 default: base
 
 node_modules: package.json
-	npm install --legacy-peer-deps
+	npm install
 	touch node_modules
+
+.PHONY: node_version
+node_version: node_modules
+	node lib/bin/enforce-node-version.js
+
+
+################################################################################
+# OIDC
 
 .PHONY: test-oidc-integration
 test-oidc-integration: node_version
@@ -25,6 +33,10 @@ fake-oidc-server:
 fake-oidc-server-ci:
 	cd test/e2e/oidc/fake-oidc-server && \
 	node index.mjs
+
+
+################################################################################
+# S3
 
 .PHONY: fake-s3-accounts
 fake-s3-accounts: node_version
@@ -52,9 +64,9 @@ fake-s3-server-ephemeral:
 fake-s3-server-persistent:
 	docker run --detach $(S3_SERVER_ARGS)
 
-.PHONY: node_version
-node_version: node_modules
-	node lib/bin/enforce-node-version.js
+
+################################################################################
+# DATABASE MIGRATIONS
 
 .PHONY: migrations
 migrations: node_version
@@ -64,8 +76,12 @@ migrations: node_version
 check-migrations: node_version
 	node lib/bin/check-migrations.js
 
+
+################################################################################
+# RUN SERVER
+
 .PHONY: base
-base: node_version migrations check-migrations
+base: node_modules node_version migrations check-migrations
 
 .PHONY: dev
 dev: base
@@ -78,6 +94,10 @@ run: base
 .PHONY: debug
 debug: base
 	node --debug --inspect lib/bin/run-server.js
+
+
+################################################################################
+# TEST & LINT
 
 .PHONY: test
 test: lint
@@ -107,6 +127,10 @@ test-coverage: node_version
 lint: node_version
 	npx eslint --cache --max-warnings 0 .
 
+
+################################################################################
+# POSTGRES
+
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
 	docker start odk-postgres14 || (\
@@ -122,6 +146,10 @@ stop-docker-postgres:
 .PHONY: rm-docker-postgres
 rm-docker-postgres: stop-docker-postgres
 	docker rm odk-postgres14 || true
+
+
+################################################################################
+# OTHER
 
 .PHONY: check-file-headers
 check-file-headers:

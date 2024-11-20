@@ -150,6 +150,7 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above!
                   updatedAt: null,
+                  deletedAt: null,
                   submitterId: '5',
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
@@ -223,6 +224,7 @@ describe('api: /forms/:id.svc', () => {
                   __system: {
                     // submissionDate is checked above!
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
@@ -265,6 +267,7 @@ describe('api: /forms/:id.svc', () => {
                   __system: {
                     // submissionDate is checked above!
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 1,
@@ -417,6 +420,7 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above!
                   updatedAt: null,
+                  deletedAt: null,
                   submitterId: '5',
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
@@ -477,6 +481,7 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above!
                   updatedAt: null,
+                  deletedAt: null,
                   submitterId: '5',
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
@@ -596,6 +601,7 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above,
                   updatedAt: null,
+                  deletedAt: null,
                   submitterId: '5',
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
@@ -617,6 +623,7 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above,
                   updatedAt: null,
+                  deletedAt: null,
                   submitterId: '5',
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
@@ -638,6 +645,7 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above,
                   updatedAt: null,
+                  deletedAt: null,
                   submitterId: '5',
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
@@ -676,6 +684,7 @@ describe('api: /forms/:id.svc', () => {
                   __system: {
                     // submissionDate is checked above,
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
@@ -697,6 +706,7 @@ describe('api: /forms/:id.svc', () => {
                   __system: {
                     // submissionDate is checked above,
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
@@ -711,6 +721,46 @@ describe('api: /forms/:id.svc', () => {
                   name: 'Alice',
                   age: 30,
                   children: {}
+                }]
+              });
+            })))));
+
+    it('should return deleted submission', testService((service) =>
+      withSubmissions(service, (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/withrepeat/submissions/rthree')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=not __system/deletedAt eq null')
+            .expect(200)
+            .then(({ body }) => {
+              body.value[0].__system.submissionDate.should.be.an.isoDate();
+              // eslint-disable-next-line no-param-reassign
+              delete body.value[0].__system.submissionDate;
+              body.value[0].__system.deletedAt.should.be.an.isoDate();
+              // eslint-disable-next-line no-param-reassign
+              delete body.value[0].__system.deletedAt;
+
+              body.should.eql({
+                '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+                value: [{
+                  __id: 'rthree',
+                  __system: {
+                    updatedAt: null,
+                    submitterId: '5',
+                    submitterName: 'Alice',
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 0,
+                    status: null,
+                    reviewState: null,
+                    deviceId: null,
+                    edits: 0,
+                    formVersion: '1.0'
+                  },
+                  meta: { instanceID: 'rthree' },
+                  name: 'Chelsea',
+                  age: 38,
+                  children: {
+                    'child@odata.navigationLink': "Submissions('rthree')/children/child"
+                  }
                 }]
               });
             })))));
@@ -766,6 +816,7 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above,
                   updatedAt: null,
+                  deletedAt: null,
                   submitterId: '5',
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
@@ -1023,6 +1074,7 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above,
                   updatedAt: null,
+                  deletedAt: null,
                   submitterId: '5',
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
@@ -1078,6 +1130,7 @@ describe('api: /forms/:id.svc', () => {
                     __system: {
                       // submissionDate is checked above,
                       updatedAt: null,
+                      deletedAt: null,
                       submitterId: '5',
                       submitterName: 'Alice',
                       attachmentsPresent: 0,
@@ -1099,6 +1152,7 @@ describe('api: /forms/:id.svc', () => {
                     __system: {
                       // submissionDate is checked above,
                       updatedAt: null,
+                      deletedAt: null,
                       submitterId: '5',
                       submitterName: 'Alice',
                       attachmentsPresent: 0,
@@ -1138,6 +1192,7 @@ describe('api: /forms/:id.svc', () => {
                   __system: {
                     submissionDate: '2010-06-01T00:00:00.000Z',
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
@@ -1207,6 +1262,7 @@ describe('api: /forms/:id.svc', () => {
                   __system: {
                     submissionDate: '2010-06-01T00:00:00.000Z',
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
@@ -1252,6 +1308,7 @@ describe('api: /forms/:id.svc', () => {
                   __id: 'rone',
                   __system: {
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
@@ -1307,6 +1364,7 @@ describe('api: /forms/:id.svc', () => {
                     reviewState: 'rejected',
                     deviceId: null,
                     edits: 0,
+                    deletedAt: null,
                     formVersion: '1.0'
                   },
                   meta: { instanceID: 'rtwo' },
@@ -1350,6 +1408,7 @@ describe('api: /forms/:id.svc', () => {
                 reviewState: 'rejected',
                 deviceId: null,
                 edits: 0,
+                deletedAt: null,
                 formVersion: '1.0'
               },
               meta: { instanceID: 'rtwo' },
@@ -1611,6 +1670,7 @@ describe('api: /forms/:id.svc', () => {
                   __system: {
                     // submissionDate is checked above!
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
@@ -1626,6 +1686,7 @@ describe('api: /forms/:id.svc', () => {
                   __system: {
                     // submissionDate is checked above!
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
@@ -1678,6 +1739,7 @@ describe('api: /forms/:id.svc', () => {
                   __system: {
                     // submissionDate is checked above!
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 1,
@@ -1693,6 +1755,7 @@ describe('api: /forms/:id.svc', () => {
                   __system: {
                     // submissionDate is checked above!
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 1,
@@ -1841,6 +1904,20 @@ describe('api: /forms/:id.svc', () => {
         });
 
 
+    }));
+
+    it('should return subtable from deleted submissions', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      await asAlice.delete('/v1/projects/1/forms/withrepeat/submissions/rtwo')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$filter=not $root/Submissions/__system/deletedAt eq null')
+        .expect(200)
+        .then(({ body }) => {
+          body.value[0].name.should.be.eql('Billy');
+          body.value[1].name.should.be.eql('Blaine');
+        });
     }));
 
     // we cheat here. see mark1.
@@ -2237,6 +2314,7 @@ describe('api: /forms/:id.svc', () => {
                     __system: {
                       // submissionDate is checked above!
                       updatedAt: null,
+                      deletedAt: null,
                       submitterId: '5',
                       submitterName: 'Alice',
                       attachmentsPresent: 0,
@@ -2319,6 +2397,7 @@ describe('api: /forms/:id.svc', () => {
                     __system: {
                       // submissionDate is checked above,
                       updatedAt: null,
+                      deletedAt: null,
                       submitterId: '5',
                       submitterName: 'Alice',
                       attachmentsPresent: 0,
@@ -2340,6 +2419,7 @@ describe('api: /forms/:id.svc', () => {
                     __system: {
                       // submissionDate is checked above,
                       updatedAt: null,
+                      deletedAt: null,
                       submitterId: '5',
                       submitterName: 'Alice',
                       attachmentsPresent: 0,
@@ -2361,6 +2441,7 @@ describe('api: /forms/:id.svc', () => {
                     __system: {
                       // submissionDate is checked above,
                       updatedAt: null,
+                      deletedAt: null,
                       submitterId: '5',
                       submitterName: 'Alice',
                       attachmentsPresent: 0,
