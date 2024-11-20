@@ -1,3 +1,17 @@
+// This functions by moving migration files in and out of the migrations target
+// directory.
+//
+// Aims:
+//
+// * ensure that the real production migration command is run in tests
+// * avoid isolation differences between running the tests & migrations in the
+//   same node instance.  These differences might include shared globals,
+//   database connection pool state, database transaction states etc.
+// * ensure that these tests do not depend directly on knex.  Removing knex
+//   dependency is a long-term project goal.
+// * allow replacement of the production migration implementation without
+//   changing tests
+
 module.exports = {
   exists,
   hasRun,
@@ -8,11 +22,6 @@ module.exports = {
 
 const fs = require('node:fs');
 const { execSync } = require('node:child_process');
-
-// Horrible hacks.  Without this:
-//
-// 1. production migration code needs modifying, and
-// 2. it takes 3+ mins just to run the migrations
 
 const migrationsDir = './lib/model/migrations';
 const holdingPen = './test/db-migrations/.holding-pen';
