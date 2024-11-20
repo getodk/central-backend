@@ -150,8 +150,7 @@ describe('(libs/FP) Option type', () => {
     });
   });
 
-  describe('should.js interactions', () => {
-
+  describe('assertion library interactions', () => {
     // N.B. should.equal() is different from should.eql():
     //
     // * .eql(): check equality using ===
@@ -159,7 +158,11 @@ describe('(libs/FP) Option type', () => {
     //
     // See: https://www.npmjs.com/package/should-equal
 
-    describe('should.eql()', () => {
+    // TODO re-introduce this line when chai is added to the project
+    //const chaiAssert = require('chai').assert;
+    const nodeAssert = require('node:assert');
+
+    describe('equality', () => {
       [
         true,
         false,
@@ -168,8 +171,17 @@ describe('(libs/FP) Option type', () => {
         '',
         'non-empty string',
       ].forEach(val => {
-        it(`should recognise two Options of '${val}' to be equal`, () => {
+        it(`should.js should recognise two Options of '${val}' to be equal`, () => {
           Option.of(val).should.eql(Option.of(val));
+        });
+
+        // TODO enable this test when chai is introduced to the project
+        //it(`chai should recognise two Options of '${val}' to be equal`, () => {
+        //  chaiAssert.deepEqual(Option.of(val), Option.of(val));
+        //});
+
+        it(`node:assert should recognise two Options of '${val}' to be equal`, () => {
+          nodeAssert.deepStrictEqual(Option.of(val), Option.of(val));
         });
       });
 
@@ -179,8 +191,17 @@ describe('(libs/FP) Option type', () => {
         [ 0, '' ],
         [ false, '' ],
       ].forEach((a, b) => {
-        it(`should not recognise Options of '${a}' and '${b}' as equal`, () => {
+        it(`should.js should not recognise Options of '${a}' and '${b}' as equal`, () => {
           Option.of(a).should.not.eql(Option.of(b));
+        });
+
+        // TODO enable this test when chai is introduced to the project
+        //it(`chai should not recognise Options of '${a}' and '${b}' as equal`, () => {
+        //  chaiAssert.notDeepEqual(Option.of(a), Option.of(b));
+        //});
+
+        it(`node:assert should not recognise Options of '${a}' and '${b}' as equal`, () => {
+          nodeAssert.notDeepStrictEqual(Option.of(a), Option.of(b));
         });
       });
     });
