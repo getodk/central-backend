@@ -8,7 +8,7 @@ on:
     - test/db-migrations/**
 
 jobs:
-  standard-tests:
+  db-migration-tests:
     timeout-minutes: 2
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
