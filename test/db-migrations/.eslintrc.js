@@ -3,7 +3,6 @@ module.exports = {
   rules: {
     'key-spacing': 'off',
     'keyword-spacing': 'off',
-    'no-console': 'off',
     'no-multi-spaces': 'off',
     'no-plusplus': 'off',
     'no-use-before-define': 'off',

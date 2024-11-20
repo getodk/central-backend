@@ -1,4 +1,4 @@
-const _log = level => (...args) => console.log(level, ...args);
+const _log = level => (...args) => console.log(level, ...args); // eslint-disable-line no-console
 global.log = _log('[INFO]');
 
 const fs = require('node:fs');

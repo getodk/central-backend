@@ -40,8 +40,6 @@ function runBefore(migrationName) {
 
   const previousMigration = allMigrations[idx - 1];
 
-  log('previousMigration:', previousMigration);
-
   return runIncluding(previousMigration);
 }
 
