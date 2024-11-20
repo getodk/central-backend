@@ -32,5 +32,5 @@ function mochaGlobalTeardown() {
 module.exports = { mochaGlobalSetup, mochaGlobalTeardown };
 
 function jsonFile(path) {
-  return JSON.parse(fs.readFileSync(path, { encoding:'utf8' }));
+  return JSON.parse(fs.readFileSync(path, { encoding: 'utf8' }));
 }

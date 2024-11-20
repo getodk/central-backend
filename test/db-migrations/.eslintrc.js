@@ -1,7 +1,6 @@
 module.exports = {
   extends: '../.eslintrc.js',
   rules: {
-    'key-spacing': 'off',
     'keyword-spacing': 'off',
     'no-multi-spaces': 'off',
     'no-plusplus': 'off',

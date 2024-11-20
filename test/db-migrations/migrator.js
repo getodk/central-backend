@@ -26,7 +26,7 @@ const { execSync } = require('node:child_process');
 const migrationsDir = './lib/model/migrations';
 const holdingPen = './test/db-migrations/.holding-pen';
 
-fs.mkdirSync(holdingPen, { recursive:true });
+fs.mkdirSync(holdingPen, { recursive: true });
 
 restoreMigrations();
 const allMigrations = loadMigrationsList();
@@ -52,7 +52,7 @@ function runIncluding(lastMigrationToRun) {
   }
 
   log('Running migrations until:', lastMigrationToRun, '...');
-  const res = execSync(`node ./lib/bin/run-migrations.js`, { encoding:'utf8' });
+  const res = execSync(`node ./lib/bin/run-migrations.js`, { encoding: 'utf8' });
 
   lastRunIdx = finalIdx;
 

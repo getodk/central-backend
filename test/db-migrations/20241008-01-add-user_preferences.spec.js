@@ -15,9 +15,9 @@ describeMigration('20241008-01-add-user_preferences', ({ runMigrationBeingTested
 
   it('should create user_site_preferences table', async () => {
     await assertTableSchema('user_site_preferences',
-      { column_name:'userId',        is_nullable:'NO', data_type:'integer' },
-      { column_name:'propertyName',  is_nullable:'NO', data_type:'text' },
-      { column_name:'propertyValue', is_nullable:'NO', data_type:'jsonb' },
+      { column_name: 'userId',        is_nullable: 'NO', data_type: 'integer' },
+      { column_name: 'propertyName',  is_nullable: 'NO', data_type: 'text' },
+      { column_name: 'propertyValue', is_nullable: 'NO', data_type: 'jsonb' },
     );
   });
 
@@ -30,10 +30,10 @@ describeMigration('20241008-01-add-user_preferences', ({ runMigrationBeingTested
 
   it('should create user_project_preferences table', async () => {
     await assertTableSchema('user_project_preferences',
-      { column_name:'userId',        is_nullable:'NO', data_type:'integer' },
-      { column_name:'projectId',     is_nullable:'NO', data_type:'integer' },
-      { column_name:'propertyName',  is_nullable:'NO', data_type:'text' },
-      { column_name:'propertyValue', is_nullable:'NO', data_type:'jsonb' },
+      { column_name: 'userId',        is_nullable: 'NO', data_type: 'integer' },
+      { column_name: 'projectId',     is_nullable: 'NO', data_type: 'integer' },
+      { column_name: 'propertyName',  is_nullable: 'NO', data_type: 'text' },
+      { column_name: 'propertyValue', is_nullable: 'NO', data_type: 'jsonb' },
     );
   });
 

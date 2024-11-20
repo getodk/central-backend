@@ -99,7 +99,7 @@ function assertRowsMatch(actualRows, expectedRows) {
       const filteredRemainingRows = remainingRows.map(r => _.pick(r, Object.keys(x)));
       assert.fail(
         `Expected row ${i} not found:\njson=` +
-        JSON.stringify({ remainingRows, filteredRemainingRows, expectedRow:x }),
+        JSON.stringify({ remainingRows, filteredRemainingRows, expectedRow: x }),
       );
     }
   }
