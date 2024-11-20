@@ -4,8 +4,12 @@ on:
   push:
     paths:
     - .github/workflows/db-migrations.yml
+    - lib/bin/create-docker-databases.js
     - lib/model/migrations/**
     - test/db-migrations/**
+    - package.json
+    - package-lock.json
+    - Makefile
 
 jobs:
   db-migration-tests:
