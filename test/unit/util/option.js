@@ -153,8 +153,8 @@ describe('(libs/FP) Option type', () => {
   describe('assertion library interactions', () => {
     // N.B. should.equal() is different from should.eql():
     //
-    // * .eql(): check equality using ===
-    // * .eql(): check equality using "should-equal" module
+    // * .equal(): check equality using ===
+    // * .eql():   check equality using "should-equal" module
     //
     // See: https://www.npmjs.com/package/should-equal
 
