@@ -5,6 +5,7 @@ module.exports = {
   describeMigration,
 };
 
+const assert = require('node:assert');
 const _ = require('lodash');
 const migrator = require('./migrator');
 

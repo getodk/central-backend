@@ -11,7 +11,6 @@ module.exports = {
     'prefer-arrow-callback': 'off',
   },
   globals: {
-    assert: false,
     db: false,
     log: false,
     sql: false,
