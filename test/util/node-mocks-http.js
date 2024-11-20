@@ -24,7 +24,10 @@ const qs = (() => {
 })();
 
 const createRequest = options => {
-  if (!options?.url) return wrapped.createRequest(options);
+  if (!options?.url && !options?.originalUrl) return wrapped.createRequest(options);
+
+  if (options.url !== undefined && options.originalUrl === undefined) throw new Error('.url supplied without .originalUrl');
+  if (options.originalUrl !== undefined && options.url === undefined) throw new Error('.originalUrl supplied without .url');
 
   const { search } = new URL(options.url, 'http://example.test');
   const { query } = options;

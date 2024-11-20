@@ -210,7 +210,8 @@ describe('preprocessors', () => {
                 Cookie: 'session=alohomora'
               },
               cookies: { session: 'alohomora' },
-              url: '/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+              url:            '/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', // eslint-disable-line key-spacing
+              originalUrl: '/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             }),
             { auth: { isAuthenticated() { return false; } }, fieldKey: Option.none() }
           )
