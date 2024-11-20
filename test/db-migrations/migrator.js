@@ -36,7 +36,7 @@ let lastRunIdx = -1;
 
 function runBefore(migrationName) {
   const idx = getIndex(migrationName);
-  if(idx === 0) return;
+  if (idx === 0) return;
 
   const previousMigration = allMigrations[idx - 1];
 
@@ -46,7 +46,7 @@ function runBefore(migrationName) {
 function runIncluding(lastMigrationToRun) {
   const finalIdx = getIndex(lastMigrationToRun);
 
-  for(let restoreIdx=lastRunIdx+1; restoreIdx<=finalIdx; ++restoreIdx) { // eslint-disable-line no-plusplus
+  for (let restoreIdx=lastRunIdx+1; restoreIdx<=finalIdx; ++restoreIdx) { // eslint-disable-line no-plusplus
     const f = allMigrations[restoreIdx] + '.js';
     fs.renameSync(`${holdingPen}/${f}`, `${migrationsDir}/${f}`);
   }
@@ -62,7 +62,7 @@ function runIncluding(lastMigrationToRun) {
 function getIndex(migrationName) {
   const idx = allMigrations.indexOf(migrationName);
   log('getIndex()', migrationName, 'found at', idx);
-  if(idx === -1) throw new Error(`Unknown migration: ${migrationName}`);
+  if (idx === -1) throw new Error(`Unknown migration: ${migrationName}`);
   return idx;
 }
 
@@ -98,7 +98,7 @@ function exists(migrationName) {
   try {
     getIndex(migrationName);
     return true;
-  } catch(err) {
+  } catch (err) {
     return false;
   }
 }

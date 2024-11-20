@@ -23,7 +23,7 @@ function _describeMigration(describeFn, migrationName, fn) {
   const runMigrationBeingTested = (() => {
     let alreadyRun;
     return () => {
-      if(alreadyRun) throw new Error('Migration has already run!  Check your test structure.');
+      if (alreadyRun) throw new Error('Migration has already run!  Check your test structure.');
       alreadyRun = true;
       migrator.runIncluding(migrationName);
     };
@@ -41,10 +41,10 @@ describeMigration.only =  (...args) =>       _describeMigration(describe.only, .
 describeMigration.skip =  (...args) =>       _describeMigration(describe.skip, ...args); // eslint-disable-line no-multi-spaces
 
 async function assertIndexExists(tableName, expected) {
-  if(arguments.length !== 2) throw new Error('Incorrect arg count.');
+  if (arguments.length !== 2) throw new Error('Incorrect arg count.');
   const actualIndexes = await db.anyFirst(sql`SELECT indexdef FROM pg_indexes WHERE tablename=${tableName}`);
 
-  if(actualIndexes.includes(expected)) return true;
+  if (actualIndexes.includes(expected)) return true;
   assert.fail(
     'Could not find expected index:\njson=' +
     JSON.stringify({ expected, actualIndexes, }),
@@ -65,7 +65,7 @@ async function assertTableSchema(tableName, ...expectedCols) {
   await assertTableExists(tableName);
 
   expectedCols.forEach((def, idx) => {
-    if(!def.column_name) throw new Error(`Expected column definition is missing required prop: .column_name at index ${idx}`);
+    if (!def.column_name) throw new Error(`Expected column definition is missing required prop: .column_name at index ${idx}`);
   });
 
   const actualCols = await db.any(sql`SELECT * FROM information_schema.columns WHERE table_name=${tableName}`);
@@ -83,19 +83,19 @@ function assertRowsMatch(actualRows, expectedRows) {
   assert.strictEqual(actualRows.length, expectedRows.length, 'row count mismatch');
 
   const remainingRows = [...actualRows];
-  for(let i=0; i<expectedRows.length; ++i) { // eslint-disable-line no-plusplus
+  for (let i=0; i<expectedRows.length; ++i) { // eslint-disable-line no-plusplus
     const x = expectedRows[i];
     let found = false;
-    for(let j=0; j<remainingRows.length; ++j) { // eslint-disable-line no-plusplus
+    for (let j=0; j<remainingRows.length; ++j) { // eslint-disable-line no-plusplus
       const rr = remainingRows[j];
       try {
         assertIncludes(rr, x);
         remainingRows.splice(j, 1);
         found = true;
         break;
-      } catch(err) { /* keep searching */ }
+      } catch (err) { /* keep searching */ }
     }
-    if(!found) {
+    if (!found) {
       const filteredRemainingRows = remainingRows.map(r => _.pick(r, Object.keys(x)));
       assert.fail(
         `Expected row ${i} not found:\njson=` +
@@ -106,17 +106,17 @@ function assertRowsMatch(actualRows, expectedRows) {
 }
 
 function assertEqualInAnyOrder(a, b, message) {
-  if(!Array.isArray(a)) throw new Error('IllegalArgument: first arg is not an array');
-  if(!Array.isArray(b)) throw new Error('IllegalArgument: second arg is not an array');
+  if (!Array.isArray(a)) throw new Error('IllegalArgument: first arg is not an array');
+  if (!Array.isArray(b)) throw new Error('IllegalArgument: second arg is not an array');
   assert.deepEqual([...a].sort(), [...b].sort(), message);
 }
 
 function assertIncludes(actual, expected) {
-  for(const [k, expectedVal] of Object.entries(expected)) {
+  for (const [k, expectedVal] of Object.entries(expected)) {
     const actualVal = actual[k];
     try {
       assert.deepEqual(actualVal, expectedVal);
-    } catch(err) {
+    } catch (err) {
       assert.fail(`Could not find all properties of ${expected} in ${actual}`);
     }
   }
