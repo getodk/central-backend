@@ -1,3 +1,4 @@
+const should = require('should');
 const { createRequest } = require('../../util/node-mocks-http');
 
 const appRoot = require('app-root-path');
@@ -91,36 +92,47 @@ describe('middleware', () => {
 
     it('should pass through any query key content', (done) => {
       const request = createRequest({ url: '/users/23?st=inva|id' });
+      request.query.st.should.equal('inva|id');
+
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('inva|id'));
         request.url        .should.equal('/users/23?st=inva|id'); // eslint-disable-line no-multi-spaces, no-whitespace-before-property
         request.originalUrl.should.equal('/v1/key/inva|id/users/23?st=inva|id');
+        should(request.query.st).be.undefined();
         done();
       });
     });
 
     it('should escape slashes in the rewritten path prefix', (done) => {
       const request = createRequest({ url: '/users/23?st=in$va/i/d' });
+      request.query.st.should.equal('in$va/i/d');
+
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('in$va/i/d'));
         request.url        .should.equal('/users/23?st=in$va/i/d'); // eslint-disable-line no-multi-spaces, no-whitespace-before-property
         request.originalUrl.should.equal('/v1/key/in$va%2Fi%2Fd/users/23?st=in$va/i/d');
+        should(request.query.st).be.undefined();
         done();
       });
     });
 
     it('should set Some(fk) and rewrite URL if a query key is found', (done) => {
       const request = createRequest({ url: '/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' });
+      request.query.st.should.equal('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'));
         request.url        .should.equal('/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'); // eslint-disable-line no-multi-spaces, no-whitespace-before-property
         request.originalUrl.should.equal('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+        should(request.query.st).be.undefined();
         done();
       });
     });
 
     it('should decode percent-encoded query keys', (done) => {
       const request = createRequest({ url: '/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%24aa!aaaaaaaaaaaaaaaaaa' });
+      request.query.st.should.equal('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aa!aaaaaaaaaaaaaaaaaa');
+
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aa!aaaaaaaaaaaaaaaaaa'));
         request.url        .should.equal('/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%24aa!aaaaaaaaaaaaaaaaaa'); // eslint-disable-line no-multi-spaces, no-whitespace-before-property
