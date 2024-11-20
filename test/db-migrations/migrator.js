@@ -46,7 +46,7 @@ function runBefore(migrationName) {
 function runIncluding(lastMigrationToRun) {
   const finalIdx = getIndex(lastMigrationToRun);
 
-  for(let restoreIdx=lastRunIdx+1; restoreIdx<=finalIdx; ++restoreIdx) {
+  for(let restoreIdx=lastRunIdx+1; restoreIdx<=finalIdx; ++restoreIdx) { // eslint-disable-line no-plusplus
     const f = allMigrations[restoreIdx] + '.js';
     fs.renameSync(`${holdingPen}/${f}`, `${migrationsDir}/${f}`);
   }

@@ -83,10 +83,10 @@ function assertRowsMatch(actualRows, expectedRows) {
   assert.strictEqual(actualRows.length, expectedRows.length, 'row count mismatch');
 
   const remainingRows = [...actualRows];
-  for(let i=0; i<expectedRows.length; ++i) {
+  for(let i=0; i<expectedRows.length; ++i) { // eslint-disable-line no-plusplus
     const x = expectedRows[i];
     let found = false;
-    for(let j=0; j<remainingRows.length; ++j) {
+    for(let j=0; j<remainingRows.length; ++j) { // eslint-disable-line no-plusplus
       const rr = remainingRows[j];
       try {
         assertIncludes(rr, x);
