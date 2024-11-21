@@ -1132,6 +1132,135 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body.length.should.equal(2);
               });
           }));
+
+          it('should do something with draft subs from two draft versions', testService(async (service, { oneFirst, run }) => {
+            const asAlice = await service.login('alice');
+
+            // Create a draft of a published form
+            await asAlice.post('/v1/projects/1/forms/simple/draft')
+              .expect(200);
+
+            // Get the draft def id for later use
+            const oldDraftDefId = await oneFirst(sql`select "draftDefId" from forms where "xmlFormId"='simple'`);
+
+            // Send a submission to the draft
+            await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+              .send(testData.instances.simple.one)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            // Replace the draft with a new version
+            await asAlice.post('/v1/projects/1/forms/simple/draft')
+              .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
+              .set('Content-Type', 'application/xml')
+              .expect(200);
+
+            // Send the submission with a different instance ID to the new draft
+            await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+              .send(testData.instances.simple.two)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            // Confirm that for current draft version, there is only one submission
+            await asAlice.get('/v1/projects/1/forms/simple/draft/submissions')
+              .then(({ body }) => {
+                body.length.should.equal(1);
+              });
+
+            // ----- Un-delete old draft submissions ----
+            // without swapping the draft def, keeping the current draft def as the active draft
+
+            // Undelete the submissions associated with first draft def. This is possible
+            // because instanceIds don't intersect.
+            await run(sql`
+              UPDATE submissions
+              SET "deletedAt" = null
+              FROM submission_defs
+              WHERE submissions."id" = submission_defs."submissionId"
+              AND submissions."deletedAt" IS NOT NULL
+              AND submission_defs."formDefId" = ${oldDraftDefId};`);
+
+            // Confirm that both draft submissions are visible even though they were for
+            // different draft def IDs
+            await asAlice.get('/v1/projects/1/forms/simple/draft/submissions')
+              .then(({ body }) => {
+                body.length.should.equal(2);
+              });
+          }));
+
+          it('should do something with draft subs in a def that got published', testService(async (service, { oneFirst, all, run }) => {
+            const asAlice = await service.login('alice');
+
+            // Create a draft of a published form
+            await asAlice.post('/v1/projects/1/forms/simple/draft')
+              .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="two"'))
+              .set('Content-Type', 'application/xml')
+              .expect(200);
+
+            // Get the draft def id for later use
+            const oldDraftDefId = await oneFirst(sql`select "draftDefId" from forms where "xmlFormId"='simple'`);
+
+            // Send a submission to the draft
+            await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+              .send(testData.instances.simple.one)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            // Publish the draft
+            await asAlice.post('/v1/projects/1/forms/simple/draft/publish')
+              .expect(200);
+
+            // Send a submission to the published form (new version)
+            await asAlice.post('/v1/projects/1/forms/simple/submissions')
+              .send(testData.instances.simple.two
+                .replace('id="simple"', 'id="simple" version="two"')
+              )
+              .set('Content-Type', 'application/xml')
+              .expect(200);
+
+            // confirm that there is no draft version
+            await asAlice.get('/v1/projects/1/forms/simple/draft/submissions')
+              .expect(404);
+
+            // Confirm that for current published version, there is only one submission
+            await asAlice.get('/v1/projects/1/forms/simple/submissions')
+              .then(({ body }) => {
+                body.length.should.equal(1);
+              });
+
+            // Show that both submissions are attached to the same form def id
+            const sds = await oneFirst(sql`select count(*) from submission_defs where "formDefId" = ${oldDraftDefId}`);
+            sds.should.equal(2);
+
+            const subs = await all(sql`select * from submissions order by id`);
+            subs[0].instanceId.should.equal('one');
+            subs[0].deletedAt.should.not.be.null();
+            subs[0].draft.should.equal(true);
+
+            subs[1].instanceId.should.equal('two');
+            should(subs[1].deletedAt).be.null();
+            subs[1].draft.should.equal(false);
+
+            // ----- Un-delete old draft submissions ----
+            // the draft def became the published def so the deleted draft subs
+            // can only be brought back as regular published subs
+            // IF there are no instanceId conflicts, which there aren't in this case
+
+            await run(sql`
+              UPDATE submissions
+              SET "deletedAt" = null, draft = false
+              FROM submission_defs
+              WHERE submissions."id" = submission_defs."submissionId"
+              AND submissions."deletedAt" IS NOT NULL
+              AND submission_defs."formDefId" = ${oldDraftDefId};`);
+
+            // Confirm that both draft submissions are visible even though they were for
+            // different draft def IDs
+            await asAlice.get('/v1/projects/1/forms/simple/submissions')
+              .then(({ body }) => {
+                body.length.should.equal(2);
+              });
+          }));
         });
       });
     });
