@@ -2180,9 +2180,9 @@ describe('datasets and entities', () => {
               .expect(200)
               .then(() =>
                 Forms.getByProjectAndXmlFormId(1, 'withAttachments')
-                  .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+                  .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
                     .then(attachment => {
-                      attachment.value.datasetId.should.not.be.null();
+                      attachment.get().datasetId.should.not.be.null();
                     })))))));
 
       it('should not link dataset if previous version has blob', testService((service, { Forms, FormAttachments }) =>
@@ -2205,10 +2205,10 @@ describe('datasets and entities', () => {
               .expect(200))
             .then(() =>
               Forms.getByProjectAndXmlFormId(1, 'withAttachments')
-                .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+                .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
                   .then(attachment => {
-                    should(attachment.value.datasetId).be.null();
-                    should(attachment.value.blobId).not.be.null();
+                    should(attachment.get().datasetId).be.null();
+                    should(attachment.get().blobId).not.be.null();
                   }))))));
 
       it('should link dataset if previous version does not have blob or dataset linked', testService((service, { Forms, FormAttachments }) =>
@@ -2230,10 +2230,10 @@ describe('datasets and entities', () => {
               .expect(200))
             .then(() =>
               Forms.getByProjectAndXmlFormId(1, 'withAttachments')
-                .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+                .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
                   .then(attachment => {
-                    should(attachment.value.datasetId).not.be.null();
-                    should(attachment.value.blobId).be.null();
+                    should(attachment.get().datasetId).not.be.null();
+                    should(attachment.get().blobId).be.null();
                   }))))));
 
       // Verifying autolinking happens only for attachment with "file" type
@@ -2249,9 +2249,9 @@ describe('datasets and entities', () => {
               .expect(200)
               .then(() =>
                 Forms.getByProjectAndXmlFormId(1, 'withAttachments')
-                  .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people')
+                  .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people')
                     .then(attachment => {
-                      should(attachment.value.datasetId).be.null();
+                      should(attachment.get().datasetId).be.null();
                     })))))));
 
       describe('autolink when publishing form that creates and consumes new dataset', () => {

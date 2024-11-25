@@ -713,6 +713,21 @@ describe('/audits', () => {
               body[3].action.should.equal('user.session.create');
             })))));
 
+    it('should fail gracefully if note decoding fails', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .set('X-Action-Notes', 'doing this for fun%ae')
+          .send(testData.forms.binaryType)
+          .expect(400)
+          .then(({ body }) => {
+            body.should.deepEqual({
+              code: 400.6,
+              details: { field: 'x-action-notes' },
+              message: 'An expected header field (x-action-notes) did not match the expected format.',
+            });
+          }))));
+
     describe('audit logs of deleted and purged actees', () => {
       it('should get the information of a purged actee', testService(async (service, { Forms }) =>
         service.login('alice', (asAlice) =>
