@@ -865,11 +865,43 @@ describe('api: /projects/:id/forms (drafts)', () => {
             .set('Content-Type', 'application/xml')
             .expect(200);
 
-          // Send the submission to the new draft
+          // Send the submission (with a new, non-conflicting instance id) to the new draft
+          await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/simple/draft/submissions')
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].instanceId.should.equal('two');
+            });
+        }));
+
+        it('should NOT allow a new draft submission to be sent if it conflicts with a soft-deleted old ones', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // Create a draft of a published form
+          await asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200);
+
           await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
             .send(testData.instances.simple.one)
             .set('Content-Type', 'text/xml')
             .expect(200);
+
+          // Replace the draft with a new version
+          await asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // Send the submission to the new draft but get a 409 conflict because the instance ID exists
+          // in real usage, these instance IDs will be UUIDs so there shouldn't be conflicts
+          await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(409);
         }));
 
         it('should soft-delete submissions of undeeded draft when a new version is uploaded', testService(async (service, { oneFirst }) => {
@@ -1096,9 +1128,9 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body.length.should.equal(0);
               });
 
-            // Send the submission to the same draft form again
+            // Send the submission (with a new instance id) to the same draft form again
             await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
-              .send(testData.instances.simple.one)
+              .send(testData.instances.simple.three)
               .set('Content-Type', 'text/xml')
               .expect(200);
 
@@ -1110,8 +1142,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
 
             // ----- Swap out old draft submissions ----
 
-            // Soft-delete the existing draft submissions so there are not conflicts
-            // They might include the same instance IDs so they shouldn't be combined
+            // Soft-delete the existing draft submissions
             await Submissions.deleteDraftSubmissions(formId);
 
             // Recover the deleted draft submissions by first setting the previous draft to the current draft
@@ -1133,7 +1164,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
               });
           }));
 
-          it('should do something with draft subs from two draft versions', testService(async (service, { oneFirst, run }) => {
+          it('should combine draft subs from two draft versions if recovering old subs without deleting new ones', testService(async (service, { oneFirst, run }) => {
             const asAlice = await service.login('alice');
 
             // Create a draft of a published form
@@ -1188,7 +1219,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
               });
           }));
 
-          it('should do something with draft subs in a def that got published', testService(async (service, { oneFirst, all, run }) => {
+          it('should recover draft subs in a def that got published (without changing the version) by adding them to the published subs', testService(async (service, { oneFirst, all, run }) => {
             const asAlice = await service.login('alice');
 
             // Create a draft of a published form
@@ -1254,8 +1285,8 @@ describe('api: /projects/:id/forms (drafts)', () => {
               AND submissions."deletedAt" IS NOT NULL
               AND submission_defs."formDefId" = ${oldDraftDefId};`);
 
-            // Confirm that both draft submissions are visible even though they were for
-            // different draft def IDs
+            // Confirm that both draft submissions are visible in the published for submissions
+            // even though they were for a form def ID that was originally a draft.
             await asAlice.get('/v1/projects/1/forms/simple/submissions')
               .then(({ body }) => {
                 body.length.should.equal(2);
