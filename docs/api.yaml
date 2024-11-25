@@ -1013,7 +1013,7 @@ paths:
       - App User Authentication
       summary: Using App User Authentication
       description: |-
-        To use App User Authentication, first obtain a App User, typically by using the configuration panel in the user interface, or else by using the [App User API Resource](/central-api-accounts-and-users/#app-users). Once you have the token, you can apply it to any eligible action by prefixing the URL with `/key/{appUser}` as follows:
+        To use App User Authentication, first obtain an App User, typically by using the configuration panel in the user interface, or else by using the [App User API Resource](/central-api-accounts-and-users/#app-users). Once you have the token, you can apply it to any eligible action by prefixing the URL with `/key/{appUser}` as follows:
 
         `/v1/key/!Ms7V3$Zdnd63j5HFacIPFEvFAuwNqTUZW$AsVOmaQFf$vIC!F8dJjdgiDnJXXOt/example/request/path`
 
@@ -1045,9 +1045,9 @@ paths:
         
         **Revoking an App User**
 
-        The token associated with a App User is actually just its Session Token. As a result, although a App User Token can uniquely be used as a URL prefix as described here, the session associated with it can be revoked in exactly the same way a session is logged out, by issuing a `DELETE` request to its Session resource.
+        The token associated with an App User is actually just its Session Token. As a result, although an App User Token can uniquely be used as a URL prefix as described here, the session associated with it can be revoked in exactly the same way a session is logged out, by issuing a `DELETE` request to its Session resource.
 
-        Note, however, that a App User cannot revoke itself; a `User` must perform this action.
+        Note, however, that an App User cannot revoke itself; a `User` must perform this action.
       operationId: Revoking an App User
       parameters:
       - name: token
@@ -1875,12 +1875,12 @@ paths:
     delete:
       tags:
       - App Users
-      summary: Deleting a App User
+      summary: Deleting an App User
       description: |-
         You don't have to delete a `App User` in order to cut off its access. Using a `User`'s credentials you can simply [log the App User's session out](/central-api-authentication/#logging-out-current-session) using its token. This will end its session without actually deleting the App User, which allows you to still see it in the configuration panel and inspect its history. This is what the administrative panel does when you choose to "Revoke" the App User.
 
         That said, if you do wish to delete the App User altogether, you can do so by issuing a `DELETE` request to its resource path. App Users cannot delete themselves.
-      operationId: Deleting a App User
+      operationId: Deleting an App User
       parameters:
       - name: id
         in: path
@@ -3670,7 +3670,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/FormAttachment'
               example:
-              - name: myfile.mp3
+              - name: myfile.png
                 type: image
                 exists: true
                 blobExists: true
@@ -4198,7 +4198,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/FormAttachment'
               example:
-              - name: myfile.mp3
+              - name: myfile.png
                 type: image
                 exists: true
                 blobExists: true
@@ -4899,7 +4899,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/FormAttachment'
               example:
-              - name: myfile.mp3
+              - name: myfile.png
                 type: image
                 exists: true
                 blobExists: true
@@ -6165,9 +6165,8 @@ paths:
       tags:
       - Submissions
       summary: Retrieving Submission XML
-      description: To get only the XML of the `Submission` rather than all of the
-        details with the XML as one of many properties, just add `.xml` to the end
-        of the request URL.
+      description: To retrieve the XML of the `Submission`, just append `.xml` to
+        the end of the request URL.
       operationId: Retrieving Submission XML
       parameters:
       - name: projectId
@@ -12264,7 +12263,7 @@ components:
       properties:
         name:
           type: string
-          example: myfile.mp3
+          example: myfile.png
           description: The name of the file as specified in the XForm.
         type:
           $ref: '#/components/schemas/FormAttachmentType'
@@ -12659,7 +12658,7 @@ components:
       properties:
         name:
           type: string
-          example: myfile.mp3
+          example: myfile.png
           description: The name of the file as specified in the Submission XML.
         exists:
           type: boolean
