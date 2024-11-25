@@ -348,6 +348,30 @@ module.exports = {
     simpleEntity: `<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
   <h:head>
+    <model entities:entities-version="2024.1.0">
+      <instance>
+        <data id="simpleEntity" orx:version="1.0">
+          <name/>
+          <age/>
+          <hometown/>
+          <meta>
+            <entity dataset="people" id="" create="">
+              <label/>
+            </entity>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+      <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+      <bind nodeset="/data/hometown" type="string"/>
+    </model>
+  </h:head>
+</h:html>`,
+
+    // Copy of the above form with the original entities-version
+    simpleEntity2022: `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+  <h:head>
     <model entities:entities-version="2022.1.0">
       <instance>
         <data id="simpleEntity" orx:version="1.0">
@@ -371,7 +395,7 @@ module.exports = {
     multiPropertyEntity: `<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
   <h:head>
-    <model entities:entities-version="2022.1.0">
+    <model entities:entities-version="2024.1.0">
       <instance>
         <data id="multiPropertyEntity" orx:version="1.0">
           <q1/>
@@ -394,6 +418,29 @@ module.exports = {
 </h:html>`,
 
     updateEntity: `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+  <h:head>
+    <model entities:entities-version="2024.1.0">
+      <instance>
+        <data id="updateEntity" orx:version="1.0">
+          <name/>
+          <age/>
+          <hometown/>
+          <meta>
+            <entity dataset="people" id="" update="" baseVersion="" branchId="" trunkVersion="">
+              <label/>
+            </entity>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+      <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+    </model>
+  </h:head>
+</h:html>`,
+
+    // Copy of the above form with the original entities-version spec
+    updateEntity2023: `<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
   <h:head>
     <model entities:entities-version="2023.1.0">

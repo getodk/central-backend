@@ -1063,25 +1063,25 @@ testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
       const asAlice = await service.login('alice');
 
       // Upload one form with multiple versions
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.updateEntity)
+      await asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023)
         .expect(200);
 
-      await asAlice.post('/v1/projects/1/forms/updateEntity/draft')
-        .send(testData.forms.updateEntity.replace('orx:version="1.0"', 'orx:version="2.0"'))
+      await asAlice.post('/v1/projects/1/forms/updateEntity/draft?ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023.replace('orx:version="1.0"', 'orx:version="2.0"'))
         .set('Content-Type', 'text/xml')
         .expect(200);
 
       await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish');
 
-      await asAlice.post('/v1/projects/1/forms/updateEntity/draft')
-        .send(testData.forms.updateEntity.replace('orx:version="1.0"', 'orx:version="3.0"'))
+      await asAlice.post('/v1/projects/1/forms/updateEntity/draft?ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023.replace('orx:version="1.0"', 'orx:version="3.0"'))
         .set('Content-Type', 'text/xml')
         .expect(200);
 
       // Upload another form that needs updating
-      await asAlice.post('/v1/projects/1/forms')
-        .send(testData.forms.updateEntity.replace('id="updateEntity"', 'id="updateEntity2"'))
+      await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023.replace('id="updateEntity"', 'id="updateEntity2"'))
         .expect(200);
 
       // Upload an entity form that doesn't really need updating but does have 'update' in the actions column
@@ -1090,14 +1090,14 @@ testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
         .expect(200);
 
       // Upload an entity form that does not need updating
-      await asAlice.post('/v1/projects/1/forms')
-        .send(testData.forms.simpleEntity)
+      await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+        .send(testData.forms.simpleEntity2022)
         .expect(200);
 
       // Deleted forms and projects
       // Upload another form that needs updating but will be deleted
-      await asAlice.post('/v1/projects/1/forms')
-        .send(testData.forms.updateEntity.replace('id="updateEntity"', 'id="updateEntityDeleted"'))
+      await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023.replace('id="updateEntity"', 'id="updateEntityDeleted"'))
         .expect(200);
 
       await asAlice.delete('/v1/projects/1/forms/updateEntityDeleted')
@@ -1110,8 +1110,8 @@ testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
         .then(({ body }) => body.id);
 
       // Upload a form that needs updating to the new project
-      await asAlice.post(`/v1/projects/${newProjectId}/forms?publish=true`)
-        .send(testData.forms.updateEntity)
+      await asAlice.post(`/v1/projects/${newProjectId}/forms?publish=true&ignoreWarnings=true`)
+        .send(testData.forms.updateEntity2023)
         .expect(200);
 
       // Delete the new project
