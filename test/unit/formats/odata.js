@@ -853,20 +853,29 @@ describe('odata message composition', () => {
         { instanceId: 'two', repeatId: 'this should probably be rejected' },
         { instanceId: 'two', repeatId: '0000000000000000000000000000000000000000' },
       ].forEach(skipToken => {
-        it(`should reject bad skipToken '${JSON.stringify(skipToken)}'`, () => {
+        it(`should reject bad skipToken '${JSON.stringify(skipToken)}'`, done => {
           const query = { $skiptoken: QueryOptions.getSkiptoken(skipToken) };
           const inRows = streamTest.fromObjects([
             mockSubmission('one', testData.instances.withrepeat.one),
             mockSubmission('two', testData.instances.withrepeat.two),
             mockSubmission('three', testData.instances.withrepeat.three)
           ]);
-          return fieldsFor(testData.forms.withrepeat)
+          fieldsFor(testData.forms.withrepeat)
             .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows))
-            .then((stream) => stream.pipe(streamTest.toText((err, result) => {
-              should(err).be.an.Error();
-              should(result).equalOneOf([ undefined, null ]);
-              err.message.should.equal('');
-            })));
+            .then((stream) => {
+              stream.streams[stream.streams.length-1].on('error', err => {
+                console.log('hi there:', err);
+                should(err).be.an.Error();
+                err.message.should.equal('cursorPredicate was never fulfilled');
+                done();
+              });
+              return stream.pipe(streamTest.toText((err, result) => {
+                done('pipe should not have completed');
+              }));
+            })
+            .catch(err => {
+              done('How did we get here?');
+            });
         });
       });
     });
