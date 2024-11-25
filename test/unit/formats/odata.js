@@ -853,14 +853,14 @@ describe('odata message composition', () => {
         { instanceId: 'two', repeatId: 'this should probably be rejected' },
         { instanceId: 'two', repeatId: '0000000000000000000000000000000000000000' },
       ].forEach(skipToken => {
-        it.only(`should reject bad skipToken '${JSON.stringify(skipToken)}'`, done => {
+        it(`should reject bad skipToken '${JSON.stringify(skipToken)}'`, () => {
           const query = { $skiptoken: QueryOptions.getSkiptoken(skipToken) };
           const inRows = streamTest.fromObjects([
             mockSubmission('one', testData.instances.withrepeat.one),
             mockSubmission('two', testData.instances.withrepeat.two),
             mockSubmission('three', testData.instances.withrepeat.three)
           ]);
-          fieldsFor(testData.forms.withrepeat)
+          return fieldsFor(testData.forms.withrepeat)
             .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows))
             .then((stream) => stream.pipe(streamTest.toText((err, result) => {
               should(err).be.an.Error();
