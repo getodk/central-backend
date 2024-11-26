@@ -861,9 +861,6 @@ describe('odata message composition', () => {
             mockSubmission('three', testData.instances.withrepeat.three)
           ]);
 
-          // FIXME tidy this up
-          // FIXME confirm that these tests fail if the error is NOT thrown
-
           fieldsFor(testData.forms.withrepeat)
             .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows))
             .then((stream) => {
@@ -876,10 +873,7 @@ describe('odata message composition', () => {
                 if (err) return done(err);
                 done('pipe should not have completed');
               }));
-            })
-            .catch(err => {
-              done(err);
-            });
+            }, done);
         });
       });
     });
