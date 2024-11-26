@@ -860,6 +860,10 @@ describe('odata message composition', () => {
             mockSubmission('two', testData.instances.withrepeat.two),
             mockSubmission('three', testData.instances.withrepeat.three)
           ]);
+
+          // FIXME tidy this up
+          // FIXME confirm that these tests fail if the error is NOT thrown
+
           fieldsFor(testData.forms.withrepeat)
             .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows))
             .then((stream) => {
