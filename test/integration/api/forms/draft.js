@@ -1292,6 +1292,63 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body.length.should.equal(2);
               });
           }));
+
+          it('should show what happens when a published def is set as the draft def of the form', testService(async (service, { one, oneFirst, run }) => {
+            const asAlice = await service.login('alice');
+
+            // Upload a new draft with a new version
+            await asAlice.post('/v1/projects/1/forms/simple/draft')
+              .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="drafty2"'))
+              .set('Content-Type', 'application/xml')
+              .expect(200);
+
+            // Get the draft def id and form id for later use
+            const oldDraftDefId = await oneFirst(sql`select "draftDefId" from forms where "xmlFormId"='simple'`);
+
+            // Send a submission to the draft
+            await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+              .send(testData.instances.simple.one)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            // Publish the draft
+            await asAlice.post('/v1/projects/1/forms/simple/draft/publish')
+              .expect(200);
+
+            // Set the old draft def as the draft def of the form (but this is also the same as th current def)
+            await run(sql`update forms set "draftDefId" = ${oldDraftDefId} where "xmlFormId"='simple'`);
+
+            // Show that the currentDefId and draftDefId are the same on the form
+            const formRow = await one(sql`select "currentDefId", "draftDefId" from forms where "xmlFormId"='simple'`);
+            formRow.currentDefId.should.equal(formRow.draftDefId);
+
+            // Before submission recovery, confirm that are no submissions for the published form
+            await asAlice.get('/v1/projects/1/forms/simple/submissions')
+              .then(({ body }) => {
+                body.length.should.equal(0);
+              });
+
+            // Undelete the submissions associated with the draft def while keeping it as a draft submission
+            await run(sql`
+              UPDATE submissions
+              SET "deletedAt" = null
+              FROM submission_defs
+              WHERE submissions."id" = submission_defs."submissionId"
+              AND submissions."deletedAt" IS NOT NULL
+              AND submission_defs."formDefId" = ${oldDraftDefId};`);
+
+            // After submission recovery, there should still be zero submissions because the only submission is a draft
+            await asAlice.get('/v1/projects/1/forms/simple/submissions')
+              .then(({ body }) => {
+                body.length.should.equal(0);
+              });
+
+            // But the submissions should be visible for the draft form
+            await asAlice.get('/v1/projects/1/forms/simple/draft/submissions')
+              .then(({ body }) => {
+                body.length.should.equal(1);
+              });
+          }));
         });
       });
     });
