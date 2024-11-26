@@ -864,7 +864,7 @@ describe('odata message composition', () => {
           fieldsFor(testData.forms.withrepeat)
             .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows))
             .then((stream) => {
-              stream.streams[stream.streams.length-1].on('error', err => {
+              stream.streams.at(-1).on('error', err => {
                 should(err).be.an.Error();
                 err.message.should.equal('cursorPredicate was never fulfilled');
                 done();
