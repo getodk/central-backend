@@ -868,17 +868,17 @@ describe('odata message composition', () => {
             .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows))
             .then((stream) => {
               stream.streams[stream.streams.length-1].on('error', err => {
-                console.log('hi there:', err);
                 should(err).be.an.Error();
                 err.message.should.equal('cursorPredicate was never fulfilled');
                 done();
               });
-              return stream.pipe(streamTest.toText((err, result) => {
+              return stream.pipe(streamTest.toText(err => {
+                if (err) return done(err);
                 done('pipe should not have completed');
               }));
             })
             .catch(err => {
-              done('How did we get here?');
+              done(err);
             });
         });
       });
