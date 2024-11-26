@@ -1086,6 +1086,45 @@ describe('api: /projects/:id/forms (drafts)', () => {
           fds.should.equal(2); // Old draft has now been deleted. Count also includes published and new draft.
         }));
 
+        it('should not let soft-deleted draft submissions be undeleted', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // Create a draft and send in two submissions
+          // one submission (one) will also be send to the published form and deleted and restored
+          // another submission (two) will only be sent to the draft form
+          await asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200);
+          await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+          await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+            .send(testData.instances.simple.two)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          // Abandon the draft to delete the submissions
+          await asAlice.delete('/v1/projects/1/forms/simple/draft');
+
+          // Send the same instance id submission to the published form
+          await asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200);
+
+          // delete the published sub 'one'
+          await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+            .expect(200);
+
+          // Try to undelete submission 'one' (this should undelete the one sent to the published form)
+          await asAlice.post('/v1/projects/1/forms/simple/submissions/one/restore')
+            .expect(200);
+
+          // Try to undelete the submission 'two' that only exists as a draft
+          await asAlice.post('/v1/projects/1/forms/simple/submissions/two/restore')
+            .expect(404);
+        }));
+
         describe('experimental - recovering deleted draft submissions', () => {
           it('should work in the straight forward case of replacing active draft with previous draft and submissions', testService(async (service, { oneFirst, run, Submissions }) => {
             const asAlice = await service.login('alice');
