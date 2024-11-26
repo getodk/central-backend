@@ -178,7 +178,7 @@ describe('stream utils', () => {
     it('should assemble a traditional .pipe() chain on pipe', (done) =>
       PartialPipe.of(
         fromObjects([ 4, 8, 15, 16, 23, 42 ]), doubler(), doubler()
-      )._pipe(toObjects((e, result) => {
+      ).pipe(toObjects((e, result) => {
         result.should.eql([ 16, 32, 60, 64, 92, 168 ]);
         done();
       })));
