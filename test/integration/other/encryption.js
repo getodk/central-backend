@@ -107,11 +107,11 @@ describe('managed encryption', () => {
                 // verify no charlie:
                 (decryptor(null, keys[2].id) === null).should.equal(true);
 
-                clearAlpha.pipe(toText((_, textAlpha) => {
+                clearAlpha._pipe(toText((_, textAlpha) => {
                   textAlpha.should.equal(testData.instances.simple.one);
 
                   // eslint-disable-next-line no-shadow
-                  clearBeta.pipe(toText((_, textBeta) => {
+                  clearBeta._pipe(toText((_, textBeta) => {
                     textBeta.should.equal(testData.instances.simple.two);
                     done();
                   }));
