@@ -1,4 +1,4 @@
-const { omit } = require('ramda');
+const { without } = require('ramda');
 const { testService } = require('../setup');
 const { httpZipResponseToFiles } = require('../../util/zip');
 
@@ -12,18 +12,16 @@ describe('api: /backup', () => {
     it('should return a valid zip file if the user can backup @slow', testService((service) =>
       service.login('alice', (asAlice) =>
         httpZipResponseToFiles(asAlice.post('/v1/backup').expect(200))
-          .then(res => {
-            const constantProps = ['filenames', 'keepalive', 'keys.json', 'toc.dat'];
-            res.should.have.properties(constantProps);
+          .then(({ filenames, ...files }) => {
+            const constantFiles = ['keepalive', 'keys.json', 'toc.dat'];
+            files.should.have.properties(constantFiles);
 
-            const datFiles = Object.keys(omit(constantProps, res));
+            const datFiles = without(constantFiles, filenames);
             // Because /backup ALWAYS uses config('default.database'), this list
             // may be empty in some environments, including CI.
             datFiles.should.matchEvery(/\.dat\.gz$/);
 
-            res.should.only.have.keys(...constantProps, ...datFiles);
-
-            const keysJson = JSON.parse(res['keys.json']);
+            const keysJson = JSON.parse(files['keys.json']);
             keysJson.should.only.have.keys('iv', 'local', 'privkey', 'pubkey', 'salt');
             keysJson.iv.should.be.a.String();
             keysJson.privkey.should.be.a.String();
