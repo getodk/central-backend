@@ -8,12 +8,14 @@ const streamTest = require('streamtest').v2;
 // calls the callback with an object as follows:
 // {
 //      filenames: [ names of files in zip ],
-//      {filename}: "contents",
-//      {filename}: "contents",
-//      …
+//      files: {
+//          {filename}: "contents",
+//          {filename}: "contents",
+//          …
+//      },
 // }
 const processZipFile = (zipfile, callback) => {
-  const result = { filenames: [] };
+  const result = { filenames: [], files: new Map() };
   const entries = [];
   let completed = 0;
 
@@ -36,7 +38,7 @@ const processZipFile = (zipfile, callback) => {
             // eslint-disable-next-line keyword-spacing
             if(err) return callback(err);
 
-            result[entry.fileName] = contents;
+            result.files.set(entry.fileName, contents);
             completed += 1;
             if (completed === entries.length) {
               callback(null, result);
