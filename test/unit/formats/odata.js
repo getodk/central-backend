@@ -866,7 +866,7 @@ describe('odata message composition', () => {
             .then((stream) => {
               stream.streams.at(-1).on('error', err => {
                 should(err).be.an.Error();
-                err.message.should.equal('cursorPredicate was never fulfilled');
+                err.message.should.equal('Record associated with the provided $skiptoken not found.');
                 done();
               });
               return stream.pipe(streamTest.toText(err => {
