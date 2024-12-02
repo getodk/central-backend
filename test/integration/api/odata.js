@@ -1902,8 +1902,6 @@ describe('api: /forms/:id.svc', () => {
           body.value[0].name.should.be.eql('Blaine');
           should.not.exist(body['@odata.nextLink']);
         });
-
-
     }));
 
     it('should return subtable from deleted submissions', testService(async (service) => {
