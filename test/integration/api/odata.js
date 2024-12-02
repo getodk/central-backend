@@ -1881,6 +1881,27 @@ describe('api: /forms/:id.svc', () => {
         });
     }));
 
+    it('should reject unmatched repeatId', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      const nextlink = await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=2')
+        .expect(200)
+        .then(({ body }) => {
+          body.value[0].name.should.be.eql('Candace');
+          body.value[1].name.should.be.eql('Billy');
+          body['@odata.nextLink'].should.eql('http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=2&%24skiptoken=01eyJyZXBlYXRJZCI6IjUyZWZmOWVhODI1NTAxODM4ODBiOWQ2NGMyMDQ4NzY0MmZhNmU2MGMifQ%3D%3D');
+          return body['@odata.nextLink'];
+        });
+
+      const skiptoken = '01' + encodeURIComponent(Buffer.from(JSON.stringify({ repeatId: 'nonsense' })).toString('base64'));
+      await asAlice.get(nextlink.replace('http://localhost:8989', '').replace('01eyJyZXBlYXRJZCI6IjUyZWZmOWVhODI1NTAxODM4ODBiOWQ2NGMyMDQ4NzY0MmZhNmU2MGMifQ%3D%3D', skiptoken))
+        .expect(200)
+        .then(({ body }) => {
+          body.value[0].name.should.be.eql('Blaine');
+          should.not.exist(body['@odata.nextLink']);
+        });
+    }));
+
     it('should limit and filter subtable', testService(async (service) => {
       const asAlice = await withSubmissions(service, identity);
 
