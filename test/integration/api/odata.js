@@ -1881,7 +1881,7 @@ describe('api: /forms/:id.svc', () => {
         });
     }));
 
-    it.only('should reject unmatched repeatId', testService(async (service) => {
+    it('should reject unmatched repeatId', testService(async (service) => {
       const asAlice = await withSubmissions(service, identity);
 
       const nextlink = await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=2')
