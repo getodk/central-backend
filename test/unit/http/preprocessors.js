@@ -183,8 +183,7 @@ describe('preprocessors', () => {
           should.not.exist(context);
         }));
 
-      it('should do nothing if Cookie auth is attempted with primary auth present', () => {
-        let caught = false;
+      it('should prioritise primary auth over Cookie auth', () =>
         Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
           new Context(
@@ -196,16 +195,9 @@ describe('preprocessors', () => {
             }, cookies: { session: 'alohomora' } }),
             { auth: { isAuthenticated() { return false; } }, fieldKey: Option.none() }
           )
-        )).catch((err) => {
-          err.problemCode.should.equal(401.2);
-          caught = true;
-        }).then(() => {
-          caught.should.equal(true);
-        });
-      });
+        )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
-      it('should do nothing if Cookie auth is attempted with fk auth present', () => {
-        let caught = false;
+      it('should prioritise fk auth over Cookie auth', () =>
         Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
           new Context(
@@ -222,13 +214,7 @@ describe('preprocessors', () => {
             }),
             { auth: { isAuthenticated() { return false; } }, fieldKey: Option.none() }
           )
-        )).catch((err) => {
-          err.problemCode.should.equal(401.2);
-          caught = true;
-        }).then(() => {
-          caught.should.equal(true);
-        });
-      });
+        )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should work for HTTPS GET requests', () =>
         Promise.resolve(authHandler(

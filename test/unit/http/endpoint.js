@@ -476,9 +476,7 @@ describe('endpoints', () => {
       const responseTest = streamTest.toText((err, result) => {
         err.message.should.equal('ERR_EXPECTED');
         trailers.should.eql({ Status: 'Error' });
-        // eslint-disable-next-line no-multi-spaces
-        should.not.exist(result);                  // node v14
-        (result === undefined).should.equal(true); // post node v14.??
+        should(result).be.undefined();
         done();
       });
       responseTest.addTrailers = function(t) { trailers = t; };

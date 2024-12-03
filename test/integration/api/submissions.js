@@ -3362,22 +3362,34 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .send(withSimpleIds('one', 'two'))
             .set('Content-Type', 'text/xml')
             .expect(200))
+          .then(() => asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions/one/restore')
+            .expect(200))
           .then(() => oneFirst(sql`select id from submissions`))
           .then((submissionId) => all(sql`SELECT id FROM submission_defs WHERE "submissionId" = ${submissionId} ORDER BY id desc`)
             .then(map(o => o.id))
             .then(submissionDefIds => asAlice.get('/v1/projects/1/forms/simple/submissions/one/audits')
               .expect(200)
               .then(({ body }) => {
-                body.length.should.equal(3);
+                body.length.should.equal(5);
                 for (const audit of body) audit.should.be.an.Audit();
-                body[0].action.should.equal('submission.update.version');
-                body[0].details.should.eql({ instanceId: 'two', submissionId, submissionDefId: submissionDefIds[0] });
-                body[1].action.should.equal('submission.update');
-                body[1].details.reviewState.should.equal('rejected');
-                body[1].details.submissionId.should.equal(submissionId);
-                should.exist(body[1].details.submissionDefId);
-                body[2].action.should.equal('submission.create');
-                body[2].details.should.eql({ instanceId: 'one', submissionId, submissionDefId: submissionDefIds[1] });
+                body[0].action.should.equal('submission.restore');
+                body[0].details.should.eql({ submissionId, instanceId: 'one' });
+
+                body[1].action.should.equal('submission.delete');
+                body[1].details.should.eql({ submissionId, instanceId: 'one' });
+
+                body[2].action.should.equal('submission.update.version');
+                body[2].details.should.eql({ instanceId: 'two', submissionId, submissionDefId: submissionDefIds[0] });
+
+                body[3].action.should.equal('submission.update');
+                body[3].details.reviewState.should.equal('rejected');
+                body[3].details.submissionId.should.equal(submissionId);
+                should.exist(body[3].details.submissionDefId);
+
+                body[4].action.should.equal('submission.create');
+                body[4].details.should.eql({ instanceId: 'one', submissionId, submissionDefId: submissionDefIds[1] });
               }))))));
 
     it('should not expand actor when not extended', testService((service) =>

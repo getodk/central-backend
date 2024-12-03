@@ -1091,7 +1091,7 @@ describe('Offline Entities', () => {
       backlogCount.should.equal(0);
     }));
 
-    it.skip('should apply an entity update as a create, and then properly handle the delayed create', testOfflineEntities(async (service, container) => {
+    it('should apply an entity update as a create, and then properly handle the delayed create as an update', testOfflineEntities(async (service, container) => {
       const asAlice = await service.login('alice');
       const branchId = uuid();
 
@@ -1126,9 +1126,10 @@ describe('Offline Entities', () => {
           body.currentVersion.data.should.eql({ status: 'checked in' });
           body.currentVersion.label.should.eql('auto generated');
           body.currentVersion.branchId.should.equal(branchId);
+          body.currentVersion.branchBaseVersion.should.equal(1);
           should.not.exist(body.currentVersion.baseVersion);
-          should.not.exist(body.currentVersion.branchBaseVersion); // No base version because this is a create, though maybe this should be here.
           should.not.exist(body.currentVersion.trunkVersion);
+          should(body.conflict).equal(null); // conflict should be null after update-as-create
         });
 
       backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
@@ -1136,25 +1137,71 @@ describe('Offline Entities', () => {
 
       // First submission creates the entity, but this will be processed as an update
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd`)
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(2);
+          body.currentVersion.data.should.eql({ age: '20', status: 'new', first_name: 'Megan' });
+          body.conflict.should.equal('soft'); // this should be marked as a soft conflict
+          body.currentVersion.baseVersion.should.equal(1); // baseVersion is set, but normally the baseVersion of an entity-create is null
+          // the rest of these are null like a normal entity-create
+          should.not.exist(body.currentVersion.branchBaseVersion);
+          should.not.exist(body.currentVersion.trunkVersion);
+          should.not.exist(body.currentVersion.branchId);
+        });
+    }));
+
+    it('should verify that the create-as-update submission was parsed as a create even when applied as an update', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Send first submission, which is an update that will be applied as a create
+      // Removing extra fields of the submission to demonstrate a simpler update with missing fields
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
           .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+          .replace('<label>Megan (20)</label>', '')
+          .replace('<age>20</age>', '')
+          .replace('<name>Megan</name>', '')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+      await container.Entities.processBacklog(true);
+
+      // First submission creates the entity, but it should trigger an entity-processing error
+      // because there is no label
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('<label>Megan (20)</label>', '')
         )
         .set('Content-Type', 'application/xml')
         .expect(200);
 
       await exhaust(container);
 
-      // In the default behavior, attempting create on an entity that already exists causes a conflict error.
-      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two/audits')
-        .expect(200)
-        .then(({ body }) => {
-          body[0].details.errorMessage.should.eql('A resource already exists with uuid value(s) of 12345678-1234-4123-8234-123456789ddd.');
-        });
-
       await asAlice.get(`/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd`)
         .expect(200)
         .then(({ body }) => {
           body.currentVersion.version.should.equal(1);
+        });
+
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].action.should.equal('entity.error');
+          body[0].details.errorMessage.should.eql('Required parameter label missing.');
         });
     }));
 
