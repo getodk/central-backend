@@ -1498,13 +1498,6 @@ paths:
           schema:
             type: string
           example: "frobwazzleEnabled"
-        - name: Authorization
-          in: header
-          description: Bearer encoding of a token of the user whose preferences to operate on
-          required: true
-          schema:
-            type: string
-          example: Bearer lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7
       requestBody:
         content:
           'application/json':
