@@ -1,6 +1,9 @@
 name: OIDC integration tests
 
-on: push
+on:
+  push:
+    branches: master
+  pull_request:
 
 jobs:
   oidc-integration-test:
