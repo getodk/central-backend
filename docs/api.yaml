@@ -1674,8 +1674,8 @@ paths:
         However, if you only have a Bearer token, for example, you don't have any information about the user attached to that session, including even the ID with which to get more information. So you can instead supply the text `current` to get the user information associated with the authenticated session.
 
         If you _do_ use `current`, you may request extended metadata. Supply an `X-Extended-Metadata` header value of `true` to additionally receive:
-        — an array of strings of the `verbs` the authenticated User/Actor is allowed to perform server-wide
-        — an object containing the preferences of the authenticated User/Actor
+        - an array of strings of the `verbs` the authenticated User/Actor is allowed to perform server-wide
+        - an object containing the preferences of the authenticated User/Actor
       operationId: Getting authenticated User details
       responses:
         200:
