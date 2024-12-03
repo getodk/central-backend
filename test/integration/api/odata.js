@@ -1902,7 +1902,7 @@ describe('api: /forms/:id.svc', () => {
         });
 
       const skiptoken = '01' + encodeURIComponent(Buffer.from(JSON.stringify({ repeatId: 'nonsense' })).toString('base64'));
-      await asAlice.get(nextlink.replace('http://localhost:8989', '').replace('01eyJyZXBlYXRJZCI6IjUyZWZmOWVhODI1NTAxODM4ODBiOWQ2NGMyMDQ4NzY0MmZhNmU2MGMifQ%3D%3D', skiptoken))
+      await asAlice.get(`/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=2&%24skiptoken=${skiptoken}`)
         .expect(400)
         .then(({ body }) => {
           body.should.deepEqual({ code: 400.34, message: 'Record associated with the provided $skiptoken not found.' });
