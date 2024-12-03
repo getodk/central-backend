@@ -1748,6 +1748,12 @@ describe('Offline Entities', () => {
 
       await exhaust(container);
 
+      // Check that entity as a whole is a conflict
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd')
+        .then(({ body }) => {
+          body.conflict.should.equal('soft');
+        });
+
       // Check versions
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd/versions')
         .expect(200)
