@@ -3483,7 +3483,35 @@ describe('datasets and entities', () => {
             });
 
           await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+            .send(testData.forms.updateEntity2023)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+        }));
+
+        it('should warn if the entities-version is earlier than 2024.1.0 when uploading a version of an existing form', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // Post version of form that has good 2024.1.0 version
+          await asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.updateEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft')
+            .send(testData.forms.updateEntity2023)
+            .set('Content-Type', 'application/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.be.eql(400.16);
+              body.details.warnings.workflowWarnings[0].should.be.eql({
+                type: 'oldEntityVersion',
+                details: { version: '2023.1.0' },
+                reason: 'Entities specification version [2023.1.0] is not compatible with Offline Entities. Please use version 2024.1.0 or later.'
+              });
+            });
+
+          await asAlice.post('/v1/projects/1/forms/updateEntity/draft?ignoreWarnings=true')
+            .send(testData.forms.updateEntity2023)
             .set('Content-Type', 'application/xml')
             .expect(200);
         }));
