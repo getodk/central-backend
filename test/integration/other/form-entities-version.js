@@ -52,7 +52,7 @@ const upgradedSimpleEntity = `<?xml version="1.0"?>
   </h:head>
 </h:html>`;
 
-describe('Update / migrate entities-version within form', () => {
+describe.only('Update / migrate entities-version within form', () => {
   describe('upgrading a 2023.1.0 update form', () => {
     it('should upgrade a form with only a published version', testService(async (service, container) => {
       const { Forms, Audits } = container;
@@ -114,7 +114,7 @@ describe('Update / migrate entities-version within form', () => {
         .then(({ text }) => text.should.equal(upgradedUpdateEntity));
     }));
 
-    it('should upgrade a form with a draft version and a published version', testService(async (service, container) => {
+    it.only('should upgrade a form with a draft version and a published version', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -125,7 +125,9 @@ describe('Update / migrate entities-version within form', () => {
         .expect(200);
 
       // Convert the published form to a draft
-      await asAlice.post('/v1/projects/1/forms/updateEntity/draft');
+      await asAlice.post('/v1/projects/1/forms/updateEntity/draft')
+        .then(({ body }) => {  console.log(body); });
+      //  .expect(200);
 
       const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
