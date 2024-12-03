@@ -648,7 +648,7 @@ tags:
 - name: User Preferences
   x-parent-tag: Accounts and Users
   description: |-
-    The Central frontend uses this API to save various user preferences, such as the sorting order of certain listings. When a user starts a new session, these preferences are loaded in.
+    The Central frontend uses this API to save various user preferences, such as the sorting order of certain listings. When a user starts a new session, these preferences are loaded in as part of the [User object](/central-api-accounts-and-users/#getting-authenticated-user-details).
     
     Preferences can be set site-wide or per-project.
 - name: App Users
