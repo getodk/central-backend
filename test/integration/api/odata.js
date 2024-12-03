@@ -1888,6 +1888,27 @@ describe('api: /forms/:id.svc', () => {
         });
     }));
 
+    it('should reject unmatched repeatId', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=2')
+        .expect(200)
+        .then(({ body }) => {
+          body.value[0].name.should.be.eql('Candace');
+          body.value[1].name.should.be.eql('Billy');
+          body['@odata.nextLink'].should.eql('http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=2&%24skiptoken=01eyJyZXBlYXRJZCI6IjUyZWZmOWVhODI1NTAxODM4ODBiOWQ2NGMyMDQ4NzY0MmZhNmU2MGMifQ%3D%3D');
+          body['@odata.nextLink'].should.have.skiptoken({ repeatId: '52eff9ea82550183880b9d64c20487642fa6e60c' });
+          return body['@odata.nextLink'];
+        });
+
+      const skiptoken = '01' + encodeURIComponent(Buffer.from(JSON.stringify({ repeatId: 'nonsense' })).toString('base64'));
+      await asAlice.get(`/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=2&%24skiptoken=${skiptoken}`)
+        .expect(400)
+        .then(({ body }) => {
+          body.should.deepEqual({ code: 400.34, message: 'Record associated with the provided $skiptoken not found.' });
+        });
+    }));
+
     it('should limit and filter subtable', testService(async (service) => {
       const asAlice = await withSubmissions(service, identity);
 

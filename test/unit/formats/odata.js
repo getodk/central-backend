@@ -852,6 +852,36 @@ describe('odata message composition', () => {
             done();
           })));
       });
+
+      [
+        { instanceId: 'two' },
+        { instanceId: 'two', repeatId: '' },
+        { instanceId: 'two', repeatId: 'this should probably be rejected' },
+        { instanceId: 'two', repeatId: '0000000000000000000000000000000000000000' },
+      ].forEach(skipToken => {
+        it(`should reject bad skipToken '${JSON.stringify(skipToken)}'`, done => {
+          const query = { $skiptoken: QueryOptions.getSkiptoken(skipToken) };
+          const inRows = streamTest.fromObjects([
+            mockSubmission('one', testData.instances.withrepeat.one),
+            mockSubmission('two', testData.instances.withrepeat.two),
+            mockSubmission('three', testData.instances.withrepeat.three)
+          ]);
+
+          fieldsFor(testData.forms.withrepeat)
+            .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows))
+            .then((stream) => {
+              stream.streams.at(-1).on('error', err => {
+                should(err).be.an.Error();
+                err.message.should.equal('Record associated with the provided $skiptoken not found.');
+                done();
+              });
+              return stream.pipe(streamTest.toText(err => {
+                if (err) return done(err);
+                done('pipe should not have completed');
+              }));
+            }, done);
+        });
+      });
     });
   });
 
