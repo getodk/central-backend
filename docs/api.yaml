@@ -1765,6 +1765,14 @@ paths:
                       server-wide.
                     items:
                       type: object
+                  preferences:
+                    description: The preferences of this user
+                    type: object
+                    properties:
+                      site:
+                        type: object
+                      projects:
+                        type: object
               example:
                 createdAt: 2018-04-18T23:19:14.802Z
                 displayName: My Display Name
@@ -1776,6 +1784,12 @@ paths:
                 verbs:
                 - project.create
                 - project.update
+                preferences:
+                  site:
+                    projectSortMode: latest
+                  projects:
+                    "1":
+                      formTrashCollapsed: false
         403:
           description: Forbidden
           content:
