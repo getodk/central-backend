@@ -1891,7 +1891,7 @@ describe('api: /forms/:id.svc', () => {
     it('should reject unmatched repeatId', testService(async (service) => {
       const asAlice = await withSubmissions(service, identity);
 
-      const nextlink = await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=2')
+      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=2')
         .expect(200)
         .then(({ body }) => {
           body.value[0].name.should.be.eql('Candace');
