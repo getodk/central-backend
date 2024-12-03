@@ -1897,6 +1897,7 @@ describe('api: /forms/:id.svc', () => {
           body.value[0].name.should.be.eql('Candace');
           body.value[1].name.should.be.eql('Billy');
           body['@odata.nextLink'].should.eql('http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=2&%24skiptoken=01eyJyZXBlYXRJZCI6IjUyZWZmOWVhODI1NTAxODM4ODBiOWQ2NGMyMDQ4NzY0MmZhNmU2MGMifQ%3D%3D');
+          body['@odata.nextLink'].should.have.skiptoken({ repeatId: '52eff9ea82550183880b9d64c20487642fa6e60c' });
           return body['@odata.nextLink'];
         });
 
