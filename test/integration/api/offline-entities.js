@@ -1716,4 +1716,60 @@ describe('Offline Entities', () => {
       successCount.should.equal(50);
     }));
   });
+
+  describe('miscellaneous', () => {
+    it.only('should handle two updates followed by delayed create', testOfflineEntities(async (service, container) => {
+      // Issue c#808
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Send second update first
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update2')
+          .replace('baseVersion=""', 'baseVersion="2"')
+          .replace('<status>checked in</status>', '<status>working</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Send first update second
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update1')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Check backlog
+      const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(2);
+
+      await container.Entities.processBacklog(true);
+
+      // Send registration
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Check submission audit log
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two/audits')
+        .expect(200)
+        .then(({ body }) => {
+          // TODO it should update the entity, not have this creation error
+          body[0].details.errorMessage.should.equal('Query returns an unexpected result.');
+        });
+    }));
+  });
 });
