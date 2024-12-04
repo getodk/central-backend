@@ -1,6 +1,12 @@
 name: OIDC e2e tests
 
-on: push
+on:
+  push:
+    branches:
+    - master
+    # contributors who develop on branches in this repo:
+    - 'ktuite/*'
+  pull_request:
 
 env:
   DEBUG: pw:api

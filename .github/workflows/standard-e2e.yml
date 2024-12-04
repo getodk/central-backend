@@ -1,6 +1,12 @@
 name: Standard E2E Tests
 
-on: push
+on:
+  push:
+    branches:
+    - master
+    # contributors who develop on branches in this repo:
+    - 'ktuite/*'
+  pull_request:
 
 env:
   LOG_LEVEL: DEBUG
