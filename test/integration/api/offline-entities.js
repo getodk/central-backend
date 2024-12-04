@@ -851,6 +851,56 @@ describe('Offline Entities', () => {
       count = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       count.should.equal(0);
     }));
+
+    it('should not process update submission in backlog if approvalRequired is true', testOfflineEntities(async (service, container) => {
+      // Demonstrating issue c#811
+      const asAlice = await service.login('alice');
+
+      // Configure the entity list to create entities on submission approval
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      const branchId = uuid();
+
+      // Send update submission (imagine that registration submission is lost)
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // There should be one item in the backlog
+      let count = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      count.should.equal(1);
+
+      // Force process backlog
+      await container.Entities.processBacklog(true);
+
+      // There should be nothing in the backlog
+      count = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      count.should.equal(0);
+
+      // Entity should not exist
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd')
+        .expect(404);
+
+      // Submission should not have a processing error, just the create event.
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two-update/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+          body[0].action.should.eql('submission.create');
+          should.not.exist(body[0].details.problem);
+        });
+    }));
   });
 
   describe('force-processing held submissions', () => {
@@ -1773,7 +1823,7 @@ describe('Offline Entities', () => {
     }));
 
     it.only('should handle update from sub and update from API followed by delayed create', testOfflineEntities(async (service, container) => {
-      // Issue c#808
+      // Issue c#810
       const asAlice = await service.login('alice');
       const branchId = uuid();
 
