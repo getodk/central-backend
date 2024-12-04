@@ -1768,7 +1768,7 @@ describe('Offline Entities', () => {
   });
 
   describe('miscellaneous', () => {
-    it.only('should handle two updates followed by delayed create', testOfflineEntities(async (service, container) => {
+    it('should handle two updates followed by delayed create', testOfflineEntities(async (service, container) => {
       // Issue c#808
       const asAlice = await service.login('alice');
       const branchId = uuid();
@@ -1817,12 +1817,11 @@ describe('Offline Entities', () => {
       await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two/audits')
         .expect(200)
         .then(({ body }) => {
-          // TODO it should update the entity, not have this creation error
-          body[0].details.errorMessage.should.equal('Query returns an unexpected result.');
+          body[0].action.should.equal('entity.update.version');
         });
     }));
 
-    it.only('should handle update from sub and update from API followed by delayed create', testOfflineEntities(async (service, container) => {
+    it('should handle update from sub and update from API followed by delayed create', testOfflineEntities(async (service, container) => {
       // Issue c#810
       const asAlice = await service.login('alice');
       const branchId = uuid();
@@ -1864,8 +1863,7 @@ describe('Offline Entities', () => {
       await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two/audits')
         .expect(200)
         .then(({ body }) => {
-          // TODO it should update the entity, not have this creation error
-          body[0].details.errorMessage.should.equal('Query returns an unexpected result.');
+          body[0].action.should.equal('entity.update.version');
         });
     }));
   });
