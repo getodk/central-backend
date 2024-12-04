@@ -126,6 +126,13 @@ describe('api: /forms/:id.svc', () => {
       withSubmission(service, (asAlice) =>
         asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('nonexistent')").expect(404))));
 
+    it('should reject if the submission has been soft-deleted', testService((service) =>
+      withSubmission(service, (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/doubleRepeat/submissions/double')
+          .expect(200) // soft-delete
+          .then(() => asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')")
+            .expect(404)))));
+
     it('should return a single row result', testService((service) =>
       withSubmission(service, (asAlice) =>
         asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')")
@@ -143,6 +150,7 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above!
                   updatedAt: null,
+                  deletedAt: null,
                   submitterId: '5',
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
@@ -216,6 +224,7 @@ describe('api: /forms/:id.svc', () => {
                   __system: {
                     // submissionDate is checked above!
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
@@ -258,6 +267,7 @@ describe('api: /forms/:id.svc', () => {
                   __system: {
                     // submissionDate is checked above!
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 1,
@@ -319,6 +329,7 @@ describe('api: /forms/:id.svc', () => {
                 }
               }]
             });
+            body['@odata.nextLink'].should.have.skiptoken({ repeatId: 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d' });
           }))));
 
     it('should return just a count if asked', testService((service) =>
@@ -391,6 +402,7 @@ describe('api: /forms/:id.svc', () => {
                 .expect(200)
                 .then(({ body }) => {
                   body['@odata.nextLink'].should.equal('http://localhost:8989/v1/projects/1/forms/double%20repeat.svc/Submissions(%27uuid%3A17b09e96-4141-43f5-9a70-611eb0e8f6b4%27)/children/child?%24top=1&%24skiptoken=01eyJyZXBlYXRJZCI6IjdhYzVmNGQ0ZmFjYmFhOTY1N2MyMWZmMjIxYjg4NTI0MWMyODRiNmMifQ%3D%3D');
+                  body['@odata.nextLink'].should.have.skiptoken({ repeatId: '7ac5f4d4facbaa9657c21ff221b885241c284b6c' });
                 })
             ]))))));
 
@@ -410,6 +422,7 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above!
                   updatedAt: null,
+                  deletedAt: null,
                   submitterId: '5',
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
@@ -470,6 +483,7 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above!
                   updatedAt: null,
+                  deletedAt: null,
                   submitterId: '5',
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
@@ -589,6 +603,7 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above,
                   updatedAt: null,
+                  deletedAt: null,
                   submitterId: '5',
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
@@ -610,6 +625,7 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above,
                   updatedAt: null,
+                  deletedAt: null,
                   submitterId: '5',
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
@@ -631,6 +647,7 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above,
                   updatedAt: null,
+                  deletedAt: null,
                   submitterId: '5',
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
@@ -648,6 +665,107 @@ describe('api: /forms/:id.svc', () => {
               }]
             });
           }))));
+
+    it('should exclude a deleted submission from rows', testService((service) =>
+      withSubmissions(service, (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/withrepeat/submissions/rthree')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions')
+            .expect(200)
+            .then(({ body }) => {
+              for (const idx of [0, 1]) {
+                body.value[idx].__system.submissionDate.should.be.an.isoDate();
+                // eslint-disable-next-line no-param-reassign
+                delete body.value[idx].__system.submissionDate;
+              }
+
+              body.should.eql({
+                '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+                value: [{
+                  __id: 'rtwo',
+                  __system: {
+                    // submissionDate is checked above,
+                    updatedAt: null,
+                    deletedAt: null,
+                    submitterId: '5',
+                    submitterName: 'Alice',
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 0,
+                    status: null,
+                    reviewState: null,
+                    deviceId: null,
+                    edits: 0,
+                    formVersion: '1.0'
+                  },
+                  meta: { instanceID: 'rtwo' },
+                  name: 'Bob',
+                  age: 34,
+                  children: {
+                    'child@odata.navigationLink': "Submissions('rtwo')/children/child"
+                  }
+                }, {
+                  __id: 'rone',
+                  __system: {
+                    // submissionDate is checked above,
+                    updatedAt: null,
+                    deletedAt: null,
+                    submitterId: '5',
+                    submitterName: 'Alice',
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 0,
+                    status: null,
+                    reviewState: null,
+                    deviceId: null,
+                    edits: 0,
+                    formVersion: '1.0'
+                  },
+                  meta: { instanceID: 'rone' },
+                  name: 'Alice',
+                  age: 30,
+                  children: {}
+                }]
+              });
+            })))));
+
+    it('should return deleted submission', testService((service) =>
+      withSubmissions(service, (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/withrepeat/submissions/rthree')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=not __system/deletedAt eq null')
+            .expect(200)
+            .then(({ body }) => {
+              body.value[0].__system.submissionDate.should.be.an.isoDate();
+              // eslint-disable-next-line no-param-reassign
+              delete body.value[0].__system.submissionDate;
+              body.value[0].__system.deletedAt.should.be.an.isoDate();
+              // eslint-disable-next-line no-param-reassign
+              delete body.value[0].__system.deletedAt;
+
+              body.should.eql({
+                '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+                value: [{
+                  __id: 'rthree',
+                  __system: {
+                    updatedAt: null,
+                    submitterId: '5',
+                    submitterName: 'Alice',
+                    attachmentsPresent: 0,
+                    attachmentsExpected: 0,
+                    status: null,
+                    reviewState: null,
+                    deviceId: null,
+                    edits: 0,
+                    formVersion: '1.0'
+                  },
+                  meta: { instanceID: 'rthree' },
+                  name: 'Chelsea',
+                  age: 38,
+                  children: {
+                    'child@odata.navigationLink': "Submissions('rthree')/children/child"
+                  }
+                }]
+              });
+            })))));
 
     it('should return a count even if there are no rows', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -700,6 +818,7 @@ describe('api: /forms/:id.svc', () => {
                 __system: {
                   // submissionDate is checked above,
                   updatedAt: null,
+                  deletedAt: null,
                   submitterId: '5',
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
@@ -718,6 +837,7 @@ describe('api: /forms/:id.svc', () => {
                 }
               }]
             });
+            body['@odata.nextLink'].should.have.skiptoken({ instanceId: 'rtwo' });
           }))));
 
     // nb: order of id and createdAt is not guaranteed to be same
@@ -803,7 +923,7 @@ describe('api: /forms/:id.svc', () => {
         });
     }));
 
-    it('should support $skiptoken even if associated submission is deleted', testService(async (service, { run }) => {
+    it('should support $skiptoken even if associated submission is deleted', testService(async (service) => {
       const asAlice = await service.login('alice');
       await asAlice.post('/v1/projects/1/forms/simple/submissions')
         .send(testData.instances.simple.one)
@@ -817,9 +937,7 @@ describe('api: /forms/:id.svc', () => {
         .expect(200)
         .then(({ body }) => new URL(body['@odata.nextLink']).searchParams.get('$skiptoken'));
       QueryOptions.parseSkiptoken(skiptoken).instanceId.should.equal('two');
-      // We don't have a submission delete endpoint yet, but we should soon.
-      await run(sql`UPDATE submissions SET "deletedAt" = clock_timestamp()
-WHERE "instanceId" = 'two'`);
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/two');
       const { body: odata } = await asAlice.get(url`/v1/projects/1/forms/simple.svc/Submissions?%24skiptoken=${skiptoken}`)
         .expect(200);
       odata.value.length.should.equal(1);
@@ -938,6 +1056,7 @@ WHERE "instanceId" = 'two'`);
             age: 38,
           });
           body['@odata.nextLink'].should.be.eql('http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24top=1&%24select=age&%24skiptoken=01eyJpbnN0YW5jZUlkIjoicnRocmVlIn0%3D');
+          body['@odata.nextLink'].should.have.skiptoken({ instanceId: 'rthree' });
         });
     }));
 
@@ -959,6 +1078,7 @@ WHERE "instanceId" = 'two'`);
                 __system: {
                   // submissionDate is checked above,
                   updatedAt: null,
+                  deletedAt: null,
                   submitterId: '5',
                   submitterName: 'Alice',
                   attachmentsPresent: 0,
@@ -977,6 +1097,7 @@ WHERE "instanceId" = 'two'`);
                 }
               }]
             });
+            body['@odata.nextLink'].should.have.skiptoken({ instanceId: 'rthree' });
           }))));
 
     it('should return submitter-filtered toplevel rows if requested', testService((service) =>
@@ -1014,6 +1135,7 @@ WHERE "instanceId" = 'two'`);
                     __system: {
                       // submissionDate is checked above,
                       updatedAt: null,
+                      deletedAt: null,
                       submitterId: '5',
                       submitterName: 'Alice',
                       attachmentsPresent: 0,
@@ -1035,6 +1157,7 @@ WHERE "instanceId" = 'two'`);
                     __system: {
                       // submissionDate is checked above,
                       updatedAt: null,
+                      deletedAt: null,
                       submitterId: '5',
                       submitterName: 'Alice',
                       attachmentsPresent: 0,
@@ -1074,6 +1197,7 @@ WHERE "instanceId" = 'two'`);
                   __system: {
                     submissionDate: '2010-06-01T00:00:00.000Z',
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
@@ -1143,6 +1267,7 @@ WHERE "instanceId" = 'two'`);
                   __system: {
                     submissionDate: '2010-06-01T00:00:00.000Z',
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
@@ -1188,6 +1313,7 @@ WHERE "instanceId" = 'two'`);
                   __id: 'rone',
                   __system: {
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
@@ -1243,6 +1369,7 @@ WHERE "instanceId" = 'two'`);
                     reviewState: 'rejected',
                     deviceId: null,
                     edits: 0,
+                    deletedAt: null,
                     formVersion: '1.0'
                   },
                   meta: { instanceID: 'rtwo' },
@@ -1286,6 +1413,7 @@ WHERE "instanceId" = 'two'`);
                 reviewState: 'rejected',
                 deviceId: null,
                 edits: 0,
+                deletedAt: null,
                 formVersion: '1.0'
               },
               meta: { instanceID: 'rtwo' },
@@ -1547,6 +1675,7 @@ WHERE "instanceId" = 'two'`);
                   __system: {
                     // submissionDate is checked above!
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
@@ -1562,6 +1691,7 @@ WHERE "instanceId" = 'two'`);
                   __system: {
                     // submissionDate is checked above!
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 0,
@@ -1614,6 +1744,7 @@ WHERE "instanceId" = 'two'`);
                   __system: {
                     // submissionDate is checked above!
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 1,
@@ -1629,6 +1760,7 @@ WHERE "instanceId" = 'two'`);
                   __system: {
                     // submissionDate is checked above!
                     updatedAt: null,
+                    deletedAt: null,
                     submitterId: '5',
                     submitterName: 'Alice',
                     attachmentsPresent: 1,
@@ -1658,6 +1790,7 @@ WHERE "instanceId" = 'two'`);
                 age: 4
               }]
             });
+            body['@odata.nextLink'].should.have.skiptoken({ repeatId: '52eff9ea82550183880b9d64c20487642fa6e60c' });
           }))));
 
     it('should reject if subtable filtering criterion is non-root', testService(async (service) => {
@@ -1743,6 +1876,7 @@ WHERE "instanceId" = 'two'`);
           body.value[0].name.should.be.eql('Candace');
           body.value[1].name.should.be.eql('Billy');
           body['@odata.nextLink'].should.eql('http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=2&%24skiptoken=01eyJyZXBlYXRJZCI6IjUyZWZmOWVhODI1NTAxODM4ODBiOWQ2NGMyMDQ4NzY0MmZhNmU2MGMifQ%3D%3D');
+          body['@odata.nextLink'].should.have.skiptoken({ repeatId: '52eff9ea82550183880b9d64c20487642fa6e60c' });
           return body['@odata.nextLink'];
         });
 
@@ -1751,6 +1885,27 @@ WHERE "instanceId" = 'two'`);
         .then(({ body }) => {
           body.value[0].name.should.be.eql('Blaine');
           should.not.exist(body['@odata.nextLink']);
+        });
+    }));
+
+    it('should reject unmatched repeatId', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=2')
+        .expect(200)
+        .then(({ body }) => {
+          body.value[0].name.should.be.eql('Candace');
+          body.value[1].name.should.be.eql('Billy');
+          body['@odata.nextLink'].should.eql('http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=2&%24skiptoken=01eyJyZXBlYXRJZCI6IjUyZWZmOWVhODI1NTAxODM4ODBiOWQ2NGMyMDQ4NzY0MmZhNmU2MGMifQ%3D%3D');
+          body['@odata.nextLink'].should.have.skiptoken({ repeatId: '52eff9ea82550183880b9d64c20487642fa6e60c' });
+          return body['@odata.nextLink'];
+        });
+
+      const skiptoken = '01' + encodeURIComponent(Buffer.from(JSON.stringify({ repeatId: 'nonsense' })).toString('base64'));
+      await asAlice.get(`/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=2&%24skiptoken=${skiptoken}`)
+        .expect(400)
+        .then(({ body }) => {
+          body.should.deepEqual({ code: 400.34, message: 'Record associated with the provided $skiptoken not found.' });
         });
     }));
 
@@ -1766,6 +1921,7 @@ WHERE "instanceId" = 'two'`);
         .then(({ body }) => {
           body.value[0].name.should.be.eql('Billy');
           body['@odata.nextLink'].should.eql('http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=1&%24filter=%24root%2FSubmissions%2F__system%2FreviewState+eq+%27rejected%27&%24skiptoken=01eyJyZXBlYXRJZCI6IjUyZWZmOWVhODI1NTAxODM4ODBiOWQ2NGMyMDQ4NzY0MmZhNmU2MGMifQ%3D%3D');
+          body['@odata.nextLink'].should.have.skiptoken({ repeatId: '52eff9ea82550183880b9d64c20487642fa6e60c' });
           return body['@odata.nextLink'];
         });
 
@@ -1775,8 +1931,20 @@ WHERE "instanceId" = 'two'`);
           body.value[0].name.should.be.eql('Blaine');
           should.not.exist(body['@odata.nextLink']);
         });
+    }));
 
+    it('should return subtable from deleted submissions', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
 
+      await asAlice.delete('/v1/projects/1/forms/withrepeat/submissions/rtwo')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$filter=not $root/Submissions/__system/deletedAt eq null')
+        .expect(200)
+        .then(({ body }) => {
+          body.value[0].name.should.be.eql('Billy');
+          body.value[1].name.should.be.eql('Blaine');
+        });
     }));
 
     // we cheat here. see mark1.
@@ -2173,6 +2341,7 @@ WHERE "instanceId" = 'two'`);
                     __system: {
                       // submissionDate is checked above!
                       updatedAt: null,
+                      deletedAt: null,
                       submitterId: '5',
                       submitterName: 'Alice',
                       attachmentsPresent: 0,
@@ -2255,6 +2424,7 @@ WHERE "instanceId" = 'two'`);
                     __system: {
                       // submissionDate is checked above,
                       updatedAt: null,
+                      deletedAt: null,
                       submitterId: '5',
                       submitterName: 'Alice',
                       attachmentsPresent: 0,
@@ -2276,6 +2446,7 @@ WHERE "instanceId" = 'two'`);
                     __system: {
                       // submissionDate is checked above,
                       updatedAt: null,
+                      deletedAt: null,
                       submitterId: '5',
                       submitterName: 'Alice',
                       attachmentsPresent: 0,
@@ -2297,6 +2468,7 @@ WHERE "instanceId" = 'two'`);
                     __system: {
                       // submissionDate is checked above,
                       updatedAt: null,
+                      deletedAt: null,
                       submitterId: '5',
                       submitterName: 'Alice',
                       attachmentsPresent: 0,

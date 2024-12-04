@@ -1,6 +1,6 @@
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
-const { testService } = require('../setup');
+const { testService, testServiceFullTrx } = require('../setup');
 const testData = require('../../data/xml');
 const config = require('config');
 const { Form } = require('../../../lib/model/frames');
@@ -409,6 +409,34 @@ describe('datasets and entities', () => {
           });
       }));
 
+      it('should reject if creating a dataset property that already exists', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({
+            name: 'trees'
+          })
+          .expect(200);
+
+        // Create a property
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({
+            name: 'height'
+          })
+          .expect(200);
+
+        // Second time should fail
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({
+            name: 'height'
+          })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.3);
+            body.message.should.startWith('A resource already exists with name,datasetId value(s) of height');
+          });
+      }));
+
       it('should log an event for creating a new dataset property', testService(async (service) => {
         const asAlice = await service.login('alice');
 
@@ -432,6 +460,44 @@ describe('datasets and entities', () => {
             logs[0].actee.should.be.a.Dataset();
             logs[0].actee.name.should.equal('trees');
             logs[0].details.properties.should.eql([ 'circumference' ]);
+          });
+      }));
+
+      it('should allow property name from a deleted draft form be used', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        // Create a draft dataset
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Delete the draft form
+        await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+          .expect(200);
+
+        // Create the dataset with the same name as the dataset in the deleted form
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        // Create a property with a name that wasn't originally in the dataset in the form
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'nickname' })
+          .expect(200);
+
+        // Create a property with a name that was in the dataset in the form
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'age' })
+          .expect(200);
+
+        // Re-creating an existing property should result in an error
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'age' })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.3);
+            body.message.should.startWith('A resource already exists with name,datasetId value(s) of age');
           });
       }));
     });
@@ -611,7 +677,7 @@ describe('datasets and entities', () => {
 
         await exhaust(container);
 
-        await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1' WHERE TRUE`);
+        await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1T00:00:00Z' WHERE TRUE`);
 
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
           .send(testData.instances.simpleEntity.two)
@@ -1884,7 +1950,7 @@ describe('datasets and entities', () => {
         const domain = config.get('default.env.domain');
         manifest.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
-    <mediaFile>
+    <mediaFile type="entityList">
       <filename>goodone.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
@@ -1968,7 +2034,7 @@ describe('datasets and entities', () => {
         const domain = config.get('default.env.domain');
         manifest.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
-    <mediaFile>
+    <mediaFile type="entityList">
       <filename>goodone.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
@@ -2114,9 +2180,9 @@ describe('datasets and entities', () => {
               .expect(200)
               .then(() =>
                 Forms.getByProjectAndXmlFormId(1, 'withAttachments')
-                  .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+                  .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
                     .then(attachment => {
-                      attachment.value.datasetId.should.not.be.null();
+                      attachment.get().datasetId.should.not.be.null();
                     })))))));
 
       it('should not link dataset if previous version has blob', testService((service, { Forms, FormAttachments }) =>
@@ -2139,10 +2205,10 @@ describe('datasets and entities', () => {
               .expect(200))
             .then(() =>
               Forms.getByProjectAndXmlFormId(1, 'withAttachments')
-                .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+                .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
                   .then(attachment => {
-                    should(attachment.value.datasetId).be.null();
-                    should(attachment.value.blobId).not.be.null();
+                    should(attachment.get().datasetId).be.null();
+                    should(attachment.get().blobId).not.be.null();
                   }))))));
 
       it('should link dataset if previous version does not have blob or dataset linked', testService((service, { Forms, FormAttachments }) =>
@@ -2164,10 +2230,10 @@ describe('datasets and entities', () => {
               .expect(200))
             .then(() =>
               Forms.getByProjectAndXmlFormId(1, 'withAttachments')
-                .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+                .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
                   .then(attachment => {
-                    should(attachment.value.datasetId).not.be.null();
-                    should(attachment.value.blobId).be.null();
+                    should(attachment.get().datasetId).not.be.null();
+                    should(attachment.get().blobId).be.null();
                   }))))));
 
       // Verifying autolinking happens only for attachment with "file" type
@@ -2183,9 +2249,9 @@ describe('datasets and entities', () => {
               .expect(200)
               .then(() =>
                 Forms.getByProjectAndXmlFormId(1, 'withAttachments')
-                  .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people')
+                  .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people')
                     .then(attachment => {
-                      should(attachment.value.datasetId).be.null();
+                      should(attachment.get().datasetId).be.null();
                     })))))));
 
       describe('autolink when publishing form that creates and consumes new dataset', () => {
@@ -2193,7 +2259,7 @@ describe('datasets and entities', () => {
         const updateForm = `<?xml version="1.0"?>
         <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
           <h:head>
-            <model entities:entities-version="2023.1.0">
+            <model entities:entities-version="2024.1.0">
               <instance>
                 <data id="updateEntity" orx:version="1.0">
                   <person/>
@@ -2201,7 +2267,7 @@ describe('datasets and entities', () => {
                   <age/>
                   <hometown/>
                   <meta>
-                    <entity dataset="people" id="" update="" baseVersion="">
+                    <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId="">
                       <label/>
                     </entity>
                   </meta>
@@ -2214,10 +2280,7 @@ describe('datasets and entities', () => {
           </h:head>
         </h:html>`;
 
-        it('should NOT autolink on upload new form and simultaneously publish', testService(async (service) => {
-          // this path of directly publishing a form on upload isn't possible in central
-          // so it's not going to be supported. if it were, logic would go around line #170 in
-          // lib/model/query/forms.js in Forms.createNew after the dataset is published.
+        it('should autolink on upload new form and simultaneously publish', testService(async (service) => {
           const asAlice = await service.login('alice');
 
           await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -2228,7 +2291,7 @@ describe('datasets and entities', () => {
           await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
             .then(({ body }) => {
               body[0].name.should.equal('people.csv');
-              body[0].datasetExists.should.be.false();
+              body[0].datasetExists.should.be.true();
             });
         }));
 
@@ -2284,7 +2347,7 @@ describe('datasets and entities', () => {
           const differentDataset = `<?xml version="1.0"?>
           <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
             <h:head>
-              <model entities:entities-version="2023.1.0">
+              <model entities:entities-version="2024.1.0">
                 <instance>
                   <data id="updateEntity" orx:version="1.0">
                     <person/>
@@ -2292,7 +2355,7 @@ describe('datasets and entities', () => {
                     <age/>
                     <hometown/>
                     <meta>
-                      <entity dataset="students" id="" update="" baseVersion="">
+                      <entity dataset="students" id="" update="" baseVersion="" trunkVersion="" branchId="">
                         <label/>
                       </entity>
                     </meta>
@@ -2427,7 +2490,7 @@ describe('datasets and entities', () => {
           const noDataset = `<?xml version="1.0"?>
           <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
             <h:head>
-              <model entities:entities-version="2023.1.0">
+              <model entities:entities-version="2024.1.0">
                 <instance>
                   <data id="updateEntity" orx:version="1.0">
                     <person/>
@@ -2470,7 +2533,7 @@ describe('datasets and entities', () => {
           const caseChange = `<?xml version="1.0"?>
           <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
             <h:head>
-              <model entities:entities-version="2023.1.0">
+              <model entities:entities-version="2024.1.0">
                 <instance>
                   <data id="updateEntity" orx:version="1.0">
                     <person/>
@@ -2478,7 +2541,7 @@ describe('datasets and entities', () => {
                     <age/>
                     <hometown/>
                     <meta>
-                      <entity dataset="people" id="" update="" baseVersion="">
+                      <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId="">
                         <label/>
                       </entity>
                     </meta>
@@ -2520,7 +2583,7 @@ describe('datasets and entities', () => {
           const caseChange = `<?xml version="1.0"?>
             <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
               <h:head>
-                <model entities:entities-version="2023.1.0">
+                <model entities:entities-version="2024.1.0">
                   <instance>
                     <data id="updateEntity" orx:version="1.0">
                       <person/>
@@ -2846,7 +2909,7 @@ describe('datasets and entities', () => {
             const domain = config.get('default.env.domain');
             text.should.be.eql(`<?xml version="1.0" encoding="UTF-8"?>
   <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
-    <mediaFile>
+    <mediaFile type="entityList">
       <filename>people.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/people.csv</downloadUrl>
@@ -3379,21 +3442,57 @@ describe('datasets and entities', () => {
 
   describe('parsing datasets on form upload', () => {
     describe('parsing datasets at /projects/:id/forms POST', () => {
-      it('should allow someone without dataset.create to create a dataset through posting a form', testService(async (service, { run }) => {
-        await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
 
-        const asBob = await service.login('bob');
+      describe('warnings about entities-version from before 2024.1.0', () => {
+        it('should warn if the entities-version is 2022.1.0 (earlier than 2024.1.0)', testService(async (service) => {
+          const asAlice = await service.login('alice');
 
-        await asBob.post('/v1/projects/1/forms')
-          .send(testData.forms.simpleEntity)
-          .set('Content-Type', 'text/xml')
-          .expect(200);
-      }));
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity2022)
+            .set('Content-Type', 'application/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.be.eql(400.16);
+              body.details.warnings.workflowWarnings[0].should.be.eql({
+                type: 'oldEntityVersion',
+                details: { version: '2022.1.0' },
+                reason: 'Entities specification version [2022.1.0] is not compatible with Offline Entities. Please use version 2024.1.0 or later.'
+              });
+            });
+
+          await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+            .send(testData.forms.simpleEntity2022)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+        }));
+
+        it('should warn if the entities-version is 2023.1.0 (earlier than 2024.1.0)', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.updateEntity2023)
+            .set('Content-Type', 'application/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.be.eql(400.16);
+              body.details.warnings.workflowWarnings[0].should.be.eql({
+                type: 'oldEntityVersion',
+                details: { version: '2023.1.0' },
+                reason: 'Entities specification version [2023.1.0] is not compatible with Offline Entities. Please use version 2024.1.0 or later.'
+              });
+            });
+
+          await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+            .send(testData.forms.updateEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+        }));
+      });
 
       it('should return a Problem if the entity xml has the wrong version', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
-            .send(testData.forms.simpleEntity.replace('2022.1.0', 'bad-version'))
+            .send(testData.forms.simpleEntity.replace('2024.1.0', 'bad-version'))
             .set('Content-Type', 'text/xml')
             .expect(400)
             .then(({ body }) => {
@@ -3457,7 +3556,7 @@ describe('datasets and entities', () => {
         const xml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
           <h:title>nobinds</h:title>
-          <model entities:entities-version='2022.1.0'>
+          <model entities:entities-version='2024.1.0'>
             <instance>
               <data id="nobinds">
                 <name/>
@@ -3499,7 +3598,7 @@ describe('datasets and entities', () => {
         const alice = await service.login('alice');
         const xml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
           <h:head>
-            <model entities:entities-version='2022.1.0'>
+            <model entities:entities-version='2024.1.0'>
               <instance>
                 <data id="validate_structure">
                   <name/>
@@ -3551,7 +3650,7 @@ describe('datasets and entities', () => {
         <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
           <h:head>
             <h:title>Repeat Children Entities</h:title>
-            <model entities:entities-version="2022.1.0" odk:xforms-version="1.0.0">
+            <model entities:entities-version="2024.1.0" odk:xforms-version="1.0.0">
               <instance>
                 <data id="repeat_entity" version="2">
                   <num_children/>
@@ -3907,6 +4006,208 @@ describe('datasets and entities', () => {
               }));
         }));
       });
+
+      describe('dataset-specific verbs', () => {
+        describe('dataset.create', () => {
+          it('should NOT allow a new form that creates a dataset without user having dataset.create verb', testServiceFullTrx(async (service, { run }) => {
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
+
+            const asBob = await service.login('bob');
+
+            await asBob.post('/v1/projects/1/forms')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(403);
+
+            // shouldn't work with immediate publish, either
+            await asBob.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(403);
+          }));
+
+          it('should NOT allow "creating" of a dataset when the dataset exists but unpublished', testServiceFullTrx(async (service, { run }) => {
+            const asAlice = await service.login('alice');
+            const asBob = await service.login('bob');
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
+
+            // Alice can upload first version of form that creates unpublished "people" dataset
+            await asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            // Should not be OK for bob to "create" people dataset
+            await asBob.post('/v1/projects/1/forms')
+              .send(testData.forms.simpleEntity
+                .replace('simpleEntity', 'simpleEntity2'))
+              .set('Content-Type', 'text/xml')
+              .expect(403);
+          }));
+
+          it('should NOT allow updating a form about an unpublished dataset, which is similar to creating that dataset', testServiceFullTrx(async (service, { run }) => {
+            const asAlice = await service.login('alice');
+            const asBob = await service.login('bob');
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
+
+            // Alice can upload first version of form that creates unpublished "people" dataset
+            await asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            // Should not be OK for bob to update this form
+            await asBob.post('/v1/projects/1/forms/simpleEntity/draft')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(403);
+          }));
+
+          it('should NOT allow updating a draft that creates a dataset without user having dataset.create verb', testServiceFullTrx(async (service, { run }) => {
+            const asAlice = await service.login('alice');
+            const asBob = await service.login('bob');
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
+
+            // Alice can upload first version of form
+            await asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            await asBob.post('/v1/projects/1/forms/simpleEntity/draft')
+              .send(testData.forms.simpleEntity.replace(/people/g, 'trees'))
+              .set('Content-Type', 'text/xml')
+              .expect(403);
+          }));
+
+          it('should NOT allow unpublished dataset to be published on form publish if user does not have dataset.create verb', testServiceFullTrx(async (service, { run }) => {
+            const asAlice = await service.login('alice');
+            const asBob = await service.login('bob');
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
+
+            // Alice can upload first version of form
+            await asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            // Bob should not be able to publish form because it will publish the new dataset
+            await asBob.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+              .expect(403);
+          }));
+        });
+
+        describe('dataset.update', () => {
+          it('should NOT allow a new form that updates a dataset without user having dataset.update verb', testServiceFullTrx(async (service, { run }) => {
+            const asAlice = await service.login('alice');
+            const asBob = await service.login('bob');
+
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
+
+            await asAlice.post('/v1/projects/1/datasets')
+              .send({ name: 'people' })
+              .expect(200);
+
+            // Form mentions properties 'age' and 'first_name' in dataset 'people'
+            // But Bob is not allowed to add these new properties to an existing dataset.
+            await asBob.post('/v1/projects/1/forms')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(403);
+
+            // shouldn't work with immediate publish, either
+            await asBob.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(403);
+          }));
+
+          it('should NOT allow update draft that updates a dataset without user having dataset.update verb', testServiceFullTrx(async (service, { run }) => {
+            const asAlice = await service.login('alice');
+            const asBob = await service.login('bob');
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
+
+            // Alice can upload first version of form
+            await asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            await asBob.post('/v1/projects/1/forms/simpleEntity/draft')
+              .send(testData.forms.simpleEntity.replace('saveto="age"', 'saveto="birth_year"'))
+              .set('Content-Type', 'text/xml')
+              .expect(403);
+          }));
+
+          it('should NOT allow unpublished properties to be published on form publish if user does not have dataset.update verb', testServiceFullTrx(async (service, { run }) => {
+            const asAlice = await service.login('alice');
+            const asBob = await service.login('bob');
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
+
+            // Alice can upload and publish first version of form
+            await asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            // Alice can upload new version of form with new property
+            await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+              .send(testData.forms.simpleEntity
+                .replace('saveto="age"', 'saveto="birth_year"')
+                .replace('orx:version="1.0"', 'orx:version="2.0"')
+              )
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            // Bob should not be able to publish form because it will publish the new property
+            await asBob.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+              .expect(403);
+          }));
+
+          it('should ALLOW update of form draft that does not modify existing dataset', testServiceFullTrx(async (service, { run }) => {
+            const asAlice = await service.login('alice');
+            const asBob = await service.login('bob');
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
+
+            // Alice can upload first version of form
+            await asAlice.post('/v1/projects/1/forms?publish=true')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+
+            // Should be OK for bob to update draft if not updating dataset
+            await asBob.post('/v1/projects/1/forms/simpleEntity/draft')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+          }));
+
+          it('should ALLOW new form about existing dataset that does not update it', testServiceFullTrx(async (service, { run }) => {
+            const asAlice = await service.login('alice');
+            const asBob = await service.login('bob');
+            await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
+
+            // Alice can create the dataset
+            await asAlice.post('/v1/projects/1/datasets')
+              .send({ name: 'people' })
+              .expect(200);
+
+            // And create the properties
+            await asAlice.post('/v1/projects/1/datasets/people/properties')
+              .send({ name: 'age' })
+              .expect(200);
+            await asAlice.post('/v1/projects/1/datasets/people/properties')
+              .send({ name: 'first_name' })
+              .expect(200);
+
+            // Should be OK for bob to upload form that uses existing dataset and properties
+            await asBob.post('/v1/projects/1/forms')
+              .send(testData.forms.simpleEntity)
+              .set('Content-Type', 'text/xml')
+              .expect(200);
+          }));
+        });
+      });
     });
 
     describe('dataset audit logging at /projects/:id/forms POST', () => {
@@ -3939,6 +4240,38 @@ describe('datasets and entities', () => {
         audit.should.equal(Option.none());
       }));
 
+      it('should log appropriate sequence of form and dataset events', testService(async (service) => {
+
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'text/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simpleEntity.replace('orx:version="1.0"', 'orx:version="draft1"').replace(/first_name/g, 'nickname'))
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish');
+
+        await asAlice.get('/v1/audits?action=nonverbose')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(7);
+            body.map(a => a.action).should.eql([
+              'form.update.publish',
+              'dataset.update',
+              'form.update.draft.set',
+              'form.update.publish',
+              'dataset.create',
+              'form.create',
+              'user.session.create'
+            ]);
+          });
+      }));
+
       it('should not log dataset modification when no new property is added', testService(async (service, { Audits }) => {
         const asAlice = await service.login('alice');
 
@@ -3958,7 +4291,7 @@ describe('datasets and entities', () => {
         audit.should.equal(Option.none());
       }));
 
-      it('should log dataset publishing in audit log', testService(async (service, { Audits }) => {
+      it('should log dataset publishing with properties in audit log', testService(async (service, { Audits }) => {
 
         const asAlice = await service.login('alice');
 
@@ -4248,12 +4581,12 @@ describe('datasets and entities', () => {
       const form = `<?xml version="1.0"?>
       <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model entities:entities-version="2023.1.0">
+          <model entities:entities-version="2024.1.0">
             <instance>
               <data id="brokenForm" orx:version="1.0">
                 <age foo="bar"/>
                 <meta>
-                  <entity dataset="people" id="" create="" update="" baseVersion="" />
+                  <entity dataset="people" id="" create="" update="" baseVersion="" trunkVersion="" branchId=""/>
                 </meta>
               </data>
             </instance>
@@ -4313,12 +4646,12 @@ describe('datasets and entities', () => {
       const form = `<?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model entities:entities-version="2023.1.0">
+          <model entities:entities-version="2024.1.0">
             <instance>
               <data id="brokenForm" orx:version="1.0">
                 <age foo="bar"/>
                 <meta>
-                  <entity dataset="people" id="" create="" update="" baseVersion="" />
+                  <entity dataset="people" id="" create="" update="" baseVersion="" trunkVersion="" branchId="" />
                 </meta>
               </data>
             </instance>
@@ -4330,12 +4663,12 @@ describe('datasets and entities', () => {
       const form2 = `<?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model entities:entities-version="2023.1.0">
+          <model entities:entities-version="2024.1.0">
             <instance>
               <data id="brokenForm" orx:version="2.0">
                 <age foo="bar"/>
                 <meta>
-                  <entity dataset="people" id="" create="" update="" baseVersion="">
+                  <entity dataset="people" id="" create="" update="" baseVersion=""  trunkVersion="" branchId="">
                     <label/>
                   </entity>
                 </meta>
@@ -4365,12 +4698,12 @@ describe('datasets and entities', () => {
       const form = `<?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model entities:entities-version="2023.1.0">
+          <model entities:entities-version="2024.1.0">
             <instance>
               <data id="updateWithoutLabel" orx:version="1.0">
                 <age foo="bar"/>
                 <meta>
-                  <entity dataset="people" id="" update="" baseVersion="" />
+                  <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId=""/>
                 </meta>
               </data>
             </instance>
@@ -4388,12 +4721,12 @@ describe('datasets and entities', () => {
       const form2 = `<?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model entities:entities-version="2023.1.0">
+          <model entities:entities-version="2024.1.0">
             <instance>
               <data id="updateWithLabel" orx:version="1.0">
                 <age foo="bar"/>
                 <meta>
-                  <entity dataset="people" id="" update="" baseVersion="">
+                  <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId="">
                     <label/>
                   </entity>
                 </meta>
@@ -4434,12 +4767,12 @@ describe('datasets and entities', () => {
       const form = `<?xml version="1.0"?>
       <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model entities:entities-version="2023.1.0">
+          <model entities:entities-version="2024.1.0">
             <instance>
               <data id="brokenForm" orx:version="1.0">
                 <age foo="bar"/>
                 <meta>
-                  <entity dataset="people" id="" update="" baseVersion="" />
+                  <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId=""/>
                 </meta>
               </data>
             </instance>
@@ -5273,10 +5606,10 @@ describe('datasets and entities', () => {
           .send({ approvalRequired: true })
           .expect(200);
 
-        // Create a submission that fails to create an entity (bad UUID)
+        // Create a submission that fails to create an entity (empty label)
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
           .send(testData.instances.simpleEntity.one
-            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:invalid_uuid"'))
+            .replace('<entities:label>Alice (88)</entities:label>', ''))
           .set('Content-Type', 'application/xml')
           .expect(200);
 
@@ -5336,10 +5669,10 @@ describe('datasets and entities', () => {
           .send({ approvalRequired: true })
           .expect(200);
 
-        // Create a submission that fails to create an entity (bad UUID)
+        // Create a submission that fails to create an entity (empty label)
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
           .send(testData.instances.simpleEntity.one
-            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:invalid_uuid"'))
+            .replace('<entities:label>Alice (88)</entities:label>', ''))
           .set('Content-Type', 'application/xml')
           .expect(200);
 

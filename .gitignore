@@ -9,5 +9,6 @@ node_modules/
 .idea/
 /.eslintcache
 /.pgbadger/
+/.repl-history
 .vscode
 /junit-reports/

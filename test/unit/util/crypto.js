@@ -46,9 +46,35 @@ describe('util/crypto', () => {
       generateToken().should.be.a.token();
     });
 
-    it('should accept other lengths', () => {
-      // the numbers are not equal due to the base64 conversion.
-      generateToken(12).length.should.equal(16);
+    it('should ignore legacy length argument', () => {
+      generateToken(12).should.be.a.token();
+    });
+  });
+
+  describe('isValidToken()', () => {
+    const { generateToken, isValidToken } = crypto;
+
+    [
+      generateToken(), generateToken(), generateToken(), generateToken(),
+      generateToken(), generateToken(), generateToken(), generateToken(),
+      generateToken(), generateToken(), generateToken(), generateToken(),
+      generateToken(), generateToken(), generateToken(), generateToken(),
+    ].forEach(validToken => {
+      it(`should return true for valid token '${validToken}'`, () => {
+        isValidToken(validToken).should.be.true();
+      });
+    });
+
+    [
+      undefined,
+      null,
+      '',
+      generateToken() + 'a',
+      generateToken().substr(1),
+    ].forEach(invalidToken => {
+      it(`return false for invalid token '${invalidToken}'`, () => {
+        isValidToken(invalidToken).should.be.false();
+      });
     });
   });
 

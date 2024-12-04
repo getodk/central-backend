@@ -165,13 +165,13 @@ describe('Entities API', () => {
         .send({ label: 'two' })
         .expect(200);
 
-      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01' WHERE "displayName" = 'Alice'`);
-      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01' WHERE "displayName" = 'Bob'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01T00:00:00Z' WHERE "displayName" = 'Alice'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01T00:00:00Z' WHERE "displayName" = 'Bob'`);
 
-      await container.run(sql`UPDATE entities SET "createdAt" = '2022-01-01', "updatedAt" = '2023-01-01' WHERE uuid = '12345678-1234-4123-8234-123456789abc'`);
+      await container.run(sql`UPDATE entities SET "createdAt" = '2022-01-01T00:00:00Z', "updatedAt" = '2023-01-01T00:00:00Z' WHERE uuid = '12345678-1234-4123-8234-123456789abc'`);
 
-      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2022-01-01' WHERE label = 'Alice (88)'`);
-      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2023-01-01' WHERE label = 'two'`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2022-01-01T00:00:00Z' WHERE label = 'Alice (88)'`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2023-01-01T00:00:00Z' WHERE label = 'two'`);
 
       await asAlice.get('/v1/projects/1/datasets/people/entities')
         .set('X-Extended-Metadata', true)
@@ -340,13 +340,13 @@ describe('Entities API', () => {
         .send({ label: 'two' })
         .expect(200);
 
-      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01' WHERE "displayName" = 'Alice'`);
-      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01' WHERE "displayName" = 'Bob'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01T00:00:00Z' WHERE "displayName" = 'Alice'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01T00:00:00Z' WHERE "displayName" = 'Bob'`);
 
-      await container.run(sql`UPDATE entities SET "createdAt" = '2022-01-01', "updatedAt" = '2023-01-01'`);
+      await container.run(sql`UPDATE entities SET "createdAt" = '2022-01-01T00:00:00Z', "updatedAt" = '2023-01-01T00:00:00Z'`);
 
-      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2022-01-01' WHERE label = 'Alice (88)'`);
-      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2023-01-01' WHERE label = 'two'`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2022-01-01T00:00:00Z' WHERE label = 'Alice (88)'`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2023-01-01T00:00:00Z' WHERE label = 'two'`);
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .set('X-Extended-Metadata', true)
@@ -616,30 +616,33 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should get version source even when there is no corresponding create/update event', testEntities(async (service, container) => {
+    it('should get version source with source details even when there is no corresponding submission event', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people.csv',
+            size: 100,
+          },
+          entities: [
+            {
+              uuid: '12345678-1234-4123-8234-111111111aaa',
+              label: 'Johnny Doe',
+              data: {
+                first_name: 'Johnny',
+                age: '22'
+              }
+            },
+          ]
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/versions')
         .expect(200)
         .then(({ body: versions }) => {
           versions[0].should.have.property('source');
-          versions[0].source.submission.instanceId.should.equal('one');
-          versions[0].source.submission.should.have.property('currentVersion');
-          versions[0].source.event.action.should.equal('submission.update');
+          versions[0].source.should.eql({ name: 'people.csv', size: 100, count: 1, userAgent: null });
         });
-
-      // this is simulating an entity version that doesnt have a corresponding create event
-      // e.g. made through bulk create (coming soon)
-      // but that can still look up source details directly from source table
-      await container.run(sql`delete from audits where action = 'entity.create'`);
-
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
-        .expect(200)
-        .then(({ body: versions }) => {
-          versions[0].should.have.property('source');
-          versions[0].source.should.eql({ submission: { instanceId: 'one' } });
-        });
-
     }));
 
     describe('relevantToConflict', () => {
@@ -3235,6 +3238,53 @@ describe('Entities API', () => {
             logs[1].action.should.be.eql('submission.create');
           });
       }));
+
+      it('should create entity when both create and update are true but baseVersion is empty', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('id="12345678-1234-4123-8234-123456789abc"', 'id="12345678-1234-4123-8234-123456789ddd"')
+            .replace('update="1"', 'create="1" update="1"')
+            .replace('baseVersion="1"', 'baseVersion=""'))
+          .expect(200);
+
+        await exhaust(container);
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body: people }) => {
+            // existing entity + new entity
+            people.length.should.be.eql(2);
+          });
+      }));
+
+      it('should log error when both create and update are true, baseVersion is empty but entity uuid exists', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // This submission uses an existing entity uuid
+        // has create and update both set to true
+        // and is missing a baseVersion.
+        // This will attempt to update but fail because it finds no
+        // baseVersion to parse in the update case
+        // and will then attempt to create but fail because
+        // the entity uuid does actually exist.
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('update="1"', 'create="1" update="1"')
+            .replace('baseVersion="1"', 'baseVersion=""'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('entity.error');
+            logs[0].details.problem.problemCode.should.be.eql(409.3);
+            logs[0].details.errorMessage.should.be.eql('A resource already exists with uuid value(s) of 12345678-1234-4123-8234-123456789abc.');
+            logs[1].action.should.be.eql('submission.create');
+          });
+      }));
     });
 
     // 10 examples described in central issue #517
@@ -3794,22 +3844,6 @@ describe('Entities API', () => {
         .then(({ body }) => {
           body.success.should.be.true();
         });
-    }));
-
-    it('should not allow larger body on GET request', testDataset(async (service) => {
-      const asAlice = await service.login('alice');
-
-      await asAlice.get('/v1/projects/1/datasets/people/entities?foo=bar')
-        .send({ source: { name: 'file.csv' }, entities: [{ label: 'x'.repeat(256001) }] })
-        .expect(500)
-        .then(({ body }) => {
-          body.message.should.equal('Internal Server Error');
-        });
-
-      // GET on this endpoint with payload doens't really make sense
-      await asAlice.get('/v1/projects/1/datasets/people/entities?foo=bar')
-        .send({ source: { name: 'file.csv' }, entities: [{ label: 'x'.repeat(10) }] })
-        .expect(200);
     }));
   });
 });

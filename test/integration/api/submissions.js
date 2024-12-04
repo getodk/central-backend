@@ -3,9 +3,9 @@ const should = require('should');
 const uuid = require('uuid').v4;
 const { sql } = require('slonik');
 const { createReadStream, readFileSync } = require('fs');
-const { testService } = require('../setup');
+const { testService, testServiceFullTrx } = require('../setup');
 const testData = require('../../data/xml');
-const { pZipStreamToFiles } = require('../../util/zip');
+const { httpZipResponseToFiles } = require('../../util/zip');
 const { map } = require('ramda');
 const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
@@ -484,6 +484,62 @@ describe('api: /submission', () => {
               .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
                 .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
                 .expect(304)))))));
+
+    it('should successfully save additionally POSTed attachment binary data with s3 enabled', testService((service, { Blobs }) => {
+      global.s3.enableMock();
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201)
+              .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
+                .expect(200)
+                .then(({ headers, body }) => {
+                  headers['content-type'].should.equal('image/jpeg');
+                  headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+                  headers['etag'].should.equal('"25bdb03b7942881c279788575997efba"'); // eslint-disable-line dot-notation
+                  body.toString('utf8').should.equal('this is test file two');
+                }))
+              .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
+                .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
+                .expect(304))
+              .then(() => Blobs.s3UploadPending()
+                .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
+                  .expect(307)
+                  .then(({ headers, body }) => {
+                    // TODO content-type should not be present at all, but response.removeHeader() does not seem to have an effect
+                    headers['content-type'].should.equal('text/plain; charset=utf-8');
+                    should(headers['content-disposition']).be.undefined();
+                    should(headers.etag).be.undefined();
+
+                    const { location } = headers;
+                    location.should.equal('s3://mock/25bdb03b7942881c279788575997efba/eba799d1dc156c0df70f7bad65f815928b98aa7d/here_is_file2.jpg?contentType=image/jpeg');
+                    body.should.deepEqual({}); // not sure why
+                  }))
+                .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
+                  .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
+                  .expect(307)
+                  .then(({ headers, body }) => {
+                    // TODO content-type should not be present at all, but response.removeHeader() does not seem to have an effect
+                    headers['content-type'].should.equal('text/plain; charset=utf-8');
+                    should(headers['content-disposition']).be.undefined();
+                    should(headers.etag).be.undefined();
+
+                    const { location } = headers;
+                    location.should.equal('s3://mock/25bdb03b7942881c279788575997efba/eba799d1dc156c0df70f7bad65f815928b98aa7d/here_is_file2.jpg?contentType=image/jpeg');
+                    body.should.deepEqual({}); // not sure why
+                  }))))));
+    }));
 
     it('should accept encrypted submissions, with attachments', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -1343,6 +1399,158 @@ describe('api: /forms/:id/submissions', () => {
             .then(({ body }) => { body.reviewState.should.equal('approved'); })))));
   });
 
+  describe('/:instanceId DELETE', () => {
+    it('should reject notfound if the submission does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+          .expect(404))));
+
+    it('should reject if the user cannot delete', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => service.login('chelsea', (asChelsea) =>
+            asChelsea.delete('/v1/projects/1/forms/simple/submissions/one')
+              .expect(403))))));
+
+    it('should soft-delete the submission and not be able to access it again', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+            .expect(404)))));
+
+    it('should not let a draft submission be deleted', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms/simple/draft');
+      await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      // draft submission delete resource does not exist
+      await asAlice.delete('/v1/projects/1/forms/simple/draft/submissions/one')
+        .expect(404);
+    }));
+
+    it('should not let a submission with the same instanceId as a deleted submission be sent', testServiceFullTrx(async (service, { Submissions }) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(409);
+
+      // once purged, the submission can be sent in again
+      await Submissions.purge(true);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+    }));
+
+    it('should delete and restore non-draft submission even when draft submission with same instanceId exists', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // make a draft submission with the same instanceId
+      await asAlice.post('/v1/projects/1/forms/simple/draft');
+      await asAlice.post('/v1/projects/1/forms/simple/draft/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // does not effect delete and restore of non-draft submission
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions/one/restore')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+    }));
+  });
+
+  describe('/:instanceId RESTORE', () => {
+    it('should reject if the submission has not been deleted', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions/one/restore')
+            .expect(404)))));
+
+    it('should reject if the submission does not exist', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions/nonexistant/restore')
+          .expect(404))));
+
+    it('should reject if the user cannot restore', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const asChelsea = await service.login('chelsea');
+
+      // Create a submission
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Delete the submission
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+
+      // Chelsea cannot restore
+      await asChelsea.post('/v1/projects/1/forms/simple/submissions/one/restore')
+        .expect(403);
+    }));
+
+    it('should soft-delete the submission and then restore it', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // Create a submission
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Delete the submission
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+
+      // Accessing the submission should 404
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+        .expect(404);
+
+      // Restore the submission
+      await asAlice.post('/v1/projects/1/forms/simple/submissions/one/restore')
+        .expect(200);
+
+      // Accessing the submission should 200
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+    }));
+  });
+
   describe('.csv.zip GET', () => {
     // NOTE: tests related to decryption of .csv.zip export are located in test/integration/other/encryption.js
 
@@ -1356,7 +1564,7 @@ describe('api: /forms/:id/submissions', () => {
           }))));
 
     it('should return the csv header even if there is no data', testService((service) =>
-      service.login('alice', (asAlice) => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
+      service.login('alice', (asAlice) => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
         .then((result) => {
           result.filenames.should.eql([ 'simple.csv' ]);
           result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion\n');
@@ -1376,7 +1584,7 @@ describe('api: /forms/:id/submissions', () => {
             .send(testData.instances.simple.three)
             .set('Content-Type', 'text/xml')
             .expect(200))
-          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
+          .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
               result['simple.csv'].should.be.a.SimpleCsv();
@@ -1406,7 +1614,7 @@ describe('api: /forms/:id/submissions', () => {
           .set('Content-Type', 'text/xml')
           .expect(200);
       }
-      const result = await pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/single-repeat-1-instance-10qs/submissions.csv.zip'));
+      const result = await httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/single-repeat-1-instance-10qs/submissions.csv.zip'));
       result.filenames.should.eql([ 'single-repeat-1-instance-10qs.csv', 'single-repeat-1-instance-10qs-repeat.csv' ]);
       result['single-repeat-1-instance-10qs.csv'].split('\n').length.should.equal(52);
       result['single-repeat-1-instance-10qs-repeat.csv'].split('\n').length.should.equal(52);
@@ -1431,7 +1639,7 @@ describe('api: /forms/:id/submissions', () => {
             .set('Content-Type', 'text/xml')
             .expect(200))
       ])
-        .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
+        .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
           .then((result) => {
             result.filenames.should.eql([ 'simple.csv' ]);
             const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
@@ -1445,6 +1653,39 @@ describe('api: /forms/:id/submissions', () => {
             csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0','' ]);
             csv[3].should.eql([ '' ]);
           })))));
+
+    it('should not return data from deleted submissions in csv export', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.two)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.three)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/two');
+
+      const result = await httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'));
+      const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+      csv.length.should.equal(4); // header + 2 data rows + newline
+      csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
+      csv[1].shift().should.be.an.recentIsoDate();
+      // eslint-disable-next-line comma-spacing
+      csv[1].should.eql([ 'three','Chelsea','38','three','5','Alice','0','0','','','','0','' ]);
+      csv[2].shift().should.be.an.recentIsoDate();
+      // eslint-disable-next-line comma-spacing
+      csv[2].should.eql([ 'one','Alice','30','one','5','Alice','0','0','','','','0','' ]);
+      csv[3].should.eql([ '' ]);
+    }));
 
     it('should return a submitter-filtered zipfile with the relevant data', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -1461,7 +1702,7 @@ describe('api: /forms/:id/submissions', () => {
               .send(testData.instances.simple.three)
               .set('Content-Type', 'text/xml')
               .expect(200))
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?$filter=__system/submitterId eq 5'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?$filter=__system/submitterId eq 5'))
               .then((result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
                 const lines = result['simple.csv'].split('\n');
@@ -1487,7 +1728,7 @@ describe('api: /forms/:id/submissions', () => {
             .send(testData.instances.simple.three)
             .set('Content-Type', 'text/xml')
             .expect(200))
-          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?$filter=__system/reviewState eq null'))
+          .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?$filter=__system/reviewState eq null'))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
               const lines = result['simple.csv'].split('\n');
@@ -1508,7 +1749,7 @@ describe('api: /forms/:id/submissions', () => {
               .send(testData.instances.simple.two)
               .set('Content-Type', 'text/xml')
               .expect(200))
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?$filter=year(__system/submissionDate) eq 2010'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?$filter=year(__system/submissionDate) eq 2010'))
               .then((result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
                 const lines = result['simple.csv'].split('\n');
@@ -1529,7 +1770,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => asAlice.patch('/v1/projects/1/forms/simple/submissions/two')
             .send({ reviewState: 'approved' })
             .expect(200))
-          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?$filter=__system/updatedAt eq null'))
+          .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?$filter=__system/updatedAt eq null'))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
               const lines = result['simple.csv'].split('\n');
@@ -1553,7 +1794,7 @@ describe('api: /forms/:id/submissions', () => {
               .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
               .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
               .expect(201))
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.containDeep([
                   'binaryType.csv',
@@ -1570,6 +1811,67 @@ describe('api: /forms/:id/submissions', () => {
                 csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,2,2,,,,0,');
                 csv.length.should.equal(3); // newline at end
               }))))));
+
+    it('should return a zipfile with the relevant attachments if s3 is enabled', testService((service, { Blobs }) => {
+      global.s3.enableMock();
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+            .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201))
+            .then(() => Blobs.s3UploadPending())
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'))
+              .then((result) => {
+                result.filenames.should.containDeep([
+                  'binaryType.csv',
+                  'media/my_file1.mp4',
+                  'media/here_is_file2.jpg'
+                ]);
+
+                result['media/my_file1.mp4'].should.equal('this is test file one');
+                result['media/here_is_file2.jpg'].should.equal('this is test file two');
+
+                // we also check the csv for the sake of verifying the attachments counts.
+                const csv = result['binaryType.csv'].split('\n');
+                csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+                csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,2,2,,,,0,');
+                csv.length.should.equal(3); // newline at end
+              }))));
+    }));
+
+    it('should handle s3 errors when trying to construct zipfile', testService((service, { Blobs }) => {
+      global.s3.enableMock();
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+            .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+            .expect(201)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201))
+            .then(() => Blobs.s3UploadPending())
+            .then(() => { global.s3.error.onDownload = true; })
+            .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip')
+              .then(() => should.fail('Should have thrown an error.'))
+              .catch(err => err.message.should.equal('aborted')))));
+    }));
 
     it('should filter attachments by the query', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -1588,7 +1890,7 @@ describe('api: /forms/:id/submissions', () => {
                 .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.two), { filename: 'data.xml' })
                 .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
                 .expect(201))
-              .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip?$filter=__system/submitterId eq 5'))
+              .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip?$filter=__system/submitterId eq 5'))
                 .then((result) => {
                   result.filenames.should.eql([
                     'binaryType.csv',
@@ -1623,7 +1925,7 @@ describe('api: /forms/:id/submissions', () => {
             .send(testData.instances.simple.three.replace('id="simple"', 'id="simple" version="updated"'))
             .set('Content-Type', 'text/xml')
             .expect(200))
-          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
+          .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
               const lines = result['simple.csv'].split('\n');
@@ -1644,7 +1946,7 @@ describe('api: /forms/:id/submissions', () => {
             .set('Content-Type', 'application/xml')
             .send(testData.instances.selectMultiple.two))
           .then(() => exhaust(container))
-          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true'))
+          .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true'))
             .then((result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
               const lines = result['selectMultiple.csv'].split('\n');
@@ -1666,7 +1968,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
             .set('Content-Type', 'application/xml')
             .send(testData.instances.selectMultiple.two))
-          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true'))
+          .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true'))
             .then((result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
               const lines = result['selectMultiple.csv'].split('\n');
@@ -1691,7 +1993,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => asAlice.patch('/v1/projects/1/forms/selectMultiple/submissions/two')
             .send({ reviewState: 'approved' }))
           .then(() => exhaust(container))
-          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true&$filter=__system/reviewState eq null'))
+          .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true&$filter=__system/reviewState eq null'))
             .then((result) => {
               const lines = result['selectMultiple.csv'].split('\n');
               lines.length.should.equal(3);
@@ -1731,7 +2033,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
             .set('Content-Type', 'application/xml')
             .send(testData.instances.simple.three.replace('id="simple"', 'id="simple" version="2"')))
-          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?deletedFields=true'))
+          .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?deletedFields=true'))
             .then((result) => {
               result.filenames.should.containDeep([ 'simple.csv' ]);
               const lines = result['simple.csv'].split('\n');
@@ -1760,7 +2062,7 @@ describe('api: /forms/:id/submissions', () => {
               .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
               .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
               .expect(201))
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip?attachments=false'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip?attachments=false'))
               .then((result) => {
                 result.filenames.should.containDeep([ 'binaryType.csv' ]);
 
@@ -1792,7 +2094,7 @@ describe('api: /forms/:id/submissions', () => {
           .set('X-OpenRosa-Version', '1.0')
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .expect(201)
-          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?groupPaths=false'))
+          .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?groupPaths=false'))
             .then((result) => {
               const csv = result['simple.csv'].split('\n');
               csv[0].should.equal('SubmissionDate,instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
@@ -1810,7 +2112,7 @@ describe('api: /forms/:id/submissions', () => {
             .set('Content-Type', 'application/xml')
             .send(testData.instances.selectMultiple.two))
           .then(() => exhaust(container))
-          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true&groupPaths=false'))
+          .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true&groupPaths=false'))
             .then((result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
               const lines = result['selectMultiple.csv'].split('\n');
@@ -1832,7 +2134,7 @@ describe('api: /forms/:id/submissions', () => {
             .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
             .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
             .expect(201)
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/binaryType/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.containDeep([
                   'binaryType.csv',
@@ -1864,7 +2166,7 @@ describe('api: /forms/:id/submissions', () => {
             .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
             .expect(201))
           .then(() => exhaust(container))
-          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
+          .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
             .then((result) => {
               result.filenames.should.eql([
                 'audits.csv',
@@ -1901,7 +2203,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
             .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
             .expect(201))
-          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
+          .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
             .then((result) => {
               result.filenames.should.eql([
                 'audits.csv',
@@ -1920,6 +2222,76 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 `);
             })))));
 
+    it('should return adhoc-processed consolidated client audit log attachments if uploaded to s3', testService((service, { Blobs }) => {
+      global.s3.enableMock();
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => Blobs.s3UploadPending())
+          .then(() => {
+            global.s3.uploads.attempted.should.equal(2);
+            global.s3.uploads.successful.should.equal(2);
+          })
+          .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
+            .then((result) => {
+              result.filenames.should.eql([
+                'audits.csv',
+                'audits - audit.csv'
+              ]);
+
+              result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
+one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
+one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
+one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,
+one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
+two,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
+two,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
+two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+`);
+            }))
+          .then(() => {
+            global.s3.downloads.attempted.should.equal(2);
+            global.s3.downloads.successful.should.equal(2);
+          }));
+    }));
+
+    it('should gracefully handle error if client audit s3 download fails', testService((service, { Blobs }) => {
+      global.s3.enableMock();
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => asAlice.post('/v1/projects/1/submission')
+            .set('X-OpenRosa-Version', '1.0')
+            .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+            .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+            .expect(201))
+          .then(() => Blobs.s3UploadPending())
+          .then(() => { global.s3.error.onDownload = true; })
+          .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip')
+            .then(() => should.fail('should have thrown'))
+            .catch(err => err.message.should.equal('aborted'))));
+    }));
+
     it('should return consolidated client audit log filtered by user', testService((service) =>
       service.login('alice', (asAlice) =>
         service.login('bob', (asBob) =>
@@ -1937,7 +2309,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
               .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
               .expect(201))
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip?$filter=__system/submitterId eq 5'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip?$filter=__system/submitterId eq 5'))
               .then((result) => {
                 result.filenames.should.eql([
                   'audits.csv',
@@ -1973,7 +2345,7 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
             .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
             .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
             .expect(201))
-          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip?$filter=__system/reviewState eq \'approved\''))
+          .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip?$filter=__system/reviewState eq \'approved\''))
             .then((result) => {
               result.filenames.should.eql([
                 'audits.csv',
@@ -2008,7 +2380,7 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
             .expect(201))
           .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip')
             .expect(200)
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.eql([
                   'audits.csv',
@@ -2040,7 +2412,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200))
           .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip')
             .expect(200)
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.eql([
                   'audits.csv',
@@ -2068,7 +2440,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(201))
           .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip')
             .expect(200)
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.eql([
                   'audits.csv',
@@ -2097,7 +2469,7 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
             .expect(201))
           .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip')
             .expect(200)
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.eql([
                   'audits.csv',
@@ -2135,7 +2507,7 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
               .expect(201))
             .then(() => asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip')
               .expect(200)
-              .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
+              .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
                 .then((result) => {
                   result.filenames.should.eql([
                     'audits.csv',
@@ -2312,7 +2684,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
               .set('Content-Type', 'application/xml')
               .send(testData.instances.simple.three.replace('id="simple"', 'id="simple" version="3"')))
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?deletedFields=true'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?deletedFields=true'))
               .then((result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
                 const lines = result['simple.csv'].split('\n');
@@ -2414,7 +2786,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200))
           .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip')
             .expect(200)
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
 
@@ -2436,7 +2808,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200))
           .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip')
             .expect(200)
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
 
@@ -2455,7 +2827,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200))
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip')
             .expect(200)
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
 
@@ -2474,7 +2846,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200))
           .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip')
             .expect(200)
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
 
@@ -2495,7 +2867,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .expect(200))
           .then(() => asAlice.get('/v1/projects/1/forms/simple/draft/submissions.csv.zip')
             .expect(200)
-            .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
+            .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
               .then((result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
 
@@ -2531,7 +2903,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 .set('X-OpenRosa-Version', '1.0')
                 .attach('xml_submission_file', Buffer.from(testData.instances.selectMultiple.two), { filename: 'data.xml' }))))
           .then(() => exhaust(container))
-          .then(() => pZipStreamToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/draft/submissions.csv.zip?splitSelectMultiples=true'))
+          .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/draft/submissions.csv.zip?splitSelectMultiples=true'))
             .then((result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
               const lines = result['selectMultiple.csv'].split('\n');
@@ -2990,22 +3362,34 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .send(withSimpleIds('one', 'two'))
             .set('Content-Type', 'text/xml')
             .expect(200))
+          .then(() => asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions/one/restore')
+            .expect(200))
           .then(() => oneFirst(sql`select id from submissions`))
           .then((submissionId) => all(sql`SELECT id FROM submission_defs WHERE "submissionId" = ${submissionId} ORDER BY id desc`)
             .then(map(o => o.id))
             .then(submissionDefIds => asAlice.get('/v1/projects/1/forms/simple/submissions/one/audits')
               .expect(200)
               .then(({ body }) => {
-                body.length.should.equal(3);
+                body.length.should.equal(5);
                 for (const audit of body) audit.should.be.an.Audit();
-                body[0].action.should.equal('submission.update.version');
-                body[0].details.should.eql({ instanceId: 'two', submissionId, submissionDefId: submissionDefIds[0] });
-                body[1].action.should.equal('submission.update');
-                body[1].details.reviewState.should.equal('rejected');
-                body[1].details.submissionId.should.equal(submissionId);
-                should.exist(body[1].details.submissionDefId);
-                body[2].action.should.equal('submission.create');
-                body[2].details.should.eql({ instanceId: 'one', submissionId, submissionDefId: submissionDefIds[1] });
+                body[0].action.should.equal('submission.restore');
+                body[0].details.should.eql({ submissionId, instanceId: 'one' });
+
+                body[1].action.should.equal('submission.delete');
+                body[1].details.should.eql({ submissionId, instanceId: 'one' });
+
+                body[2].action.should.equal('submission.update.version');
+                body[2].details.should.eql({ instanceId: 'two', submissionId, submissionDefId: submissionDefIds[0] });
+
+                body[3].action.should.equal('submission.update');
+                body[3].details.reviewState.should.equal('rejected');
+                body[3].details.submissionId.should.equal(submissionId);
+                should.exist(body[3].details.submissionDefId);
+
+                body[4].action.should.equal('submission.create');
+                body[4].details.should.eql({ instanceId: 'one', submissionId, submissionDefId: submissionDefIds[1] });
               }))))));
 
     it('should not expand actor when not extended', testService((service) =>
@@ -3384,13 +3768,13 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
         .send(withSimpleIds('one', 'two'))
         .expect(200);
 
-      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01' WHERE "displayName" = 'Alice'`);
-      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01' WHERE "displayName" = 'Bob'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01T00:00:00Z' WHERE "displayName" = 'Alice'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01T00:00:00Z' WHERE "displayName" = 'Bob'`);
 
-      await container.run(sql`UPDATE submissions SET "createdAt" = '2022-01-01', "updatedAt" = '2023-01-01'`);
+      await container.run(sql`UPDATE submissions SET "createdAt" = '2022-01-01T00:00:00Z', "updatedAt" = '2023-01-01T00:00:00Z'`);
 
-      await container.run(sql`UPDATE submission_defs SET "createdAt" = '2022-01-01' WHERE "instanceId" = 'one'`);
-      await container.run(sql`UPDATE submission_defs SET "createdAt" = '2023-01-01' WHERE "instanceId" = 'two'`);
+      await container.run(sql`UPDATE submission_defs SET "createdAt" = '2022-01-01T00:00:00Z' WHERE "instanceId" = 'one'`);
+      await container.run(sql`UPDATE submission_defs SET "createdAt" = '2023-01-01T00:00:00Z' WHERE "instanceId" = 'two'`);
 
       await asAlice.get('/v1/projects/1/forms/simple/submissions/one')
         .set('X-Extended-Metadata', 'true')

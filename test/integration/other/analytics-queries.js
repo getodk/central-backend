@@ -2,6 +2,7 @@ const appRoot = require('app-root-path');
 const { sql } = require('slonik');
 const { testService, testContainer } = require('../setup');
 const { createReadStream, readFileSync } = require('fs');
+const uuid = require('uuid').v4;
 
 const { promisify } = require('util');
 const testData = require('../../data/xml');
@@ -71,12 +72,6 @@ const createTestForm = (service, container, xml, projectId) =>
       .send(xml)
       .then(({ body }) => body.xmlFormId));
 
-const approvalRequired = (service, projectId, datasetName) =>
-  service.login('alice', (asAlice) =>
-    asAlice.patch(`/v1/projects/${projectId}/datasets/${datasetName}`)
-      .send({ approvalRequired: true })
-      .expect(200));
-
 const createPublicLink = (service, projectId, xmlFormId) =>
   service.login('alice', (asAlice) =>
     asAlice.post(`/v1/projects/${projectId}/forms/${xmlFormId}/public-links`)
@@ -102,7 +97,6 @@ const submitToForm = (service, user, projectId, xmlFormId, xml, deviceId = 'abcd
 ////////////////////////////////////////////////////////////////////////////////
 // Tests!
 ////////////////////////////////////////////////////////////////////////////////
-// eslint-disable-next-line func-names
 describe('analytics task queries', function () {
   // increasing timeouts on this set of tests
   this.timeout(8000);
@@ -114,7 +108,7 @@ describe('analytics task queries', function () {
       await container.Audits.log(null, 'dummy.action', null, 'test audit details');
       // old audit
       await container.run(sql`insert into audits ("actorId", action, "acteeId", details, "loggedAt")
-        values (null, 'dummy.action', null, null, '1999-1-1')`);
+        values (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z')`);
       const res = await container.Analytics.auditLogs();
       res.recent.should.equal(2);
       res.total.should.equal(3);
@@ -357,6 +351,37 @@ describe('analytics task queries', function () {
         await container.Analytics.countClientAuditRows()
           .then((res) => res.should.equal(8));
       }));
+
+      it('should count rows from client audit attachments uploaded to s3', testService(async (service, container) => {
+        global.s3.enableMock();
+
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.clientAudits)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+          .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+          .expect(201);
+
+        await asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+          .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+          .expect(201);
+
+        await container.Analytics.countClientAuditRows()
+          .then((res) => res.should.equal(0));
+
+        await container.Blobs.s3UploadPending();
+        await exhaust(container);
+
+        await container.Analytics.countClientAuditRows()
+          .then((res) => res.should.equal(8));
+      }));
     });
 
     it('should count failed audits', testService(async (service, container) => {
@@ -405,7 +430,6 @@ describe('analytics task queries', function () {
     it('should calculate number of managers per project', testService(async (service, container) => {
       // default project has 1 manager already (bob) with no activity
       await createTestUser(service, container, 'Manager1', 'manager', 1);
-      // eslint-disable-next-line no-trailing-spaces
 
       // compute metrics
       const res = await container.Analytics.countUsersPerRole();
@@ -487,7 +511,7 @@ describe('analytics task queries', function () {
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one, 'device1');
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.two, 'device2');
       // make all submissions so far in the distant past
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.three, 'device3');
       const res = await container.Analytics.countDeviceIds();
       res[0].projectId.should.equal(1);
@@ -593,7 +617,7 @@ describe('analytics task queries', function () {
       const projId = await createTestProject(service, container, 'New Proj');
       const encryptedFormId = await createTestForm(service, container, testData.forms.encrypted, projId);
       await submitToForm(service, 'alice', projId, encryptedFormId, testData.instances.encrypted.one);
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
       const res = await container.Analytics.countFormsEncrypted();
       const projects = {};
       for (const row of res) {
@@ -693,7 +717,7 @@ describe('analytics task queries', function () {
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.one);
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.two);
       // make all submissions so far in the distant past
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.three);
       const res = await container.Analytics.countSubmissions();
       res[0].projectId.should.equal(1);
@@ -707,7 +731,7 @@ describe('analytics task queries', function () {
         asAlice.patch('/v1/projects/1/forms/simple/submissions/aaa')
           .send({ reviewState: 'approved' }));
 
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
 
       await submitToForm(service, 'alice', 1, 'simple', simpleInstance('bbb'));
       await service.login('alice', (asAlice) =>
@@ -737,7 +761,7 @@ describe('analytics task queries', function () {
         asAlice.patch('/v1/projects/1/forms/simple/submissions/aaa')
           .send({ reviewState: 'rejected' }));
 
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
 
       await submitToForm(service, 'alice', 1, 'simple', simpleInstance('bbb'));
       await service.login('alice', (asAlice) =>
@@ -766,7 +790,7 @@ describe('analytics task queries', function () {
         asAlice.patch('/v1/projects/1/forms/simple/submissions/aaa')
           .send({ reviewState: 'hasIssues' }));
 
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
 
       await submitToForm(service, 'alice', 1, 'simple', simpleInstance('bbb'));
       await service.login('alice', (asAlice) =>
@@ -795,7 +819,7 @@ describe('analytics task queries', function () {
         asAlice.patch('/v1/projects/1/forms/simple/submissions/aaa')
           .send({ reviewState: 'edited' }));
 
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
 
       await submitToForm(service, 'alice', 1, 'simple', simpleInstance('bbb'));
       await service.login('alice', (asAlice) =>
@@ -827,8 +851,8 @@ describe('analytics task queries', function () {
           .attach('xml_submission_file', Buffer.from(withSimpleIds('one', '111').replace('Alice', 'Alyssa')), { filename: 'data.xml' }));
 
       // make all submissions (and their defs in this case) so far in the distant past
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
-      await container.all(sql`update submission_defs set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
+      await container.all(sql`update submission_defs set "createdAt" = '1999-1-1T00:00:00Z' where true`);
 
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.two);
       await service.login('alice', (asAlice) =>
@@ -849,7 +873,7 @@ describe('analytics task queries', function () {
           .send({ body: 'new comment here' }));
 
       // make all submissions so far in the past
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.two);
       await service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions/two/comments')
@@ -882,7 +906,7 @@ describe('analytics task queries', function () {
         .set('Content-Type', 'application/xml');
 
       // make all submissions so far in the distant past
-      await container.all(sql`update submissions set "createdAt" = '1999-1-1' where true`);
+      await container.all(sql`update submissions set "createdAt" = '1999-1-1T00:00:00Z' where true`);
       await submitToForm(service, 'alice', 1, 'simple', testData.instances.simple.two);
       await submitToForm(service, 'bob', 1, 'simple', testData.instances.simple.three);
 
@@ -951,7 +975,7 @@ describe('analytics task queries', function () {
       await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two').send({ reviewState: 'approved' });
       await exhaust(container);
 
-      await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1' WHERE TRUE`);
+      await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1T00:00:00Z' WHERE TRUE`);
 
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three);
       await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/three').send({ reviewState: 'approved' });
@@ -964,23 +988,17 @@ describe('analytics task queries', function () {
     }));
 
     it('should calculate failed entities', testService(async (service, container) => {
-      const asAlice = await service.login('alice');
-
       await createTestForm(service, container, testData.forms.simpleEntity, 1);
-      await approvalRequired(service, 1, 'people');
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
-      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one').send({ reviewState: 'approved' });
 
       // let's pass invalid UUID
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two.replace(/aaa/, 'xxx'));
-      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two').send({ reviewState: 'approved' });
       await exhaust(container);
 
       // let's set date of entity errors to long time ago
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.error'`);
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.error'`);
 
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three.replace(/bbb/, 'xxx'));
-      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/three').send({ reviewState: 'approved' });
       await exhaust(container);
 
       const datasets = await container.Analytics.getDatasets();
@@ -1007,7 +1025,7 @@ describe('analytics task queries', function () {
         .expect(200);
 
       // let's set date of entity update to long time ago
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.update.version'`);
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.update.version'`);
 
       await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
         .send({ data: { age: '2' } })
@@ -1041,7 +1059,7 @@ describe('analytics task queries', function () {
         .expect(200);
 
       // let's set date of entity update to long time ago
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.update.version'`);
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.update.version'`);
 
       await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
         .send({ data: { age: '2' } })
@@ -1079,10 +1097,10 @@ describe('analytics task queries', function () {
         .expect(200);
 
       // let's set date of entity update to long time ago
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.update.version'`);
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.update.version'`);
 
       // let's set entity updatedAt to a long time ago, too
-      await container.run(sql`UPDATE entities SET "updatedAt" = '1999-1-1' WHERE "uuid" = '12345678-1234-4123-8234-123456789abc'`);
+      await container.run(sql`UPDATE entities SET "updatedAt" = '1999-1-1T00:00:00Z' WHERE "uuid" = '12345678-1234-4123-8234-123456789abc'`);
 
       await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa?force=true')
         .send({ data: { age: '2' } })
@@ -1250,7 +1268,7 @@ describe('analytics task queries', function () {
         .expect(200);
 
       // Make existing audits in the distant past
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.bulk.create'`);
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.bulk.create'`);
 
       // Recent bulk upload with 1 row in "people"
       await asAlice.post('/v1/projects/1/datasets/people/entities')
@@ -1313,6 +1331,509 @@ describe('analytics task queries', function () {
     }));
   });
 
+  describe('offline entity metrics', () => {
+    it('should count number of offline entity branches (nontrivial branches with >1 update)', testService(async (service, container) => {
+      await createTestForm(service, container, testData.forms.offlineEntity, 1);
+
+      const asAlice = await service.login('alice');
+
+      // Entity version from API doesn't have a branchId so doesn't count
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Johnny Doe',
+          data: { first_name: 'Johnny', age: '22' }
+        })
+        .expect(200);
+
+      // Branch with only update (trunkVersion = baseVersion, doesn't count)
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${uuid()}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Branch with two updates (does count)
+      const branchIdOne = uuid();
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update1')
+          .replace('branchId=""', `branchId="${branchIdOne}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${branchIdOne}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Branch with create, then update (does count)
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${uuid()}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const countOfflineBranches = await container.Analytics.countOfflineBranches();
+      countOfflineBranches.should.equal(2);
+
+      // Sanity check this count, should be 0
+      const countInterruptedBranches = await container.Analytics.countInterruptedBranches();
+      countInterruptedBranches.should.equal(0);
+    }));
+
+    it('should count number of interrupted branches', testService(async (service, container) => {
+      await createTestForm(service, container, testData.forms.offlineEntity, 1);
+
+      const asAlice = await service.login('alice');
+
+      // make some entities to update
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          entities: [
+            { uuid: '12345678-1234-4123-8234-123456789aaa', label: 'aaa' },
+            { uuid: '12345678-1234-4123-8234-123456789bbb', label: 'bbb' },
+            { uuid: '12345678-1234-4123-8234-123456789ccc', label: 'ccc' },
+            { uuid: '12345678-1234-4123-8234-123456789ddd', label: 'ddd' },
+          ],
+          source: { name: 'api', size: 3 }
+        })
+        .expect(200);
+
+      // aaa entity, branches: A, A, B, A (counts as interrupted)
+      const aaaBranchA = uuid();
+      const aaaBranchB = uuid();
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789aaa')
+          .replace('one', 'aaa-v1')
+          .replace('branchId=""', `branchId="${aaaBranchA}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789aaa')
+          .replace('one', 'aaa-v2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${aaaBranchA}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789aaa')
+          .replace('one', 'aaa-interrupt')
+          .replace('branchId=""', `branchId="${aaaBranchB}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789aaa')
+          .replace('one', 'aaa-v3')
+          .replace('baseVersion="1"', 'baseVersion="3"')
+          .replace('branchId=""', `branchId="${aaaBranchA}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // bbb entity, branches: A, A, B, B (not counted)
+      const bbbBranchA = uuid();
+      const bbbBranchB = uuid();
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789bbb')
+          .replace('one', 'bbb-v1')
+          .replace('branchId=""', `branchId="${bbbBranchA}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789bbb')
+          .replace('one', 'bbb-v2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${bbbBranchA}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789bbb')
+          .replace('one', 'bbb-newbranch-v1')
+          .replace('branchId=""', `branchId="${bbbBranchB}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789bbb')
+          .replace('one', 'bbb-newbranch-v2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${bbbBranchB}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // ccc entity, branches: A, B, A, B  (counted twice)
+      const cccBranchA = uuid();
+      const cccBranchB = uuid();
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789ccc')
+          .replace('one', 'ccc-v1')
+          .replace('branchId=""', `branchId="${cccBranchA}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789ccc')
+          .replace('one', 'ccc-newbranch-v1')
+          .replace('branchId=""', `branchId="${cccBranchB}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789ccc')
+          .replace('one', 'ccc-v2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${cccBranchA}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789ccc')
+          .replace('one', 'ccc-newbranch-v2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${cccBranchB}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // ddd entity, branches A, (api update), A
+      const dddBranchA = uuid();
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789ddd')
+          .replace('one', 'ddd-v1')
+          .replace('branchId=""', `branchId="${dddBranchA}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd?baseVersion=2')
+        .send({ label: 'ddd update' })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd?baseVersion=3')
+        .send({ label: 'ddd update2' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="12345678-1234-4123-8234-123456789abc', 'id="12345678-1234-4123-8234-123456789ddd')
+          .replace('one', 'ddd-v2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${dddBranchA}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const countInterruptedBranches = await container.Analytics.countInterruptedBranches();
+      countInterruptedBranches.should.equal(4);
+    }));
+
+    it('should count number of submission.reprocess events (submissions temporarily in the backlog)', testService(async (service, container) => {
+      await createTestForm(service, container, testData.forms.offlineEntity, 1);
+
+      const asAlice = await service.login('alice');
+
+      // Create entity to update
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'label'
+        })
+        .expect(200);
+
+      const branchId = uuid();
+
+      // Send second update in branch first
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update1')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Should be in backlog
+      let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      // Send first update in
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // backlog should be empty now
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(0);
+
+      let countReprocess = await container.Analytics.countSubmissionReprocess();
+      countReprocess.should.equal(1);
+
+      // Send a future update that will get held in backlog
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update10')
+          .replace('baseVersion="1"', 'baseVersion="10"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      // A submission being put in the backlog is not what is counted so this is still 1
+      countReprocess = await container.Analytics.countSubmissionReprocess();
+      countReprocess.should.equal(1);
+
+      // force processing the backlog
+      await container.Entities.processBacklog(true);
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(0);
+
+      // Force processing also doesn't change this count so it is still 1
+      countReprocess = await container.Analytics.countSubmissionReprocess();
+      countReprocess.should.equal(1);
+
+      //----------
+
+      // Trigger another reprocess by sending an update before a create
+      const branchId2 = uuid();
+
+      // Send the second submission that updates an entity (before the entity has been created)
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId2}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      // Send the second submission to create the entity, which should trigger
+      // the processing of the next submission in the branch.
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Two reprocessing events logged now
+      countReprocess = await container.Analytics.countSubmissionReprocess();
+      countReprocess.should.equal(2);
+    }));
+
+    it('should measure time from submission creation to entity version finished processing', testService(async (service, container) => {
+      await createTestForm(service, container, testData.forms.offlineEntity, 1);
+
+      const asAlice = await service.login('alice');
+
+      // Make an entity that doesn't have a source
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Johnny Doe',
+          data: { first_name: 'Johnny', age: '22' }
+        })
+        .expect(200);
+
+      // times may be null if no submissions have been processed
+      let waitTime = await container.Analytics.measureEntityProcessingTime();
+      waitTime.should.eql({ max_wait: null, avg_wait: null });
+
+      // Make an entity update
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${uuid()}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Make another entity create
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+      waitTime = await container.Analytics.measureEntityProcessingTime();
+      waitTime.max_wait.should.be.greaterThan(0);
+      waitTime.avg_wait.should.be.greaterThan(0);
+    }));
+
+    it('should not see a delay for submissions processed with approvalRequired flag toggled', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Create form, set dataset people to approvalRequired = true
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      // Send submission
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
+
+      // Process submission
+      await exhaust(container);
+
+      const processTimes1 = await container.one(sql`select "claimed", "processed", "loggedAt" from audits where action = 'submission.create'`);
+
+      // Wait times shouldn't be set yet because submission hasn't been processed into an entity
+      let waitTime = await container.Analytics.measureEntityProcessingTime();
+      waitTime.should.eql({ max_wait: null, avg_wait: null });
+
+      // wait 100ms
+      // eslint-disable-next-line no-promise-executor-return
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Toggle approvalRequired flag
+      await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+        .send({ approvalRequired: false })
+        .expect(200);
+
+      await exhaust(container);
+
+      // Wait times are now measured but they are from the initial processing of the submission.create event
+      // (when it was skipped because the dataset approval was required)
+      waitTime = await container.Analytics.measureEntityProcessingTime();
+      waitTime.max_wait.should.be.greaterThan(0);
+      waitTime.avg_wait.should.be.greaterThan(0);
+
+      const processTimes2 = await container.one(sql`select "claimed", "processed", "loggedAt" from audits where action = 'submission.create'`);
+      processTimes1.should.eql(processTimes2);
+
+      // Overall time from submission creation to entity version creation should be higher
+      // because it includes delay from dataset approval flag toggle
+      const entityTime = await container.Analytics.measureElapsedEntityTime();
+      entityTime.max_wait.should.be.greaterThan(waitTime.max_wait + 0.1);
+      entityTime.avg_wait.should.be.greaterThan(waitTime.avg_wait + 0.1);
+    }));
+
+    it('should not see a delay for submissions held in backlog and then force-processed', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await createTestForm(service, container, testData.forms.offlineEntity, 1);
+
+      // Send an update without the preceeding create
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${uuid()}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      let backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      // The submission.create event does have timestamps on it that we will compare later
+      const processTimes1 = await container.one(sql`select "claimed", "processed", "loggedAt" from audits where action = 'submission.create'`);
+
+      // Wait times shouldn't be set yet because submission hasn't been processed into an entity
+      let waitTime = await container.Analytics.measureEntityProcessingTime();
+      waitTime.should.eql({ max_wait: null, avg_wait: null });
+
+      // wait 100ms
+      // eslint-disable-next-line no-promise-executor-return
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // force processing the backlog
+      await container.Entities.processBacklog(true);
+
+      backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(0);
+
+      // Wait times are now measured but they are from the initial processing of the submission.create event
+      // (when it was skipped because it went into backlog)
+      waitTime = await container.Analytics.measureEntityProcessingTime();
+      waitTime.max_wait.should.be.greaterThan(0);
+      waitTime.avg_wait.should.be.greaterThan(0);
+
+      const processTimes2 = await container.one(sql`select "claimed", "processed", "loggedAt" from audits where action = 'submission.create'`);
+      processTimes1.should.eql(processTimes2);
+
+      // Overall time for entity creation should be higher because it includes the delay
+      // from waiting in the backlog before being force-processed
+      const entityTime = await container.Analytics.measureElapsedEntityTime();
+      entityTime.max_wait.should.be.greaterThan(waitTime.max_wait + 0.1);
+      entityTime.avg_wait.should.be.greaterThan(waitTime.avg_wait + 0.1);
+    }));
+  });
+
   describe('other project metrics', () => {
     it('should calculate projects with descriptions', testService(async (service, container) => {
       await service.login('alice', (asAlice) =>
@@ -1370,6 +1891,69 @@ describe('analytics task queries', function () {
       const event = (await container.Audits.getLatestByAction('submission.attachment.update')).get();
       await container.run(sql`update audits set failures = 5 where id = ${event.id}`);
 
+
+      // 2024.2 offline entity metrics
+
+      // create the form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.offlineEntity)
+        .expect(200);
+
+      // Creating an update chain
+      // API create
+      // update 2, update 1, (out of order reprocessing)
+      // API update (interrupt branch)
+      // update 3
+      const branchId = uuid();
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'abc',
+        })
+        .expect(200);
+
+      // switching the order of these updates triggers the
+      // submission.reprocess count
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update1')
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // inserting an API update before continuing the branch triggers
+      // the interrupted branch count
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=3')
+        .send({ label: 'abc update' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update3')
+          .replace('baseVersion="1"', 'baseVersion="3"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // After the interesting stuff above, encrypt and archive the project
+
       // encrypting a project
       await asAlice.post('/v1/projects/1/key')
         .send({ passphrase: 'supersecret', hint: 'it is a secret' });
@@ -1391,10 +1975,9 @@ describe('analytics task queries', function () {
       // creating audit events in various states
       await container.run(sql`insert into audits ("actorId", action, "acteeId", details, "loggedAt", "failures")
         values
-          (null, 'dummy.action', null, null, '1999-1-1', 1),
-          (null, 'dummy.action', null, null, '1999-1-1', 5),
-          (null, 'dummy.action', null, null, '1999-1-1', 0)`);
-
+          (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 1),
+          (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 5),
+          (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 0)`);
 
       const res = await container.Analytics.previewMetrics();
 
@@ -1567,15 +2150,12 @@ describe('analytics task queries', function () {
 
       // Create first Dataset
       await createTestForm(service, container, testData.forms.simpleEntity, 1);
-      await approvalRequired(service, 1, 'people');
 
       // Make submission for the first Dataset
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
-      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one').send({ reviewState: 'approved' });
 
       // Create second Dataset using two forms
       await createTestForm(service, container, testData.forms.simpleEntity.replace(/simpleEntity|people/g, 'employees'), 1);
-      await approvalRequired(service, 1, 'employees');
       await createTestForm(service, container, testData.forms.simpleEntity
         .replace(/simpleEntity/, 'employees2')
         .replace(/people/, 'employees')
@@ -1583,37 +2163,32 @@ describe('analytics task queries', function () {
 
       // Make submissions for the second Datasets
       await submitToForm(service, 'alice', 1, 'employees', testData.instances.simpleEntity.two.replace(/simpleEntity|people/g, 'employees'));
-      await asAlice.patch('/v1/projects/1/forms/employees/submissions/two').send({ reviewState: 'approved' });
       await submitToForm(service, 'alice', 1, 'employees2', testData.instances.simpleEntity.three
         .replace(/simpleEntity/, 'employees2')
         .replace(/people/, 'employees')
         .replace(/age/g, 'gender'));
-      await asAlice.patch('/v1/projects/1/forms/employees2/submissions/three').send({ reviewState: 'approved' });
 
       // Expecting all Submissions should generate Entities
       await exhaust(container);
 
       // Making all Entities ancient
-      await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1' WHERE TRUE`);
+      await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1T00:00:00Z' WHERE TRUE`);
 
       // Make a recent Submissions for the first Dataset
       // aaa -> ccc creates unique UUID
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two.replace('aaa', 'ccc'));
-      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two').send({ reviewState: 'approved' });
 
       // bbb -> xxx causes invalid UUID, hence this Submission should not generate Entity
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three.replace('bbb', 'xxx'));
-      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/three').send({ reviewState: 'approved' });
 
       // One Entity will be created and one error will be logged
       await exhaust(container);
 
       // Make the error ancient
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.error'`);
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.error'`);
 
       // Create new Submission that will cause entity creation error
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.three.replace(/bbb|three/g, 'xxx'));
-      await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/xxx').send({ reviewState: 'approved' });
 
       // One error will be logged
       await exhaust(container);
@@ -1623,7 +2198,7 @@ describe('analytics task queries', function () {
         .send({ data: { age: '1' } });
 
       // Make the update ancient
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1' WHERE action = 'entity.update.version'`);
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.update.version'`);
 
       // Update the same entity again
       await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')

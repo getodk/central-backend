@@ -29,13 +29,17 @@ const defaults = {
   // The OpenRosa URL that was passed to the create() method
   receivedUrl: undefined,
   // An object with a property for each argument passed to the edit() method
-  editData: undefined
+  editData: undefined,
+
+  // Control whether enketo resets after a request. Set to false in tests that
+  // need multiple error requests or timeouts in a row.
+  autoReset: true,
 };
 
 let cancelToken = 0;
 
 const reset = () => {
-  if (global.enketo === undefined) global.enketo = {};
+  if (global.enketo === undefined) global.enketo = { reset };
   Object.assign(global.enketo, defaults);
   cancelToken += 1;
 };
@@ -44,7 +48,10 @@ const reset = () => {
 const request = () => {
   global.enketo.callCount += 1;
   const options = { ...global.enketo };
-  Object.assign(global.enketo, without(['callCount'], defaults));
+
+  if (global.enketo.autoReset)
+    Object.assign(global.enketo, without(['callCount'], defaults));
+
   return new Promise((resolve, reject) => {
     const { wait } = options;
     const tokenBeforeWait = cancelToken;

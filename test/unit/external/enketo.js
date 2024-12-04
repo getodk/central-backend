@@ -18,7 +18,6 @@ describe('external/enketo', () => {
     it('should send a properly constructed request to Enketo', () => {
       enketoNock
         .post('/enketoPath/api/v2/survey/all')
-        // eslint-disable-next-line space-before-function-paren, func-names
         .reply(201, function(uri, requestBody) {
           const base64Auth = Buffer.from('enketoApiKey:').toString('base64');
           const expectedQueryString = querystring.stringify({ server_url: openRosaUrl, form_id: xmlFormId });
@@ -87,7 +86,6 @@ describe('external/enketo', () => {
       let run = false;
       enketoNock
         .post('/enketoPath/api/v2/instance')
-        // eslint-disable-next-line space-before-function-paren, func-names
         .reply(201, function(uri, requestBody) {
           run = true;
           const base64Auth = Buffer.from('enketoApiKey:').toString('base64');

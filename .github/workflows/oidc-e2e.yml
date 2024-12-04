@@ -30,7 +30,7 @@ jobs:
     - name: Use Node.js 20
       uses: actions/setup-node@v4
       with:
-        node-version: 20.10.0
+        node-version: 20.17.0
         cache: 'npm'
     - run: make test-oidc-e2e
     - name: Archive playwright screenshots

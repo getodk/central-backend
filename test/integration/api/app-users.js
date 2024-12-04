@@ -1,7 +1,6 @@
 const should = require('should');
 const { testService, withClosedForm } = require('../setup');
 const testData = require('../../data/xml');
-const authenticateUser = require('../../util/authenticate-user');
 
 describe('api: /projects/:id/app-users', () => {
   describe('POST', () => {
@@ -235,7 +234,7 @@ describe('api: /key/:key', () => {
       .expect(403)));
 
   it('should reject non-field tokens', testService((service) =>
-    authenticateUser(service, 'alice')
+    service.authenticateUser('alice')
       .then((token) => service.get(`/v1/key/${token}/users/current`)
         .expect(403))));
 

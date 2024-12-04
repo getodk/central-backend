@@ -2,7 +2,6 @@ const appRoot = require('app-root-path');
 const should = require('should');
 const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { testService } = require('../setup');
-const authenticateUser = require('../../util/authenticate-user');
 
 describe('api: /users', () => {
   describe('GET', () => {
@@ -523,7 +522,7 @@ describe('api: /users', () => {
 
               if (process.env.TEST_AUTH === 'oidc') {
                 after.body.email.should.equal('bob@getodk.org');
-                return authenticateUser(service, 'bob');
+                return service.authenticateUser('bob');
               } else {
                 after.body.email.should.equal('newbob@odk.org');
                 return service.post('/v1/sessions')
@@ -804,7 +803,7 @@ describe('api: /users', () => {
               .then(async () => {
                 if (process.env.TEST_AUTH === 'oidc') {
                   try {
-                    await authenticateUser(service, 'chelsea');
+                    await service.authenticateUser('chelsea');
                     should.fail();
                   } catch (err) {
                     err.message.should.equal('expected 200 "OK", got 303 "See Other"');

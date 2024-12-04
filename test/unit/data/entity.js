@@ -3,7 +3,19 @@ const appRoot = require('app-root-path');
 const assert = require('assert');
 const { ConflictType } = require('../../../lib/data/entity');
 const { Entity } = require('../../../lib/model/frames');
-const { normalizeUuid, extractLabelFromSubmission, extractBaseVersionFromSubmission, parseSubmissionXml, extractEntity, extractBulkSource, extractSelectedProperties, selectFields, diffEntityData, getDiffProp, getWithConflictDetails } = require(appRoot + '/lib/data/entity');
+const { normalizeUuid,
+  extractLabelFromSubmission,
+  extractBaseVersionFromSubmission,
+  extractBranchIdFromSubmission,
+  extractTrunkVersionFromSubmission,
+  parseSubmissionXml,
+  extractEntity,
+  extractBulkSource,
+  extractSelectedProperties,
+  selectFields,
+  diffEntityData,
+  getDiffProp,
+  getWithConflictDetails } = require(appRoot + '/lib/data/entity');
 const { fieldsFor } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
@@ -119,36 +131,30 @@ describe('extracting and validating entities', () => {
 
     describe('extractBaseVersionFromSubmission', () => {
       it('should extract integer base version when update is true', () => {
-        const entity = { system: { update: '1', baseVersion: '99' } };
-        extractBaseVersionFromSubmission(entity).should.equal(99);
-      });
-
-      it('not return base version if create is true because it is not relevant', () => {
-        const entity = { system: { create: '1', baseVersion: '99' } };
-        should.not.exist(extractBaseVersionFromSubmission(entity));
-      });
-
-      it('not return base version if neither create nor update are provided', () => {
         const entity = { system: { baseVersion: '99' } };
-        should.not.exist(extractBaseVersionFromSubmission(entity));
+        extractBaseVersionFromSubmission(entity, { update: true }).should.equal(99);
       });
 
-      it('should complain if baseVersion is missing when update is true (update = 1)', () => {
+      it('should extract base version even if create is true and update is not', () => {
+        const entity = { system: { baseVersion: '99' } };
+        extractBaseVersionFromSubmission(entity, { create: true }).should.equal(99);
+      });
+
+      it('should complain if baseVersion is missing when update is true', () => {
         const entity = { system: { update: '1' } };
-        assert.throws(() => { extractBaseVersionFromSubmission(entity); }, (err) => {
+        assert.throws(() => { extractBaseVersionFromSubmission(entity, { update: true }); }, (err) => {
           err.problemCode.should.equal(400.2);
           err.message.should.equal('Required parameter baseVersion missing.');
           return true;
         });
       });
 
-      it('should complain if baseVersion is missing when update is true (update = true)', () => {
-        const entity = { system: { update: 'true' } };
-        assert.throws(() => { extractBaseVersionFromSubmission(entity); }, (err) => {
-          err.problemCode.should.equal(400.2);
-          err.message.should.equal('Required parameter baseVersion missing.');
-          return true;
-        });
+      it('not complain if baseVersion is missing when update is false and create is true', () => {
+        const entity = { system: { } };
+        // the create/update values do not get pulled from the entity system data here
+        // but rather from the branch in the code that decides whether a create
+        // or update is currently being attempted.
+        should.not.exist(extractBaseVersionFromSubmission(entity, { create: true }));
       });
 
       it('should complain if baseVersion not an integer', () => {
@@ -156,6 +162,57 @@ describe('extracting and validating entities', () => {
         assert.throws(() => { extractBaseVersionFromSubmission(entity); }, (err) => {
           err.problemCode.should.equal(400.11);
           err.message.should.equal('Invalid input data type: expected (baseVersion) to be (integer)');
+          return true;
+        });
+      });
+    });
+
+    describe('extractBranchIdFromSubmission', () => {
+      it('should extract branchId as uuid', () => {
+        const entity = { system: { branchId: 'dcd8906c-e795-45f8-8670-48e97ba79437' } };
+        extractBranchIdFromSubmission(entity).should.equal('dcd8906c-e795-45f8-8670-48e97ba79437');
+      });
+
+      it('should complain if branchId is provided but is not a v4 uuid', () => {
+        const entity = { system: { branchId: 'not-a-uuid' } };
+        assert.throws(() => { extractBranchIdFromSubmission(entity); }, (err) => {
+          err.problemCode.should.equal(400.11);
+          err.message.should.equal('Invalid input data type: expected (branchId) to be (valid version 4 UUID)');
+          return true;
+        });
+      });
+
+      it('should return null for branch id if empty string', () => {
+        const entity = { system: { branchId: '' } };
+        should.not.exist(extractBranchIdFromSubmission(entity));
+      });
+
+      it('should return null for branch id not provided', () => {
+        const entity = { system: { } };
+        should.not.exist(extractBranchIdFromSubmission(entity));
+      });
+    });
+
+    describe('extractTrunkVersionFromSubmission', () => {
+      it('should extract trunkVersion', () => {
+        const entity = { system: { trunkVersion: '4', branchId: 'dcd8906c-e795-45f8-8670-48e97ba79437' } };
+        extractTrunkVersionFromSubmission(entity).should.equal(4);
+      });
+
+      it('should complain if trunkVersion is provided with invalid branchId', () => {
+        const entity = { system: { trunkVersion: '1', branchId: 'not-a-uuid' } };
+        assert.throws(() => { extractTrunkVersionFromSubmission(entity); }, (err) => {
+          err.problemCode.should.equal(400.11);
+          err.message.should.equal('Invalid input data type: expected (branchId) to be (valid version 4 UUID)');
+          return true;
+        });
+      });
+
+      it('should complain if trunkVersion is provided without branchId', () => {
+        const entity = { system: { trunkVersion: '1' } };
+        assert.throws(() => { extractTrunkVersionFromSubmission(entity); }, (err) => {
+          err.problemCode.should.equal(400.2);
+          err.message.should.equal('Required parameter branchId missing.');
           return true;
         });
       });
@@ -191,7 +248,9 @@ describe('extracting and validating entities', () => {
               label: 'Alice (88)',
               dataset: 'people',
               update: undefined,
-              baseVersion: undefined
+              baseVersion: undefined,
+              branchId: undefined,
+              trunkVersion: undefined
             });
           }));
 
@@ -206,7 +265,9 @@ describe('extracting and validating entities', () => {
               label: 'Alice (88)',
               dataset: 'people',
               update: undefined,
-              baseVersion: undefined
+              baseVersion: undefined,
+              branchId: undefined,
+              trunkVersion: undefined
             });
           }));
 
@@ -257,7 +318,9 @@ describe('extracting and validating entities', () => {
               label: 'Alicia (85)',
               dataset: 'people',
               update: '1',
-              baseVersion: '1'
+              baseVersion: '1',
+              branchId: undefined,
+              trunkVersion: undefined
             });
           }));
     });
@@ -597,11 +660,9 @@ describe('extracting and validating entities', () => {
         creator: {
           id: 'id',
           displayName: 'displayName'
-        },
-        stats: {
-          updates: 0
         }
-      }
+      },
+      updates: 0
     };
     const properties = [{ name: 'firstName' }, { name: 'lastName' }];
 
@@ -680,11 +741,9 @@ describe('extracting and validating entities', () => {
           creator: {
             id: 'id',
             displayName: 'displayName'
-          },
-          stats: {
-            updates: 0
           }
-        }
+        },
+        updates: 0
       };
       const selectedProperties = null;
       const result = selectFields(data, properties, selectedProperties);

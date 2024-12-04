@@ -4,8 +4,11 @@ const uuid = require('uuid').v4;
 const config = require('config');
 const { testContainerFullTrx, testServiceFullTrx } = require('../setup');
 const { sql } = require('slonik');
+const { createReadStream } = require('fs');
 const { Actor, Config } = require(appRoot + '/lib/model/frames');
 const { withDatabase } = require(appRoot + '/lib/model/migrate');
+const { exhaust } = require(appRoot + '/lib/worker/worker');
+
 const testData = require('../../data/xml');
 const populateUsers = require('../fixtures/01-users');
 const populateForms = require('../fixtures/02-forms');
@@ -35,9 +38,9 @@ const down = () => withTestDatabase((migrator) =>
 const testMigration = (filename, tests, options = {}) => {
   const { only = false, skip = false } = options;
   const f = only
+    // eslint-disable-next-line no-only-tests/no-only-tests
     ? describe.only.bind(describe)
     : (skip ? describe.skip.bind(describe) : describe);
-  // eslint-disable-next-line func-names, space-before-function-paren
   f(`database migrations: ${filename}`, function() {
     this.timeout(20000);
 
@@ -56,7 +59,6 @@ testMigration.skip = (filename, tests) =>
 // column to projects and forms, it is not possible to migrate part way
 // (before the new column) and populate the data when frames expect the
 // new column to exist.
-// eslint-disable-next-line space-before-function-paren, func-names
 describe.skip('database migrations', function() {
   this.timeout(8000);
 
@@ -216,7 +218,6 @@ describe.skip('database migrations', function() {
 
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 describe('database migrations: removing default project', function() {
   this.timeout(8000);
 
@@ -254,7 +255,6 @@ describe('database migrations: removing default project', function() {
   }));
 });
 
-// eslint-disable-next-line space-before-function-paren, func-names
 describe('database migrations: intermediate form schema', function() {
   this.timeout(20000);
 
@@ -384,7 +384,6 @@ describe('database migrations: intermediate form schema', function() {
   }));
 });
 
-// eslint-disable-next-line func-names, space-before-function-paren
 describe('database migrations: 20230123-01-remove-google-backups', function() {
   this.timeout(20000);
 
@@ -479,7 +478,6 @@ describe('database migrations: 20230123-01-remove-google-backups', function() {
   }));
 });
 
-// eslint-disable-next-line func-names
 describe.skip('database migrations: 20230324-01-edit-dataset-verbs.js', function () {
   this.timeout(20000);
 
@@ -516,7 +514,6 @@ describe.skip('database migrations: 20230324-01-edit-dataset-verbs.js', function
   }));
 });
 
-// eslint-disable-next-line func-names
 describe.skip('database migrations from 20230406: altering entities and entity_defs', function () {
   this.timeout(20000);
 
@@ -611,7 +608,6 @@ describe.skip('database migrations from 20230406: altering entities and entity_d
   }));
 });
 
-// eslint-disable-next-line func-names
 describe('database migrations from 20230512: adding entity_def_sources table', function () {
   this.timeout(20000);
 
@@ -986,4 +982,258 @@ testMigration('20240215-02-dedupe-verbs.js', () => {
     const { body: roles } = await service.get('/v1/roles').expect(200);
     for (const { verbs } of roles) verbs.should.eql([...new Set(verbs)]);
   }));
+});
+
+testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
+  it('should remove orphaned client audits', testServiceFullTrx(async (service, container) => {
+    await populateUsers(container);
+    await populateForms(container);
+
+    const asAlice = await service.login('alice');
+
+    await asAlice.post('/v1/projects/1/forms?publish=true')
+      .send(testData.forms.clientAudits)
+      .expect(200);
+
+    // Send the submission with the client audit attachment
+    await asAlice.post('/v1/projects/1/submission')
+      .set('X-OpenRosa-Version', '1.0')
+      .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
+      .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+      .expect(201);
+
+    await asAlice.post('/v1/projects/1/submission')
+      .set('X-OpenRosa-Version', '1.0')
+      .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+      .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+      .expect(201);
+
+    await exhaust(container);
+
+    // there should be 8 total rows (5 + 3)
+    let numClientAudits = await container.oneFirst(sql`select count(*) from client_audits`);
+    numClientAudits.should.equal(8);
+
+    // there should be 2 blobs
+    let blobCount = await container.oneFirst(sql`select count(*) from blobs`);
+    blobCount.should.equal(2);
+
+    // delete one of the submissions
+    await asAlice.delete('/v1/projects/1/forms/audits/submissions/one')
+      .expect(200);
+
+    // simulate purge without client audit purge
+    await container.run(sql`delete from submissions
+    where submissions."deletedAt" is not null`);
+
+    // purge unattached blobs (will not purge any because one is still referenced)
+    await container.Blobs.purgeUnattached(true);
+
+    // blobs count should still be 2
+    blobCount = await container.oneFirst(sql`select count(*) from blobs`);
+    blobCount.should.equal(2);
+
+    // client audits still equals 8 after purge (3 orphaned)
+    numClientAudits = await container.oneFirst(sql`select count(*) from client_audits`);
+    numClientAudits.should.equal(8);
+
+    // clean up orphaned client audits
+    await up();
+
+    numClientAudits = await container.oneFirst(sql`select count(*) from client_audits`);
+    numClientAudits.should.equal(3);
+
+    // blob count will still be two
+    blobCount = await container.oneFirst(sql`select count(*) from blobs`);
+    blobCount.should.equal(2);
+
+    // but next run of purging unattached blobs will purge one
+    await container.Blobs.purgeUnattached(true);
+
+    // blobs count should finally be 1
+    blobCount = await container.oneFirst(sql`select count(*) from blobs`);
+    blobCount.should.equal(1);
+  }));
+
+  testMigration('20241010-01-schedule-entity-form-upgrade.js', () => {
+    it('should schedule entity forms with spec version 2023.1.0 for upgrade to 2024.1.0', testServiceFullTrx(async (service, container) => {
+      await populateUsers(container);
+      await populateForms(container);
+
+      const asAlice = await service.login('alice');
+
+      // Upload one form with multiple versions
+      await asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023)
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/draft?ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023.replace('orx:version="1.0"', 'orx:version="2.0"'))
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish');
+
+      await asAlice.post('/v1/projects/1/forms/updateEntity/draft?ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023.replace('orx:version="1.0"', 'orx:version="3.0"'))
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Upload another form that needs updating
+      await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023.replace('id="updateEntity"', 'id="updateEntity2"'))
+        .expect(200);
+
+      // Upload an entity form that doesn't really need updating but does have 'update' in the actions column
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.offlineEntity)
+        .expect(200);
+
+      // Upload an entity form that does not need updating
+      await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+        .send(testData.forms.simpleEntity2022)
+        .expect(200);
+
+      // Deleted forms and projects
+      // Upload another form that needs updating but will be deleted
+      await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023.replace('id="updateEntity"', 'id="updateEntityDeleted"'))
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/forms/updateEntityDeleted')
+        .expect(200);
+
+      // Create a new project
+      const newProjectId = await asAlice.post('/v1/projects')
+        .send({ name: 'NewDeletedProject' })
+        .expect(200)
+        .then(({ body }) => body.id);
+
+      // Upload a form that needs updating to the new project
+      await asAlice.post(`/v1/projects/${newProjectId}/forms?publish=true&ignoreWarnings=true`)
+        .send(testData.forms.updateEntity2023)
+        .expect(200);
+
+      // Delete the new project
+      await asAlice.delete(`/v1/projects/${newProjectId}`);
+
+      // Mark forms for upgrade
+      await up();
+
+      // There should be a total of 3 forms flagged for upgrade:
+      // The two 2023.1 forms that need to be migrated, and one newer 2024.1 form.
+      // The latter form will get processed by the worker but it will realize there is
+      // no work to do so it wont change anything.
+      const audits = await container.oneFirst(sql`select count(*) from audits where action = 'upgrade.process.form.entities_version'`);
+      audits.should.equal(3);
+
+      // Run upgrade
+      await exhaust(container);
+
+      // Check the audit log
+      await asAlice.get('/v1/audits')
+        .expect(200)
+        .then(({ body }) => {
+          const actions = body.map(a => a.action);
+
+          // worker may not always process forms in the same order
+          actions.slice(0, 3).should.eqlInAnyOrder([
+            'form.update.draft.replace', // updateEntity2 draft only
+            'form.update.draft.replace', // updateEntity draft
+            'form.update.publish', // updateEntity published version
+          ]);
+
+          // Three upgrade events will always be present, though
+          actions.slice(3, 6).should.eql([
+            'upgrade.process.form.entities_version',
+            'upgrade.process.form.entities_version',
+            'upgrade.process.form.entities_version'
+          ]);
+        });
+
+      // First form that was upgraded: updateEntity
+      // Published form looks good, shows version 2.0[upgrade]
+      await asAlice.get('/v1/projects/1/forms/updateEntity.xml')
+        .then(({ text }) => {
+          text.should.equal(`<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+  <h:head>
+    <model entities:entities-version="2024.1.0">
+      <instance>
+        <data id="updateEntity" orx:version="2.0[upgrade]">
+          <name/>
+          <age/>
+          <hometown/>
+          <meta>
+            <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId="">
+              <label/>
+            </entity>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+      <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+    </model>
+  </h:head>
+</h:html>`);
+        });
+
+      // Draft form looks good, shows version 3.0[upgrade]
+      await asAlice.get('/v1/projects/1/forms/updateEntity/draft.xml')
+        .then(({ text }) => {
+          text.should.equal(`<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+  <h:head>
+    <model entities:entities-version="2024.1.0">
+      <instance>
+        <data id="updateEntity" orx:version="3.0[upgrade]">
+          <name/>
+          <age/>
+          <hometown/>
+          <meta>
+            <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId="">
+              <label/>
+            </entity>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+      <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+    </model>
+  </h:head>
+</h:html>`);
+        });
+
+      // Second form that was updated with only a draft version
+      // Draft form XML looks good
+      await asAlice.get('/v1/projects/1/forms/updateEntity2/draft.xml')
+        .then(({ text }) => {
+          text.should.equal(`<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+  <h:head>
+    <model entities:entities-version="2024.1.0">
+      <instance>
+        <data id="updateEntity2" orx:version="1.0[upgrade]">
+          <name/>
+          <age/>
+          <hometown/>
+          <meta>
+            <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId="">
+              <label/>
+            </entity>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+      <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+    </model>
+  </h:head>
+</h:html>`);
+        });
+
+      // Third form was already at 2024.1 version so it did not change
+      await asAlice.get('/v1/projects/1/forms/offlineEntity.xml')
+        .then(({ text }) => text.should.equal(testData.forms.offlineEntity));
+    }));
+  });
 });

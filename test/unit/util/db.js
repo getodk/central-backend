@@ -206,7 +206,7 @@ describe('util/db', () => {
     const U = Frame.define(into('extra'), 'z');
     it('should generate fields', () => {
       unjoiner(T, U)
-        .fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y","z" as "z"`);
+        .fields.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
     });
 
     it('should unjoin data', () => {
@@ -219,7 +219,7 @@ describe('util/db', () => {
 
     it('should optionally unjoin optional data', () => {
       const unjoin = unjoiner(T, Option.of(U));
-      unjoin.fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y","z" as "z"`);
+      unjoin.fields.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
       unjoin({ 'frames!x': 3, 'frames!y': 4, z: 5 })
         .should.eql(new T({ x: 3, y: 4 }, { extra: Option.of(new U({ z: 5 })) }));
       unjoin({ 'frames!x': 3, 'frames!y': 4 })
@@ -239,7 +239,7 @@ describe('util/db', () => {
     it('should provide the appropriate arguments when not extended', () => {
       let run = false;
       extender(T)(U)((fields, extend, options, x, y, z) => {
-        fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y"`);
+        fields.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y"`);
         (sql`${extend|| true}`).should.eql(sql``);
         x.should.equal(2);
         y.should.equal(3);
@@ -252,7 +252,7 @@ describe('util/db', () => {
     it('should provide the appropriate arguments when extended', () => {
       let run = false;
       extender(T)(U)((fields, extend, options, x, y, z) => {
-        fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y","a" as "a","b" as "b"`);
+        fields.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","a" as "a","b" as "b"`);
         (sql`${extend|| true}`).should.eql(sql`${true}`);
         x.should.equal(2);
         y.should.equal(3);
@@ -285,7 +285,7 @@ describe('util/db', () => {
 
     it('should formulate a basic response based on data', () => {
       insert(new T({ x: 2, y: 3 })).should.eql(sql`
-insert into frames ("x","y")
+insert into "frames" ("x","y")
 values (${2},${3})
 returning *`);
     });
@@ -293,7 +293,7 @@ returning *`);
     it('should deal with strange data input types', () => {
       insert(new T({ x: { test: true }, y: undefined, z: new Date('2000-01-01'), w: Object.assign(Object.create(null), { foo: 'bar' }) }))
         .should.eql(sql`
-insert into frames ("x","y","z","w")
+insert into "frames" ("x","y","z","w")
 values (${'{"test":true}'},${null},${'2000-01-01T00:00:00.000Z'},${'{"foo":"bar"}'})
 returning *`);
     });
@@ -301,7 +301,7 @@ returning *`);
     it('should automatically insert into createdAt if expected', () => {
       const U = Frame.define(table('cats'), 'createdAt', 'updatedAt');
       insert(new U()).should.eql(sql`
-insert into cats ("createdAt")
+insert into "cats" ("createdAt")
 values (${sql`clock_timestamp()`})
 returning *`);
     });
@@ -318,7 +318,7 @@ returning *`);
     it('should insert all data', () => {
       const query = insertMany([ new T({ x: 2 }), new T({ y: 3 }) ]);
       query.sql.should.be.eql(`
-  INSERT INTO dogs ("x","y")
+  INSERT INTO "dogs" ("x","y")
   SELECT * FROM unnest($1::"text"[], $2::"text"[]) AS t`);
       query.values.should.be.eql([
         [2, null],
@@ -330,10 +330,22 @@ returning *`);
       const U = Frame.define(table('dogs'), 'x', 'createdAt', fieldTypes(['timestamptz', 'timestamptz']));
       const query = insertMany([ new U({ x: new Date('2000-01-01') }), new U() ]);
       query.sql.should.be.eql(`
-  INSERT INTO dogs ("createdAt", "x")
+  INSERT INTO "dogs" ("createdAt", "x")
   SELECT clock_timestamp(), * FROM unnest($1::"timestamptz"[]) AS t`);
       query.values.should.be.eql([
         ['2000-01-01T00:00:00.000Z', null]
+      ]);
+    });
+
+    it('should insert createdAt even if last type is not timestamp', () => {
+      const U = Frame.define(table('dogs'), 'x', 'createdAt', 'age', fieldTypes(['timestamptz', 'timestamptz', 'int4']));
+      const query = insertMany([ new U({ x: new Date('2000-01-01'), age: 14 }), new U({ age: 8 }), new U() ]);
+      query.sql.should.be.eql(`
+  INSERT INTO "dogs" ("createdAt", "x","age")
+  SELECT clock_timestamp(), * FROM unnest($1::"timestamptz"[], $2::"int4"[]) AS t`);
+      query.values.should.be.eql([
+        ['2000-01-01T00:00:00.000Z', null, null],
+        [14, 8, null]
       ]);
     });
 
@@ -350,7 +362,7 @@ returning *`);
 
     it('should update the given data', () => {
       updater(new T({ id: 1, x: 2 }), new T({ y: 3 })).should.eql(sql`
-update rabbits
+update "rabbits"
 set "y"=${3}
 
 where ${sql.identifier([ 'id' ])}=${1}
@@ -360,7 +372,7 @@ returning *`);
     it('should set updatedAt if present', () => {
       const U = Frame.define(table('rabbits'), 'createdAt', 'updatedAt');
       updater(new U({ id: 1, x: 2 }), new U({ y: 3 })).should.eql(sql`
-update rabbits
+update "rabbits"
 set "y"=${3}
 ,"updatedAt"=clock_timestamp()
 where "id"=${1}
@@ -369,7 +381,7 @@ returning *`);
 
     it('should use a different id key if given', () => {
       updater(new T({ otherId: 0, x: 2 }), new T({ y: 3 }), 'otherId').should.eql(sql`
-update rabbits
+update "rabbits"
 set "y"=${3}
 
 where "otherId"=${0}
@@ -377,19 +389,19 @@ returning *`);
     });
   });
 
-  describe('equals', () => {
-    const { equals } = util;
+  describe('sqlEquals', () => {
+    const { sqlEquals } = util;
     it('should do nothing if given no conditions', () => {
-      equals({}).should.eql(sql`true`);
+      sqlEquals({}).should.eql(sql`true`);
     });
 
     it('should match k/v pairs', () => {
-      equals({ x: 2, y: 3 })
+      sqlEquals({ x: 2, y: 3 })
         .should.eql(sql.join([ sql`"x"=${2}`, sql`"y"=${3}` ], sql` and `));
     });
 
     it('should split compound keys', () => {
-      equals({ 'x.y': 2 })
+      sqlEquals({ 'x.y': 2 })
         .should.eql(sql.join([ sql`"x"."y"=${2}` ], sql` and `));
     });
   });

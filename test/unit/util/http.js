@@ -1,5 +1,6 @@
 const appRoot = require('app-root-path');
 const http = require(appRoot + '/lib/util/http');
+const Option = require(appRoot + '/lib/util/option');
 
 describe('util/http', () => {
   describe('isTrue', () => {
@@ -38,6 +39,31 @@ describe('util/http', () => {
     });
   });
 
+  describe('url()', () => {
+    const { url } = http;
+
+    const a = 'a space';
+    const b = 'funnyȩ¸iê';
+    const c = '100%';
+    const d = 999;
+    const e = { toString: () => 'e!' };
+
+    [
+      [ url``, '' ],
+      [ url`/`, '/' ],
+      [ url`/${a}`, '/a%20space' ],
+      [ url`/${b}`, '/funny%C8%A9%C2%B8i%C3%AA' ],
+      [ url`/${c}`, '/100%25' ],
+      [ url`/${d}`, '/999' ],
+      [ url`/${e}`, '/e!' ],
+      [ url`/${a}/${b}?c=${c}&d=${d}&e=${e}x`, '/a%20space/funny%C8%A9%C2%B8i%C3%AA?c=100%25&d=999&e=e!x' ],
+    ].forEach(([ actual, expected ]) => {
+      it(`should correctly encode ${expected}`, () => {
+        actual.should.equal(expected);
+      });
+    });
+  });
+
   describe('urlPathname', () => {
     const { urlPathname } = http;
     it('should return the pathname part of a url', () => {
@@ -51,7 +77,7 @@ describe('util/http', () => {
 
   describe('format response helpers', () => {
     const { contentType, xml, atom, json } = http;
-    // eslint-disable-next-line semi, space-before-function-paren, object-shorthand, func-names
+    // eslint-disable-next-line semi, object-shorthand
     const mockResponse = () => ({ type: function(value) { this.contentType = value } });
     it('should ultimately return the result', () => {
       contentType()(42)(null, mockResponse()).should.equal(42);
@@ -94,6 +120,34 @@ describe('util/http', () => {
 
     it('should unset keys given nully values', () => {
       urlWithQueryParams('/path?x=1&y=2&z=3', { x: null, z: undefined }).should.equal('/path?y=2');
+    });
+  });
+
+  describe('urlDecode()', () => {
+    const { urlDecode } = http;
+
+    [
+      [ '', '' ],
+      [ '%20', ' ' ],
+      [ 'abc123', 'abc123' ],
+    ].forEach(([ decodable, expected ]) => {
+      it(`should successfully decode '${decodable}' to Option.of('${expected}')`, () => {
+        const decoded = urlDecode(decodable);
+        (decoded instanceof Option).should.equal(true);
+        decoded.isDefined().should.equal(true);
+        decoded.get().should.equal(expected);
+      });
+    });
+
+    [
+      '%',
+      '%ae',
+    ].forEach(undecodable => {
+      it(`should decode '${undecodable}' to Option.None`, () => {
+        const decoded = urlDecode(undecodable);
+        (decoded instanceof Option).should.equal(true);
+        decoded.isEmpty().should.equal(true);
+      });
     });
   });
 });

@@ -1,7 +1,10 @@
 {
   "extends": "airbnb-base",
   "env": { "node": true },
-  "parserOptions": { "ecmaVersion": 2020 },
+  "parserOptions": { "ecmaVersion": 2022 },
+  "plugins": [
+    "no-only-tests"
+  ],
   "rules": {
     "array-bracket-spacing": "off",
     "arrow-parens": "off",
@@ -25,6 +28,7 @@
     "no-else-return": "off",
     "no-multiple-empty-lines": "off",
     "no-nested-ternary": "off",
+    "no-only-tests/no-only-tests": "error",
     "no-restricted-syntax": "off",
     "no-underscore-dangle": "off",
     "nonblock-statement-body-position": "off",
