@@ -1,9 +1,12 @@
 name: S3 E2E Tests
 
-on: push
+on:
+  push:
+  pull_request:
 
 jobs:
   s3-e2e:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
     timeout-minutes: 15
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
