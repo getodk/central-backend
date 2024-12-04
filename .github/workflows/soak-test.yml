@@ -4,7 +4,9 @@ on:
   push:
     branches:
     - master
-  workflow_dispatch:
+    # contributors who develop on branches in this repo:
+    - 'ktuite/*'
+  pull_request:
 
 jobs:
   soak-test:
