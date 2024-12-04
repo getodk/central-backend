@@ -444,3 +444,9 @@ should.Assertion.add('EntitySourceSubmissionDetails', function SubmissionDetails
   this.obj.should.have.property('instanceId').which.is.a.String();
   this.obj.should.have.property('instanceName'); // can be null
 });
+
+should.Assertion.add('skiptoken', function skiptoken(expected) {
+  this.params = { operator: 'to have a skiptoken' };
+
+  JSON.parse(Buffer.from(decodeURIComponent(new URL(this.obj).searchParams.get('$skiptoken').substr(2)), 'base64')).should.deepEqual(expected);
+});
