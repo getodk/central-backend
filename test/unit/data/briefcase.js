@@ -59,8 +59,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     callAndParse(inStream, formXml, 'mytestform', (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
@@ -113,8 +112,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     callAndParse(inStream, formXml, 'mytestform', (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
@@ -154,8 +152,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     callAndParse(inStream, formXml, 'mytestform', (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
@@ -194,8 +191,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     callAndParse(inStream, formXml, 'mytestform', (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
@@ -232,8 +228,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     callAndParse(inStream, formXml, 'mytestform', (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
@@ -269,8 +264,7 @@ describe('.csv.zip briefcase output @slow', () => {
     const inStream = streamTest.fromObjects([ data ]);
 
     callAndParse(inStream, formXml, 'mytestform', (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
@@ -308,8 +302,7 @@ describe('.csv.zip briefcase output @slow', () => {
     const inStream = streamTest.fromObjects([ one, two ]);
 
     callAndParse(inStream, formXml, 'mytestform', (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
@@ -346,8 +339,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     callAndParse(inStream, formXml, 'mytestform', (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
@@ -385,8 +377,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     callAndParse(inStream, formXml, 'mytestform', (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.eql([ 'mytestform.csv' ]);
       result['mytestform.csv'].should.equal(
@@ -407,8 +398,7 @@ describe('.csv.zip briefcase output @slow', () => {
 
     fieldsFor(testData.forms.selectMultiple).then((fields) => {
       zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] })), (err, result) => {
-        // eslint-disable-next-line keyword-spacing
-        if(err) return done(err);
+        if (err) return done(err);
 
         result.filenames.should.eql([ 'selectMultiple.csv' ]);
         result['selectMultiple.csv'].should.equal(
@@ -458,8 +448,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     callAndParse(inStream, formXml, 'structuredform', (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.eql([ 'structuredform.csv' ]);
       result['structuredform.csv'].should.equal(
@@ -510,8 +499,7 @@ describe('.csv.zip briefcase output @slow', () => {
 
     fieldsFor(formXml).then((fields) => {
       zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'structuredform', undefined, undefined, false, { groupPaths: false })), (err, result) => {
-        // eslint-disable-next-line keyword-spacing
-        if(err) return done(err);
+        if (err) return done(err);
 
         result.filenames.should.eql([ 'structuredform.csv' ]);
         result['structuredform.csv'].should.equal(
@@ -533,8 +521,7 @@ describe('.csv.zip briefcase output @slow', () => {
 
     fieldsFor(testData.forms.selectMultiple).then((fields) => {
       zipStreamToFiles(zipStreamFromParts(streamBriefcaseCsvs(inStream, fields, 'selectMultiple', { '/q1': [ 'x', 'y', 'z' ], '/g1/q2': [ 'm', 'n' ] }, undefined, false, { groupPaths: false })), (err, result) => {
-        // eslint-disable-next-line keyword-spacing
-        if(err) return done(err);
+        if (err) return done(err);
 
         result.filenames.should.eql([ 'selectMultiple.csv' ]);
         result['selectMultiple.csv'].should.equal(
@@ -603,8 +590,7 @@ describe('.csv.zip briefcase output @slow', () => {
     ]);
 
     callAndParse(inStream, formXml, 'singlerepeat', (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.containDeep([ 'singlerepeat.csv', 'singlerepeat-child.csv' ]);
       result['singlerepeat.csv'].should.equal(
@@ -668,8 +654,7 @@ Candace,2,three,three/children/child[1]
       (new Array(127)).fill(null).map(() => instance(uuid(), `<orx:meta><orx:instanceID>${uuid()}</orx:instanceID></orx:meta><name>${uuid()}</name><children><child><name>${uuid()}</name></child></children>`))); // eslint-disable-line function-paren-newline
 
     callAndParse(inStream, formXml, 'singlerepeat', (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.containDeep([ 'singlerepeat.csv', 'singlerepeat-child.csv' ]);
       result['singlerepeat.csv'].split('\n').length.should.equal(129);
@@ -746,8 +731,7 @@ Candace,2,three,three/children/child[1]
     ]);
 
     callAndParse(inStream, formXml, 'multirepeat', (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.containDeep([ 'multirepeat.csv', 'multirepeat-child.csv', 'multirepeat-toy.csv' ]);
       result['multirepeat.csv'].should.equal(
@@ -809,8 +793,7 @@ Pod racer,three/children/child[1],three/children/child[1]/toy[3]
     ]);
 
     callAndParse(inStream, formXml, 'pathprefix', (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.containDeep([ 'pathprefix.csv', 'pathprefix-children.csv' ]);
       result['pathprefix.csv'].should.equal(
@@ -901,8 +884,7 @@ Chelsea,one,one/children[2]
     }]);
 
     callAndParse(inStream, formXml, 'all-data-types', (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.containDeep([ 'all-data-types.csv' ]);
       result['all-data-types.csv'].should.equal(
@@ -1031,8 +1013,7 @@ Chelsea,one,one/children[2]
     }]);
 
     callAndParse(inStream, formXml, 'nested-repeats', (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.containDeep([ 'nested-repeats.csv', 'nested-repeats-g1.csv', 'nested-repeats-g2.csv', 'nested-repeats-g3.csv' ]);
       result['nested-repeats.csv'].should.equal(
@@ -1120,8 +1101,7 @@ some text 3.1.4,uuid:0a1b861f-a5fd-4f49-846a-78dcf06cfc1b/g1[3]/g2[1],uuid:0a1b8
     ]);
 
     callAndParse(inStream, formXml, 'ambiguous', (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.containDeep([ 'ambiguous.csv', 'ambiguous-entry~1.csv', 'ambiguous-entry~2.csv' ]);
       result['ambiguous.csv'].should.equal(

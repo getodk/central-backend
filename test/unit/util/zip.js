@@ -12,8 +12,7 @@ describe('zipPart streamer', () => {
 
     let closed = false;
     zipStreamToFiles(zipStreamFromParts(part), (err) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       closed = true;
       done();
@@ -96,8 +95,7 @@ describe('zipPart streamer', () => {
     const part2 = zipPart();
 
     zipStreamToFiles(zipStreamFromParts(part1, part2), (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.containDeep([
         'x/test1.file',
@@ -128,8 +126,7 @@ describe('zipPart streamer', () => {
     const part2 = zipPart();
 
     zipStreamToFiles(zipStreamFromParts(part1, part2), (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.containDeep([ 'test1.file', 'test2.file' ]);
       result['test1.file'].should.equal('test static');
