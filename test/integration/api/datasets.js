@@ -437,6 +437,34 @@ describe('datasets and entities', () => {
           });
       }));
 
+      it('should reject if creating a dataset property that already exists but with different capitalization', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({
+            name: 'trees'
+          })
+          .expect(200);
+
+        // Create a property
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({
+            name: 'height'
+          })
+          .expect(200);
+
+        // Second time should fail
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({
+            name: 'HEIGHT'
+          })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.3);
+            body.message.should.match(/A resource already exists with name,datasetId/);
+          });
+      }));
+
       it('should log an event for creating a new dataset property', testService(async (service) => {
         const asAlice = await service.login('alice');
 
@@ -3951,6 +3979,68 @@ describe('datasets and entities', () => {
 
           await alice.post(`/v1/projects/${newProjectId}/forms/simpleEntity/draft/publish`)
             .expect(200);
+        }));
+      });
+
+      describe('dataset properties name conflicts via Form upload', () => {
+        it('should reject if property name differ by just capitalization', testService(async (service) => {
+          const alice = await service.login('alice');
+
+          // dataset "people" with property "first_name"
+          await alice.post('/v1/projects/1/forms?publish=True')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // dataset "people" with property "FIRST_NAME"
+          await alice.post('/v1/projects/1/forms?publish=True')
+            .send(testData.forms.simpleEntity
+              .replace(/simpleEntity/g, 'simpleEntity2')
+              .replace('first_name', 'FIRST_NAME'))
+            .set('Content-Type', 'application/xml')
+            .expect(409)
+            .then(({ body }) => {
+              body.message.should.match(/This form attempts to create new Entity properties that match with existing ones except for capitalization/);
+            });
+        }));
+
+        it('should reject when publishing duplicate property with different capitalization', testService(async (service) => {
+          const alice = await service.login('alice');
+
+          // dataset "people" with property "first_name" - draft only
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // dataset "people" with property "FIRST_NAME" - published
+          await alice.post('/v1/projects/1/forms?publish=True')
+            .send(testData.forms.simpleEntity
+              .replace(/simpleEntity/g, 'simpleEntity2')
+              .replace('first_name', 'FIRST_NAME'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await alice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+            .expect(409)
+            .then(({ body }) => {
+              body.message.should.match(/This form attempts to create new Entity properties that match with existing ones except for capitalization/);
+            });
+        }));
+
+        it('reject if the Form contains duplicate properties with different capitalization', testService(async (service) => {
+          const alice = await service.login('alice');
+
+          // dataset "people" with properties "age" and "AGE"
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity.replace('first_name', 'AGE'))
+            .set('Content-Type', 'application/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.be.eql(400.25);
+              body.message.should.be.eql('The entity definition within the form is invalid. Multiple Form Fields cannot be saved to a single property.');
+            });
+
         }));
       });
 
