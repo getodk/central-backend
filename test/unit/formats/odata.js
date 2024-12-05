@@ -586,6 +586,7 @@ describe('odata message composition', () => {
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             const resultObj = JSON.parse(result);
             resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24top=3&%24skiptoken=01e30%3D');
+            resultObj['@odata.nextLink'].should.have.skiptoken({});
             done();
           })));
       });
@@ -598,6 +599,7 @@ describe('odata message composition', () => {
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             const resultObj = JSON.parse(result);
             resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24top=3&%24wkt=true&%24count=true&%24skiptoken=01e30%3D');
+            resultObj['@odata.nextLink'].should.have.skiptoken({});
             done();
           })));
       });
@@ -748,7 +750,8 @@ describe('odata message composition', () => {
         fieldsFor(testData.forms.withrepeat)
           .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$top=2', query, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
-            JSON.parse(result).should.eql({
+            const parsed = JSON.parse(result);
+            parsed.should.eql({
               '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
               '@odata.nextLink': 'http://localhost:8989/withrepeat.svc/Submissions.children.child?%24top=2&%24skiptoken=01eyJyZXBlYXRJZCI6ImM3NmQwY2NjNmQ1ZGEyMzZiZTdiOTNiOTg1YTgwNDEzZDJlM2UxNzIifQ%3D%3D',
               value: [{
@@ -763,6 +766,7 @@ describe('odata message composition', () => {
                 age: 6
               }]
             });
+            parsed['@odata.nextLink'].should.have.skiptoken({ repeatId: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172' });
             done();
           })));
       });
@@ -805,7 +809,8 @@ describe('odata message composition', () => {
         fieldsFor(testData.forms.withrepeat)
           .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
-            JSON.parse(result).should.eql({
+            const parsed = JSON.parse(result);
+            parsed.should.eql({
               '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
               '@odata.nextLink': 'http://localhost:8989/withrepeat.svc/Submissions.children.child?%24top=1&%24skiptoken=01eyJyZXBlYXRJZCI6ImM3NmQwY2NjNmQ1ZGEyMzZiZTdiOTNiOTg1YTgwNDEzZDJlM2UxNzIifQ%3D%3D',
               value: [{
@@ -815,6 +820,7 @@ describe('odata message composition', () => {
                 age: 6
               }]
             });
+            parsed['@odata.nextLink'].should.have.skiptoken({ repeatId: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172' });
             done();
           })));
       });
@@ -845,6 +851,36 @@ describe('odata message composition', () => {
             });
             done();
           })));
+      });
+
+      [
+        { instanceId: 'two' },
+        { instanceId: 'two', repeatId: '' },
+        { instanceId: 'two', repeatId: 'this should probably be rejected' },
+        { instanceId: 'two', repeatId: '0000000000000000000000000000000000000000' },
+      ].forEach(skipToken => {
+        it(`should reject bad skipToken '${JSON.stringify(skipToken)}'`, done => {
+          const query = { $skiptoken: QueryOptions.getSkiptoken(skipToken) };
+          const inRows = streamTest.fromObjects([
+            mockSubmission('one', testData.instances.withrepeat.one),
+            mockSubmission('two', testData.instances.withrepeat.two),
+            mockSubmission('three', testData.instances.withrepeat.three)
+          ]);
+
+          fieldsFor(testData.forms.withrepeat)
+            .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows))
+            .then((stream) => {
+              stream.streams.at(-1).on('error', err => {
+                should(err).be.an.Error();
+                err.message.should.equal('Record associated with the provided $skiptoken not found.');
+                done();
+              });
+              return stream.pipe(streamTest.toText(err => {
+                if (err) return done(err);
+                done('pipe should not have completed');
+              }));
+            }, done);
+        });
       });
     });
   });
@@ -1063,6 +1099,7 @@ describe('odata message composition', () => {
             .then(JSON.parse)
             .then((result) => {
               result['@odata.nextLink'].should.equal("http://localhost:8989/withrepeat.svc/Submissions('two')/children/child?%24top=1&%24wkt=true&%24skiptoken=01eyJyZXBlYXRJZCI6ImNmOWExYjVjYzgzYzZkNjI3MGMxZWI5ODg2MGQyOTRlYWM1ZDUyNmQifQ%3D%3D");
+              result['@odata.nextLink'].should.have.skiptoken({ repeatId: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d' });
             });
         });
       });
