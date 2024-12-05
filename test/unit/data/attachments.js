@@ -21,9 +21,9 @@ describe('.zip attachments streaming', () => {
         'media/thirdfile.ext'
       ]);
 
-      result['media/firstfile.ext'].should.equal('this is my first file');
-      result['media/secondfile.ext'].should.equal('this is my second file');
-      result['media/thirdfile.ext'].should.equal('this is my third file');
+      result.files.get('media/firstfile.ext').should.equal('this is my first file');
+      result.files.get('media/secondfile.ext').should.equal('this is my second file');
+      result.files.get('media/thirdfile.ext').should.equal('this is my third file');
 
       done();
     });
