@@ -572,6 +572,26 @@ describe('api: /submission', () => {
               .then(({ body }) => { body.toString('utf8').should.equal('this is test file one'); })
           ])))));
 
+    it('should reject resubmission of soft-deleted submission', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+        .expect(201);
+
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+        .expect(409)
+        .then(({ text }) => {
+          text.should.match(/This submission has been deleted. You may not resubmit it./);
+        });
+    }));
+
     context('versioning', () => {
       it('should reject if the deprecatedId is not known', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -1153,6 +1173,20 @@ describe('api: /forms/:id/submissions', () => {
                 ]);
               })
           ])))));
+
+    it('should reject duplicate submissions', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(409);
+    }));
   });
 
   describe('[draft] POST', () => {
