@@ -5,15 +5,9 @@ const streamTest = require('streamtest').v2;
 
 // unzip and detangle zipfiles.
 // also, hooraaaayy callback hell.
-// calls the callback with an object as follows:
-// {
-//      filenames: [ names of files in zip ],
-//      {filename}: "contents",
-//      {filename}: "contents",
-//      …
-// }
+// calls the callback with an object { filenames:[], files:Map(name -> contents) }
 const processZipFile = (zipfile, callback) => {
-  const result = { filenames: [] };
+  const result = { filenames: [], files: new Map() };
   const entries = [];
   let completed = 0;
 
@@ -34,7 +28,7 @@ const processZipFile = (zipfile, callback) => {
           resultStream.pipe(streamTest.toText((err, contents) => {
             if (err) return callback(err);
 
-            result[entry.fileName] = contents;
+            result.files.set(entry.fileName, contents);
             completed += 1;
             if (completed === entries.length) {
               callback(null, result);

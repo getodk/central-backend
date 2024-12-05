@@ -104,10 +104,10 @@ describe('zipPart streamer', () => {
         'y/test4.file'
       ]);
 
-      result['x/test1.file'].should.equal('test 1');
-      result['x/test2.file'].should.equal('test 2');
-      result['x/test3.file'].should.equal('test 3');
-      result['y/test4.file'].should.equal('test 4');
+      result.files.get('x/test1.file').should.equal('test 1');
+      result.files.get('x/test2.file').should.equal('test 2');
+      result.files.get('x/test3.file').should.equal('test 3');
+      result.files.get('y/test4.file').should.equal('test 4');
 
       done();
     });
@@ -129,8 +129,8 @@ describe('zipPart streamer', () => {
       if (err) return done(err);
 
       result.filenames.should.containDeep([ 'test1.file', 'test2.file' ]);
-      result['test1.file'].should.equal('test static');
-      result['test2.file'].should.equal('a!test!stream!');
+      result.files.get('test1.file').should.equal('test static');
+      result.files.get('test2.file').should.equal('a!test!stream!');
       done();
     });
 
@@ -205,3 +205,32 @@ describe('zipPart streamer', () => {
   });
 });
 
+describe('zipStreamToFiles()', () => {
+  it('should not conflate metadata & file data', (done) => {
+    const part = zipPart();
+
+    zipStreamToFiles(zipStreamFromParts(part), (err, result) => {
+      if (err) return done(err);
+
+      result.filenames.should.eqlInAnyOrder([
+        'test1.file',
+        'filenames',
+        'toString',
+        '__proto__'
+      ]);
+
+      result.files.get('test1.file').should.equal('test 1');
+      result.files.get('filenames').should.equal('i should be an array');
+      result.files.get('toString').should.equal('i should be a function');
+      result.files.get('__proto__').should.equal('i should be an object');
+
+      done();
+    });
+
+    part.append('test 1', { name: 'test1.file' });
+    part.append('i should be an array', { name: 'filenames' });
+    part.append('i should be a function', { name: 'toString' });
+    part.append('i should be an object', { name: '__proto__' });
+    part.finalize();
+  });
+});
