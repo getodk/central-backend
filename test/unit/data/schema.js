@@ -2089,7 +2089,7 @@ describe('form schema', () => {
 
   describe('updateEntityForm', () => {
     it('should change version 2023->2024, add trunkVersion, and add branchId', (async () => {
-      const result = await updateEntityForm(testData.forms.updateEntity, '2023.1.0', '2024.1.0', '[upgrade]', true);
+      const result = await updateEntityForm(testData.forms.updateEntity2023, '2023.1.0', '2024.1.0', '[upgrade]', true);
       // entities-version has been updated
       // version has suffix
       // trunkVersion and branchId are present
@@ -2117,7 +2117,7 @@ describe('form schema', () => {
     }));
 
     it('should change version 2022->2024', (async () => {
-      const result = await updateEntityForm(testData.forms.simpleEntity, '2022.1.0', '2024.1.0', '[upgrade]', false);
+      const result = await updateEntityForm(testData.forms.simpleEntity2022, '2022.1.0', '2024.1.0', '[upgrade]', false);
       // entities-version has been updated
       // version has suffix
       // trunkVersion and branchId are NOT added
@@ -2148,8 +2148,8 @@ describe('form schema', () => {
     // updateEntityForm takes the old version to replace as an argument
     // these tests show it will not change a 2022.1 (create-only) form when 2023.1 is provided
     it('should not alter a version 2022.1.0 form when the old version to replace is 2023.1.0', (async () => {
-      const result = await updateEntityForm(testData.forms.simpleEntity, '2023.1.0', '2024.1.0', '[upgrade]', true);
-      result.should.equal(testData.forms.simpleEntity);
+      const result = await updateEntityForm(testData.forms.simpleEntity2022, '2023.1.0', '2024.1.0', '[upgrade]', true);
+      result.should.equal(testData.forms.simpleEntity2022);
     }));
 
     it('should not alter a version 2024.1.0 form when the old version to replace is 2023.1.0', (async () => {
@@ -2159,8 +2159,8 @@ describe('form schema', () => {
 
     // these tests show it will not change a 2023.1 (update) form when 2022.1 is provided
     it('should not alter a version 2023.1.0 form when the old version to replace is 2022.1.0', (async () => {
-      const result = await updateEntityForm(testData.forms.updateEntity, '2022.1.0', '2024.1.0', '[upgrade]', true);
-      result.should.equal(testData.forms.updateEntity);
+      const result = await updateEntityForm(testData.forms.updateEntity2023, '2022.1.0', '2024.1.0', '[upgrade]', true);
+      result.should.equal(testData.forms.updateEntity2023);
     }));
 
   });
