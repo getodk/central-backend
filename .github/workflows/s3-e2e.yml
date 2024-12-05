@@ -1,6 +1,9 @@
 name: S3 E2E Tests
 
-on: push
+on:
+  push:
+    branches: master
+  pull_request:
 
 jobs:
   s3-e2e:

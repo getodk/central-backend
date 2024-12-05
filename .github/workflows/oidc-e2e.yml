@@ -1,6 +1,9 @@
 name: OIDC e2e tests
 
-on: push
+on:
+  push:
+    branches: master
+  pull_request:
 
 env:
   DEBUG: pw:api
