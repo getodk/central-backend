@@ -13,17 +13,17 @@ describe('parsing dataset from entity block', () => {
 
   describe('versioning', () => {
     it('should validate any version that starts with 2022.1.', () =>
-      getDataset(testData.forms.simpleEntity
+      getDataset(testData.forms.simpleEntity2022
         .replace('2022.1.0', '2022.1.123'))
         .should.be.fulfilled());
 
     it('should validate a version between major releases, e.g. 2023.2.0', () =>
-      getDataset(testData.forms.updateEntity
+      getDataset(testData.forms.updateEntity2023
         .replace('2023.1.0', '2023.2.0'))
         .should.be.fulfilled());
 
     it('should validate any version that starts with 2023.1.', () =>
-      getDataset(testData.forms.updateEntity
+      getDataset(testData.forms.updateEntity2023
         .replace('2023.1.0', '2023.1.123'))
         .should.be.fulfilled());
 
@@ -33,19 +33,19 @@ describe('parsing dataset from entity block', () => {
         .should.be.fulfilled());
 
     it('should reject probable future version', () =>
-      getDataset(testData.forms.simpleEntity
+      getDataset(testData.forms.simpleEntity2022
         .replace('2022.1.0', '2025.1.0'))
         .should.be.rejectedWith(Problem, { problemCode: 400.25,
           message: 'The entity definition within the form is invalid. Entities specification version [2025.1.0] is not supported.' }));
 
     it('should complain if version is wrong', () =>
-      getDataset(testData.forms.simpleEntity
+      getDataset(testData.forms.simpleEntity2022
         .replace('entities-version="2022.1.0"', 'entities-version="bad-version"'))
         .should.be.rejectedWith(Problem, { problemCode: 400.25,
           message: 'The entity definition within the form is invalid. Entities specification version [bad-version] is not supported.' }));
 
     it('should complain if version is missing', () =>
-      getDataset(testData.forms.simpleEntity
+      getDataset(testData.forms.simpleEntity2022
         .replace('entities-version="2022.1.0"', ''))
         .should.be.rejectedWith(Problem, { problemCode: 400.25,
           message: 'The entity definition within the form is invalid. Entities specification version is missing.' }));
