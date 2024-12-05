@@ -210,8 +210,7 @@ describe('zipStreamToFiles()', () => {
     const part = zipPart();
 
     zipStreamToFiles(zipStreamFromParts(part), (err, result) => {
-      // eslint-disable-next-line keyword-spacing
-      if(err) return done(err);
+      if (err) return done(err);
 
       result.filenames.should.eqlInAnyOrder([
         'test1.file',
