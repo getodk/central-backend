@@ -97,8 +97,7 @@ after(async () => {
 
 let mustReinitAfter;
 beforeEach(() => {
-  // eslint-disable-next-line keyword-spacing
-  if(mustReinitAfter) throw new Error(`Failed to reinitalize after previous test: '${mustReinitAfter}'.  You may need to increase your mocha timeout.`);
+  if (mustReinitAfter) throw new Error(`Failed to reinitalize after previous test: '${mustReinitAfter}'.  You may need to increase your mocha timeout.`);
   s3.resetMock();
 });
 afterEach(async function() {
