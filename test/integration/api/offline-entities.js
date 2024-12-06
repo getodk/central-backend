@@ -649,7 +649,107 @@ describe('Offline Entities', () => {
         });
     }));
 
-    it('should not include submission.reprocess event in audit log of held submission', testOfflineEntities(async (service, container) => {
+    it('should log an event when holding submission in backlog (force update)', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Send second update in first
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('one', 'one-update1')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('<status>arrived</status>', '<status>working</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/one-update1/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(2);
+          body.map(a => a.action).should.eql([
+            'submission.backlog.hold',
+            'submission.create'
+          ]);
+        });
+
+      // force process the backlog
+      await container.Entities.processBacklog(true);
+
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/one-update1/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(4);
+          body.map(a => a.action).should.eql([
+            'entity.update.version',
+            'submission.backlog.force',
+            'submission.backlog.hold',
+            'submission.create'
+          ]);
+        });
+    }));
+
+    it('should log an event when holding submission in backlog (force update-as-create, then create-as-update)', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // send update to entity that hasn't been created yet
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // force process the backlog
+      await container.Entities.processBacklog(true);
+
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two-update/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(4);
+          body.map(a => a.action).should.eql([
+            'entity.create',
+            'submission.backlog.force',
+            'submission.backlog.hold',
+            'submission.create'
+          ]);
+        });
+
+
+      // Finally send create
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // force process the backlog
+      await container.Entities.processBacklog(true);
+
+      // The create doesn't go thorugh the backlog so there's no backlog events here
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(2);
+          body.map(a => a.action).should.eql([
+            'entity.update.version',
+            'submission.create'
+          ]);
+        });
+    }));
+
+    it('should include submission.backlog.reprocess event in audit log of held submission', testOfflineEntities(async (service, container) => {
       const asAlice = await service.login('alice');
       const branchId = uuid();
 
@@ -677,9 +777,10 @@ describe('Offline Entities', () => {
       await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/one-update1/audits')
         .expect(200)
         .then(({ body }) => {
-          body.length.should.equal(2);
           body.map(a => a.action).should.eql([
             'entity.update.version',
+            'submission.backlog.reprocess',
+            'submission.backlog.hold',
             'submission.create'
           ]);
         });
@@ -740,8 +841,11 @@ describe('Offline Entities', () => {
       await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/one/audits')
         .expect(200)
         .then(({ body }) => {
-          body.length.should.equal(1);
-          should.not.exist(body[0].details.problem);
+          body.map(a => a.action).should.eql([
+            'submission.backlog.hold',
+            'submission.create'
+          ]);
+          should.not.exist(body[1].details.problem);
         });
 
       // Observe that the update was still not applied.
@@ -820,8 +924,11 @@ describe('Offline Entities', () => {
       await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two-update/audits')
         .expect(200)
         .then(({ body }) => {
-          body.length.should.equal(1);
-          should.not.exist(body[0].details.problem);
+          body.map(a => a.action).should.eql([
+            'submission.backlog.hold',
+            'submission.create'
+          ]);
+          should.not.exist(body[1].details.problem);
         });
 
       // There should be one submission (the second one) in the held submissions queue
