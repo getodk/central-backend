@@ -9,7 +9,8 @@ describe('middleware', () => {
   describe('versionParser', () => {
     const { versionParser } = middleware;
     it('should fallthrough to the error handler if no version is present', (done) => {
-      const request = createRequest({ url: '/hello/test/v1' });
+      const url = '/hello/test/v1';
+      const request = createRequest({ url, originalUrl: url });
       versionParser(request, null, (error) => {
         error.isProblem.should.equal(true);
         error.problemCode.should.equal(404.2);
@@ -18,7 +19,8 @@ describe('middleware', () => {
     });
 
     it('should fallthrough to the error handler if the version is wrong', (done) => {
-      const request = createRequest({ url: '/v4/users' });
+      const url = '/v4/users';
+      const request = createRequest({ url, originalUrl: url });
       versionParser(request, null, (error) => {
         error.isProblem.should.equal(true);
         error.problemCode.should.equal(404.3);
@@ -28,15 +30,18 @@ describe('middleware', () => {
     });
 
     it('should strip off the version before calling next', (done) => {
-      const request = createRequest({ url: '/v1/users/23' });
+      const url = '/v1/users/23';
+      const request = createRequest({ url, originalUrl: url });
       versionParser(request, null, () => {
+        request.originalUrl.should.equal('/v1/users/23');
         request.url.should.equal('/users/23');
         done();
       });
     });
 
     it('should supply a numeric representation of the received number under request', (done) => {
-      const request = createRequest({ url: '/v1/forms/testform/submissions' });
+      const url = '/v1/forms/testform/submissions';
+      const request = createRequest({ url, originalUrl: url });
       versionParser(request, null, () => {
         request.apiVersion.should.equal(1);
         done();
@@ -47,7 +52,8 @@ describe('middleware', () => {
   describe('fieldKeyParser', () => {
     const { fieldKeyParser } = middleware;
     it('should always set request.fieldKey None if nothing is given', (done) => {
-      const request = createRequest({ url: '/users/23' });
+      const originalUrl = '/v1/users/23';
+      const request = createRequest({ originalUrl, url: originalUrl.substr(3) });
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.equal(Option.none());
         done();
@@ -55,70 +61,83 @@ describe('middleware', () => {
     });
 
     it('should pass through any field key content', (done) => {
-      const request = createRequest({ url: '/key/12|45/users/23' });
+      const originalUrl = '/v1/key/12|45/users/23';
+      const request = createRequest({ originalUrl, url: originalUrl.substr(3) });
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('12|45'));
+        request.originalUrl.should.equal('/v1/key/12|45/users/23');
         request.url.should.equal('/users/23');
         done();
       });
     });
 
     it('should set Some(fk) and rewrite URL if a prefix key is found', (done) => {
-      const request = createRequest({ url: '/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/23' });
+      const originalUrl = '/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/23';
+      const request = createRequest({ originalUrl, url: originalUrl.substr(3) });
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'));
+        request.originalUrl.should.equal('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/23');
         request.url.should.equal('/users/23');
         done();
       });
     });
 
     it('should decode percent-encoded prefix keys', (done) => {
-      const request = createRequest({ url: '/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%24aa!aaaaaaaaaaaaaaaaaa/users/23' });
+      const originalUrl = '/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%24aa!aaaaaaaaaaaaaaaaaa/users/23';
+      const request = createRequest({ originalUrl, url: originalUrl.substr(3) });
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aa!aaaaaaaaaaaaaaaaaa'));
+        request.originalUrl.should.equal('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%24aa!aaaaaaaaaaaaaaaaaa/users/23');
         request.url.should.equal('/users/23');
         done();
       });
     });
 
     it('should pass through any query key content', (done) => {
-      const request = createRequest({ url: '/v1/users/23?st=inva|id' });
+      const originalUrl = '/v1/users/23?st=inva|id';
+      const request = createRequest({ originalUrl, url: originalUrl.substr(3) });
       request.query.st.should.equal('inva|id');
 
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('inva|id'));
         request.originalUrl.should.equal('/v1/key/inva|id/users/23?st=inva|id');
+        request.url.should.equal('/users/23?st=inva|id');
         should(request.query.st).be.undefined();
         done();
       });
     });
 
     it('should escape slashes in the rewritten path prefix', (done) => {
-      const request = createRequest({ url: '/v1/users/23?st=in$va/i/d' });
+      const originalUrl = '/v1/users/23?st=in$va/i/d';
+      const request = createRequest({ originalUrl, url: originalUrl.substr(3) });
       request.query.st.should.equal('in$va/i/d');
 
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('in$va/i/d'));
         request.originalUrl.should.equal('/v1/key/in$va%2Fi%2Fd/users/23?st=in$va/i/d');
+        request.url.should.equal('/users/23?st=in$va/i/d');
         should(request.query.st).be.undefined();
         done();
       });
     });
 
     it('should set Some(fk) and rewrite URL if a query key is found', (done) => {
-      const request = createRequest({ url: '/v1/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' });
+      const originalUrl = '/v1/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      const request = createRequest({ originalUrl, url: originalUrl.substr(3) });
       request.query.st.should.equal('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
 
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'));
         request.originalUrl.should.equal('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+        request.url.should.equal('/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
         should(request.query.st).be.undefined();
         done();
       });
     });
 
     it('should decode percent-encoded query keys', (done) => {
-      const request = createRequest({ url: '/v1/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%24aa!aaaaaaaaaaaaaaaaaa' });
+      const originalUrl = '/v1/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%24aa!aaaaaaaaaaaaaaaaaa';
+      const request = createRequest({ originalUrl, url: originalUrl.substr(3) });
       request.query.st.should.equal('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aa!aaaaaaaaaaaaaaaaaa');
 
       fieldKeyParser(request, null, () => {

@@ -600,7 +600,8 @@ describe('endpoints', () => {
       });
 
       it('should reject json requests to xml endpoints (querystring)', () => {
-        const request = createRequest({ url: '/odata.svc?$format=json' });
+        const originalUrl = '/v1/odata.svc?$format=json';
+        const request = createRequest({ originalUrl, url: originalUrl.substr(3) });
         return odataPreprocessor('xml')(null, new Context(request), request)
           .should.be.rejectedWith(Problem, { problemCode: 406.1 });
       });
@@ -612,13 +613,15 @@ describe('endpoints', () => {
       });
 
       it('should reject xml requests to json endpoints (querystring)', () => {
-        const request = createRequest({ url: '/odata.svc?$format=xml' });
+        const originalUrl = '/v1/odata.svc?$format=xml';
+        const request = createRequest({ originalUrl, url: originalUrl.substr(3) });
         return odataPreprocessor('json')(null, new Context(request), request)
           .should.be.rejectedWith(Problem, { problemCode: 406.1 });
       });
 
       it('should treat $format with precendence over accept', () => {
-        const request = createRequest({ url: '/odata.svc?$format=json', headers: { accept: 'application/xml' } });
+        const originalUrl = '/v1/odata.svc?$format=json';
+        const request = createRequest({ originalUrl, url: originalUrl.substr(3), headers: { accept: 'application/xml' } });
         return odataPreprocessor('xml')(null, new Context(request), request)
           .should.be.rejectedWith(Problem, { problemCode: 406.1 });
       });
@@ -630,24 +633,28 @@ describe('endpoints', () => {
       });
 
       it('should reject requests for unsupported OData features', () => {
-        const request = createRequest({ url: '/odata.svc?$inlineCount=magic' });
+        const originalUrl = '/v1/odata.svc?$inlineCount=magic';
+        const request = createRequest({ originalUrl, url: originalUrl.substr(3) });
         return odataPreprocessor('json')(null, new Context(request), request)
           .should.be.rejectedWith(Problem, { problemCode: 501.1 });
       });
 
       it('should reject requests for unsupported OData $expand values', () => {
-        const request = createRequest({ url: '/odata.svc?$expand=magic' });
+        const originalUrl = '/v1/odata.svc?$expand=magic';
+        const request = createRequest({ originalUrl, url: originalUrl.substr(3) });
         return odataPreprocessor('json')(null, new Context(request), request)
           .should.be.rejectedWith(Problem, { problemCode: 501.6 });
       });
 
       it('should allow appropriate requests through', () => {
-        const request = createRequest({ url: '/odata.svc?$top=50&$expand=*', headers: { 'OData-MaxVersion': '4.0', accept: 'application/json' } });
+        const originalUrl = '/v1/odata.svc?$top=50&$expand=*';
+        const request = createRequest({ originalUrl, url: originalUrl.substr(3), headers: { 'OData-MaxVersion': '4.0', accept: 'application/json' } });
         should.not.exist(odataPreprocessor('json')(null, new Context(request), request));
       });
 
       it('should reject requests if both $select and $expand are present', () => {
-        const request = createRequest({ url: '/odata.svc?$expand=*&$select=__id' });
+        const originalUrl = '/v1/odata.svc?$expand=*&$select=__id';
+        const request = createRequest({ originalUrl, url: originalUrl.substr(3) });
         return odataPreprocessor('json')(null, new Context(request), request)
           .should.be.rejectedWith(Problem, { problemCode: 501.11 });
       });
