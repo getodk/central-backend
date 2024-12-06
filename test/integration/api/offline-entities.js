@@ -1715,7 +1715,7 @@ describe('Offline Entities', () => {
         });
     }));
 
-    it.only('should show proper conflict info on create applied as update', testOfflineEntities(async (service, container) => {
+    it('should show proper conflict info on create applied as update', testOfflineEntities(async (service, container) => {
       // Issue c#815
       const asAlice = await service.login('alice');
       const branchId = uuid();
@@ -1758,8 +1758,8 @@ describe('Offline Entities', () => {
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd/versions')
         .expect(200)
         .then(({ body }) => {
-          // TODO body[1].conflict should actually NOT be null
-          body.map(v => v.conflict).should.eql([null, null]);
+          body.map(v => v.conflict).should.eql([null, 'hard']);
+          body[1].conflictingProperties.should.eql(['age', 'label', 'status', 'first_name']);
         });
     }));
   });
