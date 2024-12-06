@@ -783,6 +783,8 @@ describe('Offline Entities', () => {
             'submission.backlog.hold',
             'submission.create'
           ]);
+          // actor for update should be the same as submission create actor
+          body[0].actorId.should.equal(body[3].actorId);
         });
     }));
   });
