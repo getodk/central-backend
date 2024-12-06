@@ -1005,9 +1005,13 @@ describe('Offline Entities', () => {
       await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two-update/audits')
         .expect(200)
         .then(({ body }) => {
-          body.length.should.equal(1);
-          body[0].action.should.eql('submission.create');
-          should.not.exist(body[0].details.problem);
+          body.map(a => a.action).should.eql([
+            'submission.backlog.force',
+            'submission.backlog.hold',
+            'submission.create'
+          ]);
+          body[2].action.should.eql('submission.create');
+          should.not.exist(body[2].details.problem);
         });
     }));
   });
