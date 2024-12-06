@@ -3816,9 +3816,9 @@ describe('Entities API', () => {
       // 250kb limit = 256000 bytes (1024 bytes per kb)
       await asAlice.post('/v1/projects/1/datasets')
         .send({ name: 'x'.repeat(256001) })
-        .expect(500)
+        .expect(400)
         .then(({ body }) => {
-          body.message.should.equal('Internal Server Error');
+          body.message.should.equal('Could not parse the given data (256012 chars) as json.');
         });
     }));
 
