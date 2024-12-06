@@ -8,8 +8,14 @@ const Option = require(appRoot + '/lib/util/option');
 describe('middleware', () => {
   describe('versionParser', () => {
     const { versionParser } = middleware;
+
+    const createPreVersionParserRequest = ({ url, originalUrl, ...props }) => {
+      if (originalUrl) throw new Error('Should not specify originalUrl');
+      return createRequest({ url, originalUrl: url, ...props });
+    };
+
     it('should fallthrough to the error handler if no version is present', (done) => {
-      const request = createRequest({ url: '/hello/test/v1' });
+      const request = createPreVersionParserRequest({ url: '/hello/test/v1' });
       versionParser(request, null, (error) => {
         error.isProblem.should.equal(true);
         error.problemCode.should.equal(404.2);
@@ -18,7 +24,7 @@ describe('middleware', () => {
     });
 
     it('should fallthrough to the error handler if the version is wrong', (done) => {
-      const request = createRequest({ url: '/v4/users' });
+      const request = createPreVersionParserRequest({ url: '/v4/users' });
       versionParser(request, null, (error) => {
         error.isProblem.should.equal(true);
         error.problemCode.should.equal(404.3);
@@ -28,7 +34,7 @@ describe('middleware', () => {
     });
 
     it('should strip off the version before calling next', (done) => {
-      const request = createRequest({ url: '/v1/users/23' });
+      const request = createPreVersionParserRequest({ url: '/v1/users/23' });
       versionParser(request, null, () => {
         request.url.should.equal('/users/23');
         done();
@@ -36,7 +42,7 @@ describe('middleware', () => {
     });
 
     it('should supply a numeric representation of the received number under request', (done) => {
-      const request = createRequest({ url: '/v1/forms/testform/submissions' });
+      const request = createPreVersionParserRequest({ url: '/v1/forms/testform/submissions' });
       versionParser(request, null, () => {
         request.apiVersion.should.equal(1);
         done();
@@ -58,7 +64,8 @@ describe('middleware', () => {
       const request = createRequest({ url: '/key/12|45/users/23' });
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('12|45'));
-        request.url.should.equal('/users/23');
+        request.url        .should.equal('/users/23'); // eslint-disable-line no-multi-spaces, no-whitespace-before-property
+        request.originalUrl.should.equal('/v1/key/12|45/users/23');
         done();
       });
     });
@@ -67,7 +74,8 @@ describe('middleware', () => {
       const request = createRequest({ url: '/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/23' });
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'));
-        request.url.should.equal('/users/23');
+        request.url        .should.equal('/users/23'); // eslint-disable-line no-multi-spaces, no-whitespace-before-property
+        request.originalUrl.should.equal('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/23');
         done();
       });
     });
@@ -76,17 +84,19 @@ describe('middleware', () => {
       const request = createRequest({ url: '/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%24aa!aaaaaaaaaaaaaaaaaa/users/23' });
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aa!aaaaaaaaaaaaaaaaaa'));
-        request.url.should.equal('/users/23');
+        request.url        .should.equal('/users/23'); // eslint-disable-line no-multi-spaces, no-whitespace-before-property
+        request.originalUrl.should.equal('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%24aa!aaaaaaaaaaaaaaaaaa/users/23');
         done();
       });
     });
 
     it('should pass through any query key content', (done) => {
-      const request = createRequest({ url: '/v1/users/23?st=inva|id' });
+      const request = createRequest({ url: '/users/23?st=inva|id' });
       request.query.st.should.equal('inva|id');
 
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('inva|id'));
+        request.url        .should.equal('/users/23?st=inva|id'); // eslint-disable-line no-multi-spaces, no-whitespace-before-property
         request.originalUrl.should.equal('/v1/key/inva|id/users/23?st=inva|id');
         should(request.query.st).be.undefined();
         done();
@@ -94,11 +104,12 @@ describe('middleware', () => {
     });
 
     it('should escape slashes in the rewritten path prefix', (done) => {
-      const request = createRequest({ url: '/v1/users/23?st=in$va/i/d' });
+      const request = createRequest({ url: '/users/23?st=in$va/i/d' });
       request.query.st.should.equal('in$va/i/d');
 
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('in$va/i/d'));
+        request.url        .should.equal('/users/23?st=in$va/i/d'); // eslint-disable-line no-multi-spaces, no-whitespace-before-property
         request.originalUrl.should.equal('/v1/key/in$va%2Fi%2Fd/users/23?st=in$va/i/d');
         should(request.query.st).be.undefined();
         done();
@@ -106,11 +117,12 @@ describe('middleware', () => {
     });
 
     it('should set Some(fk) and rewrite URL if a query key is found', (done) => {
-      const request = createRequest({ url: '/v1/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' });
+      const request = createRequest({ url: '/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' });
       request.query.st.should.equal('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
 
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'));
+        request.url        .should.equal('/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'); // eslint-disable-line no-multi-spaces, no-whitespace-before-property
         request.originalUrl.should.equal('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
         should(request.query.st).be.undefined();
         done();
@@ -118,12 +130,13 @@ describe('middleware', () => {
     });
 
     it('should decode percent-encoded query keys', (done) => {
-      const request = createRequest({ url: '/v1/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%24aa!aaaaaaaaaaaaaaaaaa' });
+      const request = createRequest({ url: '/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%24aa!aaaaaaaaaaaaaaaaaa' });
       request.query.st.should.equal('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aa!aaaaaaaaaaaaaaaaaa');
 
       fieldKeyParser(request, null, () => {
         request.fieldKey.should.eql(Option.of('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aa!aaaaaaaaaaaaaaaaaa'));
-        should(request.query.st).be.undefined();
+        request.url        .should.equal('/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%24aa!aaaaaaaaaaaaaaaaaa'); // eslint-disable-line no-multi-spaces, no-whitespace-before-property
+        request.originalUrl.should.equal('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aa!aaaaaaaaaaaaaaaaaa/users/23?st=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%24aa!aaaaaaaaaaaaaaaaaa');
         done();
       });
     });
