@@ -868,7 +868,9 @@ tags:
     * `submission.delete` when a Submission is soft-deleted.
     * `submission.purge` when soft-deleted Submissions are purged.
     * `submission.restore` when a Submission is restored.
-    * `submission.backlog.reprocess` when an Entity Submission is held in a processing backlog and then removed.
+    * `submission.backlog.hold` when an Entity Submission is first held in processing backlog.
+    * `submission.backlog.reprocess` when an Entity Submission is reprocessed and removed from the backlog.
+    * `submission.backlog.force` when an Entity Submission is force-processed after being in backlog.
     * `dataset.create` when a Dataset is created.
     * `dataset.update` when a Dataset is updated.
     * `dataset.update.publish` when a Dataset is published.
