@@ -734,9 +734,6 @@ describe('Offline Entities', () => {
 
       await exhaust(container);
 
-      // force process the backlog
-      await container.Entities.processBacklog(true);
-
       // The create doesn't go thorugh the backlog so there's no backlog events here
       await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two/audits')
         .expect(200)
