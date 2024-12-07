@@ -1198,7 +1198,7 @@ describe('Offline Entities', () => {
         .then(({ body }) => {
           body.currentVersion.version.should.equal(2);
           body.currentVersion.data.should.eql({ age: '20', status: 'new', first_name: 'Megan' });
-          body.conflict.should.equal('soft'); // this should be marked as a soft conflict
+          body.conflict.should.equal('hard'); // this should be marked as a soft conflict
           body.currentVersion.baseVersion.should.equal(1); // baseVersion is set, but normally the baseVersion of an entity-create is null
           // the rest of these are null like a normal entity-create
           should.not.exist(body.currentVersion.branchBaseVersion);
@@ -1712,6 +1712,103 @@ describe('Offline Entities', () => {
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd')
         .then(({ body: entity }) => {
           should(entity.conflict).equal(null);
+        });
+    }));
+
+    it('should show proper conflict info on create applied as update', testOfflineEntities(async (service, container) => {
+      // Issue c#815
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Send update
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update1')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+          .replace('<age>20</age>', '<age>22</age>')
+          .replace('<name>Megan</name>', '')
+          .replace('<label>Megan (20)</label>', '')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Check backlog
+      const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      await container.Entities.processBacklog(true);
+
+      // Send registration
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Check that entity as a whole is a conflict
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd')
+        .then(({ body }) => {
+          body.conflict.should.equal('hard');
+        });
+
+      // Check versions
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd/versions')
+        .expect(200)
+        .then(({ body }) => {
+          body.map(v => v.conflict).should.eql([null, 'hard']);
+          body[1].conflictingProperties.should.eql([ 'status', 'age', 'label' ]);
+        });
+    }));
+
+    it('should show proper conflict info on create applied as update that is only a soft conflict', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Send update
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update1')
+          .replace('baseVersion=""', 'baseVersion="1"')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Check backlog
+      const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      await container.Entities.processBacklog(true);
+
+      // Send registration
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Check that entity as a whole is a soft conflict
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd')
+        .then(({ body }) => {
+          body.conflict.should.equal('soft');
+        });
+
+      // Check versions
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd/versions')
+        .expect(200)
+        .then(({ body }) => {
+          body.map(v => v.conflict).should.eql([null, 'soft']);
+          body[1].conflictingProperties.should.eql([]);
         });
     }));
   });
