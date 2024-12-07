@@ -1728,6 +1728,9 @@ describe('Offline Entities', () => {
           .replace('two', 'two-update1')
           .replace('baseVersion=""', 'baseVersion="1"')
           .replace('<status>new</status>', '<status>checked in</status>')
+          .replace('<age>20</age>', '<age>22</age>')
+          .replace('<name>Megan</name>', '')
+          .replace('<label>Megan (20)</label>', '')
         )
         .set('Content-Type', 'application/xml')
         .expect(200);
@@ -1751,7 +1754,7 @@ describe('Offline Entities', () => {
       // Check that entity as a whole is a conflict
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd')
         .then(({ body }) => {
-          body.conflict.should.equal('soft');
+          body.conflict.should.equal('hard');
         });
 
       // Check versions
@@ -1759,7 +1762,7 @@ describe('Offline Entities', () => {
         .expect(200)
         .then(({ body }) => {
           body.map(v => v.conflict).should.eql([null, 'hard']);
-          body[1].conflictingProperties.should.eql(['age', 'label', 'status', 'first_name']);
+          body[1].conflictingProperties.should.eql([ 'status', 'age', 'label' ]);
         });
     }));
   });
