@@ -1,6 +1,8 @@
 name: Soak Test
 
-on: push
+on:
+  push:
+    branches: master
 
 jobs:
   soak-test:

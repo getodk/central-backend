@@ -649,7 +649,104 @@ describe('Offline Entities', () => {
         });
     }));
 
-    it('should not include submission.reprocess event in audit log of held submission', testOfflineEntities(async (service, container) => {
+    it('should log an event when holding submission in backlog (force update)', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Send second update in first
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('one', 'one-update1')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('<status>arrived</status>', '<status>working</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/one-update1/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(2);
+          body.map(a => a.action).should.eql([
+            'submission.backlog.hold',
+            'submission.create'
+          ]);
+        });
+
+      // force process the backlog
+      await container.Entities.processBacklog(true);
+
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/one-update1/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(4);
+          body.map(a => a.action).should.eql([
+            'entity.update.version',
+            'submission.backlog.force',
+            'submission.backlog.hold',
+            'submission.create'
+          ]);
+        });
+    }));
+
+    it('should log an event when holding submission in backlog (force update-as-create, then create-as-update)', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // send update to entity that hasn't been created yet
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // force process the backlog
+      await container.Entities.processBacklog(true);
+
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two-update/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(4);
+          body.map(a => a.action).should.eql([
+            'entity.create',
+            'submission.backlog.force',
+            'submission.backlog.hold',
+            'submission.create'
+          ]);
+        });
+
+
+      // Finally send create
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // The create doesn't go thorugh the backlog so there's no backlog events here
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(2);
+          body.map(a => a.action).should.eql([
+            'entity.update.version',
+            'submission.create'
+          ]);
+        });
+    }));
+
+    it('should include submission.backlog.reprocess event in audit log of held submission', testOfflineEntities(async (service, container) => {
       const asAlice = await service.login('alice');
       const branchId = uuid();
 
@@ -677,11 +774,14 @@ describe('Offline Entities', () => {
       await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/one-update1/audits')
         .expect(200)
         .then(({ body }) => {
-          body.length.should.equal(2);
           body.map(a => a.action).should.eql([
             'entity.update.version',
+            'submission.backlog.reprocess',
+            'submission.backlog.hold',
             'submission.create'
           ]);
+          // actor for update should be the same as submission create actor
+          body[0].actorId.should.equal(body[3].actorId);
         });
     }));
   });
@@ -740,8 +840,11 @@ describe('Offline Entities', () => {
       await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/one/audits')
         .expect(200)
         .then(({ body }) => {
-          body.length.should.equal(1);
-          should.not.exist(body[0].details.problem);
+          body.map(a => a.action).should.eql([
+            'submission.backlog.hold',
+            'submission.create'
+          ]);
+          should.not.exist(body[1].details.problem);
         });
 
       // Observe that the update was still not applied.
@@ -820,8 +923,11 @@ describe('Offline Entities', () => {
       await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two-update/audits')
         .expect(200)
         .then(({ body }) => {
-          body.length.should.equal(1);
-          should.not.exist(body[0].details.problem);
+          body.map(a => a.action).should.eql([
+            'submission.backlog.hold',
+            'submission.create'
+          ]);
+          should.not.exist(body[1].details.problem);
         });
 
       // There should be one submission (the second one) in the held submissions queue
@@ -850,6 +956,60 @@ describe('Offline Entities', () => {
       // Now there should be no submissions in the backlog.
       count = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       count.should.equal(0);
+    }));
+
+    it('should not process update submission in backlog if approvalRequired is true', testOfflineEntities(async (service, container) => {
+      // Demonstrating issue c#811
+      const asAlice = await service.login('alice');
+
+      // Configure the entity list to create entities on submission approval
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      const branchId = uuid();
+
+      // Send update submission (imagine that registration submission is lost)
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // There should be one item in the backlog
+      let count = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      count.should.equal(1);
+
+      // Force process backlog
+      await container.Entities.processBacklog(true);
+
+      // There should be nothing in the backlog
+      count = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      count.should.equal(0);
+
+      // Entity should not exist
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd')
+        .expect(404);
+
+      // Submission should not have a processing error, just the create event.
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two-update/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body.map(a => a.action).should.eql([
+            'submission.backlog.force',
+            'submission.backlog.hold',
+            'submission.create'
+          ]);
+          body[2].action.should.eql('submission.create');
+          should.not.exist(body[2].details.problem);
+        });
     }));
   });
 
@@ -1148,7 +1308,7 @@ describe('Offline Entities', () => {
         .then(({ body }) => {
           body.currentVersion.version.should.equal(2);
           body.currentVersion.data.should.eql({ age: '20', status: 'new', first_name: 'Megan' });
-          body.conflict.should.equal('soft'); // this should be marked as a soft conflict
+          body.conflict.should.equal('hard'); // this should be marked as a soft conflict
           body.currentVersion.baseVersion.should.equal(1); // baseVersion is set, but normally the baseVersion of an entity-create is null
           // the rest of these are null like a normal entity-create
           should.not.exist(body.currentVersion.branchBaseVersion);
@@ -1664,6 +1824,103 @@ describe('Offline Entities', () => {
           should(entity.conflict).equal(null);
         });
     }));
+
+    it('should show proper conflict info on create applied as update', testOfflineEntities(async (service, container) => {
+      // Issue c#815
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Send update
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update1')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+          .replace('<age>20</age>', '<age>22</age>')
+          .replace('<name>Megan</name>', '')
+          .replace('<label>Megan (20)</label>', '')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Check backlog
+      const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      await container.Entities.processBacklog(true);
+
+      // Send registration
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Check that entity as a whole is a conflict
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd')
+        .then(({ body }) => {
+          body.conflict.should.equal('hard');
+        });
+
+      // Check versions
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd/versions')
+        .expect(200)
+        .then(({ body }) => {
+          body.map(v => v.conflict).should.eql([null, 'hard']);
+          body[1].conflictingProperties.should.eql([ 'status', 'age', 'label' ]);
+        });
+    }));
+
+    it('should show proper conflict info on create applied as update that is only a soft conflict', testOfflineEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Send update
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update1')
+          .replace('baseVersion=""', 'baseVersion="1"')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Check backlog
+      const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      await container.Entities.processBacklog(true);
+
+      // Send registration
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Check that entity as a whole is a soft conflict
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd')
+        .then(({ body }) => {
+          body.conflict.should.equal('soft');
+        });
+
+      // Check versions
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd/versions')
+        .expect(200)
+        .then(({ body }) => {
+          body.map(v => v.conflict).should.eql([null, 'soft']);
+          body[1].conflictingProperties.should.eql([]);
+        });
+    }));
   });
 
   describe('locking an entity while processing a related submission', function() {
@@ -1714,6 +1971,107 @@ describe('Offline Entities', () => {
         if (await race()) successCount += 1;
       }
       successCount.should.equal(50);
+    }));
+  });
+
+  describe('miscellaneous', () => {
+    it('should handle two updates followed by delayed create', testOfflineEntities(async (service, container) => {
+      // Issue c#808
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Send second update first
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update2')
+          .replace('baseVersion=""', 'baseVersion="2"')
+          .replace('<status>checked in</status>', '<status>working</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Send first update second
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update1')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Check backlog
+      const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(2);
+
+      await container.Entities.processBacklog(true);
+
+      // Send registration
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Check submission audit log
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].action.should.equal('entity.update.version');
+        });
+    }));
+
+    it('should handle update from sub and update from API followed by delayed create', testOfflineEntities(async (service, container) => {
+      // Issue c#810
+      const asAlice = await service.login('alice');
+      const branchId = uuid();
+
+      // Send first update
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update1')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Check backlog
+      const backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
+      backlogCount.should.equal(1);
+
+      await container.Entities.processBacklog(true);
+
+      // Update entity via API
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789ddd?baseVersion=1')
+        .send({ data: { age: '24' } })
+        .expect(200);
+
+      // Send registration
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Check submission audit log
+      await asAlice.get('/v1/projects/1/forms/offlineEntity/submissions/two/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].action.should.equal('entity.update.version');
+        });
     }));
   });
 });
