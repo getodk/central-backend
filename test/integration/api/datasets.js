@@ -4064,7 +4064,7 @@ describe('datasets and entities', () => {
 
         }));
 
-        it('should reject when publishing duplicate property with different capitalization', testService(async (service, container) => {
+        it('should not reject for existing duplicate properties', testService(async (service, container) => {
           const alice = await service.login('alice');
 
           await alice.post('/v1/projects/1/forms?publish=True')
