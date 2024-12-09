@@ -3818,7 +3818,10 @@ describe('Entities API', () => {
         .send({ name: 'x'.repeat(256001) })
         .expect(400)
         .then(({ body }) => {
-          body.message.should.equal('Could not parse the given data (256012 chars) as json.');
+          body.should.equal({
+            code: 400.36,
+            message: 'Request body too large.',
+          });
         });
     }));
 
