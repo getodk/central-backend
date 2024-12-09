@@ -3818,7 +3818,7 @@ describe('Entities API', () => {
         .send({ name: 'x'.repeat(256001) })
         .expect(400)
         .then(({ body }) => {
-          body.should.equal({
+          body.should.eql({
             code: 400.36,
             message: 'Request body too large.',
           });
