@@ -4028,6 +4028,27 @@ describe('datasets and entities', () => {
             });
         }));
 
+        it('should reject when new Form draft has duplicate property with different capitalization', testService(async (service) => {
+          const alice = await service.login('alice');
+
+          // dataset "people" with property "first_name"
+          await alice.post('/v1/projects/1/forms?publish=True')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // dataset "people" with property "FIRST_NAME" - draft
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity
+              .replace(/simpleEntity/g, 'simpleEntity2')
+              .replace('first_name', 'FIRST_NAME'))
+            .set('Content-Type', 'application/xml')
+            .expect(409)
+            .then(({ body }) => {
+              body.message.should.match(/This form attempts to create new Entity properties that match with existing ones except for capitalization/);
+            });
+        }));
+
         it('reject if the Form contains duplicate properties with different capitalization', testService(async (service) => {
           const alice = await service.login('alice');
 
