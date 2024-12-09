@@ -4063,6 +4063,23 @@ describe('datasets and entities', () => {
             });
 
         }));
+
+        it('should reject when publishing duplicate property with different capitalization', testService(async (service, container) => {
+          const alice = await service.login('alice');
+
+          await alice.post('/v1/projects/1/forms?publish=True')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await container.run(sql`UPDATE ds_properties SET name='FIRST_NAME' WHERE name='age'`);
+
+          await alice.post('/v1/projects/1/forms/simpleEntity/draft')
+            .expect(200);
+
+          await alice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=v2')
+            .expect(200);
+        }));
       });
 
       describe('updating datasets through new form drafts', () => {
