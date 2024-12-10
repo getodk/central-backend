@@ -45,6 +45,7 @@ info:
     **Changed**:
 
     - [Submissions Odata]() now returns `__system/deletedAt`. It can also be used in $filter, $sort and $select query parameters.
+    - Dataset (Entity List) properties with the same name but different capitalization are not allowed.
 
     ## ODK Central v2024.2
 
@@ -592,7 +593,6 @@ tags:
     * The **Metadata Document** defines the data schema using [an XML-based standard](https://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html#sec_Introduction). It is linked in every OData response.
 
     * The **data documents**, linked from the Service Document, are a simple JSON representation of the Submission or Entity data, conforming to the schema we describe in our Metadata Document.
-
 - name: System Endpoints
   description: There are some resources available for getting or setting system information
     and configuration. You can set the [Usage Reporting configuration](/central-api-system-endpoints/#usage-reporting-configuration)
@@ -646,6 +646,12 @@ tags:
   x-parent-tag: Accounts and Users
   description: |-
     Presently, it is possible to create and list `User`s in the system, as well as to perform password reset operations. In future versions of this API it will be possible to manage existing user information and delete accounts as well.
+- name: User Preferences
+  x-parent-tag: Accounts and Users
+  description: |-
+    The Central frontend uses this API to save various user preferences, such as the sorting order of certain listings. When a user starts a new session, these preferences are loaded in as part of the [User object](/central-api-accounts-and-users/#getting-authenticated-user-details).
+    
+    Preferences can be set site-wide or per-project.
 - name: App Users
   x-parent-tag: Accounts and Users
   description: |-
@@ -863,7 +869,9 @@ tags:
     * `submission.delete` when a Submission is soft-deleted.
     * `submission.purge` when soft-deleted Submissions are purged.
     * `submission.restore` when a Submission is restored.
-    * `submission.reprocess` when an Entity Submission is held in a processing backlog and then removed.
+    * `submission.backlog.hold` when an Entity Submission is first held in processing backlog.
+    * `submission.backlog.reprocess` when an Entity Submission is reprocessed and removed from the backlog.
+    * `submission.backlog.force` when an Entity Submission is force-processed after being in backlog.
     * `dataset.create` when a Dataset is created.
     * `dataset.update` when a Dataset is updated.
     * `dataset.update.publish` when a Dataset is published.
@@ -1473,17 +1481,204 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
+  /v1/user-preferences/project/{projectId}/{propertyName}:
+    put:
+      tags:
+        - User Preferences
+      summary: Setting a project preference
+      parameters:
+        - name: projectId
+          in: path
+          description: The integer ID of the `Project`.
+          required: true
+          schema:
+            type: integer
+          example: 42
+        - name: propertyName
+          in: path
+          description: The name of the preference.
+          required: true
+          schema:
+            type: string
+          example: "frobwazzleEnabled"
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+              - propertyValue
+              type: any
+              properties:
+                propertyValue:
+                  type: any
+                  description: The preference to be stored. It may be of any json-serializable type.
+              example:
+                propertyValue: true
+        required: true
+      responses:
+        200:
+          description: The preference was stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        403:
+          description: Forbidden - supplied bearer token was not valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        404:
+          description: The specified project does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+    delete:
+      tags:
+        - User Preferences
+      summary: Deleting a project preference
+      parameters:
+        - name: projectId
+          in: path
+          description: The integer ID of the `Project`.
+          required: true
+          schema:
+            type: integer
+          example: 42
+        - name: propertyName
+          in: path
+          description: The name of the preference.
+          required: true
+          schema:
+            type: string
+          example: "frobwazzleEnabled"
+        - name: Authorization
+          in: header
+          description: Bearer encoding of a token of the user whose preferences to operate on
+          required: true
+          schema:
+            type: string
+          example: Bearer lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7
+      responses:
+        200:
+          description: The preference was stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        403:
+          description: Forbidden - supplied bearer token was not valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        404:
+          description: The preference does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+  /v1/user-preferences/site/{propertyName}:
+    put:
+      tags:
+        - User Preferences
+      summary: Setting a sitewide preference
+      parameters:
+        - name: propertyName
+          in: path
+          description: The name of the preference.
+          required: true
+          schema:
+            type: string
+          example: "frobwazzleEnabled"
+        - name: Authorization
+          in: header
+          description: Bearer encoding of a token of the user whose preferences to operate on
+          required: true
+          schema:
+            type: string
+          example: Bearer lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+              - propertyValue
+              type: any
+              properties:
+                propertyValue:
+                  type: any
+                  description: The preference to be stored. It may be of any json-serializable type.
+              example:
+                propertyValue: true
+        required: true
+
+      responses:
+        200:
+          description: The preference was stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        403:
+          description: Forbidden - supplied bearer token was not valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+    delete:
+      tags:
+        - User Preferences
+      summary: Deleting a sitewide preference
+      parameters:
+        - name: propertyName
+          in: path
+          description: The name of the preference.
+          required: true
+          schema:
+            type: string
+          example: "frobwazzleEnabled"
+        - name: Authorization
+          in: header
+          description: Bearer encoding of a token of the user whose preferences to operate on
+          required: true
+          schema:
+            type: string
+          example: Bearer lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7
+      responses:
+        200:
+          description: The preference was deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        403:
+          description: Forbidden - supplied bearer token was not valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+          404:
+          description: The specified preference does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
   /v1/users/current:
     get:
       tags:
       - Users
+      - User Preferences
       summary: Getting authenticated User details
       description: |-
         Typically, you would get User details by the User's numeric Actor ID.
 
         However, if you only have a Bearer token, for example, you don't have any information about the user attached to that session, including even the ID with which to get more information. So you can instead supply the text `current` to get the user information associated with the authenticated session.
 
-        If you _do_ use `current`, you may request extended metadata. Supply an `X-Extended-Metadata` header value of `true` to additionally retrieve an array of strings of the `verbs` the authenticated User/Actor is allowed to perform server-wide.
+        If you _do_ use `current`, you may request extended metadata. Supply an `X-Extended-Metadata` header value of `true` to additionally receive:
+        - an array of strings of the `verbs` the authenticated User/Actor is allowed to perform server-wide
+        - an object containing the preferences of the authenticated User/Actor
       operationId: Getting authenticated User details
       responses:
         200:
@@ -1573,6 +1768,14 @@ paths:
                       server-wide.
                     items:
                       type: object
+                  preferences:
+                    description: The preferences of this user
+                    type: object
+                    properties:
+                      site:
+                        type: object
+                      projects:
+                        type: object
               example:
                 createdAt: 2018-04-18T23:19:14.802Z
                 displayName: My Display Name
@@ -1584,6 +1787,12 @@ paths:
                 verbs:
                 - project.create
                 - project.update
+                preferences:
+                  site:
+                    projectSortMode: latest
+                  projects:
+                    "1":
+                      formTrashCollapsed: false
         403:
           description: Forbidden
           content:
@@ -3670,7 +3879,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/FormAttachment'
               example:
-              - name: myfile.mp3
+              - name: myfile.png
                 type: image
                 exists: true
                 blobExists: true
@@ -4198,7 +4407,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/FormAttachment'
               example:
-              - name: myfile.mp3
+              - name: myfile.png
                 type: image
                 exists: true
                 blobExists: true
@@ -4899,7 +5108,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/FormAttachment'
               example:
-              - name: myfile.mp3
+              - name: myfile.png
                 type: image
                 exists: true
                 blobExists: true
@@ -8499,6 +8708,8 @@ paths:
       description: |-
         Creates a new Property with a specified name in the Dataset.
 
+        The name of a Property is case-sensitive in that it will keep the capitalization provided (e.g. "Firstname"). But Central will not allow another Property with the same name but different capitalization to be created (e.g. "FIRSTNAME" when "Firstname" already exists).
+
         Property names follow the same rules as form field names (valid XML identifiers) and cannot use the reserved names of `name` or `label`, or begin with the reserved prefix `__`. 
       operationId: Adding Properties
       parameters:
@@ -8816,6 +9027,9 @@ paths:
                     label: John (88)
                     firstName: John
                     age: '88'
+            application/json; bulk:
+              schema:
+                $ref: '#/components/schemas/Success'
         403:
           description: Forbidden
           content:
@@ -9433,7 +9647,7 @@ paths:
 
         * Central supports the `HEAD` request preflighting recommended by the specification, but does not require it. Because our supported authentication methods do not follow the try/retry pattern, only preflight your request if you want to read the `X-OpenRosa-Accept-Content-Length` header or are concerned about the other issues listed in the standards document, like proxies.
 
-        * As stated in the standards document, it is possible to submit multimedia attachments with the `Submission` across multiple `POST` requests to this API. _However_, we impose the additional restriction that the Submission XML (`xml_submission_file`) _may not change_ between requests. If Central sees a Submission with an `instanceId` it already knows about but the XML has changed in any way, it will respond with a `409 Conflict` error and reject the submission.
+        * As stated in the standards document, it is possible to submit multimedia attachments with the `Submission` across multiple `POST` requests to this API. _However_, we impose the additional restriction that the Submission XML (`xml_submission_file`) _may not change_ between requests. If Central sees a Submission with an `instanceId` it already knows about but the XML has changed in any way, it will respond with a `409 Conflict` error and reject the submission. Additionally, a `409 Conflict` error is returned if the Submission has been deleted in Central while attempting to send further POST requests.
 
         * Central will never return a `202` in any response from this API.
 
@@ -12263,7 +12477,7 @@ components:
       properties:
         name:
           type: string
-          example: myfile.mp3
+          example: myfile.png
           description: The name of the file as specified in the XForm.
         type:
           $ref: '#/components/schemas/FormAttachmentType'
@@ -12658,7 +12872,7 @@ components:
       properties:
         name:
           type: string
-          example: myfile.mp3
+          example: myfile.png
           description: The name of the file as specified in the Submission XML.
         exists:
           type: boolean

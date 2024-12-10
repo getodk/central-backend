@@ -59,8 +59,8 @@ describe('Update / migrate entities-version within form', () => {
       const asAlice = await service.login('alice');
 
       // Publish a form
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.updateEntity)
+      await asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -86,8 +86,8 @@ describe('Update / migrate entities-version within form', () => {
       const asAlice = await service.login('alice');
 
       // Upload a form but dont publish, leaving it as a draft
-      await asAlice.post('/v1/projects/1/forms')
-        .send(testData.forms.updateEntity)
+      await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -119,8 +119,8 @@ describe('Update / migrate entities-version within form', () => {
       const asAlice = await service.login('alice');
 
       // Upload a form and publish it
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.updateEntity)
+      await asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -160,20 +160,20 @@ describe('Update / migrate entities-version within form', () => {
       const asAlice = await service.login('alice');
 
       // Publish a form
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.updateEntity)
+      await asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
       await asAlice.post('/v1/projects/1/forms/updateEntity/draft')
-        .send(testData.forms.updateEntity.replace('orx:version="1.0"', ' orx:version="2.0"'))
+        .send(testData.forms.updateEntity2023.replace('orx:version="1.0"', ' orx:version="2.0"'))
         .set('Content-Type', 'text/xml')
         .expect(200);
 
       await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish');
 
       await asAlice.post('/v1/projects/1/forms/updateEntity/draft')
-        .send(testData.forms.updateEntity.replace('orx:version="1.0"', ' orx:version="3.0"'))
+        .send(testData.forms.updateEntity2023.replace('orx:version="1.0"', ' orx:version="3.0"'))
         .set('Content-Type', 'text/xml')
         .expect(200);
 
@@ -197,7 +197,7 @@ describe('Update / migrate entities-version within form', () => {
 
       // Upload updateEntities form with xlsx
       global.xlsformForm = 'updateEntity';
-      await asAlice.post('/v1/projects/1/forms?publish=true')
+      await asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
         .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
         .set('Content-Type', 'application/vnd.ms-excel')
         .set('X-XlsForm-FormId-Fallback', 'testformid')
@@ -228,7 +228,7 @@ describe('Update / migrate entities-version within form', () => {
 
       // Upload updateEntities form with xlsx
       global.xlsformForm = 'updateEntity';
-      await asAlice.post('/v1/projects/1/forms')
+      await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
         .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
         .set('Content-Type', 'application/vnd.ms-excel')
         .set('X-XlsForm-FormId-Fallback', 'testformid')
@@ -262,7 +262,7 @@ describe('Update / migrate entities-version within form', () => {
         .replace('</meta>', '<entity dataset="people" id="" update="" baseVersion=""><label/></entity></meta>');
 
       // Upload a form and publish it
-      await asAlice.post('/v1/projects/1/forms')
+      await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
         .send(withAttachmentsEntities)
         .set('Content-Type', 'application/xml')
         .expect(200);
@@ -341,8 +341,8 @@ describe('Update / migrate entities-version within form', () => {
       const domain = config.get('default.env.domain');
 
       // Publish a form
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.updateEntity)
+      await asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -410,8 +410,8 @@ describe('Update / migrate entities-version within form', () => {
       const asAlice = await service.login('alice');
 
       // Upload a form and publish it
-      await asAlice.post('/v1/projects/1/forms')
-        .send(testData.forms.updateEntity)
+      await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -440,8 +440,8 @@ describe('Update / migrate entities-version within form', () => {
       const asAlice = await service.login('alice');
 
       // Upload a form and publish it
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.updateEntity)
+      await asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -470,8 +470,8 @@ describe('Update / migrate entities-version within form', () => {
       const asAlice = await service.login('alice');
 
       // Upload a form and publish it
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.updateEntity)
+      await asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -498,8 +498,8 @@ describe('Update / migrate entities-version within form', () => {
       const asAlice = await service.login('alice');
 
       // Upload a form and publish it
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.simpleEntity)
+      await asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
+        .send(testData.forms.simpleEntity2022)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -541,8 +541,8 @@ describe('Update / migrate entities-version within form', () => {
       const asAlice = await service.login('alice');
 
       // Upload a form and publish it
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.updateEntity)
+      await asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -572,8 +572,8 @@ describe('Update / migrate entities-version within form', () => {
       const asAlice = await service.login('alice');
 
       // Upload a form and publish it
-      await asAlice.post('/v1/projects/1/forms')
-        .send(testData.forms.updateEntity)
+      await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -603,8 +603,8 @@ describe('Update / migrate entities-version within form', () => {
       const asAlice = await service.login('alice');
 
       // Upload a form and publish it
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.updateEntity)
+      await asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -640,8 +640,8 @@ describe('Update / migrate entities-version within form', () => {
       const asAlice = await service.login('alice');
 
       // Publish a form
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.updateEntity)
+      await asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -661,8 +661,8 @@ describe('Update / migrate entities-version within form', () => {
       const asAlice = await service.login('alice');
 
       // Publish an invalid XML form
-      const invalidForm = testData.forms.updateEntity.replace('<entity', '<something');
-      await asAlice.post('/v1/projects/1/forms?publish=true')
+      const invalidForm = testData.forms.updateEntity2023.replace('<entity', '<something');
+      await asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
         .send(invalidForm)
         .set('Content-Type', 'application/xml')
         .expect(200);
@@ -700,7 +700,7 @@ describe('Update / migrate entities-version within form', () => {
       const asAlice = await service.login('alice');
 
       // Publish an XML form of the right version
-      await asAlice.post('/v1/projects/1/forms?publish=true')
+      await asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
         .send(testData.forms.offlineEntity)
         .set('Content-Type', 'application/xml')
         .expect(200);

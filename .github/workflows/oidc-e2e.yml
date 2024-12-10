@@ -1,6 +1,8 @@
 name: OIDC e2e tests
 
-on: push
+on:
+  push:
+  pull_request:
 
 env:
   DEBUG: pw:api
@@ -27,10 +29,10 @@ jobs:
           --health-retries 5
     steps:
     - uses: actions/checkout@v4
-    - name: Use Node.js 20
+    - name: Set node version
       uses: actions/setup-node@v4
       with:
-        node-version: 20.17.0
+        node-version: 22.12.0
         cache: 'npm'
     - run: make test-oidc-e2e
     - name: Archive playwright screenshots
