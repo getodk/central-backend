@@ -49,6 +49,6 @@ if [[ ${INSTALL_PLAYWRIGHT_DEPS-} = true ]]; then
   npx playwright install --with-deps
 fi
 log "Running playwright tests..."
-npx playwright test
+npx --node-options="--no-deprecation" playwright test
 
 log "Tests completed OK!"
