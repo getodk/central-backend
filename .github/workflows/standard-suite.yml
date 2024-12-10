@@ -1,6 +1,8 @@
 name: Full Standard Test Suite
 
-on: push
+on:
+  push:
+  pull_request:
 
 jobs:
   standard-tests:
