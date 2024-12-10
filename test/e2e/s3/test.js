@@ -436,9 +436,9 @@ async function expectRejectionFrom(promise, expectedMessage) {
     await promise;
     should.fail('Uploading should have exited with non-zero status.');
   } catch(err) {
-    if(err.message.contains('Command failed: exec node lib/bin/s3 ')) {
+    if(err.message.startsWith('Command failed: exec node lib/bin/s3 ')) {
       // expected
-      if(expectedMessage) err.message.should.match(expectedMessage);
+      if(expectedMessage) err.message.should.containEql(expectedMessage);
     } else {
       throw err;
     }
