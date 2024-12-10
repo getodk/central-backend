@@ -1,6 +1,15 @@
 name: Database Migrations
 
 on:
+  pull_request:
+    paths:
+    - .github/workflows/db-migrations.yml
+    - lib/bin/create-docker-databases.js
+    - lib/model/migrations/**
+    - test/db-migrations/**
+    - package.json
+    - package-lock.json
+    - Makefile
   push:
     paths:
     - .github/workflows/db-migrations.yml
