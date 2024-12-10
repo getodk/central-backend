@@ -645,7 +645,7 @@ describe('/audits', () => {
         });
     }));
 
-    it('should filter out offline entity submission reprocessing events given action=nonverbose', testService(async (service, container) => {
+    it('should filter out offline entity submission backlog events given action=nonverbose', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -712,6 +712,21 @@ describe('/audits', () => {
               body[2].notes.should.equal('doing this for fun!');
               body[3].action.should.equal('user.session.create');
             })))));
+
+    it('should fail gracefully if note decoding fails', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .set('X-Action-Notes', 'doing this for fun%ae')
+          .send(testData.forms.binaryType)
+          .expect(400)
+          .then(({ body }) => {
+            body.should.deepEqual({
+              code: 400.6,
+              details: { field: 'x-action-notes' },
+              message: 'An expected header field (x-action-notes) did not match the expected format.',
+            });
+          }))));
 
     describe('audit logs of deleted and purged actees', () => {
       it('should get the information of a purged actee', testService(async (service, { Forms }) =>

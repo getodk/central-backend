@@ -70,6 +70,39 @@ describe('util/util', () => {
       const base64 = utf8ToBase64(input);
       base64ToUtf8(base64).should.be.eql(input);
     });
+
+    describe('base64ToUtf8()', () => {
+      it(`should throw if no arg supplied`, () => {
+        (() => base64ToUtf8()).should.throw('Invalid base64 string.');
+      });
+
+      [
+        undefined,
+        null,
+        '!',
+      ].forEach(malformed64 => {
+        it(`should reject malformed input '${malformed64}'`, () => {
+          (() => base64ToUtf8(malformed64)).should.throw('Invalid base64 string.');
+        });
+      });
+
+      [
+        [ '', '' ],
+        [ '   ', '' ],
+        [ 'c29tZSB0ZXh0',   'some text' ], // eslint-disable-line no-multi-spaces
+        [ 'c29tZSB0ZXh0 ',  'some text' ], // eslint-disable-line no-multi-spaces
+        [ ' c29tZSB0ZXh0 ', 'some text' ],
+        [ 'c29tZSB0ZXh0IA',   'some text ' ], // eslint-disable-line no-multi-spaces
+        [ 'c29tZSB0ZXh0IA=',  'some text ' ], // eslint-disable-line no-multi-spaces
+        [ 'c29tZSB0ZXh0IA==', 'some text ' ],
+        [ 'c29tZSB0ZXh0IDE=', 'some text 1' ],
+        [ 'c29tZSB0ZXh0IDEx', 'some text 11' ],
+      ].forEach(([ good64, expected ]) => {
+        it(`should decode '${good64}' to '${expected}'`, () => {
+          base64ToUtf8(good64).should.equal(expected);
+        });
+      });
+    });
   });
 });
 

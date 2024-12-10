@@ -15,7 +15,7 @@ if [[ ${CI-} = true ]]; then
   sudo apt-get install -y wait-for-it
 
   log "Creating database users..."
-  npm ci --legacy-peer-deps
+  npm ci
   node lib/bin/create-docker-databases.js
 
   START_SERVICES=true
@@ -49,6 +49,6 @@ if [[ ${INSTALL_PLAYWRIGHT_DEPS-} = true ]]; then
   npx playwright install --with-deps
 fi
 log "Running playwright tests..."
-npx playwright test
+npx --node-options="--no-deprecation" playwright test
 
 log "Tests completed OK!"

@@ -75,12 +75,27 @@ describe('OData filter query transformer', () => {
     });
   });
 
-  it('should reject unrecognized function names', () => {
+  it('should reject unsupported OData functions', () => {
     assert.throws(() => { odataFilter('123 eq trim(\' 123 \')'); }, (err) => {
       err.should.be.a.Problem();
       err.problemCode.should.equal(501.4);
       err.message.should.equal('The given OData filter expression uses features not supported by this server: MethodCallExpression at 7 ("trim(\' 123 \')")');
       return true;
+    });
+  });
+
+  [
+    'somethingwhichneverexisted()',
+    'NOW()', // wrong case
+    'YEAR(now())', // wrong case
+  ].forEach(badCall => {
+    it(`should reject unrecognized function name ${badCall}`, () => {
+      assert.throws(() => { odataFilter(`123 eq ${badCall}`); }, (err) => {
+        err.should.be.a.Problem();
+        err.problemCode.should.equal(400.18);
+        err.message.should.match(/^The OData filter expression you provided could not be parsed: Unexpected character at \d+$/);
+        return true;
+      });
     });
   });
 });

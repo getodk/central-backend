@@ -437,6 +437,34 @@ describe('datasets and entities', () => {
           });
       }));
 
+      it('should reject if creating a dataset property that already exists but with different capitalization', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({
+            name: 'trees'
+          })
+          .expect(200);
+
+        // Create a property
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({
+            name: 'height'
+          })
+          .expect(200);
+
+        // Second time should fail
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({
+            name: 'HEIGHT'
+          })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.3);
+            body.message.should.match(/A resource already exists with name,datasetId/);
+          });
+      }));
+
       it('should log an event for creating a new dataset property', testService(async (service) => {
         const asAlice = await service.login('alice');
 
@@ -2180,9 +2208,9 @@ describe('datasets and entities', () => {
               .expect(200)
               .then(() =>
                 Forms.getByProjectAndXmlFormId(1, 'withAttachments')
-                  .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+                  .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
                     .then(attachment => {
-                      attachment.value.datasetId.should.not.be.null();
+                      attachment.get().datasetId.should.not.be.null();
                     })))))));
 
       it('should not link dataset if previous version has blob', testService((service, { Forms, FormAttachments }) =>
@@ -2205,10 +2233,10 @@ describe('datasets and entities', () => {
               .expect(200))
             .then(() =>
               Forms.getByProjectAndXmlFormId(1, 'withAttachments')
-                .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+                .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
                   .then(attachment => {
-                    should(attachment.value.datasetId).be.null();
-                    should(attachment.value.blobId).not.be.null();
+                    should(attachment.get().datasetId).be.null();
+                    should(attachment.get().blobId).not.be.null();
                   }))))));
 
       it('should link dataset if previous version does not have blob or dataset linked', testService((service, { Forms, FormAttachments }) =>
@@ -2230,10 +2258,10 @@ describe('datasets and entities', () => {
               .expect(200))
             .then(() =>
               Forms.getByProjectAndXmlFormId(1, 'withAttachments')
-                .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people.csv')
+                .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
                   .then(attachment => {
-                    should(attachment.value.datasetId).not.be.null();
-                    should(attachment.value.blobId).be.null();
+                    should(attachment.get().datasetId).not.be.null();
+                    should(attachment.get().blobId).be.null();
                   }))))));
 
       // Verifying autolinking happens only for attachment with "file" type
@@ -2249,9 +2277,9 @@ describe('datasets and entities', () => {
               .expect(200)
               .then(() =>
                 Forms.getByProjectAndXmlFormId(1, 'withAttachments')
-                  .then(form => FormAttachments.getByFormDefIdAndName(form.value.def.id, 'people')
+                  .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people')
                     .then(attachment => {
-                      should(attachment.value.datasetId).be.null();
+                      should(attachment.get().datasetId).be.null();
                     })))))));
 
       describe('autolink when publishing form that creates and consumes new dataset', () => {
@@ -2259,7 +2287,7 @@ describe('datasets and entities', () => {
         const updateForm = `<?xml version="1.0"?>
         <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
           <h:head>
-            <model entities:entities-version="2023.1.0">
+            <model entities:entities-version="2024.1.0">
               <instance>
                 <data id="updateEntity" orx:version="1.0">
                   <person/>
@@ -2267,7 +2295,7 @@ describe('datasets and entities', () => {
                   <age/>
                   <hometown/>
                   <meta>
-                    <entity dataset="people" id="" update="" baseVersion="">
+                    <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId="">
                       <label/>
                     </entity>
                   </meta>
@@ -2347,7 +2375,7 @@ describe('datasets and entities', () => {
           const differentDataset = `<?xml version="1.0"?>
           <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
             <h:head>
-              <model entities:entities-version="2023.1.0">
+              <model entities:entities-version="2024.1.0">
                 <instance>
                   <data id="updateEntity" orx:version="1.0">
                     <person/>
@@ -2355,7 +2383,7 @@ describe('datasets and entities', () => {
                     <age/>
                     <hometown/>
                     <meta>
-                      <entity dataset="students" id="" update="" baseVersion="">
+                      <entity dataset="students" id="" update="" baseVersion="" trunkVersion="" branchId="">
                         <label/>
                       </entity>
                     </meta>
@@ -2490,7 +2518,7 @@ describe('datasets and entities', () => {
           const noDataset = `<?xml version="1.0"?>
           <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
             <h:head>
-              <model entities:entities-version="2023.1.0">
+              <model entities:entities-version="2024.1.0">
                 <instance>
                   <data id="updateEntity" orx:version="1.0">
                     <person/>
@@ -2533,7 +2561,7 @@ describe('datasets and entities', () => {
           const caseChange = `<?xml version="1.0"?>
           <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
             <h:head>
-              <model entities:entities-version="2023.1.0">
+              <model entities:entities-version="2024.1.0">
                 <instance>
                   <data id="updateEntity" orx:version="1.0">
                     <person/>
@@ -2541,7 +2569,7 @@ describe('datasets and entities', () => {
                     <age/>
                     <hometown/>
                     <meta>
-                      <entity dataset="people" id="" update="" baseVersion="">
+                      <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId="">
                         <label/>
                       </entity>
                     </meta>
@@ -2583,7 +2611,7 @@ describe('datasets and entities', () => {
           const caseChange = `<?xml version="1.0"?>
             <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
               <h:head>
-                <model entities:entities-version="2023.1.0">
+                <model entities:entities-version="2024.1.0">
                   <instance>
                     <data id="updateEntity" orx:version="1.0">
                       <person/>
@@ -3442,10 +3470,57 @@ describe('datasets and entities', () => {
 
   describe('parsing datasets on form upload', () => {
     describe('parsing datasets at /projects/:id/forms POST', () => {
+
+      describe('warnings about entities-version from before 2024.1.0', () => {
+        it('should warn if the entities-version is 2022.1.0 (earlier than 2024.1.0)', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity2022)
+            .set('Content-Type', 'application/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.be.eql(400.16);
+              body.details.warnings.workflowWarnings[0].should.be.eql({
+                type: 'oldEntityVersion',
+                details: { version: '2022.1.0' },
+                reason: 'Entities specification version [2022.1.0] is not compatible with Offline Entities. Please use version 2024.1.0 or later.'
+              });
+            });
+
+          await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+            .send(testData.forms.simpleEntity2022)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+        }));
+
+        it('should warn if the entities-version is 2023.1.0 (earlier than 2024.1.0)', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.updateEntity2023)
+            .set('Content-Type', 'application/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.be.eql(400.16);
+              body.details.warnings.workflowWarnings[0].should.be.eql({
+                type: 'oldEntityVersion',
+                details: { version: '2023.1.0' },
+                reason: 'Entities specification version [2023.1.0] is not compatible with Offline Entities. Please use version 2024.1.0 or later.'
+              });
+            });
+
+          await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
+            .send(testData.forms.updateEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+        }));
+      });
+
       it('should return a Problem if the entity xml has the wrong version', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
-            .send(testData.forms.simpleEntity.replace('2022.1.0', 'bad-version'))
+            .send(testData.forms.simpleEntity.replace('2024.1.0', 'bad-version'))
             .set('Content-Type', 'text/xml')
             .expect(400)
             .then(({ body }) => {
@@ -3509,7 +3584,7 @@ describe('datasets and entities', () => {
         const xml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
           <h:title>nobinds</h:title>
-          <model entities:entities-version='2022.1.0'>
+          <model entities:entities-version='2024.1.0'>
             <instance>
               <data id="nobinds">
                 <name/>
@@ -3551,7 +3626,7 @@ describe('datasets and entities', () => {
         const alice = await service.login('alice');
         const xml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
           <h:head>
-            <model entities:entities-version='2022.1.0'>
+            <model entities:entities-version='2024.1.0'>
               <instance>
                 <data id="validate_structure">
                   <name/>
@@ -3603,7 +3678,7 @@ describe('datasets and entities', () => {
         <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
           <h:head>
             <h:title>Repeat Children Entities</h:title>
-            <model entities:entities-version="2022.1.0" odk:xforms-version="1.0.0">
+            <model entities:entities-version="2024.1.0" odk:xforms-version="1.0.0">
               <instance>
                 <data id="repeat_entity" version="2">
                   <num_children/>
@@ -3903,6 +3978,106 @@ describe('datasets and entities', () => {
             .expect(200);
 
           await alice.post(`/v1/projects/${newProjectId}/forms/simpleEntity/draft/publish`)
+            .expect(200);
+        }));
+      });
+
+      describe('dataset properties name conflicts via Form upload', () => {
+        it('should reject if property name differ by just capitalization', testService(async (service) => {
+          const alice = await service.login('alice');
+
+          // dataset "people" with property "first_name"
+          await alice.post('/v1/projects/1/forms?publish=True')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // dataset "people" with property "FIRST_NAME"
+          await alice.post('/v1/projects/1/forms?publish=True')
+            .send(testData.forms.simpleEntity
+              .replace(/simpleEntity/g, 'simpleEntity2')
+              .replace('first_name', 'FIRST_NAME'))
+            .set('Content-Type', 'application/xml')
+            .expect(409)
+            .then(({ body }) => {
+              body.message.should.match(/This form attempts to create new Entity properties that match with existing ones except for capitalization/);
+            });
+        }));
+
+        it('should reject when publishing duplicate property with different capitalization', testService(async (service) => {
+          const alice = await service.login('alice');
+
+          // dataset "people" with property "first_name" - draft only
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // dataset "people" with property "FIRST_NAME" - published
+          await alice.post('/v1/projects/1/forms?publish=True')
+            .send(testData.forms.simpleEntity
+              .replace(/simpleEntity/g, 'simpleEntity2')
+              .replace('first_name', 'FIRST_NAME'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await alice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+            .expect(409)
+            .then(({ body }) => {
+              body.message.should.match(/This form attempts to create new Entity properties that match with existing ones except for capitalization/);
+            });
+        }));
+
+        it('should reject when new Form draft has duplicate property with different capitalization', testService(async (service) => {
+          const alice = await service.login('alice');
+
+          // dataset "people" with property "first_name"
+          await alice.post('/v1/projects/1/forms?publish=True')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // dataset "people" with property "FIRST_NAME" - draft
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity
+              .replace(/simpleEntity/g, 'simpleEntity2')
+              .replace('first_name', 'FIRST_NAME'))
+            .set('Content-Type', 'application/xml')
+            .expect(409)
+            .then(({ body }) => {
+              body.message.should.match(/This form attempts to create new Entity properties that match with existing ones except for capitalization/);
+            });
+        }));
+
+        it('reject if the Form contains duplicate properties with different capitalization', testService(async (service) => {
+          const alice = await service.login('alice');
+
+          // dataset "people" with properties "age" and "AGE"
+          await alice.post('/v1/projects/1/forms')
+            .send(testData.forms.simpleEntity.replace('first_name', 'AGE'))
+            .set('Content-Type', 'application/xml')
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.be.eql(400.25);
+              body.message.should.be.eql('The entity definition within the form is invalid. Multiple Form Fields cannot be saved to a single property.');
+            });
+
+        }));
+
+        it('should not reject for existing duplicate properties', testService(async (service, container) => {
+          const alice = await service.login('alice');
+
+          await alice.post('/v1/projects/1/forms?publish=True')
+            .send(testData.forms.simpleEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await container.run(sql`UPDATE ds_properties SET name='FIRST_NAME' WHERE name='age'`);
+
+          await alice.post('/v1/projects/1/forms/simpleEntity/draft')
+            .expect(200);
+
+          await alice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=v2')
             .expect(200);
         }));
       });
@@ -4534,12 +4709,12 @@ describe('datasets and entities', () => {
       const form = `<?xml version="1.0"?>
       <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model entities:entities-version="2023.1.0">
+          <model entities:entities-version="2024.1.0">
             <instance>
               <data id="brokenForm" orx:version="1.0">
                 <age foo="bar"/>
                 <meta>
-                  <entity dataset="people" id="" create="" update="" baseVersion="" />
+                  <entity dataset="people" id="" create="" update="" baseVersion="" trunkVersion="" branchId=""/>
                 </meta>
               </data>
             </instance>
@@ -4599,12 +4774,12 @@ describe('datasets and entities', () => {
       const form = `<?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model entities:entities-version="2023.1.0">
+          <model entities:entities-version="2024.1.0">
             <instance>
               <data id="brokenForm" orx:version="1.0">
                 <age foo="bar"/>
                 <meta>
-                  <entity dataset="people" id="" create="" update="" baseVersion="" />
+                  <entity dataset="people" id="" create="" update="" baseVersion="" trunkVersion="" branchId="" />
                 </meta>
               </data>
             </instance>
@@ -4616,12 +4791,12 @@ describe('datasets and entities', () => {
       const form2 = `<?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model entities:entities-version="2023.1.0">
+          <model entities:entities-version="2024.1.0">
             <instance>
               <data id="brokenForm" orx:version="2.0">
                 <age foo="bar"/>
                 <meta>
-                  <entity dataset="people" id="" create="" update="" baseVersion="">
+                  <entity dataset="people" id="" create="" update="" baseVersion=""  trunkVersion="" branchId="">
                     <label/>
                   </entity>
                 </meta>
@@ -4651,12 +4826,12 @@ describe('datasets and entities', () => {
       const form = `<?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model entities:entities-version="2023.1.0">
+          <model entities:entities-version="2024.1.0">
             <instance>
               <data id="updateWithoutLabel" orx:version="1.0">
                 <age foo="bar"/>
                 <meta>
-                  <entity dataset="people" id="" update="" baseVersion="" />
+                  <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId=""/>
                 </meta>
               </data>
             </instance>
@@ -4674,12 +4849,12 @@ describe('datasets and entities', () => {
       const form2 = `<?xml version="1.0"?>
       <h:html xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model entities:entities-version="2023.1.0">
+          <model entities:entities-version="2024.1.0">
             <instance>
               <data id="updateWithLabel" orx:version="1.0">
                 <age foo="bar"/>
                 <meta>
-                  <entity dataset="people" id="" update="" baseVersion="">
+                  <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId="">
                     <label/>
                   </entity>
                 </meta>
@@ -4720,12 +4895,12 @@ describe('datasets and entities', () => {
       const form = `<?xml version="1.0"?>
       <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
-          <model entities:entities-version="2023.1.0">
+          <model entities:entities-version="2024.1.0">
             <instance>
               <data id="brokenForm" orx:version="1.0">
                 <age foo="bar"/>
                 <meta>
-                  <entity dataset="people" id="" update="" baseVersion="" />
+                  <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId=""/>
                 </meta>
               </data>
             </instance>

@@ -5,6 +5,7 @@
 // See: https://expressjs.com/en/api.html#app.settings.table
 // See: https://github.com/eugef/node-mocks-http/issues/299
 
+const { EventEmitter } = require('events');
 const wrapped = require('node-mocks-http');
 
 const qs = (() => {
@@ -35,7 +36,9 @@ const createRequest = options => {
   return wrapped.createRequest({ ...options, query: qs.parse(search.substr(1)) });
 };
 
+const createResponse = options => wrapped.createResponse({ eventEmitter: EventEmitter, ...options });
+
 module.exports = {
   createRequest,
-  createResponse: wrapped.createResponse,
+  createResponse,
 };

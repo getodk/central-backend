@@ -660,11 +660,9 @@ describe('extracting and validating entities', () => {
         creator: {
           id: 'id',
           displayName: 'displayName'
-        },
-        stats: {
-          updates: 0
         }
-      }
+      },
+      updates: 0
     };
     const properties = [{ name: 'firstName' }, { name: 'lastName' }];
 
@@ -743,11 +741,9 @@ describe('extracting and validating entities', () => {
           creator: {
             id: 'id',
             displayName: 'displayName'
-          },
-          stats: {
-            updates: 0
           }
-        }
+        },
+        updates: 0
       };
       const selectedProperties = null;
       const result = selectFields(data, properties, selectedProperties);

@@ -1580,7 +1580,7 @@ describe('analytics task queries', function () {
       countInterruptedBranches.should.equal(4);
     }));
 
-    it('should count number of submission.reprocess events (submissions temporarily in the backlog)', testService(async (service, container) => {
+    it('should count number of submission.backlog.reprocess events (submissions temporarily in the backlog)', testService(async (service, container) => {
       await createTestForm(service, container, testData.forms.offlineEntity, 1);
 
       const asAlice = await service.login('alice');
@@ -1915,7 +1915,7 @@ describe('analytics task queries', function () {
         .expect(200);
 
       // switching the order of these updates triggers the
-      // submission.reprocess count
+      // submission.backlog.reprocess count
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.one
           .replace('one', 'one-update2')

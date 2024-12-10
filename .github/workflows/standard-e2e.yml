@@ -1,6 +1,8 @@
 name: Standard E2E Tests
 
-on: push
+on:
+  push:
+  pull_request:
 
 env:
   LOG_LEVEL: DEBUG
@@ -26,12 +28,12 @@ jobs:
           --health-retries 5
     steps:
     - uses: actions/checkout@v4
-    - name: Use Node.js 20
+    - name: Set node version
       uses: actions/setup-node@v4
       with:
-        node-version: 20.10.0
+        node-version: 22.12.0
         cache: 'npm'
-    - run: npm ci --legacy-peer-deps
+    - run: npm ci
     - run: node lib/bin/create-docker-databases.js
     - name: E2E Test
       timeout-minutes: 10
