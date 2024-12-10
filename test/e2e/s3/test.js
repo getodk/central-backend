@@ -404,7 +404,7 @@ function cli(cmd) {
 
   cmd = `exec node lib/bin/s3 ${cmd}`; // eslint-disable-line no-param-reassign
   log.debug('cli()', 'calling:', cmd);
-  const env = { ..._.pick(process.env, 'PATH'), NODE_CONFIG_ENV:'s3-dev', NODE_OPTIONS:'$NODE_OPTIONS --no-deprecation' };
+  const env = { ..._.pick(process.env, 'PATH'), NODE_CONFIG_ENV:'s3-dev' };
 
   const promise = new Promise((resolve, reject) => {
     const child = exec(cmd, { env, cwd:'../../..' }, (err, stdout) => {
@@ -436,7 +436,7 @@ async function expectRejectionFrom(promise, expectedMessage) {
     await promise;
     should.fail('Uploading should have exited with non-zero status.');
   } catch(err) {
-    if(err.message.startsWith('Command failed: exec node lib/bin/s3 ')) {
+    if(err.message.contains('Command failed: exec node lib/bin/s3 ')) {
       // expected
       if(expectedMessage) err.message.should.match(expectedMessage);
     } else {
