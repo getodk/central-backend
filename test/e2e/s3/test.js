@@ -405,8 +405,8 @@ function cli(cmd) {
   const promise = new Promise((resolve, reject) => {
     const child = exec(cmd, { env, cwd:'../../..' }, (err, stdout, stderr) => {
       if (err) {
-        err.stdout = stdout;
-        err.stderr = stderr;
+        err.stdout = stdout; // eslint-disable-line no-param-reassign
+        err.stderr = stderr; // eslint-disable-line no-param-reassign
         return reject(err);
       }
 
