@@ -572,6 +572,26 @@ describe('api: /submission', () => {
               .then(({ body }) => { body.toString('utf8').should.equal('this is test file one'); })
           ])))));
 
+    it('should reject resubmission of soft-deleted submission', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+        .expect(201);
+
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+        .expect(409)
+        .then(({ text }) => {
+          text.should.match(/This submission has been deleted. You may not resubmit it./);
+        });
+    }));
+
     context('versioning', () => {
       it('should reject if the deprecatedId is not known', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -1153,6 +1173,20 @@ describe('api: /forms/:id/submissions', () => {
                 ]);
               })
           ])))));
+
+    it('should reject duplicate submissions', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(409);
+    }));
   });
 
   describe('[draft] POST', () => {
@@ -1567,7 +1601,7 @@ describe('api: /forms/:id/submissions', () => {
       service.login('alice', (asAlice) => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
         .then((result) => {
           result.filenames.should.eql([ 'simple.csv' ]);
-          result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion\n');
+          result.files.get('simple.csv').should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion\n');
         }))));
 
     it('should return a zipfile with the relevant data', testService((service) =>
@@ -1587,7 +1621,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
-              result['simple.csv'].should.be.a.SimpleCsv();
+              result.files.get('simple.csv').should.be.a.SimpleCsv();
             })))));
 
     it('should include all repeat rows @slow', testService(async (service) => {
@@ -1616,8 +1650,8 @@ describe('api: /forms/:id/submissions', () => {
       }
       const result = await httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/single-repeat-1-instance-10qs/submissions.csv.zip'));
       result.filenames.should.eql([ 'single-repeat-1-instance-10qs.csv', 'single-repeat-1-instance-10qs-repeat.csv' ]);
-      result['single-repeat-1-instance-10qs.csv'].split('\n').length.should.equal(52);
-      result['single-repeat-1-instance-10qs-repeat.csv'].split('\n').length.should.equal(52);
+      result.files.get('single-repeat-1-instance-10qs.csv').split('\n').length.should.equal(52);
+      result.files.get('single-repeat-1-instance-10qs-repeat.csv').split('\n').length.should.equal(52);
     }));
 
     it('should not include data from other forms', testService((service) =>
@@ -1642,7 +1676,7 @@ describe('api: /forms/:id/submissions', () => {
         .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
           .then((result) => {
             result.filenames.should.eql([ 'simple.csv' ]);
-            const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+            const csv = result.files.get('simple.csv').split('\n').map((row) => row.split(','));
             csv.length.should.equal(4); // header + 2 data rows + newline
             csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
             csv[1].shift().should.be.an.recentIsoDate();
@@ -1675,7 +1709,7 @@ describe('api: /forms/:id/submissions', () => {
       await asAlice.delete('/v1/projects/1/forms/simple/submissions/two');
 
       const result = await httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'));
-      const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+      const csv = result.files.get('simple.csv').split('\n').map((row) => row.split(','));
       csv.length.should.equal(4); // header + 2 data rows + newline
       csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
       csv[1].shift().should.be.an.recentIsoDate();
@@ -1705,7 +1739,7 @@ describe('api: /forms/:id/submissions', () => {
             .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?$filter=__system/submitterId eq 5'))
               .then((result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
-                const lines = result['simple.csv'].split('\n');
+                const lines = result.files.get('simple.csv').split('\n');
                 lines.length.should.equal(4);
                 lines[1].endsWith(',three,Chelsea,38,three,5,Alice,0,0,,,,0,').should.equal(true);
                 lines[2].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0,').should.equal(true);
@@ -1731,7 +1765,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?$filter=__system/reviewState eq null'))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
-              const lines = result['simple.csv'].split('\n');
+              const lines = result.files.get('simple.csv').split('\n');
               lines.length.should.equal(4);
               lines[1].endsWith(',three,Chelsea,38,three,5,Alice,0,0,,,,0,').should.equal(true);
               lines[2].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0,').should.equal(true);
@@ -1752,7 +1786,7 @@ describe('api: /forms/:id/submissions', () => {
             .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?$filter=year(__system/submissionDate) eq 2010'))
               .then((result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
-                const lines = result['simple.csv'].split('\n');
+                const lines = result.files.get('simple.csv').split('\n');
                 lines.length.should.equal(3);
                 lines[1].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0,').should.equal(true);
               }))))));
@@ -1773,7 +1807,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?$filter=__system/updatedAt eq null'))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
-              const lines = result['simple.csv'].split('\n');
+              const lines = result.files.get('simple.csv').split('\n');
               lines.length.should.equal(3);
               lines[1].endsWith(',one,Alice,30,one,5,Alice,0,0,,,,0,').should.equal(true);
             })))));
@@ -1802,11 +1836,11 @@ describe('api: /forms/:id/submissions', () => {
                   'media/here_is_file2.jpg'
                 ]);
 
-                result['media/my_file1.mp4'].should.equal('this is test file one');
-                result['media/here_is_file2.jpg'].should.equal('this is test file two');
+                result.files.get('media/my_file1.mp4').should.equal('this is test file one');
+                result.files.get('media/here_is_file2.jpg').should.equal('this is test file two');
 
                 // we also check the csv for the sake of verifying the attachments counts.
-                const csv = result['binaryType.csv'].split('\n');
+                const csv = result.files.get('binaryType.csv').split('\n');
                 csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
                 csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,2,2,,,,0,');
                 csv.length.should.equal(3); // newline at end
@@ -1838,11 +1872,11 @@ describe('api: /forms/:id/submissions', () => {
                   'media/here_is_file2.jpg'
                 ]);
 
-                result['media/my_file1.mp4'].should.equal('this is test file one');
-                result['media/here_is_file2.jpg'].should.equal('this is test file two');
+                result.files.get('media/my_file1.mp4').should.equal('this is test file one');
+                result.files.get('media/here_is_file2.jpg').should.equal('this is test file two');
 
                 // we also check the csv for the sake of verifying the attachments counts.
-                const csv = result['binaryType.csv'].split('\n');
+                const csv = result.files.get('binaryType.csv').split('\n');
                 csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
                 csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,2,2,,,,0,');
                 csv.length.should.equal(3); // newline at end
@@ -1928,7 +1962,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip'))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
-              const lines = result['simple.csv'].split('\n');
+              const lines = result.files.get('simple.csv').split('\n');
               lines[1].endsWith('0,updated').should.equal(true);
               lines[2].endsWith('0,').should.equal(true);
               lines[3].endsWith('1,').should.equal(true);
@@ -1949,7 +1983,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true'))
             .then((result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
-              const lines = result['selectMultiple.csv'].split('\n');
+              const lines = result.files.get('selectMultiple.csv').split('\n');
               lines[0].should.equal('SubmissionDate,meta-instanceID,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
                 .should.equal(',two,b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0,');
@@ -1971,7 +2005,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true'))
             .then((result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
-              const lines = result['selectMultiple.csv'].split('\n');
+              const lines = result.files.get('selectMultiple.csv').split('\n');
               lines[0].should.equal('SubmissionDate,meta-instanceID,q1,g1-q2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
                 .should.equal(',two,b,m x,two,5,Alice,0,0,,,,0,');
@@ -1995,7 +2029,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => exhaust(container))
           .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true&$filter=__system/reviewState eq null'))
             .then((result) => {
-              const lines = result['selectMultiple.csv'].split('\n');
+              const lines = result.files.get('selectMultiple.csv').split('\n');
               lines.length.should.equal(3);
               lines[1].should.containEql(',one,');
               lines[1].should.not.containEql('two');
@@ -2036,7 +2070,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?deletedFields=true'))
             .then((result) => {
               result.filenames.should.containDeep([ 'simple.csv' ]);
-              const lines = result['simple.csv'].split('\n');
+              const lines = result.files.get('simple.csv').split('\n');
               lines[0].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
                 .should.equal(',three,Chelsea,38,three,5,Alice,0,0,,,,0,2');
@@ -2066,8 +2100,8 @@ describe('api: /forms/:id/submissions', () => {
               .then((result) => {
                 result.filenames.should.containDeep([ 'binaryType.csv' ]);
 
-                should.not.exist(result['media/my_file1.mp4']);
-                should.not.exist(result['media/here_is_file2.jpg']);
+                should.not.exist(result.files.get('media/my_file1.mp4'));
+                should.not.exist(result.files.get('media/here_is_file2.jpg'));
 
               }))))));
 
@@ -2096,7 +2130,7 @@ describe('api: /forms/:id/submissions', () => {
           .expect(201)
           .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?groupPaths=false'))
             .then((result) => {
-              const csv = result['simple.csv'].split('\n');
+              const csv = result.files.get('simple.csv').split('\n');
               csv[0].should.equal('SubmissionDate,instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
             })))));
 
@@ -2115,7 +2149,7 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/submissions.csv.zip?splitSelectMultiples=true&groupPaths=false'))
             .then((result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
-              const lines = result['selectMultiple.csv'].split('\n');
+              const lines = result.files.get('selectMultiple.csv').split('\n');
               lines[0].should.equal('SubmissionDate,instanceID,q1,q1/a,q1/b,q2,q2/m,q2/x,q2/y,q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
                 .should.equal(',two,b,0,1,m x,1,1,0,0,two,5,Alice,0,0,,,,0,');
@@ -2142,7 +2176,7 @@ describe('api: /forms/:id/submissions', () => {
                 ]);
 
                 // we also check the csv for the sake of verifying the attachments counts.
-                const csv = result['binaryType.csv'].split('\n');
+                const csv = result.files.get('binaryType.csv').split('\n');
                 csv[0].should.equal('SubmissionDate,meta-instanceID,file1,file2,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
                 csv[1].should.endWith(',both,my_file1.mp4,here_is_file2.jpg,both,5,Alice,1,2,,,,0,');
                 csv.length.should.equal(3); // newline at end
@@ -2173,7 +2207,7 @@ describe('api: /forms/:id/submissions', () => {
                 'audits - audit.csv'
               ]);
 
-              result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+              result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
 one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
 one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
 one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
@@ -2210,7 +2244,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 'audits - audit.csv'
               ]);
 
-              result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+              result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
 one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
 one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
 one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
@@ -2251,7 +2285,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 'audits - audit.csv'
               ]);
 
-              result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+              result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
 one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
 one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
 one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
@@ -2316,7 +2350,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                   'audits - audit.csv'
                 ]);
 
-                result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+                result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
 one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
 one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
 one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
@@ -2352,7 +2386,7 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
                 'audits - audit.csv'
               ]);
 
-              result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+              result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
 one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
 one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
 one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
@@ -2387,7 +2421,7 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
                   'audits - audit.csv'
                 ]);
 
-                result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+                result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
 one,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
 one,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
 one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
@@ -2419,7 +2453,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                   'audits - audit.csv'
                 ]);
 
-                result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+                result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
 one,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
 one,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
 one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
@@ -2447,7 +2481,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                   'audits - audit.csv'
                 ]);
 
-                result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+                result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
 one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
 one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
 one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
@@ -2476,7 +2510,7 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
                   'audits - audit.csv'
                 ]);
 
-                result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+                result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
 one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
 one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
 one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
@@ -2514,7 +2548,7 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
                     'audits - audit.csv'
                   ]);
 
-                  result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+                  result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
 one,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
 one,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
 one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
@@ -2687,7 +2721,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/simple/submissions.csv.zip?deletedFields=true'))
               .then((result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
-                const lines = result['simple.csv'].split('\n');
+                const lines = result.files.get('simple.csv').split('\n');
                 lines[0].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
                 lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
                   .should.equal(',three,Chelsea,38,three,5,Alice,0,0,,,,0,3');
@@ -2790,7 +2824,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .then((result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
 
-                const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+                const csv = result.files.get('simple.csv').split('\n').map((row) => row.split(','));
                 csv.length.should.equal(3); // header + data row + newline
                 csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
                 csv[1].shift().should.be.an.recentIsoDate();
@@ -2812,7 +2846,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .then((result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
 
-                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion\n');
+                result.files.get('simple.csv').should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion\n');
               }))))));
 
     it('should not carry draft submissions forward to the published version upon publish', testService((service) =>
@@ -2831,7 +2865,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .then((result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
 
-                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion\n');
+                result.files.get('simple.csv').should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion\n');
               }))))));
 
     it('should not carry over drafts when a draft is replaced', testService((service) =>
@@ -2850,7 +2884,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .then((result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
 
-                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion\n');
+                result.files.get('simple.csv').should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion\n');
               }))))));
 
     it('should not resurface drafts when a draft is recreated', testService((service) =>
@@ -2871,7 +2905,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .then((result) => {
                 result.filenames.should.containDeep([ 'simple.csv' ]);
 
-                result['simple.csv'].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion\n');
+                result.files.get('simple.csv').should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion\n');
               }))))));
 
     it('should not log the action in the audit log', testService((service) =>
@@ -2906,7 +2940,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .then(() => httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/selectMultiple/draft/submissions.csv.zip?splitSelectMultiples=true'))
             .then((result) => {
               result.filenames.should.containDeep([ 'selectMultiple.csv' ]);
-              const lines = result['selectMultiple.csv'].split('\n');
+              const lines = result.files.get('selectMultiple.csv').split('\n');
               lines[0].should.equal('SubmissionDate,meta-instanceID,q1,q1/a,q1/b,g1-q2,g1-q2/m,g1-q2/x,g1-q2/y,g1-q2/z,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               lines[1].slice('yyyy-mm-ddThh:mm:ss._msZ'.length)
                 .should.equal(',two,b,0,1,m x,1,1,0,0,two,,,0,0,,,,0,');
@@ -3362,22 +3396,34 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .send(withSimpleIds('one', 'two'))
             .set('Content-Type', 'text/xml')
             .expect(200))
+          .then(() => asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+            .expect(200))
+          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions/one/restore')
+            .expect(200))
           .then(() => oneFirst(sql`select id from submissions`))
           .then((submissionId) => all(sql`SELECT id FROM submission_defs WHERE "submissionId" = ${submissionId} ORDER BY id desc`)
             .then(map(o => o.id))
             .then(submissionDefIds => asAlice.get('/v1/projects/1/forms/simple/submissions/one/audits')
               .expect(200)
               .then(({ body }) => {
-                body.length.should.equal(3);
+                body.length.should.equal(5);
                 for (const audit of body) audit.should.be.an.Audit();
-                body[0].action.should.equal('submission.update.version');
-                body[0].details.should.eql({ instanceId: 'two', submissionId, submissionDefId: submissionDefIds[0] });
-                body[1].action.should.equal('submission.update');
-                body[1].details.reviewState.should.equal('rejected');
-                body[1].details.submissionId.should.equal(submissionId);
-                should.exist(body[1].details.submissionDefId);
-                body[2].action.should.equal('submission.create');
-                body[2].details.should.eql({ instanceId: 'one', submissionId, submissionDefId: submissionDefIds[1] });
+                body[0].action.should.equal('submission.restore');
+                body[0].details.should.eql({ submissionId, instanceId: 'one' });
+
+                body[1].action.should.equal('submission.delete');
+                body[1].details.should.eql({ submissionId, instanceId: 'one' });
+
+                body[2].action.should.equal('submission.update.version');
+                body[2].details.should.eql({ instanceId: 'two', submissionId, submissionDefId: submissionDefIds[0] });
+
+                body[3].action.should.equal('submission.update');
+                body[3].details.reviewState.should.equal('rejected');
+                body[3].details.submissionId.should.equal(submissionId);
+                should.exist(body[3].details.submissionDefId);
+
+                body[4].action.should.equal('submission.create');
+                body[4].details.should.eql({ instanceId: 'one', submissionId, submissionDefId: submissionDefIds[1] });
               }))))));
 
     it('should not expand actor when not extended', testService((service) =>

@@ -61,7 +61,7 @@ timeout 30 bash -c "while ! curl -s -o /dev/null $serverUrl; do sleep 1; done"
 log 'Backend started!'
 
 cd test/e2e/s3
-npx mocha test.js
+npx --node-options="--no-deprecation" mocha test.js
 
 if ! curl -s -o /dev/null "$serverUrl"; then
   log '!!! Backend died.'
