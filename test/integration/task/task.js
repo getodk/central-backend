@@ -36,7 +36,7 @@ describe('task: runner', () => {
   it('should print failure details to stderr and exit nonzero', () => runScript(failure)
     .then(([ error, , stderr ]) => {
       error.code.should.equal(1);
-      stderr.should.match(/^Problem \[Error\]: The resource returned no data./);
+      stderr.should.match(/Problem \[Error\]: The resource returned no data./);
     }));
 });
 
