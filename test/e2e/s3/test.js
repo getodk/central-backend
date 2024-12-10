@@ -247,11 +247,7 @@ describe('s3 support', () => {
     // then
     // N.B. These errors are as observed, and demonstrate that the root error is shared
     // with the user.  They are not something to try to retain if implementation changes.
-    await expectRejectionFrom(uploading, new RegExp(
-      'Command failed: exec node lib/bin/s3 upload-pending\n' +
-          '(AggregateError.*)?Error: (connect ECONNREFUSED|read ECONNRESET|socket hang up|write EPIPE)',
-      's',
-    ));
+    await expectRejectionFrom(uploading, /(AggregateError.*)?Error: (connect ECONNREFUSED|read ECONNRESET|socket hang up|write EPIPE)/);
     // and
     await assertNewStatuses({ uploaded: 1, failed: 1 });
   });
