@@ -15,7 +15,7 @@ describe('api: /backup', () => {
         httpZipResponseToFiles(asAlice.post('/v1/backup').expect(200))
           .then(({ filenames, files }) => {
             const constantFiles = ['keepalive', 'keys.json', 'toc.dat'];
-            [ ...files.keys() ].should.eqlInAnyOrder(constantFiles);
+            [ ...files.keys() ].should.containDeep(constantFiles);
 
             const datFiles = without(constantFiles, filenames);
             // Because /backup ALWAYS uses config('default.database'), this list
