@@ -402,7 +402,7 @@ describe('s3 support', () => {
 function cli(cmd) {
   let pid;
 
-  cmd = `exec node lib/bin/s3 ${cmd}`; // eslint-disable-line no-param-reassign
+  cmd = `exec node --no-deprecation lib/bin/s3 ${cmd}`; // eslint-disable-line no-param-reassign
   log.debug('cli()', 'calling:', cmd);
   const env = { ..._.pick(process.env, 'PATH'), NODE_CONFIG_ENV:'s3-dev' };
 
