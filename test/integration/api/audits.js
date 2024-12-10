@@ -645,7 +645,7 @@ describe('/audits', () => {
         });
     }));
 
-    it('should filter out offline entity submission reprocessing events given action=nonverbose', testService(async (service, container) => {
+    it('should filter out offline entity submission backlog events given action=nonverbose', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')

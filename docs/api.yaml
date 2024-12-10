@@ -45,6 +45,7 @@ info:
     **Changed**:
 
     - [Submissions Odata]() now returns `__system/deletedAt`. It can also be used in $filter, $sort and $select query parameters.
+    - Dataset (Entity List) properties with the same name but different capitalization are not allowed.
 
     ## ODK Central v2024.2
 
@@ -868,7 +869,9 @@ tags:
     * `submission.delete` when a Submission is soft-deleted.
     * `submission.purge` when soft-deleted Submissions are purged.
     * `submission.restore` when a Submission is restored.
-    * `submission.reprocess` when an Entity Submission is held in a processing backlog and then removed.
+    * `submission.backlog.hold` when an Entity Submission is first held in processing backlog.
+    * `submission.backlog.reprocess` when an Entity Submission is reprocessed and removed from the backlog.
+    * `submission.backlog.force` when an Entity Submission is force-processed after being in backlog.
     * `dataset.create` when a Dataset is created.
     * `dataset.update` when a Dataset is updated.
     * `dataset.update.publish` when a Dataset is published.
@@ -8705,6 +8708,8 @@ paths:
       description: |-
         Creates a new Property with a specified name in the Dataset.
 
+        The name of a Property is case-sensitive in that it will keep the capitalization provided (e.g. "Firstname"). But Central will not allow another Property with the same name but different capitalization to be created (e.g. "FIRSTNAME" when "Firstname" already exists).
+
         Property names follow the same rules as form field names (valid XML identifiers) and cannot use the reserved names of `name` or `label`, or begin with the reserved prefix `__`. 
       operationId: Adding Properties
       parameters:
@@ -9642,7 +9647,7 @@ paths:
 
         * Central supports the `HEAD` request preflighting recommended by the specification, but does not require it. Because our supported authentication methods do not follow the try/retry pattern, only preflight your request if you want to read the `X-OpenRosa-Accept-Content-Length` header or are concerned about the other issues listed in the standards document, like proxies.
 
-        * As stated in the standards document, it is possible to submit multimedia attachments with the `Submission` across multiple `POST` requests to this API. _However_, we impose the additional restriction that the Submission XML (`xml_submission_file`) _may not change_ between requests. If Central sees a Submission with an `instanceId` it already knows about but the XML has changed in any way, it will respond with a `409 Conflict` error and reject the submission.
+        * As stated in the standards document, it is possible to submit multimedia attachments with the `Submission` across multiple `POST` requests to this API. _However_, we impose the additional restriction that the Submission XML (`xml_submission_file`) _may not change_ between requests. If Central sees a Submission with an `instanceId` it already knows about but the XML has changed in any way, it will respond with a `409 Conflict` error and reject the submission. Additionally, a `409 Conflict` error is returned if the Submission has been deleted in Central while attempting to send further POST requests.
 
         * Central will never return a `202` in any response from this API.
 
