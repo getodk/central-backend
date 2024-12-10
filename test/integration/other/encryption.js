@@ -223,7 +223,7 @@ describe('managed encryption', () => {
           .then((keyId) => httpZipResponseToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
-              result['simple.csv'].should.be.an.EncryptedSimpleCsv();
+              result.files.get('simple.csv').should.be.an.EncryptedSimpleCsv();
             })))));
 
     it('should decrypt to CSV successfully if submissions uploaded to S3', testService((service, { Blobs }) => {
@@ -249,7 +249,7 @@ describe('managed encryption', () => {
           .then((keyId) => httpZipResponseToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
-              result['simple.csv'].should.be.an.EncryptedSimpleCsv();
+              result.files.get('simple.csv').should.be.an.EncryptedSimpleCsv();
             }))
           .then(() => {
             global.s3.downloads.attempted.should.equal(3);
@@ -294,7 +294,7 @@ describe('managed encryption', () => {
             .set('Content-Type', 'application/x-www-form-urlencoded'))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
-              result['simple.csv'].should.be.an.EncryptedSimpleCsv();
+              result.files.get('simple.csv').should.be.an.EncryptedSimpleCsv();
             })))));
 
     it('should decrypt over cookie auth with passphrases provided via url-encoded POST body', testService((service) =>
@@ -321,7 +321,7 @@ describe('managed encryption', () => {
             .set('Content-Type', 'application/x-www-form-urlencoded'))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
-              result['simple.csv'].should.be.an.EncryptedSimpleCsv();
+              result.files.get('simple.csv').should.be.an.EncryptedSimpleCsv();
             })))));
 
     it('should decrypt with passphrases provide via JSON POST body', testService((service) =>
@@ -342,7 +342,7 @@ describe('managed encryption', () => {
             .send({ [keyId]: 'supersecret' }))
             .then((result) => {
               result.filenames.should.eql([ 'simple.csv' ]);
-              result['simple.csv'].should.be.an.EncryptedSimpleCsv();
+              result.files.get('simple.csv').should.be.an.EncryptedSimpleCsv();
             })))));
 
     it('should decrypt attached files successfully', testService((service) =>
@@ -363,9 +363,9 @@ describe('managed encryption', () => {
               result.filenames.length.should.equal(4);
               result.filenames.should.containDeep([ 'simple.csv', 'media/alpha', 'media/beta', 'media/charlie' ]);
 
-              result['media/alpha'].should.equal('hello this is file alpha');
-              result['media/beta'].should.equal('and beta');
-              result['media/charlie'].should.equal('file charlie is right here');
+              result.files.get('media/alpha').should.equal('hello this is file alpha');
+              result.files.get('media/beta').should.equal('and beta');
+              result.files.get('media/charlie').should.equal('file charlie is right here');
             })))));
 
     it('should decrypt attached files successfully when s3 enabled', testService((service, { Blobs }) => {
@@ -388,9 +388,9 @@ describe('managed encryption', () => {
               result.filenames.length.should.equal(4);
               result.filenames.should.containDeep([ 'simple.csv', 'media/alpha', 'media/beta', 'media/charlie' ]);
 
-              result['media/alpha'].should.equal('hello this is file alpha');
-              result['media/beta'].should.equal('and beta');
-              result['media/charlie'].should.equal('file charlie is right here');
+              result.files.get('media/alpha').should.equal('hello this is file alpha');
+              result.files.get('media/beta').should.equal('and beta');
+              result.files.get('media/charlie').should.equal('file charlie is right here');
             })));
     }));
 
@@ -432,7 +432,7 @@ describe('managed encryption', () => {
                 result.filenames.length.should.equal(2);
                 result.filenames.should.containDeep([ 'simple.csv', 'media/testfile.jpg' ]);
 
-                result['media/testfile.jpg'].should.equal('hello this is a suffixed file');
+                result.files.get('media/testfile.jpg').should.equal('hello this is a suffixed file');
               }))))));
 
     it('should skip encrypted client audit log attachments and mark them as processed', testService((service, container) =>
@@ -480,7 +480,7 @@ describe('managed encryption', () => {
                 'audits - audit.csv'
               ]);
 
-              result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+              result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
 one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
 one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
 one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
@@ -522,7 +522,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 'audits - audit.csv'
               ]);
 
-              result['audits - audit.csv'].should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
+              result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
 one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
 one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
 one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
@@ -560,7 +560,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               result.filenames.length.should.equal(2);
               result.filenames.should.containDeep([ 'binaryType.csv', 'media/my_file1.mp4' ]);
 
-              result['media/my_file1.mp4'].should.equal('this is file one');
+              result.files.get('media/my_file1.mp4').should.equal('this is file one');
             })))));
 
     it('should handle mixed [plaintext/encrypted] attachments (decrypting)', testService((service) =>
@@ -591,8 +591,8 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               result.filenames.length.should.equal(3);
               result.filenames.should.containDeep([ 'binaryType.csv', 'media/my_file1.mp4', 'media/here_is_file2.jpg' ]);
 
-              result['media/my_file1.mp4'].should.equal('this is file one');
-              result['media/here_is_file2.jpg'].should.equal('file two you can see');
+              result.files.get('media/my_file1.mp4').should.equal('this is file one');
+              result.files.get('media/here_is_file2.jpg').should.equal('file two you can see');
             })))));
 
     it('should handle mixed[plaintext/encrypted] formdata (decrypting)', testService((service) =>
@@ -615,7 +615,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .then((keyId) => httpZipResponseToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyId}=supersecret`))
               .then((result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
-                const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+                const csv = result.files.get('simple.csv').split('\n').map((row) => row.split(','));
                 csv.length.should.equal(5); // header + 3 data rows + newline
                 csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
                 csv[1].shift().should.be.an.recentIsoDate();
@@ -650,7 +650,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .then((result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
 
-                const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+                const csv = result.files.get('simple.csv').split('\n').map((row) => row.split(','));
                 csv.length.should.equal(5); // header + 3 data rows + newline
                 csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
                 csv[1].shift().should.be.an.recentIsoDate();
@@ -709,7 +709,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .then(({ body }) => body.map((key) => key.id)))
           .then((keyIds) => httpZipResponseToFiles(asAlice.get(`/v1/projects/1/forms/simple/submissions.csv.zip?${keyIds[1]}=supersecret&${keyIds[0]}=superdupersecret`))
             .then((result) => {
-              const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+              const csv = result.files.get('simple.csv').split('\n').map((row) => row.split(','));
               csv.length.should.equal(5); // header + 3 data rows + newline
               csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
               csv[1].shift().should.be.an.recentIsoDate();
@@ -750,7 +750,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .then((result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
 
-                const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+                const csv = result.files.get('simple.csv').split('\n').map((row) => row.split(','));
                 csv.length.should.equal(4); // header + 2 data rows + newline
                 csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
                 csv[1].shift().should.be.an.recentIsoDate();
@@ -783,7 +783,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .then((result) => {
                 result.filenames.should.eql([ 'simple.csv' ]);
 
-                const csv = result['simple.csv'].split('\n').map((row) => row.split(','));
+                const csv = result.files.get('simple.csv').split('\n').map((row) => row.split(','));
                 csv.length.should.equal(4); // header + 2 data rows + newline
                 csv[0].should.eql([ 'SubmissionDate', 'meta-instanceID', 'name', 'age', 'KEY', 'SubmitterID', 'SubmitterName', 'AttachmentsPresent', 'AttachmentsExpected', 'Status', 'ReviewState', 'DeviceID', 'Edits', 'FormVersion' ]);
                 csv[1].shift().should.be.an.recentIsoDate();
