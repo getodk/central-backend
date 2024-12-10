@@ -407,8 +407,12 @@ function cli(cmd) {
   const env = { ..._.pick(process.env, 'PATH'), NODE_CONFIG_ENV:'s3-dev' };
 
   const promise = new Promise((resolve, reject) => {
-    const child = exec(cmd, { env, cwd:'../../..' }, (err, stdout) => {
-      if (err) return reject(err);
+    const child = exec(cmd, { env, cwd:'../../..' }, (err, stdout, stderr) => {
+      if (err) {
+        err.stdout = stdout;
+        err.stderr = stderr;
+        return reject(err);
+      }
 
       const res = stdout.toString().trim();
       log.debug('cli()', 'returned:', res);
