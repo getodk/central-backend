@@ -48,7 +48,7 @@
     "yauzl": "~2.10"
   },
   "devDependencies": {
-    "@playwright/test": "^1.41.2",
+    "@playwright/test": "^1.49.1",
     "@sinonjs/fake-timers": "^9.1.2",
     "app-root-path": "~3",
     "eslint": "^8.44.0",
