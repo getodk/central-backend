@@ -2143,9 +2143,6 @@ describe('analytics task queries', function () {
     }));
 
     it('should fill in all project.datasets queries', testService(async (service, container) => {
-      const { defaultMaxListeners } = require('events').EventEmitter;
-      require('events').EventEmitter.defaultMaxListeners = 30;
-
       const asAlice = await service.login('alice');
 
       // Create first Dataset
@@ -2308,9 +2305,6 @@ describe('analytics task queries', function () {
 
       // Assert that a Project without a Dataset returns an empty array
       res.projects[1].datasets.should.be.eql([]);
-
-      // revert to original default
-      require('events').defaultMaxListeners = defaultMaxListeners;
     }));
   });
 
