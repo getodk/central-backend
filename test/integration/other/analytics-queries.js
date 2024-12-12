@@ -213,6 +213,13 @@ describe('analytics task queries', function () {
       Analytics.databaseExternal(null).should.equal(1);
     }));
 
+    it('should check external blob store configurations', testContainer(async ({ Analytics }) => {
+      Analytics.blobStoreExternal(null).should.equal(0);
+      Analytics.blobStoreExternal({}).should.equal(0);
+      Analytics.blobStoreExternal({ server: 'http://external.store' }).should.equal(1);
+      Analytics.blobStoreExternal({ server: 'http://external.store', accessKey: 'a', bucketName: 'foo' }).should.equal(1);
+    }));
+
     describe('counting client audits', () => {
       it('should count the total number of client audit submission attachments', testService(async (service, { Analytics }) => {
         const asAlice = await service.login('alice');
@@ -423,6 +430,77 @@ describe('analytics task queries', function () {
           res.failed5.should.equal(1);
           res.unprocessed.should.equal(1);
         });
+    }));
+
+    it('should count form definitions that are XML-only and are not associated with an XLSForm', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Adds a 3rd form def that does ahve an associated XLSForm so shouldn't be counted
+      await asAlice.post('/v1/projects/1/forms')
+        .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+        .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .set('X-XlsForm-FormId-Fallback', 'testformid')
+        .expect(200);
+
+      const xmlOnlyFormDefs = await container.Analytics.countXmlOnlyFormDefs();
+      xmlOnlyFormDefs.should.equal(2);
+    }));
+
+    it('should count the number of binary blob files total and uploaded to external store', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      // make 2 blobs from submission attachments
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+        .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+        .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+        .expect(201);
+
+      // Set upload status on existing blobs
+      await container.run(sql`update blobs set "s3_status" = 'uploaded' where true`);
+
+      // make a new blob by uploading xlsform
+      await asAlice.post('/v1/projects/1/forms')
+        .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+        .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .set('X-XlsForm-FormId-Fallback', 'testformid')
+        .expect(200);
+
+      const blobs = await container.Analytics.countBlobFiles();
+      blobs.should.eql({ total_blobs: 3, uploaded_blobs: 2 });
+    }));
+
+    it('should count number of reset failed blob uploads', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      // make 2 blobs from submission attachments
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+        .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+        .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+        .expect(201);
+
+      // set upload status on existing blobs to failed
+      await container.run(sql`update blobs set "s3_status" = 'failed' where true`);
+
+      // reset failed to pending
+      await container.Blobs.s3SetFailedToPending();
+
+      // count events
+      const count = await container.Analytics.countResetFailedToPending();
+      count.should.equal(1);
     }));
   });
 
@@ -2079,8 +2157,6 @@ describe('analytics task queries', function () {
       delete res.system.uses_external_blob_store;
 
       // TODO stop deleting these in the tests once they are implemented
-      delete res.system.num_xml_only_form_defs;
-      delete res.system.num_blob_files;
       delete res.system.num_blob_files_on_s3;
       delete res.system.num_reset_failed_to_pending_count;
 
