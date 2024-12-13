@@ -2155,8 +2155,6 @@ describe('analytics task queries', function () {
       delete res.system.uses_external_db;
       delete res.system.sso_enabled;
       delete res.system.uses_external_blob_store;
-
-      // TODO stop deleting these in the tests once they are implemented
       delete res.system.num_blob_files_on_s3;
       delete res.system.num_reset_failed_to_pending_count;
 
@@ -2428,6 +2426,14 @@ describe('analytics task queries', function () {
           total: 2,
           recent: 1
         },
+        num_entity_creates_sub: {
+          total: 2,
+          recent: 2
+        },
+        num_entity_creates_api: {
+          total: 0,
+          recent: 0
+        },
         num_entities_updated: {
           total: 1,
           recent: 1
@@ -2462,6 +2468,14 @@ describe('analytics task queries', function () {
           recent: 0
         },
         num_entity_updates_api: {
+          total: 0,
+          recent: 0
+        },
+        num_entity_creates_sub: {
+          total: 2,
+          recent: 2
+        },
+        num_entity_creates_api: {
           total: 0,
           recent: 0
         },
