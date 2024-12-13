@@ -1157,6 +1157,59 @@ describe('analytics task queries', function () {
       datasets[0].num_entity_updates_recent.should.be.equal(datasets[0].num_entity_updates_api_recent + datasets[0].num_entity_updates_sub_recent);
     }));
 
+    it('should calculate entity creates through different sources (submission, API, bulk', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+
+      // Create entity via submission
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
+
+      // Create entity via API
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          label: 'Johnny Doe',
+          data: { first_name: 'Johnny', age: '22' }
+        })
+        .expect(200);
+
+      // Create 3 entities in bulk
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people.csv', size: 100, },
+          entities: [ { label: 'a label' }, { label: 'a label' }, { label: 'a label' } ]
+        })
+        .expect(200);
+
+      // let's set date of entity update to long time ago
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action in ('entity.create', 'entity.bulk.create')`);
+
+      // Create more recent entities
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          label: 'foo',
+          data: { first_name: 'Blaise' }
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people.csv', size: 100, },
+          entities: [ { label: 'a label' }, { label: 'a label' }, { label: 'a label' } ]
+        })
+        .expect(200);
+
+      const datasets = await container.Analytics.getDatasets();
+
+      datasets[0].num_entity_create_sub_total.should.be.equal(0);
+      datasets[0].num_entity_create_sub_recent.should.be.equal(0);
+      datasets[0].num_entity_create_api_total.should.be.equal(2);
+      datasets[0].num_entity_create_api_recent.should.be.equal(1);
+      datasets[0].num_entity_create_bulk_total.should.be.equal(6);
+      datasets[0].num_entity_create_bulk_recent.should.be.equal(3);
+    }));
+
     it('should calculate number of entities ever updated vs. update actions applied', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
@@ -2434,6 +2487,10 @@ describe('analytics task queries', function () {
           total: 0,
           recent: 0
         },
+        num_entity_creates_bulk: {
+          total: 3,
+          recent: 3
+        },
         num_entities_updated: {
           total: 1,
           recent: 1
@@ -2476,6 +2533,10 @@ describe('analytics task queries', function () {
           recent: 2
         },
         num_entity_creates_api: {
+          total: 0,
+          recent: 0
+        },
+        num_entity_creates_bulk: {
           total: 0,
           recent: 0
         },
