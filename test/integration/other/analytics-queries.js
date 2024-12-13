@@ -1022,7 +1022,7 @@ describe('analytics task queries', function () {
         .replace(/simpleEntity/g, 'simpleEntity2')
         .replace(/age/g, 'gender'), 1);
 
-      const datasets = await container.Analytics.getDatasets();
+      const datasets = await container.Analytics.getDatasetProperties();
       datasets[0].num_properties.should.be.equal(3);
     }));
 
