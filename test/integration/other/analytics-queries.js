@@ -435,15 +435,38 @@ describe('analytics task queries', function () {
     it('should count form definitions that are XML-only and are not associated with an XLSForm', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
-      // Adds a 3rd form def that does ahve an associated XLSForm so shouldn't be counted
+      // two existing forms from fixtures
+      // adds a 3rd form def that does have an associated XLSForm so shouldn't be counted
       await asAlice.post('/v1/projects/1/forms')
         .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
         .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         .set('X-XlsForm-FormId-Fallback', 'testformid')
         .expect(200);
 
-      const xmlOnlyFormDefs = await container.Analytics.countXmlOnlyFormDefs();
-      xmlOnlyFormDefs.should.equal(2);
+      // make another form def that is XML-only
+      await asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      let xmlOnlyFormDefs = await container.Analytics.countXmlOnlyFormDefs();
+      xmlOnlyFormDefs.should.equal(3);
+
+      // upgrading the old version of the entity form creates more form defs
+      const { acteeId } = await container.Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      await container.Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
+
+      // Run form upgrade
+      await exhaust(container);
+
+      // encrypting the project creates more form defs
+      await asAlice.post('/v1/projects/1/key')
+        .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+        .expect(200);
+
+      // should count the same number of form defs
+      xmlOnlyFormDefs = await container.Analytics.countXmlOnlyFormDefs();
+      xmlOnlyFormDefs.should.equal(3);
     }));
 
     it('should count the number of binary blob files total and uploaded to external store', testService(async (service, container) => {
