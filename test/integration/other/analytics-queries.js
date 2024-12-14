@@ -213,6 +213,13 @@ describe('analytics task queries', function () {
       Analytics.databaseExternal(null).should.equal(1);
     }));
 
+    it('should check external blob store configurations', testContainer(async ({ Analytics }) => {
+      Analytics.blobStoreExternal(null).should.equal(0);
+      Analytics.blobStoreExternal({}).should.equal(0);
+      Analytics.blobStoreExternal({ server: 'http://external.store' }).should.equal(1);
+      Analytics.blobStoreExternal({ server: 'http://external.store', accessKey: 'a', bucketName: 'foo' }).should.equal(1);
+    }));
+
     describe('counting client audits', () => {
       it('should count the total number of client audit submission attachments', testService(async (service, { Analytics }) => {
         const asAlice = await service.login('alice');
@@ -423,6 +430,100 @@ describe('analytics task queries', function () {
           res.failed5.should.equal(1);
           res.unprocessed.should.equal(1);
         });
+    }));
+
+    it('should count form definitions that are XML-only and are not associated with an XLSForm', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // two existing forms from fixtures
+      // adds a 3rd form def that does have an associated XLSForm so shouldn't be counted
+      await asAlice.post('/v1/projects/1/forms')
+        .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+        .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .set('X-XlsForm-FormId-Fallback', 'testformid')
+        .expect(200);
+
+      // make another form def that is XML-only
+      await asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
+        .send(testData.forms.updateEntity2023)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      let xmlOnlyFormDefs = await container.Analytics.countXmlOnlyFormDefs();
+      xmlOnlyFormDefs.should.equal(3);
+
+      // upgrading the old version of the entity form creates more form defs
+      const { acteeId } = await container.Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      await container.Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
+
+      // Run form upgrade
+      await exhaust(container);
+
+      // encrypting the project creates more form defs
+      await asAlice.post('/v1/projects/1/key')
+        .send({ passphrase: 'supersecret', hint: 'it is a secret' })
+        .expect(200);
+
+      // should count the same number of form defs
+      xmlOnlyFormDefs = await container.Analytics.countXmlOnlyFormDefs();
+      xmlOnlyFormDefs.should.equal(3);
+    }));
+
+    it('should count the number of binary blob files total and uploaded to external store', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      // make 2 blobs from submission attachments
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+        .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+        .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+        .expect(201);
+
+      // Set upload status on existing blobs
+      await container.run(sql`update blobs set "s3_status" = 'uploaded' where true`);
+
+      // make a new blob by uploading xlsform
+      await asAlice.post('/v1/projects/1/forms')
+        .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+        .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .set('X-XlsForm-FormId-Fallback', 'testformid')
+        .expect(200);
+
+      const blobs = await container.Analytics.countBlobFiles();
+      blobs.should.eql({ total_blobs: 3, uploaded_blobs: 2 });
+    }));
+
+    it('should count number of reset failed blob uploads', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      // make 2 blobs from submission attachments
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+        .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+        .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+        .expect(201);
+
+      // set upload status on existing blobs to failed
+      await container.run(sql`update blobs set "s3_status" = 'failed' where true`);
+
+      // reset failed to pending
+      await container.Blobs.s3SetFailedToPending();
+
+      // count events
+      const count = await container.Analytics.countResetFailedToPending();
+      count.should.equal(1);
     }));
   });
 
@@ -944,7 +1045,7 @@ describe('analytics task queries', function () {
         .replace(/simpleEntity/g, 'simpleEntity2')
         .replace(/age/g, 'gender'), 1);
 
-      const datasets = await container.Analytics.getDatasets();
+      const datasets = await container.Analytics.getDatasetProperties();
       datasets[0].num_properties.should.be.equal(3);
     }));
 
@@ -1077,6 +1178,59 @@ describe('analytics task queries', function () {
 
       datasets[0].num_entity_updates_total.should.be.equal(datasets[0].num_entity_updates_api_total + datasets[0].num_entity_updates_sub_total);
       datasets[0].num_entity_updates_recent.should.be.equal(datasets[0].num_entity_updates_api_recent + datasets[0].num_entity_updates_sub_recent);
+    }));
+
+    it('should calculate entity creates through different sources (submission, API, bulk', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await createTestForm(service, container, testData.forms.simpleEntity, 1);
+
+      // Create entity via submission
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.one);
+
+      // Create entity via API
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          label: 'Johnny Doe',
+          data: { first_name: 'Johnny', age: '22' }
+        })
+        .expect(200);
+
+      // Create 3 entities in bulk
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people.csv', size: 100, },
+          entities: [ { label: 'a label' }, { label: 'a label' }, { label: 'a label' } ]
+        })
+        .expect(200);
+
+      // let's set date of entity update to long time ago
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action in ('entity.create', 'entity.bulk.create')`);
+
+      // Create more recent entities
+      await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          label: 'foo',
+          data: { first_name: 'Blaise' }
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people.csv', size: 100, },
+          entities: [ { label: 'a label' }, { label: 'a label' }, { label: 'a label' } ]
+        })
+        .expect(200);
+
+      const datasets = await container.Analytics.getDatasets();
+
+      datasets[0].num_entity_create_sub_total.should.be.equal(0);
+      datasets[0].num_entity_create_sub_recent.should.be.equal(0);
+      datasets[0].num_entity_create_api_total.should.be.equal(2);
+      datasets[0].num_entity_create_api_recent.should.be.equal(1);
+      datasets[0].num_entity_create_bulk_total.should.be.equal(6);
+      datasets[0].num_entity_create_bulk_recent.should.be.equal(3);
     }));
 
     it('should calculate number of entities ever updated vs. update actions applied', testService(async (service, container) => {
@@ -1580,7 +1734,7 @@ describe('analytics task queries', function () {
       countInterruptedBranches.should.equal(4);
     }));
 
-    it('should count number of submission.backlog.reprocess events (submissions temporarily in the backlog)', testService(async (service, container) => {
+    it('should count number of submission.backlog.* events (submissions temporarily in the backlog)', testService(async (service, container) => {
       await createTestForm(service, container, testData.forms.offlineEntity, 1);
 
       const asAlice = await service.login('alice');
@@ -1625,8 +1779,12 @@ describe('analytics task queries', function () {
       backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       backlogCount.should.equal(0);
 
-      let countReprocess = await container.Analytics.countSubmissionReprocess();
-      countReprocess.should.equal(1);
+      let countBacklogEvents = await container.Analytics.countSubmissionBacklogEvents();
+      countBacklogEvents.should.eql({
+        'submission.backlog.hold': 1,
+        'submission.backlog.reprocess': 1,
+        'submission.backlog.force': 0
+      });
 
       // Send a future update that will get held in backlog
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
@@ -1643,9 +1801,13 @@ describe('analytics task queries', function () {
       backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       backlogCount.should.equal(1);
 
-      // A submission being put in the backlog is not what is counted so this is still 1
-      countReprocess = await container.Analytics.countSubmissionReprocess();
-      countReprocess.should.equal(1);
+      // A submission being put in the backlog is not what is counted so reprocess count is still 1
+      countBacklogEvents = await container.Analytics.countSubmissionBacklogEvents();
+      countBacklogEvents.should.eql({
+        'submission.backlog.hold': 2,
+        'submission.backlog.reprocess': 1,
+        'submission.backlog.force': 0
+      });
 
       // force processing the backlog
       await container.Entities.processBacklog(true);
@@ -1653,9 +1815,13 @@ describe('analytics task queries', function () {
       backlogCount = await container.oneFirst(sql`select count(*) from entity_submission_backlog`);
       backlogCount.should.equal(0);
 
-      // Force processing also doesn't change this count so it is still 1
-      countReprocess = await container.Analytics.countSubmissionReprocess();
-      countReprocess.should.equal(1);
+      // Force processing counted now, and reprocessing still only counted once
+      countBacklogEvents = await container.Analytics.countSubmissionBacklogEvents();
+      countBacklogEvents.should.eql({
+        'submission.backlog.hold': 2,
+        'submission.backlog.reprocess': 1,
+        'submission.backlog.force': 1
+      });
 
       //----------
 
@@ -1689,8 +1855,12 @@ describe('analytics task queries', function () {
       await exhaust(container);
 
       // Two reprocessing events logged now
-      countReprocess = await container.Analytics.countSubmissionReprocess();
-      countReprocess.should.equal(2);
+      countBacklogEvents = await container.Analytics.countSubmissionBacklogEvents();
+      countBacklogEvents.should.eql({
+        'submission.backlog.hold': 3,
+        'submission.backlog.reprocess': 2,
+        'submission.backlog.force': 1
+      });
     }));
 
     it('should measure time from submission creation to entity version finished processing', testService(async (service, container) => {
@@ -1729,6 +1899,69 @@ describe('analytics task queries', function () {
       waitTime = await container.Analytics.measureEntityProcessingTime();
       waitTime.max_wait.should.be.greaterThan(0);
       waitTime.avg_wait.should.be.greaterThan(0);
+    }));
+
+    it('should measure max time between first submission on a branch received and last submission on that branch processed', testService(async (service, container) => {
+      await createTestForm(service, container, testData.forms.offlineEntity, 1);
+      const asAlice = await service.login('alice');
+
+      const emptyTime = await container.Analytics.measureMaxEntityBranchTime();
+      emptyTime.should.equal(0);
+
+      // Create entity to update
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'label'
+        })
+        .expect(200);
+
+      const branchId = uuid();
+
+      // Send first update
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Send second update
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update2')
+          .replace('baseVersion="1"', 'baseVersion="2"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Send third update in its own branch
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update3')
+          .replace('baseVersion="1"', 'baseVersion="3"')
+          .replace('trunkVersion="1"', 'trunkVersion="3"')
+          .replace('branchId=""', `branchId="${uuid()}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Make another update via the API
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=4')
+        .send({ label: 'label update' })
+        .expect(200);
+
+      const time = await container.Analytics.measureMaxEntityBranchTime();
+      time.should.be.greaterThan(0);
+
+      // Set date of entity defs in first branch to 1 day apart
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '1999-01-01' WHERE version = 2`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '1999-01-02' WHERE version = 3`);
+      const longTime = await container.Analytics.measureMaxEntityBranchTime();
+      longTime.should.be.equal(86400); // number of seconds in a day
     }));
 
     it('should not see a delay for submissions processed with approvalRequired flag toggled', testService(async (service, container) => {
@@ -1952,6 +2185,19 @@ describe('analytics task queries', function () {
 
       await exhaust(container);
 
+      // sending in an update much later in the chain that will need to be force processed
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('one', 'one-update10')
+          .replace('baseVersion="1"', 'baseVersion="10"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+      await container.Entities.processBacklog(true);
+
       // After the interesting stuff above, encrypt and archive the project
 
       // encrypting a project
@@ -1984,6 +2230,9 @@ describe('analytics task queries', function () {
       // can't easily test this metric
       delete res.system.uses_external_db;
       delete res.system.sso_enabled;
+      delete res.system.uses_external_blob_store;
+      delete res.system.num_blob_files_on_s3;
+      delete res.system.num_reset_failed_to_pending_count;
 
       // everything in system filled in
       Object.values(res.system).forEach((metric) =>
@@ -2253,6 +2502,18 @@ describe('analytics task queries', function () {
           total: 2,
           recent: 1
         },
+        num_entity_creates_sub: {
+          total: 2,
+          recent: 2
+        },
+        num_entity_creates_api: {
+          total: 0,
+          recent: 0
+        },
+        num_entity_creates_bulk: {
+          total: 3,
+          recent: 3
+        },
         num_entities_updated: {
           total: 1,
           recent: 1
@@ -2287,6 +2548,18 @@ describe('analytics task queries', function () {
           recent: 0
         },
         num_entity_updates_api: {
+          total: 0,
+          recent: 0
+        },
+        num_entity_creates_sub: {
+          total: 2,
+          recent: 2
+        },
+        num_entity_creates_api: {
+          total: 0,
+          recent: 0
+        },
+        num_entity_creates_bulk: {
           total: 0,
           recent: 0
         },
