@@ -43,7 +43,7 @@ info:
     ## ODK Central v2024.3
 
     **Added**:
-    - Endpoints for managing [User Preferences](/central-api-accounts-and-users/#user-preferences), mainly to be used by Frontend.
+    - Endpoints for managing [User Preferences](/central-api-accounts-and-users/#user-preferences), mainly to be used by the frontend.
 
     **Changed**:
 
@@ -877,7 +877,7 @@ tags:
     * `submission.backlog.hold` when an Entity Submission is first held in processing backlog.
     * `submission.backlog.reprocess` when an Entity Submission is reprocessed and removed from the backlog.
     * `submission.backlog.force` when an Entity Submission is force-processed after being in backlog.
-    * `upgrade.process.form.entities_version` when a Form about Entities is automatically upgraded by Central.
+    * `upgrade.process.form.entities_version` when Central flags an Entity-related Form for a potential automatic upgrade.
     * `dataset.create` when a Dataset is created.
     * `dataset.update` when a Dataset is updated.
     * `dataset.update.publish` when a Dataset is published.
@@ -3871,7 +3871,7 @@ paths:
                 exists: true
                 blobExists: true
                 datasetExists: false
-                hash: 'B8347436F16EC9358CA6649169D8DA58'
+                hash: 'd41d8cd98f00b204e9800998ecf8427e'
                 updatedAt: 2018-03-21T12:45:02.312Z
         403:
           description: Forbidden
@@ -4400,7 +4400,7 @@ paths:
                 exists: true
                 blobExists: true
                 datasetExists: false
-                hash: 'B8347436F16EC9358CA6649169D8DA58'
+                hash: 'd41d8cd98f00b204e9800998ecf8427e'
                 updatedAt: 2018-03-21T12:45:02.312Z
         403:
           description: Forbidden
@@ -5102,7 +5102,7 @@ paths:
                 exists: true
                 blobExists: true
                 datasetExists: false
-                hash: 'B8347436F16EC9358CA6649169D8DA58'
+                hash: 'd41d8cd98f00b204e9800998ecf8427e'
                 updatedAt: 2018-03-21T12:45:02.312Z
         403:
           description: Forbidden
