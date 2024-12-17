@@ -42,10 +42,14 @@ info:
 
     ## ODK Central v2024.3
 
+    **Added**:
+    - Endpoints for managing [User Preferences](/central-api-accounts-and-users/#user-preferences), mainly to be used by Frontend.
+
     **Changed**:
 
     - [Submissions Odata]() now returns `__system/deletedAt`. It can also be used in $filter, $sort and $select query parameters.
     - Dataset (Entity List) properties with the same name but different capitalization are not allowed.
+    - Form Attachments for both [published Forms](/central-api-form-management/#listing-form-attachments) and [draft Forms](/central-api-form-management/#listing-expected-draft-form-attachments) now return a property representing the hash of the attachment file.
 
     ## ODK Central v2024.2
 
@@ -847,6 +851,7 @@ tags:
     * `form.update.draft.set` when a Draft Form definition is set.
     * `form.update.draft.delete` when a Draft Form definition is deleted.
     * `form.update.publish` when a Draft Form is published to the Form.
+    * `form.update.draft.replace` when a Draft Form is changed in place.
     * `form.attachment.update` when a Form Attachment binary is set or cleared.
     * `form.submissions.export` when a Form's Submissions are exported to CSV.
     * `form.delete` when a Form is deleted.
@@ -872,6 +877,7 @@ tags:
     * `submission.backlog.hold` when an Entity Submission is first held in processing backlog.
     * `submission.backlog.reprocess` when an Entity Submission is reprocessed and removed from the backlog.
     * `submission.backlog.force` when an Entity Submission is force-processed after being in backlog.
+    * `upgrade.process.form.entities_version` when a Form about Entities is automatically upgraded by Central.
     * `dataset.create` when a Dataset is created.
     * `dataset.update` when a Dataset is updated.
     * `dataset.update.publish` when a Dataset is published.
@@ -1553,13 +1559,6 @@ paths:
           schema:
             type: string
           example: "frobwazzleEnabled"
-        - name: Authorization
-          in: header
-          description: Bearer encoding of a token of the user whose preferences to operate on
-          required: true
-          schema:
-            type: string
-          example: Bearer lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7
       responses:
         200:
           description: The preference was stored
@@ -1592,13 +1591,6 @@ paths:
           schema:
             type: string
           example: "frobwazzleEnabled"
-        - name: Authorization
-          in: header
-          description: Bearer encoding of a token of the user whose preferences to operate on
-          required: true
-          schema:
-            type: string
-          example: Bearer lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7
       requestBody:
         content:
           'application/json':
@@ -1639,13 +1631,6 @@ paths:
           schema:
             type: string
           example: "frobwazzleEnabled"
-        - name: Authorization
-          in: header
-          description: Bearer encoding of a token of the user whose preferences to operate on
-          required: true
-          schema:
-            type: string
-          example: Bearer lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7
       responses:
         200:
           description: The preference was deleted
@@ -3852,7 +3837,9 @@ paths:
       summary: Listing Form Attachments
       description: This endpoint allows you to fetch the list of expected attachment
         files, and will tell you whether the server is in possession of each file
-        or not. To modify an attachment, you'll need to create a Draft.
+        or not, and a hash of the file contents. To modify an attachment, you'll need to
+        create a Draft. The property `datasetExists` indicates whether  the attachment is
+        a link to a Dataset instead of an actual file.
       operationId: Listing Form Attachments
       parameters:
       - name: projectId
@@ -3883,7 +3870,8 @@ paths:
                 type: image
                 exists: true
                 blobExists: true
-                datasetExists: true
+                datasetExists: false
+                hash: 'B8347436F16EC9358CA6649169D8DA58'
                 updatedAt: 2018-03-21T12:45:02.312Z
         403:
           description: Forbidden
@@ -4411,7 +4399,8 @@ paths:
                 type: image
                 exists: true
                 blobExists: true
-                datasetExists: true
+                datasetExists: false
+                hash: 'B8347436F16EC9358CA6649169D8DA58'
                 updatedAt: 2018-03-21T12:45:02.312Z
         403:
           description: Forbidden
@@ -5112,7 +5101,8 @@ paths:
                 type: image
                 exists: true
                 blobExists: true
-                datasetExists: true
+                datasetExists: false
+                hash: 'B8347436F16EC9358CA6649169D8DA58'
                 updatedAt: 2018-03-21T12:45:02.312Z
         403:
           description: Forbidden
