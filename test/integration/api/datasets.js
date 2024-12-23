@@ -2006,6 +2006,7 @@ describe('datasets and entities', () => {
       <filename>goodone.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
+      <integrityUrl>${domain}/v1/projects/1/datasets/goodone/integrity</integrityUrl>
     </mediaFile>
   </manifest>`);
       }));
@@ -2090,6 +2091,7 @@ describe('datasets and entities', () => {
       <filename>goodone.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
+      <integrityUrl>${domain}/v1/projects/1/datasets/goodone/integrity</integrityUrl>
     </mediaFile>
   </manifest>`);
       }));
@@ -2965,6 +2967,7 @@ describe('datasets and entities', () => {
       <filename>people.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/people.csv</downloadUrl>
+      <integrityUrl>${domain}/v1/projects/1/datasets/people/integrity</integrityUrl>
     </mediaFile>
   </manifest>`);
           });
