@@ -2127,6 +2127,59 @@ describe('Entities API', () => {
 
   });
 
+  describe('POST /datasets/:name/entities/:uuid/restore', () => {
+    it('should reject if the entity has not been deleted', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/restore')
+        .expect(404);
+    }));
+
+    it('should reject if the entity does not exist', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/nonexistant/restore')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot restore', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      // Chelsea cannot restore
+      await asChelsea.post('/v1/projects/1/forms/simple/submissions/12345678-1234-4123-8234-123456789abc/restore')
+        .expect(403);
+    }));
+
+    it('should soft-delete the entity and then restore it', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(404);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/restore')
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
+
+      await container.Audits.getLatestByAction('entity.restore')
+        .then(o => o.get())
+        .then(audit => {
+          audit.acteeId.should.not.be.null();
+          audit.details.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.Entity();
+        });
+    }));
+  });
+
   // Bulk API operations
   describe('POST /datasets/:name/entities (bulk creation)', () => {
     // Tests that one would expect to find here are found above because this is additional
