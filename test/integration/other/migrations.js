@@ -1237,3 +1237,55 @@ testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
     }));
   });
 });
+
+testMigration('20241227-01-backfill-audit-entity-uuid.js', () => {
+  it('should update the format of detail for entity.delete audits', testServiceFullTrx(async (service, container) => {
+    await populateUsers(container);
+    await populateForms(container);
+
+    const asAlice = await service.login('alice');
+
+    // Create a dataset
+    await asAlice.post('/v1/projects/1/datasets')
+      .send({ name: 'people' });
+
+    // Create an entity
+    const _uuid = uuid();
+    await asAlice.post(`/v1/projects/1/datasets/people/entities`)
+      .send({
+        uuid: _uuid,
+        label: 'John Doe'
+      })
+      .expect(200);
+
+    // Delete the entity
+    await asAlice.delete(`/v1/projects/1/datasets/people/entities/${_uuid}`)
+      .expect(200);
+
+    // Update audit log to match the previous code where uuid is written at the root
+    await container.run(sql`UPDATE audits SET details=${JSON.stringify({ uuid: _uuid })} WHERE action='entity.delete'`);
+
+    // Check the details of audit log of entity.delete action
+    await asAlice.get('/v1/audits?action=entity.delete')
+      .expect(200)
+      .then(({ body }) => {
+        const [ audit ] = body;
+        audit.details.should.be.eql({
+          uuid: _uuid
+        });
+      });
+
+    // Run the migration
+    await up();
+
+    // Check the details of audit log of entity.delete action
+    await asAlice.get('/v1/audits?action=entity.delete')
+      .expect(200)
+      .then(({ body }) => {
+        const [ audit ] = body;
+        audit.details.should.be.eql({
+          entity: { uuid: _uuid }
+        });
+      });
+  }));
+});

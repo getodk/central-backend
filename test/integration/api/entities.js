@@ -2105,7 +2105,7 @@ describe('Entities API', () => {
         .then(o => o.get())
         .then(audit => {
           audit.acteeId.should.not.be.null();
-          audit.details.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
+          audit.details.entity.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
         });
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
@@ -2169,7 +2169,7 @@ describe('Entities API', () => {
         .then(o => o.get())
         .then(audit => {
           audit.acteeId.should.not.be.null();
-          audit.details.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
+          audit.details.entity.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
         });
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
