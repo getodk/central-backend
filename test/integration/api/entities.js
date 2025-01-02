@@ -1269,6 +1269,22 @@ describe('Entities API', () => {
           logs[0].action.should.be.eql('entity.create');
         });
     }));
+
+    it('should return delete and restore events', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/restore')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs.map(l => l.action).should.be.eql(['entity.restore', 'entity.delete', 'entity.create']);
+        });
+    }));
   });
 
   describe('POST /datasets/:name/entities', () => {
