@@ -222,9 +222,9 @@ describe('query module entities purge', () => {
     }));
   });
 
-  describe('deep cleanup of all submission artifacts', () => {
+  describe('deep cleanup of all entity artifacts', () => {
 
-    it('should purge all versions of a deleted submission', testService(async (service, { Entities, all }) => {
+    it('should purge all versions of a deleted entity', testService(async (service, { Entities, all }) => {
       const asAlice = await service.login('alice');
 
       await createDataset(asAlice, 1, 'people');
@@ -411,19 +411,30 @@ describe('query module entities purge', () => {
   });
 
   describe('entity.purge audit event', () => {
-    it('should log a purge event in the audit log when purging submissions', testService(async (service, { Entities }) => {
+    it('should log a purge event in the audit log when purging entities', testService(async (service, { Entities, oneFirst }) => {
       const asAlice = await service.login('alice');
 
-      const uuids = await createDeletedEntities(asAlice, 2);
+      const peopleUuids = await createDeletedEntities(asAlice, 2);
+      const treesUuids = await createDeletedEntities(asAlice, 2, { datasetName: 'trees' });
+
+      const peopleActeeId = await oneFirst(sql`SELECT "acteeId" FROM datasets WHERE name = 'people'`);
+      const treesActeeId = await oneFirst(sql`SELECT "acteeId" FROM datasets WHERE name = 'trees'`);
 
       // Purge entities
       await Entities.purge(true);
 
       await asAlice.get('/v1/audits')
         .then(({ body }) => {
-          body.filter((a) => a.action === 'entities.purge').length.should.equal(1);
-          body[0].details.entitiesDeleted.should.eql(2);
-          body[0].details.entityUuids.should.containDeep(uuids);
+          const purgeLogs = body.filter((a) => a.action === 'entities.purge');
+          purgeLogs.length.should.equal(2);
+
+          const [ peoplePurgeAudit ] = purgeLogs.filter(a => a.acteeId === peopleActeeId);
+          peoplePurgeAudit.details.entitiesDeleted.should.eql(2);
+          peoplePurgeAudit.details.entityUuids.should.containDeep(peopleUuids);
+
+          const [ treesPurgeAudit ] = purgeLogs.filter(a => a.acteeId === treesActeeId);
+          treesPurgeAudit.details.entitiesDeleted.should.eql(2);
+          treesPurgeAudit.details.entityUuids.should.containDeep(treesUuids);
         });
     }));
 
