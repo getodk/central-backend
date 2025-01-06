@@ -46,6 +46,7 @@ info:
     - [RESTORE](/central-api-entity-management/#restoring-a-deleted-entity) endpoint for Entities.
     - Entities that have been soft-deleted for 30 days will automatically be purged. 
     - [Entities Odata](/central-api-odata-endpoints/#id3) now returns `__system/deletedAt`. It can also be used in $filter, $sort and $select query parameters.
+    - [Integrity](/central-api-openrosa-endpoints/#openrosa-dataset-integrity-api) endpoint for the Entity list.
 
     ## ODK Central v2024.3
 
@@ -9800,6 +9801,12 @@ paths:
         * The Manifest will only output information for files the server actually has in its possession. Any missing expected files will be omitted, as we cannot provide a `hash` or `downloadUrl` for them.
 
         * For Attachments that are linked to a Dataset, the value of `hash` is calculated using the MD5 of the last updated timestamp of the Dataset, instead of the content of the Dataset.
+
+        [Offline Entities support](https://forum.getodk.org/t/openrosa-spec-proposal-support-offline-entities/48052):
+
+        * If an attachemnt is linked to a Dataset, then `type="entityList"` attribute is added to the `mediaFile` element.
+
+        * `integrityUrl` is also returned for the attachments that are linked to a Dataset.
       operationId: OpenRosa Form Manifest API
       parameters:
       - name: projectId
@@ -9844,7 +9851,86 @@ paths:
                     <hash>md5:a6fdc426037143cf71cced68e2532e3c</hash>
                     <downloadUrl>https://your.odk.server/v1/projects/7/forms/basic/attachments/question2.jpg</downloadUrl>
                   </mediaFile>
+                  <mediaFile type="entityList">
+                    <filename>people.csv</filename>
+                    <hash>md5:9fd39ac868eccdc0c134b3b7a6a25eb7</hash>
+                    <downloadUrl>https://your.odk.server/v1/projects/7/forms/basic/attachments/people.csv</downloadUrl>
+                    <integrityUrl>https://your.odk.server/v1/projects/7/datasets/people/integrity</integrityUrl>
+                  </mediaFile>
                 </manifest>
+        403:
+          description: Forbidden
+          headers:
+            X-OpenRosa-Version:
+              schema:
+                type: string
+          content:
+            text/xml:
+              example: |
+                <OpenRosaResponse xmlns="http://openrosa.org/http/response" items="0">
+                  <message nature="error">The authenticated actor does not have rights to perform that action.</message>
+                </OpenRosaResponse>
+  /v1/projects/{projectId}/datasets/{name}/integrity?id={UUIDs}:
+    get:
+      tags:
+      - OpenRosa Endpoints
+      summary: OpenRosa Dataset Integrity API
+      description: |-
+        _(introduced: version 2025.1)_
+
+        This is the fully standards-compliant implementation of the Entities Integrity API as described in [OpenRosa spec proposal: support offline Entities](https://forum.getodk.org/t/openrosa-spec-proposal-support-offline-entities/48052).
+
+        This returns the `deleted` flag of the Entities requested through `id` query parameter. If no `id` is provided then all Entities are return.
+      operationId: OpenRosa Form Manifest API
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "7"
+      - name: name
+        in: path
+        description: The `name` of the dataset being referenced.
+        required: true
+        schema:
+          type: string
+        example: people
+      - name: id
+        in: query
+        description: The comma separated UUIDs of the Entities
+        required: true
+        schema:
+          type: string
+        example: 6fdfa3b6-64fb-46cf-b98c-c92b57f914b1,97717278-2bf8-4565-88b2-711c88d66e75
+      - name: X-OpenRosa-Version
+        in: header
+        description: e.g. 1.0
+        schema:
+          type: string
+        example: "1.0"
+      responses:
+        200:
+          description: OK
+          headers:
+            X-OpenRosa-Version:
+              schema:
+                type: string
+          content:
+            text/xml:
+              example: |
+                <?xml version="1.0" encoding="UTF-8"?>
+                <data>
+                  <entities>
+                    <entity id="6fdfa3b6-64fb-46cf-b98c-c92b57f914b1">
+                      <deleted>true</deleted>
+                    </entity>
+                    <entity id="97717278-2bf8-4565-88b2-711c88d66e75">
+                      <deleted>false</deleted>
+                    </entity>
+                  </entities>
+                </data>
         403:
           description: Forbidden
           headers:
