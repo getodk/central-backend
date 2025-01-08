@@ -158,6 +158,25 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
           }));
     }));
 
+    it('should fail on warnings even for valid xlsx files', testService(async (service) => {
+      await service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .expect(200));
+
+      global.xlsformTest = 'warning'; // set up the mock service to warn.
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple2/draft')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.16);
+            body.details.warnings.xlsFormWarnings.should.eql([ 'warning 1', 'warning 2' ]);
+          }));
+    }));
+
     it('should create the form for xlsx files with warnings given ignoreWarnings', testService((service) => {
       global.xlsformTest = 'warning'; // set up the mock service to warn.
       return service.login('alice', (asAlice) =>
