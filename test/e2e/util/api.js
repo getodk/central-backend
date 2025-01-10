@@ -49,6 +49,7 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
 
       const headers = {};
       if(mimeType) headers['Content-Type'] = mimeType;
+
       return apiPost(path, body, headers);
     }
   }
