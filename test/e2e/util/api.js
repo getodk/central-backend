@@ -46,7 +46,10 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
       });
     } else {
       const { body, mimeType } = opts;
-      return apiPost(path, body, { 'Content-Type':mimeType });
+
+      const headers = {};
+      if(mimeType) headers['Content-Type'] = mimeType;
+      return apiPost(path, body, headers);
     }
   }
 
@@ -99,7 +102,7 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
     if(isRedirected(res)) return new Redirect(res);
     if(!res.ok) {
       const responseStatus = res.status;
-      const responseText = await res.text();
+      const responseText = await res.text() || res.statusText;
 
       const err = new Error(`${responseStatus}: ${responseText}`);
       err.responseStatus = responseStatus;
@@ -119,14 +122,16 @@ function mimetypeFor(f) {
   // For more, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types
   const extension = extname(f);
   switch(extension) {
-    case '.bin' : return 'application/octet-stream';
-    case '.jpg' : return 'image/jpeg';
-    case '.png' : return 'image/png';
-    case '.svg' : return 'image/svg+xml';
-    case '.txt' : return 'text/plain';
-    case '.xls' : return 'application/vnd.ms-excel';
-    case '.xlsx': return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-    case '.xml' : return 'application/xml';
+    case '.bin'    : return 'application/octet-stream';
+    case '.geojson': return 'application/geo+json';
+    case '.jpg'    : return 'image/jpeg';
+    case '.nomime' : return null; // used for testing user agents which do not set a mime type for some file extensions
+    case '.png'    : return 'image/png';
+    case '.svg'    : return 'image/svg+xml';
+    case '.txt'    : return 'text/plain';
+    case '.xls'    : return 'application/vnd.ms-excel';
+    case '.xlsx'   : return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    case '.xml'    : return 'application/xml';
     default: throw new Error(`Unsure what mime type to use for: ${f}`);
   }
 }
