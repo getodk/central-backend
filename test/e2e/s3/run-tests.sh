@@ -86,8 +86,14 @@ run_suite() {
   log "Suite '$suite' with config '$configEnv' completed OK."
 }
 
-run_suite smoke s3-dev-with-region
-run_suite smoke s3-dev-blank-region
-run_suite all   s3-dev
+# TODO consider if this will be simpler with explicit config declaration here, e.g. NODE_CONFIG="{...}"
+# TODO consider if this will be simpler with explicit mocha options declared here, e.g. (--fgrep @smoke-test)
+NODE_CONFIG='{ "default":{ "server":{ "port":8384 } "external":{ "s3blobStore":{ "region":"" } } } }' \
+run_suite smoke
+
+NODE_CONFIG='{ "default":{ "server":{ "port":8385 } "external":{ "s3blobStore":{ "region":"ijijij3ofij4ofjoi4jf534ijfo534ijf34oijfo43ijf4o3ijfo43ijfo34ijfoi34jfo43ijfo43ijo34ifjo34ifj                     what" } } } }' \
+run_suite smoke
+
+run_suite all
 
 log "Tests completed OK."
