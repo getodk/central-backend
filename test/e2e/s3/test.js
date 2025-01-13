@@ -403,7 +403,7 @@ function cli(cmd) {
 
   cmd = `exec node lib/bin/s3 ${cmd}`; // eslint-disable-line no-param-reassign
   log.debug('cli()', 'calling:', cmd);
-  const env = { ..._.pick(process.env, 'PATH'), NODE_CONFIG_ENV:'s3-dev' };
+  const env = _.pick(process.env, 'PATH', 'NODE_CONFIG_ENV');
 
   const promise = new Promise((resolve, reject) => {
     const child = exec(cmd, { env, cwd:'../../..' }, (err, stdout, stderr) => {
