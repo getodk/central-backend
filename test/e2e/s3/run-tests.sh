@@ -86,11 +86,6 @@ run_suite() {
   # TODO may not be necessary
   NODE_CONFIG_ENV="$configEnv" node lib/bin/s3.js upload-pending
 
-  # TODO may not be necessary
-  kill "$serverPid"
-  wait "$serverPid" || true # already finished?  or the command isn't working?
-  sleep 10 # TODO work out a better way of doing this!
-
   log "Suite '$suite' with config '$configEnv' completed OK."
 }
 
