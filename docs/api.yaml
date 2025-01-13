@@ -3885,7 +3885,7 @@ paths:
       - Individual Form
       summary: Downloading a Form Attachment
       description: |-
-        To download a single file, use this endpoint. The appropriate `Content-Disposition` (attachment with a filename) and `Content-Type` (based on the type supplied at upload time) will be given.
+        To download a single file, use this endpoint. The appropriate `Content-Disposition` (attachment with a filename) and `Content-Type` (based on the type supplied at upload time, or a type derived from the file extension if no `Content-Type` was supplied at upload time) will be given.
 
         This endpoint supports `ETag`, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, it returns a value in `ETag` header, you can pass this value in the header `If-None-Match` of subsequent requests. If the file has not been changed since the previous request, you will receive `304 Not Modified` response otherwise you'll get the latest file.
       operationId: Downloading a Form Attachment
@@ -5116,7 +5116,7 @@ paths:
       - Published Form Versions
       summary: Downloading a Form Version Attachment
       description: |-
-        To download a single file, use this endpoint. The appropriate `Content-Disposition` (attachment with a filename) and `Content-Type` (based on the type supplied at upload time) will be given.
+        To download a single file, use this endpoint. The appropriate `Content-Disposition` (attachment with a filename) and `Content-Type` (based on the type supplied at upload time, or a type derived from the file extension if no `Content-Type` was supplied at upload time) will be given.
 
         This endpoint supports `ETag` header, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, the endpoint returns a value in `ETag` header. If you pass that value in the `If-None-Match` header of a subsequent request, then if the file has not been changed since the previous request, you will receive `304 Not Modified` response; otherwise you'll get the latest file.
       operationId: Downloading a Form Version Attachment
