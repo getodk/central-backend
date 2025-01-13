@@ -85,7 +85,7 @@ describe('s3 support', () => {
     await assertNoneRedirect(actualAttachments);
   }
 
-  it('should shift submission attachments to s3', async function() {
+  it('should shift submission attachments to s3 @smoke-test', async function() {
     this.timeout(TIMEOUT);
 
     // given

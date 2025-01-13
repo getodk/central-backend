@@ -52,20 +52,38 @@ EOF
   read -rp ''
 fi
 
-NODE_CONFIG_ENV=s3-dev node lib/bin/s3-create-bucket.js
-NODE_CONFIG_ENV=s3-dev make run &
-serverPid=$!
+run_suite() {
+  suite="$1"
+  configEnv="$2"
 
-log 'Waiting for backend to start...'
-timeout 30 bash -c "while ! curl -s -o /dev/null $serverUrl; do sleep 1; done"
-log 'Backend started!'
+  case "$suite" in
+    smoke) testOptions="--fgrep @smoke-test" ;;
+    all)   testOptions="" ;;
+    *) log "Unrecongised test suite: $suite"; exit 1 ;;
+  esac
 
-cd test/e2e/s3
-NODE_CONFIG_ENV=s3-dev npx mocha test.js
+  NODE_CONFIG_ENV="$configEnv" node lib/bin/s3-create-bucket.js
+  NODE_CONFIG_ENV="$configEnv" make run &
+  serverPid=$!
 
-if ! curl -s -o /dev/null "$serverUrl"; then
-  log '!!! Backend died.'
-  exit 1
-fi
+  log 'Waiting for backend to start...'
+  timeout 30 bash -c "while ! curl -s -o /dev/null $serverUrl; do sleep 1; done"
+  log 'Backend started!'
+
+  cd test/e2e/s3
+  NODE_CONFIG_ENV="$configEnv" npx mocha "$testOptions" test.js
+
+  if ! curl -s -o /dev/null "$serverUrl"; then
+    log '!!! Backend died.'
+    exit 1
+  fi
+
+  kill "$serverPid"
+  wait "$serverPid"
+}
+
+run_suite smoke s3-dev-with-region
+run_suite smoke s3-dev-blank-region
+run_suite all   s3-dev
 
 log "Tests completed OK."

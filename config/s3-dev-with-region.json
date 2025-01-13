@@ -1,0 +1,17 @@
+{
+  "default": {
+    "server": {
+      "port": 8385
+    },
+    "external": {
+      "s3blobStore": {
+        "region": "eu-west-1",
+        "server": "http://localhost:9000",
+        "accessKey": "odk-central-dev",
+        "secretKey": "topSecret123",
+        "bucketName": "odk-central-bucket",
+        "requestTimeout": 60000
+      }
+    }
+  }
+}
