@@ -48,9 +48,8 @@ fi
 
 run_suite() {
   suite="$1"
-  configEnv="$2"
 
-  log "Running suite '$suite' with config '$configEnv'..."
+  log "Running suite '$suite' ..."
 
   case "$suite" in
     smoke) testOptions=(--fgrep @smoke-test) ;;
@@ -58,24 +57,23 @@ run_suite() {
     *) log "!!! Error: unrecongised test suite: $suite"; exit 1 ;;
   esac
 
-  NODE_CONFIG_ENV="$configEnv" node lib/bin/s3-create-bucket.js
+  NODE_CONFIG_ENV="s3-dev" node lib/bin/s3-create-bucket.js
 
-  serverPort="$(NODE_CONFIG_ENV="$configEnv" node -e 'console.log(require("config").default.server.port)')"
+  serverPort="$(NODE_CONFIG_ENV="s3-dev" node -e 'console.log(require("config").default.server.port)')"
   serverUrl="http://localhost:$serverPort"
-  if curl -s -o /dev/null $serverUrl; then
+  if curl -s -o /dev/null "$serverUrl"; then
     log "!!! Error: server already running at: $serverUrl"
     exit 1
   fi
 
-  NODE_CONFIG_ENV="$configEnv" make run &
-  serverPid=$!
+  NODE_CONFIG_ENV="s3-dev" make run &
 
   log 'Waiting for backend to start...'
   timeout 30 bash -c "while ! curl -s -o /dev/null $serverUrl; do sleep 1; done"
   log 'Backend started!'
 
   cd test/e2e/s3
-  NODE_CONFIG_ENV="$configEnv" NODE_CONFIG_DIR=../../../config npx mocha "${testOptions[@]}" test.js
+  NODE_CONFIG_ENV="s3-dev" NODE_CONFIG_DIR=../../../config npx mocha "${testOptions[@]}" test.js
   cd -
 
   if ! curl -s -o /dev/null "$serverUrl"; then
@@ -83,7 +81,7 @@ run_suite() {
     exit 1
   fi
 
-  log "Suite '$suite' with config '$configEnv' completed OK."
+  log "Suite '$suite' completed OK."
 }
 
 # TODO consider if this will be simpler with explicit config declaration here, e.g. NODE_CONFIG="{...}"
