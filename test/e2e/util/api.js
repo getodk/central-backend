@@ -99,7 +99,7 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
     if(isRedirected(res)) return new Redirect(res);
     if(!res.ok) {
       const responseStatus = res.status;
-      const responseText = await res.text();
+      const responseText = await res.text() || res.statusText;
 
       const err = new Error(`${responseStatus}: ${responseText}`);
       err.responseStatus = responseStatus;
