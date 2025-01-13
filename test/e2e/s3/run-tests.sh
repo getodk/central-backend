@@ -56,9 +56,11 @@ run_suite() {
   suite="$1"
   configEnv="$2"
 
+  log "Running suite '$suite' with config '$configEnv'..."
+
   case "$suite" in
-    smoke) testOptions="--fgrep @smoke-test" ;;
-    all)   testOptions="" ;;
+    smoke) testOptions=(--fgrep @smoke-test) ;;
+    all)   testOptions=() ;;
     *) log "Unrecongised test suite: $suite"; exit 1 ;;
   esac
 
@@ -71,7 +73,8 @@ run_suite() {
   log 'Backend started!'
 
   cd test/e2e/s3
-  NODE_CONFIG_ENV="$configEnv" npx mocha "$testOptions" test.js
+  NODE_CONFIG_ENV="$configEnv" npx mocha "${testOptions[@]}" test.js
+  cd -
 
   if ! curl -s -o /dev/null "$serverUrl"; then
     log '!!! Backend died.'
