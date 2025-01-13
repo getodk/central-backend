@@ -83,9 +83,6 @@ run_suite() {
     exit 1
   fi
 
-  # TODO may not be necessary
-  NODE_CONFIG_ENV="$configEnv" node lib/bin/s3.js upload-pending
-
   log "Suite '$suite' with config '$configEnv' completed OK."
 }
 
