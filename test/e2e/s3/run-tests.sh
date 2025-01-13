@@ -55,7 +55,7 @@ run_suite() {
   case "$suite" in
     smoke) testOptions=(--fgrep @smoke-test) ;;
     all)   testOptions=() ;;
-    *) log "Unrecongised test suite: $suite"; exit 1 ;;
+    *) log "!!! Error: unrecongised test suite: $suite"; exit 1 ;;
   esac
 
   NODE_CONFIG_ENV="$configEnv" node lib/bin/s3-create-bucket.js
