@@ -11,7 +11,7 @@ const aBlobExistsWith = async (container, { status }) => {
   const blob = await Blob.fromBuffer(crypto.randomBytes(100));
   await container.run(sql`
     INSERT INTO BLOBS (sha, md5, content, "contentType", s3_status)
-      VALUES (${blob.sha}, ${blob.md5}, ${sql.binary(blob.content)}, ${blob.contentType || null}, ${status})
+      VALUES (${blob.sha}, ${blob.md5}, ${sql.binary(blob.content)}, ${blob.contentType || sql`DEFAULT`}, ${status})
   `);
 };
 
