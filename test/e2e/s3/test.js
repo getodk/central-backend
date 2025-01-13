@@ -17,12 +17,13 @@ const fs = require('node:fs');
 const { randomBytes } = require('node:crypto');
 const _ = require('lodash');
 const should = require('should');
+const tmp = require('tmp');
 
 const SUITE_NAME = 'test/e2e/s3';
 const log = require('../util/logger')(SUITE_NAME);
 const { apiClient, mimetypeFor, Redirect } = require('../util/api');
 
-const serverUrl = 'http://localhost:8383';
+const serverUrl = `http://localhost:${require('config').default.server.port}`;
 const userEmail = 'x@example.com';
 const userPassword = 'secret1234';
 
@@ -65,7 +66,7 @@ describe('s3 support', () => {
       bigFileSizeMb = 100,
     } = opts; // eslint-disable-line object-curly-newline
 
-    attDir = `./test-forms/${testNumber}-attachments`;
+    attDir = opts.attDir || `./test-forms/${testNumber}-attachments`;
 
     // given
     fs.mkdirSync(attDir, { recursive:true });
@@ -85,7 +86,25 @@ describe('s3 support', () => {
     await assertNoneRedirect(actualAttachments);
   }
 
-  it('should shift submission attachments to s3 @smoke-test', async function() {
+  it('should shift submission attachment to s3 @smoke-test', async function() {
+    this.timeout(TIMEOUT);
+
+    // given
+    // randomise attDir to ensure re-runs do not use the same generated files
+    await setup(0, { bigFiles: 1, bigFileSizeMb: 0.01, attDir: tmp.dirSync().name });
+    await assertNewStatuses({ pending: 1 });
+
+    // when
+    await cli('upload-pending');
+
+    // then
+    await assertNewStatuses({ uploaded: 1 });
+    // and
+    await assertAllRedirect(actualAttachments);
+    await assertAllDownloadsMatchOriginal(actualAttachments);
+  });
+
+  it('should shift submission attachments to s3', async function() {
     this.timeout(TIMEOUT);
 
     // given
@@ -403,9 +422,10 @@ function cli(cmd) {
 
   cmd = `exec node lib/bin/s3 ${cmd}`; // eslint-disable-line no-param-reassign
   log.debug('cli()', 'calling:', cmd);
+  const env = _.omit(process.env, 'NODE_CONFIG_DIR');
 
   const promise = new Promise((resolve, reject) => {
-    const child = exec(cmd, { cwd:'../../..' }, (err, stdout, stderr) => {
+    const child = exec(cmd, { env, cwd:'../../..' }, (err, stdout, stderr) => {
       if (err) {
         err.stdout = stdout; // eslint-disable-line no-param-reassign
         err.stderr = stderr; // eslint-disable-line no-param-reassign

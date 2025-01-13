@@ -1,7 +1,6 @@
 #!/bin/bash -eu
 set -o pipefail
 
-serverUrl="http://localhost:8383"
 userEmail="x@example.com"
 userPassword="secret1234"
 
@@ -16,11 +15,6 @@ cleanup() {
   kill -- -$$
 }
 trap cleanup EXIT SIGINT SIGTERM SIGHUP
-
-if curl -s -o /dev/null $serverUrl; then
-  log "!!! Error: server already running at: $serverUrl"
-  exit 1
-fi
 
 make base
 
@@ -65,6 +59,14 @@ run_suite() {
   esac
 
   NODE_CONFIG_ENV="$configEnv" node lib/bin/s3-create-bucket.js
+
+  serverPort="$(NODE_CONFIG_ENV="$configEnv" node -e 'console.log(require("config").default.server.port)')"
+  serverUrl="http://localhost:$serverPort"
+  if curl -s -o /dev/null $serverUrl; then
+    log "!!! Error: server already running at: $serverUrl"
+    exit 1
+  fi
+
   NODE_CONFIG_ENV="$configEnv" make run &
   serverPid=$!
 
@@ -73,7 +75,7 @@ run_suite() {
   log 'Backend started!'
 
   cd test/e2e/s3
-  NODE_CONFIG_ENV="$configEnv" npx mocha "${testOptions[@]}" test.js
+  NODE_CONFIG_ENV="$configEnv" NODE_CONFIG_DIR=../../../config npx mocha "${testOptions[@]}" test.js
   cd -
 
   if ! curl -s -o /dev/null "$serverUrl"; then
@@ -81,8 +83,15 @@ run_suite() {
     exit 1
   fi
 
+  # TODO may not be necessary
+  NODE_CONFIG_ENV="$configEnv" node lib/bin/s3.js upload-pending
+
+  # TODO may not be necessary
   kill "$serverPid"
-  wait "$serverPid"
+  wait "$serverPid" || true # already finished?  or the command isn't working?
+  sleep 10 # TODO work out a better way of doing this!
+
+  log "Suite '$suite' with config '$configEnv' completed OK."
 }
 
 run_suite smoke s3-dev-with-region
