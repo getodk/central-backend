@@ -49,6 +49,14 @@
             <value>Smile</value>
             <value form="image">jr://images/smile.png</value>
           </text>
+          <text id="geojson">
+            <value>geojson</value>
+            <value form="image">jr://images/cities.geojson</value>
+          </text>
+          <text id="nomime">
+            <value>geojson</value>
+            <value form="image">jr://images/some.nomime</value>
+          </text>
         </translation>
       </itext>
       <instance>
