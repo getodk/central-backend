@@ -87,7 +87,7 @@ run_suite() {
 NODE_CONFIG='{ "default":{ "server":{ "port":8384 }, "external":{ "s3blobStore":{ "region":"" } } } }' \
 run_suite smoke
 
-NODE_CONFIG='{ "default":{ "server":{ "port":8385 }, "external":{ "s3blobStore":{ "region":"eu-nornoreast-3000" } } } }' \
+NODE_CONFIG='{ "default":{ "server":{ "port":8385 }, "external":{ "s3blobStore":{ "region":"eu-east-1" } } } }' \
 run_suite smoke
 
 run_suite all
