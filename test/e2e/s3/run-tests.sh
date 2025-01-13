@@ -86,10 +86,10 @@ run_suite() {
 
 # TODO consider if this will be simpler with explicit config declaration here, e.g. NODE_CONFIG="{...}"
 # TODO consider if this will be simpler with explicit mocha options declared here, e.g. (--fgrep @smoke-test)
-NODE_CONFIG='{ "default":{ "server":{ "port":8384 } "external":{ "s3blobStore":{ "region":"" } } } }' \
+NODE_CONFIG='{ "default":{ "server":{ "port":8384 }, "external":{ "s3blobStore":{ "region":"" } } } }' \
 run_suite smoke
 
-NODE_CONFIG='{ "default":{ "server":{ "port":8385 } "external":{ "s3blobStore":{ "region":"ijijij3ofij4ofjoi4jf534ijfo534ijf34oijfo43ijf4o3ijfo43ijfo34ijfoi34jfo43ijfo43ijo34ifjo34ifj                     what" } } } }' \
+NODE_CONFIG='{ "default":{ "server":{ "port":8385 }, "external":{ "s3blobStore":{ "region":"ijijij3ofij4ofjoi4jf534ijfo534ijf34oijfo43ijf4o3ijfo43ijfo34ijfoi34jfo43ijfo43ijo34ifjo34ifj                     what" } } } }' \
 run_suite smoke
 
 run_suite all
