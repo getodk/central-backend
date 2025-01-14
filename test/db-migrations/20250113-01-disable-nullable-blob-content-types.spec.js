@@ -25,7 +25,7 @@ describeMigration('20250113-01-disable-nullable-blob-content-types', ({ runMigra
     await runMigrationBeingTested();
   });
 
-  it('should change NULL contentType values to application/octet-stream, and preserve non-NULL values', async () => {
+  it('should change existing NULL contentType values to application/octet-stream, and preserve non-NULL values', async () => {
     await assertTableContents('blobs',
       { ...blob1, contentType: 'application/octet-stream' },
       { ...blob2, contentType: 'text/plain' },
