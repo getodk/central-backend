@@ -97,11 +97,11 @@ describe('util/db', () => {
     });
   });
 
-  describe('connectionObject', () => {
-    const { connectionObject } = util;
+  describe('knexConnection', () => {
+    const { knexConnection } = util;
 
     it('should return an object with the required options', () => {
-      const result = connectionObject({
+      const result = knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -116,7 +116,7 @@ describe('util/db', () => {
     });
 
     it('should include the port if one is specified', () => {
-      const result = connectionObject({
+      const result = knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -133,7 +133,7 @@ describe('util/db', () => {
     });
 
     it('should return the correct object if ssl is true', () => {
-      const result = connectionObject({
+      const result = knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -150,7 +150,7 @@ describe('util/db', () => {
     });
 
     it('should throw if ssl is false', () => {
-      const result = () => connectionObject({
+      const result = () => knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -161,7 +161,7 @@ describe('util/db', () => {
     });
 
     it('should throw if ssl is an object', () => {
-      const result = () => connectionObject({
+      const result = () => knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -172,7 +172,7 @@ describe('util/db', () => {
     });
 
     it('should allow (but ignore) maximumPoolSize', () => {
-      const result = connectionObject({
+      const result = knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -188,7 +188,7 @@ describe('util/db', () => {
     });
 
     it('should throw for an unsupported option', () => {
-      const result = () => connectionObject({
+      const result = () => knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
