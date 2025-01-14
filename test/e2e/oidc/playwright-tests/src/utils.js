@@ -76,9 +76,7 @@ async function fillLoginForm(page, { username, password }) {
 
   await page.locator('input[name=login]').fill('playwright-' + username);
   await page.locator('input[name=password]').fill(password);
-
   await page.locator('button[type=submit]').click();
-
   await page.getByRole('button', { name: 'Continue' }).click();
 }
 
