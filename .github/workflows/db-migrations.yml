@@ -1,16 +1,28 @@
-name: OIDC e2e tests
+name: Database Migrations
 
 on:
-  push:
   pull_request:
-
-env:
-  DEBUG: pw:api
-  ODK_PLAYWRIGHT_BROWSERS: chromium,firefox,webkit
+    paths:
+    - .github/workflows/db-migrations.yml
+    - lib/bin/create-docker-databases.js
+    - lib/model/migrations/**
+    - test/db-migrations/**
+    - package.json
+    - package-lock.json
+    - Makefile
+  push:
+    paths:
+    - .github/workflows/db-migrations.yml
+    - lib/bin/create-docker-databases.js
+    - lib/model/migrations/**
+    - test/db-migrations/**
+    - package.json
+    - package-lock.json
+    - Makefile
 
 jobs:
-  oidc-e2e-test:
-    timeout-minutes: 6
+  db-migration-tests:
+    timeout-minutes: 2
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     services:
@@ -34,10 +46,6 @@ jobs:
       with:
         node-version: 22.12.0
         cache: 'npm'
-    - run: make test-oidc-e2e
-    - name: Archive playwright screenshots
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: Playwright Screenshots
-        path: test/e2e/oidc/playwright-tests/results/**/*.png
+    - run: npm ci
+    - run: node lib/bin/create-docker-databases.js
+    - run: make test-db-migrations

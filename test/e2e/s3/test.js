@@ -90,13 +90,13 @@ describe('s3 support', () => {
 
     // given
     await setup(1);
-    await assertNewStatuses({ pending: 11 });
+    await assertNewStatuses({ pending: 13 });
 
     // when
     await cli('upload-pending');
 
     // then
-    await assertNewStatuses({ uploaded: 11 });
+    await assertNewStatuses({ uploaded: 13 });
     // and
     await assertAllRedirect(actualAttachments);
     await assertAllDownloadsMatchOriginal(actualAttachments);
@@ -379,7 +379,10 @@ describe('s3 support', () => {
 
     const filepath = `${attDir}/${name}`;
 
-    const expectedContentType = mimetypeFor(name);
+    // "null" is a questionable content-type, but matches current central behaviour
+    // See: https://github.com/getodk/central-backend/pull/1352
+    const expectedContentType = mimetypeFor(name) ?? 'null';
+
     const actualContentType = res.headers.get('content-type');
     should.equal(actualContentType, expectedContentType);
 
@@ -403,8 +406,12 @@ function cli(cmd) {
   const env = { ..._.pick(process.env, 'PATH'), NODE_CONFIG_ENV:'s3-dev' };
 
   const promise = new Promise((resolve, reject) => {
-    const child = exec(cmd, { env, cwd:'../../..' }, (err, stdout) => {
-      if (err) return reject(err);
+    const child = exec(cmd, { env, cwd:'../../..' }, (err, stdout, stderr) => {
+      if (err) {
+        err.stdout = stdout; // eslint-disable-line no-param-reassign
+        err.stderr = stderr; // eslint-disable-line no-param-reassign
+        return reject(err);
+      }
 
       const res = stdout.toString().trim();
       log.debug('cli()', 'returned:', res);
