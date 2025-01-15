@@ -101,19 +101,25 @@ debug: base
 
 .PHONY: test
 test: lint
-	BCRYPT=insecure npx --node-options="--no-deprecation" mocha --recursive
+	BCRYPT=insecure npx mocha --recursive
 
 .PHONY: test-ci
 test-ci: lint
-	BCRYPT=insecure npx --node-options="--no-deprecation" mocha --recursive --reporter test/ci-mocha-reporter.js
+	BCRYPT=insecure npx mocha --recursive --reporter test/ci-mocha-reporter.js
+
+.PHONY: test-db-migrations
+test-db-migrations:
+	NODE_CONFIG_ENV=db-migration-test npx mocha --bail --sort --timeout=20000 \
+	    --require test/db-migrations/mocha-setup.js \
+	    ./test/db-migrations/**/*.spec.js
 
 .PHONY: test-fast
 test-fast: node_version
-	BCRYPT=insecure npx --node-options="--no-deprecation" mocha --recursive --fgrep @slow --invert
+	BCRYPT=insecure npx mocha --recursive --fgrep @slow --invert
 
 .PHONY: test-integration
 test-integration: node_version
-	BCRYPT=insecure npx --node-options="--no-deprecation" mocha --recursive test/integration
+	BCRYPT=insecure npx mocha --recursive test/integration
 
 .PHONY: test-unit
 test-unit: node_version
@@ -121,7 +127,7 @@ test-unit: node_version
 
 .PHONY: test-coverage
 test-coverage: node_version
-	npx --node-options="--no-deprecation" nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --recursive test
+	npx nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --recursive test
 
 .PHONY: lint
 lint: node_version
