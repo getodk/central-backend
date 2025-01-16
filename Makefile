@@ -131,8 +131,7 @@ test-coverage: node_version
 
 .PHONY: lint
 lint: node_version
-	# max-warnings set to take account of legacy database migrations
-	npx eslint --cache --max-warnings 15 .
+	npx eslint --cache --max-warnings 0 .
 
 
 ################################################################################
