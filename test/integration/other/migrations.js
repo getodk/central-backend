@@ -6,7 +6,7 @@ const { testContainerFullTrx, testServiceFullTrx } = require('../setup');
 const { sql } = require('slonik');
 const { createReadStream } = require('fs');
 const { Actor, Config } = require(appRoot + '/lib/model/frames');
-const { withDatabase } = require(appRoot + '/lib/model/migrate');
+const { withKnex } = require(appRoot + '/lib/model/migrate');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 const testData = require('../../data/xml');
@@ -14,7 +14,7 @@ const populateUsers = require('../fixtures/01-users');
 const populateForms = require('../fixtures/02-forms');
 const { getFormFields } = require('../../../lib/data/schema');
 
-const withTestDatabase = withDatabase(config.get('test.database'));
+const withTestDatabase = withKnex(config.get('test.database'));
 const migrationsDir = appRoot + '/lib/model/migrations';
 const upToMigration = (toName, inclusive = true) => withTestDatabase(async (migrator) => {
   await migrator.raw('drop owned by current_user');
