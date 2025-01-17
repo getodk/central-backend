@@ -252,7 +252,7 @@ describe('util/db', () => {
     it('should provide the appropriate arguments when extended', () => {
       let run = false;
       extender(T)(U)((fields, extend, options, x, y, z) => {
-        fields.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","a" as "a","b" as "b"`);
+        sql`${fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","a" as "a","b" as "b"`);
         (sql`${extend|| true}`).should.eql(sql`${true}`);
         x.should.equal(2);
         y.should.equal(3);
