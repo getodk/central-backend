@@ -205,8 +205,7 @@ describe('util/db', () => {
     const T = Frame.define(table('frames'), 'x',  'y');
     const U = Frame.define(into('extra'), 'z');
     it('should generate fields', () => {
-      unjoiner(T, U)
-        .fields.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
+      sql`${unjoiner(T, U).fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
     });
 
     it('should unjoin data', () => {
@@ -219,7 +218,7 @@ describe('util/db', () => {
 
     it('should optionally unjoin optional data', () => {
       const unjoin = unjoiner(T, Option.of(U));
-      unjoin.fields.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
+      sql`${unjoin.fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
       unjoin({ 'frames!x': 3, 'frames!y': 4, z: 5 })
         .should.eql(new T({ x: 3, y: 4 }, { extra: Option.of(new U({ z: 5 })) }));
       unjoin({ 'frames!x': 3, 'frames!y': 4 })
@@ -239,7 +238,7 @@ describe('util/db', () => {
     it('should provide the appropriate arguments when not extended', () => {
       let run = false;
       extender(T)(U)((fields, extend, options, x, y, z) => {
-        fields.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y"`);
+        sql`${fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y"`);
         (sql`${extend|| true}`).should.eql(sql``);
         x.should.equal(2);
         y.should.equal(3);
