@@ -1,3 +1,4 @@
+// TODO rename e.g. legacy-knex-migrations
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const uuid = require('uuid').v4;
@@ -6,7 +7,7 @@ const { testContainerFullTrx, testServiceFullTrx } = require('../setup');
 const { sql } = require('slonik');
 const { createReadStream } = require('fs');
 const { Actor, Config } = require(appRoot + '/lib/model/frames');
-const { withKnex } = require(appRoot + '/lib/model/legacy-knex-migrator');
+const { withKnex } = require(appRoot + '/lib/model/migrate');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 const testData = require('../../data/xml');
@@ -59,7 +60,7 @@ testMigration.skip = (filename, tests) =>
 // column to projects and forms, it is not possible to migrate part way
 // (before the new column) and populate the data when frames expect the
 // new column to exist.
-describe.skip('legacy (knex) database migrations', function() {
+describe.skip('database migrations', function() {
   this.timeout(8000);
 
   it('should purge deleted forms via migration', testServiceFullTrx(async (service, container) => {
