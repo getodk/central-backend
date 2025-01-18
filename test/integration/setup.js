@@ -12,7 +12,7 @@ const testData = require('../data/xml');
 
 // knex things.
 const config = require('config');
-const { withPg } = require(appRoot + '/lib/model/migrate');
+const { withPg } = require(appRoot + '/lib/model/pg-migrator');
 
 // slonik connection pool
 const { slonikPool } = require(appRoot + '/lib/external/slonik');
