@@ -15,12 +15,12 @@
 const fs = require('node:fs');
 const { execSync } = require('node:child_process');
 
-const legacy   = createMigrator('./lib/model/migrations',           './test/db-migrations/.holding-pen/legacy');            // eslint-disable-line no-use-before-define, no-multi-spaces
-const postKnex = createMigrator('./lib/model/migrations-post-knex', './test/db-migrations/.holding-pen/post-knex', legacy); // eslint-disable-line no-use-before-define
+const legacy   = createMigrator('Legacy',    './lib/model/migrations',           './test/db-migrations/.holding-pen/legacy');            // eslint-disable-line no-use-before-define, no-multi-spaces
+const postKnex = createMigrator('Post-knex', './lib/model/migrations-post-knex', './test/db-migrations/.holding-pen/post-knex', legacy); // eslint-disable-line no-use-before-define
 
 module.exports = { legacy, postKnex };
 
-function createMigrator(migrationsDir, holdingPen, previousMigrator) {
+function createMigrator(name, migrationsDir, holdingPen, previousMigrator) {
   fs.mkdirSync(holdingPen, { recursive: true });
 
   restoreMigrations(); // eslint-disable-line no-use-before-define
@@ -91,7 +91,7 @@ function createMigrator(migrationsDir, holdingPen, previousMigrator) {
       .map(f => f.replace(/\.js$/, ''))
       .sort(); // TODO check that this is how knex sorts migration files
     log();
-    log('All migrations:');
+    log(`${name} migrations:`);
     log();
     migrations.forEach(m => log('*', m));
     log();
