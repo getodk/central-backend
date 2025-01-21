@@ -39,17 +39,9 @@ jobs:
       timeout-minutes: 10
       run: ./test/e2e/standard/run-tests.sh
 
-    - name: Install postgres-client v14
-      run: >
-        sudo apt-get update &&
-        sudo apt-get --yes remove --purge 'postgres*' &&
-        echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list &&
-        wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo tee /etc/apt/trusted.gpg.d/pgdg.asc &&
-        sudo apt-get update &&
-        sudo apt-get --yes install postgresql-client-14 &&
-        printf "Postgres versio: $(pg_dump --version): " &&
-        ([[ "$(pg_dump --version | cut -d' ' -f3)" = 14.* ]] && echo OK) || (echo Incorrect && exit 1)
-
+    - uses: ./.github/actions/install-postgres-client
+      with:
+        postgres-version: 14
     - name: Backup/restore tests
       timeout-minutes: 10
       run: ./test/e2e/standard/backup-restore.sh

@@ -1,0 +1,21 @@
+name: Install PostgreSQL Client
+description: delete-me
+
+inputs:
+  postgres-version:
+    required: true
+    description: delete-me
+
+runs:
+  using: composite
+  steps:
+    - name: Install postgres-client v${{ inputs.postgres-version }}
+      run: >
+        sudo apt-get update &&
+        sudo apt-get --yes remove --purge 'postgres*' &&
+        echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list &&
+        wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo tee /etc/apt/trusted.gpg.d/pgdg.asc &&
+        sudo apt-get update &&
+        sudo apt-get --yes install postgresql-client-${{ inputs.postgres-version }} &&
+        printf "Postgres version: $(pg_dump --version): " &&
+        ([[ "$(pg_dump --version | cut -d' ' -f3)" = ${{ inputs.postgres-version }}.* ]] && echo OK) || (echo Incorrect && exit 1)
