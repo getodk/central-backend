@@ -50,4 +50,4 @@ jobs:
 
     - name: Backend Logs
       if: always()
-      run: "ls && ! [[ -f ./server.log ]] || cat ./server.log"
+      run: "! [[ -f ./server.log ]] || cat ./server.log"
