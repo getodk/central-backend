@@ -3,11 +3,11 @@ const { hash, randomBytes } = require('node:crypto');
 
 const { // eslint-disable-line object-curly-newline
   assertTableContents,
-  describeMigration,
+  describeNewMigration,
   rowsExistFor,
 } = require('./utils'); // eslint-disable-line object-curly-newline
 
-describeMigration('20250113-01-disable-nullable-blob-content-types', ({ runMigrationBeingTested }) => {
+describeNewMigration('20250113-01-disable-nullable-blob-content-types', ({ runMigrationBeingTested }) => {
   const aBlobWith = props => {
     const randomContent = randomBytes(100);
     const md5 = hash('md5',  randomContent); // eslint-disable-line no-multi-spaces
