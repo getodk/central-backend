@@ -42,7 +42,6 @@ jobs:
     - uses: ./.github/actions/install-postgres-client
       with:
         postgres-version: 14
-    - run: psql -c 'ALTER USER jubilant CREATEDB'  postgresql://postgres:odktest@localhost/postgres
     - run: psql -c 'ALTER ROLE jubilant SUPERUSER' postgresql://postgres:odktest@localhost/postgres
     - name: Backup/restore tests
       timeout-minutes: 10
