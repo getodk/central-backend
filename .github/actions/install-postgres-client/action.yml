@@ -1,11 +1,9 @@
 name: Install PostgreSQL Client
-description: delete-me
 
 inputs:
   postgres-version:
     type: integer
     required: true
-    description: delete-me
 
 runs:
   using: composite
