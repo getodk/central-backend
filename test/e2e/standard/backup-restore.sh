@@ -1,6 +1,8 @@
 #!/bin/bash -eu
 set -o pipefail
 
+serverUrl=http://localhost:8383
+
 log() {
   if [[ ${testname-} = "" ]]; then
     echo "[test/e2e/standard/backup-restore] $*"
@@ -22,11 +24,16 @@ backup() {
       --header "X-Forwarded-Proto: https" \
       --header "Content-Type: $contentType" \
       --header="Authorization: Basic $creds" \
-      http://localhost:8383/v1/backup \
+      "$serverUrl/v1/backup" \
       --post-data "$postBody" \
       -O "$target"
   cd -
 }
+
+if ! curl -s -o /dev/null "$serverUrl"; then
+  log "Backend is not running - cannot run tests."
+  exit 1
+fi
 
 testname=no-passphrase
 log "Testing with no passphrase supplied for backup..."
