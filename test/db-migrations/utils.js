@@ -3,7 +3,7 @@ const _ = require('lodash');
 const migrator = require('./migrator');
 
 function _describeMigration(migrator, describeFn, migrationName, fn) { // eslint-disable-line no-shadow
-  assert.strictEqual(arguments.length, 3, 'Incorrect argument count.');
+  assert.strictEqual(arguments.length, 4, 'Incorrect argument count.');
 
   assert.strictEqual(typeof describeFn, 'function');
 
