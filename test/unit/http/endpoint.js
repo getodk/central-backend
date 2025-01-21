@@ -1,7 +1,7 @@
 const should = require('should');
 const { EventEmitter } = require('events');
 const { Transform } = require('stream');
-const { createRequest, createResponse } = require('node-mocks-http');
+const { createRequest, createResponse } = require('../../util/node-mocks-http');
 const streamTest = require('streamtest').v2;
 const { always } = require('ramda');
 
@@ -11,28 +11,10 @@ const { PartialPipe } = require(appRoot + '/lib/util/stream');
 const { noop } = require(appRoot + '/lib/util/util');
 const Problem = require(appRoot + '/lib/util/problem');
 
-const createModernResponse = () => {
-  const result = createResponse({ eventEmitter: EventEmitter });
-  // node-mocks-http does not have hasHeader yet.
-  // eslint-disable-next-line space-before-function-paren, func-names
-  result.hasHeader = function(name) {
-    return this.getHeader(name) != null;
-  };
-
-  // express adds this.
-  // eslint-disable-next-line space-before-function-paren, func-names
-  result.status = function(code) {
-    this.statusCode = code;
-    return this;
-  };
-
-  return result;
-};
-
 describe('endpoints', () => {
   describe('defaultErrorWriter', () => {
     it('should adapt Problem code to http code', (done) => {
-      const response = createModernResponse();
+      const response = createResponse();
       response.on('end', () => {
         response.statusCode.should.equal(409);
         done();
@@ -41,7 +23,7 @@ describe('endpoints', () => {
     });
 
     it('should set json return type', (done) => {
-      const response = createModernResponse();
+      const response = createResponse();
       response.on('end', () => {
         response.getHeader('Content-Type').should.equal('application/json');
         done();
@@ -50,7 +32,7 @@ describe('endpoints', () => {
     });
 
     it('should provide Problem details in the body', (done) => {
-      const response = createModernResponse();
+      const response = createResponse();
       response.on('end', () => {
         response._getData().code.should.equal(409.1138);
         response._getData().message.should.equal('test message');
@@ -60,20 +42,19 @@ describe('endpoints', () => {
       defaultErrorWriter(new Problem(409.1138, 'test message', { x: 1 }), null, response);
     });
 
-    it('should turn remaining errors into unknown Problems', (done) => {
-      const response = createModernResponse();
+    it('should turn remaining errors into internal server errors', (done) => {
+      const response = createResponse();
       const error = new Error('oops');
-      error.stack = ''; // strip stack so that our test output isn't super polluted
       response.on('end', () => {
         response.statusCode.should.equal(500);
-        response._getData().message.should.equal('Completely unhandled exception: oops');
+        response._getData().should.deepEqual({ message: 'Internal Server Error' });
         done();
       });
       defaultErrorWriter(error, null, response);
     });
 
     it('should not translate 403 to 401 if user agent header is not present', (done) => {
-      const response = createModernResponse();
+      const response = createResponse();
       const request = createRequest();
       response.on('end', () => {
         response.statusCode.should.equal(403);
@@ -83,10 +64,10 @@ describe('endpoints', () => {
     });
 
     it('should not throw if given a null error', (done) => {
-      const response = createModernResponse();
+      const response = createResponse();
       response.on('end', () => {
         response.statusCode.should.equal(500);
-        response._getData().message.should.equal('Completely unhandled exception: undefined');
+        response._getData().should.deepEqual({ message: 'Internal Server Error' });
         done();
       });
       defaultErrorWriter(null, null, response);
@@ -104,7 +85,7 @@ describe('endpoints', () => {
           resultWriter: noop
         })(mockContainer)(always(true));
 
-        return resource(createRequest(), createModernResponse())
+        return resource(createRequest(), createResponse())
           .then(() => { ran.should.equal(true); });
       });
 
@@ -117,7 +98,7 @@ describe('endpoints', () => {
           resultWriter: noop
         })(mockContainer, [ push('mid1'), push('mid2') ])(always(true));
 
-        return resource(createRequest(), createModernResponse())
+        return resource(createRequest(), createResponse())
           .then(() => { result.should.eql([ 'format', 'mid1', 'mid2' ]); });
       });
 
@@ -126,7 +107,7 @@ describe('endpoints', () => {
         return endpointBase({
           preprocessor: () => Promise.reject(new Error('format failure')),
           resultWriter: noop
-        })(mockContainer)()(createRequest(), createModernResponse(), (failure) => {
+        })(mockContainer)()(createRequest(), createResponse(), (failure) => {
           failure.message.should.equal('format failure');
           failed = true;
         }).then(() => { failed.should.equal(true); });
@@ -138,7 +119,7 @@ describe('endpoints', () => {
           // eslint-disable-next-line arrow-body-style
           () => { return true; },
           () => Promise.reject(new Error('middleware failure'))
-        ])(mockContainer)(createRequest(), createModernResponse(), (failure) => {
+        ])(mockContainer)(createRequest(), createResponse(), (failure) => {
           failure.message.should.equal('middleware failure');
           failed = true;
         }).then(() => { failed.should.equal(true); });
@@ -150,7 +131,7 @@ describe('endpoints', () => {
           () => new Promise((resolve) => {
             setTimeout(() => { waited = true; resolve(); }, 0);
           })
-        ])(always(true))(createRequest(), createModernResponse()).then(() => {
+        ])(always(true))(createRequest(), createResponse()).then(() => {
           waited.should.equal(true);
         });
       });
@@ -178,7 +159,7 @@ describe('endpoints', () => {
             context.method.should.equal('TEST');
             checked = true;
           }
-        ])(always(true))({ method: 'TEST' }, createModernResponse()).then(() => {
+        ])(always(true))({ method: 'TEST' }, createResponse()).then(() => {
           checked.should.equal(true);
         });
       });
@@ -192,7 +173,7 @@ describe('endpoints', () => {
             context.test2.should.equal(true);
             checked = true;
           }
-        ])(always(true))({ method: 'TEST' }, createModernResponse()).then(() => {
+        ])(always(true))({ method: 'TEST' }, createResponse()).then(() => {
           checked.should.equal(true);
         });
       });
@@ -208,7 +189,7 @@ describe('endpoints', () => {
             context.test2.should.equal(true);
             checked = true;
           }
-        ])(always(true))({ method: 'TEST' }, createModernResponse()).then(() => {
+        ])(always(true))({ method: 'TEST' }, createResponse()).then(() => {
           checked.should.equal(true);
         });
       });
@@ -222,7 +203,7 @@ describe('endpoints', () => {
           context.test2.should.equal(true);
           checked = true;
           return true;
-        })({ method: 'TEST' }, createModernResponse()).then(() => {
+        })({ method: 'TEST' }, createResponse()).then(() => {
           checked.should.equal(true);
         });
       });
@@ -238,7 +219,7 @@ describe('endpoints', () => {
         })(mockContainer, [ push('pre') ])(() => {
           ran.push('resource');
           return true;
-        })(createRequest(), createModernResponse()).then(() => {
+        })(createRequest(), createResponse()).then(() => {
           ran.should.eql([ 'pre', 'before', 'resource' ]);
         });
       });
@@ -260,7 +241,7 @@ describe('endpoints', () => {
     describe('resource/finalize/output/error', () => {
       it('should fail the Promise if nothing is returned', () => {
         let failed = false;
-        return endpointBase({})(mockContainer)(noop)(createRequest(), createModernResponse(), (failure) => {
+        return endpointBase({})(mockContainer)(noop)(createRequest(), createResponse(), (failure) => {
           failure.problemCode.should.equal(500.3);
           failed = true;
         }).then(() => { failed.should.equal(true); });
@@ -269,7 +250,7 @@ describe('endpoints', () => {
       it('should fail the Promise if an unhandled exception is returned', () => {
         let failed = false;
         // eslint-disable-next-line no-undef, no-unused-expressions
-        return endpointBase({})(mockContainer)(() => { hello; })(createRequest(), createModernResponse(), (failure) => {
+        return endpointBase({})(mockContainer)(() => { hello; })(createRequest(), createResponse(), (failure) => {
           failure.should.be.an.instanceof(ReferenceError);
           failed = true;
         }).then(() => { failed.should.equal(true); });
@@ -282,7 +263,7 @@ describe('endpoints', () => {
             error.problemCode.should.equal(404.1);
             errored = true;
           }
-        })(mockContainer)(() => Promise.reject(Problem.user.notFound()))(createRequest(), createModernResponse()).then(() => {
+        })(mockContainer)(() => Promise.reject(Problem.user.notFound()))(createRequest(), createResponse()).then(() => {
           errored.should.equal(true);
         });
       });
@@ -427,33 +408,33 @@ describe('endpoints', () => {
 
   describe('default format (outputter)', () => {
     it('should attach a json Content-Type absent any other', () => {
-      const response = createModernResponse();
+      const response = createResponse();
       defaultResultWriter({}, createRequest(), response);
       response.getHeader('Content-Type').should.equal('application/json');
     });
 
     it('should not attach a json Content-Type if one is already present', () => {
-      const response = createModernResponse();
+      const response = createResponse();
       response.setHeader('Content-Type', 'application/xml');
       defaultResultWriter({}, createRequest(), response);
       response.getHeader('Content-Type').should.equal('application/xml');
     });
 
     it('should send the given plain response', () => {
-      const response = createModernResponse();
+      const response = createResponse();
       defaultResultWriter('hello', createRequest(), response);
-      response._getData().should.equal('hello');
+      response._getData().should.equal('"hello"');
     });
 
     it('should send nothing given a 204 response', () => {
-      const response = createModernResponse();
+      const response = createResponse();
       response.status(204);
       defaultResultWriter({}, createRequest(), response);
       should.not.exist(response.body);
     });
 
     it('should send nothing given a 3xx response', () => {
-      const response = createModernResponse();
+      const response = createResponse();
       response.status(302);
       defaultResultWriter({}, createRequest(), response);
       should.not.exist(response.body);
@@ -466,7 +447,6 @@ describe('endpoints', () => {
         result.should.equal('ateststream');
         done();
       });
-      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
       defaultResultWriter(streamTest.fromChunks([ 'a', 'test', 'stream' ]), requestTest, responseTest);
     });
@@ -478,7 +458,6 @@ describe('endpoints', () => {
         result.should.equal('a!test!stream!');
         done();
       });
-      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
 
       const resourceResult = PartialPipe.of(
@@ -497,14 +476,10 @@ describe('endpoints', () => {
       const responseTest = streamTest.toText((err, result) => {
         err.message.should.equal('ERR_EXPECTED');
         trailers.should.eql({ Status: 'Error' });
-        // eslint-disable-next-line no-multi-spaces
-        should.not.exist(result);                  // node v14
-        (result === undefined).should.equal(true); // post node v14.??
+        should(result).be.undefined();
         done();
       });
-      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.addTrailers = function(t) { trailers = t; };
-      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
 
       const resourceResult = PartialPipe.of(
@@ -523,9 +498,8 @@ describe('endpoints', () => {
     it('should call next on PartialPipe stream error', (done) => {
       const requestTest = streamTest.fromChunks();
       const responseTest = streamTest.toText(() => {});
-      // eslint-disable-next-line no-undef, space-before-function-paren, func-names
+      // eslint-disable-next-line no-undef
       responseTest.addTrailers = function(t) { trailers = t; };
-      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
 
       const resourceResult = PartialPipe.of(
@@ -546,7 +520,6 @@ describe('endpoints', () => {
     it('should not crash if the request is aborted but the stream is not endable', () => {
       const requestTest = new EventEmitter();
       const responseTest = streamTest.toText(() => {});
-      // eslint-disable-next-line space-before-function-paren, func-names
       responseTest.hasHeader = function() { return true; };
       const source = streamTest.fromChunks([ 'a', 'test', 'stream' ], 20);
       defaultResultWriter(source, requestTest, responseTest);
@@ -571,7 +544,7 @@ describe('endpoints', () => {
 
     describe('before', () => {
       it('should set the appropriate headers', () => {
-        const response = createModernResponse();
+        const response = createResponse();
         openRosaBefore(response);
 
         response.get('Content-Language').should.equal('en');
@@ -585,7 +558,7 @@ describe('endpoints', () => {
       const { createdMessage } = require(appRoot + '/lib/formats/openrosa');
 
       it('should send the appropriate content with the appropriate header', () => {
-        const response = createModernResponse();
+        const response = createResponse();
         openRosaResultWriter(createdMessage({}), null, response);
 
         response.statusCode.should.equal(201);
@@ -596,7 +569,7 @@ describe('endpoints', () => {
 
     describe('error', () => {
       it('should delegate to defaultErrorWriter for uncaught exceptions', () => {
-        const response = createModernResponse();
+        const response = createResponse();
         try {
           openRosaErrorWriter(new Error('test'), null, response);
         // eslint-disable-next-line no-empty
@@ -604,11 +577,11 @@ describe('endpoints', () => {
 
         response.statusCode.should.equal(500);
         response.getHeader('Content-Type').should.equal('application/json');
-        response._getData().message.should.equal('Completely unhandled exception: test');
+        response._getData().should.deepEqual({ message: 'Internal Server Error' });
       });
 
       it('should wrap problems in openrosa xml envelopes', () => {
-        const response = createModernResponse();
+        const response = createResponse();
         openRosaErrorWriter(Problem.user.notFound(), null, response);
 
         response.statusCode.should.equal(404);
@@ -657,7 +630,7 @@ describe('endpoints', () => {
       });
 
       it('should reject requests for unsupported OData features', () => {
-        const request = createRequest({ url: '/odata.svc?$orderby=magic' });
+        const request = createRequest({ url: '/odata.svc?$inlineCount=magic' });
         return odataPreprocessor('json')(null, new Context(request), request)
           .should.be.rejectedWith(Problem, { problemCode: 501.1 });
       });
@@ -682,7 +655,7 @@ describe('endpoints', () => {
 
     describe('before', () => {
       it('should set the appropriate OData version', () => {
-        const response = createModernResponse();
+        const response = createResponse();
         odataBefore(response);
 
         response.get('OData-Version').should.equal('4.0');

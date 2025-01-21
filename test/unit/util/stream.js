@@ -33,8 +33,7 @@ describe('stream utils', () => {
 
     it('should reject if any stream rejects', () => {
       const fail = (stream) => new Promise((_, reject) => {
-        // eslint-disable-next-line prefer-promise-reject-errors
-        stream.on('data', (x) => { if (x === 'three') reject(false); });
+        stream.on('data', (x) => { if (x === 'three') reject(new Error()); });
       });
       return consumeAndBuffer(fromObjects([ 'one', 'two', 'three' ]), consumer('two'), fail)
         .should.be.rejected();

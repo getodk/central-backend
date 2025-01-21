@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { getFormFields, sanitizeFieldsForOdata, SchemaStack, merge, compare, expectedFormAttachments, injectPublicKey, addVersionSuffix, setVersion } = require(appRoot + '/lib/data/schema');
+const { getFormFields, sanitizeFieldsForOdata, SchemaStack, merge, compare, expectedFormAttachments, injectPublicKey, addVersionSuffix, setVersion, updateEntityForm } = require(appRoot + '/lib/data/schema');
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
@@ -2085,6 +2085,84 @@ describe('form schema', () => {
     </input>
   </h:body>
 </h:html>`)));
+  });
+
+  describe('updateEntityForm', () => {
+    it('should change version 2023->2024, add trunkVersion, and add branchId', (async () => {
+      const result = await updateEntityForm(testData.forms.updateEntity2023, '2023.1.0', '2024.1.0', '[upgrade]', true);
+      // entities-version has been updated
+      // version has suffix
+      // trunkVersion and branchId are present
+      result.should.equal(`<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+  <h:head>
+    <model entities:entities-version="2024.1.0">
+      <instance>
+        <data id="updateEntity" orx:version="1.0[upgrade]">
+          <name/>
+          <age/>
+          <hometown/>
+          <meta>
+            <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId="">
+              <label/>
+            </entity>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+      <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+    </model>
+  </h:head>
+</h:html>`);
+    }));
+
+    it('should change version 2022->2024', (async () => {
+      const result = await updateEntityForm(testData.forms.simpleEntity2022, '2022.1.0', '2024.1.0', '[upgrade]', false);
+      // entities-version has been updated
+      // version has suffix
+      // trunkVersion and branchId are NOT added
+      result.should.equal(`<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+  <h:head>
+    <model entities:entities-version="2024.1.0">
+      <instance>
+        <data id="simpleEntity" orx:version="1.0[upgrade]">
+          <name/>
+          <age/>
+          <hometown/>
+          <meta>
+            <entity dataset="people" id="" create="">
+              <label/>
+            </entity>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+      <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+      <bind nodeset="/data/hometown" type="string"/>
+    </model>
+  </h:head>
+</h:html>`);
+    }));
+
+    // updateEntityForm takes the old version to replace as an argument
+    // these tests show it will not change a 2022.1 (create-only) form when 2023.1 is provided
+    it('should not alter a version 2022.1.0 form when the old version to replace is 2023.1.0', (async () => {
+      const result = await updateEntityForm(testData.forms.simpleEntity2022, '2023.1.0', '2024.1.0', '[upgrade]', true);
+      result.should.equal(testData.forms.simpleEntity2022);
+    }));
+
+    it('should not alter a version 2024.1.0 form when the old version to replace is 2023.1.0', (async () => {
+      const result = await updateEntityForm(testData.forms.offlineEntity, '2023.1.0', '2024.1.0', '[upgrade]', true);
+      result.should.equal(testData.forms.offlineEntity);
+    }));
+
+    // these tests show it will not change a 2023.1 (update) form when 2022.1 is provided
+    it('should not alter a version 2023.1.0 form when the old version to replace is 2022.1.0', (async () => {
+      const result = await updateEntityForm(testData.forms.updateEntity2023, '2022.1.0', '2024.1.0', '[upgrade]', true);
+      result.should.equal(testData.forms.updateEntity2023);
+    }));
+
   });
 });
 

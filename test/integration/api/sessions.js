@@ -1,7 +1,6 @@
 const should = require('should');
 const { DateTime } = require('luxon');
 const { testService } = require('../setup');
-const authenticateUser = require('../../util/authenticate-user');
 
 describe('api: /sessions', () => {
   describe('POST', () => {
@@ -94,7 +93,7 @@ describe('api: /sessions', () => {
         .expect(404)));
 
     it('should return the active session if it exists', testService((service) =>
-      authenticateUser(service, 'alice')
+      service.authenticateUser('alice')
         .then((token) => service.get('/v1/sessions/restore')
           .set('X-Forwarded-Proto', 'https')
           .set('Cookie', 'session=' + token)
@@ -111,12 +110,12 @@ describe('api: /sessions', () => {
         .expect(403)));
 
     it('should return a 403 if the user cannot delete the given token', testService((service) =>
-      authenticateUser(service, 'alice')
+      service.authenticateUser('alice')
         .then((token) => service.login('chelsea', (asChelsea) =>
           asChelsea.delete('/v1/sessions/' + token).expect(403)))));
 
     it('should invalidate the token if successful', testService((service) =>
-      authenticateUser(service, 'alice')
+      service.authenticateUser('alice')
         .then((token) => service.delete('/v1/sessions/' + token)
           .set('Authorization', 'Bearer ' + token)
           .expect(200)
@@ -139,7 +138,7 @@ describe('api: /sessions', () => {
             })))));
 
     it('should allow non-admins to delete their own sessions', testService((service) =>
-      authenticateUser(service, 'chelsea')
+      service.authenticateUser('chelsea')
         .then((token) => service.delete('/v1/sessions/' + token)
           .set('Authorization', 'Bearer ' + token)
           .expect(200)
@@ -179,7 +178,7 @@ describe('api: /sessions', () => {
             .expect(403)))));
 
     it('should clear cookies if successful for the current session', testService((service) =>
-      authenticateUser(service, 'alice')
+      service.authenticateUser('alice')
         .then((token) => service.delete('/v1/sessions/' + token)
           .set('Authorization', 'Bearer ' + token)
           .expect(200)
@@ -191,7 +190,7 @@ describe('api: /sessions', () => {
           }))));
 
     it('should not clear cookies if using some other session', testService((service) =>
-      authenticateUser(service, 'alice')
+      service.authenticateUser('alice')
         .then((token) => service.login('alice', (asAlice) =>
           asAlice.delete('/v1/sessions/' + token)
             .expect(200)
@@ -200,7 +199,7 @@ describe('api: /sessions', () => {
             })))));
 
     it('should not log the action in the audit log for users', testService((service) =>
-      authenticateUser(service, 'alice')
+      service.authenticateUser('alice')
         .then((token) => service.delete('/v1/sessions/' + token)
           .set('Authorization', 'Bearer ' + token)
           .expect(200)
@@ -248,7 +247,7 @@ describe('api: /sessions', () => {
         .expect(404)));
 
     it('should invalidate the token if successful', testService(async (service) => {
-      const token = await authenticateUser(service, 'alice');
+      const token = await service.authenticateUser('alice');
       const { body } = await service.delete('/v1/sessions/current')
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
@@ -272,7 +271,7 @@ describe('api: /sessions', () => {
   // whole stack in addition to the unit tests.
   describe('cookie CSRF auth', () => {
     it('should reject if the CSRF token is missing', testService((service) =>
-      authenticateUser(service, 'alice')
+      service.authenticateUser('alice')
         .then((token) => service.post('/v1/projects')
           .send({ name: 'my project' })
           .set('X-Forwarded-Proto', 'https')
@@ -280,7 +279,7 @@ describe('api: /sessions', () => {
           .expect(401))));
 
     it('should reject if the CSRF token is wrong', testService((service) =>
-      authenticateUser(service, 'alice')
+      service.authenticateUser('alice')
         .then((token) => service.post('/v1/projects')
           .send({ name: 'my project', __csrf: 'nope' })
           .set('X-Forwarded-Proto', 'https')
@@ -288,7 +287,7 @@ describe('api: /sessions', () => {
           .expect(401))));
 
     it('should succeed if the CSRF token is correct', testService((service) =>
-      authenticateUser(service, 'alice', 'includeCsrf')
+      service.authenticateUser('alice', 'includeCsrf')
         .then((body) => service.post('/v1/projects')
           .send({ name: 'my project', __csrf: body.csrf })
           .set('X-Forwarded-Proto', 'https')

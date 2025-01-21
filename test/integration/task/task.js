@@ -30,14 +30,13 @@ describe('task: runner', () => {
     });
   });
 
-  it('should print success object to stdout', () => runScript(success)
-    // eslint-disable-next-line quotes
-    .then(([ , stdout ]) => stdout.should.equal(`'{"test":"result"}'\n`)));
+  it('should print success json to stdout', () => runScript(success)
+    .then(([ , stdout ]) => stdout.should.equal(`{"test":"result"}\n`)));
 
   it('should print failure details to stderr and exit nonzero', () => runScript(failure)
     .then(([ error, , stderr ]) => {
       error.code.should.equal(1);
-      stderr.should.match(/^Problem \[Error\]: The resource returned no data./);
+      stderr.should.match(/Problem \[Error\]: The resource returned no data./);
     }));
 });
 
@@ -55,8 +54,8 @@ describe('task: auditing', () => {
     it('should fault but passthrough on log failure', testTask(({ Audits }) => {
       // hijack Audit.log to crash. new container is made for each test so we don't have
       // to restore a working one.
-      // eslint-disable-next-line prefer-promise-reject-errors, no-param-reassign
-      Audits.log = () => Promise.reject(false);
+      // eslint-disable-next-line no-param-reassign
+      Audits.log = () => Promise.reject(new Error());
       return auditing('testAction', Promise.resolve(true))
         .then((result) => {
           // too difficult to test stderr output.
@@ -81,12 +80,12 @@ describe('task: auditing', () => {
       // ditto above.
       // eslint-disable-next-line no-param-reassign
       Audits.log = () => Promise.reject(Problem.user.missingParameter({ field: 'test' }));
-      // eslint-disable-next-line prefer-promise-reject-errors
-      return auditing('testAction', Promise.reject(true))
+      return auditing('testAction', Promise.reject(new Error('uhoh')))
         .then(identity, (result) => {
           // too difficult to test stderr output.
           process.exitCode.should.equal(1);
-          result.should.equal(true);
+          result.should.be.instanceOf(Error);
+          result.message.should.equal('uhoh');
         });
     }));
   });

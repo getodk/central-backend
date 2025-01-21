@@ -6,6 +6,7 @@ const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 const should = require('should');
 const { QueryOptions } = require('../../../lib/util/db');
+const Problem = require(appRoot + '/lib/util/problem');
 
 // Helpers to deal with repeated system metadata generation.
 const submitter = { id: 5, displayName: 'Alice' };
@@ -74,6 +75,7 @@ describe('odata message composition', () => {
       <ComplexType Name="metadata">
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="deletedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
@@ -119,6 +121,7 @@ describe('odata message composition', () => {
       <ComplexType Name="metadata">
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="deletedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
@@ -182,6 +185,7 @@ describe('odata message composition', () => {
       <ComplexType Name="metadata">
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="deletedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
@@ -235,6 +239,7 @@ describe('odata message composition', () => {
       <ComplexType Name="metadata">
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="deletedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
@@ -387,6 +392,7 @@ describe('odata message composition', () => {
       <ComplexType Name="metadata">
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="deletedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
@@ -465,6 +471,7 @@ describe('odata message composition', () => {
       <ComplexType Name="metadata">
         <Property Name="submissionDate" Type="Edm.DateTimeOffset"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="deletedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="submitterId" Type="Edm.String"/>
         <Property Name="submitterName" Type="Edm.String"/>
         <Property Name="attachmentsPresent" Type="Edm.Int64"/>
@@ -579,6 +586,7 @@ describe('odata message composition', () => {
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             const resultObj = JSON.parse(result);
             resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24top=3&%24skiptoken=01e30%3D');
+            resultObj['@odata.nextLink'].should.have.skiptoken({});
             done();
           })));
       });
@@ -591,6 +599,7 @@ describe('odata message composition', () => {
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
             const resultObj = JSON.parse(result);
             resultObj['@odata.nextLink'].should.equal('http://localhost:8989/simple.svc/Submissions?%24top=3&%24wkt=true&%24count=true&%24skiptoken=01e30%3D');
+            resultObj['@odata.nextLink'].should.have.skiptoken({});
             done();
           })));
       });
@@ -741,7 +750,8 @@ describe('odata message composition', () => {
         fieldsFor(testData.forms.withrepeat)
           .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$top=2', query, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
-            JSON.parse(result).should.eql({
+            const parsed = JSON.parse(result);
+            parsed.should.eql({
               '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
               '@odata.nextLink': 'http://localhost:8989/withrepeat.svc/Submissions.children.child?%24top=2&%24skiptoken=01eyJyZXBlYXRJZCI6ImM3NmQwY2NjNmQ1ZGEyMzZiZTdiOTNiOTg1YTgwNDEzZDJlM2UxNzIifQ%3D%3D',
               value: [{
@@ -756,6 +766,7 @@ describe('odata message composition', () => {
                 age: 6
               }]
             });
+            parsed['@odata.nextLink'].should.have.skiptoken({ repeatId: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172' });
             done();
           })));
       });
@@ -798,7 +809,8 @@ describe('odata message composition', () => {
         fieldsFor(testData.forms.withrepeat)
           .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows))
           .then((stream) => stream.pipe(streamTest.toText((_, result) => {
-            JSON.parse(result).should.eql({
+            const parsed = JSON.parse(result);
+            parsed.should.eql({
               '@odata.context': 'http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child',
               '@odata.nextLink': 'http://localhost:8989/withrepeat.svc/Submissions.children.child?%24top=1&%24skiptoken=01eyJyZXBlYXRJZCI6ImM3NmQwY2NjNmQ1ZGEyMzZiZTdiOTNiOTg1YTgwNDEzZDJlM2UxNzIifQ%3D%3D',
               value: [{
@@ -808,6 +820,7 @@ describe('odata message composition', () => {
                 age: 6
               }]
             });
+            parsed['@odata.nextLink'].should.have.skiptoken({ repeatId: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172' });
             done();
           })));
       });
@@ -838,6 +851,36 @@ describe('odata message composition', () => {
             });
             done();
           })));
+      });
+
+      [
+        { instanceId: 'two' },
+        { instanceId: 'two', repeatId: '' },
+        { instanceId: 'two', repeatId: 'this should probably be rejected' },
+        { instanceId: 'two', repeatId: '0000000000000000000000000000000000000000' },
+      ].forEach(skipToken => {
+        it(`should reject bad skipToken '${JSON.stringify(skipToken)}'`, done => {
+          const query = { $skiptoken: QueryOptions.getSkiptoken(skipToken) };
+          const inRows = streamTest.fromObjects([
+            mockSubmission('one', testData.instances.withrepeat.one),
+            mockSubmission('two', testData.instances.withrepeat.two),
+            mockSubmission('three', testData.instances.withrepeat.three)
+          ]);
+
+          fieldsFor(testData.forms.withrepeat)
+            .then((fields) => rowStreamToOData(fields, 'Submissions.children.child', 'http://localhost:8989', '/withrepeat.svc/Submissions.children.child?$skip=1&$top=1', query, inRows))
+            .then((stream) => {
+              stream.streams.at(-1).on('error', err => {
+                should(err).be.an.Error();
+                err.message.should.equal('Record associated with the provided $skiptoken not found.');
+                done();
+              });
+              return stream.pipe(streamTest.toText(err => {
+                if (err) return done(err);
+                done('pipe should not have completed');
+              }));
+            }, done);
+        });
       });
     });
   });
@@ -930,6 +973,157 @@ describe('odata message composition', () => {
         });
       });
 
+      describe('with $skiptoken', () => {
+        const billy = { __id: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d', age: 4, name: 'Billy' };
+        const blain = { __id: 'c76d0ccc6d5da236be7b93b985a80413d2e3e172', age: 6, name: 'Blaine' };
+
+        const nomatch = '0000000000000000000000000000000000000000';
+
+        const stringify64 = obj => Buffer.from(JSON.stringify(obj)).toString('base64');
+
+        [
+          'nonsense',
+
+          // no version + valid token
+          stringify64({ repeatId: billy.__id }),
+
+          // incorrect version number + valid token
+          '00' + stringify64({ repeatId: billy.__id }),
+          '02' + stringify64({ repeatId: billy.__id }),
+
+          // correct version plus non-json
+          '01',
+          '01aGk=',
+
+          // correct version + empty JSON:
+          '01' + stringify64({}),
+          '01' + stringify64(''),
+
+          // correct version + non-base64 string
+          '01~',
+        ].forEach($skiptoken => {
+          it(`should throw error for malformed $skiptoken '${$skiptoken}'`, () =>
+            fieldsFor(testData.forms.withrepeat)
+              .then((fields) => {
+                const submission = mockSubmission('two', testData.instances.withrepeat.two);
+                const query = { $skiptoken };
+                const originaUrl = "/withrepeat.svc/Submissions('two')/children/child"; // doesn't have to include query string
+                return singleRowToOData(fields, submission, 'http://localhost:8989', originaUrl, query);
+              })
+              .should.be.rejectedWith(Problem, { problemCode: 400.35, message: 'Invalid $skiptoken' }));
+        });
+
+        [
+          {
+            $top: 0,
+            skiptoken: { repeatId: nomatch },
+          },
+          {
+            $top: 1,
+            skiptoken: { repeatId: nomatch },
+          },
+          {
+            $top: 2,
+            skiptoken: { repeatId: nomatch },
+          },
+          {
+            $top: undefined,
+            skiptoken: { repeatId: nomatch },
+          },
+        ].forEach(({ $top, skiptoken }) =>
+          it(`should throw error for ${[$top, JSON.stringify(skiptoken)]}`, () =>
+            fieldsFor(testData.forms.withrepeat)
+              .then((fields) => {
+                const submission = mockSubmission('two', testData.instances.withrepeat.two);
+                const $skiptoken = '01' + Buffer.from(JSON.stringify(skiptoken)).toString('base64');
+                const query = { $top, $skiptoken };
+                const originaUrl = "/withrepeat.svc/Submissions('two')/children/child"; // doesn't have to include query string
+                return singleRowToOData(fields, submission, 'http://localhost:8989', originaUrl, query);
+              })
+              .should.be.rejectedWith(Problem, { problemCode: 400.34, message: 'Record associated with the provided $skiptoken not found.' })));
+
+        [
+          {
+            $top: 0,
+            skiptoken: { repeatId: billy.__id },
+            expectedNext: false,
+            expectedValue: [],
+          },
+          {
+            $top: 1,
+            skiptoken: { repeatId: billy.__id },
+            expectedNext: false,
+            expectedValue: [ blain ],
+          },
+          {
+            $top: 2,
+            skiptoken: { repeatId: billy.__id },
+            expectedNext: false,
+            expectedValue: [ blain ],
+          },
+          {
+            $top: undefined,
+            skiptoken: { repeatId: billy.__id },
+            expectedNext: false,
+            expectedValue: [ blain ],
+          },
+
+          {
+            $top: 0,
+            skiptoken: { repeatId: blain.__id },
+            expectedNext: false,
+            expectedValue: [],
+          },
+          {
+            $top: 1,
+            skiptoken: { repeatId: blain.__id },
+            expectedNext: false,
+            expectedValue: [],
+          },
+          {
+            $top: 2,
+            skiptoken: { repeatId: blain.__id },
+            expectedNext: false,
+            expectedValue: [],
+          },
+          {
+            $top: undefined,
+            skiptoken: { repeatId: blain.__id },
+            expectedNext: false,
+            expectedValue: [],
+          },
+        ].forEach(({ $top, skiptoken, expectedNext, expectedValue }) =>
+          it(`should return expected result for ${[$top, JSON.stringify(skiptoken)]}`, () =>
+            fieldsFor(testData.forms.withrepeat).then((fields) => {
+              const submission = mockSubmission('two', testData.instances.withrepeat.two);
+              const $skiptoken = '01' + Buffer.from(JSON.stringify(skiptoken)).toString('base64');
+              const query = { $top, $skiptoken };
+              const originaUrl = "/withrepeat.svc/Submissions('two')/children/child"; // doesn't have to include query string
+              return singleRowToOData(fields, submission, 'http://localhost:8989', originaUrl, query)
+                .then(JSON.parse)
+                .then((res) => {
+                  res['@odata.context'].should.eql('http://localhost:8989/withrepeat.svc/$metadata#Submissions.children.child');
+
+                  const nextLink = res['@odata.nextLink'];
+                  if (expectedNext === false) should(nextLink).be.undefined();
+                  else {
+                    should(nextLink).be.ok();
+                    JSON.parse(
+                      Buffer.from(
+                        new URL(nextLink)
+                          .searchParams
+                          .get('$skiptoken')
+                          .substr(2),
+                        'base64',
+                      ).toString()
+                    ).should.deepEqual({ repeatId: expectedNext });
+                  }
+
+                  res.value.should.deepEqual(expectedValue.map(x => ({ ...x, '__Submissions-id': 'two' })));
+                });
+            })));
+      });
+
       // eslint-disable-next-line arrow-body-style
       it('should retain other parameters when giving the nextUrl', () => {
         return fieldsFor(testData.forms.withrepeat).then((fields) => {
@@ -939,6 +1133,7 @@ describe('odata message composition', () => {
             .then(JSON.parse)
             .then((result) => {
               result['@odata.nextLink'].should.equal("http://localhost:8989/withrepeat.svc/Submissions('two')/children/child?%24top=1&%24wkt=true&%24skiptoken=01eyJyZXBlYXRJZCI6ImNmOWExYjVjYzgzYzZkNjI3MGMxZWI5ODg2MGQyOTRlYWM1ZDUyNmQifQ%3D%3D");
+              result['@odata.nextLink'].should.have.skiptoken({ repeatId: 'cf9a1b5cc83c6d6270c1eb98860d294eac5d526d' });
             });
         });
       });

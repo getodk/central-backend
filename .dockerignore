@@ -7,15 +7,14 @@
 !/Makefile
 !/lib/
 !/config/
-!/test/
 
-!/oidc-dev/certs/*.pem
-!/oidc-dev/fake-oidc-server/accounts.json
-!/oidc-dev/fake-oidc-server/index.js
-!/oidc-dev/fake-oidc-server/package.json
-!/oidc-dev/fake-oidc-server/package-lock.json
-!/oidc-dev/playwright-tests/package.json
-!/oidc-dev/playwright-tests/package-lock.json
-!/oidc-dev/playwright-tests/playwright.config.js
-!/oidc-dev/playwright-tests/src/**/*.js
-!/oidc-dev/scripts/*.sh
+!/test/e2e/oidc/certs/*.pem
+!/test/e2e/oidc/fake-oidc-server/accounts.json
+!/test/e2e/oidc/fake-oidc-server/index.js
+!/test/e2e/oidc/fake-oidc-server/package.json
+!/test/e2e/oidc/fake-oidc-server/package-lock.json
+!/test/e2e/oidc/playwright-tests/package.json
+!/test/e2e/oidc/playwright-tests/package-lock.json
+!/test/e2e/oidc/playwright-tests/playwright.config.js
+!/test/e2e/oidc/playwright-tests/src/**/*.js
+!/test/e2e/oidc/scripts/*.sh

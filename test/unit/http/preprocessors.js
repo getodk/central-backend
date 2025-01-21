@@ -1,15 +1,14 @@
 const should = require('should');
-const { createRequest } = require('node-mocks-http');
+const { createRequest } = require('../../util/node-mocks-http');
 
 const appRoot = require('app-root-path');
 const preprocessors = require(appRoot + '/lib/http/preprocessors');
 const { Context } = require(appRoot + '/lib/http/endpoint');
 const { Session, User, Actor } = require(appRoot + '/lib/model/frames');
 const { by } = require(appRoot + '/lib/model/query/auth');
+const { hashPassword } = require(appRoot + '/lib/util/crypto');
 const Problem = require(appRoot + '/lib/util/problem');
 const Option = require(appRoot + '/lib/util/option');
-
-const bcrypt = require(appRoot + '/lib/util/crypto').password(require('bcrypt'));
 
 describe('preprocessors', () => {
   // some mock helpers to simplify testing this module in isolation:
@@ -115,7 +114,7 @@ describe('preprocessors', () => {
 
       it('should fail the request if the Basic auth credentials are not right', () =>
         Promise.resolve(authHandler(
-          { Auth, Users: mockUsers('alice@getodk.org', 'willnevermatch'), bcrypt },
+          { Auth, Users: mockUsers('alice@getodk.org', 'willnevermatch') },
           new Context(
             createRequest({ headers: {
               Authorization: `Basic ${Buffer.from('alice@getodk.org:alice', 'utf8').toString('base64')}`,
@@ -126,9 +125,9 @@ describe('preprocessors', () => {
         )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should set the appropriate session if valid Basic auth credentials are given @slow', () =>
-        bcrypt.hash('alice').then((hashed) =>
+        hashPassword('alice').then((hashed) =>
           Promise.resolve(authHandler(
-            { Auth, Users: mockUsers('alice@getodk.org', hashed), bcrypt },
+            { Auth, Users: mockUsers('alice@getodk.org', hashed) },
             new Context(
               createRequest({ headers: {
                 Authorization: `Basic ${Buffer.from('alice@getodk.org:alice', 'utf8').toString('base64')}`,
@@ -184,8 +183,7 @@ describe('preprocessors', () => {
           should.not.exist(context);
         }));
 
-      it('should do nothing if Cookie auth is attempted with primary auth present', () => {
-        let caught = false;
+      it('should prioritise primary auth over Cookie auth', () =>
         Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
           new Context(
@@ -197,16 +195,9 @@ describe('preprocessors', () => {
             }, cookies: { session: 'alohomora' } }),
             { auth: { isAuthenticated() { return false; } }, fieldKey: Option.none() }
           )
-        )).catch((err) => {
-          err.problemCode.should.equal(401.2);
-          caught = true;
-        }).then(() => {
-          caught.should.equal(true);
-        });
-      });
+        )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
-      it('should do nothing if Cookie auth is attempted with fk auth present', () => {
-        let caught = false;
+      it('should prioritise fk auth over Cookie auth', () =>
         Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
           new Context(
@@ -223,13 +214,7 @@ describe('preprocessors', () => {
             }),
             { auth: { isAuthenticated() { return false; } }, fieldKey: Option.none() }
           )
-        )).catch((err) => {
-          err.problemCode.should.equal(401.2);
-          caught = true;
-        }).then(() => {
-          caught.should.equal(true);
-        });
-      });
+        )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should work for HTTPS GET requests', () =>
         Promise.resolve(authHandler(
@@ -300,6 +285,18 @@ describe('preprocessors', () => {
                 'X-Forwarded-Proto': 'https',
                 Cookie: 'session=alohomora'
               }, body: { __csrf: 'notsecretcsrf' }, cookies: { session: 'alohomora' } }),
+              { fieldKey: Option.none() }
+            )
+          )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
+
+        it('should reject cookie auth with invalid CSRF token for non-GET requests', () =>
+          Promise.resolve(authHandler(
+            { Auth, Sessions: mockSessionsWithCsrf('alohomora', 'secretcsrf') },
+            new Context(
+              createRequest({ method: 'POST', headers: {
+                'X-Forwarded-Proto': 'https',
+                Cookie: 'session=alohomora'
+              }, body: { __csrf: '%ea' }, cookies: { session: 'alohomora' } }),
               { fieldKey: Option.none() }
             )
           )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));

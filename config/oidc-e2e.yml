@@ -1,0 +1,13 @@
+{
+  "default": {
+    "env": {
+      "domain": "https://odk-central.example.org:8989"
+    },
+    "oidc": {
+      "issuerUrl": "https://fake-oidc-server.example.net:9898",
+      "clientId": "odk-central-backend-dev",
+      "clientSecret": "super-top-secret",
+      "enabled": true
+    }
+  }
+}

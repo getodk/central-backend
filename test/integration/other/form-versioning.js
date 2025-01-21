@@ -72,7 +72,8 @@ describe('form forward versioning', () => {
       Form.fromXml(testData.forms.withAttachments),
       Blob.fromFile(__filename).then(Blobs.ensure)
     ])
-      .then(([ project, partial, blobId ]) => Forms.createNew(partial, project, true)
+      .then(([ project, partial, blobId ]) => Forms.createNew(partial, project)
+        .then((formDraft) => Forms.publish(formDraft, true))
         .then((savedForm) => Promise.all([ 'goodone.csv', 'goodtwo.mp3' ]
           .map((name) => FormAttachments.getByFormDefIdAndName(savedForm.def.id, name)
             .then(force)
@@ -106,7 +107,8 @@ describe('form forward versioning', () => {
       Form.fromXml(testData.forms.withAttachments),
       Blob.fromFile(__filename).then(Blobs.ensure)
     ])
-      .then(([ project, partial, blobId ]) => Forms.createNew(partial, project, true)
+      .then(([ project, partial, blobId ]) => Forms.createNew(partial, project)
+        .then((formDraft) => Forms.publish(formDraft, true))
         .then((savedForm) => Promise.all([ 'goodone.csv', 'goodtwo.mp3' ]
           .map((name) => FormAttachments.getByFormDefIdAndName(savedForm.def.id, name)
             .then(force)

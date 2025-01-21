@@ -1,5 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
+const uuid = require('uuid').v4;
 const { sql } = require('slonik');
 const { plain } = require('../../util/util');
 const { testService } = require('../setup');
@@ -134,7 +135,7 @@ describe('/audits', () => {
               audits[1].action.should.equal('form.update.publish');
               audits[1].acteeId.should.equal(form.acteeId);
               audits[1].actee.should.eql(plain(form.forApi()));
-              audits[1].details.should.eql({ newDefId: form.currentDefId });
+              audits[1].details.should.eql({ newDefId: form.currentDefId, oldDefId: null });
               audits[1].loggedAt.should.be.a.recentIsoDate();
 
               audits[2].actorId.should.equal(alice.actor.id);
@@ -613,6 +614,23 @@ describe('/audits', () => {
         .then(({ body }) => {
           body.success.should.be.true();
         });
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people.csv',
+            size: 100,
+          },
+          entities: [
+            {
+              label: 'Johnny Doe',
+              data: {
+                first_name: 'Johnny',
+                age: '22'
+              }
+            }
+          ]
+        })
+        .expect(200);
 
       await asAlice.get('/v1/audits?action=nonverbose')
         .expect(200)
@@ -620,8 +638,51 @@ describe('/audits', () => {
           body.length.should.equal(4);
           body.map(a => a.action).should.eql([
             'form.update.publish',
-            'form.create',
             'dataset.create',
+            'form.create',
+            'user.session.create'
+          ]);
+        });
+    }));
+
+    it('should filter out offline entity submission backlog events given action=nonverbose', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.offlineEntity)
+        .expect(200);
+
+      const branchId = uuid();
+
+      // second submission in a branch will get held to wait for first in branch
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('create="1"', 'update="1"')
+          .replace('branchId=""', `branchId="${branchId}"`)
+          .replace('two', 'two-update')
+          .replace('baseVersion=""', 'baseVersion="1"')
+          .replace('<status>new</status>', '<status>checked in</status>')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
+        .send(testData.instances.offlineEntity.two
+          .replace('branchId=""', `branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/audits?action=nonverbose')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(4);
+          body.map(a => a.action).should.eql([
+            'form.update.publish',
+            'dataset.create',
+            'form.create',
             'user.session.create'
           ]);
         });
@@ -651,6 +712,21 @@ describe('/audits', () => {
               body[2].notes.should.equal('doing this for fun!');
               body[3].action.should.equal('user.session.create');
             })))));
+
+    it('should fail gracefully if note decoding fails', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .set('X-Action-Notes', 'doing this for fun%ae')
+          .send(testData.forms.binaryType)
+          .expect(400)
+          .then(({ body }) => {
+            body.should.deepEqual({
+              code: 400.6,
+              details: { field: 'x-action-notes' },
+              message: 'An expected header field (x-action-notes) did not match the expected format.',
+            });
+          }))));
 
     describe('audit logs of deleted and purged actees', () => {
       it('should get the information of a purged actee', testService(async (service, { Forms }) =>

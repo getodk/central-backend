@@ -1,8 +1,6 @@
 const should = require('should');
 const { DateTime } = require('luxon');
 
-/* eslint-disable space-before-function-paren, func-names */
-
 // debugging things.
 // eslint-disable-next-line no-console
 global.tap = (x) => { console.log(x); return x; };
@@ -208,10 +206,11 @@ should.Assertion.add('ExtendedForm', function() {
   this.params = { operator: 'to be a ExtendedForm' };
 
   this.obj.should.be.a.Form();
-  Object.keys(this.obj).should.containDeep([ 'submissions', 'lastSubmission', 'reviewStates' ]);
+  Object.keys(this.obj).should.containDeep([ 'submissions', 'lastSubmission', 'reviewStates', 'publicLinks' ]);
   this.obj.submissions.should.be.a.Number();
   Object.keys(this.obj.reviewStates).should.containDeep([ 'received', 'hasIssues', 'edited']);
   if (this.obj.lastSubmission != null) this.obj.lastSubmission.should.be.an.isoDate();
+  this.obj.publicLinks.should.be.a.Number();
 });
 
 should.Assertion.add('FormAttachment', function() {
@@ -226,6 +225,14 @@ should.Assertion.add('FormAttachment', function() {
   (blobExists && datasetExists).should.be.false();
   exists.should.equal(blobExists || datasetExists);
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
+});
+
+should.Assertion.add('Problem', function() {
+  this.params = { operator: 'to be a Problem' };
+
+  this.obj.should.be.a.Error();
+  Object.keys(this.obj).should.containDeep([ 'problemCode', 'problemDetails' ]);
+  this.obj.problemCode.should.be.a.Number();
 });
 
 should.Assertion.add('Project', function() {
@@ -436,4 +443,10 @@ should.Assertion.add('EntitySourceSubmissionDetails', function SubmissionDetails
   this.obj.should.have.property('xmlFormId').which.is.a.String();
   this.obj.should.have.property('instanceId').which.is.a.String();
   this.obj.should.have.property('instanceName'); // can be null
+});
+
+should.Assertion.add('skiptoken', function skiptoken(expected) {
+  this.params = { operator: 'to have a skiptoken' };
+
+  JSON.parse(Buffer.from(decodeURIComponent(new URL(this.obj).searchParams.get('$skiptoken').substr(2)), 'base64')).should.deepEqual(expected);
 });

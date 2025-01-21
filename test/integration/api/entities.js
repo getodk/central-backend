@@ -165,13 +165,13 @@ describe('Entities API', () => {
         .send({ label: 'two' })
         .expect(200);
 
-      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01' WHERE "displayName" = 'Alice'`);
-      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01' WHERE "displayName" = 'Bob'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01T00:00:00Z' WHERE "displayName" = 'Alice'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01T00:00:00Z' WHERE "displayName" = 'Bob'`);
 
-      await container.run(sql`UPDATE entities SET "createdAt" = '2022-01-01', "updatedAt" = '2023-01-01' WHERE uuid = '12345678-1234-4123-8234-123456789abc'`);
+      await container.run(sql`UPDATE entities SET "createdAt" = '2022-01-01T00:00:00Z', "updatedAt" = '2023-01-01T00:00:00Z' WHERE uuid = '12345678-1234-4123-8234-123456789abc'`);
 
-      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2022-01-01' WHERE label = 'Alice (88)'`);
-      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2023-01-01' WHERE label = 'two'`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2022-01-01T00:00:00Z' WHERE label = 'Alice (88)'`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2023-01-01T00:00:00Z' WHERE label = 'two'`);
 
       await asAlice.get('/v1/projects/1/datasets/people/entities')
         .set('X-Extended-Metadata', true)
@@ -193,6 +193,49 @@ describe('Entities API', () => {
           person.currentVersion.createdAt.should.match(/2023/);
           person.currentVersion.creator.displayName.should.be.eql('Bob');
           person.currentVersion.creator.createdAt.should.match(/2021/);
+        });
+    }));
+
+    it('should return entities in stable order', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111aaa',
+          label: 'Foo',
+          data: {
+            first_name: 'Foo',
+          }
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-111111111bbb',
+          label: 'Bar',
+          data: {
+            first_name: 'Bar',
+          }
+        })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body: people }) => {
+          people.map(p => p.currentVersion.label).should.eql(['Bar', 'Foo']);
+        });
+
+      // Update Foo
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa?baseVersion=1')
+        .send({ data: { age: '12' } })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body: people }) => {
+          people.map(p => p.currentVersion.label).should.eql(['Bar', 'Foo']);
         });
     }));
   });
@@ -297,13 +340,13 @@ describe('Entities API', () => {
         .send({ label: 'two' })
         .expect(200);
 
-      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01' WHERE "displayName" = 'Alice'`);
-      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01' WHERE "displayName" = 'Bob'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01T00:00:00Z' WHERE "displayName" = 'Alice'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01T00:00:00Z' WHERE "displayName" = 'Bob'`);
 
-      await container.run(sql`UPDATE entities SET "createdAt" = '2022-01-01', "updatedAt" = '2023-01-01'`);
+      await container.run(sql`UPDATE entities SET "createdAt" = '2022-01-01T00:00:00Z', "updatedAt" = '2023-01-01T00:00:00Z'`);
 
-      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2022-01-01' WHERE label = 'Alice (88)'`);
-      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2023-01-01' WHERE label = 'two'`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2022-01-01T00:00:00Z' WHERE label = 'Alice (88)'`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2023-01-01T00:00:00Z' WHERE label = 'two'`);
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .set('X-Extended-Metadata', true)
@@ -570,6 +613,35 @@ describe('Entities API', () => {
           fourthVersion.source.event.action.should.be.eql('submission.create');
           fourthVersion.source.submission.instanceId.should.be.eql('one');
 
+        });
+    }));
+
+    it('should get version source with source details even when there is no corresponding submission event', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people.csv',
+            size: 100,
+          },
+          entities: [
+            {
+              uuid: '12345678-1234-4123-8234-111111111aaa',
+              label: 'Johnny Doe',
+              data: {
+                first_name: 'Johnny',
+                age: '22'
+              }
+            },
+          ]
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/versions')
+        .expect(200)
+        .then(({ body: versions }) => {
+          versions[0].should.have.property('source');
+          versions[0].source.should.eql({ name: 'people.csv', size: 100, count: 1, userAgent: null });
         });
     }));
 
@@ -841,33 +913,34 @@ describe('Entities API', () => {
           logs[0].details.entity.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
           logs[0].actor.displayName.should.be.eql('Bob');
 
-          logs[0].details.submission.should.be.a.Submission();
-          logs[0].details.submission.xmlFormId.should.be.eql('updateEntity');
-          logs[0].details.submission.currentVersion.instanceName.should.be.eql('one');
-          logs[0].details.submission.currentVersion.submitter.displayName.should.be.eql('Bob');
-          logs[0].details.sourceEvent.should.be.an.Audit();
-          logs[0].details.sourceEvent.actor.displayName.should.be.eql('Bob');
-          logs[0].details.sourceEvent.loggedAt.should.be.isoDate();
-          logs[0].details.sourceEvent.action.should.be.eql('submission.create');
+          logs[0].details.source.submission.should.be.a.Submission();
+          logs[0].details.source.submission.xmlFormId.should.be.eql('updateEntity');
+          logs[0].details.source.submission.currentVersion.instanceName.should.be.eql('one');
+          logs[0].details.source.submission.currentVersion.submitter.displayName.should.be.eql('Bob');
+          logs[0].details.source.event.should.be.an.Audit();
+          logs[0].details.source.event.actor.displayName.should.be.eql('Bob');
+          logs[0].details.source.event.loggedAt.should.be.isoDate();
+          logs[0].details.source.event.action.should.be.eql('submission.create');
 
           logs[1].should.be.an.Audit();
           logs[1].action.should.be.eql('entity.update.version');
           logs[1].details.entity.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
           logs[1].actor.displayName.should.be.eql('Bob');
+          logs[1].details.source.should.be.eql({});
 
           logs[2].should.be.an.Audit();
           logs[2].action.should.be.eql('entity.create');
           logs[2].actor.displayName.should.be.eql('Alice');
 
-          logs[2].details.sourceEvent.should.be.an.Audit();
-          logs[2].details.sourceEvent.actor.displayName.should.be.eql('Alice');
-          logs[2].details.sourceEvent.loggedAt.should.be.isoDate();
-          logs[2].details.sourceEvent.action.should.be.eql('submission.update');
+          logs[2].details.source.event.should.be.an.Audit();
+          logs[2].details.source.event.actor.displayName.should.be.eql('Alice');
+          logs[2].details.source.event.loggedAt.should.be.isoDate();
+          logs[2].details.source.event.action.should.be.eql('submission.update');
 
-          logs[2].details.submission.should.be.a.Submission();
-          logs[2].details.submission.xmlFormId.should.be.eql('simpleEntity');
-          logs[2].details.submission.currentVersion.instanceName.should.be.eql('one');
-          logs[2].details.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
+          logs[2].details.source.submission.should.be.a.Submission();
+          logs[2].details.source.submission.xmlFormId.should.be.eql('simpleEntity');
+          logs[2].details.source.submission.currentVersion.instanceName.should.be.eql('one');
+          logs[2].details.source.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
         });
     }));
 
@@ -917,92 +990,198 @@ describe('Entities API', () => {
           logs[0].action.should.be.eql('entity.create');
           logs[0].actor.displayName.should.be.eql('Alice');
 
-          logs[0].details.submission.should.be.a.Submission();
-          logs[0].details.submission.xmlFormId.should.be.eql('simpleEntity');
-          logs[0].details.submission.currentVersion.instanceName.should.be.eql('new instance name');
+          logs[0].details.source.submission.should.be.a.Submission();
+          logs[0].details.source.submission.xmlFormId.should.be.eql('simpleEntity');
+          logs[0].details.source.submission.currentVersion.instanceName.should.be.eql('new instance name');
         });
     }));
 
-    it('should return instanceId even when submission is deleted', testEntities(async (service, container) => {
-      const asAlice = await service.login('alice');
+    describe('entity source within an audit event', () => {
+      it('should not include submission or source event when entity created or updated via API', testService(async (service) => {
+        const asAlice = await service.login('alice');
 
-      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
-        .expect(200);
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
 
-      await container.Forms.purge(true);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
-        .expect(200)
-        .then(({ body: logs }) => {
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].details.source.should.eql({});
+          });
 
-          logs[0].should.be.an.Audit();
-          logs[0].action.should.be.eql('entity.create');
-          logs[0].actor.displayName.should.be.eql('Alice');
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+          .send({ label: 'two' })
+          .expect(200);
 
-          logs[0].details.sourceEvent.should.be.an.Audit();
-          logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
-          logs[0].details.sourceEvent.loggedAt.should.be.isoDate();
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].details.source.should.eql({});
+          });
+      }));
 
-          logs[0].details.should.not.have.property('submission');
+      it('should return source when entity created via submission approval', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
 
-          logs[0].details.submissionCreate.details.instanceId.should.be.eql('one');
-          logs[0].details.submissionCreate.actor.displayName.should.be.eql('Alice');
-          logs[0].details.submissionCreate.loggedAt.should.be.isoDate();
-        });
-    }));
+        // testEntities creates an entity on submission approval
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].details.source.submission.should.be.a.Submission();
+            logs[0].details.source.submission.instanceId.should.be.eql('one');
+            logs[0].details.source.submission.xmlFormId.should.be.eql('simpleEntity');
+            logs[0].details.source.submission.currentVersion.instanceName.should.be.eql('one');
 
-    it('should return instanceId even when form is deleted', testEntities(async (service) => {
-      const asAlice = await service.login('alice');
+            logs[0].details.source.event.should.be.an.Audit();
+            logs[0].details.source.event.actor.displayName.should.be.eql('Alice');
+            logs[0].details.source.event.action.should.be.eql('submission.update');
+          });
+      }));
 
-      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
-        .expect(200);
+      it('should return source when entity created via submission creation', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
-        .expect(200)
-        .then(({ body: logs }) => {
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
 
-          logs[0].should.be.an.Audit();
-          logs[0].action.should.be.eql('entity.create');
-          logs[0].actor.displayName.should.be.eql('Alice');
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
 
-          logs[0].details.sourceEvent.should.be.an.Audit();
-          logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
-          logs[0].details.sourceEvent.loggedAt.should.be.isoDate();
+        await exhaust(container);
 
-          logs[0].details.should.not.have.property('submission');
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].details.source.submission.should.be.a.Submission();
+            logs[0].details.source.submission.instanceId.should.be.eql('one');
+            logs[0].details.source.submission.xmlFormId.should.be.eql('simpleEntity');
+            logs[0].details.source.submission.currentVersion.instanceName.should.be.eql('one');
 
-          logs[0].details.submissionCreate.details.instanceId.should.be.eql('one');
-          logs[0].details.submissionCreate.actor.displayName.should.be.eql('Alice');
-          logs[0].details.submissionCreate.loggedAt.should.be.isoDate();
-        });
-    }));
+            logs[0].details.source.event.should.be.an.Audit();
+            logs[0].details.source.event.actor.displayName.should.be.eql('Alice');
+            logs[0].details.source.event.action.should.be.eql('submission.create');
+          });
+      }));
 
-    // It's not possible to purge audit logs via API.
-    // However System Administrators can purge/archive audit logs via SQL
-    // to save disk space and improve performance
-    it('should return entity audits even when submission and its logs are deleted', testEntities(async (service, container) => {
-      const asAlice = await service.login('alice');
+      it('should return source when entity updated via submission', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
 
-      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
-        .expect(200);
+        // testEntityUpdates does the following: creates dataset, creates update form. test needs to submit update.
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
 
-      await container.Forms.purge(true);
+        await exhaust(container);
 
-      await container.run(sql`DELETE FROM audits WHERE action like 'submission%'`);
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].details.source.submission.should.be.a.Submission();
+            logs[0].details.source.submission.instanceId.should.be.eql('one');
+            logs[0].details.source.submission.xmlFormId.should.be.eql('updateEntity');
+            logs[0].details.source.submission.currentVersion.instanceName.should.be.eql('one');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
-        .expect(200)
-        .then(({ body: logs }) => {
+            logs[0].details.source.event.should.be.an.Audit();
+            logs[0].details.source.event.actor.displayName.should.be.eql('Alice');
+            logs[0].details.source.event.action.should.be.eql('submission.create');
+          });
+      }));
 
-          logs[0].should.be.an.Audit();
-          logs[0].action.should.be.eql('entity.create');
-          logs[0].actor.displayName.should.be.eql('Alice');
+      it('should return instanceId even when submission is deleted', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
 
-          logs[0].details.should.not.have.property('approval');
-          logs[0].details.should.not.have.property('submission');
-          logs[0].details.should.not.have.property('submissionCreate');
-        });
-    }));
+        await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+          .expect(200);
+
+        await container.Forms.purge(true);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].should.be.an.Audit();
+            logs[0].action.should.be.eql('entity.create');
+            logs[0].actor.displayName.should.be.eql('Alice');
+
+            logs[0].details.source.event.should.be.an.Audit();
+            logs[0].details.source.event.actor.displayName.should.be.eql('Alice');
+            logs[0].details.source.event.loggedAt.should.be.isoDate();
+
+            logs[0].details.source.submission.instanceId.should.be.eql('one');
+            logs[0].details.source.submission.submitter.displayName.should.be.eql('Alice');
+            logs[0].details.source.submission.createdAt.should.be.isoDate();
+
+            // submission is only a stub so it shouldn't have currentVersion
+            logs[0].details.source.submission.should.not.have.property('currentVersion');
+          });
+      }));
+
+      it('should return instanceId even when form is deleted', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].should.be.an.Audit();
+            logs[0].action.should.be.eql('entity.create');
+            logs[0].actor.displayName.should.be.eql('Alice');
+
+            logs[0].details.source.event.should.be.an.Audit();
+            logs[0].details.source.event.actor.displayName.should.be.eql('Alice');
+            logs[0].details.source.event.loggedAt.should.be.isoDate();
+
+            logs[0].details.source.submission.instanceId.should.be.eql('one');
+            logs[0].details.source.submission.submitter.displayName.should.be.eql('Alice');
+            logs[0].details.source.submission.createdAt.should.be.isoDate();
+
+            // submission is only a stub so it doesn't have things like instanceName or currentVersion
+            logs[0].details.source.submission.should.not.have.property('instanceName');
+            logs[0].details.source.submission.should.not.have.property('currentVersion');
+          });
+      }));
+
+      // It's not possible to purge audit logs via API.
+      // However System Administrators can purge/archive audit logs via SQL
+      // to save disk space and improve performance
+      it('should return entity audits even when submission and its logs are deleted', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+          .expect(200);
+
+        await container.Forms.purge(true);
+
+        await container.run(sql`DELETE FROM audits WHERE action like 'submission%'`);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+
+            logs[0].should.be.an.Audit();
+            logs[0].action.should.be.eql('entity.create');
+            logs[0].actor.displayName.should.be.eql('Alice');
+
+            logs[0].details.should.not.have.property('approval');
+            logs[0].details.should.not.have.property('submission');
+            logs[0].details.should.not.have.property('submissionCreate');
+          });
+      }));
+    });
 
     it('should return right approval details when we have multiple approvals', testService(async (service, container) => {
       const asAlice = await service.login('alice');
@@ -1061,15 +1240,15 @@ describe('Entities API', () => {
           logs[0].action.should.be.eql('entity.create');
           logs[0].actor.displayName.should.be.eql('Alice');
 
-          logs[0].details.sourceEvent.should.be.an.Audit();
-          logs[0].details.sourceEvent.actor.displayName.should.be.eql('Alice');
-          logs[0].details.sourceEvent.loggedAt.should.be.isoDate();
-          logs[0].details.sourceEvent.notes.should.be.eql('create entity'); // this confirms that it's the second approval
+          logs[0].details.source.event.should.be.an.Audit();
+          logs[0].details.source.event.actor.displayName.should.be.eql('Alice');
+          logs[0].details.source.event.loggedAt.should.be.isoDate();
+          logs[0].details.source.event.notes.should.be.eql('create entity'); // this confirms that it's the second approval
 
-          logs[0].details.submission.should.be.a.Submission();
-          logs[0].details.submission.xmlFormId.should.be.eql('simpleEntity');
-          logs[0].details.submission.currentVersion.instanceName.should.be.eql('one');
-          logs[0].details.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
+          logs[0].details.source.submission.should.be.a.Submission();
+          logs[0].details.source.submission.xmlFormId.should.be.eql('simpleEntity');
+          logs[0].details.source.submission.currentVersion.instanceName.should.be.eql('one');
+          logs[0].details.source.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
         });
 
     }));
@@ -1154,6 +1333,36 @@ describe('Entities API', () => {
         .then(({ body: person }) => {
           person.should.be.an.Entity();
           person.uuid.should.equal('12345678-1234-4123-8234-111111111aaa');
+          person.creatorId.should.equal(5);
+          person.should.have.property('currentVersion').which.is.an.EntityDef();
+          person.currentVersion.should.have.property('label').which.equals('Johnny Doe');
+          person.currentVersion.should.have.property('data').which.is.eql({
+            first_name: 'Johnny',
+            age: '22'
+          });
+          person.currentVersion.should.have.property('dataReceived').which.is.eql({
+            first_name: 'Johnny',
+            age: '22',
+            label: 'Johnny Doe'
+          });
+        });
+    }));
+
+    it('should generate uuid if one is not provided', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          label: 'Johnny Doe',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(200)
+        .then(({ body: person }) => {
+          person.should.be.an.Entity();
+          person.uuid.should.be.a.uuid();
           person.creatorId.should.equal(5);
           person.should.have.property('currentVersion').which.is.an.EntityDef();
           person.currentVersion.should.have.property('label').which.equals('Johnny Doe');
@@ -1876,7 +2085,7 @@ describe('Entities API', () => {
         .expect(404);
     }));
 
-    it('should reject if the user cannot read', testEntities(async (service) => {
+    it('should reject if the user cannot delete', testEntities(async (service) => {
       const asChelsea = await service.login('chelsea');
 
       await asChelsea.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
@@ -1918,6 +2127,669 @@ describe('Entities API', () => {
 
   });
 
+  // Bulk API operations
+  describe('POST /datasets/:name/entities (bulk creation)', () => {
+    // Tests that one would expect to find here are found above because this is additional
+    // functionality of an existing endpoint:
+    // - should return notfound if the dataset does not exist
+    // - should reject if the user cannot write
+    // - should reject creating new entity if dataset not yet published
+
+    it('should reject malformed entity object json', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ entities: [{ broken: 'json' }] })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.31);
+          body.message.should.equal('Expected parameters: (label, uuid, data). Got (broken).');
+        });
+    }));
+
+    it('should reject malformed contents of entity array', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ entities: ['1', '2', '3'] })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.31);
+          body.message.should.equal('Expected parameters: (label, uuid, data). Got (0).');
+        });
+    }));
+
+    it('should reject malformed entities array', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ entities: 'not an array' })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.31);
+          body.message.should.equal('Expected parameters: (entities: [...]). Got (not an array).');
+        });
+    }));
+
+    it('should reject empty entities array', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ entities: [] })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.31);
+          body.message.should.equal('Expected parameters: (entities: [...]). Got (empty array).');
+        });
+    }));
+
+    it('should create Entities in bulk', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .then(({ body }) => {
+          body.length.should.equal(0);
+        });
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people.csv',
+            size: 100,
+          },
+          entities: [
+            {
+              uuid: '12345678-1234-4123-8234-111111111aaa',
+              label: 'Johnny Doe',
+              data: {
+                first_name: 'Johnny',
+                age: '22'
+              }
+            },
+            {
+              uuid: '12345678-1234-4123-8234-111111111bbb',
+              label: 'Alice',
+              data: {
+                first_name: 'Alice',
+                age: '44'
+              }
+            },
+          ]
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
+
+      // Entity list has more entities!
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .then(({ body }) => {
+          body.length.should.equal(2);
+          body[0].uuid.should.equal('12345678-1234-4123-8234-111111111bbb');
+          body[0].currentVersion.label.should.equal('Alice');
+          body[1].uuid.should.equal('12345678-1234-4123-8234-111111111aaa');
+          body[1].currentVersion.label.should.equal('Johnny Doe');
+        });
+
+      // Check data and dataRecieved of each entity
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa')
+        .then(({ body }) => {
+          body.currentVersion.data.should.eql({ age: '22', first_name: 'Johnny' });
+          body.currentVersion.dataReceived.should.eql({ age: '22', label: 'Johnny Doe', first_name: 'Johnny' });
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111bbb')
+        .then(({ body }) => {
+          body.currentVersion.data.should.eql({ age: '44', first_name: 'Alice' });
+          body.currentVersion.dataReceived.should.eql({ age: '44', label: 'Alice', first_name: 'Alice' });
+        });
+
+      // Most recent event IS bulk create
+      await asAlice.get('/v1/audits')
+        .then(({ body }) => {
+          body[0].action.should.equal('entity.bulk.create');
+          // the main item stored in the event details is a reference to the entity source id.
+          body[0].details.should.have.property('sourceId');
+        });
+    }));
+
+
+    it('should generate uuids for entities when no uuid is provided', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .then(({ body }) => {
+          body.length.should.equal(0);
+        });
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people.csv',
+            size: 100,
+          },
+          entities: [
+            {
+              uuid: '12345678-1234-4123-8234-111111111aaa',
+              label: 'Johnny Doe',
+              data: {
+                first_name: 'Johnny',
+                age: '22'
+              }
+            },
+            {
+              label: 'Alice',
+              data: {
+                first_name: 'Alice',
+                age: '44'
+              }
+            },
+          ]
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
+
+      // Used provided UUID and generated other UUID
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .then(({ body }) => {
+          body[0].uuid.should.be.a.uuid();
+          body[1].uuid.should.equal('12345678-1234-4123-8234-111111111aaa');
+        });
+    }));
+
+    describe('bulk create errors', () => {
+      it('should not create any entities if one is invalid (missing label)', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-111111111aaa',
+                label: '', // label cannot be empty
+                data: {
+                  first_name: 'Johnny',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-1234-4123-8234-111111111bbb',
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.8);
+            body.message.should.equal('Unexpected label value (empty string); Label cannot be blank.');
+          });
+
+        // Entity list is still empty
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(0);
+          });
+
+        // Most recent event is not a bulk create event
+        await asAlice.get('/v1/audits')
+          .then(({ body }) => {
+            body[0].action.should.not.equal('entity.bulk.create');
+          });
+      }));
+
+      it('should not create any entities if one is invalid (invalid property)', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-111111111aaa',
+                label: 'John Doe',
+                data: {
+                  extra_property_not_in_dataset: 'Not Good',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-1234-4123-8234-111111111bbb',
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.28);
+            body.message.should.equal('The entity is invalid. You specified the dataset property [extra_property_not_in_dataset] which does not exist.');
+          });
+
+        // Entity list is still empty
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(0);
+          });
+
+        // Most recent event is not a bulk create event
+        await asAlice.get('/v1/audits')
+          .then(({ body }) => {
+            body[0].action.should.not.equal('entity.bulk.create');
+          });
+      }));
+
+      it('should not create any entities if one is invalid (invalid UUID)', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-111111111aaa',
+                label: 'John Doe',
+                data: {
+                  first_name: 'John',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-not-real-uuid', // invalid uuid
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.11);
+            body.message.should.equal('Invalid input data type: expected (uuid) to be (valid version 4 UUID)');
+          });
+
+        // Entity list is still empty
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(0);
+          });
+
+        // Most recent event is not a bulk create event
+        await asAlice.get('/v1/audits')
+          .then(({ body }) => {
+            body[0].action.should.not.equal('entity.bulk.create');
+          });
+      }));
+
+      it('should not create any entities there is a UUID collision', testServiceFullTrx(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc', // collision
+            label: 'John Doe',
+            data: {
+              first_name: 'John',
+              age: '22'
+            }
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(1);
+          });
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-123456789abc', // collision
+                label: 'John Doe',
+                data: {
+                  first_name: 'John',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-1234-4123-8234-111111111bbb',
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.3);
+            body.message.should.equal('A resource already exists with uuid value(s) of 12345678-1234-4123-8234-123456789abc.');
+          });
+
+        // Entity list is still same length as before
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(1); // same as before
+          });
+
+        // Most recent event is not a bulk create event
+        await asAlice.get('/v1/audits')
+          .then(({ body }) => {
+            body[0].action.should.not.equal('entity.bulk.create');
+          });
+      }));
+    });
+
+    describe('entity source when created through bulk append', () => {
+      it('should throw an error if no source is provided', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            entities: [{
+              label: 'Alice',
+              data: { first_name: 'Alice' }
+            }]
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.2);
+            body.message.should.equal('Required parameter source missing.');
+          });
+      }));
+
+      it('should throw an error if source name is missing', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {},
+            entities: [{
+              label: 'Alice',
+              data: { first_name: 'Alice' }
+            }]
+          })
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.2);
+            body.message.should.equal('Required parameter source.name missing.');
+          });
+      }));
+
+      it('should save source details in entity version source', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-111111111aaa',
+                label: 'Alice',
+                data: { first_name: 'Alice' }
+              },
+              {
+                label: 'Emily',
+                data: { first_name: 'Emily' }
+              },
+              {
+                label: 'Jane',
+                data: { first_name: 'Jane' }
+              }
+            ]
+          })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/versions')
+          .then(({ body: versions }) => {
+            versions[0].source.should.eql({ name: 'people.csv', size: 100, count: 3, userAgent: 'central/tests' });
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/audits')
+          .then(({ body: logs }) => {
+            logs[0].details.source.should.eql({ name: 'people.csv', size: 100, count: 3, userAgent: 'central/tests' });
+          });
+      }));
+
+      it('should create entities that share the same source', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-111111111aaa',
+                label: 'Johnny Doe',
+                data: {
+                  first_name: 'Johnny',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-1234-4123-8234-111111111bbb',
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(200);
+
+        const aaaSource = await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/versions')
+          .then(({ body: versions }) => versions[0].source);
+
+        aaaSource.should.eql({ name: 'people.csv', size: 100, count: 2, userAgent: null });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111bbb/versions')
+          .then(({ body: versions }) => {
+            versions[0].source.should.eql(aaaSource);
+          });
+      }));
+    });
+
+    describe('entity audit events when created through bulk append', () => {
+      it('should return bulk create event in the audit log for an entity', testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-111111111aaa',
+                label: 'Johnny Doe',
+                data: {
+                  first_name: 'Johnny',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-1234-4123-8234-111111111bbb',
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa?force=true')
+          .send({ data: { age: '33' } })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/audits')
+          .then(({ body: logs }) => {
+            // update event
+            logs[0].action.should.equal('entity.update.version');
+            logs[0].details.source.should.eql({});
+            logs[0].details.entity.should.eql({ uuid: '12345678-1234-4123-8234-111111111aaa', dataset: 'people' });
+
+            // bulk create event
+            logs[1].action.should.equal('entity.bulk.create');
+            logs[1].details.source.should.eql({ name: 'people.csv', size: 100, count: 2, userAgent: 'central/tests' });
+
+            logs.length.should.equal(2);
+          });
+      }));
+
+      // this test is relevant to bulk events because the audit query is shared
+      it('should fetch the correct events for a conflict resolution (no new version)', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // second version
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+          .send({ data: { age: '12' } })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // third version: hard conflict - all properties are changed
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // resolve conflict while simultaneously making new version
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&force=true')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+          .expect(200)
+          .then(({ body: versions }) => {
+            versions.length.should.equal(3);
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs.length.should.equal(4);
+            logs.map(e => e.action).should.eql([
+              'entity.update.resolve',
+              'entity.update.version',
+              'entity.update.version',
+              'entity.create'
+            ]);
+            logs[0].details.source.should.have.property('event');
+            //event and source of resolve seems to be the submission create event of that def/version when it should probably be null (api event that didnt create a new version)
+          });
+      }));
+
+      // this test is relevant to bulk events because the audit query is shared
+      it('should fetch the correct events for a conflict resolution that does add a new version', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // second version
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+          .send({ data: { age: '12' } })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // third version: hard conflict - all properties are changed
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        // resolve conflict without making new version
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?resolve=true&force=true')
+          .send({ data: { age: '28' } })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+          .expect(200)
+          .then(({ body: versions }) => {
+            versions.length.should.equal(4);
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs.length.should.equal(5);
+            logs.map(e => e.action).should.eql([
+              'entity.update.resolve',
+              'entity.update.version',
+              'entity.update.version',
+              'entity.update.version',
+              'entity.create'
+            ]);
+            logs[0].details.source.should.not.have.property('event');
+            logs[0].details.source.should.eql({});
+            logs[0].details.entity.should.eql({ uuid: '12345678-1234-4123-8234-123456789abc', dataset: 'people' });
+
+            logs[1].details.source.should.not.have.property('event');
+            logs[1].details.source.should.eql({});
+            logs[1].details.entity.should.eql({ uuid: '12345678-1234-4123-8234-123456789abc', dataset: 'people' });
+
+            logs[0].details.entityId.should.eql(logs[1].details.entityId);
+            logs[0].details.entityDefId.should.eql(logs[1].details.entityDefId);
+            // update and resolve are technically the same event and the source of both are empty because it was an API call
+          });
+      }));
+    });
+  });
+
+  // Special scenarios
   describe('create new entities from submissions', () => {
     // More success and error cases in test/integration/worker/entity.js
     it('should create entity', testEntityUpdates(async (service, container) => {
@@ -1960,6 +2832,27 @@ describe('Entities API', () => {
           logs[0].action.should.be.eql('entity.error');
           logs[0].details.problem.problemCode.should.equal(400.2);
           logs[0].details.errorMessage.should.equal('Required parameter label missing.');
+        });
+    }));
+
+    it('should not create entity if the uuid is missing in the submission', testDataset(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one
+          .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id=""'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs[0].should.be.an.Audit();
+          logs[0].action.should.be.eql('entity.error');
+          logs[0].details.problem.problemCode.should.equal(400.2);
+          logs[0].details.errorMessage.should.equal('Required parameter uuid missing.');
         });
     }));
   });
@@ -2342,6 +3235,53 @@ describe('Entities API', () => {
           .expect(200)
           .then(({ body: logs }) => {
             logs[0].action.should.be.eql('entity.error');
+            logs[1].action.should.be.eql('submission.create');
+          });
+      }));
+
+      it('should create entity when both create and update are true but baseVersion is empty', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('id="12345678-1234-4123-8234-123456789abc"', 'id="12345678-1234-4123-8234-123456789ddd"')
+            .replace('update="1"', 'create="1" update="1"')
+            .replace('baseVersion="1"', 'baseVersion=""'))
+          .expect(200);
+
+        await exhaust(container);
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body: people }) => {
+            // existing entity + new entity
+            people.length.should.be.eql(2);
+          });
+      }));
+
+      it('should log error when both create and update are true, baseVersion is empty but entity uuid exists', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // This submission uses an existing entity uuid
+        // has create and update both set to true
+        // and is missing a baseVersion.
+        // This will attempt to update but fail because it finds no
+        // baseVersion to parse in the update case
+        // and will then attempt to create but fail because
+        // the entity uuid does actually exist.
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('update="1"', 'create="1" update="1"')
+            .replace('baseVersion="1"', 'baseVersion=""'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('entity.error');
+            logs[0].details.problem.problemCode.should.be.eql(409.3);
+            logs[0].details.errorMessage.should.be.eql('A resource already exists with uuid value(s) of 12345678-1234-4123-8234-123456789abc.');
             logs[1].action.should.be.eql('submission.create');
           });
       }));
@@ -2865,6 +3805,48 @@ describe('Entities API', () => {
         },
         errorMessage: 'The submission attempts an entity create, but the form does not permit that action. The form permits the following actions: update.'
       });
+    }));
+  });
+
+
+  describe('increased bodyParser json request limit for bulk entity creation', () => {
+    it('should reject >250kb requests to non-entity endpoint', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // 250kb limit = 256000 bytes (1024 bytes per kb)
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'x'.repeat(256001) })
+        .expect(400)
+        .then(({ body }) => {
+          body.should.eql({
+            code: 400.36,
+            message: 'Request body too large.',
+          });
+        });
+    }));
+
+    it('should allow >250kb requests to bulk entity endpoint', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // 250kb limit = 256000 bytes (1024 bytes per kb)
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ source: { name: 'file.csv' }, entities: [{ label: 'x'.repeat(256001) }] })
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
+    }));
+
+    it('should allow >250kb requests to bulk entity endpoint with query parameters', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // query parameters are not currently used in this endpoint
+      await asAlice.post('/v1/projects/1/datasets/people/entities?foo=bar')
+        .send({ source: { name: 'file.csv' }, entities: [{ label: 'x'.repeat(256001) }] })
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
     }));
   });
 });

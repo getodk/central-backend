@@ -1,8 +1,9 @@
 const appRoot = require('app-root-path');
 const { User, Actor, Project } = require(appRoot + '/lib/model/frames');
+const { hashPassword } = require(appRoot + '/lib/util/crypto');
 const { mapSequential } = require(appRoot + '/test/util/util');
 
-module.exports = ({ Assignments, Users, Projects, bcrypt }) => {
+module.exports = ({ Assignments, Users, Projects }) => {
   const proj = new Project({ name: 'Default Project' });
 
   const users = [
@@ -13,7 +14,7 @@ module.exports = ({ Assignments, Users, Projects, bcrypt }) => {
 
   // hash the passwords, create our three test users, then add grant Alice and Bob their rights.
   const withPasswords = Promise.all(users.map((user) =>
-    bcrypt.hash(user.password).then((password) => user.with({ password }))));
+    hashPassword(user.password).then((password) => user.with({ password }))));
 
   return Projects.create(proj)
     .then(() => withPasswords)
