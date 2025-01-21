@@ -42,6 +42,7 @@ jobs:
     - uses: ./.github/actions/install-postgres-client
       with:
         postgres-version: 14
+    - run: psql -c 'ALTER USER jubilant CREATEDB' postgresql://postgres:odktest@localhost/postgres
     - name: Backup/restore tests
       timeout-minutes: 10
       run: ./test/e2e/standard/backup-restore.sh
