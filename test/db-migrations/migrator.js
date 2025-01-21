@@ -15,8 +15,8 @@
 const fs = require('node:fs');
 const { execSync } = require('node:child_process');
 
-const legacy   = createMigrator('./lib/model/migrations',           './test/db-migrations/.holding-pen/legacy');
-const postKnex = createMigrator('./lib/model/migrations-post-knex', './test/db-migrations/.holding-pen/post-knex', legacy);
+const legacy   = createMigrator('./lib/model/migrations',           './test/db-migrations/.holding-pen/legacy');            // eslint-disable-line no-use-before-define, no-multi-spaces
+const postKnex = createMigrator('./lib/model/migrations-post-knex', './test/db-migrations/.holding-pen/post-knex', legacy); // eslint-disable-line no-use-before-define
 
 module.exports = { legacy, postKnex };
 
@@ -30,11 +30,11 @@ function createMigrator(migrationsDir, holdingPen, previousMigrator) {
   let lastRunIdx = -1;
 
   return {
-    exists,
-    hasRun,
-    runBefore,
-    runIncluding,
-    restoreMigrations,
+    exists,            // eslint-disable-line no-use-before-define, no-multi-spaces
+    hasRun,            // eslint-disable-line no-use-before-define, no-multi-spaces
+    runBefore,         // eslint-disable-line no-use-before-define, no-multi-spaces
+    runIncluding,      // eslint-disable-line no-use-before-define, no-multi-spaces
+    restoreMigrations, // eslint-disable-line no-use-before-define
   };
 
   function runBefore(migrationName) {
@@ -47,7 +47,7 @@ function createMigrator(migrationsDir, holdingPen, previousMigrator) {
   }
 
   function runIncluding(lastMigrationToRun) {
-    if(previousMigrator) previousMigrator.restoreMigrations();
+    if (previousMigrator) previousMigrator.restoreMigrations();
 
     const finalIdx = getIndex(lastMigrationToRun); // eslint-disable-line no-use-before-define
 
@@ -101,7 +101,6 @@ function createMigrator(migrationsDir, holdingPen, previousMigrator) {
   }
 
   function exists(migrationName) {
-    console.log('migrator.exists()', migrationName, { allMigrations });
     try {
       getIndex(migrationName);
       return true;
