@@ -27,7 +27,6 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-    - run: pg_dump --version
     - run: sudo apt-get update
     - run: sudo apt-get --yes remove --purge 'postgres*'
 
@@ -38,9 +37,6 @@ jobs:
 
     - name: Check pg_dump version
       run: pg_dump --version && [[ "$(pg_dump --version | cut -d' ' -f3)" = 14.* ]]
-
-#    - name: Grant create database permission to jubilant user
-#      run: psql -c 'ALTER USER jubilant CREATEDB' postgresql://postgres:odktest@localhost/postgres
 
     - uses: actions/checkout@v4
     - name: Set node version
