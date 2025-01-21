@@ -69,6 +69,11 @@ function assertTitle(page, expectedTitle) {
 }
 
 async function fillLoginForm(page, { username, password }) {
+  // Wait for autofocus.  On webkit, it looks like `autofocus` on the username
+  // (`login`) field can sometimes steal focus after the `password` field
+  // locator has been successfully executed.
+  await sleep(1);
+
   await page.locator('input[name=login]').fill('playwright-' + username);
   await page.locator('input[name=password]').fill(password);
   await page.locator('button[type=submit]').click();
@@ -79,5 +84,11 @@ function initTest({ browserName, page }, testInfo) {
   page.on('console', msg => {
     const level = msg.type().toUpperCase();
     console.log(level, `[${browserName}:${testInfo.title}]`, msg.text());
+  });
+}
+
+async function sleep(seconds) {
+  return new Promise(resolve => {
+    setTimeout(resolve, seconds * 1000);
   });
 }
