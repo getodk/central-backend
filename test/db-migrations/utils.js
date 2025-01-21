@@ -2,13 +2,13 @@ const assert = require('node:assert/strict');
 const _ = require('lodash');
 const migrator = require('./migrator');
 
-function _describeLegacyMigration(describeFn, migrationName, fn) {
+function _describeMigration(migrator, describeFn, migrationName, fn) { // eslint-disable-line no-shadow
   assert.strictEqual(arguments.length, 3, 'Incorrect argument count.');
 
   assert.strictEqual(typeof describeFn, 'function');
 
-  assert.ok(migrator.legacy.exists(migrationName), `Migration '${migrationName}' does not exist.`);
-  assert.ok(!migrator.legacy.hasRun(migrationName), `Migration '${migrationName}' has already been run.`);
+  assert.ok(migrator.exists(migrationName), `Migration '${migrationName}' does not exist.`);
+  assert.ok(!migrator.hasRun(migrationName), `Migration '${migrationName}' has already been run.`);
 
   assert.strictEqual(typeof fn, 'function');
   assert.strictEqual(fn.length, 1);
@@ -18,51 +18,25 @@ function _describeLegacyMigration(describeFn, migrationName, fn) {
     return () => {
       if (alreadyRun) throw new Error('Migration has already run!  Check your test structure.');
       alreadyRun = true;
-      migrator.legacy.runIncluding(migrationName);
+      migrator.runIncluding(migrationName);
     };
   })();
 
   return describeFn(`database migration: ${migrationName}`, () => {
     before(() => {
-      migrator.legacy.runBefore(migrationName);
+      migrator.runBefore(migrationName);
     });
     return fn({ runMigrationBeingTested });
   });
 }
-function describeLegacyMigration(...args) { return _describeLegacyMigration(describe, ...args); }
-describeLegacyMigration.only =  (...args) =>       _describeLegacyMigration(describe.only, ...args); // eslint-disable-line no-only-tests/no-only-tests, no-multi-spaces
-describeLegacyMigration.skip =  (...args) =>       _describeLegacyMigration(describe.skip, ...args); // eslint-disable-line no-multi-spaces
 
-function _describeNewMigration(describeFn, migrationName, fn) {
-  assert.strictEqual(arguments.length, 3, 'Incorrect argument count.');
+function describeLegacyMigration(...args) { return _describeMigration(migrator.legacy,   describe, ...args); }    // eslint-disable-line no-multi-spaces
+describeLegacyMigration.only =  (...args) =>       _describeMigration(migrator.legacy,   describe.only, ...args); // eslint-disable-line no-only-tests/no-only-tests, no-multi-spaces
+describeLegacyMigration.skip =  (...args) =>       _describeMigration(migrator.legacy,   describe.skip, ...args); // eslint-disable-line no-multi-spaces
 
-  assert.strictEqual(typeof describeFn, 'function');
-
-  assert.ok(migrator.postKnex.exists(migrationName), `Migration '${migrationName}' does not exist.`);
-  assert.ok(!migrator.postKnex.hasRun(migrationName), `Migration '${migrationName}' has already been run.`);
-
-  assert.strictEqual(typeof fn, 'function');
-  assert.strictEqual(fn.length, 1);
-
-  const runMigrationBeingTested = (() => {
-    let alreadyRun;
-    return () => {
-      if (alreadyRun) throw new Error('Migration has already run!  Check your test structure.');
-      alreadyRun = true;
-      migrator.postKnex.runIncluding(migrationName);
-    };
-  })();
-
-  return describeFn(`database migration: ${migrationName}`, () => {
-    before(() => {
-      migrator.postKnex.runBefore(migrationName);
-    });
-    return fn({ runMigrationBeingTested });
-  });
-}
-function describeNewMigration(...args) { return _describeNewMigration(describe, ...args); }
-describeNewMigration.only =  (...args) =>       _describeNewMigration(describe.only, ...args); // eslint-disable-line no-only-tests/no-only-tests, no-multi-spaces
-describeNewMigration.skip =  (...args) =>       _describeNewMigration(describe.skip, ...args); // eslint-disable-line no-multi-spaces
+function    describeNewMigration(...args) { return _describeMigration(migrator.postKnex, describe, ...args); }    // eslint-disable-line no-multi-spaces
+describeNewMigration.only =     (...args) =>       _describeMigration(migrator.postKnex, describe.only, ...args); // eslint-disable-line no-only-tests/no-only-tests, no-multi-spaces
+describeNewMigration.skip =     (...args) =>       _describeMigration(migrator.postKnex, describe.skip, ...args); // eslint-disable-line no-multi-spaces
 
 async function assertIndexExists(tableName, expected) {
   if (arguments.length !== 2) throw new Error('Incorrect arg count.');
