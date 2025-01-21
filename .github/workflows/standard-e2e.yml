@@ -35,9 +35,10 @@ jobs:
         cache: 'npm'
     - run: npm ci
     - run: node lib/bin/create-docker-databases.js
-    #- name: E2E Test
-    #  timeout-minutes: 10
-    #  run: ./test/e2e/standard/run-tests.sh
+
+    - name: E2E Test
+      timeout-minutes: 10
+      run: ./test/e2e/standard/run-tests.sh
 
     - uses: ./.github/actions/install-postgres-client
       with:
