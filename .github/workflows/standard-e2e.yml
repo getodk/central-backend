@@ -39,7 +39,7 @@ jobs:
       timeout-minutes: 10
       run: ./test/e2e/standard/run-tests.sh
 
-    - name: Install postgres-client 14
+    - name: Install postgres-client v14
       run: >
         sudo apt-get update &&
         sudo apt-get --yes remove --purge 'postgres*' &&
