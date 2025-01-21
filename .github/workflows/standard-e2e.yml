@@ -46,3 +46,7 @@ jobs:
     - name: Backup/restore tests
       timeout-minutes: 10
       run: ./test/e2e/standard/backup-restore.sh
+
+    - name: Backend Logs
+      if: always()
+      run: "! [[ -f ./server.log ]] || cat ./server.log"
