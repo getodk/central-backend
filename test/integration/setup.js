@@ -12,7 +12,7 @@ const testData = require('../data/xml');
 
 // knex things.
 const config = require('config');
-const { connect } = require(appRoot + '/lib/model/migrate');
+const { knexConnect } = require(appRoot + '/lib/model/migrate');
 
 // slonik connection pool
 const { slonikPool } = require(appRoot + '/lib/external/slonik');
@@ -72,7 +72,7 @@ const populate = (container, [ head, ...tail ] = fixtures) =>
 // this hook won't run if `test-unit` is called, as this directory is skipped
 // in that case.
 const initialize = async () => {
-  const migrator = connect(config.get('test.database'));
+  const migrator = knexConnect(config.get('test.database'));
   const { log } = console;
   try {
     await migrator.raw('drop owned by current_user');
