@@ -647,6 +647,7 @@ describe('extracting and validating entities', () => {
       uuid: 'uuid',
       createdAt: 'createdAt',
       updatedAt: 'updatedAt',
+      deletedAt: 'deletedAt',
       conflict: 'hard',
       def: {
         label: 'label',
@@ -677,6 +678,7 @@ describe('extracting and validating entities', () => {
           creatorId: 'id',
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
+          deletedAt: 'deletedAt',
           updates: 0,
           version: 1,
           conflict: 'hard'
@@ -719,6 +721,7 @@ describe('extracting and validating entities', () => {
           creatorId: 'id',
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
+          deletedAt: 'deletedAt',
           updates: 0,
           version: 1,
           conflict: 'hard'
@@ -731,6 +734,7 @@ describe('extracting and validating entities', () => {
         uuid: 'uuid',
         createdAt: 'createdAt',
         updatedAt: 'updatedAt',
+        deletedAt: 'deletedAt',
         conflict: 'hard',
         def: {
           label: 'label',
@@ -755,6 +759,7 @@ describe('extracting and validating entities', () => {
           creatorId: 'id',
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
+          deletedAt: 'deletedAt',
           updates: 0,
           version: 1,
           conflict: 'hard'
@@ -777,6 +782,7 @@ describe('extracting and validating entities', () => {
           creatorId: 'id',
           creatorName: 'displayName',
           updatedAt: 'updatedAt',
+          deletedAt: 'deletedAt',
           updates: 0,
           version: 1,
           conflict: 'hard'
