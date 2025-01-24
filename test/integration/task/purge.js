@@ -7,7 +7,9 @@ const { purgeTask } = require(appRoot + '/lib/task/purge');
 
 // The basics of this task are tested here, including returning the message
 // of purged forms, but the full functionality is more thoroughly tested in
-// test/integration/other/form-purging.js and test/integration/other/submission-purging.js.
+// test/integration/other/form-purging.js,
+// test/integration/other/submission-purging.js and
+// test/integration/other/entities-purging.js
 
 const withDeleteChecks = container => {
   const confirm = {
@@ -41,7 +43,7 @@ const withDeleteChecks = container => {
 
 const testPurgeTask = fn => testTask(container => fn(withDeleteChecks(container)));
 
-describe('task: purge deleted resources (forms and submissions)', () => {
+describe('task: purge deleted resources (forms, submissions and entities)', () => {
   describe('forms', () => {
     describe('force flag', () => {
       it('should not purge recently deleted forms by default', testPurgeTask(({ confirm, Forms }) =>
@@ -239,13 +241,57 @@ describe('task: purge deleted resources (forms and submissions)', () => {
         })));
   });
 
+  describe('entities', () => {
+    it('should call entities purge if mode is specified as entities', testTask(() =>
+      purgeTask({ mode: 'entities' })
+        .then((message) => {
+          message.should.equal('Entities purged: 0');
+        })));
+
+    it('should call entities purge if entities uuid is specified', testTask(() =>
+      purgeTask({ entityUuid: 'abc', projectId: 1, datasetName: 'people' })
+        .then((message) => {
+          message.should.equal('Entities purged: 0');
+        })));
+
+    it('should call entities purge if dataset name is specified', testTask(() =>
+      purgeTask({ projectId: 1, datasetName: 'people' })
+        .then((message) => {
+          message.should.equal('Entities purged: 0');
+        })));
+
+    it('should complain if uuid specified without project and dataset', testTask(() =>
+      purgeTask({ entityUuid: 'abc' })
+        .then((message) => {
+          message.should.equal('Must specify projectId and datasetName to purge a specify entity.');
+        })));
+
+    it('should complain if uuid specified without project', testTask(() =>
+      purgeTask({ entityUuid: 'abc', datasetName: 'simple' })
+        .then((message) => {
+          message.should.equal('Must specify projectId and datasetName to purge a specify entity.');
+        })));
+
+    it('should complain if uuid specified without dataset', testTask(() =>
+      purgeTask({ entityUuid: 'abc', projectId: 1 })
+        .then((message) => {
+          message.should.equal('Must specify projectId and datasetName to purge a specify entity.');
+        })));
+
+    it('should complain if dataset specified without project', testTask(() =>
+      purgeTask({ datasetName: 'simple' })
+        .then((message) => {
+          message.should.equal('Must specify projectId to purge all entities of a dataset/entity-list.');
+        })));
+  });
+
   describe('all', () => {
     it('should purge both forms and submissions when neither mode is specified (not forced)', testTask(({ Forms }) =>
       Forms.getByProjectAndXmlFormId(1, 'simple')
         .then((form) => Forms.del(form.get())
           .then(() => purgeTask())
           .then((message) => {
-            message.should.equal('Forms purged: 0, Submissions purged: 0');
+            message.should.equal('Forms purged: 0, Submissions purged: 0, Entities purged: 0');
           }))));
 
     it('should purge both forms and submissions when neither mode is specified (forced)', testTask(({ Forms }) =>
@@ -253,7 +299,7 @@ describe('task: purge deleted resources (forms and submissions)', () => {
         .then((form) => Forms.del(form.get())
           .then(() => purgeTask({ force: true }))
           .then((message) => {
-            message.should.equal('Forms purged: 1, Submissions purged: 0');
+            message.should.equal('Forms purged: 1, Submissions purged: 0, Entities purged: 0');
           }))));
 
     it('should accept other mode and treat as "all"', testTask(({ Forms }) =>
@@ -261,7 +307,7 @@ describe('task: purge deleted resources (forms and submissions)', () => {
         .then((form) => Forms.del(form.get())
           .then(() => purgeTask({ force: true, mode: 'something_else' }))
           .then((message) => {
-            message.should.equal('Forms purged: 1, Submissions purged: 0');
+            message.should.equal('Forms purged: 1, Submissions purged: 0, Entities purged: 0');
           }))));
   });
 });
