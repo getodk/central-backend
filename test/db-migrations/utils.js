@@ -82,22 +82,22 @@ function assertRowsMatch(actualRows, expectedRows) {
 
   const remainingRows = [...actualRows];
   for (let i=0; i<expectedRows.length; ++i) { // eslint-disable-line no-plusplus
-    const x = expectedRows[i];
+    const expectedRow = expectedRows[i];
     let found = false;
     for (let j=0; j<remainingRows.length; ++j) { // eslint-disable-line no-plusplus
       const rr = remainingRows[j];
       try {
-        assertIncludes(rr, x); // eslint-disable-line no-use-before-define
+        assertIncludes(rr, expectedRow); // eslint-disable-line no-use-before-define
         remainingRows.splice(j, 1);
         found = true;
         break;
       } catch (err) { /* keep searching */ }
     }
     if (!found) {
-      const filteredRemainingRows = remainingRows.map(r => _.pick(r, Object.keys(x)));
+      const filteredRemainingRows = remainingRows.map(r => _.pick(r, Object.keys(expectedRow)));
       assert.fail(
         `Expected row ${i} not found:\njson=` +
-        JSON.stringify({ remainingRows, filteredRemainingRows, expectedRow: x }),
+        JSON.stringify({ remainingRows, filteredRemainingRows, expectedRow }),
       );
     }
   }
