@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
-const testData = require('../../data/xml');
+const testData = require(appRoot + '/test/data/xml');
 
 const createConflict = async (user, container) => {
   await user.post('/v1/projects/1/forms/simpleEntity/submissions')

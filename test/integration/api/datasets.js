@@ -8,7 +8,7 @@ const { getOrNotFound } = require('../../../lib/util/promise');
 const should = require('should');
 const { sql } = require('slonik');
 const { QueryOptions } = require('../../../lib/util/db');
-const { createConflict } = require('../fixtures/scenarios');
+const { createConflict } = require('../../util/scenarios');
 const { omit } = require('ramda');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
