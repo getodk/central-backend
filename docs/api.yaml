@@ -9283,8 +9283,6 @@ paths:
       description: Use this API to delete an Entity. With this API, Entity is soft-deleted,
         which means it is still in the database and you can retreive it by passing
         `?deleted=true` to [GET /projects/:id/datasets/:name/entities](/central-api-entity-management/#entities-metadata).
-        In the future, we will provide a way to restore deleted entities and purge
-        deleted entities.
       operationId: Deleting an Entity
       parameters:
       - name: projectId
