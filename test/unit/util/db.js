@@ -97,11 +97,11 @@ describe('util/db', () => {
     });
   });
 
-  describe('connectionObject', () => {
-    const { connectionObject } = util;
+  describe('knexConnection', () => {
+    const { knexConnection } = util;
 
     it('should return an object with the required options', () => {
-      const result = connectionObject({
+      const result = knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -116,7 +116,7 @@ describe('util/db', () => {
     });
 
     it('should include the port if one is specified', () => {
-      const result = connectionObject({
+      const result = knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -133,7 +133,7 @@ describe('util/db', () => {
     });
 
     it('should return the correct object if ssl is true', () => {
-      const result = connectionObject({
+      const result = knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -150,7 +150,7 @@ describe('util/db', () => {
     });
 
     it('should throw if ssl is false', () => {
-      const result = () => connectionObject({
+      const result = () => knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -161,7 +161,7 @@ describe('util/db', () => {
     });
 
     it('should throw if ssl is an object', () => {
-      const result = () => connectionObject({
+      const result = () => knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -172,7 +172,7 @@ describe('util/db', () => {
     });
 
     it('should allow (but ignore) maximumPoolSize', () => {
-      const result = connectionObject({
+      const result = knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -188,7 +188,7 @@ describe('util/db', () => {
     });
 
     it('should throw for an unsupported option', () => {
-      const result = () => connectionObject({
+      const result = () => knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -205,8 +205,7 @@ describe('util/db', () => {
     const T = Frame.define(table('frames'), 'x',  'y');
     const U = Frame.define(into('extra'), 'z');
     it('should generate fields', () => {
-      unjoiner(T, U)
-        .fields.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
+      sql`${unjoiner(T, U).fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
     });
 
     it('should unjoin data', () => {
@@ -219,7 +218,7 @@ describe('util/db', () => {
 
     it('should optionally unjoin optional data', () => {
       const unjoin = unjoiner(T, Option.of(U));
-      unjoin.fields.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
+      sql`${unjoin.fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
       unjoin({ 'frames!x': 3, 'frames!y': 4, z: 5 })
         .should.eql(new T({ x: 3, y: 4 }, { extra: Option.of(new U({ z: 5 })) }));
       unjoin({ 'frames!x': 3, 'frames!y': 4 })
@@ -239,7 +238,7 @@ describe('util/db', () => {
     it('should provide the appropriate arguments when not extended', () => {
       let run = false;
       extender(T)(U)((fields, extend, options, x, y, z) => {
-        fields.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y"`);
+        sql`${fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y"`);
         (sql`${extend|| true}`).should.eql(sql``);
         x.should.equal(2);
         y.should.equal(3);
@@ -252,7 +251,7 @@ describe('util/db', () => {
     it('should provide the appropriate arguments when extended', () => {
       let run = false;
       extender(T)(U)((fields, extend, options, x, y, z) => {
-        fields.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","a" as "a","b" as "b"`);
+        sql`${fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","a" as "a","b" as "b"`);
         (sql`${extend|| true}`).should.eql(sql`${true}`);
         x.should.equal(2);
         y.should.equal(3);
