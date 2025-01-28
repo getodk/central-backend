@@ -1,0 +1,6 @@
+{
+  "extends": "../../../.eslintrc.json",
+  "rules": {
+    "no-restricted-modules": [ "error", { "patterns": [ "../*" ] } ]
+  }
+}
