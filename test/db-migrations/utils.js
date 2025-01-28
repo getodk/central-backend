@@ -2,8 +2,8 @@ const assert = require('node:assert/strict');
 const _ = require('lodash');
 const migrator = require('./migrator');
 
-function _describeMigration(describeFn, migrationName, fn) {
-  assert.strictEqual(arguments.length, 3, 'Incorrect argument count.');
+function _describeMigration(migrator, describeFn, migrationName, fn) { // eslint-disable-line no-shadow
+  assert.strictEqual(arguments.length, 4, 'Incorrect argument count.');
 
   assert.strictEqual(typeof describeFn, 'function');
 
@@ -29,9 +29,14 @@ function _describeMigration(describeFn, migrationName, fn) {
     return fn({ runMigrationBeingTested });
   });
 }
-function describeMigration(...args) { return _describeMigration(describe, ...args); }
-describeMigration.only =  (...args) =>       _describeMigration(describe.only, ...args); // eslint-disable-line no-only-tests/no-only-tests, no-multi-spaces
-describeMigration.skip =  (...args) =>       _describeMigration(describe.skip, ...args); // eslint-disable-line no-multi-spaces
+
+function describeLegacyMigration(...args) { return _describeMigration(migrator.legacy,   describe, ...args); }    // eslint-disable-line no-multi-spaces
+describeLegacyMigration.only =  (...args) =>       _describeMigration(migrator.legacy,   describe.only, ...args); // eslint-disable-line no-only-tests/no-only-tests, no-multi-spaces
+describeLegacyMigration.skip =  (...args) =>       _describeMigration(migrator.legacy,   describe.skip, ...args); // eslint-disable-line no-multi-spaces
+
+function    describeNewMigration(...args) { return _describeMigration(migrator.postKnex, describe, ...args); }    // eslint-disable-line no-multi-spaces
+describeNewMigration.only =     (...args) =>       _describeMigration(migrator.postKnex, describe.only, ...args); // eslint-disable-line no-only-tests/no-only-tests, no-multi-spaces
+describeNewMigration.skip =     (...args) =>       _describeMigration(migrator.postKnex, describe.skip, ...args); // eslint-disable-line no-multi-spaces
 
 async function assertIndexExists(tableName, expected) {
   if (arguments.length !== 2) throw new Error('Incorrect arg count.');
@@ -115,9 +120,73 @@ function assertIncludes(actual, expected) {
   }
 }
 
+async function rowsExistFor(tableName, ...rows) {
+  if (!rows.length) throw new Error(`Attempted to insert 0 rows into table ${tableName}`);
+
+  assertAllHaveSameProps(rows); // eslint-disable-line no-use-before-define
+  const colNames = Object.keys(rows[0]);
+  if (!colNames.length) throw new Error(`Attempted to insert data with 0 defined columns`);
+
+  const table = sql.identifier([tableName]);
+  const cols = sql.join(colNames.map(k => sql.identifier([k])), sql`,`);
+
+  return db.query(
+    sql`
+      INSERT INTO ${table} (${cols})
+        SELECT ${cols}
+          FROM JSON_POPULATE_RECORDSET(NULL::${table}, ${JSON.stringify(rows)})
+    `,
+  );
+}
+
+async function assertTableContents(tableName, ...expected) {
+  const { rows: actual } = await db.query(sql`SELECT * FROM ${sql.identifier([tableName])}`);
+
+  assert.equal(
+    actual.length,
+    expected.length,
+    `Unexpected number of rows in table '${tableName}'.  ` +
+        `Expected ${expected.length} but got ${actual.length}.  ` +
+        `DB returned: ${JSON.stringify(actual, null, 2)}`,
+  );
+
+  const remainingRows = [ ...actual ];
+  for (let i=0; i<expected.length; ++i) { // eslint-disable-line no-plusplus
+    const x = expected[i];
+    let found = false;
+    for (let j=0; j<remainingRows.length; ++j) { // eslint-disable-line no-plusplus
+      const rr = remainingRows[j];
+      try {
+        assertIncludes(rr, x);
+        remainingRows.splice(j, 1);
+        found = true;
+        break;
+      } catch (err) { /* keep searching */ }
+    }
+    if (!found) {
+      const filteredRemainingRows = remainingRows.map(r => _.pick(r, Object.keys(x)));
+      assert.fail(`Expected row ${i} not found in table '${tableName}':\n        json=${JSON.stringify({ remainingRows, filteredRemainingRows, expectedRow: x })}`);
+    }
+  }
+}
+
+function assertAllHaveSameProps(list) {
+  if (list.length < 2) return;
+  const [ first, ...rest ] = list.map(Object.keys);
+
+  rest.forEach((v, i) => {
+    assert.deepEqual(v, first, `Row #${i+1} has different props to row #0.  All supplied rows must have the same props.`);
+  });
+}
+
 module.exports = {
   assertIndexExists,
+  assertTableContents,
   assertTableDoesNotExist,
   assertTableSchema,
-  describeMigration,
+
+  describeLegacyMigration,
+  describeNewMigration, // TODO rename to simply describeMigration
+
+  rowsExistFor,
 };

@@ -2,10 +2,10 @@ const { // eslint-disable-line object-curly-newline
   assertIndexExists,
   assertTableDoesNotExist,
   assertTableSchema,
-  describeMigration,
+  describeLegacyMigration,
 } = require('./utils'); // eslint-disable-line object-curly-newline
 
-describeMigration('20241008-01-add-user_preferences', ({ runMigrationBeingTested }) => {
+describeLegacyMigration('20241008-01-add-user_preferences', ({ runMigrationBeingTested }) => {
   before(async () => {
     await assertTableDoesNotExist('user_site_preferences');
     await assertTableDoesNotExist('user_project_preferences');
