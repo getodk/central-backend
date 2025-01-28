@@ -35,6 +35,21 @@ jobs:
         cache: 'npm'
     - run: npm ci
     - run: node lib/bin/create-docker-databases.js
+
     - name: E2E Test
       timeout-minutes: 10
       run: ./test/e2e/standard/run-tests.sh
+
+    - uses: ./.github/actions/install-postgres-client
+      with:
+        postgres-version: 14
+    - name: Grant postgres superuser role
+      # As per #1368, this role is required to create the pgrowlocks extension
+      run: psql -c 'ALTER ROLE jubilant SUPERUSER' postgresql://postgres:odktest@localhost/postgres
+    - name: Backup/restore tests
+      timeout-minutes: 10
+      run: ./test/e2e/standard/backup-restore.sh
+
+    - name: Backend Logs
+      if: always()
+      run: "! [[ -f ./server.log ]] || cat ./server.log"
