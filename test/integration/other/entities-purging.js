@@ -29,6 +29,23 @@ const createEntities = async (user, count, projectId, datasetName) => {
   return uuids;
 };
 
+const createBulkEntities = async (user, count, projectId, datasetName) => {
+  const entities = [];
+  const uuids = [];
+  for (let i = 0; i < count; i += 1) {
+    const _uuid = uuid();
+    entities.push({ uuid: _uuid, label: 'label' });
+    uuids.push(_uuid);
+  }
+  await user.post(`/v1/projects/${projectId}/datasets/${datasetName}/entities`)
+    .send({
+      entities,
+      source: { name: 'bulk.csv', size: count }
+    })
+    .expect(200);
+  return uuids;
+};
+
 const createEntitiesViaSubmissions = async (user, container, count) => {
   const uuids = [];
   for (let i = 0; i < count; i += 1) {
@@ -286,7 +303,22 @@ describe('query module entities purge', () => {
       should(auditNotes).be.null();
     }));
 
-    it('should purge entity sources', testService(async (service, container) => {
+    it('should purge API entity sources', testService(async (service, container) => {
+      const { Entities, oneFirst } = container;
+      const asAlice = await service.login('alice');
+
+      await createDeletedEntities(asAlice, 2);
+
+      let sourcesCount = await oneFirst(sql`select count(1) from entity_def_sources`);
+      sourcesCount.should.be.equal(2);
+
+      await Entities.purge(true);
+
+      sourcesCount = await oneFirst(sql`select count(1) from entity_def_sources`);
+      sourcesCount.should.be.equal(0);
+    }));
+
+    it('should purge submission entity sources', testService(async (service, container) => {
       const { Entities, oneFirst } = container;
       const asAlice = await service.login('alice');
 
@@ -306,6 +338,28 @@ describe('query module entities purge', () => {
 
       sourcesCount = await oneFirst(sql`select count(1) from entity_def_sources`);
       sourcesCount.should.be.equal(0);
+    }));
+
+    it('should not purge bulk entity sources', testService(async (service, container) => {
+      const { Entities, oneFirst } = container;
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      const uuids = await createBulkEntities(asAlice, 2, 1, 'people');
+
+      let sourcesCount = await oneFirst(sql`select count(1) from entity_def_sources`);
+      sourcesCount.should.be.equal(1);
+
+      await deleteEntities(asAlice, uuids.slice(0, 1), 1, 'people');
+
+      await Entities.purge(true);
+
+      sourcesCount = await oneFirst(sql`select count(1) from entity_def_sources`);
+      sourcesCount.should.be.equal(1);
     }));
 
     it('should purge submission backlog for entities', testService(async (service, container) => {
@@ -374,7 +428,7 @@ describe('query module entities purge', () => {
         })
         .expect(409)
         .then(({ body }) => {
-          body.details.values.should.eql(uuids[0]);
+          body.message.includes(uuids[0]).should.be.true();
         });
     }));
 
@@ -405,7 +459,7 @@ describe('query module entities purge', () => {
         })
         .expect(409)
         .then(({ body }) => {
-          uuids.forEach(i => body.details.values.includes(i).should.be.true);
+          uuids.forEach(i => body.message.includes(i).should.be.true());
         });
     }));
   });
@@ -425,7 +479,7 @@ describe('query module entities purge', () => {
 
       await asAlice.get('/v1/audits')
         .then(({ body }) => {
-          const purgeLogs = body.filter((a) => a.action === 'entities.purge');
+          const purgeLogs = body.filter((a) => a.action === 'entity.purge');
           purgeLogs.length.should.equal(2);
 
           const [ peoplePurgeAudit ] = purgeLogs.filter(a => a.acteeId === peopleActeeId);
@@ -445,7 +499,7 @@ describe('query module entities purge', () => {
 
       await asAlice.get('/v1/audits')
         .then(({ body }) => {
-          body.filter((a) => a.action === 'entities.purge').length.should.equal(0);
+          body.filter((a) => a.action === 'entity.purge').length.should.equal(0);
         });
     }));
   });
