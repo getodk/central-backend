@@ -90,13 +90,13 @@ describe('s3 support', () => {
 
     // given
     await setup(1);
-    await assertNewStatuses({ pending: 11 });
+    await assertNewStatuses({ pending: 13 });
 
     // when
     await cli('upload-pending');
 
     // then
-    await assertNewStatuses({ uploaded: 11 });
+    await assertNewStatuses({ uploaded: 13 });
     // and
     await assertAllRedirect(actualAttachments);
     await assertAllDownloadsMatchOriginal(actualAttachments);
@@ -379,7 +379,10 @@ describe('s3 support', () => {
 
     const filepath = `${attDir}/${name}`;
 
-    const expectedContentType = mimetypeFor(name);
+    // "null" is a questionable content-type, but matches current central behaviour
+    // See: https://github.com/getodk/central-backend/pull/1352
+    const expectedContentType = mimetypeFor(name) ?? 'null';
+
     const actualContentType = res.headers.get('content-type');
     should.equal(actualContentType, expectedContentType);
 
