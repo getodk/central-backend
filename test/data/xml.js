@@ -637,6 +637,7 @@ module.exports = {
       two: instance('binaryType', 'btwo', '<file2>here_is_file2.jpg</file2>'),
       both: instance('binaryType', 'both', '<file1>my_file1.mp4</file1><file2>here_is_file2.jpg</file2>'),
       unicode: instance('binaryType', 'both', '<file1>fîlé2</file1><file2>f😂le3صادق</file2>'),
+      withFile: (filename) => instance('binaryType', 'with-file', `<file1>${filename}</file1>`),
     },
     encrypted: {
       // TODO: the jpg binary associated with this sample blob is >3MB. will replace
