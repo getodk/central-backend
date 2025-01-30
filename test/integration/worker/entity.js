@@ -351,6 +351,78 @@ describe('worker: entity', () => {
         event.details.errorMessage.should.equal('Required parameter dataset missing.');
         event.details.problem.problemCode.should.equal(400.2);
       }));
+
+      it('should not create entity because UUID is used by a deleted entity', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post(`/v1/projects/1/datasets/people/entities`)
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'John Doe'
+          })
+          .expect(200);
+
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].should.be.an.Audit();
+            logs[0].action.should.be.eql('entity.error');
+            logs[0].details.problem.problemCode.should.equal(409.19);
+            logs[0].details.errorMessage.should.equal('The following UUID(s) cannot be used because they are associated with deleted Entities: (12345678-1234-4123-8234-123456789abc).');
+          });
+      }));
+
+      it('should not create entity because UUID is used by a purged entity', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post(`/v1/projects/1/datasets/people/entities`)
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'John Doe'
+          })
+          .expect(200);
+
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+
+        await container.Entities.purge();
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].should.be.an.Audit();
+            logs[0].action.should.be.eql('entity.error');
+            logs[0].details.problem.problemCode.should.equal(409.19);
+            logs[0].details.errorMessage.should.equal('The following UUID(s) cannot be used because they are associated with deleted Entities: (12345678-1234-4123-8234-123456789abc).');
+          });
+      }));
     });
 
     describe('constraint errors', () => {
@@ -537,6 +609,84 @@ describe('worker: entity', () => {
         event.details.submissionId.should.equal(subEvent.details.submissionId);
         event.details.errorMessage.should.equal('Required parameter dataset missing.');
         event.details.problem.problemCode.should.equal(400.2);
+      }));
+
+      it('should fail because UUID has been deleted', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post(`/v1/projects/1/datasets`)
+          .send({ name: 'people' });
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post(`/v1/projects/1/datasets/people/entities`)
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'John Doe'
+          })
+          .expect(200);
+
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].should.be.an.Audit();
+            logs[0].action.should.be.eql('entity.error');
+            logs[0].details.problem.problemCode.should.equal(404.11);
+            logs[0].details.errorMessage.should.equal('The entity with UUID (12345678-1234-4123-8234-123456789abc) has been deleted.');
+          });
+      }));
+
+      it('should fail because UUID has been purged', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post(`/v1/projects/1/datasets`)
+          .send({ name: 'people' });
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.updateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post(`/v1/projects/1/datasets/people/entities`)
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'John Doe'
+          })
+          .expect(200);
+
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+
+        await container.Entities.purge();
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].should.be.an.Audit();
+            logs[0].action.should.be.eql('entity.error');
+            logs[0].details.problem.problemCode.should.equal(404.11);
+            logs[0].details.errorMessage.should.equal('The entity with UUID (12345678-1234-4123-8234-123456789abc) has been deleted.');
+          });
       }));
     });
 
