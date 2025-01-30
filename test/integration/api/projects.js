@@ -5,7 +5,7 @@ const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { QueryOptions } = require('../../../lib/util/db');
 const { Actor } = require('../../../lib/model/frames');
-const { createConflict } = require('../fixtures/scenarios');
+const { createConflict } = require('../../util/scenarios');
 // eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
