@@ -4,12 +4,12 @@ on:
   push:
   pull_request:
 
-strategy:
-  matrix:
-    iteration: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
 
 jobs:
   oidc-integration-test:
+    strategy:
+      matrix:
+        iteration: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
     timeout-minutes: 6
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
