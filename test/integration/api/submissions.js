@@ -4377,8 +4377,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                   body.toString().should.equal('testvideo');
                 })))))));
 
-    // Ref https://github.com/getodk/central-backend/issues/1351
-    it('should attach a given file with empty Content-Type', testService((service) =>
+    it('should attach a given file with empty Content-Type and serve it with default mime type', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -4394,13 +4393,12 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .expect(200)
               .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
                 .expect(200)
-                .then(({ headers, text }) => {
-                  headers['content-type'].should.equal('null');
-                  text.toString().should.equal('testvideo'); // use 'text' instead of 'body' to avoid supertest response parsing
+                .then(({ headers, body }) => {
+                  headers['content-type'].should.equal('application/octet-stream');
+                  body.toString().should.equal('testvideo');
                 })))))));
 
-    // Ref https://github.com/getodk/central-backend/issues/1351
-    it('should attach a given file with missing Content-Type', testService((service) =>
+    it('should attach a given file with missing Content-Type and serve it with default mime type', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -4416,9 +4414,9 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .expect(200)
               .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
                 .expect(200)
-                .then(({ headers, text }) => {
-                  headers['content-type'].should.equal('null');
-                  text.toString().should.equal('testvideo'); // use 'text' instead of 'body' to avoid supertest response parsing
+                .then(({ headers, body }) => {
+                  headers['content-type'].should.equal('application/octet-stream');
+                  body.toString().should.equal('testvideo');
                 })))))));
 
     it('should log an audit entry about initial attachment', testService((service, { Audits, Forms, Submissions, SubmissionAttachments }) =>
