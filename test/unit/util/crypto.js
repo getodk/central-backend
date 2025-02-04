@@ -1,3 +1,4 @@
+const { KeyObject } = require('node:crypto');
 const appRoot = require('app-root-path');
 const { readFileSync } = require('fs');
 const should = require('should');
@@ -131,6 +132,44 @@ describe('util/crypto', () => {
         cipher.update.should.be.a.Function();
         cipher.final.should.be.a.Function();
         done();
+      });
+    });
+  });
+
+  describe('getPrivate()', () => {
+    const { getPrivate } = crypto;
+
+    [
+      {
+        iv: "7+ELinzekqZOaOiGSRgYxw==",
+        salt: "7jE50XhstDF97pN4YlPS/g==",
+        pubkey: "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUFxcHR1dnhpQWtINE5vdVRJTU1sVQp1Q2VxODJjNXdaZWEyQ3R4Uzg1U1A2NCsxQWJLSHdHWDhXYU5YRTNyUlZOQ3l5SzYvQTlWSWJ3ZWg5OXZjOEhnCnI2bFplcjhwOGhtTlFheXdUbThHczA2NllNTkQ3SExVY2h4dmdML2xYQjVwYlVtNDk1VkQrbE9HODJkbEExTSsKODFTTHBhaUovSzdNcVhHK2ZwbkM0UXpVWlRNMXY5RUlyRTVvbDFVL1JYQi9IZERzaXRwNnlROEJwNm5TdVlzRQoveURwUlNGTEFCZWFCTkN6cGxLZHY5ZVFaSmdtNjV2MVcxNlBteGNNRmVXM21RcHJOWTczZ1YvUFpCL25vTjdlClZ2cXl6R0hHajlJZmFBMnVjandVYmxjbFFVNElIR1FBaEtCZGlReEpHL1g2TDVqdVpQU3NYQW5NbENqR21vWm4KU1FJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==","privkey":"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",
+      },
+      {
+        iv: "n8nUrZ4vr2ivj4DI/9L3Iw==",
+        salt: "wlws0kI3fosgvE8g1z9rRw==",
+        pubkey: "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUEzQWp4bG9pM3lFZkh1NytQZSs3OAplR25zTEpuNUNMMmE1akd4SkhPemZRSDQ1Ti9tZ0tpN2J3WVhyYldST0M0UHFSelRzMm1FZ1JvRHE1SFJSS2VMCkNTWjF0MUo3QlNvMytzRXRxTG16VlNkd3NpNjdwTHM1N0dteVltN1QwTSttS3Bka1IrUStJRWFoczBDZGUrc1oKVExBZzhqdkJPTDZGN1MvYytoeXdTNjJEVUNBd093eGhwNHhTWjdjbzVCS2JMOHEzZS9lOUh6elFoNHVZS05rTAp2ZkEybi82MVFEd3dIcElXcm5pSHRmMFRFLzFaY0c2MnUwK3F0aHhXNE93K0lrRHE2VnNBbkxHd3p2VDIzWXZpCk1LYWtESThzNUtudm5wenI4TFo4ZnVGcTFHTTIwWVg2cDRIdWE5ZUF0TlZmckNiRXk4SUFDVnpITzY2VnlHWXMKcXdJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==","privkey":"8ZJvFdz2JFEDd26ZThKLCwXPCjL9pDkK9jzsS+kBtmiiRHN1bm8lFg9HzKGN0q6nwwtbD3qoZ39d/sU3MYGbqrpcWO0TdFZbRUMlqrZ4gtqDkM35dSvrfkP4CyIlNWhyJ2Tn5Vs/Vi8+uN7xF9CHE+D5QSaOLT4CgzUWE6urqbFwKbD0Im0GWkGG3YjHj89xfpaYJZ2qVKIGavCdO9+se2zePwCgiD644AqYtlCzD5/KC1ClDVqg/DHAm13s2lq+WUi4CUFizeI4c7tCfqxIDpimiG6ho3B8Mg7eEN21GSsG5WWw4BAat/TfLihmJAccMnv7BKcd3XxtY5dc/GrKyqsFZRlQoMDqyGFQ2NzA6Ic0o3CoZ5mY9NX0h4pUF/BfDxjiHWV1Dvo+B3pyBvp82UDMreytL/e9nJAKSTTihDLmpIygxFZ5h/FYaC+7p2BczA0BBnfL0iHIoSal28ea6sk90EmLhsDh6t4umJ6Fldd3makuT4Dj/Dhp1w7Y7O0P9x2X1OVYgHDqbuMnHNFyhPGSh9Okc/D+mNcSfrTZHKki+js5BuN32YMPDOBq7ORChieyI7Ox70odVhzrW+m75kXUfFG8DPfLtyjBl7maZSlv7JpYUjpfUyvIWk5qBUy6fAp/esOljzuoOYOprmP/dWzkO/DsoONWMkAQWymLxkJ6hsu9JfSWpa07wtCsjP8Fe53NLdZDSN/ebkQxPBRoR50uo71fAnwtUVt447eia8DBLgyvd0R4xB5XiU/XcI7Rr4I0JDMYsBi3OAT/9XryMKkTGtZ1eEYFgordL6AcEU5XpMLva+YolNlJXxjb7f1J3ZRYBPARtcDPyUHuo4nz6uh/iKnRkKVA4ocrRqxWaJM2VyeT+pB+VjjflbDsrKfqNmUKlY1Cj48Ww/0iG8ySmAnCWGoOMH83sBZfXmRn/EieV14zskFBbhnXXBrMV7jCXsqdvc8jAeBVVITRRK9nukc7U4y91XuKcaZ678ghK/eNMvN1PPLKFpe7jvAvbNhJJVmNShjkku/7qP0Jv4UWaieVdRe897mcTE/m9fhvC8RKCKBzYNotWrwFxtqk2Rf7zsFa5F8OTUQ7syZ4lyRLxi9ORsTPf0VlAW4k1Dk/ZR7eqH2FTZECLz9+Qm1HG864WYTJIikULNW7tdiNqc20KX+kRbSJ7tuY9RklgLXmA3Z5MMlK0usIXvXx6FJPsWd5mvtOAMOZUr/JhdDNuuqCUBhoYyvuIqUcbXg+nBmPJ6CvM4qU5y9vO1fc1j3l0EhkxR8aEYzxnD5dWiFNnd6oyRask31oKkl//l0k8KX0bhhF95TAg6Sp69V+S1dUr/r8zUHNHqSf+PnGP3TDWrzYb4PymCjf1mfGBADxAIYJoFs5G8BFFJfZ+YUPG3wgK1S2bTwg1W3/cDn+Cov4MM1Ea9zSVpgpOLD5BqLuz+mUhi+DjCP/YfoXuZ3ITvGHwYzRvBG9YZK1H5yGi/yCIzsiMyJXNRqdgF7PydyrnIAIVrnwWMvPguqEEL0+ETvlBeKpAh0HlyF62Y4YiNN7t7+v3fGjSENSXuNIV9fsI9nPHI8xsGQfffKRykgFsf1PLOwc3VN9SqjGJ0CrT6wu94FnssjmE84dObOqDEcYTgYydNxcA839bLi7nkSZT1ilc9ZuDUC5///QHETWMrqxgSOrZwloXYvMMEo/KFXuvceLLkYgpiwXNiq54LMEwef8mhyHsGJL5rnvfZZ4m4Nl4CYdd+W7jQXpW8MeEm9lavzivAomEChuoqUgaopgd6kCkZ0efBi2JxD8QnZsbmlW92WTUqxNzUHhkbI1hGZEwp0Jcg5XjGEbN6vzUiN40Pa7aj8wLbBwVcmShrQ2tm8lqF797bRBF0InjIHQE4v6AoPJfnVVqMaCxUGg9C/TYmtFWDGA+JjAB8qYvI+BaMmORkN7tG9SOOglbmdIdVPFUQwafgyDJy30gKaUVlXgksJm49EAC3xYxFAGcXTqUdmnf07+nKDiT0hDnSywRFbknzmONL93zdU+sM044HNaWcJbAyLi6Ac5bHi008u+GBWMXT7j2zpo5KHL1AUhgT2OwYGvTCw0i/Oh0ly9M7Rx/0Ar/vX7wJhSdCsJN9wuzMvq5yXNcnnfJWgC89LaQhEb3Lt6Us/5qziw520FzBXaEHn/YuLw3FZTQfvHKTHA6GomhwfLsVj8fe7UvjKXa2H3VcW3l43h+RP7VvN22v6bfVwdf2Wvgi0Us0e/OQYK4z6jMI8Qxw4CQPYaDmYRwO2mr9InVtY=",
+      },
+    ].forEach((keys, idx) => {
+      it(`should generate private key from example #${idx} with correct passphrase`, async () => {
+        const res = await getPrivate(keys, 'supersecret');
+        (res instanceof KeyObject).should.be.true();
+      });
+
+      [
+        'wrong',
+        'very-wrong',
+      ].forEach(passphrase => {
+        it(`should fail gracefully with incorrect passphrase '${passphrase}'`, async () => {
+          try {
+            await getPrivate(keys, passphrase);
+            should.fail('Incorrect passphrase should have been rejected.');
+          } catch (err) {
+            err.should.be.a.Problem();
+            err.problemCode.should.eql(400.12);
+            err.message.should.eql( 'Could not perform decryption. Double check your passphrase and your data and try again.');
+          }
+        });
       });
     });
   });
