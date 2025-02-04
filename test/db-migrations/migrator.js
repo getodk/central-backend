@@ -39,23 +39,25 @@ function createMigrator(name, migrationsDir, holdingPen, previousMigrator) {
 
   function runBefore(migrationName) {
     const idx = getIndex(migrationName); // eslint-disable-line no-use-before-define
-    if (idx === 0) return;
-
-    const previousMigration = allMigrations[idx - 1];
-
-    return runIncluding(previousMigration); // eslint-disable-line no-use-before-define
+    runUntilIndex(idx - 1);
   }
 
   function runIncluding(lastMigrationToRun) {
-    if (previousMigrator) previousMigrator.restoreMigrations();
+    runUntilIndex(getIndex(lastMigrationToRun)); // eslint-disable-line no-use-before-define
+  }
 
-    const finalIdx = getIndex(lastMigrationToRun); // eslint-disable-line no-use-before-define
-
+  function runUntilIndex(finalIdx) {
     for (let restoreIdx=lastRunIdx+1; restoreIdx<=finalIdx; ++restoreIdx) { // eslint-disable-line no-plusplus
       const f = allMigrations[restoreIdx] + '.js';
       fs.renameSync(`${holdingPen}/${f}`, `${migrationsDir}/${f}`);
     }
 
+    if (previousMigrator) {
+      log('Restoring migrations for previousMigrator...');
+      previousMigrator.restoreMigrations();
+    }
+
+    const lastMigrationToRun = allMigrations[finalIdx];
     log('Running migrations until:', lastMigrationToRun, '...');
     const res = execSync(`node ./lib/bin/run-migrations.js`, { encoding: 'utf8' });
 
