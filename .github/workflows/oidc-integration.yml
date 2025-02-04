@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+strategy:
+  matrix:
+    iteration: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+
 jobs:
   oidc-integration-test:
     timeout-minutes: 6
