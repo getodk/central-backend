@@ -36,8 +36,8 @@ describeNewMigration('20250113-01-disable-nullable-blob-content-types', ({ runMi
     const { md5, sha } = aBlob();
 
     const created = await db.oneFirst(sql`
-      INSERT INTO blobs (md5, sha, "contentType")
-        VALUES(${md5}, ${sha}, DEFAULT)
+      INSERT INTO blobs (md5, sha)
+        VALUES(${md5}, ${sha})
         RETURNING "contentType"
     `);
 
