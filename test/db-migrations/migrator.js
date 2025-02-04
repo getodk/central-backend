@@ -74,6 +74,7 @@ function createMigrator(name, migrationsDir, holdingPen, previousMigrator) {
   }
 
   function restoreMigrations() {
+    log('restoring migrations from ', holdingPen, 'to', migrationsDir, '...');
     moveAll(holdingPen, migrationsDir); // eslint-disable-line no-use-before-define
   }
 
@@ -84,7 +85,7 @@ function createMigrator(name, migrationsDir, holdingPen, previousMigrator) {
   function moveAll(src, tgt) {
     fs.readdirSync(src)
       .filter(f => f.endsWith('.js'))
-      .forEach(f => fs.renameSync(`${src}/${f}`, `${tgt}/${f}`));
+      .forEach(f => log(`Moving ${f} from ${src} to ${tgt}...`) || fs.renameSync(`${src}/${f}`, `${tgt}/${f}`));
   }
 
   function loadMigrationsList() {
