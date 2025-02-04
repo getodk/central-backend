@@ -39,7 +39,7 @@ function createMigrator(name, migrationsDir, holdingPen, previousMigrator) {
 
   function runBefore(migrationName) {
     const idx = getIndex(migrationName); // eslint-disable-line no-use-before-define
-    runUntilIndex(idx - 1);
+    runUntilIndex(idx - 1); // eslint-disable-line no-use-before-define
   }
 
   function runIncluding(lastMigrationToRun) {
