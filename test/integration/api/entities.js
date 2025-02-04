@@ -1269,6 +1269,22 @@ describe('Entities API', () => {
           logs[0].action.should.be.eql('entity.create');
         });
     }));
+
+    it('should return delete and restore events', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/restore')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs.map(l => l.action).should.be.eql(['entity.restore', 'entity.delete', 'entity.create']);
+        });
+    }));
   });
 
   describe('POST /datasets/:name/entities', () => {
@@ -1437,6 +1453,28 @@ describe('Entities API', () => {
           }
         })
         .expect(409);
+    }));
+
+    it('should reject if entity with the same uuid is soft deleted', testEntities(async (service) => {
+      // Use testEntities here vs. testDataset to prepopulate with 2 entities
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Johnny Doe',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(409)
+        .then(({ body }) => {
+          body.message.should.be.eql('The following UUID(s) cannot be used because they are associated with deleted Entities: (12345678-1234-4123-8234-123456789abc).');
+        });
     }));
 
     it('should reject if data properties do not match dataset exactly', testDataset(async (service) => {
@@ -2105,7 +2143,7 @@ describe('Entities API', () => {
         .then(o => o.get())
         .then(audit => {
           audit.acteeId.should.not.be.null();
-          audit.details.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
+          audit.details.entity.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
         });
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
@@ -2125,6 +2163,59 @@ describe('Entities API', () => {
 
     }));
 
+  });
+
+  describe('POST /datasets/:name/entities/:uuid/restore', () => {
+    it('should reject if the entity has not been deleted', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/restore')
+        .expect(404);
+    }));
+
+    it('should reject if the entity does not exist', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/nonexistant/restore')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot restore', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      // Chelsea cannot restore
+      await asChelsea.post('/v1/projects/1/forms/simple/submissions/12345678-1234-4123-8234-123456789abc/restore')
+        .expect(403);
+    }));
+
+    it('should soft-delete the entity and then restore it', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(404);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/restore')
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
+
+      await container.Audits.getLatestByAction('entity.restore')
+        .then(o => o.get())
+        .then(audit => {
+          audit.acteeId.should.not.be.null();
+          audit.details.entity.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.Entity();
+        });
+    }));
   });
 
   // Bulk API operations
@@ -2252,7 +2343,6 @@ describe('Entities API', () => {
           body[0].details.should.have.property('sourceId');
         });
     }));
-
 
     it('should generate uuids for entities when no uuid is provided', testDataset(async (service) => {
       const asAlice = await service.login('alice');
@@ -2502,6 +2592,76 @@ describe('Entities API', () => {
         await asAlice.get('/v1/projects/1/datasets/people/entities')
           .then(({ body }) => {
             body.length.should.equal(1); // same as before
+          });
+
+        // Most recent event is not a bulk create event
+        await asAlice.get('/v1/audits')
+          .then(({ body }) => {
+            body[0].action.should.not.equal('entity.bulk.create');
+          });
+      }));
+
+      it('should not create any entities if there is a UUID collision with soft deleted Entity', testServiceFullTrx(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc', // collision
+            label: 'John Doe',
+            data: {
+              first_name: 'John',
+              age: '22'
+            }
+          });
+
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(0);
+          });
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-123456789abc', // collision
+                label: 'John Doe',
+                data: {
+                  first_name: 'John',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-1234-4123-8234-111111111bbb',
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.19);
+            body.message.should.equal('The following UUID(s) cannot be used because they are associated with deleted Entities: (12345678-1234-4123-8234-123456789abc).');
+          });
+
+        // Entity list is still same length as before
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(0); // same as before
           });
 
         // Most recent event is not a bulk create event

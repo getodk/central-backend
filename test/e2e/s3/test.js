@@ -379,9 +379,7 @@ describe('s3 support', () => {
 
     const filepath = `${attDir}/${name}`;
 
-    // "null" is a questionable content-type, but matches current central behaviour
-    // See: https://github.com/getodk/central-backend/pull/1352
-    const expectedContentType = mimetypeFor(name) ?? 'null';
+    const expectedContentType = mimetypeFor(name) ?? 'application/octet-stream';
 
     const actualContentType = res.headers.get('content-type');
     should.equal(actualContentType, expectedContentType);
