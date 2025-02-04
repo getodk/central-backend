@@ -6,7 +6,7 @@ const { testContainerFullTrx, testServiceFullTrx } = require('../setup');
 const { sql } = require('slonik');
 const { createReadStream } = require('fs');
 const { Actor, Config } = require(appRoot + '/lib/model/frames');
-const { withKnex } = require(appRoot + '/lib/model/migrate');
+const { withKnex } = require(appRoot + '/lib/model/knex-migrator');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 const testData = require('../../data/xml');
