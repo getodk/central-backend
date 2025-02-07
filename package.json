@@ -68,6 +68,7 @@
     "should": "~13",
     "streamtest": "~1.2",
     "supertest": "^6.3.3",
-    "tmp": "~0.2"
+    "tmp": "~0.2",
+    "undici": "^7.3.0"
   }
 }
