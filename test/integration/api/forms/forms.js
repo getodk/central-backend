@@ -1572,17 +1572,19 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
     it('should update allowed fields', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple')
-          .send({ state: 'closing' })
+          .send({ state: 'closing', webformsEnabled: true })
           .expect(200)
           .then(({ body }) => {
             body.should.be.a.Form();
             body.state.should.equal('closing');
+            body.webformsEnabled.should.equal(true);
           })
           .then(() => asAlice.get('/v1/projects/1/forms/simple')
             .expect(200)
             .then(({ body }) => {
               body.should.be.a.Form();
               body.state.should.equal('closing');
+              body.webformsEnabled.should.equal(true);
             })))));
 
     it('should reject if state is invalid', testService((service) =>
