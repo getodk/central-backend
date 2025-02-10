@@ -931,8 +931,8 @@ describe('api: /projects', () => {
           .send({
             name: 'Default Project',
             forms: [
-              { xmlFormId: 'simple' },
-              { xmlFormId: 'withrepeat' }
+              { xmlFormId: 'simple', state: 'invalid' },
+              { xmlFormId: 'withrepeat', state: 'invalid' }
             ]
           })
           .expect(400)
