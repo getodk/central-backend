@@ -22,7 +22,7 @@ kill_child_processes() {
 trap kill_child_processes EXIT
 
 log "Starting backend..."
-make run &
+make run | tee server.log &
 
 log "Waiting for backend to start..."
 timeout 30 bash -c "while ! curl -s -o /dev/null $serverUrl; do sleep 1; done"

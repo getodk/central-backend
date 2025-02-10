@@ -4377,8 +4377,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                   body.toString().should.equal('testvideo');
                 })))))));
 
-    // Ref https://github.com/getodk/central-backend/issues/1351
-    it('should attach a given file with empty Content-Type', testService((service) =>
+    it('should attach a given file with empty Content-Type and serve it with default mime type', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -4394,13 +4393,12 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .expect(200)
               .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
                 .expect(200)
-                .then(({ headers, text }) => {
-                  headers['content-type'].should.equal('null');
-                  text.toString().should.equal('testvideo'); // use 'text' instead of 'body' to avoid supertest response parsing
+                .then(({ headers, body }) => {
+                  headers['content-type'].should.equal('application/octet-stream');
+                  body.toString().should.equal('testvideo');
                 })))))));
 
-    // Ref https://github.com/getodk/central-backend/issues/1351
-    it('should attach a given file with missing Content-Type', testService((service) =>
+    it('should attach a given file with missing Content-Type and serve it with default mime type', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -4416,10 +4414,91 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
               .expect(200)
               .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
                 .expect(200)
-                .then(({ headers, text }) => {
-                  headers['content-type'].should.equal('null');
-                  text.toString().should.equal('testvideo'); // use 'text' instead of 'body' to avoid supertest response parsing
+                .then(({ headers, body }) => {
+                  headers['content-type'].should.equal('application/octet-stream');
+                  body.toString().should.equal('testvideo');
                 })))))));
+
+    [
+      // express ALWAYS adds "charset=..." suffix to text-based Content-Type response headers
+      // See: https://github.com/expressjs/express/issues/2654
+      [ 'CSV',     'myfile.csv',     'text/csv; charset=utf-8',  'a,b,c' ],    // eslint-disable-line no-multi-spaces
+      [ 'GeoJSON', 'myfile.geojson', 'application/geo+json',     '{}' ],       // eslint-disable-line no-multi-spaces
+      [ 'Custom',  'myfile.custom1', 'application/octet-stream', 'anything' ], // eslint-disable-line no-multi-spaces
+    ].forEach(([ humanType, filename, officialContentType, fileContents ]) => {
+      describe(`special handling for ${humanType}`, () => {
+        it('should attach the given file and serve it with supplied mime type', testService((service) =>
+          service.login('alice', (asAlice) =>
+            asAlice.post('/v1/projects/1/forms?publish=true')
+              .set('Content-Type', 'application/xml')
+              .send(testData.forms.binaryType)
+              .expect(200)
+              .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions')
+                .send(testData.instances.binaryType.withFile(filename))
+                .set('Content-Type', 'text/xml')
+                .expect(200)
+                .then(() => asAlice.post(`/v1/projects/1/forms/binaryType/submissions/with-file/attachments/${filename}`)
+                  .set('Content-Type', 'application/x-abiword')
+                  .send(fileContents)
+                  .expect(200)
+                  .then(() => asAlice.get(`/v1/projects/1/forms/binaryType/submissions/with-file/attachments/${filename}`)
+                    .expect(200)
+                    .then(({ headers, text }) => {
+                      headers['content-type'].should.equal('application/x-abiword');
+                      text.toString().should.equal(fileContents); // use 'text' instead of 'body' to avoid supertest response parsing
+                    })))))));
+
+        it(`should attach a given ${humanType} file with empty Content-Type and serve it with mime type ${officialContentType}`, testService((service) =>
+          service.login('alice', (asAlice) =>
+            asAlice.post('/v1/projects/1/forms?publish=true')
+              .set('Content-Type', 'application/xml')
+              .send(testData.forms.binaryType)
+              .expect(200)
+              .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions')
+                .send(testData.instances.binaryType.withFile(filename))
+                .set('Content-Type', 'text/xml')
+                .expect(200)
+                .then(() => asAlice.post(`/v1/projects/1/forms/binaryType/submissions/with-file/attachments/${filename}`)
+                  .send(fileContents)
+                  .set('Content-Type', '') // N.B. must be called _after_ send()
+                  .expect(200)
+                  .then(() => asAlice.get(`/v1/projects/1/forms/binaryType/submissions/with-file/attachments/${filename}`)
+                    .expect(200)
+                    .then(({ headers, body, text }) => {
+                      headers['content-type'].should.equal(officialContentType);
+
+                      // Both body & text must be checked here to avoid supertest response parsing:
+                      // * for JSON-based formats, body will contain parsed JSON objects
+                      // * for general binary formats, text will be undefined
+                      (text ?? body).toString().should.equal(fileContents);
+                    })))))));
+
+        it(`should attach a given ${humanType} file with missing Content-Type and serve it with mime type ${officialContentType}`, testService((service) =>
+          service.login('alice', (asAlice) =>
+            asAlice.post('/v1/projects/1/forms?publish=true')
+              .set('Content-Type', 'application/xml')
+              .send(testData.forms.binaryType)
+              .expect(200)
+              .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions')
+                .send(testData.instances.binaryType.withFile(filename))
+                .set('Content-Type', 'text/xml')
+                .expect(200)
+                .then(() => asAlice.post(`/v1/projects/1/forms/binaryType/submissions/with-file/attachments/${filename}`)
+                  .send(fileContents)
+                  .unset('Content-Type') // N.B. must be called _after_ send()
+                  .expect(200)
+                  .then(() => asAlice.get(`/v1/projects/1/forms/binaryType/submissions/with-file/attachments/${filename}`)
+                    .expect(200)
+                    .then(({ headers, body, text }) => {
+                      headers['content-type'].should.equal(officialContentType);
+
+                      // Both body & text must be checked here to avoid supertest response parsing:
+                      // * for JSON-based formats, body will contain parsed JSON objects
+                      // * for general binary formats, text will be undefined
+                      (text ?? body).toString().should.equal(fileContents);
+                    })))))));
+      });
+    });
 
     it('should log an audit entry about initial attachment', testService((service, { Audits, Forms, Submissions, SubmissionAttachments }) =>
       service.login('alice', (asAlice) =>

@@ -2,7 +2,7 @@ const config = require('config');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
 
-describe('api: /projects/:id/forms (testing drafts)', () => {
+describe('api: /test/:key/projects/:id/forms (testing drafts)', () => {
 
   ////////////////////////////////////////////////////////////////////////////////
   // DRAFT FORM TESTING
