@@ -159,8 +159,8 @@ describe('util/crypto', () => {
       });
 
       [
-        'wrong',
-        'very-wrong',
+        'very-wrong', // decrypts with error
+        'wrong',      // decrypts without error, but result is nonsense
       ].forEach(passphrase => {
         it(`should fail gracefully with incorrect passphrase '${passphrase}'`, async () => {
           try {
