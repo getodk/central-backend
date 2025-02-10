@@ -3,7 +3,7 @@ const { testService } = require('../setup');
 describe('api: /oidc/...', () => {
   if (process.env.TEST_AUTH === 'oidc') {
     describe('GET /oidc/login', () => {
-      it('should redirect to error page if no parameters are provided', testService(service =>
+      it('should redirect to IdP if no parameters are provided', testService(service =>
         service.get('/v1/oidc/login')
           .expect(307)
           .then(({ text, headers }) => {
