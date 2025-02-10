@@ -159,8 +159,9 @@ describe('util/crypto', () => {
       });
 
       [
-        'very-wrong', // decrypts with error
+        // eslint-disable-next-line no-multi-spaces
         'wrong',      // decrypts without error, but result is nonsense
+        'very-wrong', // decrypts with error
       ].forEach(passphrase => {
         it(`should fail gracefully with incorrect passphrase '${passphrase}'`, async () => {
           try {
