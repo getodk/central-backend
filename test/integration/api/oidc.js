@@ -32,8 +32,8 @@ describe('api: /oidc/...', () => {
             url.searchParams.get('response_type').should.eql('code');
             url.searchParams.get('scope').should.eql('openid email');
 
-            url.searchParams.get('code_challenge').should.match(/^[a-zA-Z0-9-]{43}$/);
-            url.searchParams.get('state'         ).should.match(/^[a-zA-Z0-9-]{43}:$/); // eslint-disable-line space-in-parens,no-multi-spaces
+            url.searchParams.get('code_challenge').should.match(/^[a-zA-Z0-9-_]{43}$/);
+            url.searchParams.get('state'         ).should.match(/^[a-zA-Z0-9-_]{43}:$/); // eslint-disable-line space-in-parens,no-multi-spaces
           })));
     });
   } else { // OIDC not enabled
