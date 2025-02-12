@@ -35,6 +35,7 @@ describe('api: /oidc/...', () => {
             url.searchParams.get('code_challenge').should.match(/^[a-zA-Z0-9-_]{43}$/);
             url.searchParams.get('state'         ).should.match(/^[a-zA-Z0-9-_]{43}:$/); // eslint-disable-line space-in-parens,no-multi-spaces
           })));
+    });
 
     describe('GET /oidc/callback', () => {
       it('should redirect to error page if no parameters are provided', testService(service =>
