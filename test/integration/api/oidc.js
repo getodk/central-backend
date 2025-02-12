@@ -35,11 +35,23 @@ describe('api: /oidc/...', () => {
             url.searchParams.get('code_challenge').should.match(/^[a-zA-Z0-9-_]{43}$/);
             url.searchParams.get('state'         ).should.match(/^[a-zA-Z0-9-_]{43}:$/); // eslint-disable-line space-in-parens,no-multi-spaces
           })));
+
+      it('should redirect to error page if no parameters are provided', testService(service =>
+        service.get('/v1/oidc/callback')
+          .expect(303)
+          .then(({ text, headers }) => {
+            text.should.eql('See Other. Redirecting to http://localhost:8989/#/login?oidcError=internal-server-error');
+            headers.location.should.eql('http://localhost:8989/#/login?oidcError=internal-server-error');
+          })));
     });
   } else { // OIDC not enabled
     describe('GET /oidc/login', () => {
       it('should not exist', testService(service =>
         service.get('/v1/oidc/login')
+          .expect(404)));
+
+      it('should not exist', testService(service =>
+        service.get('/v1/oidc/callback')
           .expect(404)));
     });
   }
