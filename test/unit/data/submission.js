@@ -56,7 +56,7 @@ describe('submission field streamer', () => {
     'null xml':      null,
     'undefined xml': undefined,
   }).forEach(([ description, xml ]) => {
-    it.only(`should throw given ${description}`, (done) => {
+    it(`should throw given ${description}`, (done) => {
       fieldsFor(testData.forms.simple).then((fields) => {
         const stream = submissionXmlToFieldStream(fields, xml);
         stream.on('data', () => () => {});
