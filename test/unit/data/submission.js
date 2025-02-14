@@ -50,12 +50,12 @@ describe('submission field streamer', () => {
     });
   });
 
-  Object.entries({
-    'random text':   'this is not an XML',
-    'empty xml':     '',
-    'null xml':      null,
-    'undefined xml': undefined,
-  }).forEach(([ description, xml ]) => {
+  [
+    [ 'random text',   'this is not an XML' ], // eslint-disable-line no-multi-spaces, key-spacing
+    [ 'empty xml',     '',                  ], // eslint-disable-line no-multi-spaces, key-spacing
+    [ 'null xml',      null,                ], // eslint-disable-line no-multi-spaces, key-spacing
+    [ 'undefined xml', undefined,           ], // eslint-disable-line no-multi-spaces
+  ].forEach(([ description, xml ]) => {
     it(`should throw given ${description}`, (done) => {
       fieldsFor(testData.forms.simple).then((fields) => {
         const stream = submissionXmlToFieldStream(fields, xml);
