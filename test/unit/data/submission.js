@@ -54,7 +54,10 @@ describe('submission field streamer', () => {
     fieldsFor(testData.forms.simple).then((fields) => {
       const stream = submissionXmlToFieldStream(fields, 'this is not an XML');
       stream.on('data', () => () => {});
-      stream.on('error', () => done());
+      stream.on('error', err => {
+        err.message.should.eql('Stream ended before stack was exhausted.');
+        done();
+      });
       stream.on('end', () => done(new Error('should have emitted error event')));
     });
   });
@@ -63,7 +66,10 @@ describe('submission field streamer', () => {
     fieldsFor(testData.forms.simple).then((fields) => {
       const stream = submissionXmlToFieldStream(fields, null);
       stream.on('data', () => () => {});
-      stream.on('error', () => done());
+      stream.on('error', err => {
+        err.message.should.eql('Stream ended before stack was exhausted.');
+        done();
+      });
       stream.on('end', () => done(new Error('should have emitted error event')));
     });
   });
@@ -72,7 +78,10 @@ describe('submission field streamer', () => {
     fieldsFor(testData.forms.simple).then((fields) => {
       const stream = submissionXmlToFieldStream(fields, undefined);
       stream.on('data', () => () => {});
-      stream.on('error', () => done());
+      stream.on('error', err => {
+        err.message.should.eql('Stream ended before stack was exhausted.');
+        done();
+      });
       stream.on('end', () => done(new Error('should have emitted error event')));
     });
   });
