@@ -50,51 +50,22 @@ describe('submission field streamer', () => {
     });
   });
 
-  it('should throw given random text', (done) => {
-    fieldsFor(testData.forms.simple).then((fields) => {
-      const stream = submissionXmlToFieldStream(fields, 'this is not an XML');
-      stream.on('data', () => () => {});
-      stream.on('error', err => {
-        err.message.should.eql('Stream ended before stack was exhausted.');
-        done();
+  Object.entries({
+    'random text':   'this is not an XML',
+    'empty xml':     '',
+    'null xml':      null,
+    'undefined xml': undefined,
+  }).forEach(([ description, xml ]) => {
+    it.only(`should throw given ${description}`, (done) => {
+      fieldsFor(testData.forms.simple).then((fields) => {
+        const stream = submissionXmlToFieldStream(fields, xml);
+        stream.on('data', () => () => {});
+        stream.on('error', err => {
+          err.message.should.eql('Stream ended before stack was exhausted.');
+          done();
+        });
+        stream.on('end', () => done(new Error('should have emitted error event')));
       });
-      stream.on('end', () => done(new Error('should have emitted error event')));
-    });
-  });
-
-  it('should throw given empty xml', (done) => {
-    fieldsFor(testData.forms.simple).then((fields) => {
-      const stream = submissionXmlToFieldStream(fields, '');
-      stream.on('data', () => () => {});
-      stream.on('error', err => {
-        err.message.should.eql('Stream ended before stack was exhausted.');
-        done();
-      });
-      stream.on('end', () => done(new Error('should have emitted error event')));
-    });
-  });
-
-  it('should throw given null xml', (done) => {
-    fieldsFor(testData.forms.simple).then((fields) => {
-      const stream = submissionXmlToFieldStream(fields, null);
-      stream.on('data', () => () => {});
-      stream.on('error', err => {
-        err.message.should.eql('Stream ended before stack was exhausted.');
-        done();
-      });
-      stream.on('end', () => done(new Error('should have emitted error event')));
-    });
-  });
-
-  it('should throw given undefined xml', (done) => {
-    fieldsFor(testData.forms.simple).then((fields) => {
-      const stream = submissionXmlToFieldStream(fields, undefined);
-      stream.on('data', () => () => {});
-      stream.on('error', err => {
-        err.message.should.eql('Stream ended before stack was exhausted.');
-        done();
-      });
-      stream.on('end', () => done(new Error('should have emitted error event')));
     });
   });
 
