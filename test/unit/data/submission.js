@@ -62,6 +62,18 @@ describe('submission field streamer', () => {
     });
   });
 
+  it('should throw given empty xml', (done) => {
+    fieldsFor(testData.forms.simple).then((fields) => {
+      const stream = submissionXmlToFieldStream(fields, '');
+      stream.on('data', () => () => {});
+      stream.on('error', err => {
+        err.message.should.eql('Stream ended before stack was exhausted.');
+        done();
+      });
+      stream.on('end', () => done(new Error('should have emitted error event')));
+    });
+  });
+
   it('should throw given null xml', (done) => {
     fieldsFor(testData.forms.simple).then((fields) => {
       const stream = submissionXmlToFieldStream(fields, null);
