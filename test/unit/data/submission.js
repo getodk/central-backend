@@ -50,6 +50,25 @@ describe('submission field streamer', () => {
     });
   });
 
+  [
+    [ 'random text',   'this is not an XML' ], // eslint-disable-line no-multi-spaces, key-spacing
+    [ 'empty xml',     '',                  ], // eslint-disable-line no-multi-spaces, key-spacing
+    [ 'null xml',      null,                ], // eslint-disable-line no-multi-spaces, key-spacing
+    [ 'undefined xml', undefined,           ], // eslint-disable-line no-multi-spaces
+  ].forEach(([ description, xml ]) => {
+    it(`should throw given ${description}`, (done) => {
+      fieldsFor(testData.forms.simple).then((fields) => {
+        const stream = submissionXmlToFieldStream(fields, xml);
+        stream.on('data', () => () => {});
+        stream.on('error', err => {
+          err.message.should.eql('Stream ended before stack was exhausted.');
+          done();
+        });
+        stream.on('end', () => done(new Error('should have emitted error event')));
+      });
+    });
+  });
+
   it('should not crash given malformed over-closing xml', (done) => {
     fieldsFor(testData.forms.simple).then((fields) => {
       const stream = submissionXmlToFieldStream(fields, '<data></goodbye></goodbye></goodbye>');
