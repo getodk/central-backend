@@ -67,7 +67,22 @@ describe('api: /sessions', () => {
             body[0].details.userAgent.should.equal('central/tests');
           }))));
 
-    it('should return a 401 if the password is wrong', testService((service) =>
+    [
+      [ 'undefined',    undefined, '' ],
+      [ 'null',         null,      '' ],
+      [ 'empty string', '',        '' ],
+      [ 'number',       123,       '' ],
+      [ 'array',        [],        '' ],
+      [ 'object',       {},        '' ],
+    ].forEach(([ description, password, expectedError ]) => {
+      it.only(`should return a 400 for invalid password (${description})`, testService((service) =>
+        service.post('/v1/sessions')
+          .send({ email: 'chelsea@getodk.org', password })
+          .expect(400)
+          .then(({ body }) => body.message.should.equal(expectedError))));
+    });
+
+    it.only('should return a 401 if the password is wrong', testService((service) =>
       service.post('/v1/sessions')
         .send({ email: 'chelsea@getodk.org', password: 'letmein' })
         .expect(401)
