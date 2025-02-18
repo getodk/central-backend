@@ -19,11 +19,15 @@ describe('util/crypto', () => {
       hashPassword('password', 'hashhash').should.be.a.Promise();
     });
 
-    it('should return a Promise of null given a blank plaintext', (done) => {
-      hashPassword('').then((result) => {
-        should(result).equal(null);
-        done();
-      });
+    it('should reject given a blank plaintext', async () => {
+        let thrown = false;
+        try { // i know about should.throws but i can't get it to assert the specific error type.
+          await hashPassword('');
+        } catch (ex) {
+          ex.message.should.equal('The password or passphrase provided does not meet the required length.');
+          thrown = true;
+        }
+        thrown.should.equal(true);
     });
 
     it('should not attempt to verify empty plaintext', (done) => {
