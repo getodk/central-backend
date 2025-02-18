@@ -140,7 +140,7 @@ describe('api: /users', () => {
           [ 'array',     [] ], // eslint-disable-line no-multi-spaces
           [ 'number',    123 ], // eslint-disable-line no-multi-spaces
         ].forEach(([ description, password ]) => {
-          it.only(`should not accept a ${description} password`, testService((service) =>
+          it.only(`should not accept ${description} password`, testService((service) =>
             service.login('alice', (asAlice) =>
               asAlice.post('/v1/users')
                 .send({ email: 'david@getodk.org', password })
@@ -358,7 +358,7 @@ describe('api: /users', () => {
                 email.subject.should.equal('ODK Central account password reset');
 
                 return service.post('/v1/sessions')
-                  .send({ email: 'bob@getodk.org', password: 'bob' })
+                  .send({ email: 'bob@getodk.org', password: 'password4bob' })
                   .expect(401);
               }))));
 
@@ -544,7 +544,7 @@ describe('api: /users', () => {
               } else {
                 after.body.email.should.equal('newbob@odk.org');
                 return service.post('/v1/sessions')
-                  .send({ email: 'newbob@odk.org', password: 'bob' })
+                  .send({ email: 'newbob@odk.org', password: 'password4bob' })
                   .expect(200);
               }
             })))));
@@ -828,7 +828,7 @@ describe('api: /users', () => {
                   }
                 } else {
                   return service.post('/v1/sessions')
-                    .send({ email: 'chelsea@getodk.org', password: 'chelsea' })
+                    .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
                     .expect(401);
                 }
               }))))));
