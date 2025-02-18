@@ -42,13 +42,6 @@ describe('submission field streamer', () => {
       })));
   });
 
-  it('should not hang given malformed non-closing xml', (done) => {
-    fieldsFor(testData.forms.simple).then((fields) => {
-      const stream = submissionXmlToFieldStream(fields, '<data><meta><instanceID>');
-      stream.on('data', () => {});
-      stream.on('end', done); // not hanging/timing out is the assertion here
-    });
-  });
 
   [
     [ 'random text',   'this is not an XML' ], // eslint-disable-line no-multi-spaces, key-spacing
@@ -69,11 +62,31 @@ describe('submission field streamer', () => {
     });
   });
 
-  it('should not crash given malformed over-closing xml', (done) => {
-    fieldsFor(testData.forms.simple).then((fields) => {
-      const stream = submissionXmlToFieldStream(fields, '<data></goodbye></goodbye></goodbye>');
-      stream.on('data', () => {});
-      stream.on('end', done); // not hanging/timing out is the assertion here
+  [
+    '<data>', // no closing tags
+    '<data><meta><instanceID>', // no closing tags
+    '<data></goodbye></goodbye></goodbye>', // over-closing
+    // trailing content:
+    '<doc/><boom>',
+    '<doc/></boom>',
+    '<doc/> boom',
+    '<doc></doc><boom>',
+    '<doc></doc></boom>',
+    '<doc></doc> boom',
+    // leading content:
+    '<boom><doc/>',
+    '</boom><doc/>',
+    'boom <doc/>',
+    '<boom><doc></doc>',
+    '</boom><doc></doc>',
+    'boom <doc></doc>',
+  ].forEach(xml => {
+    it(`should not hang given malformed xml: ${xml}`, (done) => {
+      fieldsFor(testData.forms.simple).then((fields) => {
+        const stream = submissionXmlToFieldStream(fields, xml);
+        stream.on('data', () => {});
+        stream.on('end', done); // not hanging/timing out is the assertion here
+      });
     });
   });
 
