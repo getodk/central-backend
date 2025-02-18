@@ -39,7 +39,7 @@ const testMigration = (filename, tests, options = {}) => {
   const { only = false, skip = false } = options;
   const f = only
     // eslint-disable-next-line no-only-tests/no-only-tests
-    ? describe.only.bind(describe)
+    ? describe.bind(describe)
     : (skip ? describe.skip.bind(describe) : describe);
   f(`knex migrations: ${filename}`, function() {
     this.timeout(20000);
@@ -922,7 +922,8 @@ describe.skip('database migration: 20231002-01-add-conflict-details.js', functio
   }));
 });
 
-testMigration('20240215-01-entity-delete-verb.js', () => {
+// Skip because 1. this migration now runs on new migrator, and (2) it relies on application code.
+testMigration.skip('20240215-01-entity-delete-verb.js', () => {
   it('should add entity.delete verb to correct roles', testServiceFullTrx(async (service) => {
     const verbsByRole = async () => {
       const { body: roles } = await service.get('/v1/roles').expect(200);
@@ -951,7 +952,8 @@ testMigration('20240215-01-entity-delete-verb.js', () => {
   }));
 });
 
-testMigration('20240215-02-dedupe-verbs.js', () => {
+// Skip because 1. this migration now runs on new migrator, and (2) it relies on application code.
+testMigration.skip('20240215-02-dedupe-verbs.js', () => {
   it('should remove duplicate submission.update verb', testServiceFullTrx(async (service) => {
     const verbsByRole = async () => {
       const { body: roles } = await service.get('/v1/roles').expect(200);
@@ -984,7 +986,8 @@ testMigration('20240215-02-dedupe-verbs.js', () => {
   }));
 });
 
-testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
+// Skip because 1. this migration now runs on new migrator, and (2) it relies on application code.
+testMigration.skip('20240914-02-remove-orphaned-client-audits.js', () => {
   it('should remove orphaned client audits', testServiceFullTrx(async (service, container) => {
     await populateUsers(container);
     await populateForms(container);
@@ -1238,7 +1241,8 @@ testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
   });
 });
 
-testMigration('20241227-01-backfill-audit-entity-uuid.js', () => {
+// Skip because 1. this migration now runs on new migrator, and (2) it relies on application code.
+testMigration.skip('20241227-01-backfill-audit-entity-uuid.js', () => {
   it('should update the format of detail for entity.delete audits', testServiceFullTrx(async (service, container) => {
     await populateUsers(container);
     await populateForms(container);
