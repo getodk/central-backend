@@ -78,7 +78,7 @@ describe('api: /users', () => {
           }))));
   });
 
-  describe('POST', () => {
+  describe.only('POST', () => {
     it('should prohibit non-admins from creating users', testService((service) =>
       service.login('bob', (asBob) =>
         asBob.post('/v1/users')
@@ -133,11 +133,19 @@ describe('api: /users', () => {
                   .then(({ password }) => { should.not.exist(password); })
               ])))));
 
-        it('should not accept a password that is too short', testService((service) =>
-          service.login('alice', (asAlice) =>
-            asAlice.post('/v1/users')
-              .send({ email: 'david@getodk.org', password: 'short' })
-              .expect(400))));
+        [
+          [ 'too short', 'short' ],
+          [ 'too long',  'loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong' ], // eslint-disable-line no-multi-spaces
+          [ 'object',    {} ], // eslint-disable-line no-multi-spaces
+          [ 'array',     [] ], // eslint-disable-line no-multi-spaces
+          [ 'number',    123 ], // eslint-disable-line no-multi-spaces
+        ].forEach(([ description, password ]) => {
+          it.only(`should not accept a ${description} password`, testService((service) =>
+            service.login('alice', (asAlice) =>
+              asAlice.post('/v1/users')
+                .send({ email: 'david@getodk.org', password })
+                .expect(400))));
+        });
 
         it('should send an email to provisioned users', testService((service) =>
           service.login('alice', (asAlice) =>
