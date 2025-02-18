@@ -8,7 +8,7 @@ describe('api: /sessions', () => {
 
     it('should return a new session if the information is valid', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'chelsea@getodk.org', password: 'chelsea' })
+        .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
         .expect(200)
         .then(({ body }) => {
           body.should.be.a.Session();
@@ -16,7 +16,7 @@ describe('api: /sessions', () => {
 
     it('should treat email addresses case insensitively', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'cHeLsEa@getodk.OrG', password: 'chelsea' })
+        .send({ email: 'cHeLsEa@getodk.OrG', password: 'password4chelsea' })
         .expect(200)
         .then(({ body }) => {
           body.should.be.a.Session();
@@ -24,7 +24,7 @@ describe('api: /sessions', () => {
 
     it('should provide a csrf token when the session returns', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'chelsea@getodk.org', password: 'chelsea' })
+        .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
         .expect(200)
         .then(({ body }) => {
           body.csrf.should.be.a.token();
@@ -32,7 +32,7 @@ describe('api: /sessions', () => {
 
     it('should set cookie information when the session returns', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'chelsea@getodk.org', password: 'chelsea' })
+        .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
         .expect(200)
         .then(({ body, headers }) => {
           // i don't know how this becomes an array but i think superagent does it.
@@ -51,7 +51,7 @@ describe('api: /sessions', () => {
 
     it('should log the action in the audit log', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'alice@getodk.org', password: 'alice' })
+        .send({ email: 'alice@getodk.org', password: 'password4alice' })
         .set('User-Agent', 'central/tests')
         .expect(200)
         .then(({ body }) => body.token)
