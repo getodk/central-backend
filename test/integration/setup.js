@@ -161,7 +161,7 @@ const testService = (test) => () => new Promise((resolve, reject) => {
 // we offer testServiceFullTrx:
 const testServiceFullTrx = (test) => function() {
   mustReinitAfter = this.test.fullTitle();
-  return test(augment(request(service(baseContainer))), baseContainer);
+  return test.call(this, augment(request(service(baseContainer))), baseContainer);
 };
 
 // for some tests we just want a container, without any of the webservice stuffs between.
@@ -176,7 +176,7 @@ const testContainer = (test) => () => new Promise((resolve, reject) => {
 // complete the square of options:
 const testContainerFullTrx = (test) => function() {
   mustReinitAfter = this.test.fullTitle();
-  return test(baseContainer);
+  return test.call(this, baseContainer);
 };
 
 // called to get a container context per task. ditto all // from testService.
@@ -198,7 +198,7 @@ const testTask = (test) => () => new Promise((resolve, reject) => {
 const testTaskFullTrx = (test) => function() {
   mustReinitAfter = this.test.fullTitle();
   task._container = baseContainer.with({ task: true });
-  return test(task._container);
+  return test.call(this, task._container);
 };
 
 // eslint-disable-next-line no-shadow
