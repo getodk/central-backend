@@ -20,7 +20,8 @@ describe('api: /sessions', () => {
     // and reject them before passing the values to bcrypt.
     describe('weird bcrypt implementation details', () => {
       [
-        [ 'repeated once', 'chelsea\0chelsea' ],
+        [ 'repeated once',             'chelsea\0chelsea' ],          // eslint-disable-line no-multi-spaces
+        [ 'repeated twice',            'chelsea\0chelsea\0chelsea' ], // eslint-disable-line no-multi-spaces
         [ 'repeated until truncation', 'chelsea\0chelsea\0chelsea\0chelsea\0chelsea\0chelsea\0chelsea\0chelsea\0chelsea\0' ],
       ].forEach(([ description, password ]) => {
         it(`should treat a password ${description} as the singular version of the same`, testService((service) =>
