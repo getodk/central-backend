@@ -15,8 +15,8 @@
 const fs = require('node:fs');
 const { execSync } = require('node:child_process');
 
-const legacy = createMigrator('Legacy',    './lib/model/migrations/legacy', './test/db-migrations/.holding-pen/legacy');     // eslint-disable-line no-use-before-define, no-multi-spaces
-const modern = createMigrator('Post-knex', './lib/model/migrations',        './test/db-migrations/.holding-pen/pg', legacy); // eslint-disable-line no-use-before-define, no-multi-spaces
+const legacy = createMigrator('Legacy', './lib/model/migrations/legacy', './test/db-migrations/.holding-pen/legacy');     // eslint-disable-line no-use-before-define, no-multi-spaces
+const modern = createMigrator('Modern', './lib/model/migrations',        './test/db-migrations/.holding-pen/pg', legacy); // eslint-disable-line no-use-before-define, no-multi-spaces
 
 module.exports = { legacy, modern };
 
