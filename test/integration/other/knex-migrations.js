@@ -1,4 +1,3 @@
-// TODO rename e.g. legacy-knex-migrations
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const uuid = require('uuid').v4;
