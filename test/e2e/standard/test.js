@@ -20,8 +20,6 @@ const userPassword = 'secret1234';
 describe('Cache headers', () => {
   const undici = require('undici');
 
-  // REVIEW this could also be written in a JVM language to simulate Collect behaviour more closely.
-
   const privateCacheDispatcher = new undici.Agent().compose(undici.interceptors.cache({
     cacheByDefault: undefined, // do not cache responses without explicit expiration
     methods: [ 'GET' ],
