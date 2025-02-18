@@ -68,12 +68,12 @@ describe('api: /sessions', () => {
           }))));
 
     [
-      [ 'undefined',    undefined, '' ],
-      [ 'null',         null,      '' ],
-      [ 'empty string', '',        '' ],
-      [ 'number',       123,       '' ],
-      [ 'array',        [],        '' ],
-      [ 'object',       {},        '' ],
+      [ 'undefined',    undefined, '' ], // eslint-disable-line no-multi-spaces
+      [ 'null',         null,      '' ], // eslint-disable-line no-multi-spaces
+      [ 'empty string', '',        '' ], // eslint-disable-line no-multi-spaces
+      [ 'number',       123,       '' ], // eslint-disable-line no-multi-spaces
+      [ 'array',        [],        '' ], // eslint-disable-line no-multi-spaces
+      [ 'object',       {},        '' ], // eslint-disable-line no-multi-spaces
     ].forEach(([ description, password, expectedError ]) => {
       it.only(`should return a 400 for invalid password (${description})`, testService((service) =>
         service.post('/v1/sessions')
