@@ -73,7 +73,7 @@ const populate = (container, [ head, ...tail ] = fixtures) =>
 // this hook won't run if `test-unit` is called, as this directory is skipped
 // in that case.
 const initialize = async () => {
-  await withPg(dbConfig, client => client.query('DROP OWNED BY CURRENT_USER'));
+  await withPg(dbConfig)(client => client.query('DROP OWNED BY CURRENT_USER'));
   execSync('make migrations', { env: { ...process.env, NODE_CONFIG: JSON.stringify({ default: { database: dbConfig } }) } });
   return withDefaults({ db, context, enketo, env, s3 }).transacting(populate);
 };
