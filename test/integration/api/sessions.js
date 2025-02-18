@@ -68,25 +68,20 @@ describe('api: /sessions', () => {
           }))));
 
     [
-      [ 'undefined',    undefined, '' ], // eslint-disable-line no-multi-spaces
-      [ 'null',         null,      '' ], // eslint-disable-line no-multi-spaces
-      [ 'empty string', '',        '' ], // eslint-disable-line no-multi-spaces
-      [ 'number',       123,       '' ], // eslint-disable-line no-multi-spaces
-      [ 'array',        [],        '' ], // eslint-disable-line no-multi-spaces
-      [ 'object',       {},        '' ], // eslint-disable-line no-multi-spaces
-    ].forEach(([ description, password, expectedError ]) => {
-      it.only(`should return a 400 for invalid password (${description})`, testService((service) =>
+      [ 'undefined',      undefined, 400, 'Required parameters missing. Expected (email, password), got (email: \'chelsea@getodk.org\', password: undefined).' ], // eslint-disable-line no-multi-spaces
+      [ 'null',           null,      400, 'Required parameters missing. Expected (email, password), got (email: \'chelsea@getodk.org\', password: null).' ], // eslint-disable-line no-multi-spaces
+      [ 'empty string',   '',        400, 'Required parameters missing. Expected (email, password), got (email: \'chelsea@getodk.org\', password: \'\').' ], // eslint-disable-line no-multi-spaces
+      [ 'wrong password', 'letmein', 401, 'Could not authenticate with the provided credentials.' ], // eslint-disable-line no-multi-spaces
+      [ 'number',         123,       401, 'Could not authenticate with the provided credentials.' ], // eslint-disable-line no-multi-spaces
+      [ 'array',          [],        401, 'Could not authenticate with the provided credentials.' ], // eslint-disable-line no-multi-spaces
+      [ 'object',         {},        401, 'Could not authenticate with the provided credentials.' ], // eslint-disable-line no-multi-spaces
+    ].forEach(([ description, password, expectedStatus, expectedError ]) => {
+      it(`should return a ${expectedStatus} for invalid password (${description})`, testService((service) =>
         service.post('/v1/sessions')
           .send({ email: 'chelsea@getodk.org', password })
-          .expect(400)
+          .expect(expectedStatus)
           .then(({ body }) => body.message.should.equal(expectedError))));
     });
-
-    it.only('should return a 401 if the password is wrong', testService((service) =>
-      service.post('/v1/sessions')
-        .send({ email: 'chelsea@getodk.org', password: 'letmein' })
-        .expect(401)
-        .then(({ body }) => body.message.should.equal('Could not authenticate with the provided credentials.'))));
 
     it('should return a 401 if the email is wrong', testService((service) =>
       service.post('/v1/sessions')
