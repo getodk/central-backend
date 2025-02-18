@@ -5,7 +5,7 @@ const should = require('should');
 const streamTest = require('streamtest').v2;
 const crypto = require(appRoot + '/lib/util/crypto');
 
-describe('util/crypto', () => {
+describe.only('util/crypto', () => {
   describe('hashPassword/verifyPassword', () => {
     const { hashPassword, verifyPassword } = crypto;
 
@@ -289,19 +289,15 @@ describe('util/crypto', () => {
           }));
       });
 
-      it('should throw a Problem if the padding is invalid', () => {
+      it.only('should throw a Problem if the padding is invalid', () => {
         const unpaddedCiphertext = Buffer.from('kMhJdk0mZOqvlxndUO3v4+UPvfYoc+bbkPmF3QmhoP7lP/QjHbzqw/IfZxQ54D328eCc4V6jtbrjeAXV+m1cWsCGGLW5KwTAxBjPBXzsZrUeY0RISVJ1g9BJoXfSRAjYMrFYOM907BFUIYYxMqpVWGy1lo8ljqY+Sgq1VphkQk/TQGgOVYFALHDLOYnLKuLHvwBLQQwK3lje8CwNlf/b2rY9qfGC4P1emoiP+YzkLp8eH6x/HfMvRIFoZEaom1i5s3SU4WVwe2Tno4jKD69ojMlQN6VKB7DK4xaRSs2C7zfDm63n1WCyyOAj8mASIFhb3sc3hD56HTJFUV/TH3UVlzP7oPm/Mm7nEcU3+HdSSwm3I1qFYhsXfVRym41IlbC4Twf660/kUZrugA7Zqd5K9Un3lOVTzYowaF+m5OIOO56wff3zPBxeOVjANA==', 'base64');
         const aesKey = getSubmissionKey(priv, encAesKey);
         const ivs = getSubmissionIvs(instanceId, aesKey);
 
-        let thrown = false;
-        try { // i know about should.throws but i can't get it to assert the specific error type.
-          getSubmissionCleartext(aesKey, ivs(1), unpaddedCiphertext);
-        } catch (ex) {
-          ex.message.should.equal('Could not perform decryption. Double check your passphrase and your data and try again.');
-          thrown = true;
-        }
-        thrown.should.equal(true);
+        should.throws(
+          () => getSubmissionCleartext(aesKey, ivs(1), unpaddedCiphertext),
+          /^Error: Could not perform decryption\. Double check your passphrase and your data and try again\.$/,
+        );
       });
     });
   });
