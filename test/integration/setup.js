@@ -9,8 +9,6 @@ const request = require('supertest');
 const { task } = require(appRoot + '/lib/task/task');
 const authenticateUser = require('../util/authenticate-user');
 const testData = require('../data/xml');
-
-// knex things.
 const config = require('config');
 const { withPg } = require(appRoot + '/lib/model/pg-migrator');
 
