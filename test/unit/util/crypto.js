@@ -19,7 +19,8 @@ describe('util/crypto', () => {
       hashPassword('password', 'hashhash').should.be.a.Promise();
     });
 
-    it('should reject given a blank plaintext', () => hashPassword('').should.be.rejectedWith('The password or passphrase provided does not meet the required length.'));
+    it('should reject given a blank plaintext', () =>
+      hashPassword('').should.be.rejectedWith('The password or passphrase provided does not meet the required length.'));
 
     it('should not attempt to verify empty plaintext', (done) => {
       verifyPassword('', '$2a$12$hCRUXz/7Hx2iKPLCduvrWugC5Q/j5e3bX9KvaYvaIvg/uvFYEpzSy').then((result) => {
