@@ -14,6 +14,26 @@ describe('api: /sessions', () => {
           body.should.be.a.Session();
         })));
 
+    // These demonstrate a strange feature of bcrypt - a valid password can be
+    // repeated multiple times and still validate successfully.  An alternative
+    // to these tests would be to check for NUL characters in supplied passwords
+    // and reject them before passing the values to bcrypt.
+    describe('weird bcrypt implementation details', () => {
+      [
+        [ 'repeated once',             'chelsea\0chelsea' ],          // eslint-disable-line no-multi-spaces
+        [ 'repeated twice',            'chelsea\0chelsea\0chelsea' ], // eslint-disable-line no-multi-spaces
+        [ 'repeated until truncation', 'chelsea\0chelsea\0chelsea\0chelsea\0chelsea\0chelsea\0chelsea\0chelsea\0chelsea\0' ],
+      ].forEach(([ description, password ]) => {
+        it(`should treat a password ${description} as the singular version of the same`, testService((service) =>
+          service.post('/v1/sessions')
+            .send({ email: 'chelsea@getodk.org', password })
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.a.Session();
+            })));
+      });
+    });
+
     it('should treat email addresses case insensitively', testService((service) =>
       service.post('/v1/sessions')
         .send({ email: 'cHeLsEa@getodk.OrG', password: 'chelsea' })
