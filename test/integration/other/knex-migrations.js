@@ -15,7 +15,7 @@ const populateForms = require('../fixtures/02-forms');
 const { getFormFields } = require('../../../lib/data/schema');
 
 const withTestDatabase = withKnex(config.get('test.database'));
-const migrationsDir = appRoot + '/lib/model/migrations';
+const migrationsDir = appRoot + '/lib/model/migrations/legacy';
 const upToMigration = (toName, inclusive = true) => withTestDatabase(async (migrator) => {
   await migrator.raw('drop owned by current_user');
   const migrations = await migrator.migrate.list({ directory: migrationsDir });
@@ -39,9 +39,9 @@ const testMigration = (filename, tests, options = {}) => {
   const { only = false, skip = false } = options;
   const f = only
     // eslint-disable-next-line no-only-tests/no-only-tests
-    ? describe.only.bind(describe)
+    ? describe.bind(describe)
     : (skip ? describe.skip.bind(describe) : describe);
-  f(`database migrations: ${filename}`, function() {
+  f(`knex migrations: ${filename}`, function() {
     this.timeout(20000);
 
     beforeEach(() => upToMigration(filename, false));
@@ -59,7 +59,7 @@ testMigration.skip = (filename, tests) =>
 // column to projects and forms, it is not possible to migrate part way
 // (before the new column) and populate the data when frames expect the
 // new column to exist.
-describe.skip('database migrations', function() {
+describe.skip('knex migrations', function() {
   this.timeout(8000);
 
   it('should purge deleted forms via migration', testServiceFullTrx(async (service, container) => {
@@ -218,7 +218,7 @@ describe.skip('database migrations', function() {
 
 });
 
-describe('database migrations: removing default project', function() {
+describe('knex migrations: removing default project', function() {
   this.timeout(8000);
 
   it('should put old forms into project', testServiceFullTrx(async (service, container) => {
@@ -255,7 +255,7 @@ describe('database migrations: removing default project', function() {
   }));
 });
 
-describe('database migrations: intermediate form schema', function() {
+describe('knex migrations: intermediate form schema', function() {
   this.timeout(20000);
 
   it('should test migration', testServiceFullTrx(async (service, container) => {
@@ -384,7 +384,7 @@ describe('database migrations: intermediate form schema', function() {
   }));
 });
 
-describe('database migrations: 20230123-01-remove-google-backups', function() {
+describe('knex migrations: 20230123-01-remove-google-backups', function() {
   this.timeout(20000);
 
   beforeEach(() => upToMigration('20230123-01-remove-google-backups.js', false));
@@ -478,7 +478,7 @@ describe('database migrations: 20230123-01-remove-google-backups', function() {
   }));
 });
 
-describe.skip('database migrations: 20230324-01-edit-dataset-verbs.js', function () {
+describe.skip('knex migrations: 20230324-01-edit-dataset-verbs.js', function () {
   this.timeout(20000);
 
   it('should add dataset/entity read verbs with raw sql', testServiceFullTrx(async (service, container) => {
@@ -514,7 +514,7 @@ describe.skip('database migrations: 20230324-01-edit-dataset-verbs.js', function
   }));
 });
 
-describe.skip('database migrations from 20230406: altering entities and entity_defs', function () {
+describe.skip('knex migrations from 20230406: altering entities and entity_defs', function () {
   this.timeout(20000);
 
   const createEntity = async (service, container) => {
@@ -608,7 +608,7 @@ describe.skip('database migrations from 20230406: altering entities and entity_d
   }));
 });
 
-describe('database migrations from 20230512: adding entity_def_sources table', function () {
+describe('knex migrations from 20230512: adding entity_def_sources table', function () {
   this.timeout(20000);
 
   it('should backfill entityId and entityDefId in audit log', testServiceFullTrx(async (service, container) => {
@@ -922,7 +922,8 @@ describe.skip('database migration: 20231002-01-add-conflict-details.js', functio
   }));
 });
 
-testMigration('20240215-01-entity-delete-verb.js', () => {
+// Skip because 1. this migration now runs on new migrator, and (2) it relies on application code.
+testMigration.skip('20240215-01-entity-delete-verb.js', () => {
   it('should add entity.delete verb to correct roles', testServiceFullTrx(async (service) => {
     const verbsByRole = async () => {
       const { body: roles } = await service.get('/v1/roles').expect(200);
@@ -951,7 +952,8 @@ testMigration('20240215-01-entity-delete-verb.js', () => {
   }));
 });
 
-testMigration('20240215-02-dedupe-verbs.js', () => {
+// Skip because 1. this migration now runs on new migrator, and (2) it relies on application code.
+testMigration.skip('20240215-02-dedupe-verbs.js', () => {
   it('should remove duplicate submission.update verb', testServiceFullTrx(async (service) => {
     const verbsByRole = async () => {
       const { body: roles } = await service.get('/v1/roles').expect(200);
@@ -984,7 +986,8 @@ testMigration('20240215-02-dedupe-verbs.js', () => {
   }));
 });
 
-testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
+// Skip because 1. this migration now runs on new migrator, and (2) it relies on application code.
+testMigration.skip('20240914-02-remove-orphaned-client-audits.js', () => {
   it('should remove orphaned client audits', testServiceFullTrx(async (service, container) => {
     await populateUsers(container);
     await populateForms(container);
@@ -1238,7 +1241,8 @@ testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
   });
 });
 
-testMigration('20241227-01-backfill-audit-entity-uuid.js', () => {
+// Skip because 1. this migration now runs on new migrator, and (2) it relies on application code.
+testMigration.skip('20241227-01-backfill-audit-entity-uuid.js', () => {
   it('should update the format of detail for entity.delete audits', testServiceFullTrx(async (service, container) => {
     await populateUsers(container);
     await populateForms(container);

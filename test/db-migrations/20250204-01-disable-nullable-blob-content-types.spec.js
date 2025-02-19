@@ -7,7 +7,7 @@ const { // eslint-disable-line object-curly-newline
   rowsExistFor,
 } = require('./utils'); // eslint-disable-line object-curly-newline
 
-describeMigration('20250113-01-disable-nullable-blob-content-types', ({ runMigrationBeingTested }) => {
+describeMigration('20250204-01-disable-nullable-blob-content-types', ({ runMigrationBeingTested }) => {
   const aBlobWith = props => {
     const randomContent = randomBytes(100);
     const md5 = hash('md5',  randomContent); // eslint-disable-line no-multi-spaces
@@ -21,6 +21,7 @@ describeMigration('20250113-01-disable-nullable-blob-content-types', ({ runMigra
 
   before(async () => {
     await rowsExistFor('blobs', blob1, blob2);
+    await assertTableContents('blobs', blob1, blob2); // should fail if old migration still exists
 
     await runMigrationBeingTested();
   });
