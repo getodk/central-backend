@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 const { KeyObject } = require('node:crypto');
 const appRoot = require('app-root-path');
 const { readFileSync } = require('fs');
@@ -294,9 +295,9 @@ describe('util/crypto', () => {
         const aesKey = getSubmissionKey(priv, encAesKey);
         const ivs = getSubmissionIvs(instanceId, aesKey);
 
-        should.throws(
+        assert.throws(
           () => getSubmissionCleartext(aesKey, ivs(1), unpaddedCiphertext),
-          /^Error: Could not perform decryption\. Double check your passphrase and your data and try again\.$/,
+          { message: 'Could not perform decryption. Double check your passphrase and your data and try again.' },
         );
       });
     });
