@@ -9804,7 +9804,7 @@ paths:
 
         [Offline Entities support](https://forum.getodk.org/t/openrosa-spec-proposal-support-offline-entities/48052):
 
-        * If an attachemnt is linked to a Dataset, then `type="entityList"` attribute is added to the `mediaFile` element.
+        * If an attachment is linked to a Dataset, then `type="entityList"` attribute is added to the `mediaFile` element.
 
         * `integrityUrl` is also returned for the attachments that are linked to a Dataset.
       operationId: OpenRosa Form Manifest API
