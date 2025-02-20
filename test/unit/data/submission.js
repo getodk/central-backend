@@ -20,6 +20,20 @@ describe('submission field streamer', () => {
       })));
   });
 
+  it('should ignore data after initial XML hash finished', (done) => {
+    const xml = `
+      <data id="simple"><meta><instanceID>one</instanceID></meta></data>
+      <data id="simple"><name>Alice</name><age>30</age></data>
+    `;
+    fieldsFor(testData.forms.simple).then((fields) =>
+      submissionXmlToFieldStream(fields, xml).pipe(toObjects((error, result) => {
+        result.should.eql([
+          { field: new MockField({ order: 1, name: 'instanceID', path: '/meta/instanceID', type: 'string' }), text: 'one' },
+        ]);
+        done();
+      })));
+  });
+
   it('should deal correctly with repeats', (done) => {
     fieldsFor(testData.forms.doubleRepeat).then((fields) =>
       submissionXmlToFieldStream(fields, testData.instances.doubleRepeat.double).pipe(toObjects((error, result) => {
