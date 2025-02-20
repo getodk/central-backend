@@ -7,9 +7,9 @@ module.exports = ({ Assignments, Users, Projects }) => {
   const proj = new Project({ name: 'Default Project' });
 
   const users = [
-    new User({ email: 'alice@getodk.org', password: 'alice' }, { actor: new Actor({ type: 'user', displayName: 'Alice' }) }),
-    new User({ email: 'bob@getodk.org', password: 'bob' }, { actor: new Actor({ type: 'user', displayName: 'Bob' }) }),
-    new User({ email: 'chelsea@getodk.org', password: 'chelsea' }, { actor: new Actor({ type: 'user', displayName: 'Chelsea' }) })
+    new User({ email: 'alice@getodk.org', password: 'password4alice' }, { actor: new Actor({ type: 'user', displayName: 'Alice' }) }),
+    new User({ email: 'bob@getodk.org', password: 'password4bob' }, { actor: new Actor({ type: 'user', displayName: 'Bob' }) }),
+    new User({ email: 'chelsea@getodk.org', password: 'password4chelsea' }, { actor: new Actor({ type: 'user', displayName: 'Chelsea' }) })
   ];
 
   // hash the passwords, create our three test users, then add grant Alice and Bob their rights.

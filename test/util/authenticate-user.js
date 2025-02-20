@@ -15,7 +15,7 @@ module.exports = async (service, user, includeCsrf) => {
     return body.token;
   } else {
     const credentials = (typeof user === 'string')
-      ? { email: `${user}@getodk.org`, password: user }
+      ? { email: `${user}@getodk.org`, password: `password4${user}` }
       : user;
     const { body } = await service.post('/v1/sessions')
       .send(credentials)

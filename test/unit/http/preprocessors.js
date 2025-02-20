@@ -125,12 +125,12 @@ describe('preprocessors', () => {
         )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should set the appropriate session if valid Basic auth credentials are given @slow', () =>
-        hashPassword('alice').then((hashed) =>
+        hashPassword('password4alice').then((hashed) =>
           Promise.resolve(authHandler(
             { Auth, Users: mockUsers('alice@getodk.org', hashed) },
             new Context(
               createRequest({ headers: {
-                Authorization: `Basic ${Buffer.from('alice@getodk.org:alice', 'utf8').toString('base64')}`,
+                Authorization: `Basic ${Buffer.from('alice@getodk.org:password4alice', 'utf8').toString('base64')}`,
                 'X-Forwarded-Proto': 'https'
               } }),
               { fieldKey: Option.none() }

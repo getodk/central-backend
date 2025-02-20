@@ -5,13 +5,13 @@ describe('basic authentication', () => {
     it('should not accept email and password', testService((service) =>
       service.get('/v1/users/current')
         .set('x-forwarded-proto', 'https')
-        .auth('alice@getodk.org', 'alice')
+        .auth('alice@getodk.org', 'password4alice')
         .expect(401)));
   } else {
     it('should accept email and password', testService((service) =>
       service.get('/v1/users/current')
         .set('x-forwarded-proto', 'https')
-        .auth('alice@getodk.org', 'alice')
+        .auth('alice@getodk.org', 'password4alice')
         .expect(200)));
   }
 });
