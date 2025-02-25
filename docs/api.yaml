@@ -47,9 +47,11 @@ info:
     - Entities that have been soft-deleted for 30 days will automatically be purged. 
     - [Entities Odata](/central-api-odata-endpoints/#id3) now returns `__system/deletedAt`. It can also be used in $filter, $sort and $select query parameters.
     - [Integrity](/central-api-openrosa-endpoints/#openrosa-dataset-integrity-api) endpoint for the Entity list.
+    - [Get Form metadata by EnketoId](/central-api-form-management/#getting-form-details-by-enketoid)
 
     **Changed**:
     - `webformsEnabled` boolean flag is added to [Forms](/central-api-form-management) APIs that enables use of ODK Web Forms instead of Enketo.
+    - Draft Submission can be created using draft token by adding `/test/{token}` to [Creating a draft Submission](/central-api-submission-management/#id1) endpoint.
 
     ## ODK Central v2024.3
 
@@ -3720,6 +3722,46 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
+  /v1/enketo-ids/{enketoId}/form:
+    get:
+      tags:
+      - Individual Form
+      summary: Getting Form Details by EnketoId
+      description: Returns Form metadata for the provided EnketoId
+      operationId: Getting Form Details by EnketoId
+      parameters:
+      - name: enketoId
+        in: path
+        description: The `enketoId` of the Form being referenced.
+        required: true
+        schema:
+          type: string
+        example: abcdef
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Form'
+              example:
+              - projectId: 1
+                xmlFormId: simple
+                name: Simple
+                version: "2.1"
+                enketoId: abcdef
+                hash: 51a93eab3a1974dbffc4c7913fa5a16a
+                keyId: 3
+                state: open
+                publishedAt: 2018-01-21T00:04:11.153Z
+                createdAt: 2018-01-19T23:58:03.395Z
+                updatedAt: 2018-03-21T12:45:02.312Z
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}.xml:
     get:
       tags:
@@ -7875,8 +7917,12 @@ paths:
       tags:
       - Draft Submissions
       summary: Creating a Submission
-      description: Identical to [the non-Draft version](/central-api-submission-management/#creating-a-submission)
-        of this endpoint.
+      description: |-
+        Or
+      
+        **POST /v1/test/{token}/projects/{projectId}/forms/{xmlFormId}/draft/submissions**
+
+        Identical to [the non-Draft version](/central-api-submission-management/#creating-a-submission) of this endpoint.
       operationId: Creating a Submission for a draft Form
       parameters:
       - name: projectId
