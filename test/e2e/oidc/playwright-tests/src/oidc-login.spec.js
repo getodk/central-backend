@@ -24,8 +24,8 @@ test.describe.configure({ mode: 'parallel' });
 
 test.describe('happy', () => {
   [
-    [ 'no next param',       '',                   '/',            '/#/' ],          // eslint-disable-line no-multi-spaces
-    [ 'internal next param', '?next=/some/path',   '/',            '/#/some/path' ], // eslint-disable-line no-multi-spaces
+    [ 'no next param',       '',                   '/',            '/' ],          // eslint-disable-line no-multi-spaces
+    [ 'internal next param', '?next=/some/path',   '/some/path',            '/some/path' ], // eslint-disable-line no-multi-spaces
     [ 'enketo next param',   '?next=/-/some/path', '/-/some/path', '/-/some/path' ], // eslint-disable-line no-multi-spaces
   ].forEach(([ description, initialQueryString, expectedBackendPath, expectedFrontendPath ]) => {
     test(`can log in (${description})`, async ({ browserName, page }, testInfo) => {

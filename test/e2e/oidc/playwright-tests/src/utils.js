@@ -27,9 +27,8 @@ const SESSION_COOKIE = (frontendUrl.startsWith('https://') ? '__Host-' : '') + '
 
 async function assertErrorRedirect(page, expectedErrorCode) {
   await page.waitForFunction(expected => {
-    const { href, hash } = window.location;
-    const fakeSearch = hash.replace(/[^?]*\?/, ''); // hash & search exchanged in odk-central-frontend
-    const actual = new URLSearchParams(fakeSearch).get('oidcError');
+    const { href, hash, search } = window.location;
+    const actual = new URLSearchParams(search).get('oidcError');
 
     console.log(`
       assertErrorRedirect()
