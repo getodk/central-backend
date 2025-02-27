@@ -2,7 +2,7 @@ const appRoot = require('app-root-path');
 const { readFileSync } = require('fs');
 const { sql } = require('slonik');
 const { toText } = require('streamtest').v2;
-const { testService, testContainerFullTrx, testContainer } = require(appRoot + '/test/integration/setup');
+const { testService, testServiceFullTrx, testContainerFullTrx, testContainer } = require(appRoot + '/test/integration/setup');
 const testData = require(appRoot + '/test/data/xml');
 const { httpZipResponseToFiles } = require(appRoot + '/test/util/zip');
 // eslint-disable-next-line import/no-dynamic-require
@@ -492,7 +492,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
 `);
             })))));
 
-    it.only('should decrypt client audit log attachments from s3', testService((service, { Blobs }) => {
+    it.only('should decrypt client audit log attachments from s3', testServiceFullTrx((service, { Blobs }) => {
       global.s3.enableMock();
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/key')
