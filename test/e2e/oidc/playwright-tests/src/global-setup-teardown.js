@@ -29,9 +29,8 @@ async function startFakeFrontend() {
   console.log('Starting fake frontend proxy...'); // eslint-disable-line no-console
   const fakeFrontend = express();
   fakeFrontend.use(cookieParser());
-  fakeFrontend.get('/',    successHandler); // eslint-disable-line no-use-before-define
-  fakeFrontend.get('/-/*', successHandler); // eslint-disable-line no-use-before-define
   fakeFrontend.use(createProxyMiddleware('/v1', { target: backendUrl }));
+  fakeFrontend.get('*',    successHandler); // eslint-disable-line no-use-before-define
 
   if (frontendUrl.startsWith('http://')) {
     return fakeFrontend.listen(port);
