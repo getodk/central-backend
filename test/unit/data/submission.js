@@ -20,6 +20,20 @@ describe('submission field streamer', () => {
       })));
   });
 
+  it('should ignore data after initial XML hash finished', (done) => {
+    const xml = `
+      <data id="simple"><meta><instanceID>one</instanceID></meta></data>
+      <data id="simple"><name>Alice</name><age>30</age></data>
+    `;
+    fieldsFor(testData.forms.simple).then((fields) =>
+      submissionXmlToFieldStream(fields, xml).pipe(toObjects((error, result) => {
+        result.should.eql([
+          { field: new MockField({ order: 1, name: 'instanceID', path: '/meta/instanceID', type: 'string' }), text: 'one' },
+        ]);
+        done();
+      })));
+  });
+
   it('should deal correctly with repeats', (done) => {
     fieldsFor(testData.forms.doubleRepeat).then((fields) =>
       submissionXmlToFieldStream(fields, testData.instances.doubleRepeat.double).pipe(toObjects((error, result) => {
@@ -40,6 +54,26 @@ describe('submission field streamer', () => {
         ]);
         done();
       })));
+  });
+
+
+  [
+    [ 'random text',   'this is not an XML' ], // eslint-disable-line no-multi-spaces, key-spacing
+    [ 'empty xml',     '',                  ], // eslint-disable-line no-multi-spaces, key-spacing
+    [ 'null xml',      null,                ], // eslint-disable-line no-multi-spaces, key-spacing
+    [ 'undefined xml', undefined,           ], // eslint-disable-line no-multi-spaces
+  ].forEach(([ description, xml ]) => {
+    it(`should throw given ${description}`, (done) => {
+      fieldsFor(testData.forms.simple).then((fields) => {
+        const stream = submissionXmlToFieldStream(fields, xml);
+        stream.on('data', () => () => {});
+        stream.on('error', err => {
+          err.message.should.eql('Stream ended before stack was exhausted.');
+          done();
+        });
+        stream.on('end', () => done(new Error('should have emitted error event')));
+      });
+    });
   });
 
   [
