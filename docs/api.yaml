@@ -48,6 +48,9 @@ info:
     - [Entities Odata](/central-api-odata-endpoints/#id3) now returns `__system/deletedAt`. It can also be used in $filter, $sort and $select query parameters.
     - [Integrity](/central-api-openrosa-endpoints/#openrosa-dataset-integrity-api) endpoint for the Entity list.
 
+    **Changed**:
+    - `webformsEnabled` boolean flag is added to [Forms](/central-api-form-management) APIs that enables use of ODK Web Forms instead of Enketo.
+
     ## ODK Central v2024.3
 
     **Added**:
@@ -12566,6 +12569,9 @@ components:
           type: string
           description: ISO date format
           example: 2018-03-21T12:45:02.312Z
+        webformsEnabled:
+          type: boolean
+          description: Enables use of ODK Web Forms instead of Enketo for filling Forms via web browsers.
     ExtendedForm:
       allOf:
         - $ref: '#/components/schemas/Form'
