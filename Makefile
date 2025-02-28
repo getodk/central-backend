@@ -72,16 +72,12 @@ fake-s3-server-persistent:
 migrations: node_version
 	node lib/bin/run-migrations.js
 
-.PHONY: check-migrations
-check-migrations: node_version
-	node lib/bin/check-migrations.js
-
 
 ################################################################################
 # RUN SERVER
 
 .PHONY: base
-base: node_modules node_version migrations check-migrations
+base: node_modules node_version migrations
 
 .PHONY: dev
 dev: base
