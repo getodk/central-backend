@@ -1572,17 +1572,19 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
     it('should update allowed fields', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple')
-          .send({ state: 'closing' })
+          .send({ state: 'closing', webformsEnabled: true })
           .expect(200)
           .then(({ body }) => {
             body.should.be.a.Form();
             body.state.should.equal('closing');
+            body.webformsEnabled.should.equal(true);
           })
           .then(() => asAlice.get('/v1/projects/1/forms/simple')
             .expect(200)
             .then(({ body }) => {
               body.should.be.a.Form();
               body.state.should.equal('closing');
+              body.webformsEnabled.should.equal(true);
             })))));
 
     it('should reject if state is invalid', testService((service) =>
@@ -1633,5 +1635,54 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               log.acteeId.should.equal(form.acteeId);
               log.details.should.eql({ data: { state: 'closing' } });
             })))));
+  });
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Get Form by EnketoId
+  ////////////////////////////////////////////////////////////////////////////////
+
+  describe('/enketo-ids/:enketoId/form', () => {
+    it('should return Form if it is in draft and no auth is provided', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft')
+        .expect(200);
+
+      const enketoId = await asAlice.get('/v1/projects/1/forms/simple/draft')
+        .then(({ body }) => body.enketoId);
+
+      await service.get(`/v1/enketo-ids/${enketoId}/form`)
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.a.Form();
+        });
+    }));
+
+    it('should reject without session token', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const enketoId = await asAlice.get('/v1/projects/1/forms/simple')
+        .then(({ body }) => body.enketoId);
+
+      await service.get(`/v1/enketo-ids/${enketoId}/form`)
+        .expect(404);
+    }));
+
+    it('should return the Form with session token queryparam', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const enketoId = await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simple2)
+        .expect(200)
+        .then(({ body }) => body.enketoId);
+
+      const token = await asAlice.post('/v1/projects/1/forms/simple2/public-links')
+        .send({ displayName: 'link1' })
+        .then(({ body }) => body.token);
+
+      await service.get(`/v1/enketo-ids/${enketoId}/form?st=${token}`)
+        .expect(200);
+    }));
   });
 });
