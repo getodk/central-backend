@@ -48,6 +48,10 @@ info:
     - [Entities Odata](/central-api-odata-endpoints/#id3) now returns `__system/deletedAt`. It can also be used in $filter, $sort and $select query parameters.
     - [Integrity](/central-api-openrosa-endpoints/#openrosa-dataset-integrity-api) endpoint for the Entity list.
 
+    **Changed**:
+    - Extended metadata for Datasets includes a new property `lastUpdate`, which is the timestamp of latest modifed Entity.
+
+
     ## ODK Central v2024.3
 
     **Added**:
@@ -12721,6 +12725,11 @@ components:
             description: ISO date format. The timestamp of the most recent entity,
               if any.
             example: 2018-04-18T03:04:51.695Z
+          lastUpdate:
+            type: string
+            description: ISO date format. The timestamp of the most recent updated entity,
+              if any.
+            example: 2020-19-10T03:04:51.695Z
           entities:
             type: number
             description: The number of Entities in the Dataset.

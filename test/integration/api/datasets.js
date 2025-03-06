@@ -607,7 +607,7 @@ describe('datasets and entities', () => {
           .expect(200)
           .then(({ body }) => {
             body[0].should.be.an.ExtendedDataset();
-            body.map(({ createdAt, lastEntity, ...d }) => d).should.eql([
+            body.map(({ createdAt, lastEntity, lastUpdate, ...d }) => d).should.eql([
               { name: 'people', projectId: 1, entities: 1, approvalRequired: false, conflicts: 0 }
             ]);
           });
@@ -650,8 +650,9 @@ describe('datasets and entities', () => {
           .expect(200)
           .then(({ body }) => {
             body[0].should.be.an.ExtendedDataset();
-            body.map(({ createdAt, lastEntity, ...d }) => {
+            body.map(({ createdAt, lastEntity, lastUpdate, ...d }) => {
               should(lastEntity).be.null();
+              should(lastUpdate).be.null();
               return d;
             }).should.eql([
               { name: 'people', projectId: 1, entities: 0, approvalRequired: false, conflicts: 0 }
@@ -678,14 +679,21 @@ describe('datasets and entities', () => {
 
         await exhaust(container);
 
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+          .send({
+            label: 'Alice - updated'
+          })
+          .expect(200);
+
         await asAlice.get('/v1/projects/1/datasets')
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
             body[0].should.be.an.ExtendedDataset();
-            body.map(({ createdAt, lastEntity, ...d }) => {
+            body.map(({ createdAt, lastEntity, lastUpdate, ...d }) => {
               createdAt.should.not.be.null();
               lastEntity.should.not.be.null();
+              lastUpdate.should.not.be.null();
               return d;
             }).should.eql([
               { name: 'people', projectId: 1, entities: 1, approvalRequired: false, conflicts: 0 }
@@ -729,7 +737,7 @@ describe('datasets and entities', () => {
 
         await exhaust(container);
 
-        await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1T00:00:00Z' WHERE TRUE`);
+        await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1T00:00:00Z', "updatedAt" = '1999-1-1T00:00:00Z' WHERE TRUE`);
 
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
           .send(testData.instances.simpleEntity.two)
@@ -747,8 +755,9 @@ describe('datasets and entities', () => {
           .expect(200)
           .then(({ body }) => {
             body[0].should.be.an.ExtendedDataset();
-            body.map(({ createdAt, lastEntity, conflicts, ...d }) => {
+            body.map(({ createdAt, lastEntity, lastUpdate, conflicts, ...d }) => {
               lastEntity.should.not.startWith('1999');
+              lastUpdate.should.startWith('1999');
               return d;
             }).should.eql([
               { name: 'people', projectId: 1, entities: 2, approvalRequired: false }
@@ -1407,12 +1416,18 @@ describe('datasets and entities', () => {
           })
           .expect(200);
 
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa?force=true')
+          .send({
+            label: 'Johnny Doe - updated'
+          })
+          .expect(200);
+
         await asAlice.get('/v1/projects/1/datasets/people')
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
 
-            const { createdAt, properties, lastEntity, ...ds } = body;
+            const { createdAt, properties, lastEntity, lastUpdate, ...ds } = body;
 
             ds.should.be.eql({
               name: 'people',
@@ -1425,7 +1440,7 @@ describe('datasets and entities', () => {
             });
 
             lastEntity.should.be.recentIsoDate();
-
+            lastUpdate.should.be.recentIsoDate();
             createdAt.should.be.recentIsoDate();
 
             properties.map(({ publishedAt, ...p }) => {
