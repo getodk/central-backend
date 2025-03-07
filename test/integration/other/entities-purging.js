@@ -6,6 +6,7 @@ const { v4: uuid } = require('uuid');
 
 const appPath = require('app-root-path');
 const Problem = require('../../../lib/util/problem');
+const { map } = require('ramda');
 const { exhaust } = require(appPath + '/lib/worker/worker');
 
 const createProject = (user) => user.post('/v1/projects')
@@ -468,8 +469,8 @@ describe('query module entities purge', () => {
     it('should log a purge event in the audit log when purging entities', testService(async (service, { Entities, oneFirst }) => {
       const asAlice = await service.login('alice');
 
-      const peopleUuids = await createDeletedEntities(asAlice, 2);
-      const treesUuids = await createDeletedEntities(asAlice, 2, { datasetName: 'trees' });
+      await createDeletedEntities(asAlice, 2);
+      await createDeletedEntities(asAlice, 2, { datasetName: 'trees' });
 
       const peopleActeeId = await oneFirst(sql`SELECT "acteeId" FROM datasets WHERE name = 'people'`);
       const treesActeeId = await oneFirst(sql`SELECT "acteeId" FROM datasets WHERE name = 'trees'`);
@@ -484,11 +485,9 @@ describe('query module entities purge', () => {
 
           const [ peoplePurgeAudit ] = purgeLogs.filter(a => a.acteeId === peopleActeeId);
           peoplePurgeAudit.details.entitiesDeleted.should.eql(2);
-          peoplePurgeAudit.details.entityUuids.should.containDeep(peopleUuids);
 
           const [ treesPurgeAudit ] = purgeLogs.filter(a => a.acteeId === treesActeeId);
           treesPurgeAudit.details.entitiesDeleted.should.eql(2);
-          treesPurgeAudit.details.entityUuids.should.containDeep(treesUuids);
         });
     }));
 
@@ -503,4 +502,21 @@ describe('query module entities purge', () => {
         });
     }));
   });
+
+  it('should persist the list of UUIDs of purged entities', testService(async (service, { Entities, oneFirst, all }) => {
+    const asAlice = await service.login('alice');
+
+    const peopleUuids = await createDeletedEntities(asAlice, 2);
+    const treesUuids = await createDeletedEntities(asAlice, 2, { datasetName: 'trees' });
+
+    await oneFirst(sql`SELECT "acteeId" FROM datasets WHERE name = 'people'`);
+    await oneFirst(sql`SELECT "acteeId" FROM datasets WHERE name = 'trees'`);
+
+    // Purge entities
+    await Entities.purge(true);
+
+    const purgedEntities = await all(sql`SELECT "entityUuid" FROM purged_entities`).then(map(e => e.entityUuid));
+
+    purgedEntities.should.containDeep(peopleUuids.concat(treesUuids));
+  }));
 });
