@@ -1,3 +1,5 @@
+const { up: purgeEntityTableUp, down: purgeEntityTableDown } = require('../../../lib/model/migrations/20250307-01-purged-entities-table');
+
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const uuid = require('uuid').v4;
@@ -1240,6 +1242,8 @@ testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
 
 testMigration('20241227-01-backfill-audit-entity-uuid.js', () => {
   it('should update the format of detail for entity.delete audits', testServiceFullTrx(async (service, container) => {
+
+    await withTestDatabase(db => purgeEntityTableUp(db));
     await populateUsers(container);
     await populateForms(container);
 
@@ -1275,10 +1279,12 @@ testMigration('20241227-01-backfill-audit-entity-uuid.js', () => {
         });
       });
 
+    await withTestDatabase(db => purgeEntityTableDown(db));
+
     // Run the migration
     await up();
 
-    // Check the details of audit log of entity.delete action
+    // // Check the details of audit log of entity.delete action
     await asAlice.get('/v1/audits?action=entity.delete')
       .expect(200)
       .then(({ body }) => {
