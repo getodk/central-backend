@@ -23,6 +23,26 @@ describe('api: user-preferences', () => {
       });
   }));
 
+  it('can store the string "null", distinct from NULL value', testService(async (service) => {
+    const asAlice = await service.login('alice');
+
+    await asAlice.put('/v1/user-preferences/site/let-us-store-a-string-whose-content-is-null')
+      .send({ propertyValue: 'null' })
+      .expect(200);
+
+    await asAlice.get('/v1/users/current')
+      .set('X-Extended-Metadata', 'true')
+      .expect(200)
+      .then(({ body }) => {
+        body.preferences.should.eql({
+          site: {
+            'let-us-store-a-string-whose-content-is-null': 'null',
+          },
+          projects: {
+          },
+        });
+      });
+  }));
 
   it('can store a JS null propertyValue', testService(async (service) => {
     const asAlice = await service.login('alice');
