@@ -268,7 +268,7 @@ describe.only('query module entities purge', () => {
       remainingEntityDefs.map(def => def.entityId).should.containDeep(remainingEntity.map(e => e.id));
     }));
 
-    it.only('should redact notes of a deleted entity sent with x-action-notes', testService(async (service, { Entities, oneFirst }) => {
+    it('should redact notes of a deleted entity sent with x-action-notes', testService(async (service, { Entities, oneFirst }) => {
       const asAlice = await service.login('alice');
 
       // Create a dataset
@@ -302,7 +302,7 @@ describe.only('query module entities purge', () => {
       should(auditNotes).be.null();
     }));
 
-    it('should purge API entity sources', testService(async (service, container) => {
+    it.only('should purge API entity sources', testService(async (service, container) => {
       const { Entities, oneFirst } = container;
       const asAlice = await service.login('alice');
 
