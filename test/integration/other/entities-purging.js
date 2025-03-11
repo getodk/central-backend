@@ -190,7 +190,7 @@ describe.only('query module entities purge', () => {
         projectId: false, datasetName: true, entityUuid: false, expectedError: PROVIDE_PROJECT_ID },
     ];
     cases.forEach(c =>
-      it.only(`should throw an error ${c.description}`, testService(async (service, { Entities }) => {
+      it(`should throw an error ${c.description}`, testService(async (service, { Entities }) => {
         const asAlice = await service.login('alice');
 
         const uuids = await createDeletedEntities(asAlice, 1);
@@ -268,7 +268,7 @@ describe.only('query module entities purge', () => {
       remainingEntityDefs.map(def => def.entityId).should.containDeep(remainingEntity.map(e => e.id));
     }));
 
-    it('should redact notes of a deleted entity sent with x-action-notes', testService(async (service, { Entities, oneFirst }) => {
+    it.only('should redact notes of a deleted entity sent with x-action-notes', testService(async (service, { Entities, oneFirst }) => {
       const asAlice = await service.login('alice');
 
       // Create a dataset
