@@ -303,10 +303,15 @@ describe.only('query module entities purge', () => {
     }));
 
     it.only('should purge API entity sources', testService(async (service, container) => {
-      const { Entities, oneFirst } = container;
+      const { Entities, oneFirst, all } = container;
       const asAlice = await service.login('alice');
 
       await createDeletedEntities(asAlice, 2);
+
+      let defs = await all(sql`select * from entity_defs`);
+      console.log('entity_defs:', defs);
+      let defsCount = await oneFirst(sql`select count(1) from entity_defs`);
+      defsCount.should.be.equal(2);
 
       let sourcesCount = await oneFirst(sql`select count(1) from entity_def_sources`);
       sourcesCount.should.be.equal(2);
