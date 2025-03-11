@@ -12,4 +12,4 @@ node_modules/
 /.repl-history
 .vscode
 /junit-reports/
-config/development.json
+/config/development.json
