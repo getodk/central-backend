@@ -195,14 +195,16 @@ describe.only('query module entities purge', () => {
 
         const uuids = await createDeletedEntities(asAlice, 1);
 
-        Entities.purge(
+        return Entities.purge(
           true,
           c.projectId ? 1 : null,
           c.datasetName ? 'people' : null,
           c.entityUuid ? uuids[0] : null
         ).should.be.rejectedWith(Problem, {
-          problemCode: 123,
-          error: c.expectedError
+          problemCode: 500.1,
+          problemDetails: {
+            error: c.expectedError,
+          },
         });
       }))
     );
@@ -303,15 +305,10 @@ describe.only('query module entities purge', () => {
     }));
 
     it('should purge API entity sources', testService(async (service, container) => {
-      const { Entities, oneFirst, all } = container;
+      const { Entities, oneFirst } = container;
       const asAlice = await service.login('alice');
 
       await createDeletedEntities(asAlice, 2);
-
-      let defs = await all(sql`select * from entity_defs`);
-      console.log('entity_defs:', defs);
-      let defsCount = await oneFirst(sql`select count(1) from entity_defs`);
-      defsCount.should.be.equal(2);
 
       let sourcesCount = await oneFirst(sql`select count(1) from entity_def_sources`);
       sourcesCount.should.be.equal(2);

@@ -43,7 +43,7 @@ const withDeleteChecks = container => {
 
 const testPurgeTask = fn => testTask(container => fn(withDeleteChecks(container)));
 
-describe('task: purge deleted resources (forms, submissions and entities)', () => {
+describe.only('task: purge deleted resources (forms, submissions and entities)', () => {
   describe('forms', () => {
     describe('force flag', () => {
       it('should not purge recently deleted forms by default', testPurgeTask(({ confirm, Forms }) =>
