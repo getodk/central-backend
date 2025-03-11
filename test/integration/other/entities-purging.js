@@ -83,7 +83,7 @@ const createDeletedEntities = async (user, count, { datasetName='people', projec
   return uuids;
 };
 
-describe.only('query module entities purge', () => {
+describe('query module entities purge', () => {
 
   describe('entities purge arguments', () => {
     it('should purge a specific entity', testService(async (service, { Entities, oneFirst }) => {
