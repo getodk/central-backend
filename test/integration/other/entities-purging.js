@@ -83,7 +83,7 @@ const createDeletedEntities = async (user, count, { datasetName='people', projec
   return uuids;
 };
 
-describe('query module entities purge', () => {
+describe.only('query module entities purge', () => {
 
   describe('entities purge arguments', () => {
     it('should purge a specific entity', testService(async (service, { Entities, oneFirst }) => {
@@ -180,31 +180,30 @@ describe('query module entities purge', () => {
     const PROVIDE_ALL = 'Must specify projectId and datasetName to purge a specify entity.';
     const PROVIDE_PROJECT_ID = 'Must specify projectId to purge all entities of a dataset/entity-list.';
     const cases = [
-      { description: ' when entityUuid specified without projectId and datasetName',
+      { description: 'when entityUuid specified without projectId and datasetName',
         projectId: false, datasetName: false, entityUuid: true, expectedError: PROVIDE_ALL },
-      { description: ' when entityUuid specified without projectId',
+      { description: 'when entityUuid specified without projectId',
         projectId: false, datasetName: true, entityUuid: true, expectedError: PROVIDE_ALL },
-      { description: ' when entityUuid specified without datasetName',
+      { description: 'when entityUuid specified without datasetName',
         projectId: true, datasetName: false, entityUuid: true, expectedError: PROVIDE_ALL },
-      { description: ' when datasetName specified without projectId',
+      { description: 'when datasetName specified without projectId',
         projectId: false, datasetName: true, entityUuid: false, expectedError: PROVIDE_PROJECT_ID },
     ];
     cases.forEach(c =>
-      it(`should throw an error ${c.description}`, testService(async (service, { Entities }) => {
+      it.only(`should throw an error ${c.description}`, testService(async (service, { Entities }) => {
         const asAlice = await service.login('alice');
 
         const uuids = await createDeletedEntities(asAlice, 1);
 
-        (() => {
-          Entities.purge(
-            true,
-            c.projectId ? 1 : null,
-            c.datasetName ? 'people' : null,
-            c.entityUuid ? uuids[0] : null
-          );
-        }).should.throw(Problem.internal.unknown({
+        Entities.purge(
+          true,
+          c.projectId ? 1 : null,
+          c.datasetName ? 'people' : null,
+          c.entityUuid ? uuids[0] : null
+        ).should.be.rejectedWith(Problem, {
+          problemCode: 123,
           error: c.expectedError
-        }));
+        });
       }))
     );
   });
