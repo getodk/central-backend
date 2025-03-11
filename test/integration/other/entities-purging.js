@@ -180,13 +180,13 @@ describe('query module entities purge', () => {
     const PROVIDE_ALL = 'Must specify projectId and datasetName to purge a specify entity.';
     const PROVIDE_PROJECT_ID = 'Must specify projectId to purge all entities of a dataset/entity-list.';
     const cases = [
-      { description: 'when entityUuid specified without projectId and datasetName',
+      { description: ' when entityUuid specified without projectId and datasetName',
         projectId: false, datasetName: false, entityUuid: true, expectedError: PROVIDE_ALL },
-      { description: 'when entityUuid specified without projectId',
+      { description: ' when entityUuid specified without projectId',
         projectId: false, datasetName: true, entityUuid: true, expectedError: PROVIDE_ALL },
-      { description: 'when entityUuid specified without datasetName',
+      { description: ' when entityUuid specified without datasetName',
         projectId: true, datasetName: false, entityUuid: true, expectedError: PROVIDE_ALL },
-      { description: 'when datasetName specified without projectId',
+      { description: ' when datasetName specified without projectId',
         projectId: false, datasetName: true, entityUuid: false, expectedError: PROVIDE_PROJECT_ID },
     ];
     cases.forEach(c =>
