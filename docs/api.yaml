@@ -49,7 +49,7 @@ info:
     - [Integrity](/central-api-openrosa-endpoints/#openrosa-dataset-integrity-api) endpoint for the Entity list.
 
     **Changed**:
-    - Extended metadata for Datasets includes a new property `lastUpdate`, which is the timestamp of latest modifed Entity.
+    - [Dataset Metadata](/central-api-dataset-management/#dataset-metadata) now includes a new property, `lastUpdate`, which is the timestamp of the latest modification to the datasets or its entities.
 
 
     ## ODK Central v2024.3
@@ -8556,14 +8556,13 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/DatasetMetadata'
+                $ref: '#/components/schemas/DatasetMetadata'
               example:
                 name: people
                 createdAt: '2018-01-19T23:58:03.395Z'
                 projectId: 1
                 approvalRequired: false
+                lastUpdate: '2018-01-19T23:58:03.395Z'
                 sourceForms: []
                 linkedForms: []
                 properties: []
@@ -8618,14 +8617,13 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/DatasetMetadata'
+                $ref: '#/components/schemas/DatasetMetadata'
               example:
                 name: people
                 createdAt: '2018-01-19T23:58:03.395Z'
                 projectId: 1
                 approvalRequired: true
+                lastUpdate: '2020-10-10T03:04:51.695Z'
                 sourceForms:
                 - xmlFormId: treeRegistration
                   name: Tree Registration
@@ -8687,14 +8685,13 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/DatasetMetadata'
+                $ref: '#/components/schemas/DatasetMetadata'
               example:
                 name: people
                 createdAt: '2018-01-19T23:58:03.395Z'
                 projectId: 1
                 approvalRequired: true
+                lastUpdate: '2020-10-10T03:04:51.695Z'
                 sourceForms:
                 - xmlFormId: treeRegistration
                   name: Tree Registration
@@ -12725,11 +12722,6 @@ components:
             description: ISO date format. The timestamp of the most recent entity,
               if any.
             example: 2018-04-18T03:04:51.695Z
-          lastUpdate:
-            type: string
-            description: ISO date format. The timestamp of the most recent updated entity,
-              if any.
-            example: 2020-19-10T03:04:51.695Z
           entities:
             type: number
             description: The number of Entities in the Dataset.
@@ -12879,22 +12871,29 @@ components:
           items:
             $ref: '#/components/schemas/FormKeyValue'
     DatasetMetadata:
-      properties:
-        linkedForms:
-          type: array
-          items:
-            $ref: '#/components/schemas/FormKeyValue'
-          description: Forms that consume data from the Dataset
-        sourceForms:
-          type: array
-          items:
-            $ref: '#/components/schemas/FormKeyValue'
-          description: Forms that create Entities in the Dataset
-        properties:
-          type: array
-          description: All properties of the Dataset
-          items:
-            $ref: '#/components/schemas/PropertyDetailed'
+      allOf:
+        - $ref: '#/components/schemas/Dataset'
+        - type: object
+          properties:
+            lastUpdate:
+              type: string
+              description: ISO date format. The timestamp of the most recent change to the dataset or its entities
+              example: '2020-10-10T03:04:51.695Z'
+            linkedForms:
+              type: array
+              items:
+                $ref: '#/components/schemas/FormKeyValue'
+              description: Forms that consume data from the Dataset
+            sourceForms:
+              type: array
+              items:
+                $ref: '#/components/schemas/FormKeyValue'
+              description: Forms that create Entities in the Dataset
+            properties:
+              type: array
+              description: All properties of the Dataset
+              items:
+                $ref: '#/components/schemas/PropertyDetailed'
     Submission:
       type: object
       required:

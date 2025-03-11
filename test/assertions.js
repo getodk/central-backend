@@ -362,7 +362,6 @@ should.Assertion.add('ExtendedDataset', function assertExtendedDataset() {
   Object.keys(this.obj).should.containDeep([ 'entities', 'lastEntity', 'conflicts' ]);
   this.obj.entities.should.be.a.Number();
   if (this.obj.lastEntity != null) this.obj.lastEntity.should.be.an.isoDate();
-  if (this.obj.lastUpdate != null) this.obj.lastUpdate.should.be.an.isoDate();
 });
 
 should.Assertion.add('Entity', function assertEntity() {
