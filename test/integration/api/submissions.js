@@ -53,11 +53,39 @@ describe('api: /submission', () => {
           .expect(400)
           .then(({ text }) => { text.should.match(/form ID xml attribute/i); }))));
 
-    it('should reject if content is empty', testService((service) =>
+    it('should reject if "Multipart: Boundary not found"', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
           .set('Content-Type', 'multipart/form-data')
+          .expect(400)
+          .then(({ body }) => {
+            body.should.eql({
+              code: 400.39,
+              message: 'Multipart form content failed to parse.',
+            });
+          }))));
+
+    it('should reject if "Unexpected end of form"', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .set('Content-Type', 'multipart/form-data; boundary=----geckoformboundary57597312afb59088b78af2a1fdc6038')
+          .send('')
+          .expect(400)
+          .then(({ body }) => {
+            body.should.eql({
+              code: 400.39,
+              message: 'Multipart form content failed to parse.',
+            });
+          }))));
+
+    it('should reject if "Malformed part header"', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .set('Content-Type', 'multipart/form-data; boundary=----geckoformboundary57597312afb59088b78af2a1fdc6038')
+          .send('------geckoformboundary57597312afb59088b78af2a1fdc6038\r\nContent-Disposition: form-data; name="xml_submission_file"; filename="xml_submission_file"\r\nContent-Type: text/xml\r\n\r\n------geckoformboundary57597312afb59088b78af2a1fdc6038\r\nContent-Disposition: form-data; name="__csrf"\r\n\r\nxxx\r\n------geckoformboundary57597312afb59088b78af2a1fdc6038\r\nContent-Disposition: form-data; name="699-536x354-9_4_59.jpg"; filename="699-536x354-9_4_59.jpg"\r\nContent-Type: image/jpeg\r\n\r\n------geckoformboundary57597312afb59088b78af2a1fdc6038--\r\n\r\nhelo\r\n\r\n')
           .expect(400)
           .then(({ body }) => {
             body.should.eql({
