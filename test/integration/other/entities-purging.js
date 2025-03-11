@@ -302,7 +302,7 @@ describe.only('query module entities purge', () => {
       should(auditNotes).be.null();
     }));
 
-    it.only('should purge API entity sources', testService(async (service, container) => {
+    it('should purge API entity sources', testService(async (service, container) => {
       const { Entities, oneFirst, all } = container;
       const asAlice = await service.login('alice');
 
