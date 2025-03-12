@@ -1,3 +1,4 @@
+const should = require('should');
 const { sql } = require('slonik');
 const { testContainer } = require('../setup');
 
@@ -18,11 +19,18 @@ describe('slonik', () => {
       ]);
     }));
 
-    // eslint-disable-next-line arrow-body-style
-    it('should not accept non-symbols', testContainer(({ db }) => {
-      return db.all(sql`
-        SELECT * FROM roles WHERE id=${{ type: 'SLONIK_TOKEN_SQL', values: [], sql: '1 OR TRUE' }}
-      `).should.be.rejected();
+    it('should not accept non-symbols', testContainer(async ({ db }) => {
+      let caught;
+
+      try {
+        await db.all(sql`
+          SELECT * FROM roles WHERE id=${{ type: 'SLONIK_TOKEN_SQL', values: [], sql: '1 OR TRUE' }}
+        `).should.be.rejected();
+      } catch (err) {
+        caught = err;
+      }
+
+      should(caught).be.an.Error();
     }));
   });
 });
