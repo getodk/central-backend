@@ -17,6 +17,7 @@ describe('slonik', () => {
       ]);
     }));
 
+    // eslint-disable-next-line arrow-body-style
     it('should not accept non-symbols', testContainer(({ db }) => {
       return db.all(sql`
         SELECT * FROM roles WHERE id=${{ type: 'SLONIK_TOKEN_SQL', values: [], sql: '1 OR TRUE' }}
