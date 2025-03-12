@@ -899,6 +899,8 @@ tags:
     * `entity.update.version` when an Entity is updated.
     * `entity.update.resolve` when an Entity conflict is resolved.
     * `entity.delete` when an Entity is deleted.
+    * `entity.restore` when a deleted Entity is restored.
+    * `entity.purge` when a deleted Entity is purged (ppermanently deleted).
     * `config.set` when a system configuration is set.
     * `analytics` when a Usage Report is attempted.
     * `blobs.s3.upload` when blobs are moved from the database to external storage.
