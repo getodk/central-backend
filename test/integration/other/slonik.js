@@ -29,7 +29,7 @@ describe.only('slonik', () => {
       }
 
       should(caught).be.an.Error();
-      caught.message.should.eql('TODO');
+      caught.message.should.eql('Unexpected value expression.');
     }));
   });
 });
