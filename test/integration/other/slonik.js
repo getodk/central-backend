@@ -2,7 +2,7 @@ const should = require('should');
 const { sql } = require('slonik');
 const { testContainer } = require('../setup');
 
-describe('slonik', () => {
+describe.only('slonik', () => {
   describe('query()', () => {
     it('should accept symbols', testContainer(async ({ all }) => {
       const { SqlToken } = require('slonik/dist/src/tokens');
