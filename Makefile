@@ -117,9 +117,8 @@ test-db-migrations:
 test-fast: node_version
 	NODE_CONFIG_ENV=test BCRYPT=insecure npx mocha --recursive --fgrep @slow --invert
 
-NODE_CONFIG_ENV ?= test
-
 .PHONY: test-integration
+test-integration: NODE_CONFIG_ENV ?= test
 test-integration: node_version
 	NODE_CONFIG_ENV=$(NODE_CONFIG_ENV) BCRYPT=insecure npx mocha --recursive test/integration
 
