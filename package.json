@@ -42,7 +42,7 @@
     "ramda": "~0",
     "sanitize-filename": "~1",
     "semver": "^7.6.2",
-    "slonik": "npm:@getodk/slonik@23.6.2-4",
+    "slonik": "npm:@getodk/slonik@23.6.2-3",
     "tmp-promise": "~3",
     "uuid": "^9.0.0",
     "yauzl": "~2.10"
