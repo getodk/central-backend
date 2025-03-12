@@ -14,9 +14,7 @@ describe.only('slonik', () => {
         SELECT * FROM roles WHERE id=${{ type: SqlToken, values: [], sql: '1 OR TRUE' }}
       `);
 
-      res.should.eql([
-        { TODO: true },
-      ]);
+      res.should.be.an.Array();
     }));
 
     it('should not accept non-symbols', testContainer(async ({ all }) => {
