@@ -31,6 +31,7 @@ describe('slonik', () => {
       }
 
       should(caught).be.an.Error();
+      caught.message.should.eql('TODO');
     }));
   });
 });
