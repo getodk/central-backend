@@ -19,7 +19,7 @@ describe.only('slonik', () => {
       ]);
     }));
 
-    it('should not accept non-symbols', testService(async ({ all }) => {
+    it('should not accept non-symbols', testContainer(async ({ all }) => {
       let caught;
 
       try {
