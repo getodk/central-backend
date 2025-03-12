@@ -1,5 +1,7 @@
 default: base
 
+NODE_CONFIG_ENV ?= test
+
 node_modules: package.json
 	npm install
 	touch node_modules
@@ -118,7 +120,6 @@ test-fast: node_version
 	NODE_CONFIG_ENV=test BCRYPT=insecure npx mocha --recursive --fgrep @slow --invert
 
 .PHONY: test-integration
-test-integration: NODE_CONFIG_ENV ?= test
 test-integration: node_version
 	NODE_CONFIG_ENV=$(NODE_CONFIG_ENV) BCRYPT=insecure npx mocha --recursive test/integration
 
