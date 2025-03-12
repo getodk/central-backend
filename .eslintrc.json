@@ -28,7 +28,7 @@
     "no-else-return": "off",
     "no-multiple-empty-lines": "off",
     "no-nested-ternary": "off",
-    "no-only-tests/no-only-tests": [ "error", { "block": [ "describe", "it", "describeMigration" ] } ],
+    "no-only-tests/no-only-tests": "off",
     "no-restricted-syntax": "off",
     "no-underscore-dangle": "off",
     "nonblock-statement-body-position": "off",
