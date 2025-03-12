@@ -195,16 +195,17 @@ describe('query module entities purge', () => {
 
         const uuids = await createDeletedEntities(asAlice, 1);
 
-        (() => {
-          Entities.purge(
-            true,
-            c.projectId ? 1 : null,
-            c.datasetName ? 'people' : null,
-            c.entityUuid ? uuids[0] : null
-          );
-        }).should.throw(Problem.internal.unknown({
-          error: c.expectedError
-        }));
+        return Entities.purge(
+          true,
+          c.projectId ? 1 : null,
+          c.datasetName ? 'people' : null,
+          c.entityUuid ? uuids[0] : null
+        ).should.be.rejectedWith(Problem, {
+          problemCode: 500.1,
+          problemDetails: {
+            error: c.expectedError,
+          },
+        });
       }))
     );
   });
