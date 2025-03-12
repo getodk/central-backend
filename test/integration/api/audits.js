@@ -406,11 +406,20 @@ describe('/audits', () => {
           body.success.should.be.true();
         });
 
+      await asAlice.post('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/restore')
+        .expect(200);
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200);
+      await container.Entities.purge(true);
+
       await asAlice.get('/v1/audits?action=entity')
         .expect(200)
         .then(({ body }) => {
-          body.length.should.equal(6);
+          body.length.should.equal(9);
           body.map(a => a.action).should.eql([
+            'entity.purge',
+            'entity.delete',
+            'entity.restore',
             'entity.delete',
             'entity.update.resolve',
             'entity.update.version',
@@ -614,6 +623,11 @@ describe('/audits', () => {
         .then(({ body }) => {
           body.success.should.be.true();
         });
+      await asAlice.post('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/restore')
+        .expect(200);
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200);
+      await container.Entities.purge(true);
       await asAlice.post('/v1/projects/1/datasets/people/entities')
         .send({
           source: {
