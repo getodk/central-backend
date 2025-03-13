@@ -53,7 +53,7 @@ const context = { query: {}, transitoryData: new Map(), headers: [] };
 
 // application things.
 const { withDefaults } = require(appRoot + '/lib/model/container');
-const service = require(appRoot + '/lib/http/service');
+const httpService = require(appRoot + '/lib/http/service');
 
 // get all our fixture scripts, and set up a function that runs them all.
 const fixtures = readdirSync(appRoot + '/test/integration/fixtures')
@@ -132,7 +132,7 @@ afterEach(done => {
   });
 });
 const augment = async (container) => {
-  let app = service(container);
+  const app = httpService(container);
 
   // Ensure express app has started listening before tests begin.
   // See: https://github.com/getodk/central-backend/issues/1440
@@ -141,21 +141,21 @@ const augment = async (container) => {
     app.on('error', reject);
   });
 
-  app = supertest(app);
+  const service = supertest(app);
 
   // eslint-disable-next-line no-param-reassign
-  app.authenticateUser = authenticateUser.bind(null, app);
+  service.authenticateUser = authenticateUser.bind(null, service);
 
   // eslint-disable-next-line no-param-reassign
-  app.login = async (userOrUsers, test = undefined) => {
+  service.login = async (userOrUsers, test = undefined) => {
     const users = Array.isArray(userOrUsers) ? userOrUsers : [userOrUsers];
-    const tokens = await Promise.all(users.map(user => app.authenticateUser(user)));
-    const proxies = tokens.map((token) => new Proxy(app, authProxy(token)));
+    const tokens = await Promise.all(users.map(user => service.authenticateUser(user)));
+    const proxies = tokens.map((token) => new Proxy(service, authProxy(token)));
     return test != null
       ? test(...proxies)
       : (Array.isArray(userOrUsers) ? proxies : proxies[0]);
   };
-  return app;
+  return service;
 };
 
 
