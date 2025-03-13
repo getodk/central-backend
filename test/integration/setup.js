@@ -122,14 +122,19 @@ const authProxy = (token) => ({
     return (...args) => method.apply(target, args).set('Authorization', `Bearer ${token}`);
   }
 });
-// eslint-disable-next-line no-shadow
+
+let expressServer;
+afterEach(done => {
+  if(!expressServer) return done();
+  expressServer.close(done);
+});
 const augment = async (container) => {
   let app = service(container);
 
   // Ensure express app has started listening before tests begin.
   // See: https://github.com/getodk/central-backend/issues/1440
   await new Promise((resolve, reject) => {
-    app.listen(resolve);
+    expressServer = app.listen(resolve);
     app.on('error', reject);
   });
 
