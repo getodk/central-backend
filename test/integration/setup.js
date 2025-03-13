@@ -4,7 +4,7 @@ const { mergeRight } = require('ramda');
 const { sql } = require('slonik');
 const { readdirSync } = require('fs');
 const { join } = require('path');
-const request = require('supertest');
+const supertest = require('supertest');
 const { noop } = require(appRoot + '/lib/util/util');
 const { task } = require(appRoot + '/lib/task/task');
 const authenticateUser = require('../util/authenticate-user');
@@ -123,20 +123,31 @@ const authProxy = (token) => ({
   }
 });
 // eslint-disable-next-line no-shadow
-const augment = (service) => {
-  // eslint-disable-next-line no-param-reassign
-  service.authenticateUser = authenticateUser.bind(null, service);
+const augment = async (container) => {
+  let app = service(container);
+
+  // Ensure express app has started listening before tests begin.
+  // See: https://github.com/getodk/central-backend/issues/1440
+  await new Promise((resolve, reject) => {
+    app.listen(resolve);
+    app.on('error', reject);
+  });
+
+  app = supertest(app);
 
   // eslint-disable-next-line no-param-reassign
-  service.login = async (userOrUsers, test = undefined) => {
+  app.authenticateUser = authenticateUser.bind(null, app);
+
+  // eslint-disable-next-line no-param-reassign
+  app.login = async (userOrUsers, test = undefined) => {
     const users = Array.isArray(userOrUsers) ? userOrUsers : [userOrUsers];
-    const tokens = await Promise.all(users.map(user => service.authenticateUser(user)));
-    const proxies = tokens.map((token) => new Proxy(service, authProxy(token)));
+    const tokens = await Promise.all(users.map(user => app.authenticateUser(user)));
+    const proxies = tokens.map((token) => new Proxy(app, authProxy(token)));
     return test != null
       ? test(...proxies)
       : (Array.isArray(userOrUsers) ? proxies : proxies[0]);
   };
-  return service;
+  return app;
 };
 
 
@@ -151,9 +162,13 @@ const baseContainer = withDefaults({ db, mail, env, xlsform, enketo, Sentry, odk
 // gets rolled back for a clean slate on the next test.
 const testService = (test) => function() {
   return new Promise((resolve, reject) => {
-    baseContainer.transacting((container) => {
-      const rollback = (f) => (x) => container.run(sql`rollback`).then(() => f(x));
-      return test.call(this, augment(request(service(container))), container).then(rollback(resolve), rollback(reject));
+    baseContainer.transacting(async (container) => {
+      try {
+        const rollback = (f) => (x) => container.run(sql`rollback`).then(() => f(x));
+        return test.call(this, await augment(container), container).then(rollback(resolve), rollback(reject));
+      } catch (err) {
+        reject(err);
+      }
     });//.catch(Promise.resolve.bind(Promise)); // TODO/SL probably restore
   });
 };
@@ -161,9 +176,9 @@ const testService = (test) => function() {
 // for some tests we explicitly need to make concurrent requests, in which case
 // the transaction butchering we do for testService will not work. for these cases,
 // we offer testServiceFullTrx:
-const testServiceFullTrx = (test) => function() {
+const testServiceFullTrx = (test) => async function() {
   mustReinitAfter = this.test.fullTitle();
-  return test.call(this, augment(request(service(baseContainer))), baseContainer);
+  return test.call(this, await augment(baseContainer), baseContainer);
 };
 
 // for some tests we just want a container, without any of the webservice stuffs between.
