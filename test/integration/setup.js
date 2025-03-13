@@ -126,7 +126,10 @@ const authProxy = (token) => ({
 let expressServer;
 afterEach(done => {
   if (!expressServer) return done();
-  expressServer.close(done);
+  expressServer.close(err => {
+    if (!err || err.code === 'ERR_SERVER_NOT_RUNNING') return done();
+    done(err);
+  });
 });
 const augment = async (container) => {
   let app = service(container);
