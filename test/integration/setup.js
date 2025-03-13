@@ -125,7 +125,7 @@ const authProxy = (token) => ({
 
 let expressServer;
 afterEach(done => {
-  if(!expressServer) return done();
+  if (!expressServer) return done();
   expressServer.close(done);
 });
 const augment = async (container) => {
