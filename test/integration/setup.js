@@ -103,7 +103,7 @@ beforeEach(() => {
     execSync(`netstat --all --numeric --tcp | tail -n+3 | awk '{ print $6 }' | sort | uniq --count`, { encoding: 'utf8' }) +
     '-----------------');
   // eslint-disable-next-line no-console
-  console.log(`open file descriptors: ${child_process.execSync('lsof -a -p $$ 2>/dev/null | wc -l', { encoding:'utf8' }).trim()}`);
+  console.log(`open file descriptors: ${execSync('lsof -a -p $$ 2>/dev/null | wc -l', { encoding: 'utf8' }).trim()}`);
   console.log('-----------------'); // eslint-disable-line no-console
 
   if (mustReinitAfter) throw new Error(`Failed to reinitalize after previous test: '${mustReinitAfter}'.  You may need to increase your mocha timeout.`);
