@@ -101,6 +101,67 @@ const oidc = new Provider(rootUrl, {
   },
 });
 
+[
+  'access_token.destroyed',
+  'access_token.saved',
+  'access_token.issued',
+  'authorization_code.consumed',
+  'authorization_code.destroyed',
+  'authorization_code.saved',
+  'authorization.accepted',
+  'authorization.error',
+  'authorization.success',
+  'backchannel.error',
+  'backchannel.success',
+  'jwks.error',
+  'client_credentials.destroyed',
+  'client_credentials.saved',
+  'client_credentials.issued',
+  'device_code.consumed',
+  'device_code.destroyed',
+  'device_code.saved',
+  'discovery.error',
+  'end_session.error',
+  'end_session.success',
+  'grant.error',
+  'grant.revoked',
+  'grant.success',
+  'initial_access_token.destroyed',
+  'initial_access_token.saved',
+  'interaction.destroyed',
+  'interaction.ended',
+  'interaction.saved',
+  'interaction.started',
+  'introspection.error',
+  'replay_detection.destroyed',
+  'replay_detection.saved',
+  'pushed_authorization_request.error',
+  'pushed_authorization_request.success',
+  'pushed_authorization_request.destroyed',
+  'pushed_authorization_request.saved',
+  'refresh_token.consumed',
+  'refresh_token.destroyed',
+  'refresh_token.saved',
+  'registration_access_token.destroyed',
+  'registration_access_token.saved',
+  'registration_create.error',
+  'registration_create.success',
+  'registration_delete.error',
+  'registration_delete.success',
+  'registration_read.error',
+  'registration_update.error',
+  'registration_update.success',
+  'revocation.error',
+  'server_error',
+  'session.destroyed',
+  'session.saved',
+  'userinfo.error',
+].forEach(eventName => {
+  oidc.on(eventName, (...args) => {
+    log(`event:${eventName}`, args);
+  });
+});
+
 (async () => {
   if (rootUrl.startsWith('https://')) {
     const key  = fs.readFileSync('../certs/fake-oidc-server.example.net-key.pem', 'utf8'); // eslint-disable-line no-multi-spaces
