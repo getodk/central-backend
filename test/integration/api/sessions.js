@@ -103,6 +103,22 @@ describe('api: /sessions', () => {
           .then(({ body }) => body.message.should.equal(expectedError))));
     });
 
+    [
+      [ 'undefined',      undefined, 400, 'Required parameters missing. Expected (email, password), got (email: undefined, password: \'n/a\').' ], // eslint-disable-line no-multi-spaces
+      [ 'null',           null,      400, 'Required parameters missing. Expected (email, password), got (email: null, password: \'n/a\').' ], // eslint-disable-line no-multi-spaces
+      [ 'empty string',   '',        400, 'Required parameters missing. Expected (email, password), got (email: \'\', password: \'n/a\').' ], // eslint-disable-line no-multi-spaces
+      [ 'invalid email',  'letmein', 401, 'Could not authenticate with the provided credentials.' ], // eslint-disable-line no-multi-spaces
+      [ 'number',         123,       400, 'Invalid input data type: expected (email) to be (string)' ], // eslint-disable-line no-multi-spaces
+      [ 'array',          [],        400, 'Invalid input data type: expected (email) to be (string)' ], // eslint-disable-line no-multi-spaces
+      [ 'object',         {},        400, 'Invalid input data type: expected (email) to be (string)' ], // eslint-disable-line no-multi-spaces
+    ].forEach(([ description, email, expectedStatus, expectedError ]) => {
+      it(`should return a ${expectedStatus} for invalid email (${description})`, testService((service) =>
+        service.post('/v1/sessions')
+          .send({ email, password: 'n/a' })
+          .expect(expectedStatus)
+          .then(({ body }) => body.message.should.equal(expectedError))));
+    });
+
     it('should return a 401 if the email is wrong', testService((service) =>
       service.post('/v1/sessions')
         .send({ email: 'winnifred@getodk.org', password: 'winnifred' })
