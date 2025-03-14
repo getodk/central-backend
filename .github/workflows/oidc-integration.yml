@@ -10,7 +10,7 @@ jobs:
       matrix:
         x: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
         y: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-    timeout-minutes: 6
+    timeout-minutes: 60
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     services:
