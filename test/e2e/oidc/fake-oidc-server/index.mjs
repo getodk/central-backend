@@ -23,7 +23,7 @@ const ACCOUNTS = loadJson(ACCOUNTS_JSON_PATH);
 
 const pkg = loadJson('../../../../package.json');
 // eslint-disable-next-line no-console
-const log = (...args) => console.error(pkg.name, new Date().toISOString(), 'INFO', ...args);
+const log = (...args) => console.log(pkg.name, new Date().toISOString(), 'INFO', ...args);
 log.info = log;
 
 function forHumans(o) {
