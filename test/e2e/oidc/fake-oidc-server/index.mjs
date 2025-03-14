@@ -157,6 +157,7 @@ const oidc = new Provider(rootUrl, {
   'session.saved',
   'userinfo.error',
 ].forEach(eventName => {
+  log('Adding event listener for:', eventName);
   oidc.on(eventName, (...args) => {
     log(`event:${eventName}`, args);
   });
