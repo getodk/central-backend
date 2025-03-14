@@ -1,4 +1,4 @@
-const { execSync } = require('node:child_process');
+//const { execSync } = require('node:child_process');
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const { mergeRight } = require('ramda');
