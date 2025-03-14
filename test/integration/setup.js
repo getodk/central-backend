@@ -1,3 +1,4 @@
+const { execSync } = require('node:child_process');
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const { mergeRight } = require('ramda');
@@ -88,6 +89,10 @@ const initialize = async () => {
 };
 
 before(function() {
+  console.log('--- TCP STATS ---'); // eslint-disable-line no-console
+  console.log( // eslint-disable-line no-console
+    execSync(`netstat --all --numeric --tcp | tail -n+3 | awk '{ print $6 }' | sort | uniq --count`, { encoding: 'utf8' }) +
+    '-----------------');
   this.timeout(0);
   return initialize();
 });
