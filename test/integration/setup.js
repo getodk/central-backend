@@ -89,10 +89,6 @@ const initialize = async () => {
 };
 
 before(function() {
-  console.log('--- TCP STATS ---'); // eslint-disable-line no-console
-  console.log( // eslint-disable-line no-console
-    execSync(`netstat --all --numeric --tcp | tail -n+3 | awk '{ print $6 }' | sort | uniq --count`, { encoding: 'utf8' }) +
-    '-----------------');
   this.timeout(0);
   return initialize();
 });
@@ -102,6 +98,11 @@ after(async () => {
 
 let mustReinitAfter;
 beforeEach(() => {
+  console.log('--- TCP STATS ---'); // eslint-disable-line no-console
+  console.log( // eslint-disable-line no-console
+    execSync(`netstat --all --numeric --tcp | tail -n+3 | awk '{ print $6 }' | sort | uniq --count`, { encoding: 'utf8' }) +
+    '-----------------');
+
   if (mustReinitAfter) throw new Error(`Failed to reinitalize after previous test: '${mustReinitAfter}'.  You may need to increase your mocha timeout.`);
   s3.resetMock();
 });
