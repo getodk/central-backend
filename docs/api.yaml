@@ -53,6 +53,10 @@ info:
     - `webformsEnabled` boolean flag is added to [Forms](/central-api-form-management) APIs that enables use of ODK Web Forms instead of Enketo.
     - Draft Submission can be created using draft token by adding `/test/{token}` to [Creating a draft Submission](/central-api-submission-management/#id1) endpoint.
 
+    **Changed**:
+    - [Dataset Metadata](/central-api-dataset-management/#dataset-metadata) now includes a new property, `lastUpdate`, which is the timestamp of the latest modification to the datasets or its entities.
+
+
     ## ODK Central v2024.3
 
     **Added**:
@@ -899,6 +903,8 @@ tags:
     * `entity.update.version` when an Entity is updated.
     * `entity.update.resolve` when an Entity conflict is resolved.
     * `entity.delete` when an Entity is deleted.
+    * `entity.restore` when a deleted Entity is restored.
+    * `entity.purge` when a deleted Entity is purged (ppermanently deleted).
     * `config.set` when a system configuration is set.
     * `analytics` when a Usage Report is attempted.
     * `blobs.s3.upload` when blobs are moved from the database to external storage.
@@ -8601,14 +8607,13 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/DatasetMetadata'
+                $ref: '#/components/schemas/DatasetMetadata'
               example:
                 name: people
                 createdAt: '2018-01-19T23:58:03.395Z'
                 projectId: 1
                 approvalRequired: false
+                lastUpdate: '2018-01-19T23:58:03.395Z'
                 sourceForms: []
                 linkedForms: []
                 properties: []
@@ -8663,14 +8668,13 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/DatasetMetadata'
+                $ref: '#/components/schemas/DatasetMetadata'
               example:
                 name: people
                 createdAt: '2018-01-19T23:58:03.395Z'
                 projectId: 1
                 approvalRequired: true
+                lastUpdate: '2020-10-10T03:04:51.695Z'
                 sourceForms:
                 - xmlFormId: treeRegistration
                   name: Tree Registration
@@ -8732,14 +8736,13 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/DatasetMetadata'
+                $ref: '#/components/schemas/DatasetMetadata'
               example:
                 name: people
                 createdAt: '2018-01-19T23:58:03.395Z'
                 projectId: 1
                 approvalRequired: true
+                lastUpdate: '2020-10-10T03:04:51.695Z'
                 sourceForms:
                 - xmlFormId: treeRegistration
                   name: Tree Registration
@@ -10773,7 +10776,7 @@ paths:
                 code: "501.1"
                 message: The requested feature $unsupported is not supported by this
                   server.
-  /#/dl/projects{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments/{filename}:
+  /dl/projects{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments/{filename}:
     get:
       tags:
       - OData Form Service
@@ -10785,9 +10788,9 @@ paths:
 
         If you are writing or configuring an OData client and have submission media files to deal with, you can run into authentication problems directly fetching or linking the media file URLs that are provided in the OData feed. This can be due to several reasons: if the user is not logged into the Central administration site (and thus has no valid cookie), if the request comes from a foreign origin (and thus cookies are not sent by the browser), and more.
 
-        To help manage this, the frontend provides a `/#/dl` path that allows file download. Just take a normal attachment download path and replace the `/v1` near the beginning of the path with `/#/dl`, and the user will be taken to a page managed by the Central administration website that will ensure the user is logged in, and offer the file as a download.
+        To help manage this, the frontend provides a `/dl` path that allows file download. Just take a normal attachment download path and replace the `/v1` near the beginning of the path with `/dl`, and the user will be taken to a page managed by the Central administration website that will ensure the user is logged in, and offer the file as a download.
 
-        Because this `/#/dl` path returns a web page that causes a file download rather than directly returning the media file in question, it cannot be used to directly embed or retrieve these files, for example in a `<img>` tag.
+        Because this `/dl` path returns a web page that causes a file download rather than directly returning the media file in question, it cannot be used to directly embed or retrieve these files, for example in a `<img>` tag.
       operationId: Data Download Path
       parameters:
       - name: projectId
@@ -12922,22 +12925,29 @@ components:
           items:
             $ref: '#/components/schemas/FormKeyValue'
     DatasetMetadata:
-      properties:
-        linkedForms:
-          type: array
-          items:
-            $ref: '#/components/schemas/FormKeyValue'
-          description: Forms that consume data from the Dataset
-        sourceForms:
-          type: array
-          items:
-            $ref: '#/components/schemas/FormKeyValue'
-          description: Forms that create Entities in the Dataset
-        properties:
-          type: array
-          description: All properties of the Dataset
-          items:
-            $ref: '#/components/schemas/PropertyDetailed'
+      allOf:
+        - $ref: '#/components/schemas/Dataset'
+        - type: object
+          properties:
+            lastUpdate:
+              type: string
+              description: ISO date format. The timestamp of the most recent change to the dataset or its entities
+              example: '2020-10-10T03:04:51.695Z'
+            linkedForms:
+              type: array
+              items:
+                $ref: '#/components/schemas/FormKeyValue'
+              description: Forms that consume data from the Dataset
+            sourceForms:
+              type: array
+              items:
+                $ref: '#/components/schemas/FormKeyValue'
+              description: Forms that create Entities in the Dataset
+            properties:
+              type: array
+              description: All properties of the Dataset
+              items:
+                $ref: '#/components/schemas/PropertyDetailed'
     Submission:
       type: object
       required:
