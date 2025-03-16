@@ -81,9 +81,9 @@ describe('Cache headers', () => {
         assert.equal(res3.headers.get('date'), res1.headers.get('date'));
 
         // and
-        assert.equal(res1.headers.get('Cache-Control'), 'private, max-age=0');
-        assert.equal(res2.headers.get('Cache-Control'), 'private, max-age=0');
-        assert.equal(res3.headers.get('Cache-Control'), 'private, max-age=0');
+        assert.equal(res1.headers.get('Cache-Control'), 'private, max-age=20');
+        assert.equal(res2.headers.get('Cache-Control'), 'private, max-age=20');
+        assert.equal(res3.headers.get('Cache-Control'), 'private, max-age=20');
         assert.equal(res1.headers.get('Expires'), undefined);
         assert.equal(res2.headers.get('Expires'), undefined);
         assert.equal(res3.headers.get('Expires'), undefined);
@@ -109,9 +109,9 @@ describe('Cache headers', () => {
         assert.notEqual(res3.headers.get('date'), res1.headers.get('date'));
 
         // and
-        assert.equal(res1.headers.get('Cache-Control'), 'private, max-age=0');
-        assert.equal(res2.headers.get('Cache-Control'), 'private, max-age=0');
-        assert.equal(res3.headers.get('Cache-Control'), 'private, max-age=0');
+        assert.equal(res1.headers.get('Cache-Control'), 'private, max-age=20');
+        assert.equal(res2.headers.get('Cache-Control'), 'private, max-age=20');
+        assert.equal(res3.headers.get('Cache-Control'), 'private, max-age=20');
         assert.equal(res1.headers.get('Expires'), undefined);
         assert.equal(res2.headers.get('Expires'), undefined);
         assert.equal(res3.headers.get('Expires'), undefined);
