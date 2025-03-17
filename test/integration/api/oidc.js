@@ -42,8 +42,8 @@ describe('api: /oidc/...', () => {
         service.get('/v1/oidc/callback')
           .expect(303)
           .then(({ text, headers }) => {
-            text.should.eql('See Other. Redirecting to http://localhost:8989/#/login?oidcError=internal-server-error');
-            headers.location.should.eql('http://localhost:8989/#/login?oidcError=internal-server-error');
+            text.should.eql('See Other. Redirecting to http://localhost:8989/login?oidcError=internal-server-error');
+            headers.location.should.eql('http://localhost:8989/login?oidcError=internal-server-error');
           })));
     });
   } else { // OIDC not enabled
