@@ -4876,5 +4876,91 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                   .then(({ body }) => { should(body.instanceName).equal(null); })
               ])))))));
   });
+
+  describe('[draft] /test POST', () => {
+    it('should reject notfound if there is no draft', testService(async (service) => {
+      await service.post('/v1/test/dummykey/projects/1/forms/simple/draft/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(404);
+    }));
+
+    it('should reject if the draft has been published', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft')
+        .expect(200);
+
+      const token = await asAlice.get('/v1/projects/1/forms/simple/draft')
+        .then(({ body }) => body.draftToken);
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+        .expect(200);
+
+      await service.post(`/v1/test/${token}/projects/1/forms/simple/draft/submissions`)
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(404);
+    }));
+
+    it('should reject if the draft has been deleted', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft')
+        .expect(200);
+
+      const token = await asAlice.get('/v1/projects/1/forms/simple/draft')
+        .then(({ body }) => body.draftToken);
+
+      await asAlice.delete('/v1/projects/1/forms/simple/draft')
+        .expect(200);
+
+      await service.post(`/v1/test/${token}/projects/1/forms/simple/draft/submissions`)
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(404);
+    }));
+
+    it('should reject if the key is wrong', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft')
+        .expect(200);
+
+      await service.post(`/v1/test/dummytoken/projects/1/forms/simple/draft/submissions`)
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(404);
+    }));
+
+    it('should reject if the draft has been deleted', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft')
+        .expect(200);
+
+      const token = await asAlice.get('/v1/projects/1/forms/simple/draft')
+        .then(({ body }) => body.draftToken);
+
+      await service.post(`/v1/test/${token}/projects/1/forms/simple/draft/submissions`)
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one')
+        .expect(200)
+        .then(({ body }) => {
+          body.createdAt.should.be.a.recentIsoDate();
+          should.not.exist(body.deviceId);
+        });
+
+      await asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one.xml')
+        .expect(200)
+        .then(({ text }) => { text.should.equal(testData.instances.simple.one); });
+
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+        .expect(404);
+    }));
+  });
 });
 
