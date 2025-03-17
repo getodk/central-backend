@@ -12,4 +12,7 @@ module.exports = {
     'test/db-migrations/**',
     'test/e2e/**',
   ],
+  require: [
+    'test/assertions.js',
+  ],
 };
