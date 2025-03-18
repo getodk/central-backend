@@ -38,7 +38,6 @@ describe('Cache headers', () => {
   });
 
   describe('private paths', () => {
-    // TODO write test version with cookie (and/or with session header?)
     [
       () => `${serverUrl}/v1/projects/${projectId}`,
       () => `${serverUrl}/v1/projects/${projectId}/forms/${encodeURIComponent(xmlFormId)}`,
