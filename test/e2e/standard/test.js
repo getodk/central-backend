@@ -44,7 +44,7 @@ describe('Cache headers', () => {
       () => `${serverUrl}/v1/projects/${projectId}/forms/${encodeURIComponent(xmlFormId)}.svc/Submissions('cache-test-submission')`,
     ].forEach(url => {
       testTable(`
-        inputs                                              || expected outputs
+        inputs                                              || expected outputs (2nd response)
         with cache | has session | has etag | after max-age || response status | date
         -----------|-------------|----------|---------------||-----------------|---------------
                 ❌ |          ❌ |       ❌ |            ❌ || 403             | N/A
