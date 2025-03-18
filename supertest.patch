@@ -1,0 +1,10 @@
+--- node_modules/supertest/lib/test.js	2025-03-17 15:27:56.351251654 +0300
++++ modified.js	2025-03-18 18:40:15.342068450 +0300
+@@ -153,6 +153,7 @@
+     if (!res && resError) {
+       if (resError instanceof Error && resError.syscall === 'connect'
+         && Object.getOwnPropertyNames(sysErrors).indexOf(resError.code) >= 0) {
++        console.log('About to discard error:', resError, 'stack:', new Error().stack.replace(/^Error\n/, '').replace(/^\s*at /gm, ''));
+         errorObj = new Error(resError.code + ': ' + sysErrors[resError.code]);
+       } else {
+         errorObj = resError;
