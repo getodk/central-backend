@@ -1,5 +1,5 @@
---- node_modules/supertest/lib/test.js	2025-03-17 15:27:56.351251654 +0300
-+++ modified.js	2025-03-18 18:40:15.342068450 +0300
+--- node_modules/supertest/lib/test.js	2025-03-17 12:27:56.351251654 +0000
++++ node_modules/supertest/lib/test.js	2025-03-18 15:40:15.342068450 +0000
 @@ -153,6 +153,7 @@
      if (!res && resError) {
        if (resError instanceof Error && resError.syscall === 'connect'
