@@ -4,7 +4,7 @@
      if (!res && resError) {
        if (resError instanceof Error && resError.syscall === 'connect'
          && Object.getOwnPropertyNames(sysErrors).indexOf(resError.code) >= 0) {
-+        console.log(`Request: [method:${this.method}; url:${this.url}]`, 'About to discard error:', resError, 'stack:', new Error().stack.replace(/^Error\n/, '').replace(/^\s*at /gm, ''));
++        console.log(`Request: [method:${this.method}; url:${this.url}]`, this, 'About to discard error:', resError, 'stack:', new Error().stack.replace(/^Error\n/, '').replace(/^\s*at /gm, ''));
          errorObj = new Error(resError.code + ': ' + sysErrors[resError.code]);
        } else {
          errorObj = resError;
