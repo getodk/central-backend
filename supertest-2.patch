@@ -12,7 +12,7 @@
 +    } catch (err) {
 +      console.log('supertest:event:clientError', 'threw again:', err);
 +    } finally {
-+      process.exit(99);
++      //process.exit(99);
 +    }
 +  });
 +
