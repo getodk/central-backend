@@ -1,10 +1,39 @@
 --- node_modules/supertest/lib/test.js	2025-03-17 12:27:56.351251654 +0000
 +++ node_modules/supertest/lib/test.js	2025-03-18 15:40:15.342068450 +0000
-@@ -153,6 +153,7 @@
-     if (!res && resError) {
-       if (resError instanceof Error && resError.syscall === 'connect'
-         && Object.getOwnPropertyNames(sysErrors).indexOf(resError.code) >= 0) {
-+        console.log(`Request: [method:${this.method}; url:${this.url}]`, this, 'About to discard error:', resError, 'stack:', new Error().stack.replace(/^Error\n/, '').replace(/^\s*at /gm, ''));
-         errorObj = new Error(resError.code + ': ' + sysErrors[resError.code]);
-       } else {
-         errorObj = resError;
+@@ -5,10 +5,17 @@
+  */
+ 
+ const { inspect } = require('util');
++const http = require('http');
+ const { STATUS_CODES } = require('http');
+ const { Server } = require('tls');
+ const { deepStrictEqual } = require('assert');
+ const { Request } = require('superagent');
++let http2;
++try {
++  http2 = require('http2'); // eslint-disable-line global-require
++} catch (_) {
++  // eslint-disable-line no-empty
++}
+ 
+ /** @typedef {import('superagent').Response} Response */
+ 
+@@ -22,9 +29,17 @@
+    * @param {String} path
+    * @api public
+    */
+-  constructor (app, method, path) {
++  constructor (app, method, path, optHttp2) {
+     super(method.toUpperCase(), path);
+ 
++    if (typeof app === 'function') {
++      if (optHttp2) {
++        app = http2.createServer(app); // eslint-disable-line no-param-reassign
++      } else {
++        app = http.createServer(app); // eslint-disable-line no-param-reassign
++      }
++    }
++
+     this.redirects(0);
+     this.buffer();
+     this.app = app;
