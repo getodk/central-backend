@@ -7,13 +7,10 @@
 // including this file, may be copied, modified, propagated, or distributed
 // except according to the terms contained in the LICENSE file.
 
-import fs from 'node:fs';
-import http from 'node:http';
-import https from 'node:https';
-import Path from 'node:path';
-
-import express from 'express';
 import Provider from 'oidc-provider';
+import Path from 'node:path';
+import fs from 'node:fs';
+import https from 'node:https';
 
 const port = 9898;
 const rootUrl = process.env.FAKE_OIDC_ROOT_URL;
@@ -26,7 +23,7 @@ const ACCOUNTS = loadJson(ACCOUNTS_JSON_PATH);
 
 const pkg = loadJson('../../../../package.json');
 // eslint-disable-next-line no-console
-const log = (...args) => console.log(pkg.name, new Date().toISOString(), 'INFO', ...args);
+const log = (...args) => console.error(pkg.name, new Date().toISOString(), 'INFO', ...args);
 log.info = log;
 
 function forHumans(o) {
@@ -104,89 +101,14 @@ const oidc = new Provider(rootUrl, {
   },
 });
 
-[
-  'access_token.destroyed',
-  'access_token.saved',
-  'access_token.issued',
-  'authorization_code.consumed',
-  'authorization_code.destroyed',
-  'authorization_code.saved',
-  'authorization.accepted',
-  'authorization.error',
-  'authorization.success',
-  'backchannel.error',
-  'backchannel.success',
-  'jwks.error',
-  'client_credentials.destroyed',
-  'client_credentials.saved',
-  'client_credentials.issued',
-  'device_code.consumed',
-  'device_code.destroyed',
-  'device_code.saved',
-  'discovery.error',
-  'end_session.error',
-  'end_session.success',
-  'grant.error',
-  'grant.revoked',
-  'grant.success',
-  'initial_access_token.destroyed',
-  'initial_access_token.saved',
-  'interaction.destroyed',
-  'interaction.ended',
-  'interaction.saved',
-  'interaction.started',
-  'introspection.error',
-  'replay_detection.destroyed',
-  'replay_detection.saved',
-  'pushed_authorization_request.error',
-  'pushed_authorization_request.success',
-  'pushed_authorization_request.destroyed',
-  'pushed_authorization_request.saved',
-  'refresh_token.consumed',
-  'refresh_token.destroyed',
-  'refresh_token.saved',
-  'registration_access_token.destroyed',
-  'registration_access_token.saved',
-  'registration_create.error',
-  'registration_create.success',
-  'registration_delete.error',
-  'registration_delete.success',
-  'registration_read.error',
-  'registration_update.error',
-  'registration_update.success',
-  'revocation.error',
-  'server_error',
-  'session.destroyed',
-  'session.saved',
-  'userinfo.error',
-].forEach(eventName => {
-  log('Adding event listener for:', eventName);
-  oidc.on(eventName, (...args) => {
-    log(`event:${eventName}`, args);
-  });
-});
-
-let app;
-if (rootUrl.startsWith('https://')) {
-  const key  = fs.readFileSync('../certs/fake-oidc-server.example.net-key.pem', 'utf8'); // eslint-disable-line no-multi-spaces
-  const cert = fs.readFileSync('../certs/fake-oidc-server.example.net.pem', 'utf8');
-  app = https.createServer({ key, cert }, oidc.callback());
-} else {
-  app = http.createServer(oidc.callback());
-}
-
-app.on('clientError', (err, socket) => {
-  log('event:clientError', err);
-  try {
-    if(err.code === 'ECONNRESET' || !socket.writable) return;
-    socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
-  } catch (err) {
-    log('event:clientError', 'threw again:', err);
-  } finally {
-    process.exit(99);
+(async () => {
+  if (rootUrl.startsWith('https://')) {
+    const key  = fs.readFileSync('../certs/fake-oidc-server.example.net-key.pem', 'utf8'); // eslint-disable-line no-multi-spaces
+    const cert = fs.readFileSync('../certs/fake-oidc-server.example.net.pem', 'utf8');
+    const httpsServer = https.createServer({ key, cert }, oidc.callback());
+    await httpsServer.listen(port);
+  } else {
+    await oidc.listen(port);
   }
-});
-
-app.listen(port, () => {
   log(`oidc-provider listening on port ${port}, check ${rootUrl}/.well-known/openid-configuration`);
-});
+})();
