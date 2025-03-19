@@ -35,7 +35,8 @@ jobs:
         node-version: 22.12.0
         cache: 'npm'
     - run: npm ci
-    - run: patch --strip=0 < supertest.patch
+    - run: patch --strip=0 < supertest-1.patch
+    - run: patch --strip=0 < supertest-2.patch
     - run: FAKE_OIDC_ROOT_URL=http://localhost:9898 make fake-oidc-server-ci > fake-oidc-server.log &
     - run: node lib/bin/create-docker-databases.js
     - run: make test-oidc-integration

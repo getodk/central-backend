@@ -1,0 +1,21 @@
+--- node_modules/supertest/index.js	2025-03-17 12:27:56.260254487 +0000
++++ node_modules/supertest/index.js	2025-03-19 06:40:31.171469590 +0000
+@@ -38,6 +38,18 @@
+     }
+   }
+ 
++  app.on('clientError', (err, socket) => {
++    console.log('supertest:event:clientError', err);
++    try {
++      if(err.code === 'ECONNRESET' || !socket.writable) return;
++      socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
++    } catch (err) {
++      console.log('supertest:event:clientError', 'threw again:', err);
++    } finally {
++      process.exit(99);
++    }
++  });
++
+   methods.forEach(function(method) {
+     obj[method] = function(url) {
+       var test = new Test(app, method, url);
