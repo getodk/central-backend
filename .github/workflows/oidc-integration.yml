@@ -6,7 +6,11 @@ on:
 
 jobs:
   oidc-integration-test:
-    timeout-minutes: 6
+    strategy:
+      matrix:
+        x: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+        y: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+    timeout-minutes: 60
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     services:
@@ -31,6 +35,8 @@ jobs:
         node-version: 22.12.0
         cache: 'npm'
     - run: npm ci
+    - run: patch --strip=0 < supertest-1.patch
+    - run: patch --strip=0 < supertest-2.patch
     - run: FAKE_OIDC_ROOT_URL=http://localhost:9898 make fake-oidc-server-ci > fake-oidc-server.log &
     - run: node lib/bin/create-docker-databases.js
     - run: make test-oidc-integration
