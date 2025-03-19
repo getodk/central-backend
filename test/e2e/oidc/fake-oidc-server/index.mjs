@@ -175,11 +175,16 @@ if (rootUrl.startsWith('https://')) {
   app = http.createServer(oidc.callback());
 }
 
-app.on('error',       err => log('event:error', err));
 app.on('clientError', (err, socket) => {
   log('event:clientError', err);
-  if(err.code === 'ECONNRESET' || !socket.writable) return;
-  socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+  try {
+    if(err.code === 'ECONNRESET' || !socket.writable) return;
+    socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+  } catch (err) {
+    log('event:clientError', 'threw again:', err);
+  } finally {
+    process.exit(99);
+  }
 });
 
 app.listen(port, () => {
