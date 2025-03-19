@@ -34,7 +34,7 @@ fake-oidc-server:
 .PHONY: fake-oidc-server-ci
 fake-oidc-server-ci:
 	cd test/e2e/oidc/fake-oidc-server && \
-	DEBUG='oidc-provider:*' node index.mjs
+	node index.mjs
 
 
 ################################################################################
