@@ -7,9 +7,10 @@
 // including this file, may be copied, modified, propagated, or distributed
 // except according to the terms contained in the LICENSE file.
 
-import Path from 'node:path';
 import fs from 'node:fs';
+import http from 'node:http';
 import https from 'node:https';
+import Path from 'node:path';
 
 import express from 'express';
 import Provider from 'oidc-provider';
@@ -169,12 +170,17 @@ let app;
 if (rootUrl.startsWith('https://')) {
   const key  = fs.readFileSync('../certs/fake-oidc-server.example.net-key.pem', 'utf8'); // eslint-disable-line no-multi-spaces
   const cert = fs.readFileSync('../certs/fake-oidc-server.example.net.pem', 'utf8');
-  app = express.createServer({ key, cert });
+  app = https.createServer({ key, cert }, oidc.callback());
 } else {
-  app = express();
+  app = http.createServer(oidc.callback());
 }
 
-app.use(oidc.callback());
+app.on('error',       err => log('event:error', err));
+app.on('clientError', (err, socket) => {
+  log('event:clientError', err);
+  if(err.code === 'ECONNRESET' || !socket.writable) return;
+  socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+});
 
 app.listen(port, () => {
   log(`oidc-provider listening on port ${port}, check ${rootUrl}/.well-known/openid-configuration`);
