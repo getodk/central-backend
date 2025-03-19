@@ -7,10 +7,12 @@
 // including this file, may be copied, modified, propagated, or distributed
 // except according to the terms contained in the LICENSE file.
 
-import Provider from 'oidc-provider';
 import Path from 'node:path';
 import fs from 'node:fs';
 import https from 'node:https';
+
+import express from 'express';
+import Provider from 'oidc-provider';
 
 const port = 9898;
 const rootUrl = process.env.FAKE_OIDC_ROOT_URL;
@@ -163,14 +165,17 @@ const oidc = new Provider(rootUrl, {
   });
 });
 
-(async () => {
-  if (rootUrl.startsWith('https://')) {
-    const key  = fs.readFileSync('../certs/fake-oidc-server.example.net-key.pem', 'utf8'); // eslint-disable-line no-multi-spaces
-    const cert = fs.readFileSync('../certs/fake-oidc-server.example.net.pem', 'utf8');
-    const httpsServer = https.createServer({ key, cert }, oidc.callback());
-    await httpsServer.listen(port);
-  } else {
-    await oidc.listen(port);
-  }
+let app;
+if (rootUrl.startsWith('https://')) {
+  const key  = fs.readFileSync('../certs/fake-oidc-server.example.net-key.pem', 'utf8'); // eslint-disable-line no-multi-spaces
+  const cert = fs.readFileSync('../certs/fake-oidc-server.example.net.pem', 'utf8');
+  app = express.createServer({ key, cert });
+} else {
+  app = express();
+}
+
+app.use(oidc.callback());
+
+app.listen(port, () => {
   log(`oidc-provider listening on port ${port}, check ${rootUrl}/.well-known/openid-configuration`);
-})();
+});
