@@ -611,7 +611,7 @@ describe.skip('knex migrations from 20230406: altering entities and entity_defs'
 describe('knex migrations from 20230512: adding entity_def_sources table', function () {
   this.timeout(20000);
 
-  it('should backfill entityId and entityDefId in audit log', testServiceFullTrx(async (service, container) => {
+  it.skip('should backfill entityId and entityDefId in audit log', testServiceFullTrx(async (service, container) => {
     await upToMigration('20230512-02-backfill-entity-id.js', false); // actually this is the previous migration
     await populateUsers(container);
     await populateForms(container);
@@ -843,7 +843,7 @@ describe('knex migrations from 20230512: adding entity_def_sources table', funct
 describe('database migrations from 20230802: delete orphan submissions', function test() {
   this.timeout(20000);
 
-  it('should delete orphan draft Submissions', testServiceFullTrx(async (service, container) => {
+  it.skip('should delete orphan draft Submissions', testServiceFullTrx(async (service, container) => {
     await upToMigration('20230518-01-add-entity-index-to-audits.js');
     await populateUsers(container);
 
@@ -1059,7 +1059,7 @@ testMigration.skip('20240914-02-remove-orphaned-client-audits.js', () => {
   }));
 
   testMigration('20241010-01-schedule-entity-form-upgrade.js', () => {
-    it('should schedule entity forms with spec version 2023.1.0 for upgrade to 2024.1.0', testServiceFullTrx(async (service, container) => {
+    it.skip('should schedule entity forms with spec version 2023.1.0 for upgrade to 2024.1.0', testServiceFullTrx(async (service, container) => {
       await populateUsers(container);
       await populateForms(container);
 

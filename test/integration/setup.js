@@ -138,56 +138,62 @@ const baseContainer = withDefaults({ db, mail, env, xlsform, enketo, Sentry, odk
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
 // gets rolled back for a clean slate on the next test.
-const testService = (test) => () => new Promise((resolve, reject) => {
-  baseContainer.transacting((container) => {
-    const rollback = (f) => (x) => container.run(sql`rollback`).then(() => f(x));
-    return test(augment(request(service(container))), container).then(rollback(resolve), rollback(reject));
-  });//.catch(Promise.resolve.bind(Promise)); // TODO/SL probably restore
-});
+const testService = (test) => function() {
+  return new Promise((resolve, reject) => {
+    baseContainer.transacting((container) => {
+      const rollback = (f) => (x) => container.run(sql`rollback`).then(() => f(x));
+      return test.call(this, augment(request(service(container))), container).then(rollback(resolve), rollback(reject));
+    });//.catch(Promise.resolve.bind(Promise)); // TODO/SL probably restore
+  });
+};
 
 // for some tests we explicitly need to make concurrent requests, in which case
 // the transaction butchering we do for testService will not work. for these cases,
 // we offer testServiceFullTrx:
 const testServiceFullTrx = (test) => function() {
   mustReinitAfter = this.test.fullTitle();
-  return test(augment(request(service(baseContainer))), baseContainer);
+  return test.call(this, augment(request(service(baseContainer))), baseContainer);
 };
 
 // for some tests we just want a container, without any of the webservice stuffs between.
 // this is that, with the same transaction trickery as a normal test.
-const testContainer = (test) => () => new Promise((resolve, reject) => {
-  baseContainer.transacting((container) => {
-    const rollback = (f) => (x) => container.run(sql`rollback`).then(() => f(x));
-    return test(container).then(rollback(resolve), rollback(reject));
-  });//.catch(Promise.resolve.bind(Promise));
-});
+const testContainer = (test) => function () {
+  return new Promise((resolve, reject) => {
+    baseContainer.transacting((container) => {
+      const rollback = (f) => (x) => container.run(sql`rollback`).then(() => f(x));
+      return test.call(this, container).then(rollback(resolve), rollback(reject));
+    });//.catch(Promise.resolve.bind(Promise));
+  });
+};
 
 // complete the square of options:
 const testContainerFullTrx = (test) => function() {
   mustReinitAfter = this.test.fullTitle();
-  return test(baseContainer);
+  return test.call(this, baseContainer);
 };
 
 // called to get a container context per task. ditto all // from testService.
 // here instead our weird hijack work involves injecting our own constructed
 // container into the task context so it just picks it up and uses it.
-const testTask = (test) => () => new Promise((resolve, reject) => {
-  baseContainer.transacting((container) => {
-    task._container = container.with({ task: true });
-    const rollback = (f) => (x) => {
-      delete task._container;
-      return container.run(sql`rollback`).then(() => f(x));
-    };
-    return test(task._container).then(rollback(resolve), rollback(reject));
-  });//.catch(Promise.resolve.bind(Promise));
-});
+const testTask = (test) => function() {
+  return new Promise((resolve, reject) => {
+    baseContainer.transacting((container) => {
+      task._container = container.with({ task: true });
+      const rollback = (f) => (x) => {
+        delete task._container;
+        return container.run(sql`rollback`).then(() => f(x));
+      };
+      return test.call(this, task._container).then(rollback(resolve), rollback(reject));
+    });//.catch(Promise.resolve.bind(Promise));
+  });
+};
 
 // See testServiceFullTrx()
 // eslint-disable-next-line space-before-function-paren, func-names
 const testTaskFullTrx = (test) => function() {
   mustReinitAfter = this.test.fullTitle();
   task._container = baseContainer.with({ task: true });
-  return test(task._container);
+  return test.call(this, task._container);
 };
 
 // eslint-disable-next-line no-shadow

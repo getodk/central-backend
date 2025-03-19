@@ -10,9 +10,33 @@ const { sql } = require('slonik');
 const { QueryOptions } = require('../../../lib/util/db');
 const { createConflict } = require('../../util/scenarios');
 const { omit } = require('ramda');
+const xml2js = require('xml2js');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const Option = require(appRoot + '/lib/util/option');
+
+const testEntities = (test) => testService(async (service, container) => {
+  const asAlice = await service.login('alice');
+
+  await asAlice.post(`/v1/projects/1/datasets`)
+    .send({ name: 'people' });
+
+  const uuids = [
+    '12345678-1234-4123-8234-123456789aaa',
+    '12345678-1234-4123-8234-123456789abc'
+  ];
+
+  uuids.forEach(async _uuid => {
+    await asAlice.post('/v1/projects/1/datasets/people/entities')
+      .send({
+        uuid: _uuid,
+        label: 'John Doe'
+      })
+      .expect(200);
+  });
+
+  await test(service, container);
+});
 
 describe('datasets and entities', () => {
 
@@ -239,7 +263,7 @@ describe('datasets and entities', () => {
         const withOutTs = result.replace(isoRegex, '');
         withOutTs.should.be.eql(
           '__id,label,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
-            '12345678-1234-4123-8234-123456789aaa,Willow,,5,Alice,0,,1\n'
+          '12345678-1234-4123-8234-123456789aaa,Willow,,5,Alice,0,,1\n'
         );
       }));
 
@@ -356,7 +380,7 @@ describe('datasets and entities', () => {
         const withOutTs = result.replace(isoRegex, '');
         withOutTs.should.be.eql(
           '__id,label,height,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
-            '12345678-1234-4123-8234-123456789aaa,redwood,120,,5,Alice,0,,1\n'
+          '12345678-1234-4123-8234-123456789aaa,redwood,120,,5,Alice,0,,1\n'
         );
       }));
 
@@ -487,7 +511,7 @@ describe('datasets and entities', () => {
             logs[0].actorId.should.equal(5);
             logs[0].actee.should.be.a.Dataset();
             logs[0].actee.name.should.equal('trees');
-            logs[0].details.properties.should.eql([ 'circumference' ]);
+            logs[0].details.properties.should.eql(['circumference']);
           });
       }));
 
@@ -583,7 +607,7 @@ describe('datasets and entities', () => {
           .expect(200)
           .then(({ body }) => {
             body[0].should.be.an.ExtendedDataset();
-            body.map(({ createdAt, lastEntity, ...d }) => d).should.eql([
+            body.map(({ createdAt, lastEntity, lastUpdate, ...d }) => d).should.eql([
               { name: 'people', projectId: 1, entities: 1, approvalRequired: false, conflicts: 0 }
             ]);
           });
@@ -654,6 +678,12 @@ describe('datasets and entities', () => {
 
         await exhaust(container);
 
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+          .send({
+            label: 'Alice - updated'
+          })
+          .expect(200);
+
         await asAlice.get('/v1/projects/1/datasets')
           .set('X-Extended-Metadata', 'true')
           .expect(200)
@@ -705,7 +735,7 @@ describe('datasets and entities', () => {
 
         await exhaust(container);
 
-        await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1T00:00:00Z' WHERE TRUE`);
+        await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1T00:00:00Z', "updatedAt" = '1999-1-1T00:00:00Z' WHERE TRUE`);
 
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
           .send(testData.instances.simpleEntity.two)
@@ -926,8 +956,8 @@ describe('datasets and entities', () => {
         const withOutTs = result.replace(isoRegex, '');
         withOutTs.should.be.eql(
           '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
-            '12345678-1234-4123-8234-123456789aaa,Jane (30),Jane,30,,5,Alice,0,,1\n' +
-            '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,,1\n'
+          '12345678-1234-4123-8234-123456789aaa,Jane (30),Jane,30,,5,Alice,0,,1\n' +
+          '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,,1\n'
         );
 
       }));
@@ -958,7 +988,7 @@ describe('datasets and entities', () => {
         const withOutTs = result.replace(isoRegex, '');
         withOutTs.should.be.eql(
           '__id,label,first_name,the.age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
-            '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,,1\n'
+          '12345678-1234-4123-8234-123456789abc,Alice (88),Alice,88,,5,Alice,0,,1\n'
         );
 
       }));
@@ -1014,8 +1044,8 @@ describe('datasets and entities', () => {
         const withOutTs = text.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g, '');
         withOutTs.should.be.eql(
           '__id,label,f_q1,e_q2,a_q3,c_q4,b_q1,d_q2,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
-          '12345678-1234-4123-8234-123456789ccc,one,w,x,y,z,,,,5,Alice,0,,1\n'+
-          '12345678-1234-4123-8234-123456789bbb,two,,,c,d,a,b,,5,Alice,0,,1\n'+
+          '12345678-1234-4123-8234-123456789ccc,one,w,x,y,z,,,,5,Alice,0,,1\n' +
+          '12345678-1234-4123-8234-123456789bbb,two,,,c,d,a,b,,5,Alice,0,,1\n' +
           '12345678-1234-4123-8234-123456789aaa,one,,,y,z,w,x,,5,Alice,0,,1\n'
         );
       }));
@@ -1088,7 +1118,7 @@ describe('datasets and entities', () => {
         const withOutTs = result.replace(isoRegex, '');
         withOutTs.should.be.eql(
           '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
-            '12345678-1234-4123-8234-111111111aaa,Robert Doe (expired),Robert,,,5,Alice,1,,2\n'
+          '12345678-1234-4123-8234-111111111aaa,Robert Doe (expired),Robert,,,5,Alice,1,,2\n'
         );
 
       }));
@@ -1133,7 +1163,7 @@ describe('datasets and entities', () => {
         const withOutTs = result.replace(isoRegex, '');
         withOutTs.should.be.eql(
           '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
-            '12345678-1234-4123-8234-123456789abc,Alicia (85),Alicia,85,,5,Alice,1,,2\n'
+          '12345678-1234-4123-8234-123456789abc,Alicia (85),Alicia,85,,5,Alice,1,,2\n'
         );
 
       }));
@@ -1170,7 +1200,7 @@ describe('datasets and entities', () => {
         const withOutTs = result.replace(isoRegex, '');
         withOutTs.should.be.eql(
           '__id,label,first_name,age,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
-            '12345678-1234-4123-8234-123456789abc,Alicia (85),Alicia,85,,5,Alice,2,,3\n'
+          '12345678-1234-4123-8234-123456789abc,Alicia (85),Alicia,85,,5,Alice,2,,3\n'
         );
 
       }));
@@ -1334,7 +1364,7 @@ describe('datasets and entities', () => {
           .expect(200)
           .then(({ body }) => {
 
-            const { createdAt, linkedForms, properties, sourceForms, ...ds } = body;
+            const { createdAt, linkedForms, properties, sourceForms, lastUpdate, ...ds } = body;
 
             ds.should.be.eql({
               name: 'people',
@@ -1343,6 +1373,8 @@ describe('datasets and entities', () => {
             });
 
             createdAt.should.not.be.null();
+
+            lastUpdate.should.be.isoDate();
 
             linkedForms.should.be.eql([{ name: 'withAttachments', xmlFormId: 'withAttachments' }]);
 
@@ -1383,12 +1415,18 @@ describe('datasets and entities', () => {
           })
           .expect(200);
 
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa?force=true')
+          .send({
+            label: 'Johnny Doe - updated'
+          })
+          .expect(200);
+
         await asAlice.get('/v1/projects/1/datasets/people')
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
 
-            const { createdAt, properties, lastEntity, ...ds } = body;
+            const { createdAt, properties, lastEntity, lastUpdate, ...ds } = body;
 
             ds.should.be.eql({
               name: 'people',
@@ -1401,7 +1439,7 @@ describe('datasets and entities', () => {
             });
 
             lastEntity.should.be.recentIsoDate();
-
+            lastUpdate.should.be.recentIsoDate();
             createdAt.should.be.recentIsoDate();
 
             properties.map(({ publishedAt, ...p }) => {
@@ -1982,6 +2020,7 @@ describe('datasets and entities', () => {
       <filename>goodone.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
+      <integrityUrl>${domain}/v1/projects/1/datasets/goodone/integrity</integrityUrl>
     </mediaFile>
   </manifest>`);
       }));
@@ -2066,6 +2105,7 @@ describe('datasets and entities', () => {
       <filename>goodone.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
+      <integrityUrl>${domain}/v1/projects/1/datasets/goodone/integrity</integrityUrl>
     </mediaFile>
   </manifest>`);
       }));
@@ -2834,7 +2874,7 @@ describe('datasets and entities', () => {
           .expect(200)
           .then(({ text }) => {
             text.should.equal('name,label,__version,first_name,the.age\n' +
-          '12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n');
+              '12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n');
           });
 
       }));
@@ -2941,6 +2981,7 @@ describe('datasets and entities', () => {
       <filename>people.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/people.csv</downloadUrl>
+      <integrityUrl>${domain}/v1/projects/1/datasets/people/integrity</integrityUrl>
     </mediaFile>
   </manifest>`);
           });
@@ -4567,7 +4608,7 @@ describe('datasets and entities', () => {
             .expect(200)
             .then(({ body }) => {
               body.name.should.be.eql('people');
-              body.properties.map(p => p.name).should.eql([ 'first_name', 'age' ]);
+              body.properties.map(p => p.name).should.eql(['first_name', 'age']);
             });
 
           await asAlice.get('/v1/audits?action=dataset.create')
@@ -5959,5 +6000,167 @@ describe('datasets and entities', () => {
           });
       }));
     });
+  });
+
+  // OpenRosa endpoint
+  describe('GET /datasets/:name/integrity', () => {
+    it('should return notfound if the dataset does not exist', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/nonexistent/integrity')
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot read', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.get('/v1/projects/1/datasets/people/integrity')
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(403);
+    }));
+
+    it('should happily return given no entities', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/integrity')
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(200)
+        .then(async ({ text }) => {
+          const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+          result.data.entities.should.not.have.property('entity');
+        });
+    }));
+
+    it('should return data for app-user with access to consuming Form', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      const appUser = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test' })
+        .then(({ body }) => body);
+
+      await asAlice.post(`/v1/projects/1/forms/withAttachments/assignments/app-user/${appUser.id}`);
+
+      await service.get(`/v1/key/${appUser.token}/projects/1/datasets/people/integrity`)
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(200)
+        .then(async ({ text }) => {
+          const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+          result.data.entities.entity.length.should.be.eql(2);
+        });
+    }));
+
+    it('should reject for app-user if consuming Form is closed', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      const appUser = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test' })
+        .then(({ body }) => body);
+
+      await asAlice.post(`/v1/projects/1/forms/withAttachments/assignments/app-user/${appUser.id}`);
+
+      await asAlice.patch('/v1/projects/1/forms/withAttachments')
+        .send({ state: 'closed' })
+        .expect(200);
+
+      await service.get(`/v1/key/${appUser.token}/projects/1/datasets/people/integrity`)
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(403);
+    }));
+
+    it('should return with correct deleted value', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/integrity`)
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(200)
+        .then(async ({ text }) => {
+          const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+          result.data.entities.entity.length.should.be.eql(2);
+          const [first, second] = result.data.entities.entity;
+          first.$.id.should.be.eql('12345678-1234-4123-8234-123456789aaa');
+          first.deleted.should.be.eql('false');
+          second.$.id.should.be.eql('12345678-1234-4123-8234-123456789abc');
+          second.deleted.should.be.eql('true');
+        });
+    }));
+
+    it('should return purged entities as well', testEntities(async (service, { Entities }) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200);
+
+      await Entities.purge(true);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/integrity`)
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(200)
+        .then(async ({ text }) => {
+          const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+          result.data.entities.entity.length.should.be.eql(2);
+          const [first, second] = result.data.entities.entity;
+          first.$.id.should.be.eql('12345678-1234-4123-8234-123456789aaa');
+          first.deleted.should.be.eql('false');
+          second.$.id.should.be.eql('12345678-1234-4123-8234-123456789abc');
+          second.deleted.should.be.eql('true');
+        });
+    }));
+
+    it('should return only queried entities', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/integrity?id=12345678-1234-4123-8234-123456789abc`)
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(200)
+        .then(async ({ text }) => {
+          const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+          const { entity } = result.data.entities;
+          entity.$.id.should.be.eql('12345678-1234-4123-8234-123456789abc');
+          entity.deleted.should.be.eql('true');
+        });
+    }));
+
+    it('should return only queried purged entities', testEntities(async (service, { Entities }) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa')
+        .expect(200);
+
+      await Entities.purge(true);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/integrity?id=12345678-1234-4123-8234-123456789abc`)
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(200)
+        .then(async ({ text }) => {
+          const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+          const { entity } = result.data.entities;
+          entity.$.id.should.be.eql('12345678-1234-4123-8234-123456789abc');
+          entity.deleted.should.be.eql('true');
+        });
+    }));
   });
 });
