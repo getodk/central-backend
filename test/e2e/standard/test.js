@@ -43,81 +43,85 @@ describe('Cache headers', () => {
       () => `${serverUrl}/v1/projects/${projectId}/forms/${encodeURIComponent(xmlFormId)}`,
       () => `${serverUrl}/v1/projects/${projectId}/forms/${encodeURIComponent(xmlFormId)}.svc/Submissions('cache-test-submission')`,
     ].forEach(url => {
-      testTable(`
-        inputs                                              || expected outputs (2nd response)
-        with cache | has session | has etag | after max-age || response status | date
-        -----------|-------------|----------|---------------||-----------------|---------------
-                ❌ |          ❌ |       ❌ |            ❌ || 403             | N/A
-                ❌ |          ❌ |       ❌ |            ✅ || 403             | N/A
-                ❌ |          ❌ |       ✅ |            ❌ || 403             | N/A
-                ❌ |          ❌ |       ✅ |            ✅ || 403             | N/A
-                ❌ |          ✅ |       ❌ |            ❌ || 200             | race-condition
-                ❌ |          ✅ |       ❌ |            ✅ || 200             | changed
-                ❌ |          ✅ |       ✅ |            ❌ || 304             | race-condition
-                ❌ |          ✅ |       ✅ |            ✅ || 304             | changed
-            shared |          ❌ |       ❌ |            ❌ || 403             | N/A
-            shared |          ❌ |       ❌ |            ✅ || 403             | N/A
-            shared |          ❌ |       ✅ |            ❌ || 403             | N/A
-            shared |          ❌ |       ✅ |            ✅ || 403             | N/A
-            shared |          ✅ |       ❌ |            ❌ || 200             | race-condition
-            shared |          ✅ |       ❌ |            ✅ || 200             | changed
-            shared |          ✅ |       ✅ |            ❌ || 304             | race-condition
-            shared |          ✅ |       ✅ |            ✅ || 304             | changed
-           private |          ❌ |       ❌ |            ❌ || 403             | N/A
-           private |          ❌ |       ❌ |            ✅ || 403             | N/A
-           private |          ❌ |       ✅ |            ❌ || 403             | N/A
-           private |          ❌ |       ✅ |            ✅ || 403             | N/A
-           private |          ✅ |       ❌ |            ❌ || 200             | same
-           private |          ✅ |       ❌ |            ✅ || 200             | same
-           private |          ✅ |       ✅ |            ❌ || 200             | same
-           private |          ✅ |       ✅ |            ✅ || 200             | same
-      `)
-        .forEach(args => testSecondRequest(url, args,
-          [ 'Cache-Control', 'private, no-cache' ],
-          [ 'Expires',        undefined ],
-          [ 'Vary',          'Accept-Encoding, Authorization, Cookie' ],
-        ));
+      describe(url(), () => {
+        testTable(`
+          inputs                                              || expected outputs (2nd response)
+          with cache | has session | manual etag | after max-age || response status | date
+          -----------|-------------|-------------|---------------||-----------------|---------------
+                  ❌ |          ❌ |          ❌ |            ❌ || 403             | N/A
+                  ❌ |          ❌ |          ❌ |            ✅ || 403             | N/A
+                  ❌ |          ❌ |          ✅ |            ❌ || 403             | N/A
+                  ❌ |          ❌ |          ✅ |            ✅ || 403             | N/A
+                  ❌ |          ✅ |          ❌ |            ❌ || 200             | race-condition
+                  ❌ |          ✅ |          ❌ |            ✅ || 200             | changed
+                  ❌ |          ✅ |          ✅ |            ❌ || 304             | race-condition
+                  ❌ |          ✅ |          ✅ |            ✅ || 304             | changed
+              shared |          ❌ |          ❌ |            ❌ || 403             | N/A
+              shared |          ❌ |          ❌ |            ✅ || 403             | N/A
+              shared |          ❌ |          ✅ |            ❌ || 403             | N/A
+              shared |          ❌ |          ✅ |            ✅ || 403             | N/A
+              shared |          ✅ |          ❌ |            ❌ || 200             | race-condition
+              shared |          ✅ |          ❌ |            ✅ || 200             | changed
+              shared |          ✅ |          ✅ |            ❌ || 304             | race-condition
+              shared |          ✅ |          ✅ |            ✅ || 304             | changed
+             private |          ❌ |          ❌ |            ❌ || 403             | N/A
+             private |          ❌ |          ❌ |            ✅ || 403             | N/A
+             private |          ❌ |          ✅ |            ❌ || 403             | N/A
+             private |          ❌ |          ✅ |            ✅ || 403             | N/A
+             private |          ✅ |          ❌ |            ❌ || 200             | same
+             private |          ✅ |          ❌ |            ✅ || 200             | same
+             private |          ✅ |          ✅ |            ❌ || 200             | same
+             private |          ✅ |          ✅ |            ✅ || 200             | same
+        `)
+          .forEach(args => testSecondRequest(url, args,
+            [ 'Cache-Control', 'private, no-cache' ],
+            [ 'Expires',        undefined ],
+            [ 'Vary',          'Accept-Encoding, Authorization, Cookie' ],
+          ));
       });
+    });
   });
 
   describe('single-use paths', () => {
     [
       () => `${serverUrl}/v1/sessions/restore`,
     ].forEach(url => {
-      testTable(`
-        inputs                                              || expected outputs
-        with cache | has session | has etag | after max-age || response status | date
-        -----------|-------------|----------|---------------||-----------------|---------------
-                ❌ |          ❌ |       ❌ |            ❌ || 404             | N/A
-                ❌ |          ❌ |       ❌ |            ✅ || 404             | N/A
-                ❌ |          ❌ |       ✅ |            ❌ || 404             | N/A
-                ❌ |          ❌ |       ✅ |            ✅ || 404             | N/A
-                ❌ |          ✅ |       ❌ |            ❌ || 200             | race-condition
-                ❌ |          ✅ |       ❌ |            ✅ || 200             | changed
-                ❌ |          ✅ |       ✅ |            ❌ || 304             | race-condition
-                ❌ |          ✅ |       ✅ |            ✅ || 304             | changed
-            shared |          ❌ |       ❌ |            ❌ || 404             | N/A
-            shared |          ❌ |       ❌ |            ✅ || 404             | N/A
-            shared |          ❌ |       ✅ |            ❌ || 404             | N/A
-            shared |          ❌ |       ✅ |            ✅ || 404             | N/A
-            shared |          ✅ |       ❌ |            ❌ || 200             | race-condition
-            shared |          ✅ |       ❌ |            ✅ || 200             | changed
-            shared |          ✅ |       ✅ |            ❌ || 304             | race-condition
-            shared |          ✅ |       ✅ |            ✅ || 304             | changed
-           private |          ❌ |       ❌ |            ❌ || 404             | N/A
-           private |          ❌ |       ❌ |            ✅ || 404             | N/A
-           private |          ❌ |       ✅ |            ❌ || 404             | N/A
-           private |          ❌ |       ✅ |            ✅ || 404             | N/A
-           private |          ✅ |       ❌ |            ❌ || 200             | race-condition
-           private |          ✅ |       ❌ |            ✅ || 200             | changed
-           private |          ✅ |       ✅ |            ❌ || 304             | race-condition
-           private |          ✅ |       ✅ |            ✅ || 304             | changed
-      `)
-        .forEach(args => testSecondRequest(url, args,
-          [ 'Cache-Control', 'no-store' ],
-          [ 'Expires',        undefined ],
-          [ 'Vary',           undefined ],
-        ));
+      describe(url(), () => {
+        testTable(`
+          inputs                                              || expected outputs
+          with cache | has session | manual etag | after max-age || response status | date
+          -----------|-------------|-------------|---------------||-----------------|---------------
+                  ❌ |          ❌ |          ❌ |            ❌ || 404             | N/A
+                  ❌ |          ❌ |          ❌ |            ✅ || 404             | N/A
+                  ❌ |          ❌ |          ✅ |            ❌ || 404             | N/A
+                  ❌ |          ❌ |          ✅ |            ✅ || 404             | N/A
+                  ❌ |          ✅ |          ❌ |            ❌ || 200             | race-condition
+                  ❌ |          ✅ |          ❌ |            ✅ || 200             | changed
+                  ❌ |          ✅ |          ✅ |            ❌ || 304             | race-condition
+                  ❌ |          ✅ |          ✅ |            ✅ || 304             | changed
+              shared |          ❌ |          ❌ |            ❌ || 404             | N/A
+              shared |          ❌ |          ❌ |            ✅ || 404             | N/A
+              shared |          ❌ |          ✅ |            ❌ || 404             | N/A
+              shared |          ❌ |          ✅ |            ✅ || 404             | N/A
+              shared |          ✅ |          ❌ |            ❌ || 200             | race-condition
+              shared |          ✅ |          ❌ |            ✅ || 200             | changed
+              shared |          ✅ |          ✅ |            ❌ || 304             | race-condition
+              shared |          ✅ |          ✅ |            ✅ || 304             | changed
+             private |          ❌ |          ❌ |            ❌ || 404             | N/A
+             private |          ❌ |          ❌ |            ✅ || 404             | N/A
+             private |          ❌ |          ✅ |            ❌ || 404             | N/A
+             private |          ❌ |          ✅ |            ✅ || 404             | N/A
+             private |          ✅ |          ❌ |            ❌ || 200             | race-condition
+             private |          ✅ |          ❌ |            ✅ || 200             | changed
+             private |          ✅ |          ✅ |            ❌ || 304             | race-condition
+             private |          ✅ |          ✅ |            ✅ || 304             | changed
+        `)
+          .forEach(args => testSecondRequest(url, args,
+            [ 'Cache-Control', 'no-store' ],
+            [ 'Expires',        undefined ],
+            [ 'Vary',           undefined ],
+          ));
+      });
     });
   });
 
