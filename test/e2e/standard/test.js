@@ -76,7 +76,7 @@ describe('Cache headers', () => {
           .forEach(args => testSecondRequest(url, args,
             [ 'Cache-Control', 'private, no-cache' ],
             [ 'Expires',        undefined ],
-            [ 'Vary',          'Accept-Encoding, Authorization, Cookie' ],
+            [ 'Vary',          'Accept-Encoding, Authorization, Cookie, Origin' ],
           ));
       });
     });
@@ -119,7 +119,7 @@ describe('Cache headers', () => {
           .forEach(args => testSecondRequest(url, args,
             [ 'Cache-Control', 'no-store' ],
             [ 'Expires',        undefined ],
-            [ 'Vary',           undefined ],
+            [ 'Vary',           'Accept-Encoding, Origin' ],
           ));
       });
     });
