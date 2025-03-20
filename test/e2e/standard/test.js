@@ -73,7 +73,7 @@ describe('Cache headers', () => {
            private |          ✅ |       ✅ |            ✅ || 200             | same
       `)
         .forEach(args => testSecondRequest(url, args,
-          [ 'Cache-Control', 'private, max-age=0' ],
+          [ 'Cache-Control', 'private, no-cache' ],
           [ 'Expires',        undefined ],
           [ 'Vary',          'Authorization, Cookie' ],
         ));
