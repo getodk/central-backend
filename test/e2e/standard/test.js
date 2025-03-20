@@ -45,7 +45,7 @@ describe('Cache headers', () => {
     ].forEach(url => {
       describe(url(), () => {
         testTable(`
-          inputs                                              || expected outputs (2nd response)
+          inputs                                                 || expected outputs (2nd response)
           with cache | has session | manual etag | after max-age || response status | date
           -----------|-------------|-------------|---------------||-----------------|---------------
                   ❌ |          ❌ |          ❌ |            ❌ || 403             | N/A
@@ -88,7 +88,7 @@ describe('Cache headers', () => {
     ].forEach(url => {
       describe(url(), () => {
         testTable(`
-          inputs                                              || expected outputs
+          inputs                                                 || expected outputs
           with cache | has session | manual etag | after max-age || response status | date
           -----------|-------------|-------------|---------------||-----------------|---------------
                   ❌ |          ❌ |          ❌ |            ❌ || 404             | N/A
