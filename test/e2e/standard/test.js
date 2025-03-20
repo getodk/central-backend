@@ -141,7 +141,7 @@ describe('Cache headers', () => {
         }));
   }
 
-  function testSecondRequest(url, [ cache, useSession, useEtag, useSleep, expectedStatus, dateExpectation ], ...expectedHeaders) {
+  function testSecondRequest(url, [ cache, useSession, useManualEtag, useSleep, expectedStatus, dateExpectation ], ...expectedHeaders) {
     if(!useSession) {
       scenario('without session',     withBearerToken, withoutAuth);
     } else {
@@ -173,7 +173,7 @@ describe('Cache headers', () => {
     }
 
     function scenario(authType, withFirstAuth, withSecondAuth) {
-      return it(`should return ${expectedStatus} ${authType} and ${JSON.stringify({ cache, useSession, useEtag, useSleep })}`, async function() {
+      return it(`should return ${expectedStatus} ${authType} and ${JSON.stringify({ cache, useSession, useManualEtag, useSleep })}`, async function() {
         this.timeout(2000);
 
         // Testing with cacheByDefault: MAX_SAFE_INTEGER is appropriate for
@@ -220,8 +220,8 @@ describe('Cache headers', () => {
         assert.equal(res1.ok, true, `Expected OK response status, but got ${res1.status}`);
         // and
         let opts2 = baseOpts;
-        if (useEtag)    opts2 = withEtagFrom(res1, opts2);
-        if (useSession) opts2 = withSecondAuth(opts2);
+        if (useManualEtag) opts2 = withEtagFrom(res1, opts2); // cache may also choose to include etag
+        if (useSession)    opts2 = withSecondAuth(opts2);
 
         // when
         if (useSleep) await sleep(1000);
