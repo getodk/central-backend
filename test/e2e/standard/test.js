@@ -75,7 +75,7 @@ describe('Cache headers', () => {
         .forEach(args => testSecondRequest(url, args,
           [ 'Cache-Control', 'private, no-cache' ],
           [ 'Expires',        undefined ],
-          [ 'Vary',          'Authorization, Cookie' ],
+          [ 'Vary',          'Accept-Encoding, Authorization, Cookie' ],
         ));
       });
   });
