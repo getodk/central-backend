@@ -229,6 +229,21 @@ describe('Cache headers', () => {
 
         // then
         assert.equal(res2.status, Number(expectedStatus), `Expected response status ${expectedStatus}, but got ${res2.status}`);
+        // and
+        switch(Number(expectedStatus)) {
+          case 200: assertStructureEqual(await res2.json(), await res1.json()); break;
+          case 304: assert.equal(await res2.text(), useManualEtag ? '' : await res1.text()); break;
+          case 403: assert.deepEqual(await res2.json(), {
+            code: 403.1,
+            message: 'The authentication you provided does not have rights to perform that action.',
+          }); break;
+          case 404: assert.deepEqual(await res2.json(), {
+            code: 404.1,
+            message: 'Could not find the resource you were looking for.',
+          }); break;
+          default: assert.equal(await res2.text(), ''); break;
+        }
+        // and
         switch(dateExpectation) {
           case 'same':       assert.equal(res2.headers.get('date'), res1.headers.get('date')); break;
           case 'changed': assert.notEqual(res2.headers.get('date'), res1.headers.get('date')); break;
@@ -315,4 +330,24 @@ function uploadSubmission(api, projectId, xmlFormId, xmlFormVersion, submissionI
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms)); // eslint-disable-line no-promise-executor-return
+}
+
+function assertStructureEqual(a, b) {
+  return assert.deepEqual(structure(a), structure(b));
+
+  function structure(obj) {
+    if(obj === null) {
+      return 'null';
+    } else if(Array.isArray(obj)) {
+      return obj.map(structure);
+    } else if(typeof obj === 'object') {
+      return Object.fromEntries(
+        Object
+          .entries(obj)
+          .map(([k, v]) => [k, structure(v)]),
+      );
+    } else {
+      return typeof obj;
+    }
+  }
 }
