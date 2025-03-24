@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 const { KeyObject } = require('node:crypto');
 const appRoot = require('app-root-path');
 const { readFileSync } = require('fs');
@@ -19,12 +20,8 @@ describe('util/crypto', () => {
       hashPassword('password', 'hashhash').should.be.a.Promise();
     });
 
-    it('should return a Promise of null given a blank plaintext', (done) => {
-      hashPassword('').then((result) => {
-        should(result).equal(null);
-        done();
-      });
-    });
+    it('should reject given a blank plaintext', () =>
+      hashPassword('').should.be.rejectedWith('The password or passphrase provided does not meet the required length.'));
 
     it('should not attempt to verify empty plaintext', (done) => {
       verifyPassword('', '$2a$12$hCRUXz/7Hx2iKPLCduvrWugC5Q/j5e3bX9KvaYvaIvg/uvFYEpzSy').then((result) => {
@@ -294,14 +291,10 @@ describe('util/crypto', () => {
         const aesKey = getSubmissionKey(priv, encAesKey);
         const ivs = getSubmissionIvs(instanceId, aesKey);
 
-        let thrown = false;
-        try { // i know about should.throws but i can't get it to assert the specific error type.
-          getSubmissionCleartext(aesKey, ivs(1), unpaddedCiphertext);
-        } catch (ex) {
-          ex.message.should.equal('Could not perform decryption. Double check your passphrase and your data and try again.');
-          thrown = true;
-        }
-        thrown.should.equal(true);
+        assert.throws(
+          () => getSubmissionCleartext(aesKey, ivs(1), unpaddedCiphertext),
+          { message: 'Could not perform decryption. Double check your passphrase and your data and try again.' },
+        );
       });
     });
   });

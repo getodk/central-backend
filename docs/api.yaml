@@ -46,6 +46,16 @@ info:
     - [RESTORE](/central-api-entity-management/#restoring-a-deleted-entity) endpoint for Entities.
     - Entities that have been soft-deleted for 30 days will automatically be purged. 
     - [Entities Odata](/central-api-odata-endpoints/#id3) now returns `__system/deletedAt`. It can also be used in $filter, $sort and $select query parameters.
+    - [Integrity](/central-api-openrosa-endpoints/#openrosa-dataset-integrity-api) endpoint for the Entity list.
+    - [Get Form metadata by EnketoId](/central-api-form-management/#getting-form-details-by-enketoid)
+
+    **Changed**:
+    - `webformsEnabled` boolean flag is added to [Forms](/central-api-form-management) APIs that enables use of ODK Web Forms instead of Enketo.
+    - Draft Submission can be created using draft token by adding `/test/{token}` to [Creating a draft Submission](/central-api-submission-management/#id1) endpoint.
+
+    **Changed**:
+    - [Dataset Metadata](/central-api-dataset-management/#dataset-metadata) now includes a new property, `lastUpdate`, which is the timestamp of the latest modification to the datasets or its entities.
+
 
     ## ODK Central v2024.3
 
@@ -893,6 +903,8 @@ tags:
     * `entity.update.version` when an Entity is updated.
     * `entity.update.resolve` when an Entity conflict is resolved.
     * `entity.delete` when an Entity is deleted.
+    * `entity.restore` when a deleted Entity is restored.
+    * `entity.purge` when a deleted Entity is purged (ppermanently deleted).
     * `config.set` when a system configuration is set.
     * `analytics` when a Usage Report is attempted.
     * `blobs.s3.upload` when blobs are moved from the database to external storage.
@@ -3716,6 +3728,46 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
+  /v1/enketo-ids/{enketoId}/form:
+    get:
+      tags:
+      - Individual Form
+      summary: Getting Form Details by EnketoId
+      description: Returns Form metadata for the provided EnketoId
+      operationId: Getting Form Details by EnketoId
+      parameters:
+      - name: enketoId
+        in: path
+        description: The `enketoId` of the Form being referenced.
+        required: true
+        schema:
+          type: string
+        example: abcdef
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Form'
+              example:
+              - projectId: 1
+                xmlFormId: simple
+                name: Simple
+                version: "2.1"
+                enketoId: abcdef
+                hash: 51a93eab3a1974dbffc4c7913fa5a16a
+                keyId: 3
+                state: open
+                publishedAt: 2018-01-21T00:04:11.153Z
+                createdAt: 2018-01-19T23:58:03.395Z
+                updatedAt: 2018-03-21T12:45:02.312Z
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}.xml:
     get:
       tags:
@@ -7871,8 +7923,12 @@ paths:
       tags:
       - Draft Submissions
       summary: Creating a Submission
-      description: Identical to [the non-Draft version](/central-api-submission-management/#creating-a-submission)
-        of this endpoint.
+      description: |-
+        Or
+      
+        **POST /v1/test/{token}/projects/{projectId}/forms/{xmlFormId}/draft/submissions**
+
+        Identical to [the non-Draft version](/central-api-submission-management/#creating-a-submission) of this endpoint.
       operationId: Creating a Submission for a draft Form
       parameters:
       - name: projectId
@@ -8551,14 +8607,13 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/DatasetMetadata'
+                $ref: '#/components/schemas/DatasetMetadata'
               example:
                 name: people
                 createdAt: '2018-01-19T23:58:03.395Z'
                 projectId: 1
                 approvalRequired: false
+                lastUpdate: '2018-01-19T23:58:03.395Z'
                 sourceForms: []
                 linkedForms: []
                 properties: []
@@ -8613,14 +8668,13 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/DatasetMetadata'
+                $ref: '#/components/schemas/DatasetMetadata'
               example:
                 name: people
                 createdAt: '2018-01-19T23:58:03.395Z'
                 projectId: 1
                 approvalRequired: true
+                lastUpdate: '2020-10-10T03:04:51.695Z'
                 sourceForms:
                 - xmlFormId: treeRegistration
                   name: Tree Registration
@@ -8682,14 +8736,13 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/DatasetMetadata'
+                $ref: '#/components/schemas/DatasetMetadata'
               example:
                 name: people
                 createdAt: '2018-01-19T23:58:03.395Z'
                 projectId: 1
                 approvalRequired: true
+                lastUpdate: '2020-10-10T03:04:51.695Z'
                 sourceForms:
                 - xmlFormId: treeRegistration
                   name: Tree Registration
@@ -9800,6 +9853,12 @@ paths:
         * The Manifest will only output information for files the server actually has in its possession. Any missing expected files will be omitted, as we cannot provide a `hash` or `downloadUrl` for them.
 
         * For Attachments that are linked to a Dataset, the value of `hash` is calculated using the MD5 of the last updated timestamp of the Dataset, instead of the content of the Dataset.
+
+        [Offline Entities support](https://forum.getodk.org/t/openrosa-spec-proposal-support-offline-entities/48052):
+
+        * If an attachment is linked to a Dataset, then `type="entityList"` attribute is added to the `mediaFile` element.
+
+        * `integrityUrl` is also returned for the attachments that are linked to a Dataset.
       operationId: OpenRosa Form Manifest API
       parameters:
       - name: projectId
@@ -9844,7 +9903,86 @@ paths:
                     <hash>md5:a6fdc426037143cf71cced68e2532e3c</hash>
                     <downloadUrl>https://your.odk.server/v1/projects/7/forms/basic/attachments/question2.jpg</downloadUrl>
                   </mediaFile>
+                  <mediaFile type="entityList">
+                    <filename>people.csv</filename>
+                    <hash>md5:9fd39ac868eccdc0c134b3b7a6a25eb7</hash>
+                    <downloadUrl>https://your.odk.server/v1/projects/7/forms/basic/attachments/people.csv</downloadUrl>
+                    <integrityUrl>https://your.odk.server/v1/projects/7/datasets/people/integrity</integrityUrl>
+                  </mediaFile>
                 </manifest>
+        403:
+          description: Forbidden
+          headers:
+            X-OpenRosa-Version:
+              schema:
+                type: string
+          content:
+            text/xml:
+              example: |
+                <OpenRosaResponse xmlns="http://openrosa.org/http/response" items="0">
+                  <message nature="error">The authenticated actor does not have rights to perform that action.</message>
+                </OpenRosaResponse>
+  /v1/projects/{projectId}/datasets/{name}/integrity?id={UUIDs}:
+    get:
+      tags:
+      - OpenRosa Endpoints
+      summary: OpenRosa Dataset Integrity API
+      description: |-
+        _(introduced: version 2025.1)_
+
+        This is the fully standards-compliant implementation of the Entities Integrity API as described in [OpenRosa spec proposal: support offline Entities](https://forum.getodk.org/t/openrosa-spec-proposal-support-offline-entities/48052).
+
+        This returns the `deleted` flag of the Entities requested through `id` query parameter. If no `id` is provided then all Entities are return.
+      operationId: OpenRosa Form Manifest API
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "7"
+      - name: name
+        in: path
+        description: The `name` of the dataset being referenced.
+        required: true
+        schema:
+          type: string
+        example: people
+      - name: id
+        in: query
+        description: The comma separated UUIDs of the Entities
+        required: true
+        schema:
+          type: string
+        example: 6fdfa3b6-64fb-46cf-b98c-c92b57f914b1,97717278-2bf8-4565-88b2-711c88d66e75
+      - name: X-OpenRosa-Version
+        in: header
+        description: e.g. 1.0
+        schema:
+          type: string
+        example: "1.0"
+      responses:
+        200:
+          description: OK
+          headers:
+            X-OpenRosa-Version:
+              schema:
+                type: string
+          content:
+            text/xml:
+              example: |
+                <?xml version="1.0" encoding="UTF-8"?>
+                <data>
+                  <entities>
+                    <entity id="6fdfa3b6-64fb-46cf-b98c-c92b57f914b1">
+                      <deleted>true</deleted>
+                    </entity>
+                    <entity id="97717278-2bf8-4565-88b2-711c88d66e75">
+                      <deleted>false</deleted>
+                    </entity>
+                  </entities>
+                </data>
         403:
           description: Forbidden
           headers:
@@ -10638,7 +10776,7 @@ paths:
                 code: "501.1"
                 message: The requested feature $unsupported is not supported by this
                   server.
-  /#/dl/projects{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments/{filename}:
+  /dl/projects{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments/{filename}:
     get:
       tags:
       - OData Form Service
@@ -10650,9 +10788,9 @@ paths:
 
         If you are writing or configuring an OData client and have submission media files to deal with, you can run into authentication problems directly fetching or linking the media file URLs that are provided in the OData feed. This can be due to several reasons: if the user is not logged into the Central administration site (and thus has no valid cookie), if the request comes from a foreign origin (and thus cookies are not sent by the browser), and more.
 
-        To help manage this, the frontend provides a `/#/dl` path that allows file download. Just take a normal attachment download path and replace the `/v1` near the beginning of the path with `/#/dl`, and the user will be taken to a page managed by the Central administration website that will ensure the user is logged in, and offer the file as a download.
+        To help manage this, the frontend provides a `/dl` path that allows file download. Just take a normal attachment download path and replace the `/v1` near the beginning of the path with `/dl`, and the user will be taken to a page managed by the Central administration website that will ensure the user is logged in, and offer the file as a download.
 
-        Because this `/#/dl` path returns a web page that causes a file download rather than directly returning the media file in question, it cannot be used to directly embed or retrieve these files, for example in a `<img>` tag.
+        Because this `/dl` path returns a web page that causes a file download rather than directly returning the media file in question, it cannot be used to directly embed or retrieve these files, for example in a `<img>` tag.
       operationId: Data Download Path
       parameters:
       - name: projectId
@@ -12480,6 +12618,9 @@ components:
           type: string
           description: ISO date format
           example: 2018-03-21T12:45:02.312Z
+        webformsEnabled:
+          type: boolean
+          description: Enables use of ODK Web Forms instead of Enketo for filling Forms via web browsers.
     ExtendedForm:
       allOf:
         - $ref: '#/components/schemas/Form'
@@ -12784,22 +12925,29 @@ components:
           items:
             $ref: '#/components/schemas/FormKeyValue'
     DatasetMetadata:
-      properties:
-        linkedForms:
-          type: array
-          items:
-            $ref: '#/components/schemas/FormKeyValue'
-          description: Forms that consume data from the Dataset
-        sourceForms:
-          type: array
-          items:
-            $ref: '#/components/schemas/FormKeyValue'
-          description: Forms that create Entities in the Dataset
-        properties:
-          type: array
-          description: All properties of the Dataset
-          items:
-            $ref: '#/components/schemas/PropertyDetailed'
+      allOf:
+        - $ref: '#/components/schemas/Dataset'
+        - type: object
+          properties:
+            lastUpdate:
+              type: string
+              description: ISO date format. The timestamp of the most recent change to the dataset or its entities
+              example: '2020-10-10T03:04:51.695Z'
+            linkedForms:
+              type: array
+              items:
+                $ref: '#/components/schemas/FormKeyValue'
+              description: Forms that consume data from the Dataset
+            sourceForms:
+              type: array
+              items:
+                $ref: '#/components/schemas/FormKeyValue'
+              description: Forms that create Entities in the Dataset
+            properties:
+              type: array
+              description: All properties of the Dataset
+              items:
+                $ref: '#/components/schemas/PropertyDetailed'
     Submission:
       type: object
       required:
