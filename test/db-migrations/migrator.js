@@ -68,6 +68,7 @@ function moveMigrationsToHoldingPen() {
 
 function moveAll(src, tgt) {
   fs.readdirSync(src)
+    .filter(f => f.endsWith('.js'))
     .forEach(f => fs.renameSync(`${src}/${f}`, `${tgt}/${f}`));
 }
 
