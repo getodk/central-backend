@@ -33,7 +33,7 @@
     "mustache": "~2.3",
     "nodemailer": "~6",
     "odata-v4-parser": "~0.1",
-    "openid-client": "^6.1.7",
+    "openid-client": "^6.3.4",
     "path-to-regexp": "^6.2.2",
     "pg": "~8",
     "pg-query-stream": "~4",
