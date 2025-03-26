@@ -1684,5 +1684,45 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
       await service.get(`/v1/enketo-ids/${enketoId}/form?st=${token}`)
         .expect(200);
     }));
+
+    it('should allow form lookup by enketoId if form has multiple published versions', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      global.enketo.enketoId = '::firstEnketoId';
+      global.enketo.autoReset = false;
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simple2)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      global.enketo.enketoId = '::secondEnketoId';
+      await asAlice.post('/v1/projects/1/forms/simple2/draft')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simple2/draft/publish?version=two')
+        .expect(200);
+      const { body: { enketoId } } = await asAlice.get('/v1/projects/1/forms/simple2')
+        .expect(200);
+      should.exist(enketoId);
+      const token = await asAlice.post('/v1/projects/1/forms/simple2/public-links')
+        .send({ displayName: 'link1' })
+        .then(({ body }) => body.token);
+      await service.get(`/v1/enketo-ids/${enketoId}/form?st=${token}`)
+        .expect(200);
+    }));
+
+    it('should return the Form by enketoOnceId', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const enketoOnceId = await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simple2)
+        .expect(200)
+        .then(({ body }) => body.enketoOnceId);
+
+      const token = await asAlice.post('/v1/projects/1/forms/simple2/public-links')
+        .send({ displayName: 'link1' })
+        .then(({ body }) => body.token);
+
+      await service.get(`/v1/enketo-ids/${enketoOnceId}/form?st=${token}`)
+        .expect(200);
+    }));
   });
 });
