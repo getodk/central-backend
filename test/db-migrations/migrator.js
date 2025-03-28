@@ -75,7 +75,7 @@ function loadMigrationsList() {
   const migrations = fs.readdirSync(migrationsDir)
     .filter(f => f.endsWith('.js'))
     .map(f => f.replace(/\.js$/, ''))
-    .sort(); // TODO check that this is how knex sorts migration files
+    .sort(); // match sorting in pg-migrator and knex's fs-migrations.js
   log();
   log('All migrations:');
   log();
