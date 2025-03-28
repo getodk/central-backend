@@ -3,6 +3,7 @@ const should = require('should');
 const uuid = require('uuid').v4;
 const { sql } = require('slonik');
 const { createReadStream, readFileSync } = require('fs');
+const FormData = require('form-data');
 const { testService, testServiceFullTrx } = require('../setup');
 const testData = require('../../data/xml');
 const { httpZipResponseToFiles } = require('../../util/zip');
@@ -220,6 +221,56 @@ describe('api: /submission', () => {
                   { name: 'my_file1.mp4', exists: true }
                 ]);
               }))))));
+
+    it('should save attachments with correct mime types for chunked requests', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => {
+            const attachments = new FormData();
+            attachments.append('my_file1.mp4', Buffer.from('this is test file one'), 'my_file1-submitted-name.mp4');
+            attachments.append('xml_submission_file', Buffer.from(testData.instances.binaryType.both), 'data.xml');
+            attachments.append('here_is_file2.jpg', Buffer.from('this is test file two'), 'here_is_file2.jpg');
+
+            const req = asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .set('Content-Type', 'multipart/form-data; boundary=' + attachments.getBoundary());
+
+            attachments.pipe(req, { end: false });
+
+            return req
+              .expect(201)
+              .then(res => {
+                res.req.chunkedEncoding.should.equal(true);
+                res.req._header.should.match(/\r\nTransfer-Encoding: chunked\r\n/);
+              });
+          })
+          .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments')
+            .expect(200)
+            .then(({ body }) => {
+              body.should.eql([
+                { name: 'here_is_file2.jpg', exists: true },
+                { name: 'my_file1.mp4', exists: true }
+              ]);
+            }))
+          .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+            .expect(200)
+            .then(({ headers, body }) => {
+              headers['content-type'].should.equal('video/mp4');
+              headers['content-disposition'].should.equal('attachment; filename="my_file1.mp4"; filename*=UTF-8\'\'my_file1.mp4');
+              headers['etag'].should.equal('"75f5701abfe7de8202cecaa0ca753f29"'); // eslint-disable-line dot-notation
+              body.toString().should.eql('this is test file one');
+            }))
+          .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
+            .expect(200)
+            .then(({ headers, body }) => {
+              headers['content-type'].should.equal('image/jpeg');
+              headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+              headers['etag'].should.equal('"25bdb03b7942881c279788575997efba"'); // eslint-disable-line dot-notation
+              body.toString().should.eql('this is test file two');
+            })))));
 
     it('should save attachments with unicode / non-english char', testService(async (service) => {
       const asAlice = await service.login('alice');
