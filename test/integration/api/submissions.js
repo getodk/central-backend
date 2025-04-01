@@ -1,3 +1,4 @@
+const { Readable } = require('node:stream');
 const appRoot = require('app-root-path');
 const should = require('should');
 const uuid = require('uuid').v4;
@@ -4376,6 +4377,48 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                   headers['content-type'].should.equal('video/mp4');
                   body.toString().should.equal('testvideo');
                 })))))));
+
+    it.only('should attach the given file with transfer-encoding: chunked, and serve it with the correct mime type (central#940)', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.binaryType)
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions')
+            .send(testData.instances.binaryType.both)
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(async () => {
+              // Borrow the Authorization header and temporary server URL from supertest:
+              // Don't use the real path here, as we don't actually want to post anything there.
+              const brokenReq = asAlice.post('/')
+                .set('Content-Type', 'video/mp4');
+              const { url, header: headers } = brokenReq;
+
+              // Use fetch() due to https://github.com/ladjs/supertest/issues/856
+              const res = await fetch(url + 'v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4', {
+                method: 'POST',
+                body: Readable.from('testvideo'),
+                duplex: 'half',
+                headers,
+              });
+
+              res.status.should.eql(200);
+
+              // Discard supertest request to prevent hanging.  Presumably caused
+              // because the request only fires once the promise is awaited, but
+              // test server socket has already been opened.
+              //
+              // This must be done _after_ the fetch() request to keep the socket
+              // open while fetch() is requesting.
+              try { await brokenReq; } catch (err) { /* discard */ }
+            })
+            .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+              .expect(200)
+              .then(({ headers, body }) => {
+                headers['content-type'].should.equal('video/mp4');
+                body.toString().should.equal('testvideo');
+              }))))));
 
     it('should attach a given file with empty Content-Type and serve it with default mime type', testService((service) =>
       service.login('alice', (asAlice) =>
