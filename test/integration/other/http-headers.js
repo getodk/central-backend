@@ -20,7 +20,7 @@ describe('http-headers', () => {
       it(`should not allow any caching of ${method.toUpperCase()} responses`, testService(async (service) => {
         const { headers } = await service[method]('/v1/users/current');
         headers['cache-control'].should.eql('no-store');
-        headers['vary'].should.eql('Accept-Encoding, Origin'); // eslint-disable-line dot-notation
+        headers['vary'].should.eql('*'); // eslint-disable-line dot-notation
       }));
     });
   });

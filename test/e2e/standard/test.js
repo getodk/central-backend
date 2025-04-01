@@ -119,7 +119,7 @@ describe('Cache headers', () => {
           .forEach(args => testSecondRequest(url, args,
             [ 'Cache-Control', 'no-store' ],
             [ 'Expires',        undefined ],
-            [ 'Vary',           'Accept-Encoding, Origin' ],
+            [ 'Vary',           '*' ],
           ));
       });
     });
