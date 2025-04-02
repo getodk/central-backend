@@ -63,6 +63,7 @@ describe('api: /submission', () => {
             body.should.eql({
               code: 400.39,
               message: 'Multipart form content failed to parse.',
+              details: 'Multipart: Boundary not found',
             });
           }))));
 
@@ -77,6 +78,7 @@ describe('api: /submission', () => {
             body.should.eql({
               code: 400.39,
               message: 'Multipart form content failed to parse.',
+              details: 'Unexpected end of form',
             });
           }))));
 
@@ -91,6 +93,7 @@ describe('api: /submission', () => {
             body.should.eql({
               code: 400.39,
               message: 'Multipart form content failed to parse.',
+              details: 'Malformed part header',
             });
           }))));
 
