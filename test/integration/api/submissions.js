@@ -87,7 +87,19 @@ describe('api: /submission', () => {
         asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
           .set('Content-Type', 'multipart/form-data; boundary=BOUNDARY')
-          .send('--BOUNDARY\r\nContent-Disposition: form-data; name="xml_submission_file"; filename="xml_submission_file"\r\nContent-Type: text/xml\r\n\r\n--BOUNDARY\r\nContent-Disposition: form-data; name="__csrf"\r\n\r\nxxx\r\n--BOUNDARY\r\nContent-Disposition: form-data; name="699-536x354-9_4_59.jpg"; filename="699-536x354-9_4_59.jpg"\r\nContent-Type: image/jpeg\r\n\r\n--BOUNDARY--\r\n\r\n')
+          .send(
+            '--BOUNDARY\r\n' +
+            'Content-Disposition: form-data; name="xml_submission_file"; filename="xml_submission_file"\r\n' +
+            'Content-Type: text/xml\r\n\r\n' +
+            '--BOUNDARY\r\n' +
+            'Content-Disposition: form-data; name="__csrf"\r\n\r\n' +
+            'content\r\n' +
+            '--BOUNDARY\r\n' +
+            'Content-Disposition: form-data; name="699-536x354-9_4_59.jpg"; filename="699-536x354-9_4_59.jpg"\r\n' +
+            'Content-Type: image/jpeg\r\n\r\n' +
+            // content should be here
+            '--BOUNDARY--\r\n\r\n'
+          )
           .expect(400)
           .then(({ body }) => {
             body.should.eql({
