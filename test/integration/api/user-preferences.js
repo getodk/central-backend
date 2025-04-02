@@ -133,13 +133,6 @@ describe('api: user-preferences', () => {
         .expect(200)
     );
 
-    // expected properties of the new project
-    const newProjectProps = {};
-    newProjectProps[newProjectID] = {
-      prefForSomeOtherProject: 9000,
-      toBeDeletedPref: 'troep',
-    };
-
     // check whether the built-up state is sane (eg stores and overwrites applied)
     await asAlice.get('/v1/users/current')
       .set('X-Extended-Metadata', 'true')
@@ -151,15 +144,16 @@ describe('api: user-preferences', () => {
             someComplexSitePref: [1, 2, 3],
             toBeDeletedPref: 'troep',
           },
-          projects: Object.assign(
-            {
-              1: {
-                someSimpleProjectPref: false,
-                someComplexProjectPref: [1, 2, 'many'],
-              },
+          projects: {
+            1: {
+              someSimpleProjectPref: false,
+              someComplexProjectPref: [1, 2, 'many'],
             },
-            newProjectProps,
-          ),
+            [newProjectID]: {
+              prefForSomeOtherProject: 9000,
+              toBeDeletedPref: 'troep',
+            },
+          },
         });
       });
 
@@ -175,8 +169,6 @@ describe('api: user-preferences', () => {
     await asAlice.delete(`/v1/user-preferences/project/${newProjectID}/toBeDeletedPref`)
       .expect(404); // as we've just deleted it
 
-    delete newProjectProps[newProjectID].toBeDeletedPref;
-
     // check whether the built-up state is sane (deletions applied)
     await asAlice.get('/v1/users/current')
       .expect(200)
@@ -187,15 +179,15 @@ describe('api: user-preferences', () => {
             someSimpleSitePref: true,
             someComplexSitePref: [1, 2, 3],
           },
-          projects: Object.assign(
-            {
-              1: {
-                someSimpleProjectPref: false,
-                someComplexProjectPref: [1, 2, 'many'],
-              },
+          projects: {
+            1: {
+              someSimpleProjectPref: false,
+              someComplexProjectPref: [1, 2, 'many'],
             },
-            newProjectProps
-          ),
+            [newProjectID]: {
+              prefForSomeOtherProject: 9000,
+            },
+          },
         });
       });
   }));
