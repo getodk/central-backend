@@ -1966,13 +1966,17 @@ describe('datasets and entities', () => {
         await asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
           .send({ dataset: true })
           .expect(200)
-          .then(({ body }) => omit(['updatedAt'], body).should.be.eql({
-            name: 'goodone.csv',
-            type: 'file',
-            exists: true,
-            blobExists: false,
-            datasetExists: true
-          }));
+          .then(({ body }) => {
+            body.should.be.a.FormAttachment();
+            omit(['updatedAt'], body).should.be.eql({
+              name: 'goodone.csv',
+              type: 'file',
+              exists: true,
+              blobExists: false,
+              datasetExists: true,
+              hash: null
+            });
+          });
 
         // Publish form with dataset as attachment
         await asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish?version=newversion')
@@ -1982,6 +1986,7 @@ describe('datasets and entities', () => {
         await asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
           .expect(200)
           .then(({ body }) => {
+            body[0].should.be.a.FormAttachment();
             body[0].name.should.equal('goodone.csv');
             body[0].datasetExists.should.equal(true);
             body[0].updatedAt.should.be.a.recentIsoDate();
@@ -2048,6 +2053,7 @@ describe('datasets and entities', () => {
         await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments')
           .expect(200)
           .then(({ body }) => {
+            body[0].should.be.a.FormAttachment();
             body[0].name.should.equal('goodone.csv');
             body[0].exists.should.equal(true);
             body[0].datasetExists.should.equal(false);
@@ -2068,6 +2074,7 @@ describe('datasets and entities', () => {
         await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments')
           .expect(200)
           .then(({ body }) => {
+            body[0].should.be.a.FormAttachment();
             body[0].name.should.equal('goodone.csv');
             body[0].exists.should.equal(true);
             body[0].datasetExists.should.equal(true);
@@ -2146,6 +2153,7 @@ describe('datasets and entities', () => {
             .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
               .expect(200)
               .then(({ body }) => {
+                body[0].should.be.a.FormAttachment();
                 body[0].name.should.equal('goodone.csv');
                 body[0].datasetExists.should.equal(false);
                 body[0].updatedAt.should.be.a.recentIsoDate();
@@ -2358,6 +2366,7 @@ describe('datasets and entities', () => {
 
           await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
             .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
               body[0].datasetExists.should.be.true();
             });
@@ -2376,6 +2385,7 @@ describe('datasets and entities', () => {
 
           await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
             .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
               body[0].exists.should.be.true();
               body[0].blobExists.should.be.false();
@@ -2401,6 +2411,7 @@ describe('datasets and entities', () => {
 
           await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
             .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
               body[0].exists.should.be.true();
               body[0].blobExists.should.be.true();
@@ -2446,6 +2457,7 @@ describe('datasets and entities', () => {
 
           await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
             .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
               body[0].exists.should.be.false();
               body[0].blobExists.should.be.false();
@@ -2469,6 +2481,7 @@ describe('datasets and entities', () => {
 
           await asAlice.get('/v1/projects/1/forms/updateEntity/draft/attachments')
             .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
               body[0].exists.should.be.true();
               body[0].blobExists.should.be.false();
@@ -2481,6 +2494,7 @@ describe('datasets and entities', () => {
 
           await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
             .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
               body[0].exists.should.be.true();
               body[0].blobExists.should.be.false();
@@ -2506,6 +2520,7 @@ describe('datasets and entities', () => {
           // because the form was uploaded before the dataset was created, this will be null
           await asAlice.get('/v1/projects/1/forms/updateEntity/draft/attachments')
             .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
               body[0].exists.should.be.false();
               body[0].blobExists.should.be.false();
@@ -2520,6 +2535,7 @@ describe('datasets and entities', () => {
 
           await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
             .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
               body[0].exists.should.be.true();
               body[0].blobExists.should.be.false();
@@ -2587,6 +2603,7 @@ describe('datasets and entities', () => {
 
           await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
             .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
               body[0].exists.should.be.false();
               body[0].blobExists.should.be.false();
@@ -2632,6 +2649,7 @@ describe('datasets and entities', () => {
 
           await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
             .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.CSV');
               body[0].exists.should.be.false();
               body[0].blobExists.should.be.false();
@@ -2677,6 +2695,7 @@ describe('datasets and entities', () => {
 
           await asAlice.get('/v1/projects/1/forms/updateEntity/draft/attachments')
             .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.CSV');
               body[0].exists.should.be.false();
               body[0].blobExists.should.be.false();
