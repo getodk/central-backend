@@ -145,8 +145,10 @@ describe('api: /sessions', () => {
           .set('Cookie', 'session=' + token)
           .expect(200)
           .then((restore) => {
-            restore.body.should.be.a.Session();
-            restore.body.token.should.equal(token);
+            restore.body.expiresAt.should.be.an.isoDate();
+            restore.body.createdAt.should.be.an.isoDate();
+            should(restore.body.token).be.undefined();
+            should(restore.body.csrf).be.undefined();
           }))));
   });
 
@@ -336,6 +338,15 @@ describe('api: /sessions', () => {
       service.authenticateUser('alice', 'includeCsrf')
         .then((body) => service.post('/v1/projects')
           .send({ name: 'my project', __csrf: body.csrf })
+          .set('X-Forwarded-Proto', 'https')
+          .set('Cookie', 'session=' + body.token)
+          .expect(200))));
+
+    it('should succeed it is ajax/xhr request', testService((service) =>
+      service.authenticateUser('alice', 'includeCsrf')
+        .then((body) => service.post('/v1/projects')
+          .send({ name: 'my project' })
+          .set('X-Requested-With', 'XMLHttpRequest')
           .set('X-Forwarded-Proto', 'https')
           .set('Cookie', 'session=' + body.token)
           .expect(200))));
