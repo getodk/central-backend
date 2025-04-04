@@ -1973,8 +1973,7 @@ describe('datasets and entities', () => {
               type: 'file',
               exists: true,
               blobExists: false,
-              datasetExists: true,
-              hash: null
+              datasetExists: true
             });
           });
 
