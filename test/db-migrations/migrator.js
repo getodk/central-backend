@@ -15,95 +15,100 @@
 const fs = require('node:fs');
 const { execSync } = require('node:child_process');
 
-const migrationsDir = './lib/model/migrations';
-const holdingPen = './test/db-migrations/.holding-pen';
+const legacy = createMigrator('Legacy', './lib/model/migrations/legacy', './test/db-migrations/.holding-pen/legacy');     // eslint-disable-line no-use-before-define, no-multi-spaces
+const modern = createMigrator('Modern', './lib/model/migrations',        './test/db-migrations/.holding-pen/pg', legacy); // eslint-disable-line no-use-before-define, no-multi-spaces
 
-fs.mkdirSync(holdingPen, { recursive: true });
+module.exports = { legacy, modern };
 
-restoreMigrations(); // eslint-disable-line no-use-before-define
-const allMigrations = loadMigrationsList(); // eslint-disable-line no-use-before-define
-moveMigrationsToHoldingPen(); // eslint-disable-line no-use-before-define
+function createMigrator(name, migrationsDir, holdingPen, previousMigrator) {
+  fs.mkdirSync(holdingPen, { recursive: true });
 
-let lastRunIdx = -1;
+  restoreMigrations(); // eslint-disable-line no-use-before-define
+  const allMigrations = loadMigrationsList(); // eslint-disable-line no-use-before-define
+  moveMigrationsToHoldingPen(); // eslint-disable-line no-use-before-define
 
-function runBefore(migrationName) {
-  const idx = getIndex(migrationName); // eslint-disable-line no-use-before-define
-  if (idx === 0) return;
+  let lastRunIdx = -1;
 
-  const previousMigration = allMigrations[idx - 1];
+  return {
+    exists,            // eslint-disable-line no-use-before-define, no-multi-spaces
+    hasRun,            // eslint-disable-line no-use-before-define, no-multi-spaces
+    runBefore,         // eslint-disable-line no-use-before-define, no-multi-spaces
+    runIncluding,      // eslint-disable-line no-use-before-define, no-multi-spaces
+    restoreMigrations, // eslint-disable-line no-use-before-define
+  };
 
-  return runIncluding(previousMigration); // eslint-disable-line no-use-before-define
-}
-
-function runIncluding(lastMigrationToRun) {
-  const finalIdx = getIndex(lastMigrationToRun); // eslint-disable-line no-use-before-define
-
-  for (let restoreIdx=lastRunIdx+1; restoreIdx<=finalIdx; ++restoreIdx) { // eslint-disable-line no-plusplus
-    const f = allMigrations[restoreIdx] + '.js';
-    fs.renameSync(`${holdingPen}/${f}`, `${migrationsDir}/${f}`);
+  function runBefore(migrationName) {
+    const idx = getIndex(migrationName); // eslint-disable-line no-use-before-define
+    runUntilIndex(idx - 1); // eslint-disable-line no-use-before-define
   }
 
-  log('Running migrations until:', lastMigrationToRun, '...');
-  const res = execSync(`node ./lib/bin/run-migrations.js`, { encoding: 'utf8' });
+  function runIncluding(lastMigrationToRun) {
+    runUntilIndex(getIndex(lastMigrationToRun)); // eslint-disable-line no-use-before-define
+  }
 
-  lastRunIdx = finalIdx;
+  function runUntilIndex(finalIdx) {
+    for (let restoreIdx=lastRunIdx+1; restoreIdx<=finalIdx; ++restoreIdx) { // eslint-disable-line no-plusplus
+      const f = allMigrations[restoreIdx] + '.js';
+      fs.renameSync(`${holdingPen}/${f}`, `${migrationsDir}/${f}`);
+    }
 
-  log(`Ran migrations up-to-and-including ${lastMigrationToRun}:\n`, res);
-}
+    if (previousMigrator) previousMigrator.restoreMigrations();
 
-function getIndex(migrationName) {
-  const idx = allMigrations.indexOf(migrationName);
-  log('getIndex()', migrationName, 'found at', idx);
-  if (idx === -1) throw new Error(`Unknown migration: ${migrationName}`);
-  return idx;
-}
+    const lastMigrationToRun = allMigrations[finalIdx];
+    log('Running migrations until:', lastMigrationToRun, '...');
+    const res = execSync(`node ./lib/bin/run-migrations.js`, { encoding: 'utf8' });
 
-function restoreMigrations() {
-  moveAll(holdingPen, migrationsDir); // eslint-disable-line no-use-before-define
-}
+    lastRunIdx = finalIdx;
 
-function moveMigrationsToHoldingPen() {
-  moveAll(migrationsDir, holdingPen); // eslint-disable-line no-use-before-define
-}
+    log(`Ran migrations up-to-and-including ${lastMigrationToRun}:\n`, res);
+  }
 
-function moveAll(src, tgt) {
-  fs.readdirSync(src)
-    .filter(f => f.endsWith('.js'))
-    .forEach(f => fs.renameSync(`${src}/${f}`, `${tgt}/${f}`));
-}
+  function getIndex(migrationName) {
+    const idx = allMigrations.indexOf(migrationName);
+    log('getIndex()', migrationName, 'found at', idx);
+    if (idx === -1) throw new Error(`Unknown migration: ${migrationName}`);
+    return idx;
+  }
 
-function loadMigrationsList() {
-  const migrations = fs.readdirSync(migrationsDir)
-    .filter(f => f.endsWith('.js'))
-    .map(f => f.replace(/\.js$/, ''))
-    .sort(); // match sorting in pg-migrator and knex's fs-migrations.js
-  log();
-  log('All migrations:');
-  log();
-  migrations.forEach(m => log('*', m));
-  log();
-  log('Total:', migrations.length);
-  log();
-  return migrations;
-}
+  function restoreMigrations() {
+    moveAll(holdingPen, migrationsDir); // eslint-disable-line no-use-before-define
+  }
 
-function exists(migrationName) {
-  try {
-    getIndex(migrationName);
-    return true;
-  } catch (err) {
-    return false;
+  function moveMigrationsToHoldingPen() {
+    moveAll(migrationsDir, holdingPen); // eslint-disable-line no-use-before-define
+  }
+
+  function moveAll(src, tgt) {
+    fs.readdirSync(src)
+      .filter(f => f.endsWith('.js'))
+      .forEach(f => fs.renameSync(`${src}/${f}`, `${tgt}/${f}`));
+  }
+
+  function loadMigrationsList() {
+    const migrations = fs.readdirSync(migrationsDir)
+      .filter(f => f.endsWith('.js'))
+      .map(f => f.replace(/\.js$/, ''))
+      .sort(); // match sorting in pg-migrator and knex's fs-migrations.js
+    log();
+    log(`${name} migrations:`);
+    log();
+    migrations.forEach(m => log('*', m));
+    log();
+    log('Total:', migrations.length);
+    log();
+    return migrations;
+  }
+
+  function exists(migrationName) {
+    try {
+      getIndex(migrationName);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function hasRun(migrationName) {
+    return lastRunIdx >= getIndex(migrationName);
   }
 }
-
-function hasRun(migrationName) {
-  return lastRunIdx >= getIndex(migrationName);
-}
-
-module.exports = {
-  exists,
-  hasRun,
-  runBefore,
-  runIncluding,
-  restoreMigrations,
-};
