@@ -53,6 +53,62 @@ describe('api: /submission', () => {
           .expect(400)
           .then(({ text }) => { text.should.match(/form ID xml attribute/i); }))));
 
+    it('should reject if "Multipart: Boundary not found"', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .set('Content-Type', 'multipart/form-data') // missing suffix: "; boundary=..."
+          .expect(400)
+          .then(({ body }) => {
+            body.should.eql({
+              code: 400.39,
+              message: 'Multipart form content failed to parse.',
+              details: 'Multipart: Boundary not found',
+            });
+          }))));
+
+    it('should reject if "Unexpected end of form"', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .set('Content-Type', 'multipart/form-data; boundary=----geckoformboundary57597312afb59088b78af2a1fdc6038')
+          .send('') // should at minimum have a final boundary
+          .expect(400)
+          .then(({ body }) => {
+            body.should.eql({
+              code: 400.39,
+              message: 'Multipart form content failed to parse.',
+              details: 'Unexpected end of form',
+            });
+          }))));
+
+    it('should reject if "Malformed part header"', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .set('Content-Type', 'multipart/form-data; boundary=BOUNDARY')
+          .send(
+            '--BOUNDARY\r\n' +
+            'Content-Disposition: form-data; name="xml_submission_file"; filename="xml_submission_file"\r\n' +
+            'Content-Type: text/xml\r\n\r\n' +
+            '--BOUNDARY\r\n' +
+            'Content-Disposition: form-data; name="__csrf"\r\n\r\n' +
+            'content\r\n' +
+            '--BOUNDARY\r\n' +
+            'Content-Disposition: form-data; name="699-536x354-9_4_59.jpg"; filename="699-536x354-9_4_59.jpg"\r\n' +
+            'Content-Type: image/jpeg\r\n\r\n' +
+            // content should be here
+            '--BOUNDARY--\r\n\r\n'
+          )
+          .expect(400)
+          .then(({ body }) => {
+            body.should.eql({
+              code: 400.39,
+              message: 'Multipart form content failed to parse.',
+              details: 'Malformed part header',
+            });
+          }))));
+
     it('should return notfound if the form does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission')
