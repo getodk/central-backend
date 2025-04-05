@@ -1642,7 +1642,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
   ////////////////////////////////////////////////////////////////////////////////
 
   describe('/form-links/:enketoId/form', () => {
-    it('should return Form if it is in draft and no auth is provided', testService(async (service) => {
+    it('should not return Form if it is in draft and no auth is provided', testService(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms/simple/draft')
@@ -1652,10 +1652,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         .then(({ body }) => body.enketoId);
 
       await service.get(`/v1/form-links/${enketoId}/form`)
-        .expect(200)
-        .then(({ body }) => {
-          body.should.be.a.Form();
-        });
+        .expect(403);
     }));
 
     it('should reject without session token', testService(async (service) => {
