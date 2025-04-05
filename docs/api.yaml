@@ -3728,17 +3728,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
-  /v1/enketo-ids/{enketoId}/form:
+  /v1/form-links/{formLinkId}/form:
     get:
       tags:
       - Individual Form
-      summary: Getting Form Details by EnketoId
-      description: Returns Form metadata for the provided EnketoId
-      operationId: Getting Form Details by EnketoId
+      summary: Getting Form Details by formLinkId
+      description: Returns Form metadata for the provided formLinkId
+      operationId: Getting Form Details by formLinkId
       parameters:
-      - name: enketoId
+      - name: formLinkId
         in: path
-        description: The `enketoId` of the Form being referenced.
+        description: The `formLinkId` of the Form being referenced.
         required: true
         schema:
           type: string
