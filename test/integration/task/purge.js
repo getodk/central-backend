@@ -1,9 +1,11 @@
+const crypto = require('node:crypto');
 const appRoot = require('app-root-path');
 const assert = require('node:assert');
 const { isEmpty } = require('ramda');
 const { sql } = require('slonik');
 const { testTask } = require('../setup');
 const { purgeTask } = require(appRoot + '/lib/task/purge');
+const { Blob } = require(appRoot + '/lib/model/frames');
 
 // The basics of this task are tested here, including returning the message
 // of purged forms, but the full functionality is more thoroughly tested in
@@ -310,5 +312,48 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
             message.should.equal('Forms purged: 1, Submissions purged: 0, Entities purged: 0');
           }))));
   });
+
+  describe('with s3 blob storage', () => {
+    // The Postgres query planner can end up doing some crazy things when trying
+    // to identify unattached blobs.  This test seems to expose that behaviour,
+    // although real-world performance will still need to be monitored.
+    //
+    // See: https://github.com/getodk/central-backend/issues/1443
+
+    beforeEach(() => {
+      global.s3.enableMock();
+    });
+
+    it('should purge in a reasonable amount of time @slow', testTask(async function({ all }) {
+      // On a dev laptop, the following measurements were made:
+      //
+      // legacy implementation:   25s
+      // current implementation: 2.5s
+
+      this.timeout(5_000);
+
+      // given
+      const blobs = [];
+      for (let i=0; i<10_000; ++i) { // eslint-disable-line no-plusplus
+        const blob = Blob.fromBuffer(crypto.randomBytes(100));
+        const { sha, md5 } = blob;
+        blobs.push({ sha, md5, content: null, contentType: 'text/plain', s3_status: 'uploaded' });
+      }
+      const dbBlobs = await all(sql`
+        INSERT INTO blobs (sha, md5, content, "contentType", s3_status)
+          SELECT sha, md5, content, "contentType", s3_status
+            FROM JSON_POPULATE_RECORDSET(NULL::blobs, ${JSON.stringify(blobs)})
+          RETURNING id, sha
+      `);
+      global.s3.mockExistingBlobs(dbBlobs);
+
+      // when
+      await purgeTask({ mode: 'forms', force: false, formId: 1 });
+
+      // then
+      // it has not timed out or thrown
+    }));
+  });
+
 });
 
