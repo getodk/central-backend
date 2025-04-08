@@ -21,7 +21,7 @@ class S3mock {
   }
 
   mockExistingBlobs(blobs) {
-    for (const { id, sha } of blobs) this.s3bucket.set(keyFrom(id, sha), 'i should never be read');
+    for (const { id, sha, content } of blobs) this.s3bucket.set(keyFrom(id, sha), content);
   }
 
   // MOCKED FUNCTIONS
