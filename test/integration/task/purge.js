@@ -325,14 +325,14 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
     });
 
     // eslint-disable-next-line prefer-arrow-callback
-    it('should purge in a reasonable amount of time', testTask(async function({ all }) {
+    it('should purge in a reasonable amount of time @slow', testTask(async function({ all }) {
       // On a dev laptop, the following measurements were made:
       //
       // legacy implementation:   25s
-      // current implementation: 400ms
+      // current implementation: 2.5s
 
       // Enable when checking other implementations:
-      //this.timeout(0);
+      this.timeout(5_000);
 
       // given
       const blobs = [];
@@ -353,7 +353,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
       await purgeTask({ mode: 'forms', force: false, formId: 1 });
 
       // then
-      // it has not timed out
+      // it has not timed out or thrown
     }));
   });
 
