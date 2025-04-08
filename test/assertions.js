@@ -348,10 +348,11 @@ should.Assertion.add('eqlInAnyOrder', function(expectedUnsorted) {
   actualSorted.should.eql(expectedSorted);
 });
 
-should.Assertion.add('subsetOf', function(subset) {
+should.Assertion.add('subsetOf', function(array) {
   this.params = { operator: 'to be a subset of' };
+
   this.obj.should.be.an.Array();
-  for (const x of this.obj) subset.should.containEql(x);
+  for (const x of this.obj) array.should.containEql(x);
 });
 
 should.Assertion.add('Dataset', function assertDataset() {
