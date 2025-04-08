@@ -20,6 +20,10 @@ class S3mock {
     this.uploads = { attempted: 0, successful: 0, deleted: 0 };
   }
 
+  mockExistingBlobs(blobs) {
+    for (const { id, sha } of blobs) this.s3bucket.set(keyFrom(id, sha), 'i should never be read');
+  }
+
   // MOCKED FUNCTIONS
   // ================
   // These functions should be marked `async` to correspond with the function
