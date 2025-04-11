@@ -6112,11 +6112,10 @@ describe('datasets and entities', () => {
         .then(async ({ text }) => {
           const result = await xml2js.parseStringPromise(text, { explicitArray: false });
           result.data.entities.entity.length.should.be.eql(2);
-          const [first, second] = result.data.entities.entity;
-          first.$.id.should.be.eql('12345678-1234-4123-8234-123456789aaa');
-          first.deleted.should.be.eql('false');
-          second.$.id.should.be.eql('12345678-1234-4123-8234-123456789abc');
-          second.deleted.should.be.eql('true');
+          result.data.entities.entity.find(e => e.$.id === '12345678-1234-4123-8234-123456789aaa')
+            .deleted.should.be.eql('false');
+          result.data.entities.entity.find(e => e.$.id === '12345678-1234-4123-8234-123456789abc')
+            .deleted.should.be.eql('true');
         });
     }));
 
@@ -6134,11 +6133,10 @@ describe('datasets and entities', () => {
         .then(async ({ text }) => {
           const result = await xml2js.parseStringPromise(text, { explicitArray: false });
           result.data.entities.entity.length.should.be.eql(2);
-          const [first, second] = result.data.entities.entity;
-          first.$.id.should.be.eql('12345678-1234-4123-8234-123456789aaa');
-          first.deleted.should.be.eql('false');
-          second.$.id.should.be.eql('12345678-1234-4123-8234-123456789abc');
-          second.deleted.should.be.eql('true');
+          result.data.entities.entity.find(e => e.$.id === '12345678-1234-4123-8234-123456789aaa')
+            .deleted.should.be.eql('false');
+          result.data.entities.entity.find(e => e.$.id === '12345678-1234-4123-8234-123456789abc')
+            .deleted.should.be.eql('true');
         });
     }));
 
