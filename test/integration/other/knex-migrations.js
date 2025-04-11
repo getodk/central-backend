@@ -1275,7 +1275,6 @@ testMigration('20241227-01-backfill-audit-entity-uuid.js', () => {
         });
       });
 
-
     // Run the migration
     await up();
 

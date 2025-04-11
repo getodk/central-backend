@@ -3,6 +3,7 @@ const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { v4: uuid } = require('uuid');
+const xml2js = require('xml2js');
 
 const appPath = require('app-root-path');
 const Problem = require('../../../lib/util/problem');
@@ -518,5 +519,46 @@ describe('query module entities purge', () => {
     const purgedEntities = await all(sql`SELECT "entityUuid" FROM purged_entities`).then(map(e => e.entityUuid));
 
     purgedEntities.should.containDeep(peopleUuids.concat(treesUuids));
+  }));
+
+  it('should return purged entities through integrity url', testService(async (service, { Entities }) => {
+    const asAlice = await service.login('alice');
+
+    const entityIds = await createDeletedEntities(asAlice, 5, { datasetName: 'people', project: 1 });
+
+    // purging all deleted entities
+    const purgeCount = await Entities.purge(true);
+    purgeCount.should.equal(5);
+
+    // No entity IDs specified
+    await asAlice.get(`/v1/projects/1/datasets/people/integrity`)
+      .set('X-OpenRosa-Version', '1.0')
+      .expect(200)
+      .then(async ({ text }) => {
+        const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+        const { entity } = result.data.entities;
+        entity.length.should.equal(5);
+      });
+
+    // A single entity ID specified
+    await asAlice.get(`/v1/projects/1/datasets/people/integrity?id=${entityIds[0]}`)
+      .set('X-OpenRosa-Version', '1.0')
+      .expect(200)
+      .then(async ({ text }) => {
+        const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+        const { entity } = result.data.entities;
+        entity.$.id.should.be.eql(entityIds[0]);
+        entity.deleted.should.be.eql('true');
+      });
+
+    // A list of 3 entity IDs specified
+    await asAlice.get(`/v1/projects/1/datasets/people/integrity?id=${entityIds.slice(0, 3).join(',')}`)
+      .set('X-OpenRosa-Version', '1.0')
+      .expect(200)
+      .then(async ({ text }) => {
+        const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+        const { entity } = result.data.entities;
+        entity.length.should.equal(3);
+      });
   }));
 });
