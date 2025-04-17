@@ -20,6 +20,10 @@ class S3mock {
     this.uploads = { attempted: 0, successful: 0, deleted: 0 };
   }
 
+  mockExistingBlobs(blobs) {
+    for (const { id, sha, content } of blobs) this.s3bucket.set(keyFrom(id, sha), content);
+  }
+
   // MOCKED FUNCTIONS
   // ================
   // These functions should be marked `async` to correspond with the function
@@ -73,14 +77,17 @@ class S3mock {
     return `s3://mock/${md5}/${sha}/${filename}?contentType=${contentType}`;
   }
 
-  async deleteObjFor({ id, sha }) {
+  async deleteObjsFor(blobs) {
     if (!this.enabled) throw new Error('S3 mock has not been enabled, so this function should not be called.');
 
-    const key = keyFrom(id, sha);
-    if (!this.s3bucket.has(key)) throw new Error('Blob not found.');
-    this.s3bucket.delete(key);
-    // eslint-disable-next-line no-plusplus
-    ++this.uploads.deleted;
+    const keys = blobs.map(({ id, sha }) => keyFrom(id, sha));
+    if (!keys.every(key => this.s3bucket.has(key))) throw new Error('One or more blobs not found in store.');
+
+    for (const key of keys) {
+      this.s3bucket.delete(key);
+      // eslint-disable-next-line no-plusplus
+      ++this.uploads.deleted;
+    }
   }
 }
 
