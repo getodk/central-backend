@@ -14,6 +14,32 @@ describe('api: /sessions', () => {
           body.should.be.a.Session();
         })));
 
+    [
+      { desc: 'invalid session cookie', header: 'Cookie', value: 'session=invalid' },
+      { desc: 'invalid bearer token', header: 'Authorization', value: 'Bearer invalid' },
+      { desc: 'invalid basic auth', header: 'Authorization', value: 'Basic invalid' },
+    ].forEach(t => {
+      it(`should return a new session even if invalid auth is passed in the header - ${t.desc}`, testService((service) =>
+        service.post('/v1/sessions')
+          .set(t.header, t.value)
+          .set('x-forwarded-proto', 'https')
+          .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.a.Session();
+          })));
+    });
+
+    it('should return a new session even valid cookie is passed', testService((service) =>
+      service.post('/v1/sessions')
+        .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
+        .expect(200)
+        .then(({ body }) => service.post('/v1/sessions')
+          .set('x-forwarded-proto', 'https')
+          .set('Cookie', `session=${body.token}`)
+          .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
+          .expect(200))));
+
     // These demonstrate a strange feature of bcrypt - a valid password can be
     // repeated multiple times and still validate successfully.  An alternative
     // to these tests would be to check for NUL characters in supplied passwords
