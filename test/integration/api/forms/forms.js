@@ -8,7 +8,7 @@ const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
-const { without } = require(appRoot + '/lib/util/util');
+const { omit } = require(appRoot + '/lib/util/util');
 
 describe('api: /projects/:id/forms (create, read, update)', () => {
 
@@ -429,7 +429,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
           .expect(200);
         // This will make a published enketo token and a draft token even though the draft is not used
         global.enketo.callCount.should.equal(2);
-        without(['token'], global.enketo.createData).should.eql({
+        omit(['token'], global.enketo.createData).should.eql({
           openRosaUrl: `${env.domain}/v1/projects/1`,
           xmlFormId: 'simple2'
         });
@@ -493,7 +493,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         global.enketo.callCount.should.equal(1);
         const { body } = await asAlice.get('/v1/projects/1/forms/simple2')
           .expect(200);
-        without(['token'], global.enketo.createData).should.eql({
+        omit(['token'], global.enketo.createData).should.eql({
           openRosaUrl: `${container.env.domain}/v1/projects/1`,
           xmlFormId: 'simple2'
         });
