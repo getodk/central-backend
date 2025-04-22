@@ -31,7 +31,7 @@ if (mailConfig.transport !== 'json')
 const xlsform = require(appRoot + '/test/util/xlsform');
 
 // set up our sentry mock.
-const Sentry = require(appRoot + '/lib/external/sentry').init();
+const { Sentry } = require(appRoot + '/lib/external/sentry');
 
 // set up our enketo mock.
 const { reset: resetEnketo, ...enketo } = require(appRoot + '/test/util/enketo');

@@ -319,7 +319,7 @@ describe('api: /forms/:id.svc', () => {
           .then(({ body }) => {
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions.children.child',
-              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/Submissions(%27double%27)/children/child?%24top=1&%24skiptoken=01eyJyZXBlYXRJZCI6ImI2ZTkzYTgxYTUzZWVkMDU2NmU2NWU0NzJkNGE0YjlhZTM4M2VlNmQifQ%3D%3D',
+              '@odata.nextLink': "http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')/children/child?%24top=1&%24skiptoken=01eyJyZXBlYXRJZCI6ImI2ZTkzYTgxYTUzZWVkMDU2NmU2NWU0NzJkNGE0YjlhZTM4M2VlNmQifQ%3D%3D",
               value: [{
                 __id: 'b6e93a81a53eed0566e65e472d4a4b9ae383ee6d',
                 '__Submissions-id': 'double',
@@ -367,7 +367,7 @@ describe('api: /forms/:id.svc', () => {
               });
             })))));
 
-    it('should return encoded URLs', testService((service) =>
+    it('should return mixed encoded/decoded URLs as supplied', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.doubleRepeat.replace(
@@ -401,7 +401,7 @@ describe('api: /forms/:id.svc', () => {
               asAlice.get("/v1/projects/1/forms/double%20repeat.svc/Submissions('uuid%3A17b09e96-4141-43f5-9a70-611eb0e8f6b4')/children/child?$top=1")
                 .expect(200)
                 .then(({ body }) => {
-                  body['@odata.nextLink'].should.equal('http://localhost:8989/v1/projects/1/forms/double%20repeat.svc/Submissions(%27uuid%3A17b09e96-4141-43f5-9a70-611eb0e8f6b4%27)/children/child?%24top=1&%24skiptoken=01eyJyZXBlYXRJZCI6IjdhYzVmNGQ0ZmFjYmFhOTY1N2MyMWZmMjIxYjg4NTI0MWMyODRiNmMifQ%3D%3D');
+                  body['@odata.nextLink'].should.equal("http://localhost:8989/v1/projects/1/forms/double%20repeat.svc/Submissions('uuid%3A17b09e96-4141-43f5-9a70-611eb0e8f6b4')/children/child?%24top=1&%24skiptoken=01eyJyZXBlYXRJZCI6IjdhYzVmNGQ0ZmFjYmFhOTY1N2MyMWZmMjIxYjg4NTI0MWMyODRiNmMifQ%3D%3D");
                   body['@odata.nextLink'].should.have.skiptoken({ repeatId: '7ac5f4d4facbaa9657c21ff221b885241c284b6c' });
                 })
             ]))))));
