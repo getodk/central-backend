@@ -24,15 +24,16 @@ describe('util/util', () => {
     });
   });
 
-  describe('without', () => {
-    const { without } = util;
+  describe('omit()', () => {
+    const { omit } = util;
+
     it('should remove the specified keys', () => {
-      without([ 'b', 'd' ], { a: 1, b: 2, c: 3, d: 4, e: 5 }).should.eql({ a: 1, c: 3, e: 5 });
+      omit([ 'b', 'd' ], { a: 1, b: 2, c: 3, d: 4, e: 5 }).should.eql({ a: 1, c: 3, e: 5 });
     });
 
     it('should actually remove the keys', () => {
       // eslint-disable-next-line no-prototype-builtins
-      without([ 'b' ], { a: 1, b: 2 }).hasOwnProperty('b').should.equal(false);
+      omit([ 'b' ], { a: 1, b: 2 }).hasOwnProperty('b').should.equal(false);
     });
 
     it('should not touch or reify prototype keys', () => {
@@ -40,13 +41,13 @@ describe('util/util', () => {
       const y = Object.create(x);
       y.c = 3;
 
-      without([ 'a' ], y).should.eql({ c: 3 });
+      omit([ 'a' ], y).should.eql({ c: 3 });
       y.a.should.equal(1);
     });
 
     it('should do nothing given no keys or no obj', () => {
-      without([], { a: 1 }).should.eql({ a: 1 });
-      without([ 'test' ]).should.eql({});
+      omit([], { a: 1 }).should.eql({ a: 1 });
+      omit([ 'test' ]).should.eql({});
     });
   });
 
