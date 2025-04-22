@@ -12,7 +12,7 @@ describe('http-headers', () => {
       it(`should allow private caching of ${method.toUpperCase()} responses`, testService(async (service) => {
         const { headers } = await service[method]('/v1/users/current');
         headers['cache-control'].should.eql('private, no-cache');
-        headers['vary'].should.eql('Accept-Encoding, Authorization, Cookie, Origin'); // eslint-disable-line dot-notation
+        headers['vary'].should.eql('Accept-Encoding, Origin'); // eslint-disable-line dot-notation
       }));
     });
 
