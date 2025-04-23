@@ -1,5 +1,4 @@
 const assert = require('node:assert/strict');
-const { hash, randomBytes } = require('node:crypto');
 
 const { // eslint-disable-line object-curly-newline
   assertTableContents,
@@ -7,15 +6,9 @@ const { // eslint-disable-line object-curly-newline
   rowsExistFor,
 } = require('./utils'); // eslint-disable-line object-curly-newline
 
-describeMigration('20250113-01-disable-nullable-blob-content-types', ({ runMigrationBeingTested }) => {
-  const aBlobWith = props => {
-    const randomContent = randomBytes(100);
-    const md5 = hash('md5',  randomContent); // eslint-disable-line no-multi-spaces
-    const sha = hash('sha1', randomContent);
-    return { md5, sha, ...props };
-  };
-  const aBlob = () => aBlobWith({});
+const { aBlob, aBlobWith } = require('./fixtures');
 
+describeMigration('20250113-01-disable-nullable-blob-content-types', ({ runMigrationBeingTested }) => {
   const blob1 = aBlobWith({ contentType: null });
   const blob2 = aBlobWith({ contentType: 'text/plain' });
 
