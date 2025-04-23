@@ -8,7 +8,7 @@ const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
-const { without } = require(appRoot + '/lib/util/util');
+const { omit } = require(appRoot + '/lib/util/util');
 
 describe('api: /projects/:id/forms (create, read, update)', () => {
 
@@ -429,7 +429,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
           .expect(200);
         // This will make a published enketo token and a draft token even though the draft is not used
         global.enketo.callCount.should.equal(2);
-        without(['token'], global.enketo.createData).should.eql({
+        omit(['token'], global.enketo.createData).should.eql({
           openRosaUrl: `${env.domain}/v1/projects/1`,
           xmlFormId: 'simple2'
         });
@@ -493,7 +493,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         global.enketo.callCount.should.equal(1);
         const { body } = await asAlice.get('/v1/projects/1/forms/simple2')
           .expect(200);
-        without(['token'], global.enketo.createData).should.eql({
+        omit(['token'], global.enketo.createData).should.eql({
           openRosaUrl: `${container.env.domain}/v1/projects/1`,
           xmlFormId: 'simple2'
         });
@@ -1641,8 +1641,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
   // Get Form by EnketoId
   ////////////////////////////////////////////////////////////////////////////////
 
-  describe('/enketo-ids/:enketoId/form', () => {
-    it('should return Form if it is in draft and no auth is provided', testService(async (service) => {
+  describe('/form-links/:enketoId/form', () => {
+    it('should not return Form if it is in draft and no auth is provided', testService(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms/simple/draft')
@@ -1651,11 +1651,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
       const enketoId = await asAlice.get('/v1/projects/1/forms/simple/draft')
         .then(({ body }) => body.enketoId);
 
-      await service.get(`/v1/enketo-ids/${enketoId}/form`)
-        .expect(200)
-        .then(({ body }) => {
-          body.should.be.a.Form();
-        });
+      await service.get(`/v1/form-links/${enketoId}/form`)
+        .expect(403);
     }));
 
     it('should reject without session token', testService(async (service) => {
@@ -1664,7 +1661,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
       const enketoId = await asAlice.get('/v1/projects/1/forms/simple')
         .then(({ body }) => body.enketoId);
 
-      await service.get(`/v1/enketo-ids/${enketoId}/form`)
+      await service.get(`/v1/form-links/${enketoId}/form`)
         .expect(404);
     }));
 
@@ -1681,7 +1678,47 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         .send({ displayName: 'link1' })
         .then(({ body }) => body.token);
 
-      await service.get(`/v1/enketo-ids/${enketoId}/form?st=${token}`)
+      await service.get(`/v1/form-links/${enketoId}/form?st=${token}`)
+        .expect(200);
+    }));
+
+    it('should allow form lookup by enketoId if form has multiple published versions', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      global.enketo.enketoId = '::firstEnketoId';
+      global.enketo.autoReset = false;
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simple2)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      global.enketo.enketoId = '::secondEnketoId';
+      await asAlice.post('/v1/projects/1/forms/simple2/draft')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simple2/draft/publish?version=two')
+        .expect(200);
+      const { body: { enketoId } } = await asAlice.get('/v1/projects/1/forms/simple2')
+        .expect(200);
+      should.exist(enketoId);
+      const token = await asAlice.post('/v1/projects/1/forms/simple2/public-links')
+        .send({ displayName: 'link1' })
+        .then(({ body }) => body.token);
+      await service.get(`/v1/form-links/${enketoId}/form?st=${token}`)
+        .expect(200);
+    }));
+
+    it('should return the Form by enketoOnceId', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const enketoOnceId = await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simple2)
+        .expect(200)
+        .then(({ body }) => body.enketoOnceId);
+
+      const token = await asAlice.post('/v1/projects/1/forms/simple2/public-links')
+        .send({ displayName: 'link1' })
+        .then(({ body }) => body.token);
+
+      await service.get(`/v1/form-links/${enketoOnceId}/form?st=${token}`)
         .expect(200);
     }));
   });

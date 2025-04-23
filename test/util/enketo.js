@@ -4,7 +4,7 @@
 const appRoot = require('app-root-path');
 const { call } = require('ramda');
 const Problem = require(appRoot + '/lib/util/problem');
-const { without } = require(appRoot + '/lib/util/util');
+const { omit } = require(appRoot + '/lib/util/util');
 
 const defaults = {
   // Properties that can be set to change the behavior of the mock. These
@@ -50,7 +50,7 @@ const request = () => {
   const options = { ...global.enketo };
 
   if (global.enketo.autoReset)
-    Object.assign(global.enketo, without(['callCount'], defaults));
+    Object.assign(global.enketo, omit(['callCount'], defaults));
 
   return new Promise((resolve, reject) => {
     const { wait } = options;
