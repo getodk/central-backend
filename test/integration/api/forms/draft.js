@@ -2000,7 +2000,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   .set('Content-Type', 'text/csv')
                   .expect(403))))));
 
-        it('should accept the file with a success result', testService((service) =>
+        it('should accept the file', testService((service) =>
           service.login('alice', (asAlice) =>
             asAlice.post('/v1/projects/1/forms')
               .send(testData.forms.withAttachments)
@@ -2011,7 +2011,14 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 .set('Content-Type', 'text/csv')
                 .expect(200)
                 .then(({ body }) => {
-                  body.should.eql({ success: true });
+                  body.should.be.a.FormAttachment();
+                  body.should.containEql({
+                    name: 'goodone.csv',
+                    type: 'file',
+                    blobExists: true,
+                    hash: '2241de57bbec8144c8ad387e69b3a3ba'
+                  });
+                  body.updatedAt.should.be.a.recentIsoDate();
                 })))));
 
         it('should accept xml type files', testService((service) =>
@@ -2025,7 +2032,8 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 .set('Content-Type', 'text/xml')
                 .expect(200)
                 .then(({ body }) => {
-                  body.should.eql({ success: true });
+                  body.should.be.a.FormAttachment();
+                  body.name.should.equal('goodone.csv');
                 }))
               .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
                 .expect(200)
@@ -2033,6 +2041,36 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   headers['content-type'].should.startWith('text/xml');
                   text.should.equal('test,csv\n1,2');
                 })))));
+
+        it('should upload form definition and form attachment with cookie auth', testService(async (service) => {
+          const token = await service.authenticateUser('alice');
+
+          await service.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments.replace('goodone.csv', 'goodone.jpg'))
+            .set('Content-Type', 'application/xml')
+            .set('Cookie', `session=${token}`)
+            .set('X-Forwarded-Proto', 'https')
+            .set('X-Requested-With', 'XMLHttpRequest')
+            .expect(200);
+
+          await service.get('/v1/projects/1/forms/withAttachments.xml')
+            .set('Cookie', `session=${token}`)
+            .set('X-Forwarded-Proto', 'https')
+            .then(({ text }) => {
+              text.should.be.equal(testData.forms.withAttachments.replace('goodone.csv', 'goodone.jpg'));
+            });
+
+          const imagePath = `${appRoot}/test/e2e/s3/test-forms/1-attachments/a.jpg`;
+          const imageBuffer = readFileSync(imagePath);
+
+          await service.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.jpg')
+            .send(imageBuffer)
+            .set('Content-Type', 'image/jpeg')
+            .set('Cookie', `session=${token}`)
+            .set('X-Forwarded-Proto', 'https')
+            .set('X-Requested-With', 'XMLHttpRequest')
+            .expect(200);
+        }));
 
         it('should replace an extant file with another', testService((service) =>
           service.login('alice', (asAlice) =>

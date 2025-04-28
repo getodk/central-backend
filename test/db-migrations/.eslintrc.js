@@ -5,4 +5,7 @@ module.exports = {
     log: false,
     sql: false,
   },
+  rules: {
+    'no-multi-spaces': 'off',
+  },
 };
