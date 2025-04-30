@@ -1,9 +1,7 @@
 const assert = require('node:assert/strict');
 const appRoot = require('app-root-path');
 const nock = require('nock');
-const querystring = require('querystring');
 const { init } = require(appRoot + '/lib/external/s3');
-const Problem = require(appRoot + '/lib/util/problem');
 
 // An example request ID.  This taken from Digital Ocean Spaces; different
 // providers have different formats.
@@ -30,6 +28,20 @@ const amzInternalError = `
 `;
 
 describe('external/s3', () => {
+  const s3Config = {
+    server: 'http://s3.example.test:1234',
+    bucketName: 'bucket-1',
+    accessKey: 'ax1',
+    secretKey: 's1',
+  };
+  const s3 = init(s3Config);
+  const s3mock = nock('http://s3.example.test:1234')
+    .defaultReplyHeaders({
+      'Content-Type': 'application/xml',
+      'X-Amz-Request-Id': amzRequestId,
+    });
+  const exampleBlob = { id: 1, sha: 'a-blob-sha', content: '' };
+
   beforeEach(() => {
     if (!nock.isActive()) nock.activate();
   });
@@ -45,20 +57,6 @@ describe('external/s3', () => {
       if (err.message !== 'Aborted by request') throw err;
     }
   });
-
-  const s3Config = {
-    server: 'http://s3.example.test:1234',
-    bucketName: 'bucket-1',
-    accessKey: 'ax1',
-    secretKey: 's1',
-  };
-  const s3 = init(s3Config);
-  const s3mock = nock('http://s3.example.test:1234')
-    .defaultReplyHeaders({
-      'Content-Type': 'application/xml',
-      'X-Amz-Request-Id': amzRequestId,
-    });
-  const exampleBlob = { id:1, sha:'a-blob-sha', content:'' };
 
   describe('deleteObjsFor()', () => {
     it('should return details for upstream permission error', async () => {
