@@ -29,10 +29,7 @@ const amzInternalError = `
   </Error>
 `;
 
-// Perhaps due to https://github.com/minio/minio-js/issues/1400, these tests do not
-// currently shutdown cleanly/in good time.
-
-describe.only('external/s3', () => {
+describe('external/s3', () => {
   beforeEach(() => {
     if (!nock.isActive()) nock.activate();
   });
@@ -40,7 +37,13 @@ describe.only('external/s3', () => {
     nock.restore();
   });
   after(async () => {
-    await s3.destroy();
+    try {
+      await s3.destroy();
+    } catch (err) {
+      // These tests do not currently shutdown cleanly/in good time.
+      // Maybe caused by: https://github.com/minio/minio-js/issues/1400
+      if (err.message !== 'Aborted by request') throw err;
+    }
   });
 
   const s3Config = {
@@ -57,22 +60,22 @@ describe.only('external/s3', () => {
     });
   const exampleBlob = { id:1, sha:'a-blob-sha', content:'' };
 
-  describe('deleteObjFor()', () => {
-    it.only('should return details for upstream permission error', async () => {
+  describe('deleteObjsFor()', () => {
+    it('should return details for upstream permission error', async () => {
       // given
       s3mock.get(/.*/).reply(403, amzPermissionError); // get for bucket location is (always?) ignored
-      s3mock.delete(/.*/).reply(403, amzPermissionError);
+      s3mock.post(/.*/).reply(403, amzPermissionError);
 
       // expect
       await assert.rejects(
-        () => s3.deleteObjFor(exampleBlob),
+        () => s3.deleteObjsFor([ exampleBlob ]),
         {
           name: 'Error',
           message: 'The S3 account details or permissions are incorret.',
           problemCode: 500.4,
           problemDetails: {
             amzRequestId,
-            operation: 'removeObject',
+            operation: 'removeObjects',
             reason: missingPermissionMsg,
           },
         },
@@ -85,15 +88,15 @@ describe.only('external/s3', () => {
 
       // expect
       await assert.rejects(
-        () => s3.deleteObjFor(exampleBlob),
+        () => s3.deleteObjsFor([ exampleBlob ]),
         {
           name: 'Error',
           message: 'The upstream S3 server had an internal problem.',
           problemCode: 500.5,
           problemDetails: {
             amzRequestId,
-            operation: 'removeObject',
-            blobId: 1,
+            operation: 'removeObjects',
+            blobIds: [ 1 ],
           },
         },
       );
