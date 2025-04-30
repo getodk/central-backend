@@ -455,12 +455,12 @@ describe('query module submission purge', () => {
         'audits - audit.csv'
       ]);
 
-      result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
-one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
-one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
-one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
-one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,
-one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
+      result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value,user,change-reason
+one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb,,
+one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd,,
+one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff,,
+one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,,,
+one,e,/data/e,2000-01-01T00:11,,,,,hh,ii,,
 `);
     }));
   });

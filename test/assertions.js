@@ -216,14 +216,16 @@ should.Assertion.add('ExtendedForm', function() {
 should.Assertion.add('FormAttachment', function() {
   this.params = { operator: 'to be a Form Attachment' };
 
-  Object.keys(this.obj).should.eqlInAnyOrder([ 'name', 'type', 'blobExists', 'datasetExists', 'exists', 'updatedAt' ]);
+  Object.keys(this.obj).should.be.a.subsetOf([ 'name', 'type', 'blobExists', 'datasetExists', 'exists', 'hash', 'updatedAt' ]);
   this.obj.name.should.be.a.String();
   this.obj.type.should.be.a.String();
-  const { blobExists, datasetExists, exists } = this.obj;
+  const { blobExists, datasetExists, exists, hash } = this.obj;
   blobExists.should.be.a.Boolean();
   datasetExists.should.be.a.Boolean();
   (blobExists && datasetExists).should.be.false();
   exists.should.equal(blobExists || datasetExists);
+  (hash != null).should.equal(blobExists);
+  if (hash != null) hash.should.be.an.md5Sum();
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 
@@ -344,6 +346,13 @@ should.Assertion.add('eqlInAnyOrder', function(expectedUnsorted) {
   const actualSorted = [ ...this.obj ].sort();
   const expectedSorted = [ ...expectedUnsorted ].sort();
   actualSorted.should.eql(expectedSorted);
+});
+
+should.Assertion.add('subsetOf', function(array) {
+  this.params = { operator: 'to be a subset of' };
+
+  this.obj.should.be.an.Array();
+  for (const x of this.obj) array.should.containEql(x);
 });
 
 should.Assertion.add('Dataset', function assertDataset() {

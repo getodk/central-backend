@@ -52,10 +52,8 @@ info:
     **Changed**:
     - `webformsEnabled` boolean flag is added to [Forms](/central-api-form-management) APIs that enables use of ODK Web Forms instead of Enketo.
     - Draft Submission can be created using draft token by adding `/test/{token}` to [Creating a draft Submission](/central-api-submission-management/#id1) endpoint.
-
-    **Changed**:
     - [Dataset Metadata](/central-api-dataset-management/#dataset-metadata) now includes a new property, `lastUpdate`, which is the timestamp of the latest modification to the datasets or its entities.
-
+    - After a file is uploaded for a Form Attachment via the POST endpoint, the response is now the updated Attachment.
 
     ## ODK Central v2024.3
 
@@ -3728,17 +3726,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
-  /v1/enketo-ids/{enketoId}/form:
+  /v1/form-links/{formLinkId}/form:
     get:
       tags:
       - Individual Form
-      summary: Getting Form Details by EnketoId
-      description: Returns Form metadata for the provided EnketoId
-      operationId: Getting Form Details by EnketoId
+      summary: Getting Form Details by formLinkId
+      description: Returns Form metadata for the provided formLinkId
+      operationId: Getting Form Details by formLinkId
       parameters:
-      - name: enketoId
+      - name: formLinkId
         in: path
-        description: The `enketoId` of the Form being referenced.
+        description: The `formLinkId` of the Form being referenced.
         required: true
         schema:
           type: string
@@ -4575,7 +4573,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Success'
+                $ref: '#/components/schemas/FormAttachment'
         403:
           description: Forbidden
           content:
