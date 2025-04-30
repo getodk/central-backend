@@ -1,0 +1,24 @@
+#!/bin/bash -eu
+set -o pipefail
+
+log() { echo "[test/db-partial-migrations/prepare] $*"; }
+
+show_migrations() {
+	tree lib/model/migrations
+}
+
+prerun="$1"
+log "Requested for prerun: $prerun"
+
+log "Re-arranging migrations..."
+make migrations
+log "Initial migrations structure:"
+show_migrations
+
+log "Re-instating unrun migrations..."
+# TODO
+
+log "Final migrations structure:"
+show_migrations
+
+log "Completed OK."
