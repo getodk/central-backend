@@ -3,6 +3,10 @@
 
 name: Partial Database Migrations
 
+on:
+  push:
+  pull_request:
+
 jobs:
   db-partial-migration-tests:
     strategy:
