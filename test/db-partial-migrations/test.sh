@@ -15,7 +15,8 @@ if ! [[ "$(git status --porcelain)" = "" ]]; then
 fi
 
 show_migrations() {
-  tree lib/model/migrations # TODO reinstate
+  tree lib/model/migrations
+  sleep 1 # wait for output to flush - seems slow in CI
 }
 
 prerun="$1"
