@@ -30,7 +30,7 @@ describe('api: /sessions', () => {
           })));
     });
 
-    it('should return a new session even valid cookie is passed', testService((service) =>
+    it('should return a new session even if valid cookie is passed', testService((service) =>
       service.post('/v1/sessions')
         .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
         .expect(200)
