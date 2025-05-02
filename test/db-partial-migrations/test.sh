@@ -33,6 +33,15 @@ rmExceptFirst() {
       xargs rm
 }
 
+fixLegacyMigrations() {
+  sed -E -i -e "s:../../:../:" -- "$migrations_legacy"/*.js
+  mv "$migrations_legacy"/*.js "$migrations_new/"
+}
+
+fixNewMigrations() {
+  sed -E -i -e "s/db\.query/db.raw/" -- "$migrations_new"/*.js
+}
+
 log "Re-arranging migrations..."
 case "$prerun" in
   none)
@@ -41,21 +50,21 @@ case "$prerun" in
     ;;
   legacy-all)
     rm "$migrations_new"/*.js
-    mv "$migrations_legacy"/*.js "$migrations_new/"
+    fixLegacyMigrations
     ;;
   legacy-first-*)
     rm "$migrations_new"/*.js
     rmExceptFirst "$(sed s/legacy-first-// <<<"$prerun")" "$migrations_legacy"
-    mv "$migrations_legacy"/*.js "$migrations_new/"
+    fixLegacyMigrations
     ;;
   new-first-*-as-legacy)
     rmExceptFirst "$(sed "s/new-first-\(.*\)-as-legacy/\1/" <<<"$prerun")" "$migrations_new"
-    sed -E -i -e "s/db\.query/db.raw/" -- "$migrations_new"/*.js
-    mv "$migrations_legacy"/*.js "$migrations_new/"
+    fixNewMigrations
+    fixLegacyMigrations
     ;;
   all)
-    sed -E -i -e "s/db\.query/db.raw/" -- "$migrations_new"/*.js
-    mv "$migrations_legacy"/*.js "$migrations_new/"
+    fixNewMigrations
+    fixLegacyMigrations
     ;;
   *)
     log "!!!"
