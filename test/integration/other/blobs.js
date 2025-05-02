@@ -16,7 +16,7 @@ describe('blob query module', () => {
         .then((count) => count.should.equal(1)))));
 
   it('should handle blob collisions with different filenames', testService((service, container) =>
-    // One one instance of the form, two files are uploaded
+    // On one instance of the form, two files are uploaded
     // On another instance of the form (different id), one file is uploaded
     // and it creates another reference to one of the blobs with a different
     // filename.
@@ -68,7 +68,7 @@ describe('blob query module', () => {
           })))));
 
   it('should handle blob collisions and not purge still attached blobs', testService((service, container) =>
-    // One one instance of the form, two files are uploaded
+    // On one instance of the form, two files are uploaded
     // On another instance of the form (different id), one file is uploaded
     // and it creates another reference to one of the blobs.
     // When the first form with two blob references is deleted and purged,
