@@ -89,7 +89,7 @@ pgConnectionString="$(node -e '
 ')"
 migrationsTable="knex_migrations"
 
-expectedMigrations="$(cd lib/model/migrations && find -maxdepth 1 -type f -name \*.js -printf '%p\n')"
+expectedMigrations="$(cd lib/model/migrations && find -maxdepth 1 -type f -name \*.js -printf '%p\n' | sort)"
 actualMigrations="$(psql --quiet --tuples-only --no-align "$pgConnectionString" -c "SELECT './' || name FROM $migrationsTable")"
 if ! diff <(echo "$expectedMigrations") <(echo "$actualMigrations"); then
   log "!!!"
