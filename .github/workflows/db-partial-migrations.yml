@@ -19,9 +19,6 @@ jobs:
         - legacy-all
         - new-first-1-as-legacy
         - new-first-10-as-legacy
-        - new-first-1
-        - new-first-10
-        - all
     timeout-minutes: 2
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
