@@ -6,6 +6,7 @@ const { sql } = require('slonik');
 const { testTask } = require('../setup');
 const { purgeTask } = require(appRoot + '/lib/task/purge');
 const { Blob } = require(appRoot + '/lib/model/frames');
+const Problem = require(appRoot + '/lib/util/problem');
 
 // The basics of this task are tested here, including returning the message
 // of purged forms, but the full functionality is more thoroughly tested in
@@ -185,8 +186,11 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
       it('should throw error if xmlFormId specified without projectId', testPurgeTask(async ({ confirm, Forms }) => {
         const form = await Forms.getByProjectAndXmlFormId(1, 'simple');
         await Forms.del(form.get());
-        const message = await purgeTask({ mode: 'forms', force: true, xmlFormId: 'simple' });
-        message.should.equal('Must also specify projectId when using xmlFormId');
+        await purgeTask({ mode: 'forms', force: true, xmlFormId: 'simple' }).should.be.rejectedWith(Problem, {
+          problemDetails: {
+            error: 'Must also specify projectId when using xmlFormId',
+          },
+        });
         await confirm.form.softDeleted(1, 'simple');
       }));
 
@@ -226,20 +230,26 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
 
     it('should complain if instance id specified without project and form', testTask(() =>
       purgeTask({ instanceId: 'abc' })
-        .then((message) => {
-          message.should.equal('Must specify either all or none of projectId, xmlFormId, and instanceId');
+        .should.be.rejectedWith(Problem, {
+          problemDetails: {
+            error: 'Must specify either all or none of projectId, xmlFormId, and instanceId',
+          },
         })));
 
     it('should complain if instance id specified without project', testTask(() =>
       purgeTask({ instanceId: 'abc', xmlFormId: 'simple' })
-        .then((message) => {
-          message.should.equal('Must specify either all or none of projectId, xmlFormId, and instanceId');
+        .should.be.rejectedWith(Problem, {
+          problemDetails: {
+            error: 'Must specify either all or none of projectId, xmlFormId, and instanceId',
+          },
         })));
 
     it('should complain if instance id specified without form', testTask(() =>
       purgeTask({ instanceId: 'abc', projectId: 1 })
-        .then((message) => {
-          message.should.equal('Must specify either all or none of projectId, xmlFormId, and instanceId');
+        .should.be.rejectedWith(Problem, {
+          problemDetails: {
+            error: 'Must specify either all or none of projectId, xmlFormId, and instanceId',
+          },
         })));
   });
 
@@ -264,26 +274,34 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
 
     it('should complain if uuid specified without project and dataset', testTask(() =>
       purgeTask({ entityUuid: 'abc' })
-        .then((message) => {
-          message.should.equal('Must specify projectId and datasetName to purge a specify entity.');
+        .should.be.rejectedWith(Problem, {
+          problemDetails: {
+            error: 'Must specify projectId and datasetName to purge a specify entity.',
+          },
         })));
 
     it('should complain if uuid specified without project', testTask(() =>
       purgeTask({ entityUuid: 'abc', datasetName: 'simple' })
-        .then((message) => {
-          message.should.equal('Must specify projectId and datasetName to purge a specify entity.');
+        .should.be.rejectedWith(Problem, {
+          problemDetails: {
+            error: 'Must specify projectId and datasetName to purge a specify entity.',
+          },
         })));
 
     it('should complain if uuid specified without dataset', testTask(() =>
       purgeTask({ entityUuid: 'abc', projectId: 1 })
-        .then((message) => {
-          message.should.equal('Must specify projectId and datasetName to purge a specify entity.');
+        .should.be.rejectedWith(Problem, {
+          problemDetails: {
+            error: 'Must specify projectId and datasetName to purge a specify entity.',
+          },
         })));
 
     it('should complain if dataset specified without project', testTask(() =>
       purgeTask({ datasetName: 'simple' })
-        .then((message) => {
-          message.should.equal('Must specify projectId to purge all entities of a dataset/entity-list.');
+        .should.be.rejectedWith(Problem, {
+          problemDetails: {
+            error: 'Must specify projectId to purge all entities of a dataset/entity-list.',
+          },
         })));
   });
 
