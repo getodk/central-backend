@@ -102,6 +102,7 @@ log "Checking final database schema..."
 if ! diff \
     test/db-partial-migrations/expected-schema.sql \
     <(pg_dump --schema-only "$pgConnectionString"); then
+  sleep 1 # wait for output to flush - seems slow in CI
   log "!!!"
   log "!!! Schema differences detected.  See above for details."
   log "!!!"
@@ -113,6 +114,7 @@ tableName="knex_migrations"
 if ! diff \
     test/db-partial-migrations/expected-migrations-table-contents.sql \
     <(psql "$pgConnectionString" -c "SELECT id, name FROM $tableName"); then
+  sleep 1 # wait for output to flush - seems slow in CI
   log "!!!"
   log "!!! $tableName table content differences detected.  See above for details."
   log "!!!"
