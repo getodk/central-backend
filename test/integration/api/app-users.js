@@ -4,10 +4,10 @@ const testData = require('../../data/xml');
 
 describe('api: /projects/:id/app-users', () => {
   describe('POST', () => {
-    it('should return 403 unless the user is allowed to create', testService((service) =>
+    it('should return 403 if unauthenticated', testService((service) =>
       service.post('/v1/projects/1/app-users')
         .send({ displayName: 'test1' })
-        .expect(403)));
+        .expect(401)));
 
     it('should return the created key', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -63,8 +63,8 @@ describe('api: /projects/:id/app-users', () => {
   });
 
   describe('GET', () => {
-    it('should return 403 unless the user is allowed to list', testService((service) =>
-      service.get('/v1/projects/1/app-users').expect(403)));
+    it('should return 401 if unauthenticated', testService((service) =>
+      service.get('/v1/projects/1/app-users').expect(401)));
 
     it('should return a list of tokens in order with merged data', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -174,11 +174,11 @@ describe('api: /projects/:id/app-users', () => {
   });
 
   describe('/:id DELETE', () => {
-    it('should return 403 unless the user can delete', testService((service) =>
+    it('should return 401 if unauthenticated', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/app-users').send({ displayName: 'condemned' }).expect(200)
           .then(({ body }) =>
-            service.delete('/v1/projects/1/app-users/' + body.id).expect(403)))));
+            service.delete('/v1/projects/1/app-users/' + body.id).expect(401)))));
 
     it('should delete the token', testService((service) =>
       service.login('alice', (asAlice) =>

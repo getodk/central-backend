@@ -19,18 +19,51 @@ const withBinaryIds = (deprecatedId, instanceId) => testData.instances.binaryTyp
 describe('api: /submission', () => {
   describe('HEAD', () => {
     it('should return a 204 with no content', testService((service) =>
-      service.head('/v1/projects/1/submission')
-        .set('X-OpenRosa-Version', '1.0')
-        .expect(204)));
+      service.login('alice', (asAlice) =>
+        asAlice.head('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(204))));
 
     it('should fail if not given X-OpenRosa-Version header', testService((service) =>
       service.head('/v1/projects/1/submission')
         .expect(400)));
 
+    it('should fail if no auth is provided', testService((service) =>
+      service.head('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(401)));
+
     it('should fail on authentication given broken credentials', testService((service) =>
       service.head('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/submission')
         .set('X-OpenRosa-Version', '1.0')
         .expect(403)));
+
+    it('should fail if form does not exists', testService((service) =>
+      service.head('/v1/projects/1/form/simple/draft/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(404)));
+
+    it('should return 404 with invalid draft token', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(({ body }) => body.draftToken)
+            .then(() => service.head(`/v1/test/abc/projects/1/forms/simple/draft/submission`)
+              .set('X-OpenRosa-Version', '1.0')
+              .expect(404))))));
+
+    it('should return 204 with valid draft token', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(({ body }) => body.draftToken)
+            .then((token) => service.head(`/v1/test/${token}/projects/1/forms/simple/draft/submission`)
+              .set('X-OpenRosa-Version', '1.0')
+              .expect(204))))));
   });
 
   describe('POST', () => {

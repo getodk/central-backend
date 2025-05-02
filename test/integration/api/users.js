@@ -2,11 +2,12 @@ const appRoot = require('app-root-path');
 const should = require('should');
 const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { testService } = require('../setup');
+const { describe } = require('mocha');
 
 describe('api: /users', () => {
   describe('GET', () => {
     it('should reject for anonymous users', testService((service) =>
-      service.get('/v1/users').expect(403)));
+      service.get('/v1/users').expect(401)));
 
     it('should return nothing for authed users who cannot user.list', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -65,7 +66,7 @@ describe('api: /users', () => {
           }))));
 
     it('should reject unauthed users even if they exactly match an email', testService((service) =>
-      service.get('/v1/users/?q=alice@getodk.org').expect(403)));
+      service.get('/v1/users/?q=alice@getodk.org').expect(401)));
 
     it('should return an exact email match to any authed user', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -343,7 +344,7 @@ describe('api: /users', () => {
         it('should fail the request if invalidation is requested but not allowed', testService((service) =>
           service.post('/v1/users/reset/initiate?invalidate=true')
             .send({ email: 'alice@getodk.org' })
-            .expect(403)));
+            .expect(401)));
 
         it('should invalidate the existing password if requested', testService((service) =>
           service.login('alice', (asAlice) =>
@@ -424,8 +425,8 @@ describe('api: /users', () => {
   });
 
   describe('/users/current GET', () => {
-    it('should return not found if nobody is logged in', testService((service) =>
-      service.get('/v1/users/current').expect(404)));
+    it('should return unauthenticated if nobody is logged in', testService((service) =>
+      service.get('/v1/users/current').expect(401)));
 
     it('should give the authed user if logged in', testService((service) =>
       service.login('chelsea', (asChelsea) =>
