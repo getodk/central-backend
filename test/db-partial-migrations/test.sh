@@ -53,6 +53,10 @@ case "$prerun" in
     sed -E -i -e "s/db\.query/db.raw/" -- "$migrations_new"/*.js
     mv "$migrations_legacy"/*.js "$migrations_new/"
     ;;
+  all)
+    sed -E -i -e "s/db\.query/db.raw/" -- "$migrations_new"/*.js
+    mv "$migrations_legacy"/*.js "$migrations_new/"
+    ;;
   *)
     log "!!!"
     log "!!! No rule found matching '$prerun'"
@@ -63,6 +67,7 @@ esac
 log "Initial migrations structure:"
 show_migrations
 
+log "Running legacy migrations..."
 make migrations-legacy
 
 log "Re-instating unrun migrations..."
@@ -70,5 +75,16 @@ git reset --hard
 
 log "Final migrations structure:"
 show_migrations
+
+log "Running modern migrations..."
+make migrations
+
+log "Checking final database schema..."
+if ! diff test/db-partial-migrations/expected-schema.sql <(./test/db-partial-migrations/dump-postgres-schema); then
+  log "!!!"
+  log "!!! Schema differences detected.  See above for details."
+  log "!!!"
+  exit 1
+fi
 
 log "Completed OK."
