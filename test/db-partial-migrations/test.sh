@@ -49,7 +49,7 @@ case "$prerun" in
     mv "$migrations_legacy"/*.js "$migrations_new/"
     ;;
   new-first-*-as-legacy)
-    rmExceptFirst "$(sed s/new-first-\(.*\)-as-legacy/\1/ <<<"$prerun")" "$migrations_new"
+    rmExceptFirst "$(sed "s/new-first-\(.*\)-as-legacy/\1/" <<<"$prerun")" "$migrations_new"
     sed -E -i -e "s/db\.query/db.raw/" -- "$migrations_new"/*.js
     mv "$migrations_legacy"/*.js "$migrations_new/"
     ;;
