@@ -36,14 +36,14 @@ rmExceptFirst() {
 log "Re-arranging migrations..."
 case "$prerun" in
   none)
-    rm "$migrations_new"/*
-    rm "$migrations_legacy"/*
+    rm "$migrations_new"/*.js
+    rm "$migrations_legacy"/*.js
     ;;
   legacy-all)
-    rm "$migrations_new"/*
+    rm "$migrations_new"/*.js
     ;;
   legacy-first-*)
-    rm "$migrations_new"/*
+    rm "$migrations_new"/*.js
     rmExceptFirst "$(sed s/legacy-first-// <<<"$prerun")" "$migrations_legacy"
     ;;
   new-first-*-as-legacy)
