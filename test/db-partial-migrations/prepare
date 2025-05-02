@@ -41,14 +41,17 @@ case "$prerun" in
     ;;
   legacy-all)
     rm "$migrations_new"/*.js
+    mv "$migrations_legacy"/*.js "$migrations_new/"
     ;;
   legacy-first-*)
     rm "$migrations_new"/*.js
     rmExceptFirst "$(sed s/legacy-first-// <<<"$prerun")" "$migrations_legacy"
+    mv "$migrations_legacy"/*.js "$migrations_new/"
     ;;
   new-first-*-as-legacy)
     rmExceptFirst "$(sed s/new-first-\(.*\)-as-legacy/\1/ <<<"$prerun")" "$migrations_new"
     sed -E -i -e "s/db\.query/db.raw/" -- "$migrations_new"/*.js
+    mv "$migrations_legacy"/*.js "$migrations_new/"
     ;;
   *)
     log "!!!"
@@ -57,7 +60,6 @@ case "$prerun" in
     exit 1
     ;;
 esac
-sed -i s/db\.query/db\.raw/ -- "$migrations_new"/*.js
 log "Initial migrations structure:"
 show_migrations
 
