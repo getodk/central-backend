@@ -23,7 +23,6 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
     apiPostAndDump,
     apiPost,
     apiFetch,
-    getSessionToken: () => bearerToken,
   };
 
   async function apiGet(path, headers) {
