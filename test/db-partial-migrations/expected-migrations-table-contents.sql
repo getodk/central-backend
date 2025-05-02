@@ -85,13 +85,6 @@
   83 | 20200423-01-fix-field-insert-performance.js
   84 | 20200428-01-allow-string-downcast.js
   85 | 20200519-01-add-enketo-id.js
-log '!!!'
-echo '[test/db-partial-migrations/prepare] !!!'
-log '!!! knex_migrations table content differences detected.  See above for details.'
-echo '[test/db-partial-migrations/prepare] !!! knex_migrations table content differences detected.  See above for details.'
-log '!!!'
-echo '[test/db-partial-migrations/prepare] !!!'
-exit 1
   86 | 20200519-02-add-form-viewer-role.js
   87 | 20200520-01-backfill-enketo.js
   88 | 20200715-01-add-data-collector-role.js
