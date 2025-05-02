@@ -92,7 +92,10 @@ show_migrations
 log "Running modern migrations..."
 make migrations
 
-pgConnectionString=
+pgConnectionString="$(node -e '
+  const { host, database, user, password } = require("config").get("default.database");
+  console.log(`postgres://${user}:${password}@${host}/${database}`);
+')"
 
 log "Checking final database schema..."
 if ! diff \
