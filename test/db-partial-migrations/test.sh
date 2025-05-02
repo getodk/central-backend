@@ -93,8 +93,7 @@ expectedMigrations="$(find lib/model/migrations -maxdepth 1 -type f)"
 actualMigrations="$(psql --quiet --tuples-only --no-align "$pgConnectionString" -c "SELECT name FROM $migrationsTable")"
 if ! diff <(echo "$expectedMigrations") <(echo "$actualMigrations"); then
   log "!!!"
-  log "!!! Migration count ($actualCount) different from expected ($expectedCount)."
-  log "!!! There may have been an error running migrations..."
+  log "!!! Migrations ran differed from expected.  See above for details."
   log "!!!"
   exit 1
 fi
