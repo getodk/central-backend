@@ -83,6 +83,22 @@ show_migrations
 log "Running legacy migrations..."
 make migrations-legacy
 
+pgConnectionString="$(node -e '
+  const { host, database, user, password } = require("config").get("default.database");
+  console.log(`postgres://${user}:${password}@${host}/${database}`);
+')"
+migrationsTable="knex_migrations"
+
+expectedMigrations="$(find lib/model/migrations -maxdepth 1 -type f)"
+actualMigrations="$(psql --quiet --tuples-only --no-align "$pgConnectionString" -c "SELECT name FROM $migrationsTable")"
+if ! diff <(echo "$expectedMigrations") <(echo "$actualMigrations"); then
+  log "!!!"
+  log "!!! Migration count ($actualCount) different from expected ($expectedCount)."
+  log "!!! There may have been an error running migrations..."
+  log "!!!"
+  exit 1
+fi
+
 log "Re-instating unrun migrations..."
 git checkout   -- lib/model/migrations
 git clean -dfx -- lib/model/migrations
@@ -92,11 +108,6 @@ show_migrations
 
 log "Running modern migrations..."
 make migrations
-
-pgConnectionString="$(node -e '
-  const { host, database, user, password } = require("config").get("default.database");
-  console.log(`postgres://${user}:${password}@${host}/${database}`);
-')"
 
 log "Checking final database schema..."
 if ! diff \
@@ -110,13 +121,12 @@ if ! diff \
 fi
 
 log "Checking migrations table..."
-tableName="knex_migrations"
 if ! diff \
     test/db-partial-migrations/expected-migrations-table-contents.sql \
-    <(psql "$pgConnectionString" -c "SELECT id, name FROM $tableName"); then
+    <(psql "$pgConnectionString" -c "SELECT id, name FROM $migrationsTable"); then
   sleep 1 # wait for output to flush - seems slow in CI
   log "!!!"
-  log "!!! $tableName table content differences detected.  See above for details."
+  log "!!! $migrationsTable table content differences detected.  See above for details."
   log "!!!"
   exit 1
 fi
