@@ -27,14 +27,11 @@ describe('preprocessors', () => {
   describe('authHandler', () => {
     const { authHandler } = preprocessors;
 
-    it('should do nothing if no Authorization header is provided', () =>
+    it('should reject if no Authorization header is provided', () =>
       Promise.resolve(authHandler(
         { Auth, Sessions: mockSessions() },
         new Context(createRequest({ fieldKey: Option.none() }))
-      )).then((context) => {
-        // preprocessors return nothing if they have no changes to make to the context.
-        should.not.exist(context);
-      }));
+      )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
     it('should fail the request if unsupported Authorization header is supplied', () =>
       Promise.resolve(authHandler(
@@ -148,12 +145,9 @@ describe('preprocessors', () => {
             createRequest({ method: 'GET', headers: { Cookie: 'session=alohomora' }, cookies: { session: 'alohomora' } }),
             { fieldKey: Option.none() }
           )
-        )).then((context) => {
-          // preprocessors return nothing if they have no changes to make to the context.
-          should.not.exist(context);
-        }));
+        )).should.be.rejectedWith(Problem, { problemCode: 401.3 }));
 
-      it('should not throw an error if the cookie is invalid', () =>
+      it('should throw an error if the cookie is invalid', () =>
         Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
           new Context(
@@ -163,12 +157,9 @@ describe('preprocessors', () => {
             }, cookies: {} }),
             { fieldKey: Option.none() }
           )
-        )).then((context) => {
-          // preprocessors return nothing if they have no changes to make to the context.
-          should.not.exist(context);
-        }));
+        )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
-      it('should not throw an error if the token is invalid', () =>
+      it('should throw an error if the token is invalid', () =>
         Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
           new Context(
@@ -178,10 +169,7 @@ describe('preprocessors', () => {
             }, cookies: { session: 'letmein' } }),
             { fieldKey: Option.none() }
           )
-        )).then((context) => {
-          // preprocessors return nothing if they have no changes to make to the context.
-          should.not.exist(context);
-        }));
+        )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should prioritise primary auth over Cookie auth', () =>
         Promise.resolve(authHandler(
@@ -301,7 +289,7 @@ describe('preprocessors', () => {
             )
           )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
-        it('should do nothing on cookie auth with incorrect session token for non-GET requests', () =>
+        it('should reject cookie auth with incorrect session token for non-GET requests', () =>
           Promise.resolve(authHandler(
             { Auth, Sessions: mockSessionsWithCsrf('alohomora', 'secretcsrf') },
             new Context(
@@ -311,10 +299,7 @@ describe('preprocessors', () => {
               }, body: { __csrf: 'secretcsrf' }, cookies: { session: 'notalohomora' } }),
               { fieldKey: Option.none() }
             )
-          )).then((context) => {
-            // preprocessors return nothing if they have no changes to make to the context.
-            should.not.exist(context);
-          }));
+          )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
         it('should accept cookie auth with correct CSRF token for non-GET requests', () =>
           Promise.resolve(authHandler(
@@ -362,15 +347,6 @@ describe('preprocessors', () => {
           ? Option.of(new Session({ token }, { actor: new Actor({ type: actorType }) }))
           : Option.none())
       });
-
-      it('should do nothing if no fieldKey is present in context', () =>
-        Promise.resolve(authHandler(
-          { Auth, Sessions: mockFkSession('alohomora') },
-          new Context(createRequest(), { fieldKey: Option.none() })
-        )).then((context) => {
-          // preprocessors return nothing if they have no changes to make to the context.
-          should.not.exist(context);
-        }));
 
       it('should fail the request with 401 if the token is the wrong length', () =>
         Promise.resolve(authHandler(

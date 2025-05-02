@@ -132,7 +132,7 @@ describe('api: /projects/:id/assignments/forms', () => {
 describe('api: /assignments', () => {
   describe('GET', () => {
     it('should prohibit anonymous users from listing assignments', testService((service) =>
-      service.get('/v1/assignments').expect(403)));
+      service.get('/v1/assignments').expect(401)));
 
     it('should prohibit unprivileged users from listing assignments', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -167,7 +167,7 @@ describe('api: /assignments', () => {
 
   describe('/:roleId GET', () => {
     it('should prohibit anonymous users from listing assignments', testService((service) =>
-      service.get('/v1/assignments/admin').expect(403)));
+      service.get('/v1/assignments/admin').expect(401)));
 
     it('should prohibit unprivileged users from listing assignments', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -210,7 +210,7 @@ describe('api: /assignments', () => {
         service.login('chelsea', (asChelsea) =>
           asChelsea.get('/v1/users/current').expect(200).then(({ body }) => body.id)
             .then((chelseaId) => service.post('/v1/assignments/admin/' + chelseaId)
-              .expect(403)))));
+              .expect(401)))));
 
       it('should prohibit unprivileged users from creating assignments', testService((service) =>
         service.login('chelsea', (asChelsea) =>
@@ -221,11 +221,12 @@ describe('api: /assignments', () => {
       it('should return notfound if the role does not exist', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
-            .then((aliceId) => service.post('/v1/assignments/99/' + aliceId)
+            .then((aliceId) => asAlice.post('/v1/assignments/99/' + aliceId)
               .expect(404)))));
 
       it('should return notfound if the user does not exist', testService((service) =>
-        service.post('/v1/assignments/admin/999').expect(404)));
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/assignments/admin/999').expect(404))));
 
       it('should create an assignment by role system id', testService((service) =>
         service.login('chelsea', (asChelsea) =>
@@ -278,7 +279,7 @@ describe('api: /assignments', () => {
         service.login('alice', (asAlice) =>
           asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
             .then((aliceId) => service.delete('/v1/assignments/admin/' + aliceId)
-              .expect(403)))));
+              .expect(401)))));
 
       it('should prohibit unprivileged users from creating assignments', testService((service) =>
         service.login('alice', (asAlice) =>
@@ -289,11 +290,12 @@ describe('api: /assignments', () => {
       it('should return notfound if the role does not exist', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.get('/v1/users/current').expect(200).then(({ body }) => body.id)
-            .then((aliceId) => service.delete('/v1/assignments/99/' + aliceId)
+            .then((aliceId) => asAlice.delete('/v1/assignments/99/' + aliceId)
               .expect(404)))));
 
       it('should return notfound if the user does not exist', testService((service) =>
-        service.delete('/v1/assignments/admin/999').expect(404)));
+        service.login('alice', (asAlice) =>
+          asAlice.delete('/v1/assignments/admin/999').expect(404))));
 
       it('should return notfound if the assignment does not exist', testService((service) =>
         service.login('alice', (asAlice) => service.login('chelsea', (asChelsea) =>
@@ -345,7 +347,8 @@ describe('/projects/:id/assignments', () => {
         asChelsea.get('/v1/projects/1/assignments').expect(403))));
 
     it('should return notfound if the project does not exist', testService((service) =>
-      service.get('/v1/projects/99/assignments').expect(404)));
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/99/assignments').expect(404))));
 
     it('should list all assignments', testService((service) =>
       service.login('bob', (asBob) => Promise.all([
@@ -366,7 +369,8 @@ describe('/projects/:id/assignments', () => {
         asChelsea.get('/v1/projects/1/assignments/manager').expect(403))));
 
     it('should return notfound if the project does not exist', testService((service) =>
-      service.get('/v1/projects/99/assignments/manager').expect(404)));
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/99/assignments/manager').expect(404))));
 
     it('should list all assignees by role system name', testService((service) =>
       service.login('bob', (asBob) =>
@@ -410,8 +414,9 @@ describe('/projects/:id/assignments', () => {
             .expect(404)))));
 
     it('should return notfound if the user does not exist', testService((service) =>
-      service.post('/v1/projects/1/assignments/manager/999')
-        .expect(404)));
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/assignments/manager/999')
+          .expect(404))));
 
     it('should not permit granting rights one does not have', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -431,7 +436,7 @@ describe('/projects/:id/assignments', () => {
     it('should assign the actor by role numeric id', testService((service) =>
       service.login('bob', (asBob) => service.login('chelsea', (asChelsea) =>
         Promise.all([
-          service.get('/v1/roles/manager').expect(200).then(({ body }) => body.id),
+          asChelsea.get('/v1/roles/manager').expect(200).then(({ body }) => body.id),
           asChelsea.get('/v1/users/current').expect(200).then(({ body }) => body.id)
         ])
           .then(([ roleId, chelseaId ]) => asBob.post(`/v1/projects/1/assignments/${roleId}/${chelseaId}`)
@@ -473,20 +478,23 @@ describe('/projects/:id/assignments', () => {
             .expect(403))))));
 
     it('should return notfound if the project does not exist', testService((service) =>
-      service.login('bob', (asBob) =>
-        asBob.get('/v1/users/current').expect(200).then(({ body }) => body.id)
-          .then((bobId) => service.delete('/v1/projects/99/assignments/manager/' + bobId)
-            .expect(404)))));
+      service.login('alice', (asAlice) =>
+        service.login('bob', (asBob) =>
+          asBob.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+            .then((bobId) => asAlice.delete('/v1/projects/99/assignments/manager/' + bobId)
+              .expect(404))))));
 
     it('should return notfound if the role does not exist', testService((service) =>
-      service.login('bob', (asBob) =>
-        asBob.get('/v1/users/current').expect(200).then(({ body }) => body.id)
-          .then((bobId) => service.delete('/v1/projects/1/assignments/99/' + bobId)
-            .expect(404)))));
+      service.login('alice', (asAlice) =>
+        service.login('bob', (asBob) =>
+          asBob.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+            .then((bobId) => asAlice.delete('/v1/projects/1/assignments/99/' + bobId)
+              .expect(404))))));
 
     it('should return notfound if the user does not exist', testService((service) =>
-      service.delete('/v1/projects/1/assignments/manager/999')
-        .expect(404)));
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/projects/1/assignments/manager/999')
+          .expect(404))));
 
     it('should unassign the actor by role system name', testService((service) =>
       service.login('bob', (asBob) =>
@@ -499,7 +507,7 @@ describe('/projects/:id/assignments', () => {
     it('should assign the actor by role numeric id', testService((service) =>
       service.login('bob', (asBob) =>
         Promise.all([
-          service.get('/v1/roles/manager').expect(200).then(({ body }) => body.id),
+          asBob.get('/v1/roles/manager').expect(200).then(({ body }) => body.id),
           asBob.get('/v1/users/current').expect(200).then(({ body }) => body.id)
         ])
           .then(([ roleId, bobId ]) => asBob.delete(`/v1/projects/1/assignments/${roleId}/${bobId}`)
