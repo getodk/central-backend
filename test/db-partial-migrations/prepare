@@ -17,24 +17,28 @@ migrations_new=./lib/model/migrations
 rmExceptFirst() {
   local skipCount="$1"
   local src="$2"
-  local dest="$3"
   find "$src" -maxdepth 1 -type f -name \*.js -printf '%p\n' |
       sort |
       tail -n +$((skipCount+1)) |
-      xargs -I{} echo mv "{}" "$dest"
+      xargs echo rm
 }
 
 log "Re-arranging migrations..."
 case "$prerun" in
   none)
-    echo rm "$migrations_legacy"/*
     echo rm "$migrations_new"/*
+    echo rm "$migrations_legacy"/*
     ;;
   legacy-all)
     echo rm "$migrations_new"/*
     ;;
   legacy-first-*)
+    echo rm "$migrations_new"/*
     rmExceptFirst "$(sed s/legacy-first-// <<<"$prerun")" "$migrations_legacy"
+    ;;
+  new-first-*-as-legacy)
+    rmExceptFirst "$(sed s/new-first-\(.*\)-as-legacy/\1/ <<<"$prerun")" "$migrations_new"
+    sed -E -i -e "s/db\.query/db.raw/" -- "$migrations_new"/*.js
     ;;
   *)
     log "!!!"
@@ -43,11 +47,11 @@ case "$prerun" in
     exit 1
     ;;
 esac
+sed -i s/db\.query/db\.raw/ -- "$migrations_new"/*.js
 exit # TODO remove this
 log "Initial migrations structure:"
 show_migrations
 
-# FIXME an ideal test would run this with the legacy migrator
 make migrations-legacy
 
 log "Re-instating unrun migrations..."
