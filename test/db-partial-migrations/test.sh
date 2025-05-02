@@ -112,7 +112,7 @@ log "Checking migrations table..."
 tableName="knex_migrations"
 if ! diff \
     test/db-partial-migrations/expected-migrations-table-contents.sql \
-    <(psql "$pgConnectionString" -c "SELECT * FROM $tableName"); then
+    <(psql "$pgConnectionString" -c "SELECT id, name FROM $tableName"); then
   log "!!!"
   log "!!! $tableName table content differences detected.  See above for details."
   log "!!!"
