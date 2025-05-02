@@ -18,10 +18,7 @@ jobs:
         - legacy-first-100
         - legacy-all
         - new-first-1-as-legacy
-        - new-first-2-as-legacy
-        - new-first-3-as-legacy
-        - new-first-4-as-legacy
-        - new-first-5-as-legacy
+        - new-first-10-as-legacy
         - all
     timeout-minutes: 2
     # TODO should we use the same container as circle & central?
