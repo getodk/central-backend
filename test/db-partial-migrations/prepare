@@ -1,4 +1,4 @@
-#!/bin/bash -eu
+#!/bin/bash -eux
 set -o pipefail
 
 log() { echo "[test/db-partial-migrations/prepare] $*"; }
