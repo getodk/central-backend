@@ -1,5 +1,6 @@
 #!/bin/bash -eux
 set -o pipefail
+shopt -s inherit_errexit
 
 log() { echo "[test/db-partial-migrations/prepare] $*"; }
 
