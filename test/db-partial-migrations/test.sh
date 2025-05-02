@@ -35,7 +35,7 @@ rmExceptFirst() {
 }
 
 fixLegacyMigrations() {
-  sed -E -i -e "s:../../:../:" -- "$migrations_legacy"/*.js
+  sed -E -i -e "s:\.\./\.\./:../:" -- "$migrations_legacy"/*.js
   mv "$migrations_legacy"/*.js "$migrations_new/"
 }
 
