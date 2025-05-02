@@ -4,16 +4,51 @@ set -o pipefail
 log() { echo "[test/db-partial-migrations/prepare] $*"; }
 
 show_migrations() {
-	tree lib/model/migrations
+  echo TODO
+  #tree lib/model/migrations # TODO reinstate
 }
 
 prerun="$1"
 log "Requested for prerun: $prerun"
 
+migrations_legacy=./lib/model/migrations/legacy
+migrations_new=./lib/model/migrations
+
+rmExceptFirst() {
+  local skipCount="$1"
+  local src="$2"
+  local dest="$3"
+  find "$src" -maxdepth 1 -type f -name \*.js -printf '%p\n' |
+      sort |
+      tail -n +$((skipCount+1)) |
+      xargs -I{} echo mv "{}" "$dest"
+}
+
 log "Re-arranging migrations..."
-make migrations
+case "$prerun" in
+  none)
+    echo rm "$migrations_legacy"/*
+    echo rm "$migrations_new"/*
+    ;;
+  legacy-all)
+    echo rm "$migrations_new"/*
+    ;;
+  legacy-first-*)
+    rmExceptFirst "$(sed s/legacy-first-// <<<"$prerun")" "$migrations_legacy"
+    ;;
+  *)
+    log "!!!"
+    log "!!! No rule found matching '$prerun'"
+    log "!!!"
+    exit 1
+    ;;
+esac
+exit # TODO remove this
 log "Initial migrations structure:"
 show_migrations
+
+# FIXME an ideal test would run this with the legacy migrator
+make migrations-legacy
 
 log "Re-instating unrun migrations..."
 # TODO
