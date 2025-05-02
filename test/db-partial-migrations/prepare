@@ -3,9 +3,19 @@ set -o pipefail
 
 log() { echo "[test/db-partial-migrations/prepare] $*"; }
 
+if ! [[ "$(git status --porcelain)" = "" ]]; then
+  log "!!!"
+  log "!!! You have uncomitted changes in your local git repo."
+  log "!!!"
+  log "!!! This command will make destructive changes."
+  log "!!!"
+  log "!!! Please revert or commit these changes before continuing."
+  log "!!!"
+  exit 1
+fi
+
 show_migrations() {
-  echo TODO
-  #tree lib/model/migrations # TODO reinstate
+  tree lib/model/migrations # TODO reinstate
 }
 
 prerun="$1"
@@ -20,20 +30,20 @@ rmExceptFirst() {
   find "$src" -maxdepth 1 -type f -name \*.js -printf '%p\n' |
       sort |
       tail -n +$((skipCount+1)) |
-      xargs echo rm
+      xargs rm
 }
 
 log "Re-arranging migrations..."
 case "$prerun" in
   none)
-    echo rm "$migrations_new"/*
-    echo rm "$migrations_legacy"/*
+    rm "$migrations_new"/*
+    rm "$migrations_legacy"/*
     ;;
   legacy-all)
-    echo rm "$migrations_new"/*
+    rm "$migrations_new"/*
     ;;
   legacy-first-*)
-    echo rm "$migrations_new"/*
+    rm "$migrations_new"/*
     rmExceptFirst "$(sed s/legacy-first-// <<<"$prerun")" "$migrations_legacy"
     ;;
   new-first-*-as-legacy)
@@ -48,14 +58,13 @@ case "$prerun" in
     ;;
 esac
 sed -i s/db\.query/db\.raw/ -- "$migrations_new"/*.js
-exit # TODO remove this
 log "Initial migrations structure:"
 show_migrations
 
 make migrations-legacy
 
 log "Re-instating unrun migrations..."
-# TODO
+git reset --hard
 
 log "Final migrations structure:"
 show_migrations
