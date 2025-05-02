@@ -98,7 +98,7 @@ if ! diff \
     <(
       pg_dump --schema-only "$(node -e '
         const { host, database, user, password } = require("config").get("default.database");
-        console.log(\`postgres://${user}:${password}@${host}/${database}\`);
+        console.log(`postgres://${user}:${password}@${host}/${database}`);
       ')"
     ); then
   log "!!!"
