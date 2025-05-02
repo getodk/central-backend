@@ -189,12 +189,12 @@ const testContainerFullTrx = (test) => function() {
 const testTask = (test) => function() {
   return new Promise((resolve, reject) => {
     baseContainer.transacting((container) => {
-      task._testContainer = container.with({ task: true });
+      task._container = container.with({ task: true });
       const rollback = (f) => (x) => {
-        delete task._testContainer;
+        delete task._container;
         return container.run(sql`rollback`).then(() => f(x));
       };
-      return test.call(this, task._testContainer).then(rollback(resolve), rollback(reject));
+      return test.call(this, task._container).then(rollback(resolve), rollback(reject));
     });//.catch(Promise.resolve.bind(Promise));
   });
 };
@@ -203,8 +203,8 @@ const testTask = (test) => function() {
 // eslint-disable-next-line space-before-function-paren, func-names
 const testTaskFullTrx = (test) => function() {
   mustReinitAfter = this.test.fullTitle();
-  task._testContainer = baseContainer.with({ task: true });
-  return test.call(this, task._testContainer);
+  task._container = baseContainer.with({ task: true });
+  return test.call(this, task._container);
 };
 
 // eslint-disable-next-line no-shadow
