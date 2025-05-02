@@ -93,10 +93,10 @@ log "Checking final database schema..."
 if ! diff \
     test/db-partial-migrations/expected-schema.sql \
     <(
-      pg_dump --schema-only "$(node -e "
-        const { host, database, user, password } = require('config').get('default.database');
-        console.log(\`postgres://\${user}:\${password}@\${host}/\${database}\`);
-      ")"
+      pg_dump --schema-only "$(node -e '
+        const { host, database, user, password } = require("config").get("default.database");
+        console.log(\`postgres://${user}:${password}@${host}/${database}\`);
+      ')"
     ); then
   log "!!!"
   log "!!! Schema differences detected.  See above for details."
