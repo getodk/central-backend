@@ -89,7 +89,7 @@ pgConnectionString="$(node -e '
 ')"
 migrationsTable="knex_migrations"
 
-expectedMigrations="$(find lib/model/migrations -maxdepth 1 -type f)"
+expectedMigrations="$(find lib/model/migrations -maxdepth 1 -type f -printf '%p\n')"
 actualMigrations="$(psql --quiet --tuples-only --no-align "$pgConnectionString" -c "SELECT name FROM $migrationsTable")"
 if ! diff <(echo "$expectedMigrations") <(echo "$actualMigrations"); then
   log "!!!"
