@@ -71,7 +71,8 @@ log "Running legacy migrations..."
 make migrations-legacy
 
 log "Re-instating unrun migrations..."
-git reset --hard
+git checkout   -- lib/model/migrations
+git clean -dfx -- lib/model/migrations
 
 log "Final migrations structure:"
 show_migrations
