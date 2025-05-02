@@ -81,7 +81,7 @@ log "Initial migrations structure:"
 show_migrations
 
 log "Running legacy migrations..."
-DEBUG="knex:*" make migrations-legacy
+make migrations-legacy
 
 log "Re-instating unrun migrations..."
 git checkout   -- lib/model/migrations
