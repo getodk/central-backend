@@ -35,11 +35,13 @@ rmExceptFirst() {
 }
 
 fixLegacyMigrations() {
+  # fix relative require() paths
   sed -E -i -e "s:\.\./\.\./:../:" -- "$migrations_legacy"/*.js
   mv "$migrations_legacy"/*.js "$migrations_new/"
 }
 
 fixNewMigrations() {
+  # convert pg API to knex API
   sed -E -i -e "s/db\.query/db.raw/" -- "$migrations_new"/*.js
 }
 
