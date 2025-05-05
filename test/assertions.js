@@ -143,10 +143,11 @@ should.Assertion.add('ExtendedSubmissionDef', function() {
 should.Assertion.add('Session', function() {
   this.params = { operator: 'to be a Session' };
 
-  Object.keys(this.obj).should.containDeep([ 'expiresAt', 'createdAt', 'token' ]);
+  Object.keys(this.obj).should.eqlInAnyOrder([ 'expiresAt', 'createdAt', 'token', 'csrf' ]);
   this.obj.expiresAt.should.be.an.isoDate();
   this.obj.createdAt.should.be.an.isoDate();
   this.obj.token.should.be.a.token();
+  this.obj.csrf.should.be.a.token();
 });
 
 should.Assertion.add('FieldKey', function() {

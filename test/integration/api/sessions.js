@@ -171,6 +171,7 @@ describe('api: /sessions', () => {
           .set('Cookie', 'session=' + token)
           .expect(200)
           .then((restore) => {
+            Object.keys(restore.body).should.eqlInAnyOrder(['createdAt', 'expiresAt']);
             restore.body.expiresAt.should.be.an.isoDate();
             restore.body.createdAt.should.be.an.isoDate();
             should(restore.body.token).be.undefined();
