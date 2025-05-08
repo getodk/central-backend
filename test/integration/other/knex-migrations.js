@@ -15,7 +15,7 @@ const populateForms = require('../fixtures/02-forms');
 const { getFormFields } = require('../../../lib/data/schema');
 
 const withTestDatabase = withKnex(config.get('test.database'));
-const migrationsDir = appRoot + '/lib/model/migrations';
+const migrationsDir = appRoot + '/lib/model/migrations/legacy';
 const upToMigration = (toName, inclusive = true) => withTestDatabase(async (migrator) => {
   await migrator.raw('drop owned by current_user');
   const migrations = await migrator.migrate.list({ directory: migrationsDir });
@@ -41,7 +41,7 @@ const testMigration = (filename, tests, options = {}) => {
     // eslint-disable-next-line no-only-tests/no-only-tests
     ? describe.only.bind(describe)
     : (skip ? describe.skip.bind(describe) : describe);
-  f(`database migrations: ${filename}`, function() {
+  f(`knex migrations: ${filename}`, function() {
     this.timeout(20000);
 
     beforeEach(() => upToMigration(filename, false));
@@ -59,7 +59,7 @@ testMigration.skip = (filename, tests) =>
 // column to projects and forms, it is not possible to migrate part way
 // (before the new column) and populate the data when frames expect the
 // new column to exist.
-describe.skip('database migrations', function() {
+describe.skip('knex migrations', function() {
   this.timeout(8000);
 
   it('should purge deleted forms via migration', testServiceFullTrx(async (service, container) => {
@@ -922,7 +922,8 @@ describe.skip('database migration: 20231002-01-add-conflict-details.js', functio
   }));
 });
 
-testMigration('20240215-01-entity-delete-verb.js', () => {
+// Skip because 1. this migration now runs on new migrator, and (2) it relies on application code.
+testMigration.skip('20240215-01-entity-delete-verb.js', () => {
   it('should add entity.delete verb to correct roles', testServiceFullTrx(async (service) => {
     const verbsByRole = async () => {
       const { body: roles } = await service.get('/v1/roles').expect(200);
@@ -951,7 +952,8 @@ testMigration('20240215-01-entity-delete-verb.js', () => {
   }));
 });
 
-testMigration('20240215-02-dedupe-verbs.js', () => {
+// Skip because 1. this migration now runs on new migrator, and (2) it relies on application code.
+testMigration.skip('20240215-02-dedupe-verbs.js', () => {
   it('should remove duplicate submission.update verb', testServiceFullTrx(async (service) => {
     const verbsByRole = async () => {
       const { body: roles } = await service.get('/v1/roles').expect(200);

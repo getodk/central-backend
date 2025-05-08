@@ -73,6 +73,9 @@ fake-s3-server-persistent:
 .PHONY: migrations
 migrations: node_version
 	node lib/bin/run-migrations.js
+.PHONY: migrations-legacy
+migrations-legacy: node_version
+	node lib/bin/run-migrations-legacy.js
 
 
 ################################################################################
